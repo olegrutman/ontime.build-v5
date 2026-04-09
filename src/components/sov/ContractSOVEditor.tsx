@@ -230,13 +230,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   </div>
                 ))}
               </div>
-              <Button onClick={generateAllSOVs} disabled={saving || generating}>
-                {generating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                {generating ? 'Generating...' : 'Generate SOV (AI-powered)'}
+              <Button onClick={createAllSOVs} disabled={saving}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Create SOV
               </Button>
               <p className="text-xs text-muted-foreground my-2">— or —</p>
               <Button variant="outline" onClick={() => setUploadDialogOpen(true)} disabled={saving}>
@@ -752,86 +748,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     </div>
                   )}
 
-                  {/* Items list — grouped by floor_label */}
-                  {(() => {
-                    // Group items by floor_label
-                    const floorGroups: { label: string; items: typeof items }[] = [];
-                    const groupMap = new Map<string, typeof items>();
-                    
-                    for (const item of items) {
-                      const label = item.floor_label || 'Uncategorized';
-                      if (!groupMap.has(label)) {
-                        groupMap.set(label, []);
-                        floorGroups.push({ label, items: groupMap.get(label)! });
-                      }
-                      groupMap.get(label)!.push(item);
-                    }
-
-                    // If no floor_label grouping exists (legacy), render flat
-                    const hasFloorLabels = items.some(i => i.floor_label);
-
-                    if (!hasFloorLabels) {
-                      return (
-                        <div className="space-y-2">
-                          {items.map((item, index) => renderSOVItem(sov, item, index, isEffectivelyLocked))}
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="space-y-3">
-                        {floorGroups.map(({ label, items: floorItems }) => {
-                          const floorPercent = floorItems.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
-                          const floorValue = floorItems.reduce((s, i) => s + (i.value_amount || 0), 0);
-                          const floorBilled = floorItems.reduce((s, i) => s + (i.total_billed_amount || 0), 0);
-                          const floorKey = `${sov.id}-${label}`;
-                          const isFloorExpanded = expandedFloors.has(floorKey);
-
-                          return (
-                            <Collapsible key={floorKey} open={isFloorExpanded} onOpenChange={() => toggleFloor(floorKey)}>
-                              <CollapsibleTrigger asChild>
-                                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer border">
-                                  <div className="flex items-center gap-2">
-                                    {isFloorExpanded ? (
-                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                    ) : (
-                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                    <span className="font-semibold text-sm">{label}</span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {floorItems.length} item{floorItems.length !== 1 ? 's' : ''}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex items-center gap-3 text-sm">
-                                    <span className="text-muted-foreground tabular-nums">{floorPercent.toFixed(2)}%</span>
-                                    <span className="font-medium tabular-nums">{formatCurrency(floorValue)}</span>
-                                    {floorBilled > 0 && floorValue > 0 && (
-                                      <div className="w-16">
-                                        <SOVProgressBar
-                                          scheduledValue={floorValue}
-                                          billedToDate={floorBilled}
-                                          showLabels={false}
-                                          size="sm"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="space-y-2 mt-2 ml-4 border-l-2 border-muted pl-3">
-                                  {floorItems.map((item) => {
-                                    const globalIndex = items.indexOf(item);
-                                    return renderSOVItem(sov, item, globalIndex, isEffectivelyLocked);
-                                  })}
-                                </div>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
+                  {/* Items list — flat */}
+                  <div className="space-y-2">
+                    {items.map((item, index) => renderSOVItem(sov, item, index, isEffectivelyLocked))}
+                  </div>
 
                   {items.length === 0 && (
                     <p className="text-center text-sm text-muted-foreground py-8">
