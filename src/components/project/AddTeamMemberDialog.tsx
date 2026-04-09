@@ -284,6 +284,24 @@ export function AddTeamMemberDialog({
       return;
     }
 
+    // Collect mode: return data without DB writes
+    if (mode === 'collect' && onCollect) {
+      onCollect({
+        id: crypto.randomUUID(),
+        companyName: selectedResult.org_name,
+        contactName: selectedResult.contact_name || '',
+        contactEmail: selectedResult.contact_email || '',
+        role: selectedRole,
+        trade: requiresTrade(selectedRole) ? selectedTrade : undefined,
+        orgId: selectedResult.org_id,
+        userId: selectedResult.contact_user_id || undefined,
+      });
+      onOpenChange(false);
+      return;
+    }
+
+    if (!projectId) return;
+
     setSaving(true);
     try {
       // Get current user's org info for contract creation
