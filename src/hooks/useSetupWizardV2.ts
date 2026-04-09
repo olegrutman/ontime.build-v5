@@ -1114,22 +1114,27 @@ export function useSetupWizardV2(projectId?: string) {
       : creatorOrgType === 'FC' ? 'Field Crew'
       : 'Trade Contractor';
 
-    // Primary contract (GC→TC for TC creators, or single contract for GC creators)
+    // Primary contract: TC bills GC (from=TC, to=GC) or GC's single contract
     const primaryResult = await _saveContractAndSov(
       pid, contractValue, fromRole, creatorOrgId || null,
       isTC ? 'General Contractor' : null,
+      isTC ? null : null, // to_org_id: GC not yet known for TC upstream
       isTC ? 'GC → TC SOV' : 'Framing SOV',
-      scopeData, answers,
+      scopeData, answers, userId,
     );
 
     // If TC, also create downstream FC contract + SOV
+    // FC bills TC: from=FC (not yet known), to=TC (creator)
     let fcResult: { contractId: string; sovId: string } | null = null;
     if (isTC && fcContractValue > 0) {
       fcResult = await _saveContractAndSov(
-        pid, fcContractValue, fromRole, creatorOrgId || null,
-        'Field Crew',
+        pid, fcContractValue,
+        'Field Crew',       // from_role: FC is the contractor billing
+        null,               // from_org_id: FC org not yet known
+        'Trade Contractor', // to_role: TC is the client paying
+        creatorOrgId || null, // to_org_id: TC's org (the payer)
         'TC → FC SOV',
-        scopeData, answers,
+        scopeData, answers, userId,
       );
     }
 
