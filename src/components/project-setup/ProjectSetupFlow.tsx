@@ -70,8 +70,10 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      {/* Show wizard only if SOV doesn't exist yet (legacy projects) */}
-      {!wizardDone && (
+      {/* Show summary when wizard is done, otherwise show wizard */}
+      {wizardDone ? (
+        <ProjectInfoSummary projectId={projectId} />
+      ) : (
         <Card className="border border-border overflow-hidden">
           <div className="border-b border-border bg-muted/30 px-5 py-3.5 flex items-center gap-3">
             <h3 className="font-heading text-sm font-bold">Project Setup</h3>
