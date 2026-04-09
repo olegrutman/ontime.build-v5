@@ -484,7 +484,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 2 — FC Contract (EDITABLE) */}
-        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label="FC CONTRACT (YOU SET THIS)" value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${fcName} · ${tcMarginPct}% TC margin` : 'No FC contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
+        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label="FC CONTRACT (YOU SET THIS)" value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || 'Field Crew'} · ${tcMarginPct}% TC margin` : 'No FC contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
           <div style={{ padding: '12px 16px' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>FC Contract Terms</div>
             {/* FC Org Search */}
