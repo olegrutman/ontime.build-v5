@@ -218,11 +218,8 @@ export function ScopeDetailsTab({ projectId }: Props) {
     <div className="space-y-4">
       {/* Project Profile Card */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Project Profile</CardTitle>
-           <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/setup`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-          </Button>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-2">
@@ -282,11 +279,8 @@ export function ScopeDetailsTab({ projectId }: Props) {
 
       {/* Scope Summary Card */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Scope Summary</CardTitle>
-           <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/setup`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-          </Button>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 mb-3">
