@@ -39,12 +39,17 @@ interface SearchResult {
   city_state: string | null;
 }
 
+import { TeamMember } from '@/types/projectWizard';
+
 interface AddTeamMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: string;
+  projectId?: string;
   creatorOrgType: OrgType | null;
   onMemberAdded: () => void;
+  /** 'direct' saves to DB (default). 'collect' returns data via onCollect without DB writes. */
+  mode?: 'direct' | 'collect';
+  onCollect?: (member: TeamMember) => void;
 }
 
 export function AddTeamMemberDialog({
@@ -53,6 +58,8 @@ export function AddTeamMemberDialog({
   projectId,
   creatorOrgType,
   onMemberAdded,
+  mode = 'direct',
+  onCollect,
 }: AddTeamMemberDialogProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'invite'>('search');
