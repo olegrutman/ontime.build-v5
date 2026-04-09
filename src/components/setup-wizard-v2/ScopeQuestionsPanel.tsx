@@ -103,22 +103,26 @@ export function ScopeQuestionsPanel({
       </div>
 
       {/* Right: Live SOV preview(s) */}
-      <div className={showDualSov ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : ''}>
-        <div className="border border-border rounded-lg overflow-hidden bg-card">
-          <div className="px-3 py-1.5 border-b bg-muted/30">
+      <div className={`grid gap-3 ${showDualSov ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+        <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col min-h-[400px] h-[calc(100vh-280px)]">
+          <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
             <p className="text-xs font-medium text-muted-foreground">
               {isTC ? 'GC → TC SOV' : 'SOV Preview'}
             </p>
           </div>
-          <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+          <div className="flex-1 overflow-y-auto">
+            <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+          </div>
         </div>
 
         {showDualSov && (
-          <div className="border border-border rounded-lg overflow-hidden bg-card">
-            <div className="px-3 py-1.5 border-b bg-muted/30">
+          <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col min-h-[400px] h-[calc(100vh-280px)]">
+            <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
               <p className="text-xs font-medium text-muted-foreground">TC → FC SOV</p>
             </div>
-            <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+            <div className="flex-1 overflow-y-auto">
+              <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+            </div>
           </div>
         )}
       </div>
