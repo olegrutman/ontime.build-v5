@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { ChevronRight, Pencil, X, UserPlus, Package, RotateCw, Loader2 } from 'lucide-react';
 import { resendProjectInvite } from '@/lib/inviteUtils';
 import { supabase } from '@/integrations/supabase/client';
@@ -301,7 +302,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
 
   // ─── Team data ───
-  const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; status: string }[]>([]);
+  const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
   const [materialResp, setMaterialResp] = useState<string | null>(null);
   const [designatedSupplier, setDesignatedSupplier] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -310,7 +311,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   const fetchTeam = useCallback(async () => {
     const [teamRes, contractRes, supplierRes] = await Promise.all([
-      supabase.from('project_team').select('id, role, invited_org_name, invited_name, status').eq('project_id', projectId),
+      supabase.from('project_team').select('id, role, invited_org_name, invited_name, invited_email, status').eq('project_id', projectId),
       supabase.from('project_contracts').select('id, material_responsibility').eq('project_id', projectId).limit(1),
       supabase.from('project_designated_suppliers').select('invited_name').eq('project_id', projectId).neq('status', 'removed').maybeSingle(),
     ]);
@@ -341,9 +342,13 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     setResending(member.id);
     try {
       await resendProjectInvite(projectId, member.id);
+      toast.success(`Invitation resent to ${member.invited_email || member.invited_org_name || 'member'}`);
       fetchTeam();
-    } catch {}
-    setResending(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resend invite');
+    } finally {
+      setResending(null);
+    }
   };
 
   // ─── Materials ───
