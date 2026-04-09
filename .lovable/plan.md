@@ -1,42 +1,48 @@
 
 
-# Merge Team Members into Project Basics Step
+# Fix Contract Creation Error + Team Invitation Method
 
-## What You Asked For
-Move team invitations into the Project Basics step so users add their team up front (before building type / scope). Show the project owner's role (GC or TC) clearly so everyone knows who created the project. This removes the separate "Team" step — the wizard goes from 5 steps to 4.
+## Problem
 
-## New Wizard Flow
+1. **Contract insert fails** with `project_contracts_from_role_check` constraint violation. The wizard saves `from_role: 'TC_PM'` but the constraint only allows `'General Contractor'`, `'Trade Contractor'`, or `'Field Crew'`.
 
-```text
-Step 1: Project Basics + Team (name, address, owner role badge, add team members)
-Step 2: Building Type
-Step 3: Scope & Contract
-Step 4: Review (includes team summary)
+2. **Contract insert is missing required fields** — no `from_org_id` or `to_org_id` are set, and the role values don't match the established pattern used in `EditProject.tsx`.
+
+## Fix
+
+### `src/hooks/useSetupWizardV2.ts` — Fix contract insert (lines ~1060-1068)
+
+The contract insert currently uses hardcoded invalid values:
+```ts
+from_role: 'TC_PM',   // INVALID — fails check constraint
+to_role: 'GC_PM',     // INVALID
+trade: 'Framing',     // Hardcoded — wrong
 ```
 
-## Changes
+Change to use the actual creator org context. The `saveAll` method needs to accept the creator's org ID and org type so it can set proper `from_org_id`, `from_role`, and leave `to_org_id`/`to_role` null (no counterparty yet — same pattern as `EditProject.tsx`):
 
-### 1. `src/components/project-wizard-new/BasicsStep.tsx`
-- Add a "Project Owner" section at the top showing the current user's org name and role badge (e.g. "Acme Construction — General Contractor")
-- Add an inline team section below the address fields with "Add Team Member" button
-- Team members stored in-memory (no projectId needed yet) — each member is a `TeamMember` object with company name, contact, role, trade
-- Props expanded to accept `team`, `onTeamChange`, `creatorOrgName`, `creatorRole`, and `creatorOrgType`
+```ts
+// For a TC creator:
+from_org_id: creatorOrgId,
+from_role: 'Trade Contractor',
+to_org_id: null,
+to_role: null,
+trade: null,
 
-### 2. `src/pages/CreateProjectNew.tsx`
-- Remove step 3 (Team) from `UNIFIED_STEPS` — now 4 steps: basics, building_type, scope, review
-- Pass team state + creator info to `BasicsStepNew`
-- Move `saveTeam` call to `createProject` (final save) since team members are in-memory until then
-- Adjust step indices for building type (1), scope (2), review (3)
+// For a GC creator:
+from_org_id: creatorOrgId,
+from_role: 'General Contractor',
+to_org_id: null,
+to_role: null,
+trade: null,
+```
 
-### 3. `src/components/project-wizard-new/UnifiedReviewStep.tsx`
-- Add team member list to review summary so user can verify who they invited
+### `src/pages/CreateProjectNew.tsx` — Pass org context to saveAll
 
-### 4. `src/components/project-wizard-new/TeamStep.tsx`
-- Keep file but no longer used in the wizard flow (may be useful elsewhere); or extract the inline member list into a reusable component used by BasicsStep
+Update the `wizard.saveAll(pid)` call to pass `currentOrg.id` and `currentOrg.type` so the hook can build the correct contract payload. The team member saving code (project_team + project_invites) is already using the correct invitation pattern — no changes needed there.
 
 | File | Change |
 |------|--------|
-| `src/components/project-wizard-new/BasicsStep.tsx` | Add owner role display + inline team member list with add/remove |
-| `src/pages/CreateProjectNew.tsx` | Remove Team step; pass team state to BasicsStep; 4-step flow |
-| `src/components/project-wizard-new/UnifiedReviewStep.tsx` | Show team members in review |
+| `src/hooks/useSetupWizardV2.ts` | Fix contract insert to use proper `from_org_id`, `from_role` based on creator org; accept org context in `saveAll` |
+| `src/pages/CreateProjectNew.tsx` | Pass `currentOrg.id` and `currentOrg.type` to `wizard.saveAll()` |
 
