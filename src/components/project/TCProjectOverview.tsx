@@ -204,11 +204,51 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   // ─── FC Contract (downstream, editable) ───
   const fcContract = financials.downstreamContract;
   const fcContractVal = fcContract?.contract_sum || 0;
-  const fcName = fcContract?.to_org_name || fcContract?.from_org_name || 'Field Crew';
+  const fcName = fcContract?.to_org_name || fcContract?.from_org_name || '';
+
+  // ─── FC org search ───
+  interface FcOrgSelection { org_id: string; org_name: string; contact_email: string; contact_name: string; contact_user_id: string }
+  const [selectedFcOrg, setSelectedFcOrg] = useState<FcOrgSelection | null>(null);
+  const [fcSearchQuery, setFcSearchQuery] = useState('');
+  const [fcSearchResults, setFcSearchResults] = useState<FcOrgSelection[]>([]);
+  const [fcSearchLoading, setFcSearchLoading] = useState(false);
+  const [fcSearchOpen, setFcSearchOpen] = useState(false);
+  const fcSearchRef = useRef<HTMLDivElement>(null);
+
+  // Pre-populate with existing FC
+  useEffect(() => {
+    if (fcName && fcContract) {
+      setSelectedFcOrg({ org_id: fcContract.from_org_id || fcContract.to_org_id || '', org_name: fcName, contact_email: '', contact_name: '', contact_user_id: '' });
+    }
+  }, [fcName, fcContract]);
+
+  // Search FC orgs
+  useEffect(() => {
+    if (fcSearchQuery.length < 2) { setFcSearchResults([]); setFcSearchOpen(false); return; }
+    const t = setTimeout(async () => {
+      setFcSearchLoading(true);
+      const { data, error } = await supabase.rpc('search_existing_team_targets', {
+        _query: fcSearchQuery, _project_id: projectId, _limit: 10,
+      });
+      setFcSearchLoading(false);
+      if (!error && data) {
+        const fcOrgs = (data as any[]).filter(r => r.org_type === 'FC');
+        setFcSearchResults(fcOrgs.map(r => ({ org_id: r.org_id, org_name: r.org_name, contact_email: r.contact_email, contact_name: r.contact_name, contact_user_id: r.contact_user_id })));
+        setFcSearchOpen(true);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [fcSearchQuery, projectId]);
+
+  // Close search on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (fcSearchRef.current && !fcSearchRef.current.contains(e.target as Node)) setFcSearchOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // ─── FC Contract editing ───
   const [fcDraft, setFcDraft] = useState({
-    crew: fcName,
     value: String(fcContractVal),
     type: 'Lump Sum',
     scope: '',
@@ -216,8 +256,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const [fcDirty, setFcDirty] = useState(false);
 
   useEffect(() => {
-    setFcDraft(prev => ({ ...prev, crew: fcName, value: String(fcContractVal) }));
-  }, [fcName, fcContractVal]);
+    setFcDraft(prev => ({ ...prev, value: String(fcContractVal) }));
+  }, [fcContractVal]);
 
   const updateFcField = (field: keyof typeof fcDraft, val: string) => {
     setFcDraft(p => ({ ...p, [field]: val }));
@@ -225,12 +265,77 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   };
 
   const saveFcContract = async () => {
-    if (fcContract) {
-      const newVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
-      await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
-      financials.refetch();
+    const newVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
+    const targetOrg = selectedFcOrg;
+
+    if (!targetOrg?.org_id) {
+      toast.error('Please select a Field Crew organization first');
+      return;
     }
-    setFcDirty(false);
+
+    try {
+      // Check if FC is already on the team
+      const isAlreadyOnTeam = team.some(m => m.invited_org_name === targetOrg.org_name || m.role === 'Field Crew');
+
+      if (!isAlreadyOnTeam) {
+        // Auto-invite: insert into project_team
+        const { error: teamErr } = await supabase.from('project_team').insert({
+          project_id: projectId,
+          role: 'Field Crew',
+          org_id: targetOrg.org_id,
+          invited_org_name: targetOrg.org_name,
+          invited_name: targetOrg.contact_name || null,
+          invited_email: targetOrg.contact_email || null,
+          user_id: targetOrg.contact_user_id || null,
+          status: 'Invited',
+        });
+        if (teamErr) throw teamErr;
+
+        // Insert project_participants for the contact user
+        if (targetOrg.contact_user_id) {
+          await supabase.from('project_participants').insert({
+            project_id: projectId,
+            user_id: targetOrg.contact_user_id,
+            org_id: targetOrg.org_id,
+            role: 'FC',
+            invite_status: 'INVITED',
+          });
+
+          // Send notification
+          await supabase.from('notifications').insert({
+            user_id: targetOrg.contact_user_id,
+            type: 'project_invite',
+            title: 'Project Invitation',
+            message: `You have been invited to join a project as Field Crew`,
+            data: { project_id: projectId },
+          });
+        }
+
+        toast.success(`${targetOrg.org_name} invited as Field Crew`);
+      }
+
+      // Create or update the FC contract
+      if (fcContract) {
+        await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
+      } else {
+        // Create new downstream contract
+        await supabase.from('project_contracts').insert({
+          project_id: projectId,
+          from_org_id: targetOrg.org_id,
+          to_org_id: currentOrgId,
+          from_role: 'Field Crew',
+          to_role: 'Trade Contractor',
+          contract_sum: newVal,
+          direction: 'downstream',
+        });
+      }
+
+      financials.refetch();
+      fetchTeam();
+      setFcDirty(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save FC contract');
+    }
   };
 
   const draftFcVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
