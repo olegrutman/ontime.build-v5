@@ -50,7 +50,7 @@ export function DemoInvoicesTab({ projectId }: { projectId: string }) {
     const newInv: DemoInvoice = {
       id: `demo-inv-new-${Date.now()}`,
       project_id: projectId,
-      invoice_number: `INV-DEMO-${String(num).padStart(3, '0')}`,
+      invoice_number: `INV-DEM-DEMO-${String(num).padStart(3, '0')}`,
       status: 'submitted',
       total_amount: 12500,
       billing_period_start: '2026-02-01',
