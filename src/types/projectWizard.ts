@@ -46,6 +46,10 @@ export interface TeamMember {
   role: TeamRole;
   trade?: Trade;
   tradeCustom?: string;
+  /** Set when selecting an existing org from search */
+  orgId?: string;
+  /** Set when selecting an existing user from search */
+  userId?: string;
 }
 
 export interface ProjectContract {
