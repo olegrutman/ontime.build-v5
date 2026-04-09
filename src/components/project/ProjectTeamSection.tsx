@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { resendProjectInvite } from '@/lib/inviteUtils';
 import { Users, RefreshCw, Mail, CheckCircle, UserPlus, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -97,18 +98,9 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const handleResendInvite = async (member: TeamMember) => {
     setResending(member.id);
     try {
-      const { data: invite } = await supabase
-        .from('project_invites')
-        .select('token')
-        .eq('project_team_id', member.id)
-        .eq('status', 'Invited')
-        .single();
-
-      if (invite) {
-        toast.success(`Invite resent to ${member.invited_email}`);
-      } else {
-        toast.error('No pending invite found');
-      }
+      await resendProjectInvite(projectId, member.id);
+      toast.success(`Invite resent to ${member.invited_email || member.invited_org_name}`);
+      fetchTeam();
     } catch (error) {
       toast.error('Failed to resend invite');
     }
