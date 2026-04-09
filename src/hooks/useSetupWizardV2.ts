@@ -1069,7 +1069,7 @@ export function useSetupWizardV2(projectId?: string) {
   }, [buildingType]);
 
   // Internal save logic — can be called with an explicit project ID
-  const _saveToDb = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string) => {
+  const _saveToDb = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string, userId?: string) => {
     if (!buildingType) throw new Error('No building type selected');
     const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
     const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
