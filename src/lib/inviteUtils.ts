@@ -59,11 +59,13 @@ export async function resendProjectInvite(projectId: string, teamMemberId: strin
       .maybeSingle();
 
     if (!existing) {
+      const { data: { user } } = await supabase.auth.getUser();
       await supabase.from('project_participants').insert({
         project_id: projectId,
         organization_id: orgId,
-        role: participantRole,
+        role: participantRole as any,
         invite_status: 'INVITED',
+        invited_by: user?.id || '',
       });
     }
   }
