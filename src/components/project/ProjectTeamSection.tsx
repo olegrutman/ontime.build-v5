@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { resendProjectInvite } from '@/lib/inviteUtils';
 import { Users, RefreshCw, Mail, CheckCircle, UserPlus, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
