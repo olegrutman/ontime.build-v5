@@ -1,28 +1,19 @@
 
 
-# Fix Side-by-Side SOVs — Bugs Found
+# Fix: Show Both SOVs Side-by-Side
 
-## Root Causes
+## Problem
+The dual SOV layout uses `grid-cols-1 md:grid-cols-2` which should work at your viewport width. But each SOV card has `h-[calc(100vh-280px)]` — when stacked in a single column (before the grid kicks in or due to overflow), the second SOV gets pushed below the viewport. More critically, the grid container itself is inside the right half of a `lg:grid-cols-2` split, so both SOVs are fighting for space in 50% of the screen.
 
-### Bug 1: AppLayout constrains width to max-w-7xl (1280px)
-`src/components/app-shell/AppShell.tsx` line 81 wraps content in `max-w-7xl mx-auto` (1280px max). The `CreateProjectNew` page does NOT pass `fullWidth` to `AppLayout`, so the entire wizard is capped at 1280px. After the sidebar (col-span-2 = ~213px), card padding (48px), and the questions/SOV split, each SOV panel gets only ~230px — far too narrow to be useful.
+## Fix: Stack SOVs vertically in the right column (top/bottom)
+Since the right panel is only ~50% of the screen, putting two SOVs side-by-side makes each one too narrow to read. Instead, stack them **vertically** — each taking half the available height.
 
-**Fix:** Pass `fullWidth` to `AppLayout` in `CreateProjectNew.tsx`.
-
-### Bug 2: SOV containers have no defined height
-`SOVLivePreview` uses `h-full flex flex-col`, but its parent containers never define a height. The `flex-1 overflow-y-auto` scroll area inside the preview collapses to zero height because there's no height constraint from above.
-
-**Fix:** Give the SOV wrapper divs in `ScopeQuestionsPanel` an explicit `min-h-[400px]` and `h-[calc(100vh-280px)]` so the previews have room to render.
-
-### Bug 3: Single SOV has no wrapper when showDualSov is false
-Line 106: when `showDualSov` is false, the className is empty string `''`. The single SOV div has no layout structure — it just floats as a bare div. This inconsistency means the single SOV might not fill the available space properly.
-
-**Fix:** Always wrap SOVs in a consistent grid container.
-
-## Changes
+### `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx`
+- Change the right-side SOV container from a 2-column grid to a **single column with two rows**, each SOV taking `h-[calc(50vh-150px)]` when dual, or full height when single
+- This ensures both SOVs are always visible without scrolling, one above the other
+- Each SOV card remains independently scrollable for its line items
 
 | File | Change |
 |------|--------|
-| `src/pages/CreateProjectNew.tsx` | Add `fullWidth` prop to `AppLayout` |
-| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Fix SOV container: always use grid wrapper, add explicit height constraints, ensure dual SOVs each get proper height |
+| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Stack dual SOVs vertically (top/bottom) instead of side-by-side; adjust heights to split viewport |
 
