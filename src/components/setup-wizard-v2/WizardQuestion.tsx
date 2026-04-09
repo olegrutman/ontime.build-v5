@@ -41,12 +41,12 @@ export function WizardQuestion({ question, value, onChange, answers }: Props) {
           </span>
         )}
       </Label>
-      {renderInput(inputType, value, options, onChange, hasBasement, question.fieldKey)}
+      {renderInput(inputType, value, options, onChange, hasBasement, question.fieldKey, answers || {})}
     </div>
   );
 }
 
-function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false, fieldKey: string = '') {
+function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false, fieldKey: string = '', answers: Record<string, any> = {}) {
   switch (type) {
     case 'yes_no':
       return (
@@ -149,7 +149,19 @@ function renderInput(type: InputType, value: any, options: string[] | undefined,
     case 'yes_no_floors': {
       const enabled = typeof value === 'object' ? value?.enabled : value === 'yes';
       const floors: string[] = typeof value === 'object' ? value?.floors || [] : [];
-      const floorOptions = hasBasement ? ['Basement', 'L1', 'L2', 'L3', 'Roof'] : ['L1', 'L2', 'L3', 'Roof'];
+      // Dynamic floor options based on story count
+      let storyCount = 1;
+      const storiesVal = answers?.stories;
+      if (typeof storiesVal === 'number') storyCount = Math.max(1, storiesVal);
+      else if (storiesVal === '2-story' || storiesVal === '2') storyCount = 2;
+      else if (storiesVal === '3') storyCount = 3;
+      else if (storiesVal === 'Mix of both') storyCount = 2;
+      else if (storiesVal === '1-story') storyCount = 1;
+      const dynamicFloors: string[] = [];
+      if (hasBasement) dynamicFloors.push('Basement');
+      for (let i = 1; i <= storyCount; i++) dynamicFloors.push(`L${i}`);
+      dynamicFloors.push('Roof');
+      const floorOptions = dynamicFloors;
       return (
         <div className="space-y-2">
           <div className="flex gap-2">

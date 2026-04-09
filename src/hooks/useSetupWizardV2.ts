@@ -748,7 +748,10 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // Basement level
   if (a.has_basement === 'yes') {
-    push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
+    // Only add floor system line if basement has its own floor system (not slab on grade)
+    if (a.basement_floor_system !== 'Slab on grade') {
+      push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
+    }
     push('per_floor', 'Hardware & connectors — Basement', w('basement_hw'), 'has_basement');
     if (a.basement_walkout === 'yes') {
       push('per_floor', 'Exterior wall framing — Basement', w('basement_wall'), 'basement_walkout');
