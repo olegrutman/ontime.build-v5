@@ -30,11 +30,17 @@ export function ContractsStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Contracts</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Primary Contracts</h2>
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            <ShieldCheck className="h-3 w-3" />
+            Official Record
+          </span>
+        </div>
         <p className="text-sm text-muted-foreground">
           {isTC
-            ? 'Enter both your upstream (GC) and downstream (FC) contract values.'
-            : 'Enter the total contract value for this project.'}
+            ? 'These become the official upstream (GC) and downstream (FC) contracts for this project.'
+            : 'This becomes the official contract record for this project.'}
         </p>
       </div>
 
