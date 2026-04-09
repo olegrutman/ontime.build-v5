@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { PhaseSOV } from './PhaseSOV';
 import { SetupWizardV2 } from '@/components/setup-wizard-v2/SetupWizardV2';
+import { ProjectInfoSummary } from './ProjectInfoSummary';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
