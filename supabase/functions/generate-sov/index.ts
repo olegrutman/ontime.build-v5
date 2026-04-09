@@ -115,18 +115,21 @@ serve(async (req) => {
     if (contract_id) contractQuery = contractQuery.eq("id", contract_id);
     const contractRes = await contractQuery.limit(1).maybeSingle();
 
-    // Fetch profile, scope, team
-    const [profileRes, scopeRes, teamRes] = await Promise.all([
+    // Fetch profile, scope, team, and existing SOV snapshot
+    const [profileRes, scopeRes, teamRes, existingSovRes] = await Promise.all([
       admin.from("project_profiles").select("*, project_types(name, slug, is_multifamily, is_single_family)").eq("project_id", project_id).maybeSingle(),
       admin.from("project_scope_selections").select("scope_item_id, scope_items(label, scope_sections(slug, label))").eq("project_id", project_id).eq("is_on", true),
       admin.from("project_team").select("user_id").eq("project_id", project_id).eq("user_id", user.id).eq("status", "Accepted").maybeSingle(),
+      contract_id
+        ? admin.from("project_sov").select("scope_snapshot").eq("project_id", project_id).eq("contract_id", contract_id).maybeSingle()
+        : admin.from("project_sov").select("scope_snapshot").eq("project_id", project_id).limit(1).maybeSingle(),
     ]);
 
     if (!teamRes.data) {
       return new Response(JSON.stringify({ error: "Not a team member" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const profile = profileRes.data;
+    let profile = profileRes.data;
     const contract = contractRes.data;
 
     // Filter scope items for FC contracts
@@ -143,6 +146,49 @@ serve(async (req) => {
           scopeItems = scopeItems.filter((s: any) => fcIds.has(s.scope_item_id));
         }
       }
+    }
+
+    // If no project_profiles record, build a synthetic profile from scope_snapshot
+    if (!profile && existingSovRes.data?.scope_snapshot) {
+      const snap = existingSovRes.data.scope_snapshot as any;
+      profile = {
+        id: null,
+        stories: snap.stories || 1,
+        foundation_types: snap.has_basement === 'yes' ? ['Basement'] : [],
+        basement_type: snap.basement_type || null,
+        has_garage: snap.has_garage?.enabled || false,
+        garage_car_count: null,
+        garage_types: [],
+        has_stairs: (snap.stories || 1) > 1,
+        stair_types: [],
+        has_deck_balcony: snap.has_balcony === 'yes',
+        has_covered_porch: false,
+        has_pool: false,
+        has_elevator: false,
+        has_clubhouse: false,
+        has_commercial_spaces: false,
+        has_shed: false,
+        framing_system: 'Stick Frame',
+        floor_system: snap.floor_system || 'Not specified',
+        roof_type: 'Not specified',
+        scope_wrb: false,
+        scope_siding: snap.siding_in_scope === 'yes',
+        scope_exterior_trim: false,
+        scope_soffit_fascia: false,
+        scope_windows_install: snap.windows_in_scope === 'yes',
+        scope_patio_doors: false,
+        scope_garage_framing: snap.has_garage?.enabled || false,
+        scope_backout: snap.has_backout === 'yes',
+        scope_backout_blocking: snap.has_backout === 'yes',
+        scope_backout_blocking_items: [],
+        scope_backout_shimming: false,
+        scope_backout_stud_repair: false,
+        scope_backout_nailer_plates: false,
+        scope_backout_pickup_framing: false,
+        units_per_building: null,
+        number_of_buildings: null,
+        project_types: { name: snap.building_type || 'Custom Home', slug: snap.building_type || 'custom_home', is_multifamily: false, is_single_family: true },
+      };
     }
 
     if (!profile || !contract?.contract_sum) {
