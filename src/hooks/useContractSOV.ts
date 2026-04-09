@@ -342,6 +342,30 @@ export async function getExistingSOVItems(projectId: string): Promise<{item_name
   return items?.length ? items : null;
 }
 
+// Helper: find the sibling SOV on the same project (different contract)
+async function findSiblingSov(
+  sovId: string,
+  allSovs: ContractSOV[],
+  allSovItems: Record<string, ContractSOVItem[]>,
+  allContracts: ProjectContract[]
+): Promise<{ sibSovId: string; sibContractValue: number; sibItems: ContractSOVItem[] } | null> {
+  const sov = allSovs.find(s => s.id === sovId);
+  if (!sov) return null;
+  
+  // Find another SOV on the same project with a different contract
+  const sibling = allSovs.find(s => s.id !== sovId && s.contract_id !== sov.contract_id);
+  if (!sibling) return null;
+  
+  const sibContract = allContracts.find(c => c.id === sibling.contract_id);
+  if (!sibContract) return null;
+  
+  return {
+    sibSovId: sibling.id,
+    sibContractValue: sibContract.contract_sum,
+    sibItems: allSovItems[sibling.id] || []
+  };
+}
+
 export function useContractSOV(projectId: string | undefined) {
   const { userOrgRoles, user } = useAuth();
   const queryClient = useQueryClient();
@@ -906,6 +930,84 @@ export function useContractSOV(projectId: string | undefined) {
           return { ...item, percent_of_contract: r.pct, value_amount: r.val };
         })
       }));
+      // Mirror to sibling SOV
+      const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+      if (sibling) {
+        const sibItem = sibling.sibItems.find(i => i.sort_order === items[idx].sort_order);
+        if (sibItem) {
+          // Build same percentage updates for sibling
+          const sibItems_arr = sibling.sibItems;
+          const sibIdx = sibItems_arr.findIndex(i => i.id === sibItem.id);
+          const sibOldPct = sibItems_arr[sibIdx]?.percent_of_contract || 0;
+          const sibDelta = newPercent - sibOldPct;
+
+          const sibUpdates: { id: string; pct: number }[] = [{ id: sibItem.id, pct: newPercent }];
+          const sibUnlocked = sibItems_arr.filter((i, j) => j !== sibIdx && !(i as any).is_locked);
+          const sibUnlockTotal = sibUnlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+
+          let sibClampedExcess = 0;
+          const sibRawAdj: { id: string; pct: number }[] = [];
+          for (const u of sibUnlocked) {
+            const share = sibUnlockTotal > 0 ? (u.percent_of_contract || 0) / sibUnlockTotal : 1 / sibUnlocked.length;
+            const adjusted = (u.percent_of_contract || 0) - sibDelta * share;
+            if (adjusted < 0) {
+              sibClampedExcess += Math.abs(adjusted);
+              sibRawAdj.push({ id: u.id, pct: 0 });
+            } else {
+              sibRawAdj.push({ id: u.id, pct: adjusted });
+            }
+          }
+          if (sibClampedExcess > 0) {
+            const posTotal = sibRawAdj.reduce((s, u) => s + u.pct, 0);
+            for (const u of sibRawAdj) {
+              if (u.pct > 0 && posTotal > 0) {
+                u.pct = Math.max(0, u.pct - sibClampedExcess * (u.pct / posTotal));
+              }
+            }
+          }
+          sibUpdates.push(...sibRawAdj);
+
+          const sibLocked = sibItems_arr.filter((i, j) => j !== sibIdx && (i as any).is_locked);
+          const sibLockedTotal = sibLocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+          const sibRunning = sibLockedTotal + sibUpdates.slice(0, -1).reduce((s, u) => s + u.pct, 0);
+          if (sibUpdates.length > 0) {
+            sibUpdates[sibUpdates.length - 1].pct = Math.round((100 - sibRunning) * 100) / 100;
+          }
+
+          const sibContract = contracts.find(c => c.id === sovs.find(s => s.id === sibling.sibSovId)?.contract_id);
+          const sibRetainage = sibContract?.retainage_percent || 0;
+
+          await supabase.rpc('update_sov_line_percentages', {
+            p_updates: sibUpdates,
+            p_contract_value: sibling.sibContractValue,
+            p_retainage_pct: sibRetainage,
+          });
+
+          // Optimistic update for sibling
+          const sibResultMap = new Map<string, { pct: number; val: number }>();
+          let sibRunTotal = 0;
+          for (let i = 0; i < sibUpdates.length; i++) {
+            const u = sibUpdates[i];
+            let val: number;
+            if (i === sibUpdates.length - 1) {
+              val = Math.round((sibling.sibContractValue - sibRunTotal) * 100) / 100;
+            } else {
+              val = Math.round((sibling.sibContractValue * u.pct / 100) * 100) / 100;
+              sibRunTotal += val;
+            }
+            sibResultMap.set(u.id, { pct: u.pct, val });
+          }
+
+          setSovItems(prev => ({
+            ...prev,
+            [sibling.sibSovId]: (prev[sibling.sibSovId] || []).map(item => {
+              const r = sibResultMap.get(item.id);
+              if (!r) return item;
+              return { ...item, percent_of_contract: r.pct, value_amount: r.val };
+            })
+          }));
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -948,12 +1050,36 @@ export function useContractSOV(projectId: string | undefined) {
       
       if (error) throw error;
       
+      // Find the edited item's sort_order for sibling matching
+      const editedItem = (sovItems[sovId] || []).find(i => i.id === itemId);
+      
       setSovItems(prev => ({
         ...prev,
         [sovId]: prev[sovId]?.map(item =>
           item.id === itemId ? { ...item, item_name: newName } : item
         ) || []
       }));
+
+      // Mirror name to sibling SOV
+      if (editedItem) {
+        const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+        if (sibling) {
+          const sibItem = sibling.sibItems.find(i => i.sort_order === editedItem.sort_order);
+          if (sibItem) {
+            await supabase
+              .from('project_sov_items')
+              .update({ item_name: newName })
+              .eq('id', sibItem.id);
+            
+            setSovItems(prev => ({
+              ...prev,
+              [sibling.sibSovId]: prev[sibling.sibSovId]?.map(item =>
+                item.id === sibItem.id ? { ...item, item_name: newName } : item
+              ) || []
+            }));
+          }
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -963,14 +1089,13 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [sovs, contracts, sovItems]);
 
   // Add item to SOV (blocked if locked)
   const addItem = useCallback(async (sovId: string, itemName: string) => {
     const sov = sovs.find(s => s.id === sovId);
     if (!sov) return;
     
-    // Block if SOV is locked
     if (sov.is_locked) {
       toast({
         title: 'SOV Locked',
@@ -1008,6 +1133,31 @@ export function useContractSOV(projectId: string | undefined) {
         ...prev,
         [sovId]: [...(prev[sovId] || []), data as ContractSOVItem]
       }));
+
+      // Mirror add to sibling SOV
+      const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+      if (sibling) {
+        const { data: sibData } = await supabase
+          .from('project_sov_items')
+          .insert({
+            project_id: projectId,
+            sov_id: sibling.sibSovId,
+            sort_order: sortOrder,
+            item_name: itemName,
+            percent_of_contract: 0,
+            value_amount: 0,
+            source: 'user'
+          })
+          .select()
+          .single();
+        
+        if (sibData) {
+          setSovItems(prev => ({
+            ...prev,
+            [sibling.sibSovId]: [...(prev[sibling.sibSovId] || []), sibData as ContractSOVItem]
+          }));
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -1021,6 +1171,9 @@ export function useContractSOV(projectId: string | undefined) {
 
   // Delete item from SOV
   const deleteItem = useCallback(async (sovId: string, itemId: string) => {
+    // Find the item's sort_order before deleting for sibling matching
+    const deletedItem = (sovItems[sovId] || []).find(i => i.id === itemId);
+    
     setSaving(true);
     try {
       const { error } = await supabase
@@ -1034,6 +1187,25 @@ export function useContractSOV(projectId: string | undefined) {
         ...prev,
         [sovId]: prev[sovId]?.filter(item => item.id !== itemId) || []
       }));
+
+      // Mirror delete to sibling SOV
+      if (deletedItem) {
+        const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+        if (sibling) {
+          const sibItem = sibling.sibItems.find(i => i.sort_order === deletedItem.sort_order);
+          if (sibItem) {
+            await supabase
+              .from('project_sov_items')
+              .delete()
+              .eq('id', sibItem.id);
+            
+            setSovItems(prev => ({
+              ...prev,
+              [sibling.sibSovId]: prev[sibling.sibSovId]?.filter(item => item.id !== sibItem.id) || []
+            }));
+          }
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -1043,10 +1215,20 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [sovs, contracts, sovItems]);
 
   // Reorder items
   const reorderItems = useCallback(async (sovId: string, reorderedItems: ContractSOVItem[]) => {
+    // Build a map of old sort_order → new sort_order from the primary SOV
+    const items = sovItems[sovId] || [];
+    const orderMap = new Map<number, number>(); // oldSortOrder → newSortOrder
+    for (let i = 0; i < reorderedItems.length; i++) {
+      const original = items.find(it => it.id === reorderedItems[i].id);
+      if (original) {
+        orderMap.set(original.sort_order, i);
+      }
+    }
+
     setSaving(true);
     try {
       for (let i = 0; i < reorderedItems.length; i++) {
@@ -1060,6 +1242,29 @@ export function useContractSOV(projectId: string | undefined) {
         ...prev,
         [sovId]: reorderedItems.map((item, index) => ({ ...item, sort_order: index }))
       }));
+
+      // Mirror reorder to sibling SOV
+      const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+      if (sibling && sibling.sibItems.length > 0) {
+        // Apply same reorder by mapping old sort_order → new sort_order
+        const sibReordered = [...sibling.sibItems].sort((a, b) => {
+          const newA = orderMap.get(a.sort_order) ?? a.sort_order;
+          const newB = orderMap.get(b.sort_order) ?? b.sort_order;
+          return newA - newB;
+        });
+
+        for (let i = 0; i < sibReordered.length; i++) {
+          await supabase
+            .from('project_sov_items')
+            .update({ sort_order: i })
+            .eq('id', sibReordered[i].id);
+        }
+
+        setSovItems(prev => ({
+          ...prev,
+          [sibling.sibSovId]: sibReordered.map((item, index) => ({ ...item, sort_order: index }))
+        }));
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -1069,7 +1274,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [sovs, contracts, sovItems]);
 
   // Calculate totals for a SOV
   const getSOVTotals = useCallback((sovId: string) => {
