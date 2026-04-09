@@ -1081,12 +1081,14 @@ export function useSetupWizardV2(projectId?: string) {
     const isTC = creatorOrgType === 'TC';
 
     // Save answers
-    const answerRows = Object.entries(answers).map(([field_key, value]) => ({
-      project_id: pid,
-      field_key,
-      value,
-      updated_at: new Date().toISOString(),
-    }));
+    const answerRows = Object.entries(answers)
+      .filter(([, value]) => value !== null && value !== undefined)
+      .map(([field_key, value]) => ({
+        project_id: pid,
+        field_key,
+        value,
+        updated_at: new Date().toISOString(),
+      }));
     answerRows.push({
       project_id: pid,
       field_key: 'building_type',
