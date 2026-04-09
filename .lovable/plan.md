@@ -1,38 +1,25 @@
 
 
-# Project Setup Analysis — Bugs & Fixes
+# Make Wizard Full-Screen + Show SOV Line Items
 
-## Bugs Found
+## Changes
 
-### Bug 1: Contract status constraint violation (CRITICAL)
-The `_saveContractAndSov` function inserts contracts with `status: 'Draft'` (line 1027), but the database constraint `project_contracts_status_check` only allows `'Invited'`, `'Accepted'`, or `'Active'`. **This causes project creation to fail silently or throw an error.**
+### 1. `src/pages/CreateProjectNew.tsx` — Full-screen layout
+- Remove `max-w-5xl` container constraint — let the wizard use the full viewport width
+- Change main content from `col-span-9` to use all remaining space
+- On the **Scope step (step 3)**, hide the Card wrapper and let `ScopeQuestionsPanel` fill the full width so SOVs have room to breathe side-by-side
+- Keep the progress sidebar narrow (col-span-2 instead of col-span-3) to give more room
 
-**Fix:** Change `status: 'Draft'` to `status: 'Active'` in `_saveContractAndSov`.
+### 2. `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` — Fix dual SOV layout
+- Change the right-side SOV container from `xl:grid-cols-2` to `grid-cols-2` (always side-by-side when dual) since `xl` never triggers inside a half-width panel
+- Use `min-h-[calc(100vh-200px)]` to fill available height
+- Remove `max-h-[600px]` on the questions panel — use `flex-1 overflow-y-auto` instead
 
-### Bug 2: Contract direction is wrong for TC upstream contract
-When a TC creates a project, the upstream contract (GC→TC) is saved with `from_role: 'Trade Contractor'` and `to_role: 'General Contractor'`. Per the system's contract direction rules ("from" = contractor/invoice sender, "to" = client/payer), the GC→TC contract should have `from_role: 'Trade Contractor'` and `to_role: 'General Contractor'` — this is actually correct (TC bills GC). However the `from_org_id` is set to the TC org but `to_org_id` is null for both contracts. The GC and FC orgs aren't known yet at creation time, so this is expected — but should be documented.
-
-### Bug 3: `sovLines` in the hook always uses `contract_value` from answers — works correctly
-The `sovLines` memo calls `generateSOVLines(buildingType, answers)` which reads `answers.contract_value`. Since `setAnswer('contract_value', ...)` updates the answers state, the SOV lines do reflect the entered contract value. **This is wired correctly.**
-
-### Bug 4: TC SOV labeling is backwards
-The SOV labels say "GC → TC" and "TC → FC" which is correct from a billing/contract perspective. No bug here.
-
-### Bug 5: Review step shows `$0` for contract value (screenshot shows this)
-The review step reads `answers.contract_value` — if the user entered a value and it was stored correctly via `setAnswer`, this should work. The `$0` in the screenshot suggests the contract value wasn't entered or the step was skipped. Need to verify `canProceed` is enforcing contract entry — it does (case 1 checks `contract_value > 0`).
-
-## What I'll Fix
+### 3. `src/components/setup-wizard-v2/SOVLivePreview.tsx` — Already shows line items
+The SOV preview already renders individual line items with line number, description, percentage, and dollar amount. No changes needed here — the items just need more screen space to be visible, which the full-screen layout provides.
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSetupWizardV2.ts` | Fix contract `status: 'Draft'` → `status: 'Active'` in `_saveContractAndSov` |
-
-## TC Dual SOV Confirmation
-The dual SOV system is already implemented correctly:
-- **ContractsStep**: TC sees two inputs (GC contract + FC contract) ✓
-- **ScopeQuestionsPanel**: TC sees two SOV previews side-by-side with same percentages, different amounts ✓
-- **UnifiedReviewStep**: TC sees both contracts and SOVs in review ✓
-- **saveAll**: Creates two `project_contracts` + two `project_sov` + two sets of `project_sov_items` for TC ✓
-
-The only real bug preventing the system from working is the `'Draft'` status constraint violation.
+| `src/pages/CreateProjectNew.tsx` | Remove `max-w-5xl`, widen layout, slim sidebar to col-span-2 |
+| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Fix dual SOV grid breakpoint; remove height cap; fill viewport |
 
