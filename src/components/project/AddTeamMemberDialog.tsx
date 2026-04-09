@@ -178,7 +178,7 @@ export function AddTeamMemberDialog({
       setSearchLoading(true);
       const { data, error } = await supabase.rpc('search_existing_team_targets', {
         _query: searchQuery,
-        _project_id: projectId,
+        _project_id: projectId || '00000000-0000-0000-0000-000000000000',
         _limit: 10,
       });
 
