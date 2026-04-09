@@ -1,30 +1,54 @@
 
 
-# Project Info Page — Show Project Summary
+# Fix: GC Contract Direction Error
 
 ## Problem
-When a project is created through the new 5-step wizard, the "Project Info" sidebar page either hides the wizard (since SOV already exists) or shows only the SOV editor. There is no summary of what was defined during creation — building type, scope answers, contract values, team, etc.
+When a **GC** creates a project, the wizard sets `from_role = 'General Contractor'` and passes it to the contract insert. The database trigger `validate_contract_direction` rejects this because GC cannot be the invoicer/contractor — GC is always the **client** (payer).
 
-## Solution
-Replace the hidden wizard section with a read-only **Project Summary** view that displays all the data captured during project creation. This summary will pull from `project_setup_answers`, `projects`, `project_contracts`, and `project_members` to reconstruct and display the project's scope and configuration.
+The contract semantic is: `from_org = contractor who bills`, `to_org = client who pays`.
 
-## Changes
+## Fix
 
-### 1. Create `src/components/project-setup/ProjectInfoSummary.tsx`
-A new read-only summary component that shows:
-- **Project basics**: name, address, building type, start date
-- **Scope selections**: all setup answers grouped by section (reuse `WizardSummary` formatting logic)
-- **Contract overview**: upstream + downstream contract values, material responsibility
-- **Team**: list of project members with roles
-- Fetches data from `project_setup_answers`, `projects`, `project_contracts`, and `project_members` using existing queries/hooks
+### `src/hooks/useSetupWizardV2.ts` — lines 1128-1141
 
-### 2. Update `src/components/project-setup/ProjectSetupFlow.tsx`
-- When `wizardDone` is true, show `ProjectInfoSummary` above the SOV editor card instead of hiding the wizard section entirely
-- Keep the SOV editor card below as-is
-- For legacy projects where wizard is still needed, behavior stays unchanged
+When the creator is a **GC**, the single contract should represent **the future TC billing the GC**:
+- `from_role = 'Trade Contractor'` (the contractor who will bill — TBD)
+- `from_org_id = null` (TC not yet assigned)
+- `to_role = 'General Contractor'` (GC is the client/payer)
+- `to_org_id = creatorOrgId` (GC's org)
+
+Current code sets `fromRole` based on creator type and passes it directly. The fix reverses the direction for GC:
+
+```
+// Line ~1128-1141 becomes:
+const isGC = creatorOrgType === 'GC';
+
+if (isGC) {
+  // GC is the CLIENT. Contract = future TC → GC
+  primaryResult = await _saveContractAndSov(
+    pid, contractValue,
+    'Trade Contractor',      // from_role: TC bills
+    null,                    // from_org_id: TC not yet known
+    'General Contractor',    // to_role: GC pays
+    creatorOrgId || null,    // to_org_id: GC's org
+    'Framing SOV',
+    scopeData, answers, userId,
+  );
+} else if (isTC) {
+  // TC bills GC upstream
+  primaryResult = await _saveContractAndSov(
+    pid, contractValue,
+    'Trade Contractor', creatorOrgId || null,
+    'General Contractor', null,
+    'GC → TC SOV',
+    scopeData, answers, userId,
+  );
+}
+```
+
+The downstream FC contract (for TC projects) stays unchanged — it's already correct.
 
 | File | Change |
 |------|--------|
-| `src/components/project-setup/ProjectInfoSummary.tsx` | New component: read-only project summary with basics, scope, contracts, team |
-| `src/components/project-setup/ProjectSetupFlow.tsx` | Show `ProjectInfoSummary` when `wizardDone` is true instead of hiding the wizard section |
+| `src/hooks/useSetupWizardV2.ts` | Fix GC contract direction: GC is the `to_role` (client/payer), TC placeholder is `from_role` |
 
