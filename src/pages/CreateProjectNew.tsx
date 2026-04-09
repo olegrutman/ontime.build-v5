@@ -20,9 +20,9 @@ import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReview
 
 const UNIFIED_STEPS = [
   { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'contracts', label: 'Contracts', description: 'Contract values' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
-  { id: 'scope', label: 'Scope', description: 'Project scope questions' },
-  { id: 'contracts', label: 'Contracts', description: 'Values & SOV preview' },
+  { id: 'scope', label: 'Scope', description: 'Scope & live SOV' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ] as const;
 
