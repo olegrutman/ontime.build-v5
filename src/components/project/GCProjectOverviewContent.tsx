@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { ChevronRight, Pencil, X, UserPlus, Package, RotateCw, Loader2 } from 'lucide-react';
+import { resendProjectInvite } from '@/lib/inviteUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -339,11 +340,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const handleResend = async (member: typeof team[0]) => {
     setResending(member.id);
     try {
-      const { error } = await supabase
-        .from('project_invites')
-        .update({ created_at: new Date().toISOString() })
-        .eq('project_team_id', member.id);
-      if (error) throw error;
+      await resendProjectInvite(projectId, member.id);
+      fetchTeam();
     } catch {}
     setResending(null);
   };

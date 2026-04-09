@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { resendProjectInvite } from '@/lib/inviteUtils';
 import { Users, Package, UserPlus, RotateCw, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,12 +69,9 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
   const handleResend = async (member: TeamMember) => {
     setResending(member.id);
     try {
-      const { error } = await supabase
-        .from('project_invites')
-        .update({ created_at: new Date().toISOString() })
-        .eq('project_team_id', member.id);
-      if (error) throw error;
+      await resendProjectInvite(projectId, member.id);
       toast({ title: `Invitation resent to ${member.invited_email || member.invited_org_name || 'member'}` });
+      fetchData();
     } catch (err: any) {
       toast({ title: 'Failed to resend', description: err.message, variant: 'destructive' });
     } finally {
