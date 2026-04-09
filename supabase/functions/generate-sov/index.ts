@@ -120,9 +120,7 @@ serve(async (req) => {
       admin.from("project_profiles").select("*, project_types(name, slug, is_multifamily, is_single_family)").eq("project_id", project_id).maybeSingle(),
       admin.from("project_scope_selections").select("scope_item_id, scope_items(label, scope_sections(slug, label))").eq("project_id", project_id).eq("is_on", true),
       admin.from("project_team").select("user_id").eq("project_id", project_id).eq("user_id", user.id).eq("status", "Accepted").maybeSingle(),
-      contract_id
-        ? admin.from("project_sov").select("scope_snapshot").eq("project_id", project_id).eq("contract_id", contract_id).maybeSingle()
-        : admin.from("project_sov").select("scope_snapshot").eq("project_id", project_id).limit(1).maybeSingle(),
+      admin.from("project_sov").select("scope_snapshot").eq("project_id", project_id).not("scope_snapshot", "eq", "{}").limit(1).maybeSingle(),
     ]);
 
     if (!teamRes.data) {
