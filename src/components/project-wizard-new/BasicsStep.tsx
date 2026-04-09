@@ -3,11 +3,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Building2, User, Mail, Shield } from 'lucide-react';
-import { ProjectBasics, US_STATES, TeamMember, TEAM_ROLES, TRADES, TeamRole, Trade } from '@/types/projectWizard';
+import { Plus, Trash2, Building2, Shield } from 'lucide-react';
+import { ProjectBasics, US_STATES, TeamMember } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
+import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 
 interface BasicsStepProps {
   data: ProjectBasics;
@@ -20,40 +20,7 @@ interface BasicsStepProps {
 }
 
 export function BasicsStepNew({ data, onChange, team, onTeamChange, creatorOrgName, creatorRole, creatorOrgType }: BasicsStepProps) {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newMember, setNewMember] = useState({
-    companyName: '',
-    contactName: '',
-    contactEmail: '',
-    role: '' as TeamRole | '',
-    trade: '' as Trade | '',
-    tradeCustom: '',
-  });
-
-  // Determine which roles can be invited based on creator org type
-  const availableRoles: TeamRole[] = (() => {
-    if (creatorOrgType === 'GC') return ['Trade Contractor', 'Field Crew', 'Supplier'];
-    if (creatorOrgType === 'TC') return ['General Contractor', 'Field Crew', 'Supplier'];
-    return ['General Contractor', 'Trade Contractor', 'Field Crew', 'Supplier'];
-  })();
-
-  const needsTrade = newMember.role === 'Trade Contractor' || newMember.role === 'Field Crew';
-
-  const addMember = () => {
-    if (!newMember.companyName || !newMember.contactEmail || !newMember.role) return;
-    const member: TeamMember = {
-      id: crypto.randomUUID(),
-      companyName: newMember.companyName,
-      contactName: newMember.contactName,
-      contactEmail: newMember.contactEmail,
-      role: newMember.role as TeamRole,
-      trade: needsTrade ? (newMember.trade as Trade) || undefined : undefined,
-      tradeCustom: needsTrade && newMember.trade === 'Other' ? newMember.tradeCustom : undefined,
-    };
-    onTeamChange([...team, member]);
-    setNewMember({ companyName: '', contactName: '', contactEmail: '', role: '', trade: '', tradeCustom: '' });
-    setShowAddForm(false);
-  };
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const removeMember = (id: string) => {
     onTeamChange(team.filter(m => m.id !== id));
@@ -160,102 +127,11 @@ export function BasicsStepNew({ data, onChange, team, onTeamChange, creatorOrgNa
               Add contractors and crew to invite to this project.
             </p>
           </div>
-          {!showAddForm && (
-            <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Member
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Member
+          </Button>
         </div>
-
-        {/* Add member form */}
-        {showAddForm && (
-          <Card>
-            <CardContent className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Company Name *</Label>
-                  <Input
-                    placeholder="Company name"
-                    value={newMember.companyName}
-                    onChange={(e) => setNewMember(p => ({ ...p, companyName: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Role *</Label>
-                  <Select
-                    value={newMember.role}
-                    onValueChange={(v) => setNewMember(p => ({ ...p, role: v as TeamRole, trade: '', tradeCustom: '' }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                    <SelectContent>
-                      {availableRoles.map(r => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Contact Name</Label>
-                  <Input
-                    placeholder="Contact name"
-                    value={newMember.contactName}
-                    onChange={(e) => setNewMember(p => ({ ...p, contactName: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Contact Email *</Label>
-                  <Input
-                    type="email"
-                    placeholder="email@company.com"
-                    value={newMember.contactEmail}
-                    onChange={(e) => setNewMember(p => ({ ...p, contactEmail: e.target.value }))}
-                  />
-                </div>
-              </div>
-              {needsTrade && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Trade</Label>
-                    <Select
-                      value={newMember.trade}
-                      onValueChange={(v) => setNewMember(p => ({ ...p, trade: v as Trade }))}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select trade" /></SelectTrigger>
-                      <SelectContent>
-                        {TRADES.map(t => (
-                          <SelectItem key={t} value={t}>{t}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {newMember.trade === 'Other' && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Custom Trade</Label>
-                      <Input
-                        placeholder="Enter trade"
-                        value={newMember.tradeCustom}
-                        onChange={(e) => setNewMember(p => ({ ...p, tradeCustom: e.target.value }))}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="flex justify-end gap-2 pt-1">
-                <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>Cancel</Button>
-                <Button
-                  size="sm"
-                  onClick={addMember}
-                  disabled={!newMember.companyName || !newMember.contactEmail || !newMember.role}
-                >
-                  Add
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Members list */}
         {team.length > 0 ? (
@@ -285,12 +161,23 @@ export function BasicsStepNew({ data, onChange, team, onTeamChange, creatorOrgNa
               </div>
             ))}
           </div>
-        ) : !showAddForm ? (
+        ) : (
           <p className="text-sm text-muted-foreground text-center py-4">
             No team members added yet. You can add them now or after creating the project.
           </p>
-        ) : null}
+        )}
       </div>
+
+      <AddTeamMemberDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        creatorOrgType={creatorOrgType || null}
+        onMemberAdded={() => {}}
+        mode="collect"
+        onCollect={(member) => {
+          onTeamChange([...team, member]);
+        }}
+      />
     </div>
   );
 }

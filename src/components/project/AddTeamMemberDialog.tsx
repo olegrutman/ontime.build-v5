@@ -39,12 +39,17 @@ interface SearchResult {
   city_state: string | null;
 }
 
+import { TeamMember } from '@/types/projectWizard';
+
 interface AddTeamMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: string;
+  projectId?: string;
   creatorOrgType: OrgType | null;
   onMemberAdded: () => void;
+  /** 'direct' saves to DB (default). 'collect' returns data via onCollect without DB writes. */
+  mode?: 'direct' | 'collect';
+  onCollect?: (member: TeamMember) => void;
 }
 
 export function AddTeamMemberDialog({
@@ -53,6 +58,8 @@ export function AddTeamMemberDialog({
   projectId,
   creatorOrgType,
   onMemberAdded,
+  mode = 'direct',
+  onCollect,
 }: AddTeamMemberDialogProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'invite'>('search');
@@ -171,7 +178,7 @@ export function AddTeamMemberDialog({
       setSearchLoading(true);
       const { data, error } = await supabase.rpc('search_existing_team_targets', {
         _query: searchQuery,
-        _project_id: projectId,
+        _project_id: projectId || '00000000-0000-0000-0000-000000000000',
         _limit: 10,
       });
 
@@ -276,6 +283,24 @@ export function AddTeamMemberDialog({
       toast.error('Please select a trade');
       return;
     }
+
+    // Collect mode: return data without DB writes
+    if (mode === 'collect' && onCollect) {
+      onCollect({
+        id: crypto.randomUUID(),
+        companyName: selectedResult.org_name,
+        contactName: selectedResult.contact_name || '',
+        contactEmail: selectedResult.contact_email || '',
+        role: selectedRole,
+        trade: requiresTrade(selectedRole) ? selectedTrade : undefined,
+        orgId: selectedResult.org_id,
+        userId: selectedResult.contact_user_id || undefined,
+      });
+      onOpenChange(false);
+      return;
+    }
+
+    if (!projectId) return;
 
     setSaving(true);
     try {
@@ -407,6 +432,22 @@ export function AddTeamMemberDialog({
       toast.error('This user already exists. Use Search Existing instead.');
       return;
     }
+
+    // Collect mode: return data without DB writes
+    if (mode === 'collect' && onCollect) {
+      onCollect({
+        id: crypto.randomUUID(),
+        companyName: inviteForm.companyName,
+        contactName: inviteForm.contactName,
+        contactEmail: inviteForm.contactEmail,
+        role: inviteForm.role,
+        trade: requiresTrade(inviteForm.role) ? inviteForm.trade : undefined,
+      });
+      onOpenChange(false);
+      return;
+    }
+
+    if (!projectId) return;
 
     setSaving(true);
     try {
