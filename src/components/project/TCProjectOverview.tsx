@@ -540,6 +540,61 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             )}
           </div>
         </KpiCard>
+
+        {/* Card 9 — Team */}
+        <KpiCard accent={C.blue} icon="👥" iconBg={C.blueBg} label="PROJECT TEAM" value={team.length === acceptedTeam.length ? `${team.length} Members` : `${acceptedTeam.length}/${team.length} Members`} sub="Manage your project team" pills={team.length > 0 ? [{ type: 'pb', text: `${team.length} total` }] : [{ type: 'pm', text: 'No members' }]} idx={8}>
+          <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ marginBottom: 12 }}>
+              {team.map(member => {
+                const abbrev = roleAbbrev[member.role] || member.role;
+                const isInvited = member.status === 'Invited';
+                const isResending = resending === member.id;
+                return (
+                  <div key={member.id} className="group" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: roleDotColors[member.role] || C.muted, flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', width: 28 }}>{abbrev}</span>
+                    <span style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: isInvited ? C.faint : C.ink }}>{member.invited_org_name || 'Unknown'}</span>
+                      {member.invited_name && <span style={{ fontSize: '0.65rem', color: C.faint, lineHeight: 1.2 }}>{member.invited_name}</span>}
+                    </span>
+                    {isInvited && (
+                      <>
+                        <span style={{ fontSize: '0.58rem', fontWeight: 600, padding: '1px 6px', borderRadius: 8, border: `1px solid ${C.border}`, color: C.faint }}>Invited</span>
+                        <button
+                          disabled={isResending}
+                          onClick={() => handleResend(member)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: C.muted, display: 'flex', alignItems: 'center' }}
+                          title="Resend invitation"
+                        >
+                          {isResending ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+              {team.length === 0 && (
+                <div style={{ padding: 16, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No team members yet</div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setAddDialogOpen(true)}
+              style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...fontLabel }}
+            >
+              <UserPlus size={13} /> Invite Field Crew
+            </button>
+
+            <AddTeamMemberDialog
+              open={addDialogOpen}
+              onOpenChange={setAddDialogOpen}
+              projectId={projectId}
+              creatorOrgType={viewerOrgType}
+              onMemberAdded={() => fetchTeam()}
+            />
+          </div>
+        </KpiCard>
       </div>
 
       {/* Cash Flow Ladder */}
