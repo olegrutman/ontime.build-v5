@@ -20,9 +20,9 @@ import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReview
 
 const UNIFIED_STEPS = [
   { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'contracts', label: 'Contracts', description: 'Contract values' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
-  { id: 'scope', label: 'Scope', description: 'Project scope questions' },
-  { id: 'contracts', label: 'Contracts', description: 'Values & SOV preview' },
+  { id: 'scope', label: 'Scope', description: 'Scope & live SOV' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ] as const;
 
@@ -67,9 +67,7 @@ export default function CreateProjectNew() {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
-      case 1: return !!wizard.buildingType;
-      case 2: return true; // scope questions are optional
-      case 3: {
+      case 1: {
         const hasGcContract = typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
         if (isTC) {
           const hasFcContract = typeof wizard.answers.fc_contract_value === 'number' && wizard.answers.fc_contract_value > 0;
@@ -77,6 +75,8 @@ export default function CreateProjectNew() {
         }
         return hasGcContract;
       }
+      case 2: return !!wizard.buildingType;
+      case 3: return true; // scope questions are optional
       case 4: return true;
       default: return false;
     }
@@ -207,32 +207,32 @@ export default function CreateProjectNew() {
         );
       case 1:
         return (
-          <BuildingTypeSelector
-            selected={wizard.buildingType}
-            onSelect={(bt) => wizard.selectBuildingType(bt)}
-          />
-        );
-      case 2:
-        return wizard.buildingType ? (
-          <ScopeQuestionsPanel
-            buildingType={wizard.buildingType}
-            answers={wizard.answers}
-            setAnswer={wizard.setAnswer}
-            visibleQuestions={wizard.visibleQuestions}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Please go back and select a building type first.
-          </p>
-        );
-      case 3:
-        return wizard.buildingType ? (
           <ContractsStep
             buildingType={wizard.buildingType}
             answers={wizard.answers}
             setAnswer={wizard.setAnswer}
             sovLines={wizard.sovLines}
             visibleQuestions={wizard.visibleQuestions}
+            creatorOrgType={creatorOrgType}
+          />
+        );
+      case 2:
+        return (
+          <BuildingTypeSelector
+            selected={wizard.buildingType}
+            onSelect={(bt) => wizard.selectBuildingType(bt)}
+          />
+        );
+      case 3:
+        return wizard.buildingType ? (
+          <ScopeQuestionsPanel
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            visibleQuestions={wizard.visibleQuestions}
+            sovLines={wizard.sovLines}
+            contractValue={typeof wizard.answers.contract_value === 'number' ? wizard.answers.contract_value : 0}
+            fcContractValue={typeof wizard.answers.fc_contract_value === 'number' ? wizard.answers.fc_contract_value : 0}
             creatorOrgType={creatorOrgType}
           />
         ) : (
