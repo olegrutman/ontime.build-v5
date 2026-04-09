@@ -152,6 +152,8 @@ export default function CreateProjectNew() {
             .from('project_team')
             .insert({
               project_id: pid,
+              org_id: member.orgId || null,
+              user_id: member.userId || null,
               role: member.role,
               trade: member.trade,
               trade_custom: member.tradeCustom,
