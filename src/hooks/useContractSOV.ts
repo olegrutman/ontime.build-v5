@@ -342,6 +342,30 @@ export async function getExistingSOVItems(projectId: string): Promise<{item_name
   return items?.length ? items : null;
 }
 
+// Helper: find the sibling SOV on the same project (different contract)
+async function findSiblingSov(
+  sovId: string,
+  allSovs: ContractSOV[],
+  allSovItems: Record<string, ContractSOVItem[]>,
+  allContracts: ProjectContract[]
+): Promise<{ sibSovId: string; sibContractValue: number; sibItems: ContractSOVItem[] } | null> {
+  const sov = allSovs.find(s => s.id === sovId);
+  if (!sov) return null;
+  
+  // Find another SOV on the same project with a different contract
+  const sibling = allSovs.find(s => s.id !== sovId && s.contract_id !== sov.contract_id);
+  if (!sibling) return null;
+  
+  const sibContract = allContracts.find(c => c.id === sibling.contract_id);
+  if (!sibContract) return null;
+  
+  return {
+    sibSovId: sibling.id,
+    sibContractValue: sibContract.contract_sum,
+    sibItems: allSovItems[sibling.id] || []
+  };
+}
+
 export function useContractSOV(projectId: string | undefined) {
   const { userOrgRoles, user } = useAuth();
   const queryClient = useQueryClient();
