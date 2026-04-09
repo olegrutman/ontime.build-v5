@@ -1,37 +1,29 @@
 
 
-# Fix: Contract Values Wiped + Missing Second SOV
+# Fix: `project_setup_answers` NOT NULL constraint violation
 
-## Root Cause
-
-**`selectBuildingType` on line 1002-1003 of `useSetupWizardV2.ts` calls `setAnswers({})` — this wipes ALL answers, including `contract_value` and `fc_contract_value` entered in Step 1 (Contracts).**
-
-Step order: Basics → **Contracts** (enter $) → **Building Type** (wipes $) → Scope → Review ($0)
-
-This single bug causes both reported issues:
-1. Contract value shows $0 in Review
-2. Second SOV missing (because `fcContractValue` is 0, the TC→FC SOV condition `isTC && fcContractValue > 0` is false)
+## Problem
+Line 1084-1089 maps ALL `answers` entries into rows for `project_setup_answers`, but some answer values are `null` or `undefined` (e.g., unanswered questions). The `value` column has a NOT NULL constraint, causing the insert to fail.
 
 ## Fix
 
 ### `src/hooks/useSetupWizardV2.ts`
-- Change `selectBuildingType` to preserve `contract_value`, `fc_contract_value`, and `material_responsibility` when clearing scope answers:
+- Filter out entries with `null`/`undefined` values before building `answerRows`:
 
 ```typescript
-const selectBuildingType = useCallback((bt: BuildingType) => {
-  setBuildingType(bt);
-  // Preserve contract values when resetting scope answers
-  setAnswers(prev => ({
-    contract_value: prev.contract_value,
-    fc_contract_value: prev.fc_contract_value,
-    material_responsibility: prev.material_responsibility,
+const answerRows = Object.entries(answers)
+  .filter(([, value]) => value !== null && value !== undefined)
+  .map(([field_key, value]) => ({
+    project_id: pid,
+    field_key,
+    value,
+    updated_at: new Date().toISOString(),
   }));
-}, []);
 ```
 
-No other files need changes — the Review step and SOV generation already read from `answers.contract_value` correctly.
+Single line change — everything else stays the same.
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSetupWizardV2.ts` | Preserve contract fields in `selectBuildingType` instead of wiping all answers |
+| `src/hooks/useSetupWizardV2.ts` | Filter out null/undefined values before upserting to `project_setup_answers` |
 
