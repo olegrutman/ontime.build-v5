@@ -184,9 +184,17 @@ interface Props {
   onNavigate: (tab: string) => void;
 }
 
+const roleDotColors: Record<string, string> = {
+  'General Contractor': C.blue, 'Trade Contractor': C.green, 'Field Crew': C.navy, 'Supplier': C.amber,
+};
+const roleAbbrev: Record<string, string> = {
+  'General Contractor': 'GC', 'Trade Contractor': 'TC', 'Field Crew': 'FC', 'Supplier': 'SUP',
+};
+
 export function TCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
 
   // ─── GC Contract (upstream, read-only) ───
   const gcContract = financials.upstreamContract;
