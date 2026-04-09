@@ -1050,12 +1050,36 @@ export function useContractSOV(projectId: string | undefined) {
       
       if (error) throw error;
       
+      // Find the edited item's sort_order for sibling matching
+      const editedItem = (sovItems[sovId] || []).find(i => i.id === itemId);
+      
       setSovItems(prev => ({
         ...prev,
         [sovId]: prev[sovId]?.map(item =>
           item.id === itemId ? { ...item, item_name: newName } : item
         ) || []
       }));
+
+      // Mirror name to sibling SOV
+      if (editedItem) {
+        const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+        if (sibling) {
+          const sibItem = sibling.sibItems.find(i => i.sort_order === editedItem.sort_order);
+          if (sibItem) {
+            await supabase
+              .from('project_sov_items')
+              .update({ item_name: newName })
+              .eq('id', sibItem.id);
+            
+            setSovItems(prev => ({
+              ...prev,
+              [sibling.sibSovId]: prev[sibling.sibSovId]?.map(item =>
+                item.id === sibItem.id ? { ...item, item_name: newName } : item
+              ) || []
+            }));
+          }
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -1065,7 +1089,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [sovs, contracts, sovItems]);
 
   // Add item to SOV (blocked if locked)
   const addItem = useCallback(async (sovId: string, itemName: string) => {
