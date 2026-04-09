@@ -433,6 +433,22 @@ export function AddTeamMemberDialog({
       return;
     }
 
+    // Collect mode: return data without DB writes
+    if (mode === 'collect' && onCollect) {
+      onCollect({
+        id: crypto.randomUUID(),
+        companyName: inviteForm.companyName,
+        contactName: inviteForm.contactName,
+        contactEmail: inviteForm.contactEmail,
+        role: inviteForm.role,
+        trade: requiresTrade(inviteForm.role) ? inviteForm.trade : undefined,
+      });
+      onOpenChange(false);
+      return;
+    }
+
+    if (!projectId) return;
+
     setSaving(true);
     try {
       // Get current user's org info for contract creation
