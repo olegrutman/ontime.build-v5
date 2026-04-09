@@ -1,37 +1,45 @@
 
 
-# Fix: TC Can't See Contract Data or SOV on Overview
+# Coordinate FC Contract Card with Team Card — Auto-Invite on Save
 
-## Root Cause
-The upstream contract (TC→GC, $250K) has `from_org_id = NULL`. The RLS policy on `project_contracts` only allows access when the user's org matches `from_org_id` or `to_org_id`. Since the TC's org (`ab07e031`) isn't in either column, the query returns empty -- no contract, no SOV, no financial data.
+## What I Understand
 
-The SOV is linked to this same contract (`contract_id = 1df26679`), so it's also invisible to the TC.
+Right now the FC Contract card (Card 2) has a plain text "Field Crew" field. You want:
+1. Replace the "Field Crew" text field with a **search input** (like the existing `AddTeamMemberDialog` search) so the TC can find an FC org from the directory
+2. TC enters the **contract value** in the same card
+3. When TC clicks **Save FC Contract**, if the selected FC isn't already on the team, the system **automatically creates the invite** (project_team + project_invites + contract record) — no separate dialog needed
+4. The FC immediately appears in the **Team Card** (Card 9) with "Invited" status
 
-## Fix
+## Plan
 
-### 1. DB Migration: Repair the broken contract data
-Update the upstream contract's `from_org_id` to the TC's org id. This is a one-time data repair for legacy records created before the org_id fix was deployed.
+### 1. Add FC search state to `TCProjectOverview.tsx`
+- Add state for `selectedFcOrg` (org_id, org_name, contact info) from search results
+- Add inline search using the existing `search_existing_team_targets` RPC (same as AddTeamMemberDialog uses)
+- Pre-populate with existing FC if one is already on the contract
 
-```sql
-UPDATE project_contracts
-SET from_org_id = 'ab07e031-1ea7-4ee9-be15-8c1d7a19dcd6'
-WHERE id = '1df26679-8a06-4c72-911d-95b15e4e6726'
-  AND from_org_id IS NULL;
-```
+### 2. Replace the "Field Crew" EditField with a search-enabled input
+- When no FC is selected and no contract exists: show a search input with dropdown results
+- When an FC is already assigned: show the name with an option to change
+- Style it to match the card's existing design tokens (amber/navy palette)
 
-### 2. DB Migration: Add a safety trigger to prevent future NULL org_ids
-Create a trigger on `project_contracts` that auto-resolves `from_org_id` or `to_org_id` from `project_team` when they are inserted as NULL. This prevents recurrence.
+### 3. Modify `saveFcContract` to auto-invite
+When saving, if a new FC org was selected that isn't already in `project_team`:
+- Insert into `project_team` (role: Field Crew, status: Invited)
+- Insert into `project_invites`
+- Create/update the `project_contracts` record with the selected FC org as `from_org_id` and the contract value
+- Refresh the team list so Card 9 updates immediately
 
-### Expected Outcome
-Once `from_org_id` is set, the existing RLS policy will grant the TC access to the contract. The `useProjectFinancials` hook will then return the upstream contract data, and the TC overview will show:
-- Contract value ($250K)
-- SOV items (linked to that contract)
-- Margin calculations
-- All KPI cards populated with real data
+If the FC is already on the team, just update the contract value as before.
 
-| Change | Detail |
-|--------|--------|
-| DB Migration | Set `from_org_id` on the broken contract + add safety trigger for future inserts |
+### 4. Keep Team Card (Card 9) in sync
+- After save, call `fetchTeam()` to refresh the team list
+- The FC will show with "Invited" badge and resend button
 
-No UI code changes needed -- the TC overview already has all the rendering logic, it's just not receiving data due to the RLS block.
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/project/TCProjectOverview.tsx` | Add FC org search in Card 2, auto-invite logic in `saveFcContract`, refresh team on save |
+
+No database changes needed — all tables and RLS policies already exist.
 
