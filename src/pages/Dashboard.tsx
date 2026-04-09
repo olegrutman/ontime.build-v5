@@ -61,8 +61,14 @@ export default function Dashboard() {
   useEffect(() => {
     if (!dataLoading && !hasInitialized.current) {
       hasInitialized.current = true;
-      if (statusCounts.setup > 0) {
+      if (statusCounts.active > 0) {
+        setStatusFilter('active');
+      } else if (statusCounts.setup > 0) {
         setStatusFilter('setup');
+      } else {
+        const order: ProjectStatusFilter[] = ['completed', 'on_hold', 'archived'];
+        const first = order.find(s => statusCounts[s] > 0);
+        if (first) setStatusFilter(first);
       }
     }
   }, [dataLoading, statusCounts]);
