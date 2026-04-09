@@ -1024,7 +1024,7 @@ export function useSetupWizardV2(projectId?: string) {
       to_role: toRole,
       trade: null,
       material_responsibility: sovLineAnswers.material_responsibility || null,
-      status: 'Draft',
+      status: 'Active',
     }).select('id').single();
     if (cErr) throw cErr;
     const contractId = newContract.id;
