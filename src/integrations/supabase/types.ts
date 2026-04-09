@@ -5958,6 +5958,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      resend_project_invite: {
+        Args: { _project_id: string; _team_member_id: string }
+        Returns: Json
+      }
       search_catalog: {
         Args: {
           category_filter?: string
