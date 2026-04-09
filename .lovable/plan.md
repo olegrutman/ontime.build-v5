@@ -1,25 +1,28 @@
 
 
-# Make Wizard Full-Screen + Show SOV Line Items
+# Fix Side-by-Side SOVs — Bugs Found
+
+## Root Causes
+
+### Bug 1: AppLayout constrains width to max-w-7xl (1280px)
+`src/components/app-shell/AppShell.tsx` line 81 wraps content in `max-w-7xl mx-auto` (1280px max). The `CreateProjectNew` page does NOT pass `fullWidth` to `AppLayout`, so the entire wizard is capped at 1280px. After the sidebar (col-span-2 = ~213px), card padding (48px), and the questions/SOV split, each SOV panel gets only ~230px — far too narrow to be useful.
+
+**Fix:** Pass `fullWidth` to `AppLayout` in `CreateProjectNew.tsx`.
+
+### Bug 2: SOV containers have no defined height
+`SOVLivePreview` uses `h-full flex flex-col`, but its parent containers never define a height. The `flex-1 overflow-y-auto` scroll area inside the preview collapses to zero height because there's no height constraint from above.
+
+**Fix:** Give the SOV wrapper divs in `ScopeQuestionsPanel` an explicit `min-h-[400px]` and `h-[calc(100vh-280px)]` so the previews have room to render.
+
+### Bug 3: Single SOV has no wrapper when showDualSov is false
+Line 106: when `showDualSov` is false, the className is empty string `''`. The single SOV div has no layout structure — it just floats as a bare div. This inconsistency means the single SOV might not fill the available space properly.
+
+**Fix:** Always wrap SOVs in a consistent grid container.
 
 ## Changes
 
-### 1. `src/pages/CreateProjectNew.tsx` — Full-screen layout
-- Remove `max-w-5xl` container constraint — let the wizard use the full viewport width
-- Change main content from `col-span-9` to use all remaining space
-- On the **Scope step (step 3)**, hide the Card wrapper and let `ScopeQuestionsPanel` fill the full width so SOVs have room to breathe side-by-side
-- Keep the progress sidebar narrow (col-span-2 instead of col-span-3) to give more room
-
-### 2. `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` — Fix dual SOV layout
-- Change the right-side SOV container from `xl:grid-cols-2` to `grid-cols-2` (always side-by-side when dual) since `xl` never triggers inside a half-width panel
-- Use `min-h-[calc(100vh-200px)]` to fill available height
-- Remove `max-h-[600px]` on the questions panel — use `flex-1 overflow-y-auto` instead
-
-### 3. `src/components/setup-wizard-v2/SOVLivePreview.tsx` — Already shows line items
-The SOV preview already renders individual line items with line number, description, percentage, and dollar amount. No changes needed here — the items just need more screen space to be visible, which the full-screen layout provides.
-
 | File | Change |
 |------|--------|
-| `src/pages/CreateProjectNew.tsx` | Remove `max-w-5xl`, widen layout, slim sidebar to col-span-2 |
-| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Fix dual SOV grid breakpoint; remove height cap; fill viewport |
+| `src/pages/CreateProjectNew.tsx` | Add `fullWidth` prop to `AppLayout` |
+| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Fix SOV container: always use grid wrapper, add explicit height constraints, ensure dual SOVs each get proper height |
 
