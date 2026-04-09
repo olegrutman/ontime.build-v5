@@ -293,21 +293,25 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
         // Insert project_participants for the contact user
         if (targetOrg.contact_user_id) {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
           await supabase.from('project_participants').insert({
             project_id: projectId,
-            user_id: targetOrg.contact_user_id,
-            org_id: targetOrg.org_id,
-            role: 'FC',
+            organization_id: targetOrg.org_id,
+            role: 'FC' as const,
             invite_status: 'INVITED',
+            invited_by: currentUser?.id || '',
           });
 
           // Send notification
           await supabase.from('notifications').insert({
-            user_id: targetOrg.contact_user_id,
-            type: 'project_invite',
+            recipient_user_id: targetOrg.contact_user_id,
+            recipient_org_id: targetOrg.org_id,
+            type: 'PROJECT_INVITE' as const,
             title: 'Project Invitation',
-            message: `You have been invited to join a project as Field Crew`,
-            data: { project_id: projectId },
+            body: `You have been invited to join a project as Field Crew`,
+            entity_id: projectId,
+            entity_type: 'project',
+            action_url: `/project/${projectId}/overview`,
           });
         }
 
@@ -483,7 +487,52 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label="FC CONTRACT (YOU SET THIS)" value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${fcName} · ${tcMarginPct}% TC margin` : 'No FC contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
           <div style={{ padding: '12px 16px' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>FC Contract Terms</div>
-            <EditField label="Field Crew" value={fcDraft.crew} onSave={(v) => updateFcField('crew', v)} />
+            {/* FC Org Search */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}`, ...fontLabel }}>
+              <span style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 600, minWidth: 130, paddingTop: 4 }}>Field Crew</span>
+              {selectedFcOrg ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'flex-end' }}>
+                  <Building2 size={14} style={{ color: C.navy }} />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink }}>{selectedFcOrg.org_name}</span>
+                  <button onClick={() => { setSelectedFcOrg(null); setFcSearchQuery(''); setFcDirty(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.faint, padding: 2 }}><X size={14} /></button>
+                </div>
+              ) : (
+                <div ref={fcSearchRef} style={{ position: 'relative', flex: 1 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: C.faint }} />
+                    <input
+                      value={fcSearchQuery}
+                      onChange={(e) => setFcSearchQuery(e.target.value)}
+                      onFocus={() => fcSearchQuery.length >= 2 && setFcSearchOpen(true)}
+                      placeholder="Search FC organizations..."
+                      style={{ width: '100%', padding: '4px 8px 4px 28px', borderRadius: 6, border: `1px solid ${C.amber}`, fontSize: '0.76rem', outline: 'none', ...fontLabel }}
+                    />
+                    {fcSearchLoading && <Loader2 size={14} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: C.faint, animation: 'spin 1s linear infinite' }} />}
+                  </div>
+                  {fcSearchOpen && fcSearchResults.length > 0 && (
+                    <div style={{ position: 'absolute', zIndex: 50, width: '100%', marginTop: 4, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.1)', maxHeight: 200, overflowY: 'auto' }}>
+                      {fcSearchResults.map((r) => (
+                        <button key={r.org_id} type="button" onClick={() => { setSelectedFcOrg(r); setFcSearchQuery(''); setFcSearchOpen(false); setFcDirty(true); }}
+                          style={{ width: '100%', padding: '8px 12px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', borderBottom: `1px solid ${C.border}`, fontSize: '0.76rem', ...fontLabel }}
+                          className="hover:bg-[#F7F9FC]">
+                          <Building2 size={14} style={{ color: C.navy, flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: C.ink }}>{r.org_name}</div>
+                            {r.contact_name && <div style={{ fontSize: '0.64rem', color: C.muted }}>{r.contact_name}{r.contact_email ? ` · ${r.contact_email}` : ''}</div>}
+                          </div>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: C.navy, color: '#fff' }}>FC</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {fcSearchOpen && fcSearchResults.length === 0 && fcSearchQuery.length >= 2 && !fcSearchLoading && (
+                    <div style={{ position: 'absolute', zIndex: 50, width: '100%', marginTop: 4, padding: '10px 12px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.1)', fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
+                      No FC organizations found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <EditField label="Contract Value" value={`$${draftFcVal.toLocaleString()}`} onSave={(v) => updateFcField('value', v.replace(/[^0-9]/g, ''))} type="number" />
             <EditField label="Contract Type" value={fcDraft.type} onSave={(v) => updateFcField('type', v)} type="select" />
             <EditField label="Scope Summary" value={fcDraft.scope || 'Click to add scope'} onSave={(v) => updateFcField('scope', v)} type="textarea" />
