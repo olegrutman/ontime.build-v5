@@ -1126,19 +1126,32 @@ export function useSetupWizardV2(projectId?: string) {
     } as any, { onConflict: 'project_id,field_key' });
 
     // ── Create contract(s) + SOV(s) ──
-    const fromRole = creatorOrgType === 'GC' ? 'General Contractor'
-      : creatorOrgType === 'TC' ? 'Trade Contractor'
-      : creatorOrgType === 'FC' ? 'Field Crew'
-      : 'Trade Contractor';
+    const isGC = creatorOrgType === 'GC';
 
-    // Primary contract: TC bills GC (from=TC, to=GC) or GC's single contract
-    const primaryResult = await _saveContractAndSov(
-      pid, contractValue, fromRole, creatorOrgId || null,
-      isTC ? 'General Contractor' : null,
-      isTC ? null : null, // to_org_id: GC not yet known for TC upstream
-      isTC ? 'GC → TC SOV' : 'Framing SOV',
-      scopeData, answers, userId,
-    );
+    let primaryResult: { contractId: string; sovId: string };
+
+    if (isGC) {
+      // GC is the CLIENT (payer). Contract = future TC → GC
+      primaryResult = await _saveContractAndSov(
+        pid, contractValue,
+        'Trade Contractor',      // from_role: TC bills (TBD)
+        null,                    // from_org_id: TC not yet known
+        'General Contractor',    // to_role: GC pays
+        creatorOrgId || null,    // to_org_id: GC's org
+        'Framing SOV',
+        scopeData, answers, userId,
+      );
+    } else {
+      // TC (or FC) is the contractor billing upstream
+      const fromRole = isTC ? 'Trade Contractor' : 'Field Crew';
+      primaryResult = await _saveContractAndSov(
+        pid, contractValue,
+        fromRole, creatorOrgId || null,
+        'General Contractor', null,
+        isTC ? 'GC → TC SOV' : 'Framing SOV',
+        scopeData, answers, userId,
+      );
+    }
 
     // If TC, also create downstream FC contract + SOV
     // FC bills TC: from=FC (not yet known), to=TC (creator)
