@@ -67,9 +67,7 @@ export default function CreateProjectNew() {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
-      case 1: return !!wizard.buildingType;
-      case 2: return true; // scope questions are optional
-      case 3: {
+      case 1: {
         const hasGcContract = typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
         if (isTC) {
           const hasFcContract = typeof wizard.answers.fc_contract_value === 'number' && wizard.answers.fc_contract_value > 0;
@@ -77,6 +75,8 @@ export default function CreateProjectNew() {
         }
         return hasGcContract;
       }
+      case 2: return !!wizard.buildingType;
+      case 3: return true; // scope questions are optional
       case 4: return true;
       default: return false;
     }
