@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { ChevronRight, Pencil, X, UserPlus, Package } from 'lucide-react';
+import { ChevronRight, Pencil, X, UserPlus, Package, RotateCw, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -334,6 +334,20 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   const acceptedTeam = team.filter(m => m.status === 'Accepted');
 
+  // ─── Resend invite ───
+  const [resending, setResending] = useState<string | null>(null);
+  const handleResend = async (member: typeof team[0]) => {
+    setResending(member.id);
+    try {
+      const { error } = await supabase
+        .from('project_invites')
+        .update({ created_at: new Date().toISOString() })
+        .eq('project_team_id', member.id);
+      if (error) throw error;
+    } catch {}
+    setResending(null);
+  };
+
   // ─── Materials ───
   const matEstimate = financials.materialEstimate || financials.approvedEstimateSum || 0;
   const matOrdered = financials.materialOrdered;
@@ -522,16 +536,34 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         </KpiCard>
 
         {/* Card 8 — Team */}
-        <KpiCard accent={C.blue} icon="👥" iconBg={C.blueBg} label="PROJECT TEAM" value={`${acceptedTeam.length} Members`} sub={materialResp ? `Materials: ${materialResp === 'GC' ? 'General Contractor' : 'Trade Contractor'}` : 'Material owner not set'} pills={designatedSupplier ? [{ type: 'pa', text: 'Supplier set' }] : [{ type: 'pm', text: 'No supplier' }]} idx={7}>
+        <KpiCard accent={C.blue} icon="👥" iconBg={C.blueBg} label="PROJECT TEAM" value={team.length === acceptedTeam.length ? `${team.length} Members` : `${acceptedTeam.length}/${team.length} Members`} sub={materialResp ? `Materials: ${materialResp === 'GC' ? 'General Contractor' : 'Trade Contractor'}` : 'Material owner not set'} pills={designatedSupplier ? [{ type: 'pa', text: 'Supplier set' }] : [{ type: 'pm', text: 'No supplier' }]} idx={7}>
           <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ marginBottom: 12 }}>
-              {acceptedTeam.map(member => {
+              {team.map(member => {
                 const abbrev = roleAbbrev[member.role] || member.role;
+                const isInvited = member.status === 'Invited';
+                const isResending = resending === member.id;
                 return (
-                  <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+                  <div key={member.id} className="group" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: roleDotColors[member.role] || C.muted, flexShrink: 0 }} />
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', width: 28 }}>{abbrev}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: C.ink, flex: 1 }}>{member.invited_org_name || 'Unknown'}</span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: isInvited ? C.faint : C.ink, flex: 1 }}>{member.invited_org_name || 'Unknown'}</span>
+                    {isInvited && (
+                      <>
+                        <span style={{ fontSize: '0.58rem', fontWeight: 600, padding: '1px 6px', borderRadius: 8, border: `1px solid ${C.border}`, color: C.faint }}>Invited</span>
+                        {canInvite && (
+                          <button
+                            disabled={isResending}
+                            onClick={() => handleResend(member)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: C.muted, display: 'flex', alignItems: 'center' }}
+                            title="Resend invitation"
+                          >
+                            {isResending ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />}
+                          </button>
+                        )}
+                      </>
+                    )}
                     {materialResp === abbrev && <Package size={12} style={{ color: C.amber }} />}
                   </div>
                 );
