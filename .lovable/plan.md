@@ -1,53 +1,38 @@
 
 
-# Move Contracts After Basics + Live Side-by-Side SOVs During Scope
+# Project Setup Analysis — Bugs & Fixes
 
-## What You'll See
+## Bugs Found
 
-**New 5-step flow:**
-```text
-Step 1: Project Basics + Team
-Step 2: Contracts (enter dollar amounts up front — TC sees two inputs)
-Step 3: Building Type
-Step 4: Scope (split screen: questions left, live dual SOV right — updating as you answer)
-Step 5: Review
-```
+### Bug 1: Contract status constraint violation (CRITICAL)
+The `_saveContractAndSov` function inserts contracts with `status: 'Draft'` (line 1027), but the database constraint `project_contracts_status_check` only allows `'Invited'`, `'Accepted'`, or `'Active'`. **This causes project creation to fail silently or throw an error.**
 
-**Step 2 (Contracts):** Simple — enter contract values. No SOV preview here yet because there's no building type or scope to generate from. GC sees one input, TC sees two (GC contract + FC contract).
+**Fix:** Change `status: 'Draft'` to `status: 'Active'` in `_saveContractAndSov`.
 
-**Step 4 (Scope):** This is where the magic happens. Split-screen layout:
-- **Left side:** Scope questions (structure, roof, envelope, etc.)
-- **Right side:** Live SOV preview(s) that build out as you answer each question
-  - GC creator: one SOV
-  - TC creator: **two SOVs side by side** (GC→TC and TC→FC) with same percentages, different dollar amounts from step 2
+### Bug 2: Contract direction is wrong for TC upstream contract
+When a TC creates a project, the upstream contract (GC→TC) is saved with `from_role: 'Trade Contractor'` and `to_role: 'General Contractor'`. Per the system's contract direction rules ("from" = contractor/invoice sender, "to" = client/payer), the GC→TC contract should have `from_role: 'Trade Contractor'` and `to_role: 'General Contractor'` — this is actually correct (TC bills GC). However the `from_org_id` is set to the TC org but `to_org_id` is null for both contracts. The GC and FC orgs aren't known yet at creation time, so this is expected — but should be documented.
 
-The SOVs grow and update in front of your eyes as you toggle floors, basement, roof options, etc.
+### Bug 3: `sovLines` in the hook always uses `contract_value` from answers — works correctly
+The `sovLines` memo calls `generateSOVLines(buildingType, answers)` which reads `answers.contract_value`. Since `setAnswer('contract_value', ...)` updates the answers state, the SOV lines do reflect the entered contract value. **This is wired correctly.**
 
-## Technical Changes
+### Bug 4: TC SOV labeling is backwards
+The SOV labels say "GC → TC" and "TC → FC" which is correct from a billing/contract perspective. No bug here.
 
-### `src/pages/CreateProjectNew.tsx`
-- Reorder steps: basics → contracts → building_type → scope → review
-- Update step indices in `canProceed()` and `renderStep()`
-- Contracts validation moves to step index 1, building type to index 2, scope to index 3
+### Bug 5: Review step shows `$0` for contract value (screenshot shows this)
+The review step reads `answers.contract_value` — if the user entered a value and it was stored correctly via `setAnswer`, this should work. The `$0` in the screenshot suggests the contract value wasn't entered or the step was skipped. Need to verify `canProceed` is enforcing contract entry — it does (case 1 checks `contract_value > 0`).
 
-### `src/components/project-wizard-new/ContractsStep.tsx`
-- Remove SOV preview from this step (no building type selected yet)
-- Keep just the contract value inputs + material responsibility question
-- GC: one input. TC: two inputs side by side
-
-### `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx`
-- Add split-screen layout: questions on the left, SOV preview(s) on the right
-- Accept `sovLines`, `contractValue`, `fcContractValue`, and `creatorOrgType` as new props
-- For TC: render two `SOVLivePreview` components side by side labeled "GC → TC" and "TC → FC"
-- For GC: render one `SOVLivePreview`
-- On mobile: stack vertically or use tabs
-
-### `src/components/project-wizard-new/UnifiedReviewStep.tsx`
-- No structural changes needed — already shows dual SOVs for TC
+## What I'll Fix
 
 | File | Change |
 |------|--------|
-| `src/pages/CreateProjectNew.tsx` | Reorder steps: basics → contracts → building_type → scope → review |
-| `src/components/project-wizard-new/ContractsStep.tsx` | Remove SOV preview (not available yet at step 2) |
-| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Add split-screen with live SOV preview(s); dual side-by-side for TC |
+| `src/hooks/useSetupWizardV2.ts` | Fix contract `status: 'Draft'` → `status: 'Active'` in `_saveContractAndSov` |
+
+## TC Dual SOV Confirmation
+The dual SOV system is already implemented correctly:
+- **ContractsStep**: TC sees two inputs (GC contract + FC contract) ✓
+- **ScopeQuestionsPanel**: TC sees two SOV previews side-by-side with same percentages, different amounts ✓
+- **UnifiedReviewStep**: TC sees both contracts and SOVs in review ✓
+- **saveAll**: Creates two `project_contracts` + two `project_sov` + two sets of `project_sov_items` for TC ✓
+
+The only real bug preventing the system from working is the `'Draft'` status constraint violation.
 
