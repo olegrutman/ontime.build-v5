@@ -302,7 +302,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
 
   // ─── Team data ───
-  const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; status: string }[]>([]);
+  const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
   const [materialResp, setMaterialResp] = useState<string | null>(null);
   const [designatedSupplier, setDesignatedSupplier] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
