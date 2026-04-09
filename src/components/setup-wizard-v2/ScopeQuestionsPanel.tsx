@@ -103,8 +103,8 @@ export function ScopeQuestionsPanel({
       </div>
 
       {/* Right: Live SOV preview(s) */}
-      <div className={`grid gap-3 ${showDualSov ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-        <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col min-h-[400px] h-[calc(100vh-280px)]">
+      <div className="flex flex-col gap-3">
+        <div className={`border border-border rounded-lg overflow-hidden bg-card flex flex-col ${showDualSov ? 'h-[calc(50vh-120px)]' : 'h-[calc(100vh-280px)]'}`}>
           <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
             <p className="text-xs font-medium text-muted-foreground">
               {isTC ? 'GC → TC SOV' : 'SOV Preview'}
@@ -116,7 +116,7 @@ export function ScopeQuestionsPanel({
         </div>
 
         {showDualSov && (
-          <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col min-h-[400px] h-[calc(100vh-280px)]">
+          <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col h-[calc(50vh-120px)]">
             <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
               <p className="text-xs font-medium text-muted-foreground">TC → FC SOV</p>
             </div>
