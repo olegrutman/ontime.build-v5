@@ -101,6 +101,36 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
     fieldKey: 'contract_value',
     buildingTypes: 'all',
   },
+  // ─── STORIES (moved to top so floor counts drive downstream questions) ──
+  {
+    id: 'Q1',
+    phase: 'per_floor',
+    label: 'Number of stories',
+    inputType: 'number',
+    tag: 'loop_driver',
+    fieldKey: 'stories',
+    buildingTypes: ['custom_home', 'apartments_mf', 'hotel', 'senior_living'],
+  },
+  {
+    id: 'Q1_track',
+    phase: 'per_floor',
+    label: 'Number of stories per plan',
+    inputType: 'dropdown',
+    options: ['1-story', '2-story', 'Mix of both'],
+    tag: 'loop_driver',
+    fieldKey: 'stories',
+    buildingTypes: ['track_home'],
+  },
+  {
+    id: 'Q1_th',
+    phase: 'per_floor',
+    label: 'Number of stories per unit',
+    inputType: 'dropdown',
+    options: ['2', '3'],
+    tag: 'loop_driver',
+    fieldKey: 'stories',
+    buildingTypes: ['townhome'],
+  },
   {
     id: 'S1',
     phase: 'per_floor',
@@ -142,6 +172,17 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
     buildingTypes: 'all',
   },
   {
+    id: 'S_basement_floor_system',
+    phase: 'mobilization_steel',
+    label: 'Basement floor system',
+    inputType: 'dropdown',
+    options: ['Has its own floor system', 'Slab on grade'],
+    tag: 'conditional',
+    conditionalOn: 'has_basement=yes',
+    fieldKey: 'basement_floor_system',
+    buildingTypes: 'all',
+  },
+  {
     id: 'S2',
     phase: 'mobilization_steel',
     label: 'Mobilization as separate SOV line item?',
@@ -163,38 +204,8 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
 
 // Per-building-type questions
 const TYPE_QUESTIONS: WizardQuestion[] = [
-  // ─── STORIES (loop driver) ──────────────────────────────────────
-  {
-    id: 'Q1',
-    phase: 'per_floor',
-    label: 'Number of stories',
-    inputType: 'number',
-    tag: 'loop_driver',
-    fieldKey: 'stories',
-    buildingTypes: ['custom_home', 'apartments_mf', 'hotel', 'senior_living'],
-  },
-  {
-    id: 'Q1_track',
-    phase: 'per_floor',
-    label: 'Number of stories per plan',
-    inputType: 'dropdown',
-    options: ['1-story', '2-story', 'Mix of both'],
-    tag: 'loop_driver',
-    fieldKey: 'stories',
-    buildingTypes: ['track_home'],
-  },
-  {
-    id: 'Q1_th',
-    phase: 'per_floor',
-    label: 'Number of stories per unit',
-    inputType: 'dropdown',
-    options: ['2', '3'],
-    tag: 'loop_driver',
-    fieldKey: 'stories',
-    buildingTypes: ['townhome'],
-  },
-
-  // ─── BASEMENT (moved to SHARED_QUESTIONS as S_basement) ──────
+  // ─── STORIES moved to SHARED_QUESTIONS ──────────────────────────
+  // ─── BASEMENT moved to SHARED_QUESTIONS ─────────────────────────
 
   // ─── FLOOR SYSTEM ──────────────────────────────────────────────
   {
@@ -737,7 +748,10 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // Basement level
   if (a.has_basement === 'yes') {
-    push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
+    // Only add floor system line if basement has its own floor system (not slab on grade)
+    if (a.basement_floor_system !== 'Slab on grade') {
+      push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
+    }
     push('per_floor', 'Hardware & connectors — Basement', w('basement_hw'), 'has_basement');
     if (a.basement_walkout === 'yes') {
       push('per_floor', 'Exterior wall framing — Basement', w('basement_wall'), 'basement_walkout');
