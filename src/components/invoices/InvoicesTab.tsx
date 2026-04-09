@@ -274,13 +274,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
 
   const handleDeleteInvoice = async (invoice: Invoice) => {
     try {
-      // Delete line items first, then the invoice
-      const { error: lineError } = await supabase
-        .from('invoice_line_items')
-        .delete()
-        .eq('invoice_id', invoice.id);
-      if (lineError) throw lineError;
-
+      // Delete invoice — cascade removes line items, BEFORE DELETE trigger updates SOV totals
       const { error: invError } = await supabase
         .from('invoices')
         .delete()
