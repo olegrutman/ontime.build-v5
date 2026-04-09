@@ -15,12 +15,14 @@ import { useSetupWizardV2 } from '@/hooks/useSetupWizardV2';
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
 import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
+import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
 
 const UNIFIED_STEPS = [
   { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
-  { id: 'scope', label: 'Scope & Contract', description: 'Questions and SOV' },
+  { id: 'scope', label: 'Scope', description: 'Project scope questions' },
+  { id: 'contracts', label: 'Contracts', description: 'Values & SOV preview' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ] as const;
 
@@ -43,6 +45,7 @@ export default function CreateProjectNew() {
   const [saving, setSaving] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
+  const creatorOrgType = currentOrg?.type as OrgType | undefined;
   const creatorRole = currentOrg?.type === 'GC' ? 'General Contractor' : 
                       currentOrg?.type === 'TC' ? 'Trade Contractor' :
                       currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
@@ -59,23 +62,28 @@ export default function CreateProjectNew() {
     setBasics(prev => ({ ...prev, ...updates }));
   };
 
+  const isTC = creatorOrgType === 'TC';
+
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
       case 1: return !!wizard.buildingType;
-      case 2: return typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
-      case 3: return true;
+      case 2: return true; // scope questions are optional
+      case 3: {
+        const hasGcContract = typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
+        if (isTC) {
+          const hasFcContract = typeof wizard.answers.fc_contract_value === 'number' && wizard.answers.fc_contract_value > 0;
+          return hasGcContract && hasFcContract;
+        }
+        return hasGcContract;
+      }
+      case 4: return true;
       default: return false;
     }
   };
 
-  const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, UNIFIED_STEPS.length - 1));
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
-  };
+  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, UNIFIED_STEPS.length - 1));
+  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
 
   const createProject = async () => {
     if (!currentOrg?.id || !user?.id) {
@@ -85,7 +93,6 @@ export default function CreateProjectNew() {
 
     setSaving(true);
     try {
-      // 1. Create project
       const { data: project, error: projErr } = await supabase
         .from('projects')
         .insert({
@@ -107,7 +114,6 @@ export default function CreateProjectNew() {
       if (projErr) throw projErr;
       const pid = project.id;
 
-      // 2. Add creator to project_participants + project_team
       const roleLabel = currentOrg.type === 'GC' ? 'General Contractor'
         : currentOrg.type === 'TC' ? 'Trade Contractor'
         : currentOrg.type === 'FC' ? 'Field Crew'
@@ -136,10 +142,10 @@ export default function CreateProjectNew() {
         }),
       ]);
 
-      // 3. Save wizard answers + contract + SOV
+      // Save wizard answers + contract(s) + SOV(s)
       await wizard.saveAll(pid, currentOrg.id, currentOrg.type);
 
-      // 4. Save team members
+      // Save team members
       for (const member of team) {
         try {
           const { data: teamMember, error: teamErr } = await supabase
@@ -196,7 +202,7 @@ export default function CreateProjectNew() {
             onTeamChange={setTeam}
             creatorOrgName={currentOrg?.name}
             creatorRole={creatorRole}
-            creatorOrgType={currentOrg?.type as OrgType | undefined}
+            creatorOrgType={creatorOrgType}
           />
         );
       case 1:
@@ -213,7 +219,6 @@ export default function CreateProjectNew() {
             answers={wizard.answers}
             setAnswer={wizard.setAnswer}
             visibleQuestions={wizard.visibleQuestions}
-            sovLines={wizard.sovLines}
           />
         ) : (
           <p className="text-sm text-muted-foreground py-8 text-center">
@@ -221,6 +226,21 @@ export default function CreateProjectNew() {
           </p>
         );
       case 3:
+        return wizard.buildingType ? (
+          <ContractsStep
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            sovLines={wizard.sovLines}
+            visibleQuestions={wizard.visibleQuestions}
+            creatorOrgType={creatorOrgType}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Please go back and select a building type first.
+          </p>
+        );
+      case 4:
         return (
           <UnifiedReviewStep
             basics={basics}
@@ -231,6 +251,7 @@ export default function CreateProjectNew() {
             team={team}
             creatorOrgName={currentOrg?.name}
             creatorRole={creatorRole}
+            creatorOrgType={creatorOrgType}
           />
         );
       default:

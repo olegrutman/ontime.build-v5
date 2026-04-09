@@ -1,9 +1,14 @@
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, MapPin, Users, FileText, Shield, Building2 } from 'lucide-react';
+import { Check, MapPin, Users, FileText, Shield, Building2, DollarSign } from 'lucide-react';
 import { WizardSummary } from '@/components/setup-wizard-v2/WizardSummary';
+import { SOVLivePreview } from '@/components/setup-wizard-v2/SOVLivePreview';
+import { generateSOVLines } from '@/hooks/useSetupWizardV2';
 import type { BuildingType, Answers, WizardQuestion, SOVLine } from '@/hooks/useSetupWizardV2';
 import type { TeamMember } from '@/types/projectWizard';
+import type { OrgType } from '@/types/organization';
+import { formatCurrency } from '@/lib/utils';
 
 interface ProjectBasicsData {
   name: string;
@@ -23,6 +28,7 @@ interface UnifiedReviewStepProps {
   team: TeamMember[];
   creatorOrgName?: string;
   creatorRole?: string | null;
+  creatorOrgType?: OrgType;
 }
 
 export function UnifiedReviewStep({
@@ -34,7 +40,17 @@ export function UnifiedReviewStep({
   team,
   creatorOrgName,
   creatorRole,
+  creatorOrgType,
 }: UnifiedReviewStepProps) {
+  const isTC = creatorOrgType === 'TC';
+  const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
+  const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
+
+  const fcSovLines = useMemo(() => {
+    if (!isTC || !buildingType || fcContractValue <= 0) return [];
+    return generateSOVLines(buildingType, { ...answers, contract_value: fcContractValue });
+  }, [isTC, buildingType, answers, fcContractValue]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -81,7 +97,7 @@ export function UnifiedReviewStep({
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Scope & Contract
+              Scope
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -95,6 +111,47 @@ export function UnifiedReviewStep({
         </Card>
       )}
 
+      {/* Contracts & SOV */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            {isTC ? 'Contracts & SOV' : 'Contract & SOV'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className={isTC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+            {/* GC / Primary contract */}
+            <div className="space-y-2">
+              <div className="text-sm">
+                <p className="text-muted-foreground">{isTC ? 'GC → TC Contract' : 'Contract Value'}</p>
+                <p className="font-medium text-lg">{contractValue > 0 ? formatCurrency(contractValue) : '—'}</p>
+              </div>
+              {sovLines.length > 0 && (
+                <div className="border rounded-lg overflow-hidden max-h-[300px]">
+                  <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+                </div>
+              )}
+            </div>
+
+            {/* FC contract (TC only) */}
+            {isTC && fcContractValue > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm">
+                  <p className="text-muted-foreground">TC → FC Contract</p>
+                  <p className="font-medium text-lg">{formatCurrency(fcContractValue)}</p>
+                </div>
+                {fcSovLines.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden max-h-[300px]">
+                    <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Team */}
       <Card>
         <CardHeader className="pb-3">
@@ -104,7 +161,6 @@ export function UnifiedReviewStep({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {/* Owner */}
           {creatorOrgName && creatorRole && (
             <div className="flex items-center justify-between text-sm py-2 border-b">
               <div className="flex items-center gap-2">
@@ -118,7 +174,6 @@ export function UnifiedReviewStep({
             </div>
           )}
 
-          {/* Invited members */}
           {team.length > 0 ? (
             team.map((member) => (
               <div key={member.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
