@@ -1003,10 +1003,74 @@ export function useSetupWizardV2(projectId?: string) {
     setAnswers({});
   }, []);
 
+  // Helper: create or update a single contract + SOV
+  const _saveContractAndSov = useCallback(async (
+    pid: string,
+    contractValue: number,
+    fromRole: string,
+    fromOrgId: string | null,
+    toRole: string | null,
+    sovName: string,
+    scopeData: any,
+    sovLineAnswers: Answers,
+  ) => {
+    // Upsert contract
+    const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
+      project_id: pid,
+      contract_sum: contractValue,
+      from_org_id: fromOrgId,
+      from_role: fromRole,
+      to_org_id: null,
+      to_role: toRole,
+      trade: null,
+      material_responsibility: sovLineAnswers.material_responsibility || null,
+      status: 'Draft',
+    }).select('id').single();
+    if (cErr) throw cErr;
+    const contractId = newContract.id;
+
+    // Create SOV
+    const { data: newSov, error: sErr } = await supabase.from('project_sov').insert({
+      project_id: pid,
+      contract_id: contractId,
+      sov_name: sovName,
+      scope_snapshot: scopeData,
+    }).select('id').single();
+    if (sErr) throw sErr;
+    const sovId = newSov.id;
+
+    // Generate and insert SOV items
+    const currentSovLines = generateSOVLines(buildingType!, { ...sovLineAnswers, contract_value: contractValue });
+    const sovItems = currentSovLines.map((line) => ({
+      project_id: pid,
+      sov_id: sovId,
+      item_name: line.description,
+      item_group: SOV_PHASE_LABELS[line.phase],
+      sort_order: line.lineNumber,
+      percent_of_contract: line.suggested_pct,
+      value_amount: line.amount,
+      scheduled_value: line.amount,
+      remaining_amount: line.amount,
+      source: 'wizard_v2',
+      scope_section_slug: line.conditionalKey,
+      ai_original_pct: line.suggested_pct,
+      default_enabled: true,
+    }));
+
+    if (sovItems.length > 0) {
+      const { error: iErr } = await supabase.from('project_sov_items').insert(sovItems);
+      if (iErr) throw iErr;
+    }
+
+    return { contractId, sovId };
+  }, [buildingType]);
+
   // Internal save logic — can be called with an explicit project ID
   const _saveToDb = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string) => {
     if (!buildingType) throw new Error('No building type selected');
     const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
+    const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
+    const isTC = creatorOrgType === 'TC';
 
     // Save answers
     const answerRows = Object.entries(answers).map(([field_key, value]) => ({
@@ -1041,92 +1105,33 @@ export function useSetupWizardV2(projectId?: string) {
       updated_at: new Date().toISOString(),
     } as any, { onConflict: 'project_id,field_key' });
 
-    // ── Upsert project_contracts with contract_value ──
-    const { data: existingContracts } = await supabase
-      .from('project_contracts')
-      .select('id')
-      .eq('project_id', pid)
-      .limit(1);
+    // ── Create contract(s) + SOV(s) ──
+    const fromRole = creatorOrgType === 'GC' ? 'General Contractor'
+      : creatorOrgType === 'TC' ? 'Trade Contractor'
+      : creatorOrgType === 'FC' ? 'Field Crew'
+      : 'Trade Contractor';
 
-    let contractId: string;
-    if (existingContracts && existingContracts.length > 0) {
-      contractId = existingContracts[0].id;
-      await supabase.from('project_contracts').update({
-        contract_sum: contractValue,
-        material_responsibility: answers.material_responsibility || null,
-        updated_at: new Date().toISOString(),
-      }).eq('id', contractId);
-    } else {
-      const fromRole = creatorOrgType === 'GC' ? 'General Contractor'
-        : creatorOrgType === 'TC' ? 'Trade Contractor'
-        : creatorOrgType === 'FC' ? 'Field Crew'
-        : 'Trade Contractor';
-      const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
-        project_id: pid,
-        contract_sum: contractValue,
-        from_org_id: creatorOrgId || null,
-        from_role: fromRole,
-        to_org_id: null,
-        to_role: null,
-        trade: null,
-        material_responsibility: answers.material_responsibility || null,
-        status: 'Draft',
-      }).select('id').single();
-      if (cErr) throw cErr;
-      contractId = newContract.id;
+    // Primary contract (GC→TC for TC creators, or single contract for GC creators)
+    const primaryResult = await _saveContractAndSov(
+      pid, contractValue, fromRole, creatorOrgId || null,
+      isTC ? 'General Contractor' : null,
+      isTC ? 'GC → TC SOV' : 'Framing SOV',
+      scopeData, answers,
+    );
+
+    // If TC, also create downstream FC contract + SOV
+    let fcResult: { contractId: string; sovId: string } | null = null;
+    if (isTC && fcContractValue > 0) {
+      fcResult = await _saveContractAndSov(
+        pid, fcContractValue, fromRole, creatorOrgId || null,
+        'Field Crew',
+        'TC → FC SOV',
+        scopeData, answers,
+      );
     }
 
-    // ── Create / update project_sov ──
-    const { data: existingSov } = await supabase
-      .from('project_sov')
-      .select('id')
-      .eq('project_id', pid)
-      .eq('contract_id', contractId)
-      .limit(1);
-
-    let sovId: string;
-    if (existingSov && existingSov.length > 0) {
-      sovId = existingSov[0].id;
-      await supabase.from('project_sov_items')
-        .delete()
-        .eq('sov_id', sovId)
-        .eq('source', 'wizard_v2');
-    } else {
-      const { data: newSov, error: sErr } = await supabase.from('project_sov').insert({
-        project_id: pid,
-        contract_id: contractId,
-        sov_name: 'Framing SOV',
-        scope_snapshot: scopeData,
-      }).select('id').single();
-      if (sErr) throw sErr;
-      sovId = newSov.id;
-    }
-
-    // ── Insert SOV line items ──
-    const currentSovLines = generateSOVLines(buildingType, answers);
-    const sovItems = currentSovLines.map((line) => ({
-      project_id: pid,
-      sov_id: sovId,
-      item_name: line.description,
-      item_group: SOV_PHASE_LABELS[line.phase],
-      sort_order: line.lineNumber,
-      percent_of_contract: line.suggested_pct,
-      value_amount: line.amount,
-      scheduled_value: line.amount,
-      remaining_amount: line.amount,
-      source: 'wizard_v2',
-      scope_section_slug: line.conditionalKey,
-      ai_original_pct: line.suggested_pct,
-      default_enabled: true,
-    }));
-
-    if (sovItems.length > 0) {
-      const { error: iErr } = await supabase.from('project_sov_items').insert(sovItems);
-      if (iErr) throw iErr;
-    }
-
-    return { contractId, sovId };
-  }, [buildingType, answers]);
+    return { contractId: primaryResult.contractId, sovId: primaryResult.sovId, fcResult };
+  }, [buildingType, answers, _saveContractAndSov]);
 
   // Legacy save: uses the projectId passed to the hook
   const saveMutation = useMutation({
