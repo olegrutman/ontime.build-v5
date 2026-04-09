@@ -1,48 +1,33 @@
 
 
-# Fix Contract Creation Error + Team Invitation Method
+# Use Existing Partner Search in Project Creation Team Section
 
 ## Problem
+The BasicsStep team section currently uses plain text inputs to add members. The rest of the app uses `AddTeamMemberDialog` which has a **Search tab** (queries existing orgs via `search_existing_team_targets` RPC) and an **Invite tab** (manual entry). You want the same search-first experience during project creation.
 
-1. **Contract insert fails** with `project_contracts_from_role_check` constraint violation. The wizard saves `from_role: 'TC_PM'` but the constraint only allows `'General Contractor'`, `'Trade Contractor'`, or `'Field Crew'`.
+## Approach
+Replace the inline plain-text form in BasicsStep with the `AddTeamMemberDialog` component. Since the dialog currently requires a `projectId` (to check for duplicates and insert directly into `project_team`), we need to adapt it to also work in an **in-memory mode** — where selecting/inviting a member returns the data to the parent instead of saving to the database.
 
-2. **Contract insert is missing required fields** — no `from_org_id` or `to_org_id` are set, and the role values don't match the established pattern used in `EditProject.tsx`.
+## Changes
 
-## Fix
+### 1. `src/components/project/AddTeamMemberDialog.tsx`
+- Add an optional `mode` prop: `'direct'` (default, current behavior — saves to DB) vs `'collect'` (returns member data via callback, no DB writes)
+- Add optional `onCollect?: (member: TeamMember) => void` callback prop
+- In `'collect'` mode, the "Add" / "Invite" buttons call `onCollect` with the assembled `TeamMember` object instead of inserting into `project_team` / `project_invites`
+- Make `projectId` optional (only required in `'direct'` mode)
+- The search RPC `search_existing_team_targets` can still work without a valid project ID — pass a dummy UUID or adjust the query param
 
-### `src/hooks/useSetupWizardV2.ts` — Fix contract insert (lines ~1060-1068)
+### 2. `src/components/project-wizard-new/BasicsStep.tsx`
+- Remove the plain-text add member form entirely
+- Add an "Add Member" button that opens `AddTeamMemberDialog` in `'collect'` mode
+- When `onCollect` fires, append the returned `TeamMember` to the in-memory `team` array
+- Keep the existing member list display + remove button (unchanged)
 
-The contract insert currently uses hardcoded invalid values:
-```ts
-from_role: 'TC_PM',   // INVALID — fails check constraint
-to_role: 'GC_PM',     // INVALID
-trade: 'Framing',     // Hardcoded — wrong
-```
-
-Change to use the actual creator org context. The `saveAll` method needs to accept the creator's org ID and org type so it can set proper `from_org_id`, `from_role`, and leave `to_org_id`/`to_role` null (no counterparty yet — same pattern as `EditProject.tsx`):
-
-```ts
-// For a TC creator:
-from_org_id: creatorOrgId,
-from_role: 'Trade Contractor',
-to_org_id: null,
-to_role: null,
-trade: null,
-
-// For a GC creator:
-from_org_id: creatorOrgId,
-from_role: 'General Contractor',
-to_org_id: null,
-to_role: null,
-trade: null,
-```
-
-### `src/pages/CreateProjectNew.tsx` — Pass org context to saveAll
-
-Update the `wizard.saveAll(pid)` call to pass `currentOrg.id` and `currentOrg.type` so the hook can build the correct contract payload. The team member saving code (project_team + project_invites) is already using the correct invitation pattern — no changes needed there.
+### 3. `src/pages/CreateProjectNew.tsx`
+- No changes needed — already passes `team` and `onTeamChange` to BasicsStep, and saves team members on final "Create Project" click
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSetupWizardV2.ts` | Fix contract insert to use proper `from_org_id`, `from_role` based on creator org; accept org context in `saveAll` |
-| `src/pages/CreateProjectNew.tsx` | Pass `currentOrg.id` and `currentOrg.type` to `wizard.saveAll()` |
+| `src/components/project/AddTeamMemberDialog.tsx` | Add `mode: 'direct' | 'collect'` prop + `onCollect` callback; skip DB writes in collect mode |
+| `src/components/project-wizard-new/BasicsStep.tsx` | Replace plain-text form with `AddTeamMemberDialog` in collect mode |
 
