@@ -32,7 +32,7 @@ export function useNotifications() {
     if (error) {
       console.error('Error fetching notifications:', error);
     } else {
-      setNotifications((data as Notification[]) || []);
+      setNotifications(((data as Notification[]) || []).filter(n => !n.is_read));
     }
     setLoading(false);
   }, [user]);
@@ -94,7 +94,7 @@ export function useNotifications() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'notifications',
         },
