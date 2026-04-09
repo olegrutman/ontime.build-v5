@@ -1000,7 +1000,12 @@ export function useSetupWizardV2(projectId?: string) {
 
   const selectBuildingType = useCallback((bt: BuildingType) => {
     setBuildingType(bt);
-    setAnswers({});
+    // Preserve contract values when resetting scope answers
+    setAnswers(prev => ({
+      contract_value: prev.contract_value,
+      fc_contract_value: prev.fc_contract_value,
+      material_responsibility: prev.material_responsibility,
+    }));
   }, []);
 
   // Helper: create or update a single contract + SOV
