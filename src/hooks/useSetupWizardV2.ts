@@ -1010,9 +1010,11 @@ export function useSetupWizardV2(projectId?: string) {
     fromRole: string,
     fromOrgId: string | null,
     toRole: string | null,
+    toOrgId: string | null,
     sovName: string,
     scopeData: any,
     sovLineAnswers: Answers,
+    createdByUserId?: string,
   ) => {
     // Upsert contract
     const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
@@ -1020,11 +1022,12 @@ export function useSetupWizardV2(projectId?: string) {
       contract_sum: contractValue,
       from_org_id: fromOrgId,
       from_role: fromRole,
-      to_org_id: null,
+      to_org_id: toOrgId,
       to_role: toRole,
       trade: null,
       material_responsibility: sovLineAnswers.material_responsibility || null,
       status: 'Active',
+      created_by_user_id: createdByUserId || null,
     }).select('id').single();
     if (cErr) throw cErr;
     const contractId = newContract.id;
