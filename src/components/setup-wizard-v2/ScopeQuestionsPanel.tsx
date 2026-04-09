@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import { WizardQuestion as WizardQuestionComponent } from './WizardQuestion';
-import type { WizardQuestion, SOVPhase, BuildingType, Answers } from '@/hooks/useSetupWizardV2';
+import { SOVLivePreview } from './SOVLivePreview';
+import type { WizardQuestion, SOVPhase, BuildingType, Answers, SOVLine } from '@/hooks/useSetupWizardV2';
+import { generateSOVLines } from '@/hooks/useSetupWizardV2';
+import { OrgType } from '@/types/organization';
 
 const STEP_PHASES: Record<string, SOVPhase[]> = {
   structure: ['mobilization_steel', 'per_floor'],
@@ -18,7 +21,6 @@ const SCOPE_STEPS = [
   { key: 'exterior', label: 'Exterior' },
 ] as const;
 
-// Questions that belong in the Contracts step, not here
 const CONTRACT_FIELD_KEYS = ['contract_value', 'fc_contract_value', 'material_responsibility'];
 
 interface ScopeQuestionsPanelProps {
@@ -26,6 +28,10 @@ interface ScopeQuestionsPanelProps {
   answers: Answers;
   setAnswer: (key: string, value: any) => void;
   visibleQuestions: WizardQuestion[];
+  sovLines: SOVLine[];
+  contractValue: number;
+  fcContractValue: number;
+  creatorOrgType?: OrgType;
 }
 
 export function ScopeQuestionsPanel({
@@ -33,8 +39,13 @@ export function ScopeQuestionsPanel({
   answers,
   setAnswer,
   visibleQuestions,
+  sovLines,
+  contractValue,
+  fcContractValue,
+  creatorOrgType,
 }: ScopeQuestionsPanelProps) {
-  // Filter out contract-related questions
+  const isTC = creatorOrgType === 'TC';
+
   const scopeQuestions = useMemo(
     () => visibleQuestions.filter(q => !CONTRACT_FIELD_KEYS.includes(q.fieldKey)),
     [visibleQuestions],
@@ -49,16 +60,26 @@ export function ScopeQuestionsPanel({
     return map;
   }, [scopeQuestions]);
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">Scope</h2>
-        <p className="text-sm text-muted-foreground">
-          Answer questions about your project scope. These determine SOV line items.
-        </p>
-      </div>
+  // FC SOV lines: same percentages, different contract value
+  const fcSovLines = useMemo(() => {
+    if (!isTC || fcContractValue <= 0) return [];
+    const fcAnswers = { ...answers, contract_value: fcContractValue };
+    return generateSOVLines(buildingType, fcAnswers);
+  }, [isTC, buildingType, answers, fcContractValue]);
 
-      <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+  const showDualSov = isTC && fcContractValue > 0;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[500px]">
+      {/* Left: Scope questions */}
+      <div className="space-y-6 overflow-y-auto max-h-[600px] pr-2">
+        <div>
+          <h2 className="text-lg font-semibold">Scope</h2>
+          <p className="text-sm text-muted-foreground">
+            Answer questions about your project scope. The SOV updates live as you go.
+          </p>
+        </div>
+
         {SCOPE_STEPS.map((step) => {
           const qs = questionsByStep[step.key];
           if (!qs || qs.length === 0) return null;
@@ -79,6 +100,27 @@ export function ScopeQuestionsPanel({
             </div>
           );
         })}
+      </div>
+
+      {/* Right: Live SOV preview(s) */}
+      <div className={showDualSov ? 'grid grid-cols-1 xl:grid-cols-2 gap-3' : ''}>
+        <div className="border border-border rounded-lg overflow-hidden bg-card">
+          <div className="px-3 py-1.5 border-b bg-muted/30">
+            <p className="text-xs font-medium text-muted-foreground">
+              {isTC ? 'GC → TC SOV' : 'SOV Preview'}
+            </p>
+          </div>
+          <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+        </div>
+
+        {showDualSov && (
+          <div className="border border-border rounded-lg overflow-hidden bg-card">
+            <div className="px-3 py-1.5 border-b bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground">TC → FC SOV</p>
+            </div>
+            <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+          </div>
+        )}
       </div>
     </div>
   );

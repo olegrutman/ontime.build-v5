@@ -207,32 +207,32 @@ export default function CreateProjectNew() {
         );
       case 1:
         return (
-          <BuildingTypeSelector
-            selected={wizard.buildingType}
-            onSelect={(bt) => wizard.selectBuildingType(bt)}
-          />
-        );
-      case 2:
-        return wizard.buildingType ? (
-          <ScopeQuestionsPanel
-            buildingType={wizard.buildingType}
-            answers={wizard.answers}
-            setAnswer={wizard.setAnswer}
-            visibleQuestions={wizard.visibleQuestions}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Please go back and select a building type first.
-          </p>
-        );
-      case 3:
-        return wizard.buildingType ? (
           <ContractsStep
             buildingType={wizard.buildingType}
             answers={wizard.answers}
             setAnswer={wizard.setAnswer}
             sovLines={wizard.sovLines}
             visibleQuestions={wizard.visibleQuestions}
+            creatorOrgType={creatorOrgType}
+          />
+        );
+      case 2:
+        return (
+          <BuildingTypeSelector
+            selected={wizard.buildingType}
+            onSelect={(bt) => wizard.selectBuildingType(bt)}
+          />
+        );
+      case 3:
+        return wizard.buildingType ? (
+          <ScopeQuestionsPanel
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            visibleQuestions={wizard.visibleQuestions}
+            sovLines={wizard.sovLines}
+            contractValue={typeof wizard.answers.contract_value === 'number' ? wizard.answers.contract_value : 0}
+            fcContractValue={typeof wizard.answers.fc_contract_value === 'number' ? wizard.answers.fc_contract_value : 0}
             creatorOrgType={creatorOrgType}
           />
         ) : (
