@@ -930,6 +930,84 @@ export function useContractSOV(projectId: string | undefined) {
           return { ...item, percent_of_contract: r.pct, value_amount: r.val };
         })
       }));
+      // Mirror to sibling SOV
+      const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+      if (sibling) {
+        const sibItem = sibling.sibItems.find(i => i.sort_order === items[idx].sort_order);
+        if (sibItem) {
+          // Build same percentage updates for sibling
+          const sibItems_arr = sibling.sibItems;
+          const sibIdx = sibItems_arr.findIndex(i => i.id === sibItem.id);
+          const sibOldPct = sibItems_arr[sibIdx]?.percent_of_contract || 0;
+          const sibDelta = newPercent - sibOldPct;
+
+          const sibUpdates: { id: string; pct: number }[] = [{ id: sibItem.id, pct: newPercent }];
+          const sibUnlocked = sibItems_arr.filter((i, j) => j !== sibIdx && !(i as any).is_locked);
+          const sibUnlockTotal = sibUnlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+
+          let sibClampedExcess = 0;
+          const sibRawAdj: { id: string; pct: number }[] = [];
+          for (const u of sibUnlocked) {
+            const share = sibUnlockTotal > 0 ? (u.percent_of_contract || 0) / sibUnlockTotal : 1 / sibUnlocked.length;
+            const adjusted = (u.percent_of_contract || 0) - sibDelta * share;
+            if (adjusted < 0) {
+              sibClampedExcess += Math.abs(adjusted);
+              sibRawAdj.push({ id: u.id, pct: 0 });
+            } else {
+              sibRawAdj.push({ id: u.id, pct: adjusted });
+            }
+          }
+          if (sibClampedExcess > 0) {
+            const posTotal = sibRawAdj.reduce((s, u) => s + u.pct, 0);
+            for (const u of sibRawAdj) {
+              if (u.pct > 0 && posTotal > 0) {
+                u.pct = Math.max(0, u.pct - sibClampedExcess * (u.pct / posTotal));
+              }
+            }
+          }
+          sibUpdates.push(...sibRawAdj);
+
+          const sibLocked = sibItems_arr.filter((i, j) => j !== sibIdx && (i as any).is_locked);
+          const sibLockedTotal = sibLocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+          const sibRunning = sibLockedTotal + sibUpdates.slice(0, -1).reduce((s, u) => s + u.pct, 0);
+          if (sibUpdates.length > 0) {
+            sibUpdates[sibUpdates.length - 1].pct = Math.round((100 - sibRunning) * 100) / 100;
+          }
+
+          const sibContract = contracts.find(c => c.id === sovs.find(s => s.id === sibling.sibSovId)?.contract_id);
+          const sibRetainage = sibContract?.retainage_percent || 0;
+
+          await supabase.rpc('update_sov_line_percentages', {
+            p_updates: sibUpdates,
+            p_contract_value: sibling.sibContractValue,
+            p_retainage_pct: sibRetainage,
+          });
+
+          // Optimistic update for sibling
+          const sibResultMap = new Map<string, { pct: number; val: number }>();
+          let sibRunTotal = 0;
+          for (let i = 0; i < sibUpdates.length; i++) {
+            const u = sibUpdates[i];
+            let val: number;
+            if (i === sibUpdates.length - 1) {
+              val = Math.round((sibling.sibContractValue - sibRunTotal) * 100) / 100;
+            } else {
+              val = Math.round((sibling.sibContractValue * u.pct / 100) * 100) / 100;
+              sibRunTotal += val;
+            }
+            sibResultMap.set(u.id, { pct: u.pct, val });
+          }
+
+          setSovItems(prev => ({
+            ...prev,
+            [sibling.sibSovId]: (prev[sibling.sibSovId] || []).map(item => {
+              const r = sibResultMap.get(item.id);
+              if (!r) return item;
+              return { ...item, percent_of_contract: r.pct, value_amount: r.val };
+            })
+          }));
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
