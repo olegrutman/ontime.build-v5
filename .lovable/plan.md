@@ -1,71 +1,53 @@
 
 
-# Split Scope & Contracts + Dual SOV for Trade Contractors
+# Move Contracts After Basics + Live Side-by-Side SOVs During Scope
 
-## What This Does
+## What You'll See
 
-Today the wizard has one "Scope & Contract" step that mixes scope questions with the contract value. This change:
-
-1. **Separates Scope from Contracts** — scope questions become their own step (just building questions, no money). Contracts become a dedicated step where you enter dollar amounts.
-
-2. **TC gets two contracts** — When a Trade Contractor creates a project, they enter:
-   - **GC contract sum** (what the GC pays the TC — upstream)
-   - **FC contract sum** (what the TC pays the FC — downstream)
-
-3. **Two SOVs with identical percentages but different prices** — The wizard generates one percentage breakdown, then creates two SOV records:
-   - GC → TC SOV at the GC contract price
-   - TC → FC SOV at the FC contract price
-   - Same line items, same percentages, different dollar values
-
-4. **GC gets one contract** — GC creators only see one contract input (their TC contract), one SOV — same as today.
-
-## New 5-Step Wizard Flow
-
+**New 5-step flow:**
 ```text
 Step 1: Project Basics + Team
-Step 2: Building Type
-Step 3: Scope (questions only — structure, roof, envelope, backout, exterior)
-Step 4: Contracts (GC sees 1 input, TC sees 2 inputs + dual SOV preview)
-Step 5: Review (summary of everything including both SOVs for TC)
+Step 2: Contracts (enter dollar amounts up front — TC sees two inputs)
+Step 3: Building Type
+Step 4: Scope (split screen: questions left, live dual SOV right — updating as you answer)
+Step 5: Review
 ```
+
+**Step 2 (Contracts):** Simple — enter contract values. No SOV preview here yet because there's no building type or scope to generate from. GC sees one input, TC sees two (GC contract + FC contract).
+
+**Step 4 (Scope):** This is where the magic happens. Split-screen layout:
+- **Left side:** Scope questions (structure, roof, envelope, etc.)
+- **Right side:** Live SOV preview(s) that build out as you answer each question
+  - GC creator: one SOV
+  - TC creator: **two SOVs side by side** (GC→TC and TC→FC) with same percentages, different dollar amounts from step 2
+
+The SOVs grow and update in front of your eyes as you toggle floors, basement, roof options, etc.
 
 ## Technical Changes
 
-### 1. `src/pages/CreateProjectNew.tsx`
-- Update `UNIFIED_STEPS` from 4 to 5 steps: basics → building_type → scope → contracts → review
-- Step 3 (scope) renders `ScopeQuestionsPanel` without the contract value question or SOV preview — just the scope questions
-- Step 4 (contracts) renders a new `ContractsStep` component
-- Adjust step indices and `canProceed` validation
+### `src/pages/CreateProjectNew.tsx`
+- Reorder steps: basics → contracts → building_type → scope → review
+- Update step indices in `canProceed()` and `renderStep()`
+- Contracts validation moves to step index 1, building type to index 2, scope to index 3
 
-### 2. New: `src/components/project-wizard-new/ContractsStep.tsx`
-- If creator is **GC**: single card — "Contract Value" input + SOV live preview (same as current behavior)
-- If creator is **TC**: two cards side by side (or stacked on mobile):
-  - **GC Contract** card — "What is the GC paying you?" input
-  - **FC Contract** card — "What are you paying your FC?" input
-  - Below both: dual SOV preview showing both sets of dollar amounts with the same percentage column
-- Material responsibility question moves here (it's contract-related, not scope)
+### `src/components/project-wizard-new/ContractsStep.tsx`
+- Remove SOV preview from this step (no building type selected yet)
+- Keep just the contract value inputs + material responsibility question
+- GC: one input. TC: two inputs side by side
 
-### 3. `src/hooks/useSetupWizardV2.ts`
-- Add `fc_contract_value` to answers (alongside existing `contract_value` which becomes the GC contract value)
-- `sovLines` stays as-is (percentages only change based on scope answers)
-- Add a helper `getSovLinesForValue(contractValue: number)` that applies percentages to any dollar amount
-- Update `saveAll` to:
-  - If TC: create **two** `project_contracts` rows (one GC→TC, one TC→FC) and **two** `project_sov` + `project_sov_items` sets
-  - If GC: create one contract + one SOV (current behavior)
+### `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx`
+- Add split-screen layout: questions on the left, SOV preview(s) on the right
+- Accept `sovLines`, `contractValue`, `fcContractValue`, and `creatorOrgType` as new props
+- For TC: render two `SOVLivePreview` components side by side labeled "GC → TC" and "TC → FC"
+- For GC: render one `SOVLivePreview`
+- On mobile: stack vertically or use tabs
 
-### 4. `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx`
-- Remove SOV preview from this component (it moves to the Contracts step)
-- Component becomes a pure question panel — no split layout needed, just the grouped questions
-
-### 5. `src/components/project-wizard-new/UnifiedReviewStep.tsx`
-- If TC: show both contracts and both SOV summaries in the review
-- If GC: show single contract + SOV (current behavior)
+### `src/components/project-wizard-new/UnifiedReviewStep.tsx`
+- No structural changes needed — already shows dual SOVs for TC
 
 | File | Change |
 |------|--------|
-| `src/pages/CreateProjectNew.tsx` | 5-step flow; scope and contracts are separate steps |
-| `src/components/project-wizard-new/ContractsStep.tsx` | New component — contract value inputs + SOV preview; TC sees dual inputs |
-| `src/hooks/useSetupWizardV2.ts` | Add `fc_contract_value`; dual contract/SOV save logic for TC |
-| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Remove SOV preview; pure question panel |
-| `src/components/project-wizard-new/UnifiedReviewStep.tsx` | Show dual contracts/SOVs for TC creators |
+| `src/pages/CreateProjectNew.tsx` | Reorder steps: basics → contracts → building_type → scope → review |
+| `src/components/project-wizard-new/ContractsStep.tsx` | Remove SOV preview (not available yet at step 2) |
+| `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Add split-screen with live SOV preview(s); dual side-by-side for TC |
 
