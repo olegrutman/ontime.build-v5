@@ -1,47 +1,25 @@
 
 
-# Sync Dual SOVs: Mirror Edits Between Upstream and Downstream
+# Remove SOV Floor Grouping — Show Flat List
 
-## What I Understand
-When the TC adjusts an SOV line item (name or percentage) on one SOV (e.g., GC→TC), the other SOV (TC→FC) should automatically get the same item name and percentage changes. The dollar amounts will differ because each SOV has its own contract value, but the structure (names, percentages, sort order) stays identical.
+## Problem
+The SOV editor groups line items into collapsible sections by `floor_label` (Basement, Floor 1, Roof, Exterior, etc.). The user wants all items shown as a simple flat numbered list without any grouping.
 
-## Current State
-- Two SOVs exist per TC project: `GC → TC SOV` ($231K) and `TC → FC SOV` ($160K)
-- Items already share the same names and sort orders
-- No sync mechanism exists — edits to one SOV don't touch the other
+Additionally, the "Generate SOV (AI-powered)" and "Regenerate with AI" buttons should be removed — the SOVs created during project setup should be used as-is.
 
-## Approach: Find Sibling SOV and Mirror Changes
+## Changes
 
-In `useContractSOV.ts`, after each edit operation succeeds on the primary SOV, find the "sibling" SOV (same project, different contract) and apply the same change.
+### 1. Remove floor grouping from SOV display
+In `ContractSOVEditor.tsx`, remove the floor-label grouping logic (lines 756-834) and always render the flat list path. This means every item renders sequentially with its number, name, percentage, and dollar amount — no collapsible floor sections.
 
-### Helper: Find Sibling SOV
-```text
-Given sovId → find its contract → find other SOV on same project → that's the sibling
-Match items between SOVs by sort_order (they share the same structure)
-```
+### 2. Remove AI generate buttons
+- Remove the "Generate SOV (AI-powered)" button from the empty-SOV state (line 233-239)
+- Remove the "Regenerate with AI" button (refresh icon) from each SOV card header (lines 548-570)
+- Keep the "Create SOV" and "Upload SOV" options since those use template/manual methods
 
-### Changes to `useContractSOV.ts`
-
-| Function | Sync Logic |
-|----------|-----------|
-| `updateItemPercent` | After RPC succeeds on primary, find sibling SOV's matching item (by sort_order), call the same RPC with sibling's contract value to recalculate dollar amounts |
-| `updateItemName` | After name update succeeds, find sibling item by sort_order, update its name too |
-| `addItem` | After adding to primary SOV, insert same item (name, sort_order, 0%) into sibling SOV |
-| `deleteItem` | After deleting from primary, delete matching item (by sort_order) from sibling |
-| `reorderItems` | After reordering primary, apply same sort_order changes to sibling items |
-
-### Key Rules
-- Percentages sync exactly (e.g., 19.71% on both)
-- Dollar amounts are recalculated per each SOV's own contract value
-- Item names sync exactly
-- Sort order syncs exactly
-- Only applies when two SOVs exist on the same project (TC has both upstream and downstream)
-
-### File Changes
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useContractSOV.ts` | Add `findSiblingSov` helper; add mirror logic to `updateItemPercent`, `updateItemName`, `addItem`, `deleteItem`, `reorderItems` |
-
-No database changes needed — uses existing tables and RPC.
+| `src/components/sov/ContractSOVEditor.tsx` | Remove floor grouping logic, always render flat list; remove AI generate/regenerate buttons |
 
