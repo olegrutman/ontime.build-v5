@@ -150,7 +150,12 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const fcContract = financials.downstreamContract || financials.upstreamContract;
   const contractSum = fcContract?.contract_sum || 0;
   const laborBudget = financials.laborBudget || 0;
-  const tcName = fcContract?.from_org_name || fcContract?.to_org_name || 'Trade Contractor';
+  const tcName = (() => {
+    if (!fcContract) return 'Trade Contractor';
+    if (currentOrgId && fcContract.from_org_id === currentOrgId) return fcContract.to_org_name || 'Trade Contractor';
+    if (currentOrgId && fcContract.to_org_id === currentOrgId) return fcContract.from_org_name || 'Trade Contractor';
+    return fcContract.from_org_name || fcContract.to_org_name || 'Trade Contractor';
+  })();
 
   // Invoices
   const paidInvoices = financials.recentInvoices.filter(i => i.status === 'PAID');
