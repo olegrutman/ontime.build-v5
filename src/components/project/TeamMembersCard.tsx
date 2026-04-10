@@ -436,7 +436,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
                     )}
                   >
                     {savingResp === val ? <Loader2 className="h-3 w-3 animate-spin" /> : <Package className="h-3 w-3" />}
-                    {val}
+                    {val === 'GC' ? 'General Contractor' : 'Trade Contractor'}
                   </button>
                 ))}
                 {showSelector && (
