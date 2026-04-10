@@ -298,7 +298,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
       </div>
 
       {/* 6 KPI Cards — 3-col grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
 
         {/* Card 1 — Estimate Value */}
         <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="ESTIMATE VALUE (THIS PROJECT)" value={totalEstimate > 0 ? fmt(totalEstimate) : '—'} sub={`Total material estimate for ${projectName}`} pills={totalEstimate > 0 ? [{ type: 'pn', text: 'Estimate' }] : [{ type: 'pm', text: 'No Estimate' }]} idx={0}>
