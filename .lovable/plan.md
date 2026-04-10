@@ -1,55 +1,57 @@
 
 
-# Remove All Abbreviations from UI — Full App Sweep
+# Replace Generic Role Labels with Company Names and "Your/My" on Overview Pages
 
-## Problem
-The previous abbreviation cleanup only covered role badges, team cards, and platform roles. Many UI-facing labels still show "GC", "TC", "FC" abbreviations across dashboards, KPI cards, table headers, toast messages, alerts, status badges, and project wizard steps.
+## Concept
+Instead of "General Contractor", "Trade Contractor", "Field Crew" — use the actual company names from contract data. For the viewer's own metrics, use "Your" or "My".
 
-## Rule
-Replace all user-visible abbreviations with full names: "General Contractor", "Trade Contractor", "Field Crew", "Supplier". Internal code logic (`orgType === 'GC'`, variable names, comments) stays unchanged.
+## Data Already Available
+- **GC Overview**: `tcName` = TC company name (from `upstreamContract`), `gcName` = viewer's own org
+- **TC Overview**: `gcName` = GC company name (from `upstreamContract`), `fcName` = FC company name (from `downstreamContract`), `userOrgRoles[0]?.organization?.name` = viewer's own org
+- **FC Overview**: `tcName` = TC company name (from contract), viewer's own org from `userOrgRoles`
 
-## Files to Change
+## Changes by File
 
-| # | File | What to fix |
-|---|------|-------------|
-| 1 | `src/constants/defaultKpiConfig.ts` | Labels/subtitles: "GC Contracts (Revenue)" → "General Contractor Contracts (Revenue)", "FC / Labor Contracts (Cost)" → "Field Crew / Labor Contracts (Cost)", "Received from GC" → "Received from General Contractor", "Pending from GC", "Materials (TC POs)", "GC Profit Margin", "TC Contracts Committed", "Pending GC Approval", "Materials (GC POs)", "Contract with TC", "Paid by TC", "Pending from TC" |
-| 2 | `src/components/dashboard/GCDashboardView.tsx` | KPI card labels: "GC PROFIT MARGIN", "MATERIALS (GC POs)", "PENDING GC APPROVAL", "TC CONTRACTS COMMITTED". Table headers: "TC Contracts (Costs)". Fallback text: "No TC contracts yet" |
-| 3 | `src/components/dashboard/TCDashboardView.tsx` | KPI labels: "GC CONTRACTS (REVENUE)", "FC / LABOR CONTRACTS (COST)", "RECEIVED FROM GC", "PENDING FROM GC", "MATERIALS (TC POs)". Table headers: "GC Contract", "FC Cost", "FC Contract". Subtitles: "with GC", "awaiting GC approval", "Chasing GC". Fallback: "No FC contracts yet" |
-| 4 | `src/components/dashboard/FCDashboardView.tsx` | KPI label: "CONTRACT WITH TC". Subtitles/fallbacks using "'TC'" as display. Attention items: "Awaiting TC Approval" |
-| 5 | `src/components/dashboard/DashboardKPIs.tsx` | Subtitles: "Revenue from GC contracts", "From TC/GC contracts" |
-| 6 | `src/components/project/TCProjectOverview.tsx` | Buttons: "Submit Invoice to GC", "View GC Contract". KPI labels: "GC CONTRACT (WHAT YOU EARN)", "FC CONTRACT (YOU SET THIS)". Table rows: "Contract Value (set by GC)", "Approved COs (billed to GC)", "Received from GC", "Pending from GC", "GC Contract (your revenue)", "FC Contract (your cost)", "TC Gross Margin", "TC Margin %", "CO Revenue (from GC)", "CO Cost (to FC)", "Net TC Margin after COs", "Save FC Contract". Warnings: "Invoice Awaiting GC Approval", "Chasing GC", "FC Invoice Awaiting Your Approval", "You owe FC", "GC waiting on answers" |
-| 7 | `src/pages/GCProjectOverview.tsx` | Subtitle: "awaiting GC sign-off" |
-| 8 | `src/pages/platform/PlatformGCDashboard.tsx` | Labels: "GC PROFIT MARGIN", "PENDING GC APPROVAL", "TC CONTRACTS COMMITTED", "MATERIALS BUDGET (GC POs)". Warnings: "Pending GC Approval" |
-| 9 | `src/components/project/PurchaseOrdersTab.tsx` | Toasts: "PO sent to GC for approval", "sent to GC for approval". Tab label: "From GC" |
-| 10 | `src/components/quick-log/LoggedItemsList.tsx` | Status badges: "Sent to TC", "Sent to GC" |
-| 11 | `src/components/quick-log/QuickLogAlertBanner.tsx` | Banner text: "FC tasks not yet sent to GC" |
-| 12 | `src/components/change-orders/COContextualAlert.tsx` | Alert text: "Submitted to GC — waiting on approval", fallback "FC" label |
-| 13 | `src/components/change-orders/COStickyFooter.tsx` | Button labels: "Submit ... to TC →", "Submit ... to GC →" |
-| 14 | `src/components/change-orders/COMaterialsPanel.tsx` | Toast: "sent to GC for approval" |
-| 15 | `src/components/change-orders/CONTEPanel.tsx` | Text: "pending GC approval" |
-| 16 | `src/components/purchase-orders/CreateInvoiceFromPO.tsx` | Alert & placeholder text: "TC-to-GC contract", "bill the GC" |
-| 17 | `src/components/project-wizard-new/UnifiedReviewStep.tsx` | Labels: "GC → TC Contract", "TC → FC Contract" |
-| 18 | `src/components/project-wizard-new/ContractsStep.tsx` | Labels: "GC → You (Upstream)", "You → FC (Downstream)" |
-| 19 | `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` | Labels: "GC → TC SOV", "TC → FC SOV" |
-| 20 | `src/components/invoices/InvoicesTab.tsx` | Comment text (visible as tab context): "Sent to GC / Received from FC" |
+### 1. `GCProjectOverviewContent.tsx`
+- Add `const myOrgName = userOrgRoles[0]?.organization?.name || 'Your Company';`
+- **Card 2 label**: `"TC CONTRACT"` → `"{tcName} Contract"` (shows actual TC company name)
+- **Card 2 sub**: `"TC margin"` → `"Your margin"`
+- **Card 3 label**: `"GC MARGIN"` → `"YOUR MARGIN"`
+- **Margin table rows**: `"TC Contract"` → `tcName`, `"GC Gross Margin"` → `"Your Gross Margin"`, `"Net GC Margin"` → `"Your Net Margin"`, `"CO Cost (to TC)"` → `"CO Cost (to {tcName})"`
+- **Team card sub**: `"Materials: General Contractor"` → `"Materials: {myOrgName}"` or keep if TC
 
-## Replacement Pattern
+### 2. `TCProjectOverview.tsx`
+- **Header button**: `"Submit Invoice to General Contractor"` → `"Submit Invoice to {gcName}"`
+- **Header button**: `"View General Contractor Contract"` → `"View {gcName} Contract"`
+- **Card 1 label**: `"GENERAL CONTRACTOR CONTRACT (WHAT YOU EARN)"` → `"{gcName} CONTRACT (YOUR REVENUE)"`
+- **Card 1 rows**: `"Contract Value (set by General Contractor)"` → `"Contract Value (set by {gcName})"`, `"Received from General Contractor"` → `"Received from {gcName}"`, `"Pending from General Contractor"` → `"Pending from {gcName}"`
+- **Card 1 info**: `"set by your GC"` → `"set by {gcName}"`
+- **Card 2 label**: `"FIELD CREW CONTRACT (YOU SET THIS)"` → `"{fcName || 'Field Crew'} CONTRACT (YOU SET THIS)"`
+- **Card 2 margin rows**: `"General Contractor Contract (your revenue)"` → `"{gcName} (your revenue)"`, `"Field Crew Contract (your cost)"` → `"{fcName} (your cost)"`, `"Trade Contractor Gross Margin"` → `"Your Gross Margin"`, `"Trade Contractor Margin %"` → `"Your Margin %"`, `"Net Trade Contractor Margin after COs"` → `"Your Net Margin after COs"`
+- **Card 3 label**: `"TRADE CONTRACTOR GROSS MARGIN"` → `"YOUR GROSS MARGIN"`
+- **Card 3 rows**: `"General Contractor Contract"` → `gcName`, `"Field Crew Contract"` → `fcName`, `"Net Trade Contractor Margin"` → `"Your Net Margin"`
+- **Card 5 label**: `"RECEIVED FROM GENERAL CONTRACTOR"` → `"RECEIVED FROM {gcName}"`
+- **Card 6 label**: `"PENDING FROM GENERAL CONTRACTOR"` → `"PENDING FROM {gcName}"`, pills/sub similarly
+- **Card 7**: `"PAID TO FIELD CREW"` → `"PAID TO {fcName}"`
+- **Card 8**: `"PENDING — YOU OWE FIELD CREW"` → `"PENDING — YOU OWE {fcName}"`
+- **Cash Flow Ladder**: Already uses `gcName`/`fcName` for company names, keep role labels as secondary subtitle
+- **Warnings**: `"Invoice Awaiting General Contractor Approval"` → `"Invoice Awaiting {gcName} Approval"`, `"Chasing General Contractor"` → `"Chasing {gcName}"`, `"Field Crew Invoice Awaiting Your Approval"` → `"{fcName} Invoice Awaiting Your Approval"`, `"You owe Field Crew"` → `"You owe {fcName}"`, `"General Contractor waiting on answers"` → `"{gcName} waiting on answers"`
 
-| Abbreviation | Full Name |
-|---|---|
-| GC | General Contractor |
-| TC | Trade Contractor |
-| FC | Field Crew |
-| SP/SUP | Supplier |
+### 3. `FCProjectOverview.tsx`
+- **Header sub**: `"Field Crew · {tcName}"` → `"Your overview · {tcName}"`
+- **Header button**: `"Submit Invoice to TC"` → `"Submit Invoice to {tcName}"`
+- **Card 1 label**: `"MY CONTRACT"` → stays (already good)
+- **Card 1 rows**: `"Contract Value (set by TC)"` → `"Contract Value (set by {tcName})"`
+- **Card 1 info**: `"Contact your TC"` → `"Contact {tcName}"`
+- **Card 3 sub**: `"approved by TC and GC"` → `"approved"`
+- **Card 4 label**: `"PAID BY TC"` → `"PAID BY {tcName}"`
+- **Card 5 label**: `"PENDING FROM TC"` → `"PENDING FROM {tcName}"`, sub/pills: `"TC reviewing"` → `"{tcName} reviewing"`, `"Pending TC Approval"` → `"Pending {tcName} Approval"`, `"Your TC is reviewing"` → `"{tcName} is reviewing"`
+- **Card 6 button**: `"+ Submit CO Request to TC"` → `"+ Submit CO Request to {tcName}"`
+- **Warnings**: `"INV Awaiting TC Approval"` → `"Invoice Awaiting {tcName} Approval"`
 
-Examples:
-- "GC CONTRACTS (REVENUE)" → "GENERAL CONTRACTOR CONTRACTS (REVENUE)"
-- "Received from GC" → "Received from General Contractor"
-- "FC / Labor Contracts (Cost)" → "Field Crew / Labor Contracts (Cost)"
-- "Materials (TC POs)" → "Materials (Trade Contractor POs)"
-- "Chasing GC" → "Chasing General Contractor"
-- "GC → TC Contract" → "General Contractor → Trade Contractor Contract"
-- "Submit Invoice to GC" → "Submit Invoice to General Contractor"
-
-Internal variable names, type checks, and code comments remain unchanged.
+| # | File | Scope |
+|---|------|-------|
+| 1 | `GCProjectOverviewContent.tsx` | ~15 label replacements using `tcName` and "Your" |
+| 2 | `TCProjectOverview.tsx` | ~30 label replacements using `gcName`, `fcName`, and "Your" |
+| 3 | `FCProjectOverview.tsx` | ~12 label replacements using `tcName` and "Your" |
 
