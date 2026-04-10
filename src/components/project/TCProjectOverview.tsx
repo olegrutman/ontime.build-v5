@@ -771,7 +771,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           {/* GC Column */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.navy, color: '#fff', borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>GC</div>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>General Contractor</div>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{gcName}</div>
               <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(gcContractVal)}</div>
             </div>
@@ -782,14 +782,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           {/* TC Column (You) */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.amberPale, border: `2px solid ${C.amber}`, borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.amberD, marginBottom: 4 }}>YOU (TC)</div>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.amberD, marginBottom: 4 }}>YOU (Trade Contractor)</div>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.ink, marginBottom: 2 }}>{userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
               <div style={{ fontSize: '1.1rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <div style={{ fontSize: '1.2rem', color: C.muted }}>↓</div>
               <div style={{ background: C.greenBg, border: `1px solid ${C.green}`, borderRadius: 8, padding: '6px 12px' }}>
-                <div style={{ fontSize: '0.58rem', textTransform: 'uppercase', color: C.green, fontWeight: 700 }}>TC Margin</div>
+                <div style={{ fontSize: '0.58rem', textTransform: 'uppercase', color: C.green, fontWeight: 700 }}>Trade Contractor Margin</div>
                 <div style={{ fontSize: '0.88rem', color: C.green, ...fontMono }}>{fmt(netTCMargin)}</div>
               </div>
             </div>
@@ -799,11 +799,11 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           {/* FC Column */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.navy, color: '#fff', borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>FC</div>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>Field Crew</div>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{fcName}</div>
               <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(draftFcVal)}</div>
             </div>
-            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>Internal costs managed by FC</div>
+            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>Internal costs managed by Field Crew</div>
           </div>
         </div>
       </div>
