@@ -298,11 +298,11 @@ export function TCDashboardView({
 
           {/* Card 1: GC Contracts (Revenue) */}
           <KpiCard idx={0} accent={C.amber} icon={<Handshake size={18} color={C.amberD} />} iconBg={C.amberPale}
-            label="GC CONTRACTS (REVENUE)" value={gcRevenue > 0 ? fmt(gcRevenue) : '—'}
-            sub={`${projects.length} active project${projects.length !== 1 ? 's' : ''} with GC`}
+            label="GENERAL CONTRACTOR CONTRACTS (REVENUE)" value={gcRevenue > 0 ? fmt(gcRevenue) : '—'}
+            sub={`${projects.length} active project${projects.length !== 1 ? 's' : ''} with General Contractor`}
             pills={[{ type: 'pa', text: 'Revenue' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'GC Contract', 'FC Cost', 'Margin', 'Margin %']} />
+              <THead cols={['Project', 'General Contractor Contract', 'Field Crew Cost', 'Margin', 'Margin %']} />
               <tbody>
                 {pf.length > 0 ? pf.map((p, i) => {
                   const m = p.revenue - p.costs;
@@ -322,18 +322,18 @@ export function TCDashboardView({
 
           {/* Card 2: FC / Labor Contracts (Cost) */}
           <KpiCard idx={1} accent={C.navy} icon={<Users size={18} color={C.navy} />} iconBg={C.surface2}
-            label="FC / LABOR CONTRACTS (COST)" value={fcCost > 0 ? fmt(fcCost) : '—'}
+            label="FIELD CREW / LABOR CONTRACTS (COST)" value={fcCost > 0 ? fmt(fcCost) : '—'}
             sub="Field crew and sub-contractor costs"
             pills={[{ type: 'pm', text: 'Cost' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'FC Contract', 'GC Contract', 'Margin']} />
+              <THead cols={['Project', 'Field Crew Contract', 'General Contractor Contract', 'Margin']} />
               <tbody>
                 {pf.length > 0 ? pf.map((p, i) => (
                   <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                     <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.costs)}</TdM>,
                     <TdM>{fmt(p.revenue)}</TdM>, <TdM>{fmt(p.revenue - p.costs)}</TdM>,
                   ]} />
-                )) : <TRow cells={[<span style={{ color: C.faint }}>No FC contracts yet</span>, '', '', '']} />}
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No Field Crew contracts yet</span>, '', '', '']} />}
                 {fcCost > 0 && <TRow isTotal cells={['', <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(grossMargin)}</TdM>]} />}
               </tbody>
             </table>
@@ -345,7 +345,7 @@ export function TCDashboardView({
             sub={gcRevenue > 0 ? `${marginPct}% margin across all projects` : 'No contract data yet'}
             pills={gcRevenue > 0 ? [{ type: 'pg', text: `↑ ${marginPct}%` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'GC Contract', 'FC Contract', 'Gross Margin', 'Margin %']} />
+              <THead cols={['Project', 'General Contractor Contract', 'Field Crew Contract', 'Gross Margin', 'Margin %']} />
               <tbody>
                 {pf.length > 0 ? pf.map((p, i) => {
                   const m = p.revenue - p.costs;
@@ -384,11 +384,11 @@ export function TCDashboardView({
 
           {/* Card 5: Received from GC */}
           <KpiCard idx={4} accent={C.green} icon={<CheckCircle size={18} color={C.green} />} iconBg={C.greenBg}
-            label="RECEIVED FROM GC" value={receivedFromGC > 0 ? fmt(receivedFromGC) : '—'}
+            label="RECEIVED FROM GENERAL CONTRACTOR" value={receivedFromGC > 0 ? fmt(receivedFromGC) : '—'}
             sub={gcRevenue > 0 ? `${Math.round((receivedFromGC / gcRevenue) * 100)}% of total contracted value` : 'No payments received yet'}
             pills={receivedFromGC > 0 ? [{ type: 'pg', text: `${gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 0}% collected` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'GC Contract', 'Paid by GC', '% Collected', 'Pending']} />
+              <THead cols={['Project', 'General Contractor Contract', 'Paid by General Contractor', '% Collected', 'Pending']} />
               <tbody>
                 {pf.length > 0 ? pf.map((p, i) => {
                   const pct = p.revenue > 0 ? Math.round((p.paidToYou / p.revenue) * 100) : 0;
@@ -410,9 +410,9 @@ export function TCDashboardView({
 
           {/* Card 6: Pending from GC */}
           <KpiCard idx={5} accent={C.yellow} icon={<Clock size={18} color={C.yellow} />} iconBg={C.yellowBg}
-            label="PENDING FROM GC" value={pendingFromGC > 0 ? fmt(pendingFromGC) : '—'}
-            sub={pendingInvoiceDocs.length > 0 ? `${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length !== 1 ? 's' : ''} awaiting GC approval` : 'No pending invoices'}
-            pills={pendingFromGC > 0 ? [{ type: 'pw', text: 'Chasing GC' }] : [{ type: 'pg', text: 'All clear' }]}>
+            label="PENDING FROM GENERAL CONTRACTOR" value={pendingFromGC > 0 ? fmt(pendingFromGC) : '—'}
+            sub={pendingInvoiceDocs.length > 0 ? `${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length !== 1 ? 's' : ''} awaiting General Contractor approval` : 'No pending invoices'}
+            pills={pendingFromGC > 0 ? [{ type: 'pw', text: 'Chasing General Contractor' }] : [{ type: 'pg', text: 'All clear' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Invoice', 'Project', 'Amount', 'Status']} />
               <tbody>
@@ -430,7 +430,7 @@ export function TCDashboardView({
 
           {/* Card 7: TC Material Budget (POs) */}
           <KpiCard idx={6} accent={C.purple} icon={<Package size={18} color={C.purple} />} iconBg={C.purpleBg}
-            label="MATERIALS (TC POs)" value={poTotal > 0 ? fmt(poTotal) : '—'}
+            label="MATERIALS (TRADE CONTRACTOR POs)" value={poTotal > 0 ? fmt(poTotal) : '—'}
             sub={`${poDocs.length} purchase order${poDocs.length !== 1 ? 's' : ''}`}
             pills={poDocs.length > 0 ? [{ type: 'pg', text: `${poDocs.length} POs` }] : [{ type: 'pm', text: 'None' }]}>
             <div>
