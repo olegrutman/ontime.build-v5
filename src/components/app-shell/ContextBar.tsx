@@ -1,4 +1,4 @@
-import { ChevronRight, Search, Plus, User, Users, Settings, LogOut } from 'lucide-react';
+import { Plus, User, Users, Settings, LogOut } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,21 +13,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface Breadcrumb {
-  label: string;
-  onClick?: () => void;
-}
-
-
 interface ContextBarProps {
-  breadcrumbs: Breadcrumb[];
-  onCommandPalette: () => void;
   showNewButton?: boolean;
   onNewClick?: () => void;
   newButtonLabel?: string;
 }
 
-export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNewClick, newButtonLabel = 'New' }: ContextBarProps) {
+export function ContextBar({ showNewButton, onNewClick, newButtonLabel = 'New' }: ContextBarProps) {
   const navigate = useNavigate();
   const { profile, currentRole, signOut } = useAuth();
 
@@ -45,37 +37,8 @@ export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNew
         </span>
       </button>
 
-      {/* Center — Breadcrumbs */}
-      <nav className="flex items-center gap-1 text-sm">
-        {breadcrumbs.map((crumb, i) => (
-          <span key={i} className="flex items-center gap-1">
-            {i > 0 && <ChevronRight className="w-3 h-3 text-muted-foreground/50" />}
-            <button
-              onClick={crumb.onClick}
-              className={`${
-                i === breadcrumbs.length - 1
-                  ? 'text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground'
-              } transition-colors`}
-              disabled={!crumb.onClick}
-            >
-              {crumb.label}
-            </button>
-          </span>
-        ))}
-      </nav>
-
       {/* Right — Actions */}
       <div className="flex items-center gap-2 min-w-[120px] justify-end">
-        <button
-          onClick={onCommandPalette}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground text-xs transition-colors"
-        >
-          <Search className="w-3 h-3" />
-          <span className="hidden sm:inline">Search</span>
-          <kbd className="hidden sm:inline ml-1 px-1 py-0.5 rounded bg-muted/40 text-[10px] font-mono">⌘K</kbd>
-        </button>
-
         <NotificationSheet />
 
         {showNewButton && (
