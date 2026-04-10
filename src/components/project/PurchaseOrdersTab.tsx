@@ -363,7 +363,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           .eq('id', po.id);
 
         if (error) throw error;
-        toast.success('PO sent to GC for approval');
+        toast.success('PO sent to General Contractor for approval');
         fetchPurchaseOrders();
       } catch (err: any) {
         toast.error('Failed to submit for approval: ' + (err?.message || 'Unknown error'));
@@ -387,7 +387,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           .update({ status: 'PENDING_APPROVAL' as any })
           .eq('id', newPO.id);
 
-        toast.success(`PO ${poNumber} created and sent to GC for approval`);
+        toast.success(`PO ${poNumber} created and sent to General Contractor for approval`);
       } else {
         let supplierEmail = '';
 
@@ -780,7 +780,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   }
 
   const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplier;
-  const receivedTabLabel = isGC ? 'From Trade Contractors' : 'From GC';
+  const receivedTabLabel = isGC ? 'From Trade Contractors' : 'From General Contractor';
 
   return (
     <>

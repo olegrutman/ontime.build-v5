@@ -96,7 +96,7 @@ function getLinkedRequestDescription(status: string, supplierName?: string | nul
     case 'ACTIVE':
       return `${supplierLabel} pricing draft is ready to review in the PO workflow`;
     case 'PENDING_APPROVAL':
-      return 'Pricing request is waiting for GC approval before it can be sent';
+      return 'Pricing request is waiting for General Contractor approval before it can be sent';
     case 'SUBMITTED':
       return `${supplierLabel} has received this pricing request`;
     case 'PRICED':
@@ -609,7 +609,7 @@ export function COMaterialsPanel({
           .eq('id', newPO.id);
 
         if (approvalError) throw approvalError;
-        toast.success(`Pricing request ${poNumber} sent to GC for approval`);
+        toast.success(`Pricing request ${poNumber} sent to General Contractor for approval`);
         await fetchLinkedRequests();
         return;
       }
@@ -974,7 +974,7 @@ export function COMaterialsPanel({
                     disabled={pricingAction !== null || supplierLoading || !supplierId}
                   >
                     {pricingAction === 'send' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                    {isTC && poRequiresApproval ? 'Send to GC for approval' : 'Send to supplier for pricing'}
+                    {isTC && poRequiresApproval ? 'Send to General Contractor for approval' : 'Send to supplier for pricing'}
                   </Button>
                 </div>
               )}

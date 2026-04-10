@@ -287,7 +287,7 @@ export function CreateInvoiceFromPO({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
-            Bill to GC — {po.po_number}
+            Bill to General Contractor — {po.po_number}
           </DialogTitle>
           <DialogDescription>
             Create a draft invoice from this priced Purchase Order to bill the General Contractor.
@@ -304,7 +304,7 @@ export function CreateInvoiceFromPO({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No TC-to-GC contract found for this project. A contract must exist before you can bill the GC.
+              No Trade Contractor-to-General Contractor contract found for this project. A contract must exist before you can bill the General Contractor.
             </AlertDescription>
           </Alert>
         ) : (
@@ -435,7 +435,7 @@ export function CreateInvoiceFromPO({
                 <Label>Contract</Label>
                 <Select value={selectedContractId} onValueChange={setSelectedContractId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select TC-to-GC contract" />
+                    <SelectValue placeholder="Select Trade Contractor-to-General Contractor contract" />
                   </SelectTrigger>
                   <SelectContent>
                     {contracts.map((c) => (

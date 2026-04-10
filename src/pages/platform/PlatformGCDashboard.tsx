@@ -237,7 +237,7 @@ function Card1Body() {
 function Card2Body() {
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-      <THead cols={['Project', 'Owner Budget', 'TC Contract', 'GC Margin', 'Margin %']} />
+      <THead cols={['Project', 'Owner Budget', 'Trade Contractor Contract', 'General Contractor Margin', 'Margin %']} />
       <tbody>
         {PROJECTS.map((p) => {
           const margin = p.tcContract > 0 ? p.budget - p.tcContract : 0;
@@ -482,7 +482,7 @@ function Card8Body() {
   ];
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-      <THead cols={['Project', 'Trade Contractor', 'Contract Value', 'Invoiced to Date']} />
+       <THead cols={['Project', 'Trade Contractor', 'Contract Value', 'Invoiced to Date']} />
       <tbody>
         {tcs.map((d) => (
           <TableRow key={d.project} onClick={() => console.log(`navigate → ${d.project} contracts`)} cells={[
@@ -492,7 +492,7 @@ function Card8Body() {
             <TdM>{d.invoiced > 0 ? fmt(d.invoiced) : 'Setup'}</TdM>,
           ]} />
         ))}
-        <TableRow isTotal cells={['', '4 TCs', <TdM>{fmt(totalTC)}</TdM>, '']} />
+        <TableRow isTotal cells={['', '4 Trade Contractors', <TdM>{fmt(totalTC)}</TdM>, '']} />
       </tbody>
     </table>
   );
@@ -575,7 +575,7 @@ export default function PlatformGCDashboard() {
           </KpiCard>
 
           <KpiCard idx={1} accent={COLORS.green} icon={<TrendingUp size={18} color={COLORS.green} />} iconBg={COLORS.greenBg}
-            label="GC PROFIT MARGIN" value={fmt(totalMargin)} sub="30% overall · Owner budget minus TC contracts"
+            label="GENERAL CONTRACTOR PROFIT MARGIN" value={fmt(totalMargin)} sub="30% overall · Owner budget minus Trade Contractor contracts"
             pills={[{ type: 'pg', text: '↑ 30%' }]}>
             <Card2Body />
           </KpiCard>
@@ -587,7 +587,7 @@ export default function PlatformGCDashboard() {
           </KpiCard>
 
           <KpiCard idx={3} accent={COLORS.purple} icon={<Package size={18} color={COLORS.purple} />} iconBg={COLORS.purpleBg}
-            label="MATERIALS BUDGET (GC POs)" value="$192.3K" sub="$209.5K estimated · 92% of estimate spent"
+            label="MATERIALS BUDGET (GENERAL CONTRACTOR POs)" value="$192.3K" sub="$209.5K estimated · 92% of estimate spent"
             pills={[{ type: 'pg', text: '92% of est' }]}>
             <Card4Body />
           </KpiCard>
@@ -605,13 +605,13 @@ export default function PlatformGCDashboard() {
           </KpiCard>
 
           <KpiCard idx={6} accent={COLORS.red} icon={<Clock size={18} color={COLORS.red} />} iconBg={COLORS.redBg}
-            label="PENDING GC APPROVAL" value="$100.9K" sub="4 invoices awaiting your review"
+            label="PENDING GENERAL CONTRACTOR APPROVAL" value="$100.9K" sub="4 invoices awaiting your review"
             pills={[{ type: 'pr', text: 'Action needed' }]}>
             <Card7Body />
           </KpiCard>
 
           <KpiCard idx={7} accent={COLORS.navy} icon={<Handshake size={18} color={COLORS.navy} />} iconBg={COLORS.surface2}
-            label="TC CONTRACTS COMMITTED" value={fmt(totalTC)} sub="Contracted with 4 TCs · 70% of owner budget"
+            label="TRADE CONTRACTOR CONTRACTS COMMITTED" value={fmt(totalTC)} sub="Contracted with 4 Trade Contractors · 70% of owner budget"
             pills={[{ type: 'pm', text: '4 TCs' }]}>
             <Card8Body />
           </KpiCard>
@@ -624,7 +624,7 @@ export default function PlatformGCDashboard() {
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
-              <THead cols={['Project', 'Owner Budget', 'TC Contract', 'GC Margin', 'Total Invoiced', 'CO Value', 'CO %', 'Mat. Health', 'Status']} />
+              <THead cols={['Project', 'Owner Budget', 'Trade Contractor Contract', 'General Contractor Margin', 'Total Invoiced', 'CO Value', 'CO %', 'Mat. Health', 'Status']} />
               <tbody>
                 {PROJECTS.map((p) => {
                   const margin = p.tcContract > 0 ? p.budget - p.tcContract : 0;
@@ -664,8 +664,8 @@ export default function PlatformGCDashboard() {
           <WarnItem color={COLORS.red} icon="📦" title="Tower 14 — Structural Steel Over Budget $6K" sub="Ordered $91K vs $85K est · Forecast margin impact" value="+$6,000" pill="Over Budget" pillType="pr" />
           <WarnItem color={COLORS.yellow} icon="🚚" title="PO-2213 Lumber Delivery Tomorrow — Confirm Site Plan" sub="Cherry Hills · Cascade Lumber · 4,200 LF" value="$24,600" pill="Tomorrow" pillType="pw" />
           <WarnItem color={COLORS.yellow} icon="⚒" title="WO-045 Budget Variance +$1,800 Over Estimate" sub="Cherry Hills · Roof sheathing Bldg A" value="+$1,800" pill="Review" pillType="pw" />
-          <WarnItem color={COLORS.blue} icon="❓" title="Tower 14 — 7 Open RFIs Blocking Level 8 Work" sub="Oldest: 8 days · Structural decisions required" value="7 RFIs" pill="Action Needed" pillType="pb" />
-          <WarnItem color={COLORS.blue} icon="📋" title="CO-T14-04 & CO-T14-05 Pending GC Approval" sub="Tower 14 · $7,900 combined" value="$7,900" pill="Pending" pillType="pb" />
+           <WarnItem color={COLORS.blue} icon="❓" title="Tower 14 — 7 Open RFIs Blocking Level 8 Work" sub="Oldest: 8 days · Structural decisions required" value="7 RFIs" pill="Action Needed" pillType="pb" />
+           <WarnItem color={COLORS.blue} icon="📋" title="CO-T14-04 & CO-T14-05 Pending General Contractor Approval" sub="Tower 14 · $7,900 combined" value="$7,900" pill="Pending" pillType="pb" />
         </div>
 
         {/* All Projects Grid */}
