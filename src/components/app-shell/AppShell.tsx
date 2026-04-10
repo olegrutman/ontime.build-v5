@@ -58,8 +58,6 @@ export function AppShell({
 
       <div className="flex flex-col flex-1 lg:ml-[200px] xl:ml-[220px]">
         <ContextBar
-          breadcrumbs={breadcrumbs}
-          onCommandPalette={() => setCmdOpen(true)}
           showNewButton={showNewButton}
           onNewClick={onNewClick}
           newButtonLabel={newButtonLabel}
