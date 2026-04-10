@@ -1,31 +1,22 @@
 
 
-# Fix: Company Name Resolution Shows Own Company Instead of Counterparty
+# Align All KPI Grids to 4-Column Layout
 
-## Problem
-The contract name resolution logic blindly picks `from_org_name` or `to_org_name` without checking which side belongs to the viewer. Since contracts can be stored in either direction (`from_role` could be GC or TC), the viewer sometimes sees their own company name where the counterparty name should appear — e.g., "Received from IMS, LLC" when IMS, LLC is the viewer's own TC company.
-
-## Fix
-In each overview component, compare `from_org_id` / `to_org_id` against `currentOrgId` to determine which side is "me" and which is the counterparty. Pick the counterparty's name.
+## Summary
+Three dashboard views and two overview views still use 3-column KPI grids. Change them all to `repeat(4, 1fr)` / `lg:grid-cols-4` to match the GC Dashboard, GC Overview, and TC Overview which already use 4 columns.
 
 ## Changes
 
-| # | File | Current (broken) | Fixed |
-|---|------|-------------------|-------|
-| 1 | `TCProjectOverview.tsx` line ~202 | `gcName = gcContract?.from_org_name \|\| gcContract?.to_org_name` | If `from_org_id === currentOrgId`, gcName = `to_org_name`; else gcName = `from_org_name`. Same logic for `fcName` on downstream contract. |
-| 2 | `GCProjectOverviewContent.tsx` line ~208 | `tcName = upContract?.to_org_name \|\| upContract?.from_org_name` | If `from_org_id === currentOrgId`, tcName = `to_org_name`; else tcName = `from_org_name`. |
-| 3 | `FCProjectOverview.tsx` line ~153 | `tcName = fcContract?.from_org_name \|\| fcContract?.to_org_name` | If `from_org_id === currentOrgId`, tcName = `to_org_name`; else tcName = `from_org_name`. |
+| # | File | Line | Current | New |
+|---|------|------|---------|-----|
+| 1 | `TCDashboardView.tsx` | 297 | `lg:grid-cols-3` | `lg:grid-cols-4` |
+| 2 | `GCDashboardView.tsx` | 325 | `lg:grid-cols-3 xl:grid-cols-4` | `lg:grid-cols-4` (drop xl breakpoint, always 4 on lg+) |
+| 3 | `FCDashboardView.tsx` | 300 | `repeat(3, 1fr)` | `repeat(4, 1fr)` |
+| 4 | `FCProjectOverview.tsx` | 220 | `repeat(3, 1fr)` | `repeat(4, 1fr)` |
+| 5 | `SupplierProjectOverview.tsx` | 301 | `repeat(3, 1fr)` | `repeat(4, 1fr)` |
+| 6 | `DashboardKPIs.tsx` | 45 | `md:grid-cols-3` (FC section) | `md:grid-cols-4` + add a 4th KPI card (e.g. "Pending" = totalRevenue − paidToYou, already computed) |
 
-### Helper pattern (applied in each file)
-```typescript
-// Given a contract and the viewer's org ID, return the OTHER party's name
-function counterpartyName(contract: any, myOrgId: string | undefined, fallback: string): string {
-  if (!contract) return fallback;
-  if (myOrgId && contract.from_org_id === myOrgId) return contract.to_org_name || fallback;
-  if (myOrgId && contract.to_org_id === myOrgId) return contract.from_org_name || fallback;
-  return contract.from_org_name || contract.to_org_name || fallback;
-}
-```
+All responsive breakpoints stay consistent: `max-lg:!grid-cols-2 max-sm:!grid-cols-1` (inline style views) or `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` (Tailwind views).
 
-This ensures a company can never appear to "receive invoices from itself" or "owe money to itself."
+**Card counts**: TC Dashboard has 8 cards (fills 2 rows of 4 perfectly). FC Dashboard has 6 cards (4+2). GC Dashboard already has 8 cards. FC Overview has 6 cards (4+2). Supplier Overview has 6 cards (4+2). The 4+2 layout is intentional and looks clean — the last 2 cards left-align on the final row.
 
