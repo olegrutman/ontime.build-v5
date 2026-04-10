@@ -187,8 +187,8 @@ interface Props {
 const roleDotColors: Record<string, string> = {
   'General Contractor': C.blue, 'Trade Contractor': C.green, 'Field Crew': C.navy, 'Supplier': C.amber,
 };
-const roleAbbrev: Record<string, string> = {
-  'General Contractor': 'GC', 'Trade Contractor': 'TC', 'Field Crew': 'FC', 'Supplier': 'SUP',
+const roleLabel: Record<string, string> = {
+  'General Contractor': 'General Contractor', 'Trade Contractor': 'Trade Contractor', 'Field Crew': 'Field Crew', 'Supplier': 'Supplier',
 };
 
 export function TCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
@@ -713,13 +713,13 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ marginBottom: 12 }}>
               {team.map(member => {
-                const abbrev = roleAbbrev[member.role] || member.role;
+                const label = roleLabel[member.role] || member.role;
                 const isInvited = member.status === 'Invited';
                 const isResending = resending === member.id;
                 return (
                   <div key={member.id} className="group" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: roleDotColors[member.role] || C.muted, flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', width: 28 }}>{abbrev}</span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
                     <span style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                       <span style={{ fontSize: '0.82rem', fontWeight: 600, color: isInvited ? C.faint : C.ink }}>{member.invited_org_name || 'Unknown'}</span>
                       {member.invited_name && <span style={{ fontSize: '0.65rem', color: C.faint, lineHeight: 1.2 }}>{member.invited_name}</span>}
