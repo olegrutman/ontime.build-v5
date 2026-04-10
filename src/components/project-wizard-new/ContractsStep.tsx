@@ -76,8 +76,8 @@ export function ContractsStep({
             <CardTitle className="text-base flex items-center gap-2">
               {isTC ? (
                 <>
-                  <ArrowDown className="h-4 w-4 text-primary" />
-                  GC → You (Upstream)
+                   <ArrowDown className="h-4 w-4 text-primary" />
+                  General Contractor → You (Upstream)
                 </>
               ) : (
                 <>
@@ -111,7 +111,7 @@ export function ContractsStep({
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <ArrowUp className="h-4 w-4 text-accent-foreground" />
-                You → FC (Downstream)
+                You → Field Crew (Downstream)
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -8,32 +8,32 @@ export interface KpiCardConfig {
 
 export const DEFAULT_KPI_GC: KpiCardConfig[] = [
   { key: 'total_owner_budget', label: 'Total Owner Budget', subtitle: 'Full portfolio value', enabled: true, order: 0 },
-  { key: 'gc_profit_margin', label: 'GC Profit Margin', subtitle: 'Owner budget minus TC contracts', enabled: true, order: 1 },
+  { key: 'gc_profit_margin', label: 'General Contractor Profit Margin', subtitle: 'Owner budget minus Trade Contractor contracts', enabled: true, order: 1 },
   { key: 'change_orders', label: 'Change Orders', subtitle: 'Pending review count', enabled: true, order: 2 },
-  { key: 'materials_gc_pos', label: 'Materials (GC POs)', subtitle: 'Purchase order spend', enabled: true, order: 3 },
+  { key: 'materials_gc_pos', label: 'Materials (General Contractor POs)', subtitle: 'Purchase order spend', enabled: true, order: 3 },
   { key: 'needs_attention', label: 'Needs Attention', subtitle: 'Items requiring response', enabled: true, order: 4 },
   { key: 'total_paid', label: 'Total Paid', subtitle: 'Outgoing payments to subs', enabled: true, order: 5 },
-  { key: 'pending_gc_approval', label: 'Pending GC Approval', subtitle: 'Invoices awaiting review', enabled: true, order: 6 },
-  { key: 'tc_contracts_committed', label: 'TC Contracts Committed', subtitle: 'Total TC contract value', enabled: true, order: 7 },
+  { key: 'pending_gc_approval', label: 'Pending General Contractor Approval', subtitle: 'Invoices awaiting review', enabled: true, order: 6 },
+  { key: 'tc_contracts_committed', label: 'Trade Contractor Contracts Committed', subtitle: 'Total Trade Contractor contract value', enabled: true, order: 7 },
 ];
 
 export const DEFAULT_KPI_TC: KpiCardConfig[] = [
-  { key: 'gc_contracts_revenue', label: 'GC Contracts (Revenue)', subtitle: 'Revenue from GC contracts', enabled: true, order: 0 },
-  { key: 'fc_labor_contracts_cost', label: 'FC / Labor Contracts (Cost)', subtitle: 'Field crew costs', enabled: true, order: 1 },
+  { key: 'gc_contracts_revenue', label: 'General Contractor Contracts (Revenue)', subtitle: 'Revenue from General Contractor contracts', enabled: true, order: 0 },
+  { key: 'fc_labor_contracts_cost', label: 'Field Crew / Labor Contracts (Cost)', subtitle: 'Field Crew costs', enabled: true, order: 1 },
   { key: 'gross_margin', label: 'Gross Margin', subtitle: 'Revenue minus costs', enabled: true, order: 2 },
   { key: 'change_orders', label: 'Change Orders', subtitle: 'Pending review count', enabled: true, order: 3 },
-  { key: 'received_from_gc', label: 'Received from GC', subtitle: 'Payments collected', enabled: true, order: 4 },
-  { key: 'pending_from_gc', label: 'Pending from GC', subtitle: 'Invoices awaiting GC approval', enabled: true, order: 5 },
-  { key: 'materials_tc_pos', label: 'Materials (TC POs)', subtitle: 'Purchase order spend', enabled: true, order: 6 },
+  { key: 'received_from_gc', label: 'Received from General Contractor', subtitle: 'Payments collected', enabled: true, order: 4 },
+  { key: 'pending_from_gc', label: 'Pending from General Contractor', subtitle: 'Invoices awaiting General Contractor approval', enabled: true, order: 5 },
+  { key: 'materials_tc_pos', label: 'Materials (Trade Contractor POs)', subtitle: 'Purchase order spend', enabled: true, order: 6 },
   { key: 'needs_attention', label: 'Needs Attention', subtitle: 'Items requiring response', enabled: true, order: 7 },
 ];
 
 export const DEFAULT_KPI_FC: KpiCardConfig[] = [
-  { key: 'contract_with_tc', label: 'Contract with TC', subtitle: 'Active contract value', enabled: true, order: 0 },
+  { key: 'contract_with_tc', label: 'Contract with Trade Contractor', subtitle: 'Active contract value', enabled: true, order: 0 },
   { key: 'net_margin', label: 'Net Margin', subtitle: 'Profit on contract + COs', enabled: true, order: 1 },
   { key: 'co_additions', label: 'CO Additions', subtitle: 'Approved change order value', enabled: true, order: 2 },
-  { key: 'paid_by_tc', label: 'Paid by TC', subtitle: 'Payments received', enabled: true, order: 3 },
-  { key: 'pending_from_tc', label: 'Pending from TC', subtitle: 'Invoices awaiting approval', enabled: true, order: 4 },
+  { key: 'paid_by_tc', label: 'Paid by Trade Contractor', subtitle: 'Payments received', enabled: true, order: 3 },
+  { key: 'pending_from_tc', label: 'Pending from Trade Contractor', subtitle: 'Invoices awaiting approval', enabled: true, order: 4 },
   { key: 'work_progress', label: 'Work Progress', subtitle: 'Completion percentage', enabled: true, order: 5 },
 ];
 

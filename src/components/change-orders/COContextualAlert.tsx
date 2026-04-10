@@ -47,7 +47,7 @@ function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
       return {
         bg: 'bg-emerald-50 dark:bg-emerald-950/30',
         border: 'border-emerald-200 dark:border-emerald-800',
-        text: `${fcCollabName ?? 'FC'} submitted ${financials.fcTotalHours} hrs — use as your pricing base?`,
+        text: `${fcCollabName ?? 'Field Crew'} submitted ${financials.fcTotalHours} hrs — use as your pricing base?`,
         action: onUseFCBase ? { label: 'Yes', onClick: onUseFCBase } : undefined,
       };
     }
@@ -55,7 +55,7 @@ function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
       return {
         bg: 'bg-muted/40',
         border: 'border-border',
-        text: 'Submitted to GC — waiting on approval.',
+        text: 'Submitted to General Contractor — waiting on approval.',
       };
     }
     if (['shared', 'work_in_progress'].includes(status)) {
