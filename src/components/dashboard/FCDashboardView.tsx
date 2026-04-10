@@ -297,7 +297,7 @@ export function FCDashboardView({
         )}
 
         {/* ═══ 6 KPI Cards — 3-column grid ═══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }} className="max-[900px]:!grid-cols-2 max-[600px]:!grid-cols-1">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-[900px]:!grid-cols-2 max-[600px]:!grid-cols-1">
 
           {/* Card 1 — Contract with TC */}
           <KpiCard

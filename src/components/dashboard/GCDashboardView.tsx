@@ -322,7 +322,7 @@ export function GCDashboardView({
         )}
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {/* Card 1: Total Owner Budget / Revenue */}
           <KpiCard idx={0} accent={C.amber} icon={<Briefcase size={18} color={C.amberD} />} iconBg={C.amberPale}
             label="TOTAL OWNER BUDGET" value={financials.totalRevenue > 0 ? fmt(financials.totalRevenue) : '—'}

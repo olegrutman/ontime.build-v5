@@ -217,7 +217,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
       </div>
 
       {/* 6 KPI Cards — 3-col grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
 
         {/* Card 1 — My Contract */}
         <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={contractSum > 0 ? fmt(contractSum) : '—'} sub={`Set by ${tcName} · read-only`} pills={contractSum > 0 ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>

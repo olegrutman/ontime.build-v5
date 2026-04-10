@@ -42,10 +42,11 @@ export function DashboardKPIs({ financials, orgType }: DashboardKPIsProps) {
 
   // FC
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       <KPICard label="Contract Value" value={financials.totalRevenue} subtitle="From Trade Contractor / General Contractor contracts" delay={0} />
       <KPICard label="Collected" value={financials.paidToYou} subtitle="Payments received" delay={40} />
       <KPICard label="Outstanding" value={financials.totalRevenue - financials.paidToYou} subtitle="Remaining to collect" delay={80} />
+      <KPICard label="Pending" value={financials.totalBilled - financials.paidToYou} subtitle="Billed but not yet received" delay={120} />
     </div>
   );
 }
