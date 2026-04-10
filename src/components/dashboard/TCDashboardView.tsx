@@ -516,10 +516,11 @@ export function TCDashboardView({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
               {activeProjects.slice(0, 6).map((p, i) => {
-                const progress = p.status === 'completed' ? 100 : p.status === 'active' ? 50 : p.status === 'on_hold' ? 30 : 10;
+                const ppf = projectFinancials.find(pf => pf.projectId === p.id);
+                const costs = ppf?.costs || 0;
                 return (
-                  <ProjectCard key={p.id} name={p.name} phase={p.build_type || p.project_type || p.status}
-                    budget={p.contractValue || 0} progress={progress} barColor={getProjectColor(i)}
+                  <ProjectCard key={p.id} name={p.name} status={p.status}
+                    budget={p.contractValue || 0} costs={costs}
                     onClick={() => navigate(`/project/${p.id}`)} />
                 );
               })}

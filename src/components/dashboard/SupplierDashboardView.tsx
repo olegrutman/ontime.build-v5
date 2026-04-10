@@ -538,10 +538,9 @@ export function SupplierDashboardView({
           <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, fontWeight: 600, marginBottom: 10, ...fontLabel }}>Active Projects</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
             {dp.filter(p => p.estimate > 0).map((p, i) => {
-              const progress = p.estimate > 0 ? Math.round((p.ordered / p.estimate) * 100) : 0;
-              const barCol = p.overBy > 0 ? C.red : progress > 90 ? C.yellow : C.green;
+              const proj = projects.find(pr => pr.id === p.projectId);
               return (
-                <ProjectCard key={i} name={p.name} phase={p.phase} budget={p.ordered} progress={Math.min(progress, 100)} barColor={barCol} onClick={() => navigate(`/project/${p.projectId}`)} />
+                <ProjectCard key={i} name={p.name} status={proj?.status || 'active'} budget={p.estimate} costs={p.ordered} onClick={() => navigate(`/project/${p.projectId}`)} />
               );
             })}
           </div>

@@ -529,16 +529,14 @@ export function FCDashboardView({
               {projects.map((p, i) => {
                 const ppf = projectFinancials.find(pff => pff.projectId === p.id);
                 const rev = ppf?.revenue || p.contractValue || 0;
-                const paid = ppf?.paidToYou || 0;
-                const prog = rev > 0 ? Math.min(Math.round((paid / rev) * 100), 100) : 0;
+                const cost = ppf?.costs || 0;
                 return (
                   <ProjectCard
                     key={p.id}
                     name={p.name}
-                    phase={p.project_type || p.build_type || '—'}
+                    status={p.status}
                     budget={rev}
-                    progress={prog}
-                    barColor={C.amber}
+                    costs={cost}
                     onClick={() => navigate(`/project/${p.id}`)}
                   />
                 );
