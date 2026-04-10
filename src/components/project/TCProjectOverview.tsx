@@ -409,13 +409,13 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (totalPendingFromGC > 0) {
-    warnings.push({ color: C.yellow, icon: '💰', title: 'Invoice Awaiting General Contractor Approval', sub: `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} pending`, value: fmt(totalPendingFromGC), pill: 'Chasing General Contractor', pillType: 'pw', tab: 'invoices' });
+    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${gcName} Approval`, sub: `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} pending`, value: fmt(totalPendingFromGC), pill: `Chasing ${gcName}`, pillType: 'pw', tab: 'invoices' });
   }
   if (fcPendingAmount > 0) {
-    warnings.push({ color: C.red, icon: '💰', title: 'Field Crew Invoice Awaiting Your Approval', sub: `${fcName} submitted`, value: fmt(fcPendingAmount), pill: 'You owe Field Crew', pillType: 'pr', tab: 'invoices' });
+    warnings.push({ color: C.red, icon: '💰', title: `${fcName || 'Field Crew'} Invoice Awaiting Your Approval`, sub: `${fcName || 'Field Crew'} submitted`, value: fmt(fcPendingAmount), pill: `You owe ${fcName || 'Field Crew'}`, pillType: 'pr', tab: 'invoices' });
   }
   if (openRfis.length > 0) {
-    warnings.push({ color: C.blue, icon: '❓', title: `${openRfis.length} Open RFI${openRfis.length > 1 ? 's' : ''} Need Response`, sub: 'General Contractor waiting on answers', value: `${openRfis.length} RFIs`, pill: 'Action Needed', pillType: 'pb', tab: 'rfis' });
+    warnings.push({ color: C.blue, icon: '❓', title: `${openRfis.length} Open RFI${openRfis.length > 1 ? 's' : ''} Need Response`, sub: `${gcName} waiting on answers`, value: `${openRfis.length} RFIs`, pill: 'Action Needed', pillType: 'pb', tab: 'rfis' });
   }
   if (pendingCOs.length > 0) {
     warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending Change Order${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Review and approve', value: `${pendingCOs.length} COs`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });
@@ -459,8 +459,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice to General Contractor</button>
-          <button onClick={() => onNavigate('sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View General Contractor Contract</button>
+          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice to {gcName}</button>
+          <button onClick={() => onNavigate('sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View {gcName} Contract</button>
         </div>
       </div>
 
@@ -468,28 +468,28 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
 
         {/* Card 1 — GC Contract (read-only) */}
-        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="GENERAL CONTRACTOR CONTRACT (WHAT YOU EARN)" value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: 'General Contractor set this' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={`${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: `${gcName} set this` }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
           <div style={{ padding: '12px 16px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>Contract Value (set by General Contractor)</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>Approved COs (billed to General Contractor)</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
+                <TRow cells={[<TdN>Contract Value (set by {gcName})</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
+                <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
                 <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />
-                <TRow cells={[<TdN>Received from General Contractor</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
-                <TRow cells={[<TdN>Pending from General Contractor</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
+                <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
+                <TRow cells={[<TdN>Pending from {gcName}</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
                 <TRow cells={[<TdN>Remaining to Bill</TdN>, <TdM>{fmt(revisedGCTotal - totalReceivedFromGC - totalPendingFromGC)}</TdM>]} isTotal />
               </tbody>
             </table>
             <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: C.blueBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
               <span style={{ fontSize: 14 }}>ℹ️</span>
-              <span>This contract value was set by your GC. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</span>
+              <span>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</span>
             </div>
           </div>
         </KpiCard>
 
         {/* Card 2 — FC Contract (EDITABLE) */}
-        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label="FIELD CREW CONTRACT (YOU SET THIS)" value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || 'Field Crew'} · ${tcMarginPct}% Trade Contractor margin` : 'No Field Crew contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
+        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label={`${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} CONTRACT (YOU SET THIS)`} value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || fcName || 'Field Crew'} · ${tcMarginPct}% your margin` : 'No contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
           <div style={{ padding: '12px 16px' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>FC Contract Terms</div>
             {/* FC Org Search */}
@@ -550,7 +550,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             <EditField label="Contract Type" value={fcDraft.type} onSave={(v) => updateFcField('type', v)} type="select" />
             <EditField label="Scope Summary" value={fcDraft.scope || 'Click to add scope'} onSave={(v) => updateFcField('scope', v)} type="textarea" />
             {fcDirty && (
-              <button onClick={saveFcContract} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, ...fontLabel }}>Save Field Crew Contract</button>
+              <button onClick={saveFcContract} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, ...fontLabel }}>Save {selectedFcOrg?.org_name || fcName || 'Field Crew'} Contract</button>
             )}
             {fcDirty && <div style={{ fontSize: '0.6rem', color: C.amber, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block' }} />Unsaved changes</div>}
 
@@ -558,41 +558,41 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>General Contractor Contract (your revenue)</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>Field Crew Contract (your cost)</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
-                <TRow cells={[<TdN>Trade Contractor Gross Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(tcGrossMargin)}</span>]} isTotal />
-                <TRow cells={[<TdN>Trade Contractor Margin %</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
-                <TRow cells={[<TdN>CO Revenue (from General Contractor)</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>CO Cost (to Field Crew)</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />
-                <TRow cells={[<TdN>Net Trade Contractor Margin after COs</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
+                <TRow cells={[<TdN>{gcName} (your revenue)</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
+                <TRow cells={[<TdN>{fcName || 'Field Crew'} (your cost)</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
+                <TRow cells={[<TdN>Your Gross Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(tcGrossMargin)}</span>]} isTotal />
+                <TRow cells={[<TdN>Your Margin %</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
+                <TRow cells={[<TdN>CO Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
+                <TRow cells={[<TdN>CO Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />
+                <TRow cells={[<TdN>Your Net Margin after COs</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
               </tbody>
             </table>
           </div>
         </KpiCard>
 
         {/* Card 3 — TC Gross Margin */}
-        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label="TRADE CONTRACTOR GROSS MARGIN" value={gcContractVal > 0 ? fmt(tcGrossMargin) : '—'} sub={gcContractVal > 0 ? `${tcMarginPct}% · General Contractor contract minus Field Crew contract` : 'Set contracts to see margin'} pills={gcContractVal > 0 ? [{ type: 'pg', text: `${tcMarginPct}%` }] : []} idx={2}>
+        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label="YOUR GROSS MARGIN" value={gcContractVal > 0 ? fmt(tcGrossMargin) : '—'} sub={gcContractVal > 0 ? `${tcMarginPct}% · ${gcName} contract minus ${fcName || 'Field Crew'} contract` : 'Set contracts to see margin'} pills={gcContractVal > 0 ? [{ type: 'pg', text: `${tcMarginPct}%` }] : []} idx={2}>
           <div style={{ padding: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>General Contractor Contract</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>Field Crew Contract</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
+                <TRow cells={[<TdN>{gcName}</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
+                <TRow cells={[<TdN>{fcName || 'Field Crew'}</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
                 <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(tcGrossMargin)}</TdM>]} isTotal />
                 <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
                 <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />
-                <TRow cells={[<TdN>Net Trade Contractor Margin</TdN>, <TdM>{fmt(netTCMargin)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(netTCMargin)}</TdM>]} isTotal />
               </tbody>
             </table>
           </div>
         </KpiCard>
 
         {/* Card 4 — CO Net Margin */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CO NET MARGIN" value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : '0 COs'} sub={coRevenue > 0 ? `Billed ${fmt(coRevenue)} to General Contractor · Paid ${fmt(coCost)} to Field Crew` : 'No approved change orders'} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} COs` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CO NET MARGIN" value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : '0 COs'} sub={coRevenue > 0 ? `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}` : 'No approved change orders'} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} COs` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={['CO #', 'Description', 'Billed to General Contractor', 'Paid to Field Crew', 'Trade Contractor Net', 'Status']} />
+                <THead cols={['CO #', 'Description', `Billed to ${gcName}`, `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
                 <tbody>
                   {changeOrders.slice(0, 8).map(co => {
                     const gcB = co.gc_budget || 0;
@@ -616,12 +616,12 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             ) : (
               <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No change orders yet</div>
             )}
-            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO to General Contractor</button>
+            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO to {gcName}</button>
           </div>
         </KpiCard>
 
         {/* Card 5 — Received from GC */}
-        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="RECEIVED FROM GENERAL CONTRACTOR" value={fmt(totalReceivedFromGC)} sub={`${gcReceivedPct}% of General Contractor contract collected`} pills={[{ type: 'pg', text: `${gcReceivedPct}% received` }]} idx={4}>
+        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`RECEIVED FROM ${gcName.toUpperCase()}`} value={fmt(totalReceivedFromGC)} sub={`${gcReceivedPct}% of ${gcName} contract collected`} pills={[{ type: 'pg', text: `${gcReceivedPct}% received` }]} idx={4}>
           <div style={{ padding: 12 }}>
             {paidInvoicesUp.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -644,7 +644,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 6 — Pending from GC */}
-        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label="PENDING FROM GENERAL CONTRACTOR" value={totalPendingFromGC > 0 ? fmt(totalPendingFromGC) : '$0'} sub={totalPendingFromGC > 0 ? `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} awaiting General Contractor approval` : 'No pending invoices'} pills={totalPendingFromGC > 0 ? [{ type: 'pw', text: 'Chasing General Contractor' }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
+        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label={`PENDING FROM ${gcName.toUpperCase()}`} value={totalPendingFromGC > 0 ? fmt(totalPendingFromGC) : '$0'} sub={totalPendingFromGC > 0 ? `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} awaiting ${gcName} approval` : 'No pending invoices'} pills={totalPendingFromGC > 0 ? [{ type: 'pw', text: `Chasing ${gcName}` }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
           <div style={{ padding: 12 }}>
             {pendingInvoicesUp.length > 0 ? (
               <>
@@ -658,8 +658,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                     <div style={{ fontSize: '1.4rem', color: C.ink, ...fontVal }}>{fmt(inv.total_amount)}</div>
                   </div>
                 ))}
-                <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 8, ...fontLabel }}>Awaiting General Contractor approval. You will be notified when approved.</div>
-                <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>Send Follow-Up to General Contractor</button>
+                <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 8, ...fontLabel }}>Awaiting {gcName} approval. You will be notified when approved.</div>
+                <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>Send Follow-Up to {gcName}</button>
               </>
             ) : (
               <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No pending invoices</div>
@@ -668,13 +668,13 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 7 — Paid to FC */}
-        <KpiCard accent={C.navy} icon="💸" iconBg={C.surface2} label="PAID TO FIELD CREW" value={fmt(totalPaidToFC)} sub={`${fcName} · ${fcPaidPct}% of Field Crew contract paid`} pills={[{ type: 'pn', text: `${fcPaidPct}% paid out` }]} idx={6}>
+        <KpiCard accent={C.navy} icon="💸" iconBg={C.surface2} label={`PAID TO ${(fcName || 'FIELD CREW').toUpperCase()}`} value={fmt(totalPaidToFC)} sub={`${fcName || 'Field Crew'} · ${fcPaidPct}% of contract paid`} pills={[{ type: 'pn', text: `${fcPaidPct}% paid out` }]} idx={6}>
           <div style={{ padding: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>Field Crew Contract Value</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
-                <TRow cells={[<TdN>Total Paid to Field Crew</TdN>, <TdM>{fmt(totalPaidToFC)}</TdM>]} />
+                <TRow cells={[<TdN>{fcName || 'Field Crew'} Contract Value</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
+                <TRow cells={[<TdN>Total Paid to {fcName || 'Field Crew'}</TdN>, <TdM>{fmt(totalPaidToFC)}</TdM>]} />
                 <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(draftFcVal - totalPaidToFC)}</TdM>]} isTotal />
               </tbody>
             </table>
@@ -682,14 +682,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 8 — FC Invoice Pending (You Owe FC) */}
-        <KpiCard accent={C.red} icon="⏳" iconBg={C.redBg} label="PENDING — YOU OWE FIELD CREW" value={fcPendingAmount > 0 ? fmt(fcPendingAmount) : '$0'} sub={fcPendingAmount > 0 ? `${fcName} submitted · awaiting your approval` : 'No pending Field Crew invoices'} pills={fcPendingAmount > 0 ? [{ type: 'pr', text: 'Field Crew waiting on you' }] : [{ type: 'pg', text: 'All clear' }]} idx={7}>
+        <KpiCard accent={C.red} icon="⏳" iconBg={C.redBg} label={`PENDING — YOU OWE ${(fcName || 'FIELD CREW').toUpperCase()}`} value={fcPendingAmount > 0 ? fmt(fcPendingAmount) : '$0'} sub={fcPendingAmount > 0 ? `${fcName || 'Field Crew'} submitted · awaiting your approval` : `No pending ${fcName || 'Field Crew'} invoices`} pills={fcPendingAmount > 0 ? [{ type: 'pr', text: `${fcName || 'Field Crew'} waiting on you` }] : [{ type: 'pg', text: 'All clear' }]} idx={7}>
           <div style={{ padding: 12 }}>
             {fcPendingAmount > 0 ? (
               <>
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem' }}>FC Invoice</span>
-                    <Pill type="pw">Pending Trade Contractor Approval</Pill>
+                    <Pill type="pw">Pending Your Approval</Pill>
                   </div>
                   <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 2 }}>From: {fcName}</div>
                   <div style={{ fontSize: '1.6rem', color: C.ink, ...fontVal }}>{fmt(fcPendingAmount)}</div>
@@ -703,7 +703,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 </div>
               </>
             ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No pending FC invoices</div>
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No pending {fcName || 'Field Crew'} invoices</div>
             )}
           </div>
         </KpiCard>
@@ -750,7 +750,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
               onClick={() => setAddDialogOpen(true)}
               style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...fontLabel }}
             >
-              <UserPlus size={13} /> Invite Field Crew
+              <UserPlus size={13} /> Invite {fcName || 'Field Crew'}
             </button>
 
             <AddTeamMemberDialog
@@ -789,7 +789,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <div style={{ fontSize: '1.2rem', color: C.muted }}>↓</div>
               <div style={{ background: C.greenBg, border: `1px solid ${C.green}`, borderRadius: 8, padding: '6px 12px' }}>
-                <div style={{ fontSize: '0.58rem', textTransform: 'uppercase', color: C.green, fontWeight: 700 }}>Trade Contractor Margin</div>
+                <div style={{ fontSize: '0.58rem', textTransform: 'uppercase', color: C.green, fontWeight: 700 }}>Your Margin</div>
                 <div style={{ fontSize: '0.88rem', color: C.green, ...fontMono }}>{fmt(netTCMargin)}</div>
               </div>
             </div>

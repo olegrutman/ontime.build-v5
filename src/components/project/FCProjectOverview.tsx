@@ -188,7 +188,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   // Warnings
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (pendingInvoices.length > 0) {
-    warnings.push({ color: C.yellow, icon: '💰', title: `INV Awaiting TC Approval`, sub: `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} submitted`, value: fmt(totalPending), pill: 'Pending', pillType: 'pw', tab: 'invoices' });
+    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${tcName} Approval`, sub: `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} submitted`, value: fmt(totalPending), pill: 'Pending', pillType: 'pw', tab: 'invoices' });
   }
   if (remainingToEarn > 0 && progressPct < 100) {
     warnings.push({ color: C.blue, icon: '📅', title: 'Work Remaining', sub: `${100 - progressPct}% of scope not yet invoiced`, value: fmt(remainingToEarn), pill: 'Upcoming', pillType: 'pb', tab: 'invoices' });
@@ -202,11 +202,11 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.purple, flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: C.ink }}>{projectName}</div>
-            <div style={{ fontSize: '0.72rem', color: C.muted }}>Field Crew · {tcName}</div>
+            <div style={{ fontSize: '0.72rem', color: C.muted }}>Your overview · {tcName}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice to TC</button>
+          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice to {tcName}</button>
           <button onClick={() => onNavigate('daily-log')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View My Tasks</button>
         </div>
       </div>
@@ -220,7 +220,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value', 'Notes']} />
               <tbody>
-                <TRow cells={[<TdN>Contract Value (set by TC)</TdN>, <TdM>{fmt(contractSum)}</TdM>, 'Lump sum']} />
+                <TRow cells={[<TdN>Contract Value (set by {tcName})</TdN>, <TdM>{fmt(contractSum)}</TdM>, 'Lump sum']} />
                 <TRow cells={[<TdN>Approved COs</TdN>, <TdM>+{fmt(coTotal)}</TdM>, `${approvedCOs.length} approved`]} />
                 <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedTotal)}</TdM>, '—']} isTotal />
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{laborBudget > 0 ? fmt(laborBudget) : '—'}</TdM>, 'Labor + materials']} />
@@ -231,7 +231,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             </table>
             <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: C.blueBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
               <span style={{ fontSize: 14 }}>ℹ️</span>
-              <span>Your contract value was set by <strong style={{ color: C.ink }}>{tcName}</strong>. Contact your TC to negotiate changes.</span>
+              <span>Your contract value was set by <strong style={{ color: C.ink }}>{tcName}</strong>. Contact {tcName} to negotiate changes.</span>
             </div>
           </div>
         </KpiCard>
@@ -253,7 +253,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 3 — Change Orders */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CHANGE ORDERS" value={coTotal > 0 ? `+${fmt(coTotal)}` : '0 COs'} sub={`${approvedCOs.length} approved by TC and GC`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={2}>
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CHANGE ORDERS" value={coTotal > 0 ? `+${fmt(coTotal)}` : '0 COs'} sub={`${approvedCOs.length} approved`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={2}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -275,12 +275,12 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             ) : (
               <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No change orders yet</div>
             )}
-            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO Request to TC</button>
+            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO Request to {tcName}</button>
           </div>
         </KpiCard>
 
         {/* Card 4 — Paid by TC */}
-        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="PAID BY TC" value={fmt(totalPaid)} sub={`${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% of contract collected · ${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% received` }]} idx={3}>
+        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`PAID BY ${tcName.toUpperCase()}`} value={fmt(totalPaid)} sub={`${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% of contract collected · ${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% received` }]} idx={3}>
           <div style={{ padding: 12 }}>
             {paidInvoices.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -303,18 +303,18 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 5 — Pending from TC */}
-        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label="PENDING FROM TC" value={totalPending > 0 ? fmt(totalPending) : '$0'} sub={pendingInvoices.length > 0 ? `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} awaiting TC approval` : 'No pending invoices'} pills={pendingInvoices.length > 0 ? [{ type: 'pw', text: 'TC reviewing' }] : [{ type: 'pg', text: 'All clear' }]} idx={4}>
+        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label={`PENDING FROM ${tcName.toUpperCase()}`} value={totalPending > 0 ? fmt(totalPending) : '$0'} sub={pendingInvoices.length > 0 ? `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} awaiting ${tcName} approval` : 'No pending invoices'} pills={pendingInvoices.length > 0 ? [{ type: 'pw', text: `${tcName} reviewing` }] : [{ type: 'pg', text: 'All clear' }]} idx={4}>
           <div style={{ padding: '12px 16px' }}>
             {pendingInvoices.length > 0 ? (
               pendingInvoices.map(inv => (
                 <div key={inv.id} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <span style={{ fontWeight: 700, fontSize: '0.82rem', color: C.ink }}>{inv.invoice_number}</span>
-                    <Pill type="pw">Pending TC Approval</Pill>
+                    <Pill type="pw">Pending {tcName} Approval</Pill>
                   </div>
                   <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 4 }}>To: {tcName}</div>
                   <div style={{ fontSize: '1.4rem', color: C.ink, ...fontVal }}>{fmt(inv.total_amount)}</div>
-                  <div style={{ fontSize: '0.67rem', color: C.muted, marginTop: 6 }}>Your TC is reviewing this invoice. You will be notified when approved.</div>
+                  <div style={{ fontSize: '0.67rem', color: C.muted, marginTop: 6 }}>{tcName} is reviewing this invoice. You will be notified when approved.</div>
                 </div>
               ))
             ) : (

@@ -199,6 +199,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const { userOrgRoles } = useAuth();
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
   const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
+  const myOrgName = userOrgRoles[0]?.organization?.name || 'Your Company';
 
   // ─── Real data from financials ───
   const ownerBudgetReal = financials.ownerContractValue || 0;
@@ -403,7 +404,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         </KpiCard>
 
         {/* Card 2 — TC Contract (EDITABLE) */}
-        <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label="TC CONTRACT" value={tcContractVal > 0 ? fmt(draftContractVal) : '—'} sub={tcContractVal > 0 ? `${tcName} · ${liveMarginPct}% GC margin` : 'No TC contract found'} pills={tcContractVal > 0 ? [{ type: 'pg', text: `${fmt(liveMargin)} margin` }, { type: 'pn', text: `${liveMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
+        <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`${tcName.toUpperCase()} CONTRACT`} value={tcContractVal > 0 ? fmt(draftContractVal) : '—'} sub={tcContractVal > 0 ? `${tcName} · ${liveMarginPct}% your margin` : 'No contract found'} pills={tcContractVal > 0 ? [{ type: 'pg', text: `${fmt(liveMargin)} margin` }, { type: 'pn', text: `${liveMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
           <div style={{ padding: '12px 16px' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>Contract Terms</div>
             <EditField label="Trade Contractor" value={contractDraft.contractor} onSave={(v) => updateField('contractor', v)} />
@@ -419,29 +420,29 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               <THead cols={['Item', 'Value']} />
               <tbody>
                 <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                <TRow cells={[<TdN>TC Contract</TdN>, <TdM>{fmt(draftContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>GC Gross Margin</TdN>, <TdM>{fmt(liveMargin)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(draftContractVal)}</TdM>]} />
+                <TRow cells={[<TdN>Your Gross Margin</TdN>, <TdM>{fmt(liveMargin)}</TdM>]} isTotal />
                 <TRow cells={[<TdN>CO Revenue (owner)</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                <TRow cells={[<TdN>CO Cost (to TC)</TdN>, <TdM>+{fmt(coCostTotal)}</TdM>]} />
-                <TRow cells={[<TdN>Net GC Margin</TdN>, <TdM>{fmt(liveMargin + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>CO Cost (to {tcName})</TdN>, <TdM>+{fmt(coCostTotal)}</TdM>]} />
+                <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(liveMargin + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
               </tbody>
             </table>
           </div>
         </KpiCard>
 
-        {/* Card 3 — GC Margin */}
-        <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="GC MARGIN" value={ownerBudget > 0 ? fmt(liveMargin + coRevenueTotal - coCostTotal) : '—'} sub={ownerBudget > 0 ? `${liveMarginPct}% gross · incl. CO impact` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: Number(liveMarginPct) > 15 ? 'pg' : Number(liveMarginPct) > 5 ? 'pw' : 'pr', text: `${liveMarginPct}%` }] : []} idx={2}>
+        {/* Card 3 — Your Margin */}
+        <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(liveMargin + coRevenueTotal - coCostTotal) : '—'} sub={ownerBudget > 0 ? `${liveMarginPct}% gross · incl. CO impact` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: Number(liveMarginPct) > 15 ? 'pg' : Number(liveMarginPct) > 5 ? 'pw' : 'pr', text: `${liveMarginPct}%` }] : []} idx={2}>
           <div style={{ padding: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
                 <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                <TRow cells={[<TdN>TC Contract</TdN>, <TdM>{fmt(tcContractVal)}</TdM>]} />
+                <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(tcContractVal)}</TdM>]} />
                 <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(marginDollar)}</TdM>]} />
                 <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
                 <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
                 <TRow cells={[<TdN>CO Net</TdN>, <TdM>{fmt(coRevenueTotal - coCostTotal)}</TdM>]} />
-                <TRow cells={[<TdN>Total GC Margin</TdN>, <TdM>{fmt(marginDollar + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(marginDollar + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
                 <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
                 <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
               </tbody>
@@ -539,7 +540,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         </KpiCard>
 
         {/* Card 8 — Team */}
-        <KpiCard accent={C.blue} icon="👥" iconBg={C.blueBg} label="PROJECT TEAM" value={team.length === acceptedTeam.length ? `${team.length} Members` : `${acceptedTeam.length}/${team.length} Members`} sub={materialResp ? `Materials: ${materialResp === 'GC' ? 'General Contractor' : 'Trade Contractor'}` : 'Material owner not set'} pills={designatedSupplier ? [{ type: 'pa', text: 'Supplier set' }] : [{ type: 'pm', text: 'No supplier' }]} idx={7}>
+        <KpiCard accent={C.blue} icon="👥" iconBg={C.blueBg} label="PROJECT TEAM" value={team.length === acceptedTeam.length ? `${team.length} Members` : `${acceptedTeam.length}/${team.length} Members`} sub={materialResp ? `Materials: ${materialResp === 'GC' ? myOrgName : tcName}` : 'Material owner not set'} pills={designatedSupplier ? [{ type: 'pa', text: 'Supplier set' }] : [{ type: 'pm', text: 'No supplier' }]} idx={7}>
           <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ marginBottom: 12 }}>
               {team.map(member => {
@@ -579,7 +580,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
             {materialResp ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: C.muted, marginBottom: 8 }}>
-                <Package size={12} /> Materials managed by: <strong style={{ color: C.ink }}>{materialResp === 'GC' ? 'General Contractor' : 'Trade Contractor'}</strong>
+                <Package size={12} /> Materials managed by: <strong style={{ color: C.ink }}>{materialResp === 'GC' ? myOrgName : tcName}</strong>
                 {canInvite && (
                   <span onClick={() => { setMaterialResp(null); }} style={{ color: C.blue, cursor: 'pointer', marginLeft: 4, fontSize: '0.65rem', fontWeight: 600 }}>Change</span>
                 )}
@@ -588,8 +589,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               <div style={{ marginBottom: 10, padding: '8px 10px', borderRadius: 8, background: C.amberPale, border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.ink, marginBottom: 6, ...fontLabel }}>Who handles materials?</div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('GC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>General Contractor</button>
-                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('TC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>Trade Contractor</button>
+                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('GC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>{myOrgName}</button>
+                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('TC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>{tcName}</button>
                 </div>
               </div>
             ) : !materialResp ? (
