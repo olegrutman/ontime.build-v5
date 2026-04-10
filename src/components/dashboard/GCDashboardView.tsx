@@ -152,27 +152,41 @@ function WarnItem({ color, icon, title, sub, value, pill, pillType, onClick }: {
 }
 
 /* ─── ProjectCard ─── */
-function ProjectCard({ name, phase, budget, progress, barColor, onClick }: {
-  name: string; phase: string; budget: number; progress: number; barColor: string; onClick: () => void;
+const STATUS_PILL_MAP: Record<string, { type: PillType; label: string }> = {
+  active: { type: 'pg', label: 'Active' },
+  setup: { type: 'pm', label: 'Setup' },
+  draft: { type: 'pm', label: 'Setup' },
+  on_hold: { type: 'pw', label: 'On Hold' },
+  completed: { type: 'pb', label: 'Completed' },
+  archived: { type: 'pm', label: 'Archived' },
+};
+
+function ProjectCard({ name, status, budget, costs, onClick }: {
+  name: string; status: string; budget: number; costs: number; onClick: () => void;
 }) {
-  const status: PillType = progress >= 80 ? 'pg' : progress >= 50 ? 'pa' : progress >= 30 ? 'pb' : 'pm';
-  const statusText = progress >= 80 ? 'On Track' : progress >= 50 ? 'In Progress' : progress >= 30 ? 'Active' : 'Setup';
+  const margin = budget - costs;
+  const pill = STATUS_PILL_MAP[status] || { type: 'pm' as PillType, label: status };
+  const dotColor = status === 'active' ? C.green : status === 'on_hold' ? C.yellow : status === 'completed' ? C.blue : C.faint;
   return (
     <div style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', cursor: 'pointer', ...fontLabel }} className="hover:border-[#F5A623] hover:shadow-sm transition-all" onClick={onClick}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: barColor }} />
-        <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem' }}>{name}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor }} />
+        <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
       </div>
-      <div style={{ fontSize: '0.64rem', color: C.faint, marginBottom: 8 }}>{phase}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <div style={{ flex: 1, height: 4, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${progress}%`, background: barColor, borderRadius: 4 }} />
-        </div>
-        <span style={{ fontSize: '0.67rem', fontWeight: 600, color: C.muted }}>{progress}%</span>
+      <div style={{ marginBottom: 10 }}>
+        <Pill type={pill.type}>{pill.label}</Pill>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ ...fontMono, fontSize: '0.82rem', fontWeight: 700, color: C.ink2 }}>{fmt(budget)}</span>
-        <Pill type={status}>{statusText}</Pill>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[
+          { label: 'Contract', value: fmt(budget) },
+          { label: 'Cost', value: fmt(costs) },
+          { label: 'Margin', value: fmt(margin), color: margin >= 0 ? C.green : C.red },
+        ].map((m, i) => (
+          <div key={i} style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '0.56rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: C.faint, fontWeight: 600 }}>{m.label}</div>
+            <div style={{ ...fontMono, fontSize: '0.76rem', fontWeight: 700, color: m.color || C.ink2, marginTop: 1 }}>{m.value}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -553,16 +567,15 @@ export function GCDashboardView({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 p-4">
               {activeProjects.slice(0, 10).map((p, i) => {
-                // Progress estimate: active=50, setup=10, completed=100
-                const progress = p.status === 'completed' ? 100 : p.status === 'active' ? 50 : p.status === 'on_hold' ? 30 : 10;
+                const ppf = projectFinancials.find(pf => pf.projectId === p.id);
+                const costs = ppf?.costs || 0;
                 return (
                   <ProjectCard
                     key={p.id}
                     name={p.name}
-                    phase={p.build_type || p.project_type || p.status}
+                    status={p.status}
                     budget={p.contractValue || 0}
-                    progress={progress}
-                    barColor={getProjectColor(i)}
+                    costs={costs}
                     onClick={() => navigate(`/project/${p.id}`)}
                   />
                 );
