@@ -200,12 +200,17 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
   const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
   const myOrgName = userOrgRoles[0]?.organization?.name || 'Your Company';
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
 
-  // ─── Real data from financials ───
   const ownerBudgetReal = financials.ownerContractValue || 0;
   const upContract = financials.upstreamContract;
   const tcContractVal = upContract?.contract_sum || 0;
-  const tcName = upContract?.to_org_name || upContract?.from_org_name || 'Trade Contractor';
+  const tcName = (() => {
+    if (!upContract) return 'Trade Contractor';
+    if (currentOrgId && upContract.from_org_id === currentOrgId) return upContract.to_org_name || 'Trade Contractor';
+    if (currentOrgId && upContract.to_org_id === currentOrgId) return upContract.from_org_name || 'Trade Contractor';
+    return upContract.to_org_name || upContract.from_org_name || 'Trade Contractor';
+  })();
 
   // ─── Owner Budget editing ───
   const [draftOwnerBudget, setDraftOwnerBudget] = useState(ownerBudgetReal);

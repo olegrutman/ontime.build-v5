@@ -199,12 +199,22 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   // ─── GC Contract (upstream, read-only) ───
   const gcContract = financials.upstreamContract;
   const gcContractVal = gcContract?.contract_sum || 0;
-  const gcName = gcContract?.from_org_name || gcContract?.to_org_name || 'General Contractor';
+  const gcName = (() => {
+    if (!gcContract) return 'General Contractor';
+    if (currentOrgId && gcContract.from_org_id === currentOrgId) return gcContract.to_org_name || 'General Contractor';
+    if (currentOrgId && gcContract.to_org_id === currentOrgId) return gcContract.from_org_name || 'General Contractor';
+    return gcContract.from_org_name || gcContract.to_org_name || 'General Contractor';
+  })();
 
   // ─── FC Contract (downstream, editable) ───
   const fcContract = financials.downstreamContract;
   const fcContractVal = fcContract?.contract_sum || 0;
-  const fcName = fcContract?.to_org_name || fcContract?.from_org_name || '';
+  const fcName = (() => {
+    if (!fcContract) return '';
+    if (currentOrgId && fcContract.from_org_id === currentOrgId) return fcContract.to_org_name || '';
+    if (currentOrgId && fcContract.to_org_id === currentOrgId) return fcContract.from_org_name || '';
+    return fcContract.to_org_name || fcContract.from_org_name || '';
+  })();
 
   // ─── FC org search ───
   interface FcOrgSelection { org_id: string; org_name: string; contact_email: string; contact_name: string; contact_user_id: string }
