@@ -24,9 +24,9 @@ const orgTypeDotColors: Record<OrgType, string> = {
 };
 
 const sizeClasses = {
-  sm: 'h-5 px-1.5 text-[10px]',
-  md: 'h-6 px-2 text-xs',
-  lg: 'h-7 px-2.5 text-sm',
+  sm: 'h-5 px-2 text-[10px]',
+  md: 'h-6 px-2.5 text-xs',
+  lg: 'h-7 px-3 text-sm',
 };
 
 const dotSizeClasses = {
@@ -50,7 +50,7 @@ export function RoleBadge({
   }
 
   const label = role ? ROLE_LABELS[role] : ORG_TYPE_LABELS[effectiveOrgType];
-  const shortLabel = effectiveOrgType;
+  const shortLabel = ORG_TYPE_LABELS[effectiveOrgType];
 
   return (
     <span

@@ -1,21 +1,21 @@
 const roles = [
   {
-    icon: 'GC', name: 'General Contractors',
+    icon: '🏗️', name: 'General Contractors',
     desc: 'Control project costs, approve invoices and change orders, track supplier activity, and keep every trade aligned from one dashboard.',
     tags: ['Budget Control', 'Approvals', 'Trade Oversight', 'Material Visibility'],
   },
   {
-    icon: 'TC', name: 'Trade Contractors',
+    icon: '🔧', name: 'Trade Contractors',
     desc: 'Run framing operations with tighter labor control, cleaner invoicing, faster supplier coordination, and full visibility into change order status.',
     tags: ['Change Orders', 'Invoicing', 'Crew Management', 'Contract Tracking'],
   },
   {
-    icon: 'FC', name: 'Field Crews',
+    icon: '👷', name: 'Field Crews',
     desc: 'See exactly what work is assigned, submit field updates, attach jobsite proof, and keep the office informed without endless phone calls.',
     tags: ['Assigned Tasks', 'Field Updates', 'Photo Proof', 'Simple Mobile'],
   },
   {
-    icon: 'SP', name: 'Suppliers',
+    icon: '📦', name: 'Suppliers',
     desc: 'Receive clean purchase orders, price estimates, confirm deliveries, and manage returns — all tied to live project demand without back-and-forth calls.',
     tags: ['Material Orders', 'Delivery Confirm', 'Returns Workflow', 'Estimate Upload'],
   },

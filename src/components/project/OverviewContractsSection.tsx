@@ -11,12 +11,7 @@ interface Props {
 export function OverviewContractsSection({ financials, onNavigate }: Props) {
   const { viewerRole, upstreamContract, downstreamContract } = financials;
 
-  const roleAbbrev = (role: string) => {
-    if (role === 'General Contractor') return 'GC';
-    if (role === 'Trade Contractor') return 'TC';
-    if (role === 'Field Crew') return 'FC';
-    return role;
-  };
+  const roleDisplay = (role: string) => role;
 
   const rows: { fromName: string; toName: string; fromRole: string; toRole: string; sum: number; retainage: number }[] = [];
 
@@ -24,8 +19,8 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
     rows.push({
       fromName: upstreamContract.from_org_name || upstreamContract.from_role || 'Unknown',
       toName: upstreamContract.to_org_name || upstreamContract.to_role || 'Unknown',
-      fromRole: roleAbbrev(upstreamContract.from_role),
-      toRole: roleAbbrev(upstreamContract.to_role),
+      fromRole: roleDisplay(upstreamContract.from_role),
+      toRole: roleDisplay(upstreamContract.to_role),
       sum: upstreamContract.contract_sum,
       retainage: upstreamContract.retainage_percent,
     });
@@ -35,8 +30,8 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
     rows.push({
       fromName: downstreamContract.from_org_name || downstreamContract.from_role || 'Unknown',
       toName: downstreamContract.to_org_name || downstreamContract.to_role || 'Unknown',
-      fromRole: roleAbbrev(downstreamContract.from_role),
-      toRole: roleAbbrev(downstreamContract.to_role),
+      fromRole: roleDisplay(downstreamContract.from_role),
+      toRole: roleDisplay(downstreamContract.to_role),
       sum: downstreamContract.contract_sum,
       retainage: downstreamContract.retainage_percent,
     });
