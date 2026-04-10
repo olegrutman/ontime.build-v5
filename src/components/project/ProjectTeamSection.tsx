@@ -45,11 +45,11 @@ const roleDotColors: Record<string, string> = {
   'Supplier': 'bg-amber-500',
 };
 
-const roleAbbreviations: Record<string, string> = {
-  'General Contractor': 'GC',
-  'Trade Contractor': 'TC',
-  'Field Crew': 'FC',
-  'Supplier': 'SUP',
+const roleDisplayLabels: Record<string, string> = {
+  'General Contractor': 'General Contractor',
+  'Trade Contractor': 'Trade Contractor',
+  'Field Crew': 'Field Crew',
+  'Supplier': 'Supplier',
 };
 
 export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {

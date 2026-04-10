@@ -52,11 +52,11 @@ const roleDotColors: Record<string, string> = {
   'Supplier': 'bg-amber-500',
 };
 
-const roleAbbrev: Record<string, string> = {
-  'General Contractor': 'GC',
-  'Trade Contractor': 'TC',
-  'Field Crew': 'FC',
-  'Supplier': 'SUP',
+const roleLabel: Record<string, string> = {
+  'General Contractor': 'General Contractor',
+  'Trade Contractor': 'Trade Contractor',
+  'Field Crew': 'Field Crew',
+  'Supplier': 'Supplier',
 };
 
 const statusVariant: Record<string, 'outline' | 'secondary' | 'destructive'> = {
@@ -347,13 +347,14 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
       ) : (
         <div className="space-y-1">
           {team.slice(0, 8).map((member) => {
-            const abbrev = roleAbbrev[member.role];
-            const hasMaterialIcon = materialResp && abbrev === materialResp;
+            const label = roleLabel[member.role] || member.role;
+            const memberOrgType = member.role === 'General Contractor' ? 'GC' : member.role === 'Trade Contractor' ? 'TC' : member.role === 'Field Crew' ? 'FC' : 'SUPPLIER';
+            const hasMaterialIcon = materialResp && memberOrgType === materialResp;
 
             return (
               <div key={member.id} className="flex items-center gap-2 py-1.5 md:py-1 group" style={{ minHeight: '52px' }}>
                 <span className={cn("h-2.5 md:h-2 w-2.5 md:w-2 rounded-full shrink-0", roleDotColors[member.role])} />
-                <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">{abbrev}</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase truncate max-w-[100px]">{label}</span>
                 <span className="text-[0.85rem] md:text-sm font-semibold md:font-normal truncate flex-1">{member.invited_org_name || 'Unknown'}</span>
 
                 {member.status !== 'Accepted' && (

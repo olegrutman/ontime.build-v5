@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const CATEGORIES = [...new Set(DEFAULT_ROLE_RULES.map(r => r.category))];
 const ROLE_COLS = ['gc', 'tc', 'fc', 'supplier'] as const;
-const ROLE_LABELS: Record<string, string> = { gc: 'GC', tc: 'TC', fc: 'FC', supplier: 'Supplier' };
+const ROLE_LABELS: Record<string, string> = { gc: 'General Contractor', tc: 'Trade Contractor', fc: 'Field Crew', supplier: 'Supplier' };
 
 export default function PlatformRoles() {
   const { data: settings, isLoading } = usePlatformSettings();

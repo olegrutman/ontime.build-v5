@@ -122,13 +122,13 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
               className={cn(
                 'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
                 ROLE_COLORS[member.roleCode] ?? ROLE_COLORS.OTHER,
-              )}
-            >
-              {member.roleCode.charAt(0)}
+               )}
+             >
+               {member.roleCode === 'GC' ? 'G' : member.roleCode === 'TC' ? 'T' : member.roleCode === 'FC' ? 'F' : 'O'}
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{member.orgName}</p>
-              <p className="text-[11px] text-muted-foreground">{member.roleLabel}</p>
+              <p className="text-[11px] text-muted-foreground">{member.roleLabel === 'GC' ? 'General Contractor' : member.roleLabel === 'TC' ? 'Trade Contractor' : member.roleLabel === 'FC' ? 'Field Crew' : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel}</p>
             </div>
             <span
               className={cn(

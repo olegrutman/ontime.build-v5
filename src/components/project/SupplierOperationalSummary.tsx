@@ -37,11 +37,11 @@ const roleDotColors: Record<string, string> = {
   'Supplier': 'bg-amber-500',
 };
 
-const roleAbbrev: Record<string, string> = {
-  'General Contractor': 'GC',
-  'Trade Contractor': 'TC',
-  'Field Crew': 'FC',
-  'Supplier': 'SUP',
+const roleLabel: Record<string, string> = {
+  'General Contractor': 'General Contractor',
+  'Trade Contractor': 'Trade Contractor',
+  'Field Crew': 'Field Crew',
+  'Supplier': 'Supplier',
 };
 
 const statusColors: Record<string, string> = {
@@ -238,7 +238,7 @@ export function SupplierOperationalSummary({ projectId, supplierOrgId, onNavigat
             {Object.entries(teamByRole).map(([role, members]) => (
               <div key={role} className="flex items-center gap-1.5 py-0.5">
                 <span className={cn("h-2 w-2 rounded-full shrink-0", roleDotColors[role])} />
-                <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">{roleAbbrev[role]}</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase truncate max-w-[110px]">{roleLabel[role] || role}</span>
                 <span className="text-sm truncate">{members.map(m => m.invited_org_name || 'Unknown').join(', ')}</span>
               </div>
             ))}

@@ -32,11 +32,11 @@ const roleDotColors: Record<string, string> = {
   'Supplier': 'bg-amber-500',
 };
 
-const roleAbbrev: Record<string, string> = {
-  'General Contractor': 'GC',
-  'Trade Contractor': 'TC',
-  'Field Crew': 'FC',
-  'Supplier': 'SUP',
+const roleLabel: Record<string, string> = {
+  'General Contractor': 'General Contractor',
+  'Trade Contractor': 'Trade Contractor',
+  'Field Crew': 'Field Crew',
+  'Supplier': 'Supplier',
 };
 
 export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardProps) {
@@ -92,15 +92,16 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
       <SurfaceCardBody className="pt-0 space-y-1.5">
         <TooltipProvider delayDuration={300}>
           {team.map((member) => {
-            const abbrev = roleAbbrev[member.role] || member.role;
-            const hasMaterial = materialResp === abbrev;
+            const label = roleLabel[member.role] || member.role;
+            const memberOrgType = member.role === 'General Contractor' ? 'GC' : member.role === 'Trade Contractor' ? 'TC' : member.role === 'Field Crew' ? 'FC' : 'SUPPLIER';
+            const hasMaterial = materialResp === memberOrgType;
             const isInvited = member.status === 'Invited';
             const isResending = resending === member.id;
 
             return (
               <div key={member.id} className="group flex items-center gap-2 py-1">
                 <span className={cn('h-2 w-2 rounded-full shrink-0', roleDotColors[member.role] || 'bg-muted-foreground')} />
-                <span className="text-[0.65rem] font-medium text-muted-foreground uppercase w-7">{abbrev}</span>
+                <span className="text-[0.6rem] font-medium text-muted-foreground uppercase truncate max-w-[110px]">{label}</span>
                 <span className={cn('text-[0.85rem] font-medium truncate flex-1', isInvited && 'text-muted-foreground')}>
                   {member.invited_org_name || 'Unknown'}
                 </span>

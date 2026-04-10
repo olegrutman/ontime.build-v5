@@ -4,7 +4,7 @@ import { X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-const ROLE_LABELS: Record<string, string> = {
+const DEMO_ROLE_LABELS: Record<string, string> = {
   GC: 'General Contractor',
   TC: 'Trade Contractor',
   FC: 'Field Crew',
@@ -31,7 +31,7 @@ export function DemoBanner() {
     <div className="sticky top-0 z-50 bg-primary text-primary-foreground px-4 py-2 flex items-center justify-between text-sm">
       <span>
         <strong>Demo Mode</strong> — Viewing as{' '}
-        <span className="font-semibold">{demoRole ? ROLE_LABELS[demoRole] : 'unknown'}</span>.
+        <span className="font-semibold">{demoRole ? DEMO_ROLE_LABELS[demoRole] : 'unknown'}</span>.
         No real data is affected.
       </span>
       <div className="flex items-center gap-1">
