@@ -106,7 +106,7 @@ export function ScopeQuestionsPanel({
       <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col h-[calc(100vh-280px)]">
         <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
           <p className="text-xs font-medium text-muted-foreground">
-            {isTC ? 'GC → TC SOV' : 'SOV Preview'}
+            {isTC ? 'General Contractor → Trade Contractor SOV' : 'SOV Preview'}
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -118,7 +118,7 @@ export function ScopeQuestionsPanel({
       {showDualSov && (
         <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col h-[calc(100vh-280px)]">
           <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
-            <p className="text-xs font-medium text-muted-foreground">TC → FC SOV</p>
+            <p className="text-xs font-medium text-muted-foreground">Trade Contractor → Field Crew SOV</p>
           </div>
           <div className="flex-1 overflow-y-auto">
             <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />

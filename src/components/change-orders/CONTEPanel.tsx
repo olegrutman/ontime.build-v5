@@ -259,7 +259,7 @@ export function CONTEPanel({
             <div className="flex items-start gap-2 rounded-md bg-accent p-2.5 border border-border">
               <Loader2 className="h-4 w-4 text-primary shrink-0 mt-0.5 animate-spin" />
               <p className="text-xs text-foreground">
-                Increase request of ${fmt(pendingRequest!.requested_increase)} pending GC approval
+                Increase request of ${fmt(pendingRequest!.requested_increase)} pending General Contractor approval
               </p>
             </div>
           )}
@@ -267,7 +267,7 @@ export function CONTEPanel({
           {hasPending && isGC && pendingRequest && (
             <div className="rounded-md border border-primary/30 bg-primary/10 p-3 space-y-2">
               <p className="text-xs font-semibold text-foreground">
-                TC requesting NTE increase
+                Trade Contractor requesting NTE increase
               </p>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
@@ -369,7 +369,7 @@ export function CONTEPanel({
               )}
             </div>
             <div>
-              <Label className="text-sm font-medium">Note to GC (optional)</Label>
+              <Label className="text-sm font-medium">Note to General Contractor (optional)</Label>
               <Textarea
                 value={increaseNote}
                 onChange={e => setIncreaseNote(e.target.value)}
@@ -427,7 +427,7 @@ export function CONTEPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Decline NTE increase</AlertDialogTitle>
             <AlertDialogDescription>
-              Provide a note. TC will be notified.
+              Provide a note. Trade Contractor will be notified.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">

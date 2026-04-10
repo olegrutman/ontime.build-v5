@@ -37,7 +37,7 @@ export function QuickLogAlertBanner({ role, openCount, openTotal, submittedCount
         <AlertTriangle className="h-4 w-4 text-blue-600" />
         <AlertDescription className="flex items-center justify-between">
           <span className="text-blue-800 dark:text-blue-200">
-            {submittedCount} FC tasks not yet sent to GC — {fmt(submittedTotal)}
+            {submittedCount} Field Crew tasks not yet sent to General Contractor — {fmt(submittedTotal)}
           </span>
           <Button size="sm" variant="outline" className="ml-4 border-blue-300 text-blue-700" onClick={onSubmit}>
             Bundle & send <ArrowRight className="h-3.5 w-3.5 ml-1" />

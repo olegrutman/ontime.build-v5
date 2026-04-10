@@ -302,16 +302,16 @@ export function FCDashboardView({
           {/* Card 1 — Contract with TC */}
           <KpiCard
             accent={C.amber} icon="🤝" iconBg={C.amberPale}
-            label="CONTRACT WITH TC"
+            label="CONTRACT WITH TRADE CONTRACTOR"
             value={fmt(contractValue)}
-            sub={primaryProject ? `${organization?.name || 'TC'} · ${primaryProject.name}` : 'No project'}
+            sub={primaryProject ? `${organization?.name || 'Trade Contractor'} · ${primaryProject.name}` : 'No project'}
             pills={[{ type: 'pa', text: primaryProject?.status === 'active' ? 'Active' : (primaryProject?.status || 'Setup') }]}
             idx={0}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value', 'Notes']} />
               <tbody>
-                <TRow cells={[<TdN>Base Contract with TC</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}{primaryProject ? ` · ${primaryProject.name}` : ''}</span>]} />
+                <TRow cells={[<TdN>Base Contract with Trade Contractor</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}{primaryProject ? ` · ${primaryProject.name}` : ''}</span>]} />
                 <TRow cells={[<TdN>Approved CO Additions</TdN>, <TdM>+{fmt(coTotal)}</TdM>, <span>{approvedCOs.length} approved COs</span>]} />
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{fmt(costs)}</TdM>, <span>Labor + materials cost</span>]} />
                 <TRow cells={[
@@ -335,7 +335,7 @@ export function FCDashboardView({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value', 'Notes']} />
               <tbody>
-                <TRow cells={[<TdN>Base Contract with TC</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}</span>]} />
+                <TRow cells={[<TdN>Base Contract with Trade Contractor</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}</span>]} />
                 <TRow cells={[<TdN>Approved CO Additions</TdN>, <TdM>+{fmt(coTotal)}</TdM>, <span>{approvedCOs.length} approved COs</span>]} />
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{fmt(costs)}</TdM>, <span>Labor + materials cost</span>]} />
                 <TRow cells={[
@@ -380,7 +380,7 @@ export function FCDashboardView({
           {/* Card 4 — Paid by TC */}
           <KpiCard
             accent={C.green} icon="✅" iconBg={C.greenBg}
-            label="PAID BY TC"
+            label="PAID BY TRADE CONTRACTOR"
             value={paidTotal > 0 ? fmt(paidTotal) : '—'}
             sub={`${collectedPct}% of contract collected`}
             pills={[{ type: 'pg', text: `${collectedPct}% received` }]}
@@ -405,7 +405,7 @@ export function FCDashboardView({
                     <TdN>{inv.title}</TdN>,
                     <span>{inv.projectName}</span>,
                     <TdM>{fmt(inv.amount || 0)}</TdM>,
-                    <Pill type="pw">Pending TC</Pill>,
+                     <Pill type="pw">Pending Trade Contractor</Pill>,
                   ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
                 ))}
               </tbody>
@@ -415,10 +415,10 @@ export function FCDashboardView({
           {/* Card 5 — Pending from TC */}
           <KpiCard
             accent={C.yellow} icon="⏳" iconBg={C.yellowBg}
-            label="PENDING FROM TC"
+            label="PENDING FROM TRADE CONTRACTOR"
             value={pendingTotal > 0 ? fmt(pendingTotal) : '—'}
-            sub={pendingInvoiceDocs.length > 0 ? `Awaiting TC approval · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
-            pills={pendingTotal > 0 ? [{ type: 'pw', text: 'Pending TC' }] : [{ type: 'pm', text: 'None' }]}
+            sub={pendingInvoiceDocs.length > 0 ? `Awaiting Trade Contractor approval · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
+            pills={pendingTotal > 0 ? [{ type: 'pw', text: 'Pending Trade Contractor' }] : [{ type: 'pm', text: 'None' }]}
             idx={4}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -432,7 +432,7 @@ export function FCDashboardView({
                     <TdN>{inv.title}</TdN>,
                     <span>{inv.projectName}</span>,
                     <TdM>{fmt(inv.amount || 0)}</TdM>,
-                    <Pill type="pw">Pending TC</Pill>,
+                    <Pill type="pw">Pending Trade Contractor</Pill>,
                   ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
                 ))}
               </tbody>
@@ -486,8 +486,8 @@ export function FCDashboardView({
             {pendingInvoiceDocs.map(inv => (
               <WarnItem key={inv.id}
                 color={C.amber} icon="💰"
-                title={`${inv.title} — Awaiting TC Approval`}
-                sub={`${inv.projectName} · ${organization?.name || 'TC'}`}
+                title={`${inv.title} — Awaiting Trade Contractor Approval`}
+                sub={`${inv.projectName} · ${organization?.name || 'Trade Contractor'}`}
                 value={fmt(inv.amount || 0)} pill="Pending" pillType="pw"
                 onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)}
               />

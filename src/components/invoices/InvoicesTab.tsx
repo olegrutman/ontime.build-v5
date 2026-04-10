@@ -124,7 +124,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
 
   const gcOrgName = useMemo(() => {
     const gcContract = contracts.find(c => c.to_role === 'General Contractor');
-    return gcContract?.to_org_name || 'GC';
+    return gcContract?.to_org_name || 'General Contractor';
   }, [contracts]);
 
   // Determine if current view is "approver" side

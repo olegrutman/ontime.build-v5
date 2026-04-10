@@ -15,8 +15,8 @@ const fmt = (n: number) =>
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   open: { label: 'Open', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' },
-  submitted_to_tc: { label: 'Sent to TC', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' },
-  submitted_to_gc: { label: 'Sent to GC', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200' },
+  submitted_to_tc: { label: 'Sent to Trade Contractor', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' },
+  submitted_to_gc: { label: 'Sent to General Contractor', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200' },
   approved: { label: 'Approved', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' },
   invoiced: { label: 'Invoiced', className: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' },
 };

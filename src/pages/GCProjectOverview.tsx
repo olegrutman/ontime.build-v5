@@ -301,7 +301,7 @@ export default function GCProjectOverview() {
             </KpiCard>
 
             {/* Card 2 — TC Contract (EDITABLE) */}
-            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label="TC CONTRACT (GC SETS THIS)" value={fmt(contractVal)} sub={`${contract.contractor} · ${marginPct}% GC margin on this project`} pills={[{ type: 'pg', text: `${fmt(marginDollar)} margin` }, { type: 'pn', text: `${marginPct}%` }]} idx={1}>
+            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label="TRADE CONTRACTOR CONTRACT (SET BY YOU)" value={fmt(contractVal)} sub={`${contract.contractor} · ${marginPct}% General Contractor margin on this project`} pills={[{ type: 'pg', text: `${fmt(marginDollar)} margin` }, { type: 'pn', text: `${marginPct}%` }]} idx={1}>
               <div style={{ padding: '12px 16px' }}>
                 {/* Section 1: Contract Terms */}
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>Contract Terms</div>
@@ -328,12 +328,12 @@ export default function GCProjectOverview() {
                   <THead cols={['Item', 'Value']} />
                   <tbody>
                     <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>$420,000</TdM>]} />
-                    <TRow cells={[<TdN>TC Contract</TdN>, <TdM>${contractVal.toLocaleString()}</TdM>]} />
-                    <TRow cells={[<TdN>GC Gross Margin</TdN>, <TdM>${marginDollar.toLocaleString()}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>GC Margin %</TdN>, <TdM>{marginPct}%</TdM>]} />
+                     <TRow cells={[<TdN>Trade Contractor Contract</TdN>, <TdM>${contractVal.toLocaleString()}</TdM>]} />
+                    <TRow cells={[<TdN>General Contractor Gross Margin</TdN>, <TdM>${marginDollar.toLocaleString()}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>General Contractor Margin %</TdN>, <TdM>{marginPct}%</TdM>]} />
                     <TRow cells={[<TdN>CO Impact (billed to owner)</TdN>, <TdM>+$10,200</TdM>]} />
-                    <TRow cells={[<TdN>CO Cost (passed to TC)</TdN>, <TdM>+$6,200</TdM>]} />
-                    <TRow cells={[<TdN>Net GC Margin after COs</TdN>, <TdM>$56,000</TdM>]} isTotal />
+                    <TRow cells={[<TdN>CO Cost (passed to Trade Contractor)</TdN>, <TdM>+$6,200</TdM>]} />
+                    <TRow cells={[<TdN>Net General Contractor Margin after COs</TdN>, <TdM>$56,000</TdM>]} isTotal />
                   </tbody>
                 </table>
               </div>
@@ -405,7 +405,7 @@ export default function GCProjectOverview() {
             </KpiCard>
 
             {/* Card 7 — Pending Approval */}
-            <KpiCard accent={C.red} icon="⏳" iconBg={C.redBg} label="PENDING YOUR APPROVAL" value={fmt(18400)} sub="1 invoice awaiting GC sign-off · submitted 4 hr ago" pills={[{ type: 'pr', text: 'Action needed' }]} idx={6}>
+            <KpiCard accent={C.red} icon="⏳" iconBg={C.redBg} label="PENDING YOUR APPROVAL" value={fmt(18400)} sub="1 invoice awaiting General Contractor sign-off · submitted 4 hr ago" pills={[{ type: 'pr', text: 'Action needed' }]} idx={6}>
               <div style={{ padding: '16px' }}>
                 <div style={{ borderRadius: 10, border: `1px solid ${C.border}`, padding: 16, background: C.surface2 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

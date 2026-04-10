@@ -346,14 +346,14 @@ export function GCDashboardView({
 
           {/* Card 2: GC Profit Margin */}
           <KpiCard idx={1} accent={C.green} icon={<TrendingUp size={18} color={C.green} />} iconBg={C.greenBg}
-            label="GC PROFIT MARGIN" value={margin !== 0 ? fmt(margin) : '—'}
-            sub={marginPct > 0 ? `${marginPct}% overall · Owner budget minus TC contracts` : 'Revenue minus costs'}
+            label="GENERAL CONTRACTOR PROFIT MARGIN" value={margin !== 0 ? fmt(margin) : '—'}
+            sub={marginPct > 0 ? `${marginPct}% overall · Owner budget minus Trade Contractor contracts` : 'Revenue minus costs'}
             pills={marginPct > 0 ? [{ type: 'pg', text: `↑ ${marginPct}%` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
                 <TRow cells={[<TdN>Owner Budget (Revenue)</TdN>, <TdM>{fmt(financials.totalRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>TC Contracts (Costs)</TdN>, <TdM>{fmt(financials.totalCosts)}</TdM>]} />
+                <TRow cells={[<TdN>Trade Contractor Contracts (Costs)</TdN>, <TdM>{fmt(financials.totalCosts)}</TdM>]} />
                 <TRow cells={[<TdN>Paid by You</TdN>, <TdM>{fmt(financials.paidByYou)}</TdM>]} />
                 <TRow cells={[<TdN>Paid to You</TdN>, <TdM>{fmt(financials.paidToYou)}</TdM>]} />
                 <TRow isTotal cells={[<TdN>Net Margin</TdN>, <TdM>{fmt(margin)}</TdM>]} />
@@ -385,7 +385,7 @@ export function GCDashboardView({
 
           {/* Card 4: Materials / PO Spend */}
           <KpiCard idx={3} accent={C.purple} icon={<Package size={18} color={C.purple} />} iconBg={C.purpleBg}
-            label="MATERIALS (GC POs)" value={poTotal > 0 ? fmt(poTotal) : '—'}
+            label="MATERIALS (GENERAL CONTRACTOR POs)" value={poTotal > 0 ? fmt(poTotal) : '—'}
             sub={`${poDocs.length} purchase order${poDocs.length !== 1 ? 's' : ''}`}
             pills={poDocs.length > 0 ? [{ type: 'pg', text: `${poDocs.length} POs` }] : [{ type: 'pm', text: 'None' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -451,7 +451,7 @@ export function GCDashboardView({
 
           {/* Card 7: Pending Approval */}
           <KpiCard idx={6} accent={C.red} icon={<Clock size={18} color={C.red} />} iconBg={C.redBg}
-            label="PENDING GC APPROVAL" value={billing.outstandingToPay > 0 ? fmt(billing.outstandingToPay) : '—'}
+            label="PENDING GENERAL CONTRACTOR APPROVAL" value={billing.outstandingToPay > 0 ? fmt(billing.outstandingToPay) : '—'}
             sub={`${billing.invoicesReceived} invoice${billing.invoicesReceived !== 1 ? 's' : ''} awaiting your review`}
             pills={billing.invoicesReceived > 0 ? [{ type: 'pr', text: 'Action needed' }] : [{ type: 'pg', text: 'All clear' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -473,7 +473,7 @@ export function GCDashboardView({
 
           {/* Card 8: TC Contracts */}
           <KpiCard idx={7} accent={C.navy} icon={<Handshake size={18} color={C.navy} />} iconBg={C.surface2}
-            label="TC CONTRACTS COMMITTED" value={financials.totalCosts > 0 ? fmt(financials.totalCosts) : '—'}
+            label="TRADE CONTRACTOR CONTRACTS COMMITTED" value={financials.totalCosts > 0 ? fmt(financials.totalCosts) : '—'}
             sub={financials.totalRevenue > 0 ? `${Math.round((financials.totalCosts / financials.totalRevenue) * 100)}% of owner budget` : 'No contracts yet'}
             pills={[{ type: 'pm', text: `${projects.length} projects` }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -487,7 +487,7 @@ export function GCDashboardView({
                       <Pill type={p.status === 'active' ? 'pg' : 'pm'}>{p.status}</Pill>,
                     ]} />
                   )) : (
-                    <TRow cells={[<span style={{ color: C.faint }}>No TC contracts yet</span>, '', '']} />
+                    <TRow cells={[<span style={{ color: C.faint }}>No Trade Contractor contracts yet</span>, '', '']} />
                   )}
                 {financials.totalCosts > 0 && <TRow isTotal cells={['Total', <TdM>{fmt(financials.totalCosts)}</TdM>, '']} />}
               </tbody>
