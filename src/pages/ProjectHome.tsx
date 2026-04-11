@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useProjectProfile } from '@/hooks/useProjectProfile';
 import { useScopeSelections } from '@/hooks/useScopeWizard';
-import { ChevronDown, ClipboardList } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -324,6 +324,7 @@ export default function ProjectHome() {
                       <span className="text-slate-500">Type <span className="text-white font-medium">{project.project_type}</span></span>
                     )}
                   </div>
+                </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <NotificationSheet />
