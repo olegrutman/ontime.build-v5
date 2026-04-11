@@ -4,10 +4,23 @@ import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 
 interface ProjectFinancialCommandProps {
   financials: ProjectFinancials;
+  isTM?: boolean;
 }
 
-export function ProjectFinancialCommand({ financials }: ProjectFinancialCommandProps) {
+export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFinancialCommandProps) {
   const { viewerRole, contracts, upstreamContract, downstreamContract, approvedEstimateSum } = financials;
+
+  // T&M mode: contract value = sum of approved COs (approvedEstimateSum)
+  if (isTM) {
+    const tmTotal = approvedEstimateSum || 0;
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <KPICard label="T&M Total" value={tmTotal} delay={0} className="p-3" />
+        <KPICard label="Approved Work Orders" value={tmTotal} delay={40} className="p-3" />
+        <KPICard label="Collected" value={financials.receivablesCollected} delay={80} className="p-3" />
+      </div>
+    );
+  }
 
   if (viewerRole === 'General Contractor') {
     const originalContract = upstreamContract?.contract_sum || 0;

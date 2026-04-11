@@ -4,9 +4,10 @@ import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui
 
 interface COImpactCardProps {
   financials: ProjectFinancials;
+  isTM?: boolean;
 }
 
-export function COImpactCard({ financials }: COImpactCardProps) {
+export function COImpactCard({ financials, isTM = false }: COImpactCardProps) {
   const { approvedEstimateSum } = financials;
 
   if (!approvedEstimateSum || approvedEstimateSum === 0) return null;
@@ -17,17 +18,17 @@ export function COImpactCard({ financials }: COImpactCardProps) {
   const pending = 0;
 
   const rows = [
-    { label: 'Approved CO Revenue', value: revenue },
-    { label: 'Approved CO Cost', value: cost },
-    { label: 'CO Gross Margin', value: margin },
-    { label: 'Pending CO Exposure', value: pending },
+    { label: isTM ? 'Approved WO Revenue' : 'Approved CO Revenue', value: revenue },
+    { label: isTM ? 'Approved WO Cost' : 'Approved CO Cost', value: cost },
+    { label: isTM ? 'WO Gross Margin' : 'CO Gross Margin', value: margin },
+    { label: isTM ? 'Pending WO Exposure' : 'Pending CO Exposure', value: pending },
   ];
 
   return (
     <SurfaceCard>
       <SurfaceCardHeader
-        title="Change order impact"
-        subtitle="How changes affected your bottom line"
+        title={isTM ? 'Work order impact' : 'Change order impact'}
+        subtitle={isTM ? 'How work orders affected your bottom line' : 'How changes affected your bottom line'}
       />
       <SurfaceCardBody className="pt-0">
         <div className="text-sm divide-y divide-border/40">
