@@ -108,7 +108,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
         style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-stretch justify-around h-[56px]">
-          {PRIMARY_ITEMS.map((item) => {
+          {getPrimaryItems(isTM).map((item) => {
             const active = activeSection === item.route;
             const Icon = item.icon;
             return (
