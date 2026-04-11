@@ -1,51 +1,35 @@
 
 
-# Optimize TC Project Overview for Mobile (390px)
+# Add Back-to-Dashboard Navigation on Mobile Project Pages
 
-## Problems
-1. **Cash Flow Ladder** occupies ~400px vertically — 3 stacked blocks with arrows and labels
-2. **KPI cards are single-column** on mobile — 8+ cards require excessive scrolling
-3. **Action buttons** have long text that wraps ("Submit Invoice to Haley Custom Homes")
-4. **Sasha bubble** still overlaps card content at the bottom
-5. **Header area** consumes the entire first viewport before any financial data appears
+## Problem
+On mobile project pages, there is no way to navigate back to the dashboard. The `ContextBar` (which has the logo linking to `/dashboard`) is part of `AppShell`, but `ProjectHome` uses its own layout (`ProjectShell` + `ProjectBottomNav`). The `ProjectBottomNav` only has project-level tabs (Overview, COs, Invoices, Orders, More) with no home/back button.
+
+## Solution
+Add a back arrow to the project header area on mobile that navigates to `/dashboard`.
 
 ## Changes
 
 | # | File | What |
 |---|------|------|
-| 1 | `TCProjectOverview.tsx` — **Cash Flow Ladder** | On mobile, replace the 3-column vertical stack with a compact horizontal summary row: `GC $231K → You $231K → FC $160K` with margin shown as a small badge. Saves ~300px of vertical space. |
-| 2 | `TCProjectOverview.tsx` — **KPI grid** | Change mobile grid from `grid-cols-1` to `grid-cols-2` for the first 4 summary cards (Revenue, FC Contract, Gross Margin, CO Net). Keep detail-heavy cards (Received, Pending, Paid, Team) as single-column below. |
-| 3 | `TCProjectOverview.tsx` — **Action buttons** | Shorten mobile labels: "Submit Invoice" and "View Contract" (drop the org name on small screens). Use `className="max-sm:hidden"` on the org name span. |
-| 4 | `TCProjectOverview.tsx` — **Card padding** | Reduce mobile card padding from `20px 24px` to `14px 16px` on the Cash Flow section and collapsed KPI card headers. |
-| 5 | `SashaBubble.tsx` | Bump mobile position from `bottom-28` to `bottom-32` to fully clear the bottom nav + Capture button area. |
+| 1 | `ProjectHome.tsx` (~line 295) | Add a back arrow (`ArrowLeft` or `ChevronLeft` icon) to the left of the project header on mobile. Tapping it navigates to `/dashboard`. Show on mobile only (`md:hidden`). |
+| 2 | `ProjectBottomNav.tsx` | Add a "Home" item (`Home` icon) as the first item in the bottom nav, navigating to `/dashboard` instead of a project sub-route. This gives users a persistent way back. |
 
-## Mobile layout (after)
+Option 2 is the cleaner UX — a Home icon in the bottom nav is always visible and discoverable. The back arrow in the header is a secondary reinforcement.
 
+## Implementation detail
+- In `ProjectBottomNav.tsx`, add `{ label: 'Home', icon: Home, route: '__home__' }` before the existing PRIMARY_ITEMS
+- In `handleNavigate`, check for the `__home__` sentinel and call `navigate('/dashboard')` instead of the project sub-route
+- Keep the existing 4 items + More + Capture, making Home the 6th (or replace one slot). Since space is tight, the cleanest approach is adding a small back arrow in the project header rather than adding to the already-full bottom nav.
+
+## Recommended approach
+Add a back/home button in the **project header** only (line ~295 in ProjectHome.tsx):
 ```text
 ┌──────────────────────────────┐
-│ ● Fuller Residence           │
-│ TC · IMIS, LLC               │
-│ [Submit Invoice] [View Cont] │  ← shortened labels
-├──────────────────────────────┤
-│ Revenue    │ FC Contract     │  ← 2-col grid
-│ $231.7K    │ $160.5K         │
-├────────────┼─────────────────│
-│ Margin     │ CO Net          │
-│ $71.2K     │ $0              │
-├──────────────────────────────┤
-│ GC $231K → You → FC $160K   │  ← compact cash flow
-│         margin $71.2K        │
-├──────────────────────────────┤
-│ Received from GC    $0       │  ← single-col detail cards
-│ Pending from GC     $0       │
-│ ...                          │
+│ ← │ Project Overview          │  ← back arrow on mobile
+│   │ Fuller Residence          │
+│   │ Status Active  Health ... │
 └──────────────────────────────┘
 ```
-
-## What stays unchanged
-- Desktop layout (4-column grid, full Cash Flow Ladder)
-- All expand/collapse KPI card functionality
-- FC contract editing flow
-- Team management card
-- Warning/attention section
+This keeps the bottom nav uncluttered and follows standard mobile patterns (top-left back arrow).
 
