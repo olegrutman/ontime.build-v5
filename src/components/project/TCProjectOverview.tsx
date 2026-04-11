@@ -182,6 +182,7 @@ interface Props {
   projectName?: string;
   financials: ProjectFinancials;
   onNavigate: (tab: string) => void;
+  isTM?: boolean;
 }
 
 const roleDotColors: Record<string, string> = {
@@ -191,7 +192,7 @@ const roleLabel: Record<string, string> = {
   'General Contractor': 'General Contractor', 'Trade Contractor': 'Trade Contractor', 'Field Crew': 'Field Crew', 'Supplier': 'Supplier',
 };
 
-export function TCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
+export function TCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
@@ -428,7 +429,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
     warnings.push({ color: C.blue, icon: '❓', title: `${openRfis.length} Open RFI${openRfis.length > 1 ? 's' : ''} Need Response`, sub: `${gcName} waiting on answers`, value: `${openRfis.length} RFIs`, pill: 'Action Needed', pillType: 'pb', tab: 'rfis' });
   }
   if (pendingCOs.length > 0) {
-    warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending Change Order${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Review and approve', value: `${pendingCOs.length} COs`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });
+    warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending ${isTM ? 'Work Order' : 'Change Order'}${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Review and approve', value: `${pendingCOs.length} ${isTM ? 'WOs' : 'COs'}`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });
   }
   // ─── Team data ───
   const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
@@ -598,7 +599,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 4 — CO Net Margin */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CO NET MARGIN" value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : '0 COs'} sub={coRevenue > 0 ? `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}` : 'No approved change orders'} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} COs` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO NET MARGIN' : 'CO NET MARGIN'} value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={coRevenue > 0 ? `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}` : `No approved ${isTM ? 'work orders' : 'change orders'}`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} ${isTM ? 'WOs' : 'COs'}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -624,7 +625,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 </tbody>
               </table>
             ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No change orders yet</div>
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No {isTM ? 'work orders' : 'change orders'} yet</div>
             )}
             <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO to {gcName}</button>
           </div>
