@@ -38,6 +38,7 @@ import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 interface CODetailLayoutProps {
   coId: string;
   projectId: string;
+  isTM?: boolean;
 }
 
 const STATUS_BADGE: Record<COStatus, string> = {
@@ -51,7 +52,7 @@ const STATUS_BADGE: Record<COStatus, string> = {
   contracted: 'bg-secondary text-secondary-foreground',
 };
 
-export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
+export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -136,7 +137,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   }
 
   const status = co.status as COStatus;
-  const displayTitle = co.title ?? co.co_number ?? 'Change Order';
+  const displayTitle = co.title ?? co.co_number ?? (isTM ? 'Work Order' : 'Change Order');
   const firstLineItem = lineItems[0];
 
   const mainContent = (
@@ -251,7 +252,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0 text-xs text-muted-foreground truncate">
-              <span className="hidden sm:inline">Change Orders › </span>
+              <span className="hidden sm:inline">{isTM ? 'Work Orders' : 'Change Orders'} › </span>
               <span className="font-medium text-foreground">{co.co_number ?? displayTitle}</span>
             </div>
           </div>
@@ -274,7 +275,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         <div className="max-w-6xl mx-auto px-4 py-4 space-y-4">
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
-          <COHeroBlock co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} />
+          <COHeroBlock co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} isTM={isTM} />
 
 
           <COContextualAlert co={co} isGC={isGC} isTC={isTC} isFC={isFC} fcCollabName={fcCollabName} financials={financials} />

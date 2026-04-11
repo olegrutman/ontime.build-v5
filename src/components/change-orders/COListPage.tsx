@@ -147,7 +147,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         {/* Stats row */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-3 sm:overflow-visible sm:mx-0 sm:px-0">
           {[
-            { label: 'Total CO value', value: `$${stats.totalValue.toLocaleString()}`, color: '#F5A623' },
+            { label: isTM ? 'Total WO value' : 'Total CO value', value: `$${stats.totalValue.toLocaleString()}`, color: '#F5A623' },
             { label: 'Pending', value: String(stats.pendingApproval), color: '#F59E0B' },
             { label: 'Pricing', value: String(stats.awaitingPricing), color: '#3B82F6' },
             { label: 'Approved', value: `$${stats.approvedBillableValue.toLocaleString()}`, color: '#10B981' },
@@ -169,11 +169,11 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       {/* Card Grid */}
       {total === 0 ? (
         <div className="co-light-shell flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
-          <p className="text-lg font-medium text-foreground">No change orders yet</p>
-          <p className="text-sm text-muted-foreground max-w-sm">Create a change order to track scope changes on this project.</p>
+          <p className="text-lg font-medium text-foreground">No {isTM ? 'work orders' : 'change orders'} yet</p>
+          <p className="text-sm text-muted-foreground max-w-sm">Create a {isTM ? 'work order' : 'change order'} to track scope changes on this project.</p>
           <Button onClick={() => setWizardOpen(true)} className="gap-1.5 mt-2">
             <Plus className="h-4 w-4" />
-            New Change Order
+            New {isTM ? 'Work Order' : 'Change Order'}
           </Button>
         </div>
       ) : (
@@ -189,7 +189,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         </div>
       )}
 
-      <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} />
+      <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} isTM={isTM} />
 
     </div>
   );

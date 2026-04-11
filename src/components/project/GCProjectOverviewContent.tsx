@@ -183,6 +183,7 @@ interface Props {
   projectName?: string;
   financials: ProjectFinancials;
   onNavigate: (tab: string) => void;
+  isTM?: boolean;
 }
 
 const roleDotColors: Record<string, string> = {
@@ -195,7 +196,7 @@ const roleLabel: Record<string, string> = {
   'General Contractor': 'General Contractor', 'Trade Contractor': 'Trade Contractor', 'Field Crew': 'Field Crew', 'Supplier': 'Supplier',
 };
 
-export function GCProjectOverviewContent({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
+export function GCProjectOverviewContent({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
   const { userOrgRoles } = useAuth();
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
   const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
@@ -376,7 +377,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     warnings.push({ color: C.blue, icon: '❓', title: `${openRfis.length} Open RFI${openRfis.length > 1 ? 's' : ''}`, sub: 'Respond to open questions', value: `${openRfis.length} RFIs`, pill: 'Action Needed', pillType: 'pb', tab: 'rfis' });
   }
   if (pendingCOs.length > 0) {
-    warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending Change Order${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Review and approve', value: `${pendingCOs.length} COs`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });
+    warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending ${isTM ? 'Work Order' : 'Change Order'}${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Review and approve', value: `${pendingCOs.length} ${isTM ? 'WOs' : 'COs'}`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });
   }
 
   const draftContractVal = parseInt(contractDraft.value.replace(/[^0-9]/g, '')) || 0;
@@ -455,8 +456,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           </div>
         </KpiCard>
 
-        {/* Card 4 — Change Orders */}
-        <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="CHANGE ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} COs` : '0 COs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
+        {/* Card 4 — Change Orders / Work Orders */}
+        <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label={isTM ? 'WORK ORDERS' : 'CHANGE ORDERS'} value={changeOrders.length > 0 ? `${changeOrders.length} ${isTM ? 'WOs' : 'COs'}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -474,9 +475,9 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                 </tbody>
               </table>
             ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No change orders yet</div>
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No {isTM ? 'work orders' : 'change orders'} yet</div>
             )}
-            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Create Change Order</button>
+            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Create {isTM ? 'Work Order' : 'Change Order'}</button>
           </div>
         </KpiCard>
 

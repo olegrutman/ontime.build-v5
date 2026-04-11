@@ -152,9 +152,10 @@ function FilteredRailItem({
 
 interface ProjectIconRailProps {
   isSupplier?: boolean;
+  isTM?: boolean;
 }
 
-export function ProjectIconRail({ isSupplier = false }: ProjectIconRailProps) {
+export function ProjectIconRail({ isSupplier = false, isTM = false }: ProjectIconRailProps) {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const [showExpanded, setShowExpanded] = useState(false);
@@ -192,16 +193,21 @@ export function ProjectIconRail({ isSupplier = false }: ProjectIconRailProps) {
               </div>
             )}
             <div className="flex flex-col items-center gap-1.5">
-              {group.map((item) => (
-                <FilteredRailItem
-                  key={item.key}
-                  item={item}
-                  isActive={activeSection === item.route}
-                  showTooltipExpanded={showExpanded}
-                  projectId={id}
-                  isSupplier={isSupplier}
-                />
-              ))}
+              {group.map((item) => {
+                const displayItem = isTM && item.key === 'change-orders'
+                  ? { ...item, label: 'Work Orders' }
+                  : item;
+                return (
+                  <FilteredRailItem
+                    key={item.key}
+                    item={displayItem}
+                    isActive={activeSection === item.route}
+                    showTooltipExpanded={showExpanded}
+                    projectId={id}
+                    isSupplier={isSupplier}
+                  />
+                );
+              })}
             </div>
           </div>
         );

@@ -36,35 +36,36 @@ export async function sendCONotification(payload: CONotificationPayload) {
 export function buildCONotification(
   type: string,
   coTitle: string | null,
-  amount?: number
+  amount?: number,
+  isTM = false
 ): { title: string; body: string } {
-  const label = coTitle ?? 'Change Order';
-
+  const label = coTitle ?? (isTM ? 'Work Order' : 'Change Order');
+  const coWord = isTM ? 'Work order' : 'Change order';
   const fmtAmount = (n: number) =>
     `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const map: Record<string, { title: string; body: string }> = {
     CO_SHARED: {
-      title: 'Change order shared with you',
+      title: `${coWord} shared with you`,
       body: `${label} has been shared for your review`,
     },
     CHANGE_SUBMITTED: {
-      title: 'Change order submitted for approval',
+      title: `${coWord} submitted for approval`,
       body:
         amount != null
           ? `${label} — ${fmtAmount(amount)} awaiting your approval`
           : `${label} awaiting your approval`,
     },
     CHANGE_APPROVED: {
-      title: 'Change order approved',
+      title: `${coWord} approved`,
       body: `${label} has been approved`,
     },
     CHANGE_REJECTED: {
-      title: 'Change order rejected',
+      title: `${coWord} rejected`,
       body: `${label} was rejected — check the detail page for the reason`,
     },
     CO_RECALLED: {
-      title: 'Change order recalled',
+      title: `${coWord} recalled`,
       body: `${label} has been recalled for revision`,
     },
     FC_INPUT_REQUESTED: {
@@ -94,7 +95,7 @@ export function buildCONotification(
       body: `Your NTE increase request was declined on ${label}`,
     },
     CO_CLOSED_FOR_PRICING: {
-      title: 'CO closed for final pricing',
+      title: `${isTM ? 'WO' : 'CO'} closed for final pricing`,
       body: `${label} — scope is finalized. Submit your final pricing.`,
     },
     CO_COMPLETED: {
@@ -106,7 +107,7 @@ export function buildCONotification(
       body: `${label} completion has been acknowledged. You can now create an invoice.`,
     },
     CO_SCOPE_ADDED: {
-      title: 'New scope added to CO',
+      title: `New scope added to ${isTM ? 'WO' : 'CO'}`,
       body: `${label} has new line items added.`,
     },
     NTE_WARNING_80: {
@@ -123,5 +124,5 @@ export function buildCONotification(
     },
   };
 
-  return map[type] ?? { title: 'Change order update', body: label };
+  return map[type] ?? { title: `${coWord} update`, body: label };
 }

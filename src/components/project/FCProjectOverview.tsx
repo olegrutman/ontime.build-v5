@@ -140,9 +140,10 @@ interface Props {
   projectName?: string;
   financials: ProjectFinancials;
   onNavigate: (tab: string) => void;
+  isTM?: boolean;
 }
 
-export function FCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
+export function FCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
@@ -257,8 +258,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </KpiCard>
 
-        {/* Card 3 — Change Orders */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CHANGE ORDERS" value={coTotal > 0 ? `+${fmt(coTotal)}` : '0 COs'} sub={`${approvedCOs.length} approved`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={2}>
+        {/* Card 3 — Change Orders / Work Orders */}
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WORK ORDERS' : 'CHANGE ORDERS'} value={coTotal > 0 ? `+${fmt(coTotal)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={`${approvedCOs.length} approved`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={2}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -278,7 +279,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 </tbody>
               </table>
             ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No change orders yet</div>
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No {isTM ? 'work orders' : 'change orders'} yet</div>
             )}
             <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO Request to {tcName}</button>
           </div>

@@ -378,6 +378,7 @@ export default function ProjectHome() {
                         projectName={project.name}
                         financials={financials}
                         onNavigate={handleTabChange}
+                        isTM={isTM}
                       />
                     ) : isTC ? (
                       <TCProjectOverview
@@ -385,6 +386,7 @@ export default function ProjectHome() {
                         projectName={project.name}
                         financials={financials}
                         onNavigate={handleTabChange}
+                        isTM={isTM}
                       />
                     ) : (
                       <GCProjectOverviewContent
@@ -392,6 +394,7 @@ export default function ProjectHome() {
                         projectName={project.name}
                         financials={financials}
                         onNavigate={handleTabChange}
+                        isTM={isTM}
                       />
                     )}
                   </div>
