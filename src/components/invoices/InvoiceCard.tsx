@@ -94,17 +94,21 @@ export function InvoiceCard({
       />
 
       <div className="pl-4 pr-3.5 py-3.5">
-        <div className="flex items-start justify-between mb-3">
-          <div>
+        <div className="mb-3">
+          <div className="flex items-start justify-between">
             <h4 className="font-mono font-medium text-sm">{invoice.invoice_number}</h4>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:block">
+                <HoverActions actions={hoverActions} />
+              </div>
+              <StatusColumn value={invoice.status} options={INVOICE_STATUS_OPTIONS} size="sm" disabled />
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-1">
             <p className="text-xs text-muted-foreground">
               {format(new Date(invoice.created_at), 'MMM d, yyyy')}
             </p>
-          </div>
-          <div className="flex items-center gap-2">
             <InvoiceAgeBadge invoice={invoice} />
-            <HoverActions actions={hoverActions} />
-            <StatusColumn value={invoice.status} options={INVOICE_STATUS_OPTIONS} size="sm" disabled />
           </div>
         </div>
 
