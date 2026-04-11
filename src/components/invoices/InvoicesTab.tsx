@@ -461,15 +461,15 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   };
 
   const renderHeader = (showCreateButton: boolean, title?: string) => (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h3 className="text-xl font-semibold">{title || 'Invoices'}</h3>
-        <p className="text-sm text-muted-foreground">
+    <div className="flex items-center justify-between gap-2">
+      <div className="min-w-0">
+        <h3 className="text-base sm:text-xl font-semibold truncate">{title || 'Invoices'}</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           {currentInvoices.length} invoice{currentInvoices.length !== 1 ? 's' : ''}
         </p>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 shrink-0">
         <div className="hidden sm:block">
           <ViewSwitcher
             value={viewMode}
@@ -479,9 +479,9 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
         </div>
 
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL' | 'NEEDS_ACTION')}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter by status" />
+          <SelectTrigger className="w-[130px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm">
+            <Filter className="h-3.5 w-3.5 mr-1 sm:mr-2" />
+            <SelectValue placeholder="Filter" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
@@ -499,9 +499,9 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button onClick={() => setCreateDialogOpen(true)} disabled={isBlocked}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Invoice
+                  <Button size="sm" onClick={() => setCreateDialogOpen(true)} disabled={isBlocked}>
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">New Invoice</span>
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -518,7 +518,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   );
 
   const renderTabContent = (showCreate: boolean, title?: string) => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {renderSOVAlert()}
       {renderHeader(showCreate, title)}
       <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
@@ -542,20 +542,22 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
 
         <Tabs value={gcSubTab} onValueChange={(v) => setGcSubTab(v as 'from_tc' | 'from_supplier')}>
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="from_tc" className="flex items-center gap-2">
-              <Inbox className="h-4 w-4" />
-              From Trade Contractors
+            <TabsTrigger value="from_tc" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <Inbox className="h-4 w-4 hidden sm:block" />
+              <span className="sm:hidden">Trade</span>
+              <span className="hidden sm:inline">From Trade Contractors</span>
               {receivedFromContracts.length > 0 && (
-                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium">
                   {receivedFromContracts.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="from_supplier" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              From Suppliers
+            <TabsTrigger value="from_supplier" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <Package className="h-4 w-4 hidden sm:block" />
+              <span className="sm:hidden">Suppliers</span>
+              <span className="hidden sm:inline">From Suppliers</span>
               {receivedFromSuppliers.length > 0 && (
-                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium">
                   {receivedFromSuppliers.length}
                 </span>
               )}
@@ -587,20 +589,22 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       <div className="space-y-6">
         <Tabs value={invoiceDirection} onValueChange={(v) => setInvoiceDirection(v as 'sent' | 'received')}>
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="sent" className="flex items-center gap-2">
-              <Send className="h-4 w-4" />
-              Sent to {gcOrgName}
+            <TabsTrigger value="sent" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <Send className="h-4 w-4 hidden sm:block" />
+              <span className="sm:hidden">Sent</span>
+              <span className="hidden sm:inline truncate">Sent to {gcOrgName}</span>
               {sentInvoices.length > 0 && (
-                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium">
                   {sentInvoices.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="received" className="flex items-center gap-2">
-              <Inbox className="h-4 w-4" />
-              From Field Crews & Suppliers
+            <TabsTrigger value="received" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <Inbox className="h-4 w-4 hidden sm:block" />
+              <span className="sm:hidden">Received</span>
+              <span className="hidden sm:inline truncate">From Field Crews & Suppliers</span>
               {allReceivedInvoices.length > 0 && (
-                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium">
                   {allReceivedInvoices.length}
                 </span>
               )}
