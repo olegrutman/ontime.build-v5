@@ -131,6 +131,7 @@ export function UnifiedReviewStep({
       )}
 
       {/* Contracts & SOV */}
+      {contractMode !== 'tm' && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
