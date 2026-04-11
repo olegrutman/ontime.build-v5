@@ -115,7 +115,8 @@ export default function ProjectHome() {
   const readiness = useProjectReadiness(id);
   const { data: projectProfile } = useProjectProfile(id);
   const { data: scopeSelections } = useScopeSelections(id);
-  const showSetupBanner = (project?.status === 'setup' || project?.status === 'draft') && (!projectProfile || !scopeSelections || scopeSelections.length === 0);
+  const isTM = project?.contract_mode === 'tm';
+  const showSetupBanner = !isTM && (project?.status === 'setup' || project?.status === 'draft') && (!projectProfile || !scopeSelections || scopeSelections.length === 0);
 
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
@@ -292,7 +293,7 @@ export default function ProjectHome() {
       onStatusChange={handleStatusChange}
     >
       <div className="flex flex-1 overflow-hidden gap-3 lg:pr-3 lg:pt-3">
-        <ProjectSidebar isSupplier={isSupplier} />
+        <ProjectSidebar isSupplier={isSupplier} isTM={isTM} />
         <main className="flex-1 overflow-auto">
           {/* Dark Header + Sticky Tab Bar — always visible */}
           <div className="sticky top-0 z-30">
@@ -467,7 +468,7 @@ export default function ProjectHome() {
             )}
             {activeTab === 'change-orders' && (
               <FeatureGate feature="change_orders">
-                <COListPage projectId={id!} />
+                <COListPage projectId={id!} isTM={isTM} />
               </FeatureGate>
             )}
           </div>
@@ -475,7 +476,7 @@ export default function ProjectHome() {
       </div>
       {/* Mobile: project-specific bottom nav */}
       <div className="md:hidden">
-        <ProjectBottomNav isSupplier={isSupplier} />
+        <ProjectBottomNav isSupplier={isSupplier} isTM={isTM} />
       </div>
     </ProjectShell>
   );
