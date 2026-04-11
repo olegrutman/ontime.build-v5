@@ -30,10 +30,7 @@ const queryClient = new QueryClient({
 const Landing = lazy(() => import("./pages/Landing"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Demo = lazy(() => import("./pages/Demo"));
-const Auth = lazy(() => import("./pages/Auth"));
-const Signup = lazy(() => import("./pages/Signup"));
-const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
-const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
 const CreateProjectNew = lazy(() => import("./pages/CreateProjectNew"));
 const ProjectHome = lazy(() => import("./pages/ProjectHome"));
 const EditProjectScope = lazy(() => import("./pages/EditProjectScope"));
@@ -52,7 +49,6 @@ const RFIs = lazy(() => import("./pages/RFIs"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Install = lazy(() => import("./pages/Install"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
@@ -166,11 +162,11 @@ function AppRoutes() {
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/demo" element={<Demo />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<AuthPage />} />
+            <Route path="/verify-email" element={<AuthPage />} />
+            <Route path="/signup" element={<AuthPage />} />
+            <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
 
             {/* Protected routes */}
