@@ -316,7 +316,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
               </div>
             )}
 
-            {currentStep.key === 'why' && <StepWhy data={data} onChange={update} />}
+            {currentStep.key === 'why' && <StepWhy data={data} onChange={update} isTM={isTM} />}
             {currentStep.key === 'where' && (
               <StepWhere
                 projectId={projectId}
@@ -328,7 +328,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
             )}
             {currentStep.key === 'scope' && <StepCatalog data={data} onChange={update} projectId={projectId} />}
             {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
-            {currentStep.key === 'team' && <StepTeam data={data} projectId={projectId} role={role} />}
+            {currentStep.key === 'team' && <StepTeam data={data} projectId={projectId} role={role} isTM={isTM} />}
           </div>
 
           {/* Footer */}
