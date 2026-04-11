@@ -341,7 +341,7 @@ export function SashaBubble() {
       )}
 
       {/* Floating Bubble */}
-      <div className="fixed bottom-28 lg:bottom-4 right-4 z-50 flex items-center gap-2">
+      <div className="fixed bottom-32 lg:bottom-4 right-4 z-50 flex items-center gap-2">
         {/* Tooltip label */}
         {/* Welcome tooltip on first dashboard visit */}
         {!open && showWelcome && isOnDashboard && (
