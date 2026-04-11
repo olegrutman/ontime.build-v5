@@ -16,6 +16,7 @@ interface Project {
   userRole: string | null;
   contractValue: number | null;
   pendingActions: number;
+  contract_mode?: string;
 }
 
 interface AttentionItem {
@@ -148,7 +149,12 @@ export function ProjectSnapshotList({
               >
                 <div className={cn('w-2 h-2 rounded-full shrink-0', STATUS_DOT[project.status] || 'bg-muted-foreground')} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[0.85rem] font-semibold truncate group-hover:text-primary transition-colors">{project.name}</p>
+                  <p className="text-[0.85rem] font-semibold truncate group-hover:text-primary transition-colors">
+                    {project.name}
+                    {project.contract_mode === 'tm' && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 text-[0.6rem] font-bold text-amber-800 dark:text-amber-300">T&M</span>
+                    )}
+                  </p>
                   <p className="text-[0.75rem] text-muted-foreground mt-0.5">
                     {project.project_type}
                     {project.pendingActions > 0 && (
