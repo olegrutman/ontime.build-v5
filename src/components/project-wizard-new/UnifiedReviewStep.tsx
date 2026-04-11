@@ -171,6 +171,7 @@ export function UnifiedReviewStep({
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Team */}
       <Card>
