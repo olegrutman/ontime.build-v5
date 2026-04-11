@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useProjectProfile } from '@/hooks/useProjectProfile';
 import { useScopeSelections } from '@/hooks/useScopeWizard';
-import { ChevronDown, ClipboardList } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -297,8 +297,16 @@ export default function ProjectHome() {
           <div className="sticky top-0 z-30">
             <div className="bg-[hsl(var(--foreground))] text-white rounded-t-2xl px-4 sm:px-5 py-4">
               <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1 flex items-start gap-2">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="md:hidden mt-0.5 shrink-0 p-1 -ml-1 rounded-md hover:bg-white/10 transition-colors"
+                  aria-label="Back to dashboard"
+                >
+                  <ChevronLeft className="w-5 h-5 text-slate-400" />
+                </button>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1">Project Overview</p>
+                <p className="text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1">Project Overview</p>
                   <h1 className="text-2xl font-semibold tracking-tight truncate">{project.name}</h1>
                   {formattedAddress && (
                     <p className="text-[0.8rem] text-slate-400 mt-0.5 truncate">{formattedAddress}</p>
@@ -316,6 +324,7 @@ export default function ProjectHome() {
                       <span className="text-slate-500">Type <span className="text-white font-medium">{project.project_type}</span></span>
                     )}
                   </div>
+                </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <NotificationSheet />
