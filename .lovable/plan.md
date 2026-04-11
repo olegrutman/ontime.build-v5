@@ -1,50 +1,33 @@
 
 
-# Redesign Project Cards: Remove Bar, Add Status + Role-Aware Financials
+# Fix Mobile Invoice View: Bottom Nav Overlap, Card Layout, and Sasha Position
 
-## What changes
+## Problems
+1. **Bottom nav covers last card** — content has `pb-24` (96px) but Sasha bubble sits at `bottom-20` (80px), stacking on top of the 56px nav bar, so the last card is hidden behind ~136px of fixed UI
+2. **Invoice card content doesn't fit on 390px** — the header row crams invoice number + age badge + hover actions + status pill into one line
+3. **Sasha bubble overlaps card content** — 64px bubble at bottom-right covers card info
 
-Replace the progress bar and percentage in all 4 dashboard `ProjectCard` components with:
-1. **Project status badge** — uses the real `project.status` value (Active, Setup, On Hold, Completed, Archived) instead of the fake progress-derived label
-2. **Three financial metrics** shown inline, varying by role:
-   - **GC**: Contract | Cost | Margin
-   - **TC**: Owner Contract | Cost | Margin  
-   - **FC**: Contract | Cost | Margin
-   - **Supplier**: PO Value | Ordered | Outstanding
+## Changes
 
-## How it works
+| # | File | What |
+|---|------|------|
+| 1 | `SashaBubble.tsx` (line 344) | Move bubble higher on mobile: `bottom-20` → `bottom-24` (above bottom nav + breathing room). Move chat panel `bottom-36` → `bottom-40`. |
+| 2 | `ProjectHome.tsx` (line 329) | Increase mobile bottom padding: `pb-24` → `pb-36` to clear both bottom nav AND Sasha bubble |
+| 3 | `InvoiceCard.tsx` | Mobile-optimize the card layout: stack the header row on small screens — put invoice number + date on top, status + age badge below. Hide `HoverActions` on mobile (actions available on tap/click). Ensure billing period text truncates properly. |
 
-Each card already receives `budget` (contract value). We'll add `costs` and `status` props by joining with the existing `projectFinancials` data that's already loaded per-project.
+## Card layout on mobile (before → after)
 
-### New ProjectCard props (all 4 files share identical card)
-```
-name, status, budget, costs, onClick
-```
-- `status`: raw project status string ("active", "setup", etc.)
-- `budget`: contract/revenue value
-- `costs`: costs from `projectFinancials`
-- Margin is computed inline: `budget - costs`
-
-### Card layout (replacing bar + %)
 ```text
-┌──────────────────────────┐
-│ ● Project Name           │
-│ Active                   │  ← status pill (real status)
-│                          │
-│ Contract   Cost   Margin │  ← 3 inline metrics
-│ $1.2M      $900K  $300K  │
-└──────────────────────────┘
+BEFORE (single cramped row):
+┌─────────────────────────────────┐
+│ INV-001  [3d] [⋯] [Submitted]  │  ← too tight at 390px
+│ Mar 1, 2026                     │
+│ ...                             │
+
+AFTER (stacked):
+┌─────────────────────────────────┐
+│ INV-001           [Submitted]   │
+│ Mar 1, 2026            3d       │
+│ ...                             │
 ```
-
-## Files to edit
-
-| # | File | Change |
-|---|------|--------|
-| 1 | `GCDashboardView.tsx` | Update `ProjectCard` — remove bar/progress, add status + 3 metrics. Update call site to pass `status` and `costs` from `projectFinancials`. |
-| 2 | `TCDashboardView.tsx` | Same card redesign. Label first metric "Owner Contract" for TC context. |
-| 3 | `FCDashboardView.tsx` | Same card redesign. |
-| 4 | `SupplierDashboardView.tsx` | Same card redesign. |
-
-### Data flow
-The `projectFinancials` array (already fetched in `useDashboardData`) contains per-project `revenue` and `costs`. At the call site, we match `projectFinancials.find(pf => pf.projectId === p.id)` to get costs. The status comes directly from `p.status`.
 
