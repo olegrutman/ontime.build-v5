@@ -85,6 +85,7 @@ interface Project {
   retainage_percent: number;
   created_at: string;
   organization_id: string;
+  contract_mode: string;
 }
 
 export default function ProjectHome() {
