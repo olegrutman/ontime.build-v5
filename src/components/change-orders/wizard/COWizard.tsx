@@ -385,7 +385,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 }
 
 // ── Step 1: Why ──────────────────────────────────────
-function StepWhy({ data, onChange }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void }) {
+function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">What triggered this {isTM ? 'work order' : 'change order'}?</p>
@@ -597,7 +597,7 @@ function StepHow({
 }
 
 // ── Step 4: Team ─────────────────────────────────────
-function StepTeam({ data, projectId, role }: { data: COWizardData; projectId: string; role: COCreatedByRole }) {
+function StepTeam({ data, projectId, role, isTM = false }: { data: COWizardData; projectId: string; role: COCreatedByRole; isTM?: boolean }) {
   const { data: assignedOrg } = useQuery({
     queryKey: ['org-name', data.assignedToOrgId],
     enabled: !!data.assignedToOrgId,
