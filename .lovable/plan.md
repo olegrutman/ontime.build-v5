@@ -1,36 +1,37 @@
 
 
-# Fix Remaining CO/Contract References in TC Overview for T&M Projects
+# WO-to-Invoice Flow for T&M Projects
 
-## What's wrong
-The TC Project Overview still has ~15 hardcoded "CO" and "Contract" references that don't swap to "WO" / "Work Order" terminology when `isTM` is true. The screenshot shows these clearly.
+## What needs to happen
+In T&M projects, there's no SOV — invoices are created from approved Work Orders (WOs). The existing `CreateInvoiceFromCOs` component already does this, but it's not wired up as the primary invoice creation path for T&M projects, and it still uses "Change Order" language.
 
-## All changes in one file: `src/components/project/TCProjectOverview.tsx`
+## Changes
 
-### Card 1 — GC Contract card (lines ~482-498)
-- Label: `"{gcName} CONTRACT (YOUR REVENUE)"` → if T&M: `"{gcName} T&M REVENUE"`
-- Row: `"Contract Value (set by {gcName})"` → if T&M: `"T&M Total (approved WOs)"`
-- Row: `"Approved COs (billed to {gcName})"` → if T&M: `"Approved WOs (billed to {gcName})"`
-- Info box: `"This contract value was set by {gcName}"` → if T&M: `"This total reflects approved Work Orders"`
+### 1. `src/components/invoices/InvoicesTab.tsx`
+- Accept `isTM` prop (passed from `ProjectHome.tsx`)
+- When `isTM` is true:
+  - Skip SOV readiness check entirely (no SOV in T&M)
+  - "New Invoice" button opens `CreateInvoiceFromCOs` instead of `CreateInvoiceFromSOV`
+  - Hide the SOV alert banner
+  - Pass `isTM` to `CreateInvoiceFromCOs`
 
-### Card 2 — FC Contract card (lines ~502-580)
-- Label: `"{FC} CONTRACT (YOU SET THIS)"` → if T&M: `"{FC} COST TRACKING"`
-- Section header `"FC CONTRACT TERMS"` → if T&M: `"FC TERMS"`
-- Row `"CO Revenue (from {gcName})"` → if T&M: `"WO Revenue (from {gcName})"`
-- Row `"CO Cost (to {fcName})"` → if T&M: `"WO Cost (to {fcName})"`
-- Row `"Your Net Margin after COs"` → if T&M: `"Your Net Margin after WOs"`
+### 2. `src/pages/ProjectHome.tsx`
+- Pass `isTM` prop to `<InvoicesTab>`
 
-### Card 3 — Gross Margin card (lines ~584-598)
-- Row `"CO Revenue"` → if T&M: `"WO Revenue"`
-- Row `"CO Cost"` → if T&M: `"WO Cost"`
+### 3. `src/components/invoices/CreateInvoiceFromCOs.tsx`
+- Accept `isTM` prop
+- Swap all "Change Order" / "CO" text to "Work Order" / "WO" when `isTM`:
+  - Dialog title: "Select Work Orders" / "Review Invoice Line Items"
+  - Empty state: "No unbilled approved work orders available"
+  - List item fallback: "Untitled WO" instead of "Untitled CO"
+  - Toast: "Invoice created from work orders"
+  - Notes field: "Invoice from N work order(s)"
+  - Invoice number prefix: `WO-INV-` instead of `CO-INV-`
 
-### Card 4 — CO/WO Net Margin card (lines ~601-631)
-- Table header `"CO #"` → if T&M: `"WO #"`
-- Summary row `"{n} COs"` → if T&M: `"{n} WOs"` (line 623)
-- Button `"+ Submit CO to {gcName}"` → if T&M: `"+ Submit WO to {gcName}"` (line 630)
+### 4. No database changes needed
+The existing `invoices` table already has `co_ids` to link invoices to change orders/work orders. The flow is identical — just the entry point and labels differ.
 
-## Approach
-- All changes are conditional on the existing `isTM` prop (already accepted by this component)
-- Use inline ternaries: `isTM ? 'WO' : 'CO'` pattern
-- No new props, no database changes, no new files needed
+## Technical detail
+- `CreateInvoiceFromCOs` already filters approved COs by org role (TC sees assigned COs, FC sees own COs) and checks for already-billed COs — this logic works identically for WOs
+- The `createDialogOpen` state in `InvoicesTab` will conditionally open either `CreateInvoiceFromSOV` (fixed) or `CreateInvoiceFromCOs` (T&M)
 
