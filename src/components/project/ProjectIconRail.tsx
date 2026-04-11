@@ -152,9 +152,10 @@ function FilteredRailItem({
 
 interface ProjectIconRailProps {
   isSupplier?: boolean;
+  isTM?: boolean;
 }
 
-export function ProjectIconRail({ isSupplier = false }: ProjectIconRailProps) {
+export function ProjectIconRail({ isSupplier = false, isTM = false }: ProjectIconRailProps) {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const [showExpanded, setShowExpanded] = useState(false);

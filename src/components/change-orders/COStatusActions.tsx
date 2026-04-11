@@ -34,6 +34,7 @@ interface COStatusActionsProps {
   collaborators?: COCollaborator[];
   assignedOrgName?: string;
   onRefresh: () => void;
+  isTM?: boolean;
 }
 
 export function COStatusActions({
@@ -47,6 +48,7 @@ export function COStatusActions({
   collaborators = [],
   assignedOrgName,
   onRefresh,
+  isTM = false,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
   const { shareCO, updateCO } = useChangeOrders(projectId);
@@ -508,11 +510,11 @@ export function COStatusActions({
       <AlertDialog open={approveOpen} onOpenChange={setApproveOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{forwardsToGC ? 'Approve FC scope and send to GC' : 'Approve change order'}</AlertDialogTitle>
+            <AlertDialogTitle>{forwardsToGC ? 'Approve FC scope and send to GC' : (isTM ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
             <AlertDialogDescription>
               {forwardsToGC
-                ? 'This approves the FC portion as TC cost and immediately forwards the change order to GC review.'
-                : 'Are you sure you want to approve this change order?'}
+                ? `This approves the FC portion as TC cost and immediately forwards the ${isTM ? 'work order' : 'change order'} to GC review.`
+                : `Are you sure you want to approve this ${isTM ? 'work order' : 'change order'}?`}
               {!forwardsToGC && co.pricing_type === 'fixed' && (
                 <span className="block mt-1">
                   The TC will be able to submit an invoice once approved.
@@ -533,7 +535,7 @@ export function COStatusActions({
       <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reject change order</AlertDialogTitle>
+            <AlertDialogTitle>{isTM ? 'Reject work order' : 'Reject change order'}</AlertDialogTitle>
             <AlertDialogDescription>
               Provide a reason. The submitter will see this note and can revise and resubmit.
             </AlertDialogDescription>
