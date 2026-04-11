@@ -193,16 +193,21 @@ export function ProjectIconRail({ isSupplier = false, isTM = false }: ProjectIco
               </div>
             )}
             <div className="flex flex-col items-center gap-1.5">
-              {group.map((item) => (
-                <FilteredRailItem
-                  key={item.key}
-                  item={item}
-                  isActive={activeSection === item.route}
-                  showTooltipExpanded={showExpanded}
-                  projectId={id}
-                  isSupplier={isSupplier}
-                />
-              ))}
+              {group.map((item) => {
+                const displayItem = isTM && item.key === 'change-orders'
+                  ? { ...item, label: 'Work Orders' }
+                  : item;
+                return (
+                  <FilteredRailItem
+                    key={item.key}
+                    item={displayItem}
+                    isActive={activeSection === item.route}
+                    showTooltipExpanded={showExpanded}
+                    projectId={id}
+                    isSupplier={isSupplier}
+                  />
+                );
+              })}
             </div>
           </div>
         );
