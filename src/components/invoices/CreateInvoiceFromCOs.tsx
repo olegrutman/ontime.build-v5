@@ -18,6 +18,7 @@ interface CreateInvoiceFromCOsProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   onSuccess: () => void;
+  isTM?: boolean;
 }
 
 interface ApprovedCO {
@@ -40,7 +41,7 @@ function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess }: CreateInvoiceFromCOsProps) {
+export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess, isTM = false }: CreateInvoiceFromCOsProps) {
   const { user, userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization_id;
 
@@ -257,7 +258,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
           project_id: projectId,
           contract_id: contractId,
           co_ids: coIds,
-          invoice_number: `CO-INV-${Date.now().toString(36).toUpperCase()}`,
+          invoice_number: `${isTM ? 'WO' : 'CO'}-INV-${Date.now().toString(36).toUpperCase()}`,
           billing_period_start: today,
           billing_period_end: today,
           status: 'DRAFT',
@@ -265,7 +266,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
           retainage_amount: retainageAmount,
           total_amount: total,
           created_by: user.id,
-          notes: `Invoice from ${coIds.length} change order${coIds.length > 1 ? 's' : ''}`,
+          notes: `Invoice from ${coIds.length} ${isTM ? 'work order' : 'change order'}${coIds.length > 1 ? 's' : ''}`,
         })
         .select()
         .single();
@@ -291,7 +292,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
 
       if (liErr) throw liErr;
 
-      toast.success('Invoice created from change orders');
+      toast.success(isTM ? 'Invoice created from work orders' : 'Invoice created from change orders');
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
@@ -307,14 +308,14 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            {step === 'select' ? 'Select Change Orders' : 'Review Invoice Line Items'}
+            {step === 'select' ? `Select ${isTM ? 'Work Orders' : 'Change Orders'}` : 'Review Invoice Line Items'}
           </DialogTitle>
         </DialogHeader>
 
         {step === 'select' && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Select approved change orders to include in this invoice.
+              Select approved {isTM ? 'work orders' : 'change orders'} to include in this invoice.
             </p>
 
             {loading ? (
@@ -323,7 +324,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
               </div>
             ) : availableCOs.length === 0 ? (
               <div className="text-center py-8 text-sm text-muted-foreground">
-                No unbilled approved change orders available.
+                No unbilled approved {isTM ? 'work orders' : 'change orders'} available.
               </div>
             ) : (
               <div className="space-y-2">
@@ -342,7 +343,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
                         <Checkbox checked={selected} className="mt-0.5" />
                         <div className="flex-1 min-w-0 space-y-1">
                           <p className="text-sm font-medium text-foreground">
-                            {co.title ?? co.co_number ?? 'Untitled CO'}
+                            {co.title ?? co.co_number ?? (isTM ? 'Untitled WO' : 'Untitled CO')}
                           </p>
                           <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                             {co.reason && (

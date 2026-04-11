@@ -436,7 +436,7 @@ export default function ProjectHome() {
               <FeatureGate feature="invoicing">
                 {isInDemoMode
                   ? <DemoInvoicesTab projectId={id!} />
-                  : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
+                  : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} isTM={isTM} />
                 }
               </FeatureGate>
             )}

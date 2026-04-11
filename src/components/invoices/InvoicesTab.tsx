@@ -29,6 +29,7 @@ interface InvoicesTabProps {
   projectId: string;
   retainagePercent: number;
   projectStatus?: string;
+  isTM?: boolean;
 }
 
 interface Contract {
@@ -41,7 +42,7 @@ interface Contract {
   to_org_name?: string | null;
 }
 
-export function InvoicesTab({ projectId, retainagePercent, projectStatus }: InvoicesTabProps) {
+export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM = false }: InvoicesTabProps) {
   const { userOrgRoles, permissions } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -85,7 +86,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
 
   const isSupplierOrg = currentOrgType === 'SUPPLIER';
   const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplierOrg;
-  const isBlocked = isProjectNotActive || (!sovReadiness.isReady && !sovReadiness.loading);
+  const isBlocked = isTM ? false : (isProjectNotActive || (!sovReadiness.isReady && !sovReadiness.loading));
 
   // Separate invoices into sent, receivedFromContracts, receivedFromSuppliers
   const { sentInvoices, receivedFromContracts, receivedFromSuppliers } = useMemo(() => {
@@ -390,7 +391,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
             {roleContext.emptyMessage}
           </p>
           {canCreateInvoice && (currentOrgType !== 'TC' || invoiceDirection === 'sent') && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button onClick={() => isTM ? setCreateFromCOsOpen(true) : setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Invoice
             </Button>
@@ -436,7 +437,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   };
 
   const renderSOVAlert = () => {
-    if (!isBlocked) return null;
+    if (isTM || !isBlocked) return null;
     return (
       <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -499,7 +500,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" onClick={() => setCreateDialogOpen(true)} disabled={isBlocked}>
+                  <Button size="sm" onClick={() => isTM ? setCreateFromCOsOpen(true) : setCreateDialogOpen(true)} disabled={isBlocked}>
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">New Invoice</span>
                   </Button>
@@ -573,12 +574,22 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           </TabsContent>
         </Tabs>
 
-        <CreateInvoiceFromSOV
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          projectId={projectId}
-          onSuccess={handleCreateSuccess}
-        />
+        {isTM ? (
+          <CreateInvoiceFromCOs
+            open={createFromCOsOpen}
+            onOpenChange={setCreateFromCOsOpen}
+            projectId={projectId}
+            onSuccess={handleCreateSuccess}
+            isTM
+          />
+        ) : (
+          <CreateInvoiceFromSOV
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            projectId={projectId}
+            onSuccess={handleCreateSuccess}
+          />
+        )}
       </div>
     );
   }
@@ -620,12 +631,22 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           </TabsContent>
         </Tabs>
 
-        <CreateInvoiceFromSOV
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          projectId={projectId}
-          onSuccess={handleCreateSuccess}
-        />
+        {isTM ? (
+          <CreateInvoiceFromCOs
+            open={createFromCOsOpen}
+            onOpenChange={setCreateFromCOsOpen}
+            projectId={projectId}
+            onSuccess={handleCreateSuccess}
+            isTM
+          />
+        ) : (
+          <CreateInvoiceFromSOV
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            projectId={projectId}
+            onSuccess={handleCreateSuccess}
+          />
+        )}
       </div>
     );
   }
@@ -649,12 +670,22 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
 
-      <CreateInvoiceFromSOV
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        projectId={projectId}
-        onSuccess={handleCreateSuccess}
-      />
+      {isTM ? (
+        <CreateInvoiceFromCOs
+          open={createFromCOsOpen}
+          onOpenChange={setCreateFromCOsOpen}
+          projectId={projectId}
+          onSuccess={handleCreateSuccess}
+          isTM
+        />
+      ) : (
+        <CreateInvoiceFromSOV
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          projectId={projectId}
+          onSuccess={handleCreateSuccess}
+        />
+      )}
     </div>
   );
 }
