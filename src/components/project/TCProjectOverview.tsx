@@ -479,13 +479,13 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-2 max-sm:!gap-2">
 
         {/* Card 1 — GC Contract (read-only) */}
-        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={`${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: `${gcName} set this` }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `${gcName.toUpperCase()} T&M REVENUE` : `${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: `${gcName} set this` }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
           <div style={{ padding: '12px 16px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>Contract Value (set by {gcName})</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'T&M Total (approved WOs)' : `Contract Value (set by ${gcName})`}</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? `Approved WOs (billed to ${gcName})` : `Approved COs (billed to ${gcName})`}</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
                 <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />
                 <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
                 <TRow cells={[<TdN>Pending from {gcName}</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
@@ -494,7 +494,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             </table>
             <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: C.blueBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
               <span style={{ fontSize: 14 }}>ℹ️</span>
-              <span>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</span>
+              <span>{isTM ? 'This total reflects approved Work Orders.' : <>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</>}</span>
             </div>
           </div>
         </KpiCard>
