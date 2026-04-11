@@ -19,7 +19,7 @@ interface ProjectBasicsData {
   startDate?: string;
 }
 
-interface UnifiedReviewStepProps {
+export interface UnifiedReviewStepProps {
   basics: ProjectBasicsData;
   buildingType: BuildingType | null;
   answers: Answers;
@@ -29,6 +29,7 @@ interface UnifiedReviewStepProps {
   creatorOrgName?: string;
   creatorRole?: string | null;
   creatorOrgType?: OrgType;
+  contractMode?: 'fixed' | 'tm';
 }
 
 export function UnifiedReviewStep({
@@ -41,6 +42,7 @@ export function UnifiedReviewStep({
   creatorOrgName,
   creatorRole,
   creatorOrgType,
+  contractMode = 'fixed',
 }: UnifiedReviewStepProps) {
   const isTC = creatorOrgType === 'TC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
