@@ -38,6 +38,7 @@ import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 interface CODetailLayoutProps {
   coId: string;
   projectId: string;
+  isTM?: boolean;
 }
 
 const STATUS_BADGE: Record<COStatus, string> = {
