@@ -500,9 +500,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 2 — FC Contract (EDITABLE) */}
-        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label={`${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} CONTRACT (YOU SET THIS)`} value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || fcName || 'Field Crew'} · ${tcMarginPct}% your margin` : 'No contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
+        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label={isTM ? `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} COST TRACKING` : `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} CONTRACT (YOU SET THIS)`} value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || fcName || 'Field Crew'} · ${tcMarginPct}% your margin` : 'No contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
           <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>FC Contract Terms</div>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>{isTM ? 'FC Terms' : 'FC Contract Terms'}</div>
             {/* FC Org Search */}
             {(() => {
               const existingFc = team.find(m => m.role === 'Field Crew');
@@ -573,9 +573,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 <TRow cells={[<TdN>{fcName || 'Field Crew'} (your cost)</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
                 <TRow cells={[<TdN>Your Gross Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(tcGrossMargin)}</span>]} isTotal />
                 <TRow cells={[<TdN>Your Margin %</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
-                <TRow cells={[<TdN>CO Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>CO Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />
-                <TRow cells={[<TdN>Your Net Margin after COs</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
+                <TRow cells={[<TdN>{isTM ? 'WO' : 'CO'} Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO' : 'CO'} Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />
+                <TRow cells={[<TdN>Your Net Margin after {isTM ? 'WOs' : 'COs'}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
               </tbody>
             </table>
           </div>
@@ -590,8 +590,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 <TRow cells={[<TdN>{gcName}</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
                 <TRow cells={[<TdN>{fcName || 'Field Crew'}</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
                 <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(tcGrossMargin)}</TdM>]} isTotal />
-                <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Revenue' : 'CO Revenue'}</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Cost' : 'CO Cost'}</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />
                 <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(netTCMargin)}</TdM>]} isTotal />
               </tbody>
             </table>
@@ -603,7 +603,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={['CO #', 'Description', `Billed to ${gcName}`, `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
+                <THead cols={[`${isTM ? 'WO' : 'CO'} #`, 'Description', `Billed to ${gcName}`, `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
                 <tbody>
                   {changeOrders.slice(0, 8).map(co => {
                     const gcB = co.gc_budget || 0;
@@ -620,14 +620,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                     );
                   })}
                   {approvedCOs.length > 0 && (
-                    <TRow cells={[<TdN>{approvedCOs.length} COs</TdN>, '—', <TdM>+{fmt(coRevenue)}</TdM>, <TdM>{fmt(coCost)}</TdM>, <TdM>+{fmt(coNetMargin)}</TdM>, '—']} isTotal />
+                    <TRow cells={[<TdN>{approvedCOs.length} {isTM ? 'WOs' : 'COs'}</TdN>, '—', <TdM>+{fmt(coRevenue)}</TdM>, <TdM>{fmt(coCost)}</TdM>, <TdM>+{fmt(coNetMargin)}</TdM>, '—']} isTotal />
                   )}
                 </tbody>
               </table>
             ) : (
               <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No {isTM ? 'work orders' : 'change orders'} yet</div>
             )}
-            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO to {gcName}</button>
+            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit {isTM ? 'WO' : 'CO'} to {gcName}</button>
           </div>
         </KpiCard>
 
