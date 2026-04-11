@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 interface COListPageProps {
   projectId: string;
+  isTM?: boolean;
 }
 
 type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter';
