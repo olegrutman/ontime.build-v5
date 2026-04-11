@@ -1,33 +1,43 @@
 
 
-# Fix Mobile Invoice View: Bottom Nav Overlap, Card Layout, and Sasha Position
+# Improve Mobile Invoice UX (390px)
 
-## Problems
-1. **Bottom nav covers last card** — content has `pb-24` (96px) but Sasha bubble sits at `bottom-20` (80px), stacking on top of the 56px nav bar, so the last card is hidden behind ~136px of fixed UI
-2. **Invoice card content doesn't fit on 390px** — the header row crams invoice number + age badge + hover actions + status pill into one line
-3. **Sasha bubble overlaps card content** — 64px bubble at bottom-right covers card info
+## Problems observed
+1. **Tab labels overflow** — "Sent to Haley Custom Hom..." and "From Field Crews & Suppliers" are too long for 390px, causing truncation and overlap
+2. **KPI cards waste space** — Three full-width cards showing mostly zeros push the actual invoice below the fold. User has to scroll past empty metrics to see their data
+3. **Invoice card still clipped** — Bottom of the card is partially hidden behind the bottom nav
+4. **Sasha bubble overlaps Capture** — The floating Sasha avatar sits directly on top of the Capture button in the bottom nav bar
+5. **Too much vertical chrome** — Section title + filter bar + 3 KPIs = ~300px of UI before the first invoice appears
 
-## Changes
+## Plan
 
-| # | File | What |
-|---|------|------|
-| 1 | `SashaBubble.tsx` (line 344) | Move bubble higher on mobile: `bottom-20` → `bottom-24` (above bottom nav + breathing room). Move chat panel `bottom-36` → `bottom-40`. |
-| 2 | `ProjectHome.tsx` (line 329) | Increase mobile bottom padding: `pb-24` → `pb-36` to clear both bottom nav AND Sasha bubble |
-| 3 | `InvoiceCard.tsx` | Mobile-optimize the card layout: stack the header row on small screens — put invoice number + date on top, status + age badge below. Hide `HoverActions` on mobile (actions available on tap/click). Ensure billing period text truncates properly. |
+### 1. Shorten tab labels on mobile
+**File:** `InvoicesTab.tsx`
+- Use shorter labels on small screens: "Sent" / "Received" instead of the full org names
+- Hide the icon on mobile to save space
+- Add `truncate` and `max-w` constraints to the TabsTrigger content
 
-## Card layout on mobile (before → after)
+### 2. Compact KPI bar on mobile
+**File:** `InvoiceActionBar.tsx`
+- Change from `grid-cols-1 sm:grid-cols-3` to a horizontal scroll row on mobile — all 3 metrics in a single row with compact styling
+- Reduce card padding on mobile (`p-3` instead of `p-4`)
+- Show just the number + label inline (skip the icon circle on mobile)
+- Collapse cards with zero values on mobile — show only cards with actual data, or show all 3 in a single condensed row
 
-```text
-BEFORE (single cramped row):
-┌─────────────────────────────────┐
-│ INV-001  [3d] [⋯] [Submitted]  │  ← too tight at 390px
-│ Mar 1, 2026                     │
-│ ...                             │
+### 3. Fix remaining bottom overlap
+**File:** `ProjectHome.tsx`
+- Verify `pb-36` is applied; if the card is still clipped, increase to `pb-40`
 
-AFTER (stacked):
-┌─────────────────────────────────┐
-│ INV-001           [Submitted]   │
-│ Mar 1, 2026            3d       │
-│ ...                             │
-```
+### 4. Move Sasha bubble away from Capture button
+**File:** `SashaBubble.tsx`
+- Increase `bottom` position further so it clears both the nav bar and the Capture button area
+- Alternative: shift Sasha to `left` side on mobile when Capture button is present
+
+### 5. Merge section title into filter bar
+**File:** `InvoicesTab.tsx` (renderTabContent)
+- Combine "From Field Crews & Suppliers / 1 Invoice" heading with the filter bar into a single compact row: `1 Invoice | [All Statuses v]`
+- Saves ~40px of vertical space
+
+## Expected result
+On 390px, the user sees: compact tabs at top, a single-line KPI summary, filter, and the invoice card — all without scrolling. The bottom nav and Sasha bubble don't overlap any content.
 
