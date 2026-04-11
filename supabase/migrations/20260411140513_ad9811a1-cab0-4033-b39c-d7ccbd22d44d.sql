@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN contract_mode text NOT NULL DEFAULT 'fixed';
