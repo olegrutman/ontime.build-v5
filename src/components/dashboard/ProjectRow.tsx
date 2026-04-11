@@ -132,6 +132,9 @@ export function ProjectRow({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-semibold truncate">{project.name}</h3>
+                  {(project as any).contract_mode === 'tm' && (
+                    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] shrink-0">T&M</Badge>
+                  )}
                   {getScheduleBadge()}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

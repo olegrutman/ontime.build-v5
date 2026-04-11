@@ -28,12 +28,14 @@ interface BottomItem {
   route: string;
 }
 
-const PRIMARY_ITEMS: BottomItem[] = [
-  { label: 'Overview', icon: LayoutDashboard, route: 'overview' },
-  { label: 'COs', icon: AlertTriangle, route: 'change-orders' },
-  { label: 'Invoices', icon: Receipt, route: 'invoices' },
-  { label: 'Orders', icon: Package, route: 'purchase-orders' },
-];
+function getPrimaryItems(isTM: boolean): BottomItem[] {
+  return [
+    { label: 'Overview', icon: LayoutDashboard, route: 'overview' },
+    { label: isTM ? 'WOs' : 'COs', icon: AlertTriangle, route: 'change-orders' },
+    { label: 'Invoices', icon: Receipt, route: 'invoices' },
+    { label: 'Orders', icon: Package, route: 'purchase-orders' },
+  ];
+}
 
 interface MoreItem {
   label: string;
@@ -74,9 +76,10 @@ function MoreItemRow({ item, isActive, onNavigate }: { item: MoreItem; isActive:
 
 interface ProjectBottomNavProps {
   isSupplier?: boolean;
+  isTM?: boolean;
 }
 
-export function ProjectBottomNav({ isSupplier = false }: ProjectBottomNavProps) {
+export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBottomNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -105,7 +108,7 @@ export function ProjectBottomNav({ isSupplier = false }: ProjectBottomNavProps) 
         style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-stretch justify-around h-[56px]">
-          {PRIMARY_ITEMS.map((item) => {
+          {getPrimaryItems(isTM).map((item) => {
             const active = activeSection === item.route;
             const Icon = item.icon;
             return (

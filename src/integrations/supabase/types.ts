@@ -4190,6 +4190,7 @@ export type Database = {
           address: Json | null
           build_type: string | null
           city: string | null
+          contract_mode: string
           created_at: string
           created_by: string | null
           created_by_org_id: string | null
@@ -4213,6 +4214,7 @@ export type Database = {
           address?: Json | null
           build_type?: string | null
           city?: string | null
+          contract_mode?: string
           created_at?: string
           created_by?: string | null
           created_by_org_id?: string | null
@@ -4236,6 +4238,7 @@ export type Database = {
           address?: Json | null
           build_type?: string | null
           city?: string | null
+          contract_mode?: string
           created_at?: string
           created_by?: string | null
           created_by_org_id?: string | null

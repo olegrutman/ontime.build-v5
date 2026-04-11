@@ -19,7 +19,7 @@ interface ProjectBasicsData {
   startDate?: string;
 }
 
-interface UnifiedReviewStepProps {
+export interface UnifiedReviewStepProps {
   basics: ProjectBasicsData;
   buildingType: BuildingType | null;
   answers: Answers;
@@ -29,6 +29,7 @@ interface UnifiedReviewStepProps {
   creatorOrgName?: string;
   creatorRole?: string | null;
   creatorOrgType?: OrgType;
+  contractMode?: 'fixed' | 'tm';
 }
 
 export function UnifiedReviewStep({
@@ -41,6 +42,7 @@ export function UnifiedReviewStep({
   creatorOrgName,
   creatorRole,
   creatorOrgType,
+  contractMode = 'fixed',
 }: UnifiedReviewStepProps) {
   const isTC = creatorOrgType === 'TC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
@@ -91,8 +93,25 @@ export function UnifiedReviewStep({
         </CardContent>
       </Card>
 
+      {/* T&M mode info */}
+      {contractMode === 'tm' && (
+        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/10 dark:border-amber-800">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold text-sm">Remodel / Time & Material Project</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  No fixed contract value or scope is set. You'll add Work Orders as the project progresses, and the contract total will grow with each approved Work Order.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Scope Summary */}
-      {buildingType && (
+      {contractMode !== 'tm' && buildingType && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -112,6 +131,7 @@ export function UnifiedReviewStep({
       )}
 
       {/* Contracts & SOV */}
+      {contractMode !== 'tm' && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -151,6 +171,7 @@ export function UnifiedReviewStep({
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Team */}
       <Card>

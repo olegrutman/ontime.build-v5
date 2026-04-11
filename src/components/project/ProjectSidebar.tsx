@@ -35,27 +35,29 @@ interface NavItem {
   premium?: boolean;
 }
 
-const NAV_GROUPS: NavItem[][] = [
-  [
-    { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
-    { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
-    { key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts' },
-  ],
-  [
-    { key: 'change-orders', label: 'Change Orders', icon: AlertTriangle, route: 'change-orders', featureKey: 'change_orders' },
-    { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true },
-    { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
-  ],
-  [
-    { key: 'invoices', label: 'Invoices', icon: Receipt, route: 'invoices', featureKey: 'invoicing' },
-    { key: 'purchase-orders', label: 'Purchase Orders', icon: Package, route: 'purchase-orders', featureKey: 'purchase_orders' },
-    { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
-  ],
-  [
-    { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true },
-    { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', premium: true },
-  ],
-];
+function getNavGroups(isTM: boolean): NavItem[][] {
+  return [
+    [
+      { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
+      { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
+      ...(!isTM ? [{ key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts' } as NavItem] : []),
+    ],
+    [
+      { key: 'change-orders', label: isTM ? 'Work Orders' : 'Change Orders', icon: AlertTriangle, route: 'change-orders', featureKey: 'change_orders' },
+      { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true },
+      { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
+    ],
+    [
+      { key: 'invoices', label: 'Invoices', icon: Receipt, route: 'invoices', featureKey: 'invoicing' },
+      { key: 'purchase-orders', label: 'Purchase Orders', icon: Package, route: 'purchase-orders', featureKey: 'purchase_orders' },
+      { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
+    ],
+    [
+      { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true },
+      { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', premium: true },
+    ],
+  ];
+}
 
 const UTILITY_ITEMS = [
   { key: 'team', label: 'My Team', icon: Users, path: '/org/team' },
@@ -96,9 +98,10 @@ function FeatureNavItem({
 
 interface ProjectSidebarProps {
   isSupplier?: boolean;
+  isTM?: boolean;
 }
 
-export function ProjectSidebar({ isSupplier = false }: ProjectSidebarProps) {
+export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -128,7 +131,7 @@ export function ProjectSidebar({ isSupplier = false }: ProjectSidebarProps) {
 
         <div className="w-full h-px bg-white/10 mb-2" />
 
-        {NAV_GROUPS.map((group, gi) => {
+        {getNavGroups(isTM).map((group, gi) => {
           const visibleItems = group.filter(
             (item) => !(item.hideForSupplier && isSupplier)
           );
