@@ -36,10 +36,11 @@ export async function sendCONotification(payload: CONotificationPayload) {
 export function buildCONotification(
   type: string,
   coTitle: string | null,
-  amount?: number
+  amount?: number,
+  isTM = false
 ): { title: string; body: string } {
-  const label = coTitle ?? 'Change Order';
-
+  const label = coTitle ?? (isTM ? 'Work Order' : 'Change Order');
+  const coWord = isTM ? 'Work order' : 'Change order';
   const fmtAmount = (n: number) =>
     `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 

@@ -546,7 +546,7 @@ export function COStatusActions({
               id="reject-note"
               value={rejectNote}
               onChange={e => setRejectNote(e.target.value)}
-              placeholder="Explain why this CO is being rejected…"
+              placeholder={isTM ? "Explain why this WO is being rejected…" : "Explain why this CO is being rejected…"}
               rows={3}
               className="mt-1.5 resize-none"
             />
