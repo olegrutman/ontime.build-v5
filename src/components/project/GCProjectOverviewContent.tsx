@@ -456,8 +456,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           </div>
         </KpiCard>
 
-        {/* Card 4 — Change Orders */}
-        <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="CHANGE ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} COs` : '0 COs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
+        {/* Card 4 — Change Orders / Work Orders */}
+        <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label={isTM ? 'WORK ORDERS' : 'CHANGE ORDERS'} value={changeOrders.length > 0 ? `${changeOrders.length} ${isTM ? 'WOs' : 'COs'}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

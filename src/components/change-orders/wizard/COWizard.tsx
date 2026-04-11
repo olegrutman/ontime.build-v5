@@ -95,9 +95,10 @@ interface COWizardProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   preSelectedReason?: COReasonCode;
+  isTM?: boolean;
 }
 
-export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: COWizardProps) {
+export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isTM = false }: COWizardProps) {
   const { currentRole, user, userOrgRoles } = useAuth();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -240,10 +241,10 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
       }
 
       queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
-      toast.success('Change order created');
+      toast.success(isTM ? 'Work order created' : 'Change order created');
       handleClose();
     } catch (err: any) {
-      toast.error(err?.message ?? 'Failed to create change order');
+      toast.error(err?.message ?? (isTM ? 'Failed to create work order' : 'Failed to create change order'));
     } finally {
       setSubmitting(false);
     }
@@ -338,7 +339,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
             {isLastStep ? (
               <Button size="sm" onClick={handleSubmit} disabled={submitting || !canAdvance()}>
                 {submitting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                Create Change Order
+                Create {isTM ? 'Work Order' : 'Change Order'}
               </Button>
             ) : (
               <Button size="sm" onClick={handleNext} disabled={!canAdvance()}>
@@ -364,11 +365,11 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden max-h-[88vh] flex flex-col">
-        <DialogTitle className="sr-only">New Change Order</DialogTitle>
-        <DialogDescription className="sr-only">Create a new change order</DialogDescription>
+        <DialogTitle className="sr-only">New {isTM ? 'Work Order' : 'Change Order'}</DialogTitle>
+        <DialogDescription className="sr-only">Create a new {isTM ? 'work order' : 'change order'}</DialogDescription>
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-card">
           <div>
-            <h2 className="text-lg font-semibold">New Change Order</h2>
+            <h2 className="text-lg font-semibold">New {isTM ? 'Work Order' : 'Change Order'}</h2>
             <p className="text-xs text-muted-foreground">{orgName} · Step {step + 1} of {STEPS.length}</p>
           </div>
           <div className="flex gap-1.5">
@@ -387,7 +388,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
 function StepWhy({ data, onChange }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void }) {
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">What triggered this change order?</p>
+      <p className="text-sm text-muted-foreground">What triggered this {isTM ? 'work order' : 'change order'}?</p>
       <div className="grid grid-cols-2 gap-3">
         {REASON_CARDS.map(card => (
           <button
@@ -625,7 +626,7 @@ function StepTeam({ data, projectId, role }: { data: COWizardData; projectId: st
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">Confirm participants and create this change order.</p>
+      <p className="text-sm text-muted-foreground">Confirm participants and create this {isTM ? 'work order' : 'change order'}.</p>
 
       <div className="space-y-2">
         {participants.map((p, i) => (
