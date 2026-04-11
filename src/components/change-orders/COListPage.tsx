@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { COWizard } from './wizard/COWizard';
+import { TMWOWizard } from './wizard/TMWOWizard';
 import { COBoardCard } from './COBoardCard';
 import { FCHomeScreen } from './FCHomeScreen';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
@@ -189,7 +190,11 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         </div>
       )}
 
-      <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} isTM={isTM} />
+      {isTM ? (
+        <TMWOWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} />
+      ) : (
+        <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} isTM={isTM} />
+      )}
 
     </div>
   );
