@@ -469,13 +469,13 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice to {gcName}</button>
-          <button onClick={() => onNavigate('sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View {gcName} Contract</button>
+          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice<span className="max-sm:hidden"> to {gcName}</span></button>
+          <button onClick={() => onNavigate('sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View Contract<span className="max-sm:hidden"> · {gcName}</span></button>
         </div>
       </div>
 
       {/* 8 KPI Cards — 4-col grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-2 max-sm:!gap-2">
 
         {/* Card 1 — GC Contract (read-only) */}
         <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={`${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: `${gcName} set this` }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
@@ -775,7 +775,34 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       </div>
 
       {/* Cash Flow Ladder */}
-      <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', ...fontLabel }}>
+      {/* Mobile: compact horizontal summary */}
+      <div className="sm:hidden" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '14px 16px', ...fontLabel }}>
+        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink, marginBottom: 10 }}>💧 Cash Flow</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>GC</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+          </div>
+          <div style={{ fontSize: '0.9rem', color: C.muted }}>→</div>
+          <div style={{ textAlign: 'center', flex: 1, background: C.amberPale, borderRadius: 8, padding: '4px 6px', border: `1.5px solid ${C.amber}` }}>
+            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.amberD, fontWeight: 600 }}>You</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+          </div>
+          <div style={{ fontSize: '0.9rem', color: C.muted }}>→</div>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>FC</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(draftFcVal)}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+          <div style={{ background: C.greenBg, border: `1px solid ${C.green}`, borderRadius: 8, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.58rem', textTransform: 'uppercase', color: C.green, fontWeight: 700 }}>Margin</span>
+            <span style={{ fontSize: '0.82rem', color: C.green, ...fontMono }}>{fmt(netTCMargin)}</span>
+          </div>
+        </div>
+      </div>
+      {/* Desktop: full Cash Flow Ladder */}
+      <div className="hidden sm:block" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', ...fontLabel }}>
         <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💧 Cash Flow — {projectName}</div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }} className="max-md:flex-col">
           {/* GC Column */}
@@ -788,7 +815,6 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             <div style={{ fontSize: '1.2rem', color: C.muted }}>↓</div>
             <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 2 }}>TC Contract: {fmt(gcContractVal)}</div>
           </div>
-
           {/* TC Column (You) */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.amberPale, border: `2px solid ${C.amber}`, borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
@@ -805,7 +831,6 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             </div>
             <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>FC Contract: {fmt(draftFcVal)}</div>
           </div>
-
           {/* FC Column */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.navy, color: '#fff', borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
