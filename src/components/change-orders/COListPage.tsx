@@ -105,13 +105,13 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       <div className="co-light-shell p-3 sm:p-4 md:p-5 space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="text-base sm:text-xl font-semibold text-foreground">Change Orders</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{total === 0 ? 'No change orders yet' : `${total} total`}</p>
+            <h2 className="text-base sm:text-xl font-semibold text-foreground">{isTM ? 'Work Orders' : 'Change Orders'}</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{total === 0 ? (isTM ? 'No work orders yet' : 'No change orders yet') : `${total} total`}</p>
           </div>
 
           <Button size="sm" onClick={() => setWizardOpen(true)} className="gap-1.5 shrink-0">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New CO</span>
+            <span className="hidden sm:inline">{isTM ? 'New WO' : 'New CO'}</span>
           </Button>
         </div>
 
