@@ -1,90 +1,81 @@
 
 
-# Implement "Remodel / Time & Material (T&M)" Project Type
+# Replace "Change Order" with "Work Order" Throughout T&M Projects
 
-## Overview
-Add a `contract_mode` column to the `projects` table (`'fixed'` default, `'tm'`). When a user picks T&M during creation, the wizard skips contracts/building-type/scope steps. In a T&M project, "Change Orders" are relabelled "Work Orders", contract value is the live sum of approved COs, and fixed-contract-only UI is hidden.
+## What's happening
+In T&M projects, many UI components still say "Change Order" instead of "Work Order". This needs to be conditional — only T&M projects use "Work Order" terminology; fixed-contract projects keep "Change Order".
 
----
+## Files to modify
 
-## Database Migration
+### 1. Pass `isTM` to overview components — `src/pages/ProjectHome.tsx`
+- Pass `isTM` prop to `GCProjectOverviewContent`, `TCProjectOverview`, and `FCProjectOverview`
 
-```sql
-ALTER TABLE public.projects
-  ADD COLUMN contract_mode text NOT NULL DEFAULT 'fixed';
-```
+### 2. `src/components/project/GCProjectOverviewContent.tsx`
+- Accept `isTM` prop
+- Line 379: "Pending Change Order" → conditional "Pending Work Order"
+- Line 458-479: KPI card label "CHANGE ORDERS" → "WORK ORDERS", empty state "No change orders yet" → "No work orders yet", button "+ Create Change Order" → "+ Create Work Order"
 
-No new tables, no RLS changes needed — existing project RLS covers the new column.
+### 3. `src/components/project/TCProjectOverview.tsx`
+- Accept `isTM` prop
+- Line 431: "Pending Change Orders" → conditional
+- Line 601/627: "No change orders yet", button label → conditional
 
----
+### 4. `src/components/project/FCProjectOverview.tsx`
+- Accept `isTM` prop
+- Line 260-282: KPI label "CHANGE ORDERS" → "WORK ORDERS", empty state → conditional
 
-## Files to Modify
+### 5. `src/components/change-orders/wizard/COWizard.tsx`
+- Accept `isTM` prop
+- Line 243: toast "Change order created" → "Work order created"
+- Line 246: error toast → conditional
+- Line 341: button "Create Change Order" → "Create Work Order"
+- Line 367-371: dialog title "New Change Order" → "New Work Order"
+- Line 390: "What triggered this change order?" → "What triggered this work order?"
+- Line 628: "Confirm participants and create this change order." → conditional
 
-### 1. `src/pages/CreateProjectNew.tsx`
-- Add `contractMode` state (`'fixed' | 'tm'`), defaulting to `'fixed'`.
-- After Basics step (step 0), show a **Contract Mode selector** (two cards: "Fixed Contract" vs "Remodel / T&M").
-- Compute `ACTIVE_STEPS` dynamically: if T&M, steps = `[basics, mode, team/review]` (skip contracts, building type, scope). If fixed, steps = current 5-step flow with mode selector inserted after basics.
-- On project insert, include `contract_mode: contractMode`.
-- Skip `wizard.saveAll()` for T&M projects (no contracts/SOV to save).
+### 6. `src/components/change-orders/COListPage.tsx`
+- Pass `isTM` to `COWizard`
+- Line 150: stat label "Total CO value" → conditional "Total WO value"
+- Line 172-177: empty state text "No change orders yet" / "Create a change order…" / button "New Change Order" → conditional
 
-### 2. `src/pages/ProjectHome.tsx`
-- Add `contract_mode` to the `Project` interface and fetch.
-- Pass `isTM = project.contract_mode === 'tm'` down to overview components and sidebar/bottom nav.
-- In dark header stat row: if T&M, show type as **"Remodel / T&M"**.
-- Hide the "Define Scope" setup banner for T&M projects.
+### 7. `src/components/change-orders/COHeroBlock.tsx`
+- Accept `isTM` prop (via props or fetching project)
+- Line 65, 102: headline "CHANGE ORDER" → "WORK ORDER"
 
-### 3. `src/components/project/ProjectSidebar.tsx`
-- Accept `isTM` prop.
-- If T&M: relabel "Change Orders" → "Work Orders" in `NAV_GROUPS`.
-- Hide "Schedule of Values" nav item for T&M (no baseline SOV).
+### 8. `src/components/change-orders/COStatusActions.tsx`
+- Accept `isTM` prop
+- Line 511: "Approve change order" → conditional
+- Line 514-515: dialog descriptions → conditional
+- Line 536: "Reject change order" → conditional
 
-### 4. `src/components/project/ProjectBottomNav.tsx`
-- Accept `isTM` prop.
-- Relabel "COs" → "WOs" in `PRIMARY_ITEMS` when T&M.
+### 9. `src/components/change-orders/CODetailLayout.tsx`
+- Fetch project `contract_mode` to determine `isTM`
+- Line 139: fallback title "Change Order" → conditional
+- Pass `isTM` to `COHeroBlock` and `COStatusActions`
 
-### 5. `src/components/project/GCProjectOverviewContent.tsx`
-- Accept `isTM` prop.
-- If T&M: KPI label "Contract Value" → **"T&M Total"**, value = sum of approved COs.
-- Hide budget variance / baseline references.
+### 10. `src/components/project/ProjectContractsSection.tsx`
+- Accept `isTM` prop
+- Line 54-55: `formatTrade` → conditional "Work Order" labels
+- Line 348: section header "Change Order Contracts" → conditional "Work Order Contracts"
 
-### 6. `src/components/project/TCProjectOverview.tsx`
-- Same T&M label swap for contract value KPIs.
-- Hide "Contract Value (set by GC)" info boxes; show "T&M Total" instead.
+### 11. `src/components/project/ProjectIconRail.tsx`
+- Accept `isTM` prop
+- Line 35: label "Change Orders" → conditional "Work Orders"
 
-### 7. `src/components/project/FCProjectOverview.tsx`
-- Same T&M label swap.
+### 12. `src/lib/coNotifications.ts`
+- Accept `isTM` parameter
+- All notification strings "Change order" → conditional "Work order"
 
-### 8. `src/components/project/ProjectFinancialCommand.tsx`
-- If T&M: label "Contract Value" → "T&M Total".
+### 13. `src/components/dashboard/FCDashboardView.tsx`
+- Line 369: "approved change order" → check project mode and use "work order" when T&M
+- Line 382: fallback "Change order" → conditional
 
-### 9. `src/components/project/COImpactCard.tsx`
-- If T&M: label "CO Impact" → "Work Order Total" or similar.
+### 14. `src/constants/defaultKpiConfig.ts`
+- These are config defaults that affect all projects; leave as-is (dashboard-level, not project-specific)
 
-### 10. `src/components/change-orders/COListPage.tsx` (or wherever the CO list header lives)
-- If T&M: page title "Change Orders" → "Work Orders", and column headers updated.
-
-### 11. Dashboard project lists
-- **`src/components/dashboard/ProjectRow.tsx`** — show a small `T&M` badge next to project name when `contract_mode === 'tm'`.
-- **`src/components/dashboard/ProjectSnapshotList.tsx`** — same badge.
-- **`src/components/dashboard/DashboardProjectList.tsx`** — same badge.
-
-### 12. New component: `src/components/project-wizard-new/ContractModeSelector.tsx`
-- Two selection cards: "Fixed Contract" (existing flow) and "Remodel / T&M" (simplified flow).
-- Amber/highlight styling consistent with existing `BuildingTypeSelector`.
-
----
-
-## Technical Details
-
-- **Contract value calculation for T&M**: reuse `useProjectFinancials` hook — it already sums approved CO totals. For T&M projects, `contractValue = coApprovedTotal` (no base contract).
-- **Work Orders = Change Orders**: no new DB table. COs on T&M projects are simply labelled "Work Orders" in the UI. The `change_orders` table and all existing CO logic (creation wizard, approval, invoicing) work unchanged.
-- **SOV tab**: hidden for T&M in sidebar since there's no baseline SOV.
-- **Setup/scope flow**: hidden for T&M since there's no scope to define upfront.
-
----
-
-## What stays the same
-- POs, Invoices, Crew Tasks, Suppliers, Returns, RFIs, Daily Log, Schedule — all unchanged.
-- CO creation wizard, approval flow, pricing models — all unchanged (just relabelled).
-- Auth, roles, permissions — unchanged.
+## Approach
+- For components already receiving `isTM`, just use it for label swaps
+- For the CO detail page (`CODetailLayout`), fetch the project's `contract_mode` to derive `isTM` since it navigates directly via URL
+- Create a small helper: `coLabel(isTM: boolean) => isTM ? 'Work Order' : 'Change Order'` to reduce repetition
+- No database changes needed
 
