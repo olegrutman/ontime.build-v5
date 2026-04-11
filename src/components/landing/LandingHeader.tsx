@@ -72,7 +72,7 @@ export function LandingHeader() {
                 className="px-5 py-[9px] bg-primary text-primary-foreground rounded-[5px] text-[0.85rem] font-bold shadow-amber hover:brightness-110 hover:-translate-y-px transition-all no-underline"
                 style={{ background: 'hsl(var(--amber))' }}
               >
-                Start Free Demo
+                Create an Account
               </Link>
             </>
           )}
@@ -116,7 +116,7 @@ export function LandingHeader() {
                     <Link to="/auth">Sign in</Link>
                   </Button>
                   <Button asChild className="w-full bg-primary text-primary-foreground" onClick={() => setOpen(false)}>
-                    <Link to="/signup">Start Free Demo</Link>
+                    <Link to="/signup">Create an Account</Link>
                   </Button>
                 </>
               )}
