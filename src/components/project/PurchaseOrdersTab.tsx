@@ -797,21 +797,23 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
         <POActionBar purchaseOrders={purchaseOrders} isSupplier={isSupplier} hidePricing={hidePricing} />
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">Purchase Orders</h2>
-            <p className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-xl font-semibold truncate">Purchase Orders</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {purchaseOrders.length} PO{purchaseOrders.length !== 1 ? 's' : ''} on this project
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <ViewSwitcher
-              value={viewMode}
-              onChange={setViewMode}
-              availableModes={['list', 'table']}
-            />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:block">
+              <ViewSwitcher
+                value={viewMode}
+                onChange={setViewMode}
+                availableModes={['list', 'table']}
+              />
+            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="w-[130px] sm:w-44 h-8 sm:h-9 text-xs sm:text-sm">
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -828,9 +830,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               </SelectContent>
             </Select>
             {canCreatePO && !isProjectNotActive && (
-              <Button onClick={() => setWizardOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Create PO
+              <Button size="sm" onClick={() => setWizardOpen(true)}>
+                <Plus className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Create PO</span>
               </Button>
             )}
           </div>
@@ -839,8 +841,16 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         {showDirectionalTabs ? (
           <Tabs defaultValue="my" className="w-full">
             <TabsList>
-              <TabsTrigger value="my">My POs ({myPOs.length})</TabsTrigger>
-              <TabsTrigger value="received">{receivedTabLabel} ({receivedPOs.length})</TabsTrigger>
+              <TabsTrigger value="my" className="text-xs sm:text-sm">
+                <span className="sm:hidden">Mine</span>
+                <span className="hidden sm:inline">My POs</span>
+                <span className="ml-1">({myPOs.length})</span>
+              </TabsTrigger>
+              <TabsTrigger value="received" className="text-xs sm:text-sm">
+                <span className="sm:hidden">Received</span>
+                <span className="hidden sm:inline">{receivedTabLabel}</span>
+                <span className="ml-1">({receivedPOs.length})</span>
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="my">{renderPOList(myPOs)}</TabsContent>
             <TabsContent value="received">{renderPOList(receivedPOs)}</TabsContent>
