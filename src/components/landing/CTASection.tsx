@@ -22,7 +22,7 @@ export function CTASection() {
           className="px-9 py-4 text-base font-bold rounded-[5px] no-underline shadow-amber-lg hover:brightness-110 hover:-translate-y-0.5 transition-all"
           style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy-d))' }}
         >
-          Start Free Demo
+          Create an Account
         </a>
         <a
           href="#"
