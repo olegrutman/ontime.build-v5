@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,14 +17,28 @@ import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeS
 import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
 import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
+import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
 
-const UNIFIED_STEPS = [
+interface StepDef {
+  id: string;
+  label: string;
+  description: string;
+}
+
+const FIXED_STEPS: StepDef[] = [
   { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'contracts', label: 'Contracts', description: 'Contract values' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
   { id: 'scope', label: 'Scope', description: 'Scope & live SOV' },
   { id: 'review', label: 'Review', description: 'Review and create' },
-] as const;
+];
+
+const TM_STEPS: StepDef[] = [
+  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
+  { id: 'review', label: 'Review', description: 'Review and create' },
+];
 
 const initialBasics: ProjectBasics = {
   name: '',
@@ -43,6 +57,7 @@ export default function CreateProjectNew() {
   const [basics, setBasics] = useState<ProjectBasics>(initialBasics);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [saving, setSaving] = useState(false);
+  const [contractMode, setContractMode] = useState<ContractMode>('fixed');
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
@@ -51,6 +66,9 @@ export default function CreateProjectNew() {
                       currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
 
   const wizard = useSetupWizardV2();
+
+  const isTM = contractMode === 'tm';
+  const activeSteps = useMemo(() => isTM ? TM_STEPS : FIXED_STEPS, [isTM]);
 
   useEffect(() => {
     if (!authLoading && (!user || !currentOrg)) {
@@ -64,10 +82,13 @@ export default function CreateProjectNew() {
 
   const isTC = creatorOrgType === 'TC';
 
+  // Map step id to validation
   const canProceed = (): boolean => {
-    switch (currentStep) {
-      case 0: return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
-      case 1: {
+    const stepId = activeSteps[currentStep]?.id;
+    switch (stepId) {
+      case 'basics': return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
+      case 'mode': return true; // always valid, a mode is always selected
+      case 'contracts': {
         const hasGcContract = typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
         if (isTC) {
           const hasFcContract = typeof wizard.answers.fc_contract_value === 'number' && wizard.answers.fc_contract_value > 0;
@@ -75,15 +96,21 @@ export default function CreateProjectNew() {
         }
         return hasGcContract;
       }
-      case 2: return !!wizard.buildingType;
-      case 3: return true; // scope questions are optional
-      case 4: return true;
+      case 'building_type': return !!wizard.buildingType;
+      case 'scope': return true;
+      case 'review': return true;
       default: return false;
     }
   };
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, UNIFIED_STEPS.length - 1));
+  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, activeSteps.length - 1));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+
+  // When switching contract mode on the mode step, reset step to mode step
+  const handleModeChange = (mode: ContractMode) => {
+    setContractMode(mode);
+    // Keep on mode step — user clicks Next to proceed
+  };
 
   const createProject = async () => {
     if (!currentOrg?.id || !user?.id) {
@@ -97,7 +124,7 @@ export default function CreateProjectNew() {
         .from('projects')
         .insert({
           name: basics.name,
-          project_type: wizard.buildingType || '',
+          project_type: isTM ? 'Remodel / T&M' : (wizard.buildingType || ''),
           address: { street: basics.address } as any,
           city: basics.city,
           state: basics.state,
@@ -106,7 +133,8 @@ export default function CreateProjectNew() {
           created_by: user.id,
           created_by_org_id: currentOrg.id,
           organization_id: currentOrg.id,
-          status: 'setup',
+          status: isTM ? 'active' : 'setup',
+          contract_mode: contractMode,
         })
         .select('id')
         .single();
@@ -142,8 +170,10 @@ export default function CreateProjectNew() {
         }),
       ]);
 
-      // Save wizard answers + contract(s) + SOV(s)
-      await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
+      // Save wizard answers + contract(s) + SOV(s) — skip for T&M
+      if (!isTM) {
+        await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
+      }
 
       // Save team members
       for (const member of team) {
@@ -184,7 +214,7 @@ export default function CreateProjectNew() {
         }
       }
 
-      toast({ title: 'Project created!', description: 'Invitations will be sent to team members.' });
+      toast({ title: 'Project created!', description: isTM ? 'Your T&M project is ready. Add Work Orders to get started.' : 'Invitations will be sent to team members.' });
       navigate(`/project/${pid}`);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -194,8 +224,9 @@ export default function CreateProjectNew() {
   };
 
   const renderStep = () => {
-    switch (currentStep) {
-      case 0:
+    const stepId = activeSteps[currentStep]?.id;
+    switch (stepId) {
+      case 'basics':
         return (
           <BasicsStepNew
             data={basics}
@@ -207,7 +238,14 @@ export default function CreateProjectNew() {
             creatorOrgType={creatorOrgType}
           />
         );
-      case 1:
+      case 'mode':
+        return (
+          <ContractModeSelector
+            selected={contractMode}
+            onSelect={handleModeChange}
+          />
+        );
+      case 'contracts':
         return (
           <ContractsStep
             buildingType={wizard.buildingType}
@@ -218,14 +256,14 @@ export default function CreateProjectNew() {
             creatorOrgType={creatorOrgType}
           />
         );
-      case 2:
+      case 'building_type':
         return (
           <BuildingTypeSelector
             selected={wizard.buildingType}
             onSelect={(bt) => wizard.selectBuildingType(bt)}
           />
         );
-      case 3:
+      case 'scope':
         return wizard.buildingType ? (
           <ScopeQuestionsPanel
             buildingType={wizard.buildingType}
@@ -242,18 +280,19 @@ export default function CreateProjectNew() {
             Please go back and select a building type first.
           </p>
         );
-      case 4:
+      case 'review':
         return (
           <UnifiedReviewStep
             basics={basics}
-            buildingType={wizard.buildingType}
-            answers={wizard.answers}
-            visibleQuestions={wizard.visibleQuestions}
-            sovLines={wizard.sovLines}
+            buildingType={isTM ? null : wizard.buildingType}
+            answers={isTM ? {} : wizard.answers}
+            visibleQuestions={isTM ? [] : wizard.visibleQuestions}
+            sovLines={isTM ? [] : wizard.sovLines}
             team={team}
             creatorOrgName={currentOrg?.name}
             creatorRole={creatorRole}
             creatorOrgType={creatorOrgType}
+            contractMode={contractMode}
           />
         );
       default:
@@ -271,6 +310,8 @@ export default function CreateProjectNew() {
     );
   }
 
+  const isLastStep = currentStep === activeSteps.length - 1;
+
   return (
     <AppLayout title="Create New Project" fullWidth>
       <div className="mx-auto p-6 w-full">
@@ -280,7 +321,7 @@ export default function CreateProjectNew() {
             <Card>
               <CardContent className="p-4">
                 <nav className="space-y-2">
-                  {UNIFIED_STEPS.map((step, index) => (
+                  {activeSteps.map((step, index) => (
                     <div
                       key={step.id}
                       onClick={() => { if (index < currentStep) setCurrentStep(index); }}
@@ -328,7 +369,7 @@ export default function CreateProjectNew() {
                   Back
                 </Button>
 
-                {currentStep < UNIFIED_STEPS.length - 1 ? (
+                {!isLastStep ? (
                   <Button
                     onClick={nextStep}
                     disabled={!canProceed() || saving}
