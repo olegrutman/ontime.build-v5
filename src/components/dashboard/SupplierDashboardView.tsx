@@ -484,7 +484,7 @@ export function SupplierDashboardView({
                   const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
                   const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
                   const outBal = Math.max(0, p.billed - p.received);
-                  const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : p.risk === 'Closed' ? 'pm' : p.risk === 'Not Started' ? 'pw' : 'pg';
+                  const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : 'pg';
                   return (
                     <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                       <TdN>{p.name}</TdN>,
