@@ -177,6 +177,21 @@ export default function CreateProjectNew() {
       // Save wizard answers + contract(s) + SOV(s) — skip for T&M
       if (!isTM) {
         await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
+      } else {
+        // Save T&M building info to project_scope_details
+        await supabase.from('project_scope_details').insert({
+          project_id: pid,
+          home_type: tmScope.buildingType,
+          floors: tmScope.stories,
+          stories: tmScope.stories,
+          foundation_type: tmScope.foundationType || null,
+          basement_type: tmScope.foundationType === 'Basement' ? (tmScope.basementType || null) : null,
+          basement_finish: tmScope.foundationType === 'Basement' ? (tmScope.basementFinish || null) : null,
+          garage_type: tmScope.garageType,
+          siding_included: tmScope.sidingIncluded,
+          siding_materials: tmScope.sidingIncluded ? tmScope.sidingMaterials : null,
+          total_sqft: tmScope.totalSqft || null,
+        });
       }
 
       // Save team members
@@ -249,6 +264,13 @@ export default function CreateProjectNew() {
             onSelect={handleModeChange}
           />
         );
+      case 'building_info':
+        return (
+          <TMBuildingInfoStep
+            data={tmScope}
+            onChange={(updates) => setTmScope(prev => ({ ...prev, ...updates }))}
+          />
+        );
       case 'contracts':
         return (
           <ContractsStep
@@ -297,6 +319,7 @@ export default function CreateProjectNew() {
             creatorRole={creatorRole}
             creatorOrgType={creatorOrgType}
             contractMode={contractMode}
+            tmBuildingInfo={isTM ? tmScope : undefined}
           />
         );
       default:
