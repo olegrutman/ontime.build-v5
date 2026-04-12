@@ -230,6 +230,22 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
         )}
       </div>
 
+      {/* Smart filter banner */}
+      {isFiltered && workTypeLabel && (
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-accent text-accent-foreground text-sm">
+          <span>Showing scope for <strong>{workTypeLabel}</strong></span>
+          <button
+            onClick={() => {
+              setIsFiltered(false);
+              navTo('division');
+            }}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Browse all trades →
+          </button>
+        </div>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
