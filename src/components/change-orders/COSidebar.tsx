@@ -1,12 +1,9 @@
 import { forwardRef } from 'react';
-import { DT } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { CONTEPanel } from './CONTEPanel';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { COStatusActions } from './COStatusActions';
-import { COBudgetTracker } from './COBudgetTracker';
-import { COProfitabilityCard } from './COProfitabilityCard';
 import { COSOVPanel } from './COSOVPanel';
 import type { ChangeOrder, COFinancials, COCollaborator, COFCOrgOption, COCreatedByRole } from '@/types/changeOrder';
 import type { UseMutationResult } from '@tanstack/react-query';
@@ -40,28 +37,6 @@ function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <h3
-      className="text-[0.7rem] uppercase tracking-[0.04em] text-muted-foreground font-semibold px-3.5 pt-3.5 pb-2"
-     
-    >
-      {title}
-    </h3>
-  );
-}
-
-function FinRow({ label, value, bold, muted }: { label: string; value: number; bold?: boolean; muted?: boolean }) {
-  return (
-    <div className="flex items-center justify-between text-sm px-3.5">
-      <span className={cn(muted ? 'text-muted-foreground' : 'text-foreground', bold && 'font-semibold')}>{label}</span>
-      <span className={cn('font-mono', bold ? 'font-semibold text-foreground' : muted ? 'text-muted-foreground' : 'font-medium text-foreground')}>
-        {fmtCurrency(value)}
-      </span>
-    </div>
-  );
-}
-
 export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COSidebar(props, ref) {
   const {
     co, isGC, isTC, isFC, role, myOrgId, projectId,
@@ -74,64 +49,182 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
 
   const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
+  // Profitability calc
+  let revenue = 0, costs = 0;
+  if (isTC) {
+    revenue = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+    costs = financials.fcLaborTotal + financials.tcActualCostTotal;
+  } else if (isFC) {
+    revenue = financials.fcLaborTotal;
+    costs = financials.fcActualCostTotal;
+  }
+  const margin = revenue - costs;
+  const marginPct = revenue > 0 ? (margin / revenue) * 100 : 0;
+
+  const statusLabel = co.status === 'work_in_progress' ? 'Work in Progress'
+    : co.status === 'closed_for_pricing' ? 'Closed for Pricing'
+    : co.status === 'submitted' ? 'Submitted for Approval'
+    : co.status === 'approved' ? 'Approved'
+    : co.status === 'rejected' ? 'Rejected'
+    : co.status === 'draft' ? 'Draft'
+    : co.status.replace(/_/g, ' ');
+
   return (
     <div ref={ref} className="space-y-3">
-      {/* GC Budget Tracker */}
-      <COBudgetTracker
-        gcBudget={(co as any).gc_budget ?? null}
-        totalApprovedSpend={totalApprovedSpend}
-        isGC={isGC}
-      />
+      {/* Actions Card — Navy */}
+      <div className="rounded-xl overflow-hidden" style={{ background: 'hsl(var(--navy))' }}>
+        <div className="px-4 py-3 border-b border-white/10">
+          <p className="text-[0.7rem] uppercase tracking-wider font-semibold" style={{ color: 'hsl(220 27% 65%)' }}>Actions</p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="w-2 h-2 rounded-full bg-[hsl(var(--amber))] animate-pulse" />
+            <span className="text-xs text-white/80 font-medium">{statusLabel}</span>
+          </div>
+        </div>
+        <div className="px-4 py-3">
+          <COStatusActions
+            co={co} isGC={isGC} isTC={isTC} isFC={isFC}
+            currentOrgId={myOrgId} projectId={projectId}
+            financials={financials} collaborators={collaborators}
+            onRefresh={onRefresh}
+          />
+        </div>
+      </div>
 
-      {/* Actions */}
-      <COStatusActions
-        co={co} isGC={isGC} isTC={isTC} isFC={isFC}
-        currentOrgId={myOrgId} projectId={projectId}
-        financials={financials} collaborators={collaborators}
-        onRefresh={onRefresh}
-      />
-
-      {/* Financials */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <SectionHeader title="Financials" />
-        <div className="space-y-1.5 pb-3.5">
+      {/* Financials Card */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="px-4 py-3 border-b border-border">
+          <h3 className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">Financials</h3>
+        </div>
+        <div className="px-4 py-3 space-y-2">
           {isGC && (
             <>
-              <FinRow label="Labor" value={financials.tcBillableToGC} />
-              {(co.materials_needed || financials.materialsTotal > 0) && <FinRow label="Materials" value={financials.materialsTotal} />}
-              {(co.equipment_needed || financials.equipmentTotal > 0) && <FinRow label="Equipment" value={financials.equipmentTotal} />}
-              <div className="border-t border-border mx-3.5 pt-1.5 mt-1.5">
-                <FinRow label="Total billed" value={totalApprovedSpend} bold />
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Billable to GC</span>
+                <span className="font-mono font-medium">{fmtCurrency(financials.tcBillableToGC)}</span>
+              </div>
+              {financials.equipmentTotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Equipment</span>
+                  <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>
+                </div>
+              )}
+              {financials.materialsTotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Materials</span>
+                  <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>
+                </div>
+              )}
+              <div className="border-t border-border pt-2 mt-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span>Total to GC</span>
+                  <span className="font-mono">{fmtCurrency(totalApprovedSpend)}</span>
+                </div>
               </div>
             </>
           )}
           {isTC && (
             <>
-              {financials.fcLaborTotal > 0 && <FinRow label="FC cost" value={financials.fcLaborTotal} muted />}
-              <FinRow label="Billable to GC" value={financials.tcBillableToGC} />
-              {financials.materialsTotal > 0 && <FinRow label="Materials" value={financials.materialsTotal} />}
-              {financials.equipmentTotal > 0 && <FinRow label="Equipment" value={financials.equipmentTotal} />}
-              <div className="border-t border-border mx-3.5 pt-1.5 mt-1.5">
-                <FinRow label="Total" value={financials.grandTotal} bold />
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Billable to GC</span>
+                <span className="font-mono font-medium">{fmtCurrency(financials.tcBillableToGC)}</span>
+              </div>
+              {financials.equipmentTotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Equipment</span>
+                  <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>
+                </div>
+              )}
+              {financials.materialsTotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Materials</span>
+                  <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>
+                </div>
+              )}
+              <div className="border-t border-border pt-2 mt-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span>Total to GC</span>
+                  <span className="font-mono">{fmtCurrency(financials.grandTotal)}</span>
+                </div>
               </div>
             </>
           )}
           {isFC && (
             <>
-              <FinRow label="My labor" value={financials.fcLaborTotal} />
-              <div className="border-t border-border mx-3.5 pt-1.5 mt-1.5">
-                <FinRow label="Total" value={financials.fcLaborTotal} bold />
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">My Labor</span>
+                <span className="font-mono font-medium">{fmtCurrency(financials.fcLaborTotal)}</span>
+              </div>
+              <div className="border-t border-border pt-2 mt-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span>Total</span>
+                  <span className="font-mono">{fmtCurrency(financials.fcLaborTotal)}</span>
+                </div>
               </div>
             </>
+          )}
+
+          {/* TC / FC Profitability */}
+          {(isTC || isFC) && (
+            <div className="border-t border-border pt-3 mt-3 space-y-2">
+              <p className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted-foreground">
+                {isTC ? 'TC' : 'FC'} Profitability
+              </p>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Revenue</span>
+                <span className="font-mono font-medium">{fmtCurrency(revenue)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Internal Costs</span>
+                <span className="font-mono font-medium">{fmtCurrency(costs)}</span>
+              </div>
+              <div className={cn(
+                'rounded-lg px-3 py-2',
+                margin >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-red-50 dark:bg-red-950/20',
+              )}>
+                <div className="flex justify-between text-sm">
+                  <span className="font-semibold">Gross Margin</span>
+                  <div className="text-right">
+                    <span className={cn('font-mono font-bold', margin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
+                      {fmtCurrency(margin)}
+                    </span>
+                    <span className={cn('text-xs ml-1', margin >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                      ({marginPct.toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+                {revenue > 0 && (
+                  <div className="mt-1.5 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full', margin >= 0 ? 'bg-emerald-500' : 'bg-red-500')}
+                      style={{ width: `${Math.min(Math.max(marginPct, 0), 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Profitability — TC and FC only */}
-      <COProfitabilityCard isTC={isTC} isFC={isFC} financials={financials} />
-
-      {/* SOV Panel — GC and TC */}
+      {/* SOV Panel */}
       <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={myOrgId} />
+
+      {/* Field Crew Card */}
+      {isTC && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="px-4 py-3 border-b border-border">
+            <h3 className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">Field Crew</h3>
+          </div>
+          <div className="px-4 py-3">
+            <FCInputRequestCard
+              canRequest={canRequestFCInput} canComplete={canCompleteFCInput}
+              options={fcOrgOptions} collaborators={collaborators} acting={false}
+              onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); onRefresh(); }}
+              onComplete={async () => { await completeFCInput.mutateAsync(); onRefresh(); }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* FC Pricing Toggle */}
       {isTC && collaborators.length > 0 && (
@@ -140,14 +233,6 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName="GC"
         />
       )}
-
-      {/* FC Input */}
-      <FCInputRequestCard
-        canRequest={canRequestFCInput} canComplete={canCompleteFCInput}
-        options={fcOrgOptions} collaborators={collaborators} acting={false}
-        onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); onRefresh(); }}
-        onComplete={async () => { await completeFCInput.mutateAsync(); onRefresh(); }}
-      />
 
       {/* NTE */}
       {co.pricing_type === 'nte' && co.nte_cap && (
