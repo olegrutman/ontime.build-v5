@@ -45,7 +45,6 @@ function getTiles(props: COKPIStripProps): KPITile[] {
         label: 'Labor billed',
         value: fmtCurrency(financials.tcBillableToGC),
         color: 'hsl(var(--primary))',
-        sub: financials.tcTotalHours > 0 ? `${financials.tcTotalHours} hrs logged` : undefined,
         badge: getStatusBadge(financials.tcBillableToGC, true),
       },
     ];
