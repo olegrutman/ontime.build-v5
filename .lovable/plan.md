@@ -1,32 +1,46 @@
 
 
-# Use V2 Building Type Tiles in TMBuildingInfoStep
+# Make Location Picker Scope-Aware
 
 ## What changes
-Replace the dropdown `<Select>` for building type in `TMBuildingInfoStep` with the same visual tile grid used in the V2 setup wizard (screenshot — Custom Home, Track Home, Townhome, Apartments/MF, Hotel/Hospitality, Senior Living).
+The `VisualLocationPicker` will read the building info saved during project setup and dynamically show only relevant options — no more hardcoded `isMultifamily = true`.
 
-## File: `src/components/project-wizard-new/TMBuildingInfoStep.tsx`
+## File: `src/components/change-orders/VisualLocationPicker.tsx`
 
-### 1. Import the building type data
-- Import `BUILDING_TYPES` and `BuildingType` from `@/hooks/useSetupWizardV2`
-- Import `cn` from `@/lib/utils`
+### 1. Derive building characteristics from scope
+Replace the hardcoded `isCommercial` and `isMultifamily` booleans with actual lookups:
+```
+const homeType = scope?.home_type;
+const isMultifamily = ['apartments_mf', 'townhomes', 'hotel_hospitality', 'senior_living'].includes(homeType);
+const isSingleFamily = ['custom_home', 'track_home'].includes(homeType);
+```
 
-### 2. Replace the dropdown with a tile grid
-- Remove the `<Select>` for building type (lines 89-101)
-- Replace with a 3-column grid of clickable tile buttons matching the `BuildingTypeSelector` pattern — each tile shows an emoji icon, label, and description
-- Selected tile gets `border-primary bg-primary/10` styling
+### 2. Filter Inside → Area options by building type
+- **Single family**: Show `Bedroom, Bathroom, Kitchen, Living Room, Laundry, Garage (if scope has garage), Other` — hide "Unit interior" and "Corridor"
+- **Multifamily**: Show current options (Unit interior, Corridor, Stairwell, Other)
+- **If garage exists** (scope `garage_type` ≠ 'None'): Add "Garage 🚗" to area options
 
-### 3. Update the data type
-- Change `buildingType: string` to use the `BuildingType` slug values (`custom_home`, `track_home`, etc.) instead of the old `PROJECT_TYPES` strings
-- Remove the `PROJECT_TYPES` import (no longer needed)
+### 3. Filter Outside → Elevation by building type
+- **Single family**: Front, Rear, Left side, Right side, Roof, Other (already exists as `SINGLE_FAMILY_ELEVATIONS`)
+- **Multifamily**: N/S/E/W elevations, Roof, Other (already exists as `MULTIFAMILY_ELEVATIONS`)
+- Actually wire this up using the derived `isMultifamily` boolean instead of the hardcoded `true`
 
-### 4. Update validation in `CreateProjectNew.tsx`
-- The `canAdvance` check for `building_info` already checks `tmScope.buildingType` — no change needed since it's still a truthy string check
+### 4. Level pills from scope (fix fallback)
+The existing `getLevelOptions(scope)` already works when scope exists. Fix the fallback path (lines 98-105) to also check `scope?.stories` and `scope?.foundation_type` directly, not just the profile.
 
-### 5. Update persistence mapping in `CreateProjectNew.tsx`
-- The `home_type` field saved to `project_scope_details` will now store the slug (e.g., `custom_home`) instead of `Single Family` — functionally equivalent, just a different label set
+### 5. No other files change
+- `useProjectScope` already fetches everything needed
+- `TMBuildingInfoStep` already saves to `project_scope_details`
+- TMWOWizard already passes `projectId` to `VisualLocationPicker`
 
-## What stays the same
-- Material responsibility, stories, foundation, garage, siding — all unchanged
-- The tile layout and styling reuses the exact same pattern from `BuildingTypeSelector.tsx`
+## Summary of filtering logic
+
+| Building type | Inside areas | Outside elevations | Levels |
+|---|---|---|---|
+| Custom/Track Home | Kitchen, Bath, Bedroom, Living, Laundry, Garage*, Other | Front, Rear, Left, Right, Roof | Based on stories + basement |
+| Apartments/MF | Unit interior (w/ unit #), Corridor, Stairwell, Other | N, S, E, W, Roof | Based on stories + basement |
+| Townhomes | Unit interior, Corridor, Stairwell, Other | N, S, E, W, Roof | Based on stories + basement |
+| Hotel/Senior | Unit interior, Corridor, Stairwell, Other | N, S, E, W, Roof | Based on stories + basement |
+
+\* Garage area shown only when `garage_type` is Attached or Detached
 
