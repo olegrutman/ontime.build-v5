@@ -1,7 +1,7 @@
 import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown, EyeOff, CheckCircle, MapPin, Plus, Lock, TrendingUp } from 'lucide-react';
+import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,15 +37,14 @@ type StatusColor = 'gray' | 'amber' | 'green';
 function getStatusColor(entries: COLaborEntry[], showGCApproval: boolean): StatusColor {
   if (entries.length === 0) return 'gray';
   if (showGCApproval && entries.every(e => (e as any).gc_approved)) return 'green';
-  if (showGCApproval && entries.some(e => (e as any).gc_approved)) return 'amber';
   if (entries.length > 0) return 'amber';
   return 'gray';
 }
 
-const STATUS_BORDER: Record<StatusColor, string> = {
-  gray: 'border-l-muted-foreground/30',
-  amber: 'border-l-amber-400',
-  green: 'border-l-emerald-500',
+const STATUS_BORDER_COLOR: Record<StatusColor, string> = {
+  gray: '#E4E8F0',
+  amber: '#F5A623',
+  green: '#059669',
 };
 
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
@@ -54,7 +53,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   canAddLabor, onRefresh, isEven = true, index,
 }, ref) {
   const [showActualForm, setShowActualForm] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
 
   const billable = laborEntries.filter(e => !e.is_actual_cost);
@@ -77,23 +76,23 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
 
   const statusColor = getStatusColor(visibleBillable, showGCApproval);
-  const latestEntry = visibleBillable.length > 0 ? visibleBillable[visibleBillable.length - 1] : null;
-  const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
 
-  // Margin calculation
+  // Margin
   const billableTotal = isFC ? fcTotal : tcTotal;
   const hasMargin = billableTotal > 0 && actualTotal > 0;
   const marginAmount = billableTotal - actualTotal;
   const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
 
+  const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
+
+  // Strip markdown asterisks from description
+  const cleanDescription = item.description?.replace(/\*+/g, '') ?? '';
+
   async function handleGCApproval(entryId: string, approved: boolean) {
     try {
       const { error } = await supabase
         .from('co_labor_entries')
-        .update({
-          gc_approved: approved,
-          gc_approved_at: approved ? new Date().toISOString() : null,
-        })
+        .update({ gc_approved: approved, gc_approved_at: approved ? new Date().toISOString() : null })
         .eq('id', entryId);
       if (error) throw error;
       onRefresh();
@@ -102,90 +101,37 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     }
   }
 
-  function renderEntry(entry: COLaborEntry, showApproval: boolean, muted = false) {
-    const gcApproved = (entry as any).gc_approved;
-    // Find matching actual cost for this entry's date (for internal cost column)
-    const matchingActual = actualCosts.find(a => a.entry_date === entry.entry_date);
-
-    return (
-      <div key={entry.id} className={cn(
-        'flex items-center justify-between text-xs rounded-lg px-3 py-2.5',
-        muted ? 'bg-muted/10' : 'bg-muted/20',
-      )}>
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {showApproval && (
-            <Checkbox
-              checked={!!gcApproved}
-              onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
-              className="h-3.5 w-3.5"
-            />
-          )}
-          {!showApproval && (isTC || isFC) && gcApproved !== undefined && (
-            <span className={cn('shrink-0', gcApproved ? 'text-emerald-500' : 'text-muted-foreground/40')}>
-              <CheckCircle className="h-3 w-3" />
-            </span>
-          )}
-          <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
-            {entry.entered_by_role}
-          </span>
-          <span className="text-muted-foreground truncate">
-            {entry.entry_date} ·{' '}
-            {entry.pricing_mode === 'lump_sum'
-              ? 'lump sum'
-              : `${entry.hours ?? 0} hrs${!isGC && entry.hourly_rate ? ` @ $${entry.hourly_rate}/hr` : ''}`}
-            {entry.description ? ` · ${entry.description}` : ''}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 ml-2">
-          {/* Internal cost column — only visible to entry owner */}
-          {(isTC || isFC) && !muted && matchingActual && (
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Lock className="h-2.5 w-2.5" />
-              ${fmt(matchingActual.line_total ?? 0)}
-            </span>
-          )}
-          <span className={cn('font-semibold', muted ? 'text-muted-foreground' : 'text-foreground')}>
-            ${fmt(entry.line_total ?? 0)}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div ref={ref} className={cn(
-      'border-b border-border last:border-b-0 border-l-4 transition-colors',
-      STATUS_BORDER[statusColor],
-      !isEven && 'bg-muted/[0.03]',
-    )}>
-      {/* Item header */}
-      <div className="px-4 py-3">
+    <div ref={ref} className={cn('border-b border-border last:border-b-0')} style={{ borderLeft: `3px solid ${STATUS_BORDER_COLOR[statusColor]}` }}>
+      {/* Item header — clickable to expand */}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-4 py-3.5 hover:bg-accent/30 transition-colors"
+      >
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2.5 min-w-0">
+          <div className="flex items-start gap-3 min-w-0">
             {/* Numbered index */}
             {index !== undefined && (
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[hsl(220,30%,20%)] text-white text-[11px] font-bold shrink-0 mt-0.5">
-                {index}
+              <div className="flex items-center justify-center w-7 h-7 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+                <span className="text-xs font-bold">{index}</span>
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground leading-tight">{item.item_name}</p>
-              {item.description && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+              {cleanDescription && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{cleanDescription}</p>
               )}
-              <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                 {item.category_name && (
-                  <span className="text-[10px] text-muted-foreground">{item.category_name}</span>
-                )}
-                {item.division && (
-                  <span className="text-[10px] text-muted-foreground">· {item.division}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
                 )}
                 {item.unit && (
-                  <span className="text-[10px] text-muted-foreground">· {item.unit}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.unit}</span>
                 )}
                 {item.reason && (
                   <span
-                    className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
+                    className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
                     style={{
                       backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode]?.bg,
                       color: CO_REASON_COLORS[item.reason as COReasonCode]?.text,
@@ -194,18 +140,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     {CO_REASON_LABELS[item.reason as COReasonCode]}
                   </span>
                 )}
-                {/* Location pill */}
                 {item.location_tag && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-[10px] font-medium text-muted-foreground">
-                    <MapPin className="h-2.5 w-2.5" />
-                    {item.location_tag}
+                    <MapPin className="h-2.5 w-2.5" /> {item.location_tag}
                   </span>
                 )}
               </div>
             </div>
           </div>
-          {/* Right side: status chip + total + margin */}
-          <div className="shrink-0 text-right flex flex-col items-end gap-1">
+
+          {/* Right side */}
+          <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
             {/* Status chip */}
             {entryCount > 0 ? (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
@@ -218,13 +163,22 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             ) : null}
 
             {totalForRole > 0 && (
-              <span className="text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
+              <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             )}
-            {entryCount > 0 && (
-              <p className="text-[10px] text-muted-foreground">
-                {entryCount} entr{entryCount === 1 ? 'y' : 'ies'}
-              </p>
+
+            {/* Internal cost pill */}
+            {(isTC || isFC) && (
+              actualTotal > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                  <Lock className="h-2.5 w-2.5" /> Internal / ${fmt(actualTotal)}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted/30 text-muted-foreground">
+                  <Lock className="h-2.5 w-2.5" /> Internal / Not logged
+                </span>
+              )
             )}
+
             {/* Margin badge */}
             {hasMargin && (isTC || isFC) && (
               <span className={cn(
@@ -237,188 +191,166 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 {marginPct.toFixed(0)}%
               </span>
             )}
+
+            <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform mt-0.5', expanded && 'rotate-180')} />
           </div>
         </div>
+      </button>
 
-        {/* Latest entry preview */}
-        {latestEntry && !historyOpen && (
-          <div className="mt-2 ml-8 flex items-center justify-between text-[11px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
-            <span className="truncate">
-              Latest: {latestEntry.entry_date} · {latestEntry.pricing_mode === 'lump_sum' ? 'lump sum' : `${latestEntry.hours ?? 0} hrs`}
-              {latestEntry.description ? ` · ${latestEntry.description}` : ''}
-            </span>
-            <span className="font-semibold text-foreground shrink-0 ml-2">${fmt(latestEntry.line_total ?? 0)}</span>
-          </div>
-        )}
-      </div>
+      {/* Expanded entries panel */}
+      {expanded && (
+        <div className="bg-accent/30 border-t border-border">
+          {entryCount === 0 && !autoExpand ? (
+            /* Empty state */
+            <div className="px-6 py-8 text-center">
+              <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-foreground">No pricing added yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Add an entry to start tracking billable work for this scope item</p>
+            </div>
+          ) : (
+            <>
+              {/* Column headers */}
+              <div className="flex items-center text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-5 py-2 border-b border-border/50">
+                <span className="w-20">Date</span>
+                <span className="flex-1">Description</span>
+                <span className="w-14 text-right">Hours</span>
+                <span className="w-20 text-right">Billable</span>
+                {(isTC || isFC) && (
+                  <span className="w-24 text-right flex items-center justify-end gap-1">
+                    <Lock className="h-2.5 w-2.5" /> Int. Cost
+                  </span>
+                )}
+                <span className="w-8" />
+              </div>
 
-      {/* Auto-expanded form when no entries */}
-      {autoExpand && (
-        <div className="px-4 pb-3 pt-0 border-t border-border/30">
-          <div className="bg-primary/[0.03] rounded-lg p-3 mt-2">
-            <p className="text-xs font-medium text-primary mb-2">Add pricing for this item</p>
-            <LaborEntryForm
-              coId={coId}
-              lineItemId={item.id}
-              orgId={orgId}
-              enteredByRole={enteredByRole}
-              pricingType={pricingType}
-              isTC={isTC}
-              isFC={isFC}
-              nteCap={nteCap}
-              nteUsed={nteUsed}
-              onSaved={onRefresh}
-            />
-          </div>
-        </div>
-      )}
+              {/* Entry rows */}
+              {visibleBillable.map(entry => {
+                const gcApproved = (entry as any).gc_approved;
+                const matchingActual = actualCosts.find(a => a.entry_date === entry.entry_date);
 
-      {/* Add more button when entries already exist */}
-      {canAddLabor && !autoExpand && !showActualForm && (
-        <Collapsible open={formOpen} onOpenChange={setFormOpen}>
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                'w-full flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors border-t border-border/30',
-                formOpen
-                  ? 'bg-primary/[0.05] text-primary'
-                  : 'text-primary hover:bg-primary/[0.03]'
+                return (
+                  <div key={entry.id} className="flex items-center text-xs px-5 py-2.5 border-b border-border/30 hover:bg-accent/40">
+                    {showGCApproval && (
+                      <Checkbox
+                        checked={!!gcApproved}
+                        onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
+                        className="h-3.5 w-3.5 mr-2"
+                      />
+                    )}
+                    <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
+                    <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
+                    <span className="w-14 text-right font-mono text-muted-foreground">
+                      {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
+                    </span>
+                    <span className="w-20 text-right font-mono font-semibold text-foreground">${fmt(entry.line_total ?? 0)}</span>
+                    {(isTC || isFC) && (
+                      <span className="w-24 text-right">
+                        {matchingActual ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
+                            <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
+                            className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
+                          >
+                            + add cost
+                          </button>
+                        )}
+                      </span>
+                    )}
+                    <span className="w-8" />
+                  </div>
+                );
+              })}
+
+              {/* TC downstream costs */}
+              {isTC && tcDownstreamCosts.length > 0 && (
+                <div className="border-t border-border px-5 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">FC Entries</p>
+                  {tcDownstreamCosts.map(entry => (
+                    <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
+                      <span className="w-20">{entry.entry_date}</span>
+                      <span className="flex-1 truncate">{entry.description || '—'}</span>
+                      <span className="w-14 text-right font-mono">{entry.hours ?? '—'}</span>
+                      <span className="w-20 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-xs font-semibold text-muted-foreground pt-1 border-t border-border/30">
+                    <span>FC total</span>
+                    <span className="font-mono">${fmt(fcTotal)}</span>
+                  </div>
+                </div>
               )}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {formOpen ? 'Hide form' : 'Add pricing entry'}
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="px-4 pb-3 pt-1">
+            </>
+          )}
+
+          {/* Add pricing entry toggle */}
+          {canAddLabor && (
+            <Collapsible open={formOpen || autoExpand} onOpenChange={setFormOpen}>
+              {!autoExpand && (
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full flex items-center gap-2.5 px-5 py-3.5 text-xs transition-colors border-t border-border/50',
+                      formOpen
+                        ? 'bg-[hsl(var(--amber)/0.05)]'
+                        : 'hover:bg-accent/40',
+                    )}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[hsl(var(--amber)/0.1)] flex items-center justify-center">
+                      <Plus className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-foreground">Add pricing entry</p>
+                      <p className="text-[10px] text-muted-foreground">Log hours, flat rate, or unit pricing</p>
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+              )}
+              <CollapsibleContent>
+                <div className="px-5 pb-4 pt-2">
+                  <LaborEntryForm
+                    coId={coId} lineItemId={item.id} orgId={orgId}
+                    enteredByRole={enteredByRole} pricingType={pricingType}
+                    isTC={isTC} isFC={isFC}
+                    nteCap={nteCap} nteUsed={nteUsed}
+                    onSaved={() => { setFormOpen(false); onRefresh(); }}
+                    onCancel={() => setFormOpen(false)}
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Auto-expand form for empty items */}
+          {autoExpand && (
+            <div className="px-5 pb-4 pt-2">
               <LaborEntryForm
-                coId={coId}
-                lineItemId={item.id}
-                orgId={orgId}
-                enteredByRole={enteredByRole}
-                pricingType={pricingType}
-                isTC={isTC}
-                isFC={isFC}
-                nteCap={nteCap}
-                nteUsed={nteUsed}
+                coId={coId} lineItemId={item.id} orgId={orgId}
+                enteredByRole={enteredByRole} pricingType={pricingType}
+                isTC={isTC} isFC={isFC}
+                nteCap={nteCap} nteUsed={nteUsed}
                 onSaved={onRefresh}
               />
             </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
+          )}
 
-      {/* Actual cost form (toggle) */}
-      {showActualForm && (
-        <div className="px-4 pb-3">
-          <LaborEntryForm
-            coId={coId}
-            lineItemId={item.id}
-            orgId={orgId}
-            enteredByRole={enteredByRole}
-            pricingType={pricingType}
-            isTC={isTC}
-            isFC={isFC}
-            isActualCost
-            onSaved={() => { setShowActualForm(false); onRefresh(); }}
-            onCancel={() => setShowActualForm(false)}
-          />
-        </div>
-      )}
-
-      {/* Actual cost toggle button */}
-      {canAddLabor && !showActualForm && (isFC || isTC) && (
-        <div className="px-4 pb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
-            onClick={() => setShowActualForm(true)}
-          >
-            <Lock className="h-3 w-3" />
-            Log internal cost (private)
-          </Button>
-        </div>
-      )}
-
-      {/* Entry history — collapsible */}
-      {(entryCount > 0 || tcDownstreamCosts.length > 0) && (
-        <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground hover:bg-muted/20 transition-colors border-t border-border/50"
-            >
-              <ChevronDown className={cn('h-3 w-3 transition-transform', historyOpen && 'rotate-180')} />
-              <span className="font-medium">
-                {historyOpen ? 'Hide' : 'Show'} {entryCount} entr{entryCount === 1 ? 'y' : 'ies'} — ${fmt(totalForRole)}
-                {tcDownstreamCosts.length > 0 && (
-                  <span className="text-muted-foreground/70"> + {tcDownstreamCosts.length} FC entr{tcDownstreamCosts.length === 1 ? 'y' : 'ies'} — ${fmt(fcTotal)}</span>
-                )}
-              </span>
-              {showGCApproval && (() => {
-                const approved = visibleBillable.filter(e => (e as any).gc_approved).length;
-                return approved > 0 ? <span className="text-emerald-600">· {approved} approved</span> : null;
-              })()}
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="px-4 pb-3 space-y-1.5">
-              {/* Column headers */}
-              {(isTC || isFC) && actualCosts.length > 0 && (
-                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-3 pb-1">
-                  <span>Entry details</span>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1"><Lock className="h-2.5 w-2.5" /> Int. cost</span>
-                    <span>Billed</span>
-                  </div>
-                </div>
-              )}
-
-              {visibleBillable.map(entry => renderEntry(entry, showGCApproval))}
-
-              {isTC && tcDownstreamCosts.length > 0 && (
-                <div className="mt-2 space-y-1 border-t border-border pt-2">
-                  <div className="flex items-center justify-between text-xs font-medium px-3">
-                    <span className="text-muted-foreground">FC cost to TC</span>
-                    <span className="text-muted-foreground">${fmt(fcTotal)}</span>
-                  </div>
-                  {tcDownstreamCosts.map(entry => renderEntry(entry, false, true))}
-                </div>
-              )}
-
-              {/* Actual costs section */}
-              {(isFC || isTC) && actualCosts.length > 0 && (
-                <div className="mt-2 space-y-1 border-t border-border pt-2">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Lock className="h-3 w-3" /> Internal costs — private
-                  </div>
-                  {actualCosts.map(entry => (
-                    <div key={entry.id} className="flex items-center justify-between text-xs px-3 py-1.5 rounded-lg bg-muted/10">
-                      <span className="text-muted-foreground truncate">
-                        {entry.entry_date} · {entry.description ?? 'Cost entry'}
-                      </span>
-                      <span className="font-medium text-foreground shrink-0 ml-2">${fmt(entry.line_total ?? 0)}</span>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between text-xs font-medium px-3 pt-1">
-                    <span className="text-muted-foreground">Internal total</span>
-                    <span className="text-foreground">${fmt(actualTotal)}</span>
-                  </div>
-                  {hasMargin && (
-                    <div className="flex items-center justify-between text-xs px-3">
-                      <span className="text-muted-foreground">Gross margin</span>
-                      <span className={cn('font-bold', marginAmount >= 0 ? 'text-emerald-600' : 'text-destructive')}>
-                        ${fmt(marginAmount)} ({marginPct.toFixed(1)}%)
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+          {/* Actual cost form */}
+          {showActualForm && (
+            <div className="px-5 pb-4 border-t border-border/50">
+              <LaborEntryForm
+                coId={coId} lineItemId={item.id} orgId={orgId}
+                enteredByRole={enteredByRole} pricingType={pricingType}
+                isTC={isTC} isFC={isFC} isActualCost
+                onSaved={() => { setShowActualForm(false); onRefresh(); }}
+                onCancel={() => setShowActualForm(false)}
+              />
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+          )}
+        </div>
       )}
     </div>
   );

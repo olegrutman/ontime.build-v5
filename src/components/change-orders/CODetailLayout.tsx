@@ -1,12 +1,10 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { DT } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
@@ -17,22 +15,18 @@ import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-import { COHeroBlock } from './COHeroBlock';
+import { CONextActionBanner } from './CONextActionBanner';
 import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
 import { COSidebar } from './COSidebar';
 import { COStickyFooter } from './COStickyFooter';
-import { COHourEntryInline } from './COHourEntryInline';
-import { COContextualAlert } from './COContextualAlert';
-import { COWhosHere } from './COWhosHere';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { COAcceptBanner } from './COAcceptBanner';
-import { COTeamCard } from './COTeamCard';
 import { AddScopeItemButton } from './AddScopeItemButton';
-import { CO_STATUS_LABELS } from '@/types/changeOrder';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 
 interface CODetailLayoutProps {
@@ -40,17 +34,6 @@ interface CODetailLayoutProps {
   projectId: string;
   isTM?: boolean;
 }
-
-const STATUS_BADGE: Record<COStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  shared: 'bg-accent text-accent-foreground',
-  work_in_progress: 'bg-blue-100 text-blue-700',
-  closed_for_pricing: 'bg-amber-100 text-amber-700',
-  submitted: 'bg-primary/15 text-primary',
-  approved: 'bg-primary text-primary-foreground',
-  rejected: 'bg-destructive/10 text-destructive',
-  contracted: 'bg-secondary text-secondary-foreground',
-};
 
 export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayoutProps) {
   const navigate = useNavigate();
@@ -64,7 +47,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
 
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
-  
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const {
     co, collaborators, lineItems, laborEntries, materials, equipment,
@@ -82,8 +65,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
   } = useCORoleContext(co ?? null, collaborators, financials);
 
   const responsibility = useCOResponsibility(
-    co?.id,
-    projectId,
+    co?.id, projectId,
     (co as any)?.co_material_responsible_override,
     (co as any)?.co_equipment_responsible_override,
   );
@@ -97,11 +79,9 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
   }
 
-  function handleBack() {
-    navigate(`/project/${projectId}/change-orders`);
-  }
+  function handleBack() { navigate(`/project/${projectId}/change-orders`); }
 
-  function handleHeroAction(action: string) {
+  function handleAction(action: string) {
     switch (action) {
       case 'scroll_scope': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_materials': materialsRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
@@ -138,138 +118,15 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
 
   const status = co.status as COStatus;
   const displayTitle = co.title ?? co.co_number ?? (isTM ? 'Work Order' : 'Change Order');
-  const firstLineItem = lineItems[0];
 
-  const mainContent = (
-    <>
-      {/* Team Card */}
-      <COTeamCard co={co} collaborators={collaborators} />
-
-      {/* Scope & Labor — Primary section */}
-      {(() => {
-        const pricedCount = lineItems.filter(li =>
-          laborEntries.some(e => e.co_line_item_id === li.id && !e.is_actual_cost)
-        ).length;
-        const totalLogged = laborEntries
-          .filter(e => !e.is_actual_cost)
-          .reduce((s, e) => s + (e.line_total ?? 0), 0);
-
-        return (
-          <div ref={scopeRef} className="bg-card border border-border rounded-lg overflow-hidden border-l-4 border-l-primary shadow-sm">
-            <div className="px-3.5 py-3 border-b border-border bg-primary/[0.02]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-heading text-sm font-semibold text-foreground">
-                    Scope & Labor
-                  </h3>
-                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-bold">
-                    {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                {canEdit && !nteBlocked && co && (
-                  <AddScopeItemButton
-                    coId={co.id} orgId={myOrgId} projectId={projectId}
-                    role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
-                  />
-                )}
-              </div>
-              {/* Progress strip */}
-              {lineItems.length > 0 && (
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${lineItems.length > 0 ? (pricedCount / lineItems.length) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
-                    {pricedCount}/{lineItems.length} priced
-                    {totalLogged > 0 && <> · <span className="text-foreground font-semibold">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div>
-              {lineItems.length === 0 ? (
-                <div className="px-4 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">No scope items yet</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Add a scope item to start tracking work</p>
-                </div>
-              ) : (
-                lineItems.map((item, idx) => (
-                  <COLineItemRow
-                    key={item.id} item={item}
-                    laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
-                    role={role} isGC={isGC} isTC={isTC} isFC={isFC}
-                    coId={co.id} orgId={myOrgId} pricingType={pricingType}
-                    nteCap={co.nte_cap} nteUsed={financials.laborTotal}
-                    canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
-                    onRefresh={refreshDetail}
-                    isEven={idx % 2 === 0}
-                    index={idx + 1}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Materials */}
-      {(co.materials_needed || materials.length > 0) && (
-        <div ref={materialsRef}>
-          <COMaterialsPanel
-            coId={co.id} orgId={myOrgId} projectId={projectId}
-            coTitle={displayTitle} materials={materials}
-            isTC={isTC} isGC={isGC} isFC={isFC}
-            materialsOnSite={co.materials_on_site}
-            materialsResponsible={co.materials_responsible}
-            canEdit={canEdit} onRefresh={refreshDetail}
-          />
-        </div>
-      )}
-
-      {/* Equipment */}
-      {(co.equipment_needed || equipment.length > 0) && (
-        <COEquipmentPanel
-          coId={co.id} orgId={myOrgId} equipment={equipment}
-          isTC={isTC} isGC={isGC} isFC={isFC}
-          equipmentResponsible={co.equipment_responsible}
-          canEdit={canEdit} onRefresh={refreshDetail}
-        />
-      )}
-
-      {/* Activity */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-3.5 py-3 border-b border-border">
-          <h3 className="font-heading text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground">
-            💬 Activity
-          </h3>
-        </div>
-        <div className="px-3.5 py-2">
-          <COActivityFeed activity={activity} />
-        </div>
-        <div className="border-t border-border px-3.5 py-3">
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
-              role === 'GC' ? 'bg-blue-500' : role === 'TC' ? 'bg-emerald-500' : 'bg-amber-500',
-            )}>
-              {role.charAt(0)}
-            </span>
-            <Textarea
-              value={comment} onChange={e => setComment(e.target.value)}
-              placeholder="Add a note…" className="min-h-[36px] h-9 resize-none text-sm flex-1" rows={1}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
-            />
-            <Button size="sm" disabled={!comment.trim() || sendingComment} onClick={handleSendComment} className="h-9">
-              <Send className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+  // Scope & Labor totals
+  const pricedCount = lineItems.filter(li =>
+    laborEntries.some(e => e.co_line_item_id === li.id && !e.is_actual_cost)
+  ).length;
+  const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const actualCostTotal = laborEntries.filter(e => e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const grossMargin = totalLogged - actualCostTotal;
+  const grossMarginPct = totalLogged > 0 ? (grossMargin / totalLogged) * 100 : 0;
 
   const sidebarProps = {
     co, isGC, isTC, isFC, role, myOrgId, projectId,
@@ -281,48 +138,218 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      {/* Topbar */}
-      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border">
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+    <div className="flex flex-col min-h-screen" style={{ background: 'hsl(var(--background))' }}>
+      {/* Sticky Topbar */}
+      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur border-b border-border">
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 max-w-7xl mx-auto w-full">
           <div className="flex items-center gap-2 min-w-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0 text-xs text-muted-foreground truncate">
               <span className="hidden sm:inline">{isTM ? 'Work Orders' : 'Change Orders'} › </span>
-              <span className="font-medium text-foreground">{co.co_number ?? displayTitle}</span>
+              <span className="font-medium text-foreground font-mono">{co.co_number ?? displayTitle}</span>
             </div>
           </div>
-          <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[status])}>
-            {CO_STATUS_LABELS[status]}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground">
+              <Copy className="h-3.5 w-3.5" /> Duplicate
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Accept Banner */}
-      <div className="max-w-6xl mx-auto w-full px-4 pt-2">
+      <div className="max-w-7xl mx-auto w-full px-4 pt-3">
         <COAcceptBanner co={co} projectId={projectId} myOrgId={myOrgId} collaborators={collaborators} onRefresh={refreshDetail} />
       </div>
 
-      {/* Who's Here */}
-      <COWhosHere coId={coId} role={role} activeTab="detail" />
-
-      {/* Scrollable body */}
+      {/* Body */}
       <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
-        <div className="max-w-6xl mx-auto px-4 py-4 space-y-4">
-          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
+        <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+          {/* Full-width Header Card + Pipeline */}
+          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} isTM={isTM} />
+
+          {/* Next Action Banner */}
+          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} isTM={isTM} />
+
+          {/* KPI Row */}
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
-          <COHeroBlock co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} isTM={isTM} />
-
-
-          <COContextualAlert co={co} isGC={isGC} isTC={isTC} isFC={isFC} fcCollabName={fcCollabName} financials={financials} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
-            <div className="flex-1 min-w-0 space-y-3" ref={pricingRef}>{mainContent}</div>
+            <div className="flex-1 min-w-0 space-y-4" ref={pricingRef}>
+
+              {/* ====== SCOPE & LABOR ====== */}
+              <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                {/* Card header */}
+                <div className="px-5 py-4 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--navy))' }}>
+                        <Hammer className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground">Scope & Labor</h3>
+                      </div>
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: 'hsl(var(--navy)/0.08)', color: 'hsl(var(--navy))' }}>
+                        {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {canEdit && !nteBlocked && co && (
+                      <AddScopeItemButton
+                        coId={co.id} orgId={myOrgId} projectId={projectId}
+                        role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
+                      />
+                    )}
+                  </div>
+
+                  {/* Totals strip */}
+                  {lineItems.length > 0 && (
+                    <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
+                      <div className="flex-1 px-3 py-2 text-center border-r border-border">
+                        <p className="text-muted-foreground font-medium">Billable to GC</p>
+                        <p className="font-mono font-bold text-foreground mt-0.5">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+                      </div>
+                      {(isTC || isFC) && (
+                        <>
+                          <div className="flex-1 px-3 py-2 text-center border-r border-border">
+                            <p className="text-muted-foreground font-medium">Internal Cost</p>
+                            <p className="font-mono font-bold text-foreground mt-0.5">${actualCostTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+                          </div>
+                          <div className="flex-1 px-3 py-2 text-center" style={{ background: grossMargin >= 0 ? 'hsl(152 82% 39% / 0.06)' : 'hsl(0 84% 60% / 0.06)' }}>
+                            <p className="text-muted-foreground font-medium">Gross Margin</p>
+                            <p className={cn('font-mono font-bold mt-0.5', grossMargin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
+                              ${grossMargin.toLocaleString('en-US', { minimumFractionDigits: 0 })} ({grossMarginPct.toFixed(0)}%)
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Progress bar */}
+                  {lineItems.length > 0 && (
+                    <div className="flex items-center gap-3 mt-3">
+                      <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                          style={{ width: `${lineItems.length > 0 ? (pricedCount / lineItems.length) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">
+                        {pricedCount}/{lineItems.length} priced
+                        {totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0 })}</span> logged</>}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Line items */}
+                <div>
+                  {lineItems.length === 0 ? (
+                    <div className="px-6 py-10 text-center">
+                      <Hammer className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                      <p className="text-sm font-semibold text-foreground">No scope items yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Add a scope item to start tracking work and pricing</p>
+                    </div>
+                  ) : (
+                    lineItems.map((item, idx) => (
+                      <COLineItemRow
+                        key={item.id} item={item}
+                        laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
+                        role={role} isGC={isGC} isTC={isTC} isFC={isFC}
+                        coId={co.id} orgId={myOrgId} pricingType={pricingType}
+                        nteCap={co.nte_cap} nteUsed={financials.laborTotal}
+                        canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
+                        onRefresh={refreshDetail}
+                        isEven={idx % 2 === 0}
+                        index={idx + 1}
+                      />
+                    ))
+                  )}
+                </div>
+
+                {/* Add another scope item row */}
+                {canEdit && !nteBlocked && lineItems.length > 0 && (
+                  <div className="border-t border-dashed border-border">
+                    <AddScopeItemButton
+                      coId={co.id} orgId={myOrgId} projectId={projectId}
+                      role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Materials */}
+              {(co.materials_needed || materials.length > 0) && (
+                <div ref={materialsRef}>
+                  <COMaterialsPanel
+                    coId={co.id} orgId={myOrgId} projectId={projectId}
+                    coTitle={displayTitle} materials={materials}
+                    isTC={isTC} isGC={isGC} isFC={isFC}
+                    materialsOnSite={co.materials_on_site}
+                    materialsResponsible={co.materials_responsible}
+                    canEdit={canEdit} onRefresh={refreshDetail}
+                  />
+                </div>
+              )}
+
+              {/* Equipment */}
+              {(co.equipment_needed || equipment.length > 0) && (
+                <COEquipmentPanel
+                  coId={co.id} orgId={myOrgId} equipment={equipment}
+                  isTC={isTC} isGC={isGC} isFC={isFC}
+                  equipmentResponsible={co.equipment_responsible}
+                  canEdit={canEdit} onRefresh={refreshDetail}
+                />
+              )}
+
+              {/* Activity — Collapsible */}
+              <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
+                <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                  <CollapsibleTrigger asChild>
+                    <button type="button" className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-accent/30 transition-colors">
+                      <h3 className="font-heading text-[0.75rem] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-2">
+                        💬 Activity
+                        <span className="text-[10px] bg-muted rounded-full px-2 py-0.5">{activity.length}</span>
+                      </h3>
+                      <span className={cn('h-4 w-4 text-muted-foreground transition-transform', activityOpen && 'rotate-180')}>▾</span>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-5 py-2 border-t border-border">
+                      <COActivityFeed activity={activity} />
+                    </div>
+                    <div className="border-t border-border px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
+                          role === 'GC' ? 'bg-blue-500' : role === 'TC' ? 'bg-emerald-500' : 'bg-amber-500',
+                        )}>
+                          {role.charAt(0)}
+                        </span>
+                        <Textarea
+                          value={comment} onChange={e => setComment(e.target.value)}
+                          placeholder="Add a note…" className="min-h-[36px] h-9 resize-none text-sm flex-1" rows={1}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
+                        />
+                        <Button size="sm" disabled={!comment.trim() || sendingComment} onClick={handleSendComment} className="h-9">
+                          <Send className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            </div>
+
+            {/* Sidebar */}
             {!isMobile && (
-              <div className="w-[300px] shrink-0 space-y-3">
+              <div className="w-[300px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} />
               </div>
             )}
@@ -332,7 +359,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
         </div>
       </div>
 
-      <COStickyFooter status={status} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} />
+      <COStickyFooter status={status} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
     </div>
   );
 }
