@@ -18,6 +18,7 @@ import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestions
 import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
+import { TMBuildingInfoStep, initialTMBuildingInfo, type TMBuildingInfo } from '@/components/project-wizard-new/TMBuildingInfoStep';
 
 interface StepDef {
   id: string;
@@ -37,6 +38,7 @@ const FIXED_STEPS: StepDef[] = [
 const TM_STEPS: StepDef[] = [
   { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
+  { id: 'building_info', label: 'Building Info', description: 'Building details for WOs' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
 
@@ -58,6 +60,7 @@ export default function CreateProjectNew() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [saving, setSaving] = useState(false);
   const [contractMode, setContractMode] = useState<ContractMode>('fixed');
+  const [tmScope, setTmScope] = useState<TMBuildingInfo>(initialTMBuildingInfo);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
@@ -87,7 +90,8 @@ export default function CreateProjectNew() {
     const stepId = activeSteps[currentStep]?.id;
     switch (stepId) {
       case 'basics': return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
-      case 'mode': return true; // always valid, a mode is always selected
+      case 'mode': return true;
+      case 'building_info': return !!(tmScope.buildingType && tmScope.stories >= 1 && tmScope.foundationType);
       case 'contracts': {
         const hasGcContract = typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
         if (isTC) {
@@ -173,6 +177,21 @@ export default function CreateProjectNew() {
       // Save wizard answers + contract(s) + SOV(s) — skip for T&M
       if (!isTM) {
         await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
+      } else {
+        // Save T&M building info to project_scope_details
+        await supabase.from('project_scope_details').insert({
+          project_id: pid,
+          home_type: tmScope.buildingType,
+          floors: tmScope.stories,
+          stories: tmScope.stories,
+          foundation_type: tmScope.foundationType || null,
+          basement_type: tmScope.foundationType === 'Basement' ? (tmScope.basementType || null) : null,
+          basement_finish: tmScope.foundationType === 'Basement' ? (tmScope.basementFinish || null) : null,
+          garage_type: tmScope.garageType,
+          siding_included: tmScope.sidingIncluded,
+          siding_materials: tmScope.sidingIncluded ? tmScope.sidingMaterials : null,
+          total_sqft: tmScope.totalSqft || null,
+        });
       }
 
       // Save team members
@@ -245,6 +264,13 @@ export default function CreateProjectNew() {
             onSelect={handleModeChange}
           />
         );
+      case 'building_info':
+        return (
+          <TMBuildingInfoStep
+            data={tmScope}
+            onChange={(updates) => setTmScope(prev => ({ ...prev, ...updates }))}
+          />
+        );
       case 'contracts':
         return (
           <ContractsStep
@@ -293,6 +319,7 @@ export default function CreateProjectNew() {
             creatorRole={creatorRole}
             creatorOrgType={creatorOrgType}
             contractMode={contractMode}
+            tmBuildingInfo={isTM ? tmScope : undefined}
           />
         );
       default:

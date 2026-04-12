@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, MapPin, Users, FileText, Shield, Building2, DollarSign } from 'lucide-react';
+import { Check, MapPin, Users, FileText, Shield, Building2, DollarSign, Hammer } from 'lucide-react';
 import { WizardSummary } from '@/components/setup-wizard-v2/WizardSummary';
 import { SOVLivePreview } from '@/components/setup-wizard-v2/SOVLivePreview';
 import { generateSOVLines } from '@/hooks/useSetupWizardV2';
 import type { BuildingType, Answers, WizardQuestion, SOVLine } from '@/hooks/useSetupWizardV2';
 import type { TeamMember } from '@/types/projectWizard';
 import type { OrgType } from '@/types/organization';
+import type { TMBuildingInfo } from './TMBuildingInfoStep';
 import { formatCurrency } from '@/lib/utils';
 
 interface ProjectBasicsData {
@@ -30,6 +31,7 @@ export interface UnifiedReviewStepProps {
   creatorRole?: string | null;
   creatorOrgType?: OrgType;
   contractMode?: 'fixed' | 'tm';
+  tmBuildingInfo?: TMBuildingInfo;
 }
 
 export function UnifiedReviewStep({
@@ -43,6 +45,7 @@ export function UnifiedReviewStep({
   creatorRole,
   creatorOrgType,
   contractMode = 'fixed',
+  tmBuildingInfo,
 }: UnifiedReviewStepProps) {
   const isTC = creatorOrgType === 'TC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
@@ -110,7 +113,63 @@ export function UnifiedReviewStep({
         </Card>
       )}
 
-      {/* Scope Summary */}
+      {/* T&M Building Info */}
+      {contractMode === 'tm' && tmBuildingInfo && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Hammer className="h-4 w-4" />
+              Building Info
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Material Responsibility</p>
+                <p className="font-medium">{tmBuildingInfo.materialResponsibility === 'SPLIT' ? 'Split' : tmBuildingInfo.materialResponsibility}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Building Type</p>
+                <p className="font-medium">{tmBuildingInfo.buildingType || '—'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Stories</p>
+                <p className="font-medium">{tmBuildingInfo.stories}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Foundation</p>
+                <p className="font-medium">{tmBuildingInfo.foundationType || '—'}</p>
+              </div>
+              {tmBuildingInfo.foundationType === 'Basement' && (
+                <div>
+                  <p className="text-muted-foreground">Basement</p>
+                  <p className="font-medium">{tmBuildingInfo.basementType}{tmBuildingInfo.basementFinish ? ` · ${tmBuildingInfo.basementFinish}` : ''}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-muted-foreground">Garage</p>
+                <p className="font-medium">{tmBuildingInfo.garageType}</p>
+              </div>
+              {tmBuildingInfo.sidingIncluded && (
+                <div className="col-span-2">
+                  <p className="text-muted-foreground">Siding</p>
+                  <div className="flex gap-1 mt-1 flex-wrap">
+                    {tmBuildingInfo.sidingMaterials.map((m) => (
+                      <Badge key={m} variant="outline">{m}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {tmBuildingInfo.totalSqft && (
+                <div>
+                  <p className="text-muted-foreground">Total Sqft</p>
+                  <p className="font-medium">{tmBuildingInfo.totalSqft.toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {contractMode !== 'tm' && buildingType && (
         <Card>
           <CardHeader className="pb-3">
