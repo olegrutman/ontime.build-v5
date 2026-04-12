@@ -52,7 +52,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
   const {
     co, collaborators, lineItems, laborEntries, materials, equipment,
     nteLog, activity, financials, isLoading,
-    requestFCInput, completeFCInput,
+    requestFCInput, completeFCInput, closeForPricing,
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     submitCO, approveCO, rejectCO,
   } = useChangeOrderDetail(coId);
@@ -99,6 +99,22 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
           document.getElementById('fc-request-card')?.scrollIntoView({ behavior: 'smooth' });
         } else {
           toast.info('No field crews found on this project');
+        }
+        break;
+      case 'submit_to_tc':
+        if (co) {
+          try {
+            await completeFCInput.mutateAsync();
+            toast.success('Submitted to Trade Contractor');
+          } catch (e: any) { toast.error(e?.message ?? 'Failed to submit to TC'); }
+        }
+        break;
+      case 'close_for_pricing':
+        if (co) {
+          try {
+            await closeForPricing.mutateAsync(co.id);
+            toast.success('Closed for pricing');
+          } catch (e: any) { toast.error(e?.message ?? 'Failed to close for pricing'); }
         }
         break;
       case 'submit':

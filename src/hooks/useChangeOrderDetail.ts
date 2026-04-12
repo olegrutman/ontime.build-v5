@@ -501,6 +501,25 @@ export function useChangeOrderDetail(coId: string | null) {
     onSuccess: invalidate,
   });
 
+  const closeForPricing = useMutation({
+    mutationFn: async (changeOrderId: string) => {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('change_orders')
+        .update({
+          status: 'closed_for_pricing',
+          closed_for_pricing_at: now,
+          updated_at: now,
+        })
+        .eq('id', changeOrderId)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data as ChangeOrder;
+    },
+    onSuccess: invalidate,
+  });
+
   const rejectNTEIncrease = useMutation({
     mutationFn: async ({
       nteLogId,
@@ -550,6 +569,7 @@ export function useChangeOrderDetail(coId: string | null) {
     requestNTEIncrease,
     requestFCInput,
     completeFCInput,
+    closeForPricing,
     approveNTEIncrease,
     rejectNTEIncrease,
   };
