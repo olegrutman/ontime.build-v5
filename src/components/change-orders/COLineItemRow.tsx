@@ -1,7 +1,7 @@
-import { useState, useCallback, forwardRef } from 'react';
+import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown, EyeOff, CheckCircle } from 'lucide-react';
+import { ChevronDown, EyeOff, CheckCircle, MapPin, Plus } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,16 +24,33 @@ interface COLineItemRowProps {
   nteUsed?: number;
   canAddLabor: boolean;
   onRefresh: () => void;
+  isEven?: boolean;
 }
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+type StatusColor = 'gray' | 'amber' | 'green';
+
+function getStatusColor(entries: COLaborEntry[], showGCApproval: boolean): StatusColor {
+  if (entries.length === 0) return 'gray';
+  if (showGCApproval && entries.every(e => (e as any).gc_approved)) return 'green';
+  if (showGCApproval && entries.some(e => (e as any).gc_approved)) return 'amber';
+  if (entries.length > 0) return 'amber';
+  return 'gray';
+}
+
+const STATUS_DOT_CLASSES: Record<StatusColor, string> = {
+  gray: 'bg-muted-foreground/30',
+  amber: 'bg-amber-400',
+  green: 'bg-emerald-500',
+};
+
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, pricingType, nteCap, nteUsed = 0,
-  canAddLabor, onRefresh,
+  canAddLabor, onRefresh, isEven = true,
 }, ref) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -57,6 +74,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
+
+  const statusColor = getStatusColor(visibleBillable, showGCApproval);
+  const latestEntry = visibleBillable.length > 0 ? visibleBillable[visibleBillable.length - 1] : null;
+  const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
 
   async function handleGCApproval(entryId: string, approved: boolean) {
     try {
@@ -113,60 +134,119 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   }
 
   return (
-    <div ref={ref} className="border-b border-border last:border-b-0">
+    <div ref={ref} className={cn(
+      'border-b border-border last:border-b-0',
+      !isEven && 'bg-muted/[0.03]',
+    )}>
       {/* Item header */}
       <div className="px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{item.item_name}</p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-xs text-muted-foreground">
-                {item.category_name}
-                {item.division ? ` · ${item.division}` : ''}
-                {item.unit ? ` · ${item.unit}` : ''}
-              </p>
-              {item.reason && (
-                <span
-                  className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
-                  style={{
-                    backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode]?.bg,
-                    color: CO_REASON_COLORS[item.reason as COReasonCode]?.text,
-                  }}
-                >
-                  {CO_REASON_LABELS[item.reason as COReasonCode]}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            {/* Status dot */}
+            <div className={cn(
+              'w-2.5 h-2.5 rounded-full shrink-0 mt-1',
+              STATUS_DOT_CLASSES[statusColor],
+            )} />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">{item.item_name}</p>
+              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                {item.category_name && (
+                  <span className="text-[10px] text-muted-foreground">{item.category_name}</span>
+                )}
+                {item.division && (
+                  <span className="text-[10px] text-muted-foreground">· {item.division}</span>
+                )}
+                {item.unit && (
+                  <span className="text-[10px] text-muted-foreground">· {item.unit}</span>
+                )}
+                {item.reason && (
+                  <span
+                    className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
+                    style={{
+                      backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode]?.bg,
+                      color: CO_REASON_COLORS[item.reason as COReasonCode]?.text,
+                    }}
+                  >
+                    {CO_REASON_LABELS[item.reason as COReasonCode]}
+                  </span>
+                )}
+              </div>
+              {item.description && (
+                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>
+              )}
+              {/* Location pill */}
+              {item.location_tag && (
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-accent text-[10px] font-medium text-muted-foreground">
+                  <MapPin className="h-2.5 w-2.5" />
+                  {item.location_tag}
                 </span>
               )}
             </div>
-            {item.description && (
-              <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>
+          </div>
+          {/* Right side: entry count + total */}
+          <div className="shrink-0 text-right">
+            {totalForRole > 0 && (
+              <span className="text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             )}
-            {item.location_tag && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                📍 {item.location_tag}
+            {entryCount > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {entryCount} entr{entryCount === 1 ? 'y' : 'ies'}
               </p>
             )}
+            {entryCount === 0 && canAddLabor && (
+              <span className="text-[10px] font-medium text-primary">Needs pricing</span>
+            )}
           </div>
-          {totalForRole > 0 && (
-            <span className="text-sm font-semibold text-foreground shrink-0 ml-3">${fmt(totalForRole)}</span>
-          )}
         </div>
+
+        {/* Latest entry preview */}
+        {latestEntry && !historyOpen && (
+          <div className="mt-2 ml-5 flex items-center justify-between text-[11px] text-muted-foreground bg-muted/30 rounded px-2.5 py-1.5">
+            <span className="truncate">
+              Latest: {latestEntry.entry_date} · {latestEntry.pricing_mode === 'lump_sum' ? 'lump sum' : `${latestEntry.hours ?? 0} hrs`}
+              {latestEntry.description ? ` · ${latestEntry.description}` : ''}
+            </span>
+            <span className="font-medium text-foreground shrink-0 ml-2">${fmt(latestEntry.line_total ?? 0)}</span>
+          </div>
+        )}
       </div>
 
-      {/* Collapsible labor entry form */}
-      {canAddLabor && !showActualForm && (
+      {/* Auto-expanded form when no entries */}
+      {autoExpand && (
+        <div className="px-4 pb-3 pt-0 border-t border-border/30">
+          <div className="bg-primary/[0.03] rounded-lg p-3 mt-2">
+            <p className="text-xs font-medium text-primary mb-2">Add pricing for this item</p>
+            <LaborEntryForm
+              coId={coId}
+              lineItemId={item.id}
+              orgId={orgId}
+              enteredByRole={enteredByRole}
+              pricingType={pricingType}
+              isTC={isTC}
+              isFC={isFC}
+              nteCap={nteCap}
+              nteUsed={nteUsed}
+              onSaved={onRefresh}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Add more button when entries already exist */}
+      {canAddLabor && !autoExpand && !showActualForm && (
         <Collapsible open={formOpen} onOpenChange={setFormOpen}>
           <CollapsibleTrigger asChild>
             <button
               type="button"
               className={cn(
-                'w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors border-t border-border/50',
+                'w-full flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-colors border-t border-border/30',
                 formOpen
-                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-muted/30 text-primary hover:bg-muted/50'
+                  ? 'bg-primary/[0.05] text-primary'
+                  : 'text-primary hover:bg-primary/[0.03]'
               )}
             >
-              <ChevronDown className={cn('h-4 w-4 transition-transform', formOpen && 'rotate-180')} />
-              {formOpen ? 'Hide entry form' : '+ Add pricing entry'}
+              <Plus className="h-3 w-3" />
+              {formOpen ? 'Hide form' : 'Add pricing entry'}
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -231,7 +311,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             >
               <ChevronDown className={cn('h-3 w-3 transition-transform', historyOpen && 'rotate-180')} />
               <span className="font-medium">
-                {entryCount} entr{entryCount === 1 ? 'y' : 'ies'} logged — ${fmt(totalForRole)}
+                {historyOpen ? 'Hide' : 'Show'} {entryCount} entr{entryCount === 1 ? 'y' : 'ies'} — ${fmt(totalForRole)}
                 {tcDownstreamCosts.length > 0 && (
                   <span className="text-muted-foreground/70"> + {tcDownstreamCosts.length} FC entr{tcDownstreamCosts.length === 1 ? 'y' : 'ies'} — ${fmt(fcTotal)}</span>
                 )}

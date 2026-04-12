@@ -145,37 +145,74 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
       {/* Team Card */}
       <COTeamCard co={co} collaborators={collaborators} />
 
-      {/* Scope & Labor */}
-      <div ref={scopeRef} className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-3.5 py-3 border-b border-border flex items-center justify-between">
-          <h3 className="font-heading text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground">
-            📋 Scope & Labor
-          </h3>
-          {canEdit && !nteBlocked && co && (
-            <AddScopeItemButton
-              coId={co.id} orgId={myOrgId} projectId={projectId}
-              role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
-            />
-          )}
-        </div>
-        <div>
-          {lineItems.length === 0 ? (
-            <p className="px-3.5 py-4 text-sm text-muted-foreground">No scope items</p>
-          ) : (
-            lineItems.map(item => (
-              <COLineItemRow
-                key={item.id} item={item}
-                laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
-                role={role} isGC={isGC} isTC={isTC} isFC={isFC}
-                coId={co.id} orgId={myOrgId} pricingType={pricingType}
-                nteCap={co.nte_cap} nteUsed={financials.laborTotal}
-                canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
-                onRefresh={refreshDetail}
-              />
-            ))
-          )}
-        </div>
-      </div>
+      {/* Scope & Labor — Primary section */}
+      {(() => {
+        const pricedCount = lineItems.filter(li =>
+          laborEntries.some(e => e.co_line_item_id === li.id && !e.is_actual_cost)
+        ).length;
+        const totalLogged = laborEntries
+          .filter(e => !e.is_actual_cost)
+          .reduce((s, e) => s + (e.line_total ?? 0), 0);
+
+        return (
+          <div ref={scopeRef} className="bg-card border border-border rounded-lg overflow-hidden border-l-4 border-l-primary shadow-sm">
+            <div className="px-3.5 py-3 border-b border-border bg-primary/[0.02]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-heading text-sm font-semibold text-foreground">
+                    Scope & Labor
+                  </h3>
+                  <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-bold">
+                    {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                {canEdit && !nteBlocked && co && (
+                  <AddScopeItemButton
+                    coId={co.id} orgId={myOrgId} projectId={projectId}
+                    role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
+                  />
+                )}
+              </div>
+              {/* Progress strip */}
+              {lineItems.length > 0 && (
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${lineItems.length > 0 ? (pricedCount / lineItems.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                    {pricedCount}/{lineItems.length} priced
+                    {totalLogged > 0 && <> · <span className="text-foreground font-semibold">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div>
+              {lineItems.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">No scope items yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Add a scope item to start tracking work</p>
+                </div>
+              ) : (
+                lineItems.map((item, idx) => (
+                  <COLineItemRow
+                    key={item.id} item={item}
+                    laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
+                    role={role} isGC={isGC} isTC={isTC} isFC={isFC}
+                    coId={co.id} orgId={myOrgId} pricingType={pricingType}
+                    nteCap={co.nte_cap} nteUsed={financials.laborTotal}
+                    canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
+                    onRefresh={refreshDetail}
+                    isEven={idx % 2 === 0}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Materials */}
       {(co.materials_needed || materials.length > 0) && (
