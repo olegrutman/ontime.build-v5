@@ -336,18 +336,19 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
       // Create or update the FC contract
       if (fcContract) {
-        await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
+        const ok = await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
+        if (!ok) throw new Error('Failed to update contract');
       } else {
-        // Create new downstream contract
-        await supabase.from('project_contracts').insert({
+        // Create new downstream contract (TC = from, FC = to)
+        const { error: insertErr } = await supabase.from('project_contracts').insert({
           project_id: projectId,
-          from_org_id: targetOrg.org_id,
-          to_org_id: currentOrgId,
-          from_role: 'Field Crew',
-          to_role: 'Trade Contractor',
+          from_org_id: currentOrgId,
+          to_org_id: targetOrg.org_id,
+          from_role: 'Trade Contractor',
+          to_role: 'Field Crew',
           contract_sum: newVal,
-          direction: 'downstream',
         });
+        if (insertErr) throw insertErr;
       }
 
       financials.refetch();
