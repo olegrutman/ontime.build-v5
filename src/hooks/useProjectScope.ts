@@ -12,7 +12,7 @@ export interface ProjectScopeDetails {
   stairs_type: string | null;
   has_elevator: boolean | null;
   shaft_type: string | null;
-  roof_type: string | null;
+  garage_type: string | null;
   has_roof_deck: boolean | null;
   roof_deck_type: string | null;
   has_covered_porches: boolean | null;
