@@ -49,11 +49,12 @@ const REASONS: { code: COReasonCode; description: string }[] = [
   { code: 'other',             description: 'Anything else' },
 ];
 
-export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
+export function StepCatalog({ data, onChange, projectId, workType }: StepCatalogProps) {
   const { divisions, search, isLoading } = useScopeCatalog();
 
-  // When location & reason are pre-set by the wizard, lock them (read-only pills)
-  const [lockedFromWizard] = useState(() => !!(data.locationTag && data.reason));
+  // Resolve work type → division auto-filter
+  const mappedDivision = workType ? WORK_TYPE_DIVISION_MAP[workType] ?? null : null;
+  const workTypeLabel = workType ? WORK_TYPE_LABELS[workType] ?? workType : null;
 
   // Internal phase: location → reason → items
   const [phase, setPhase] = useState<Phase>(() => {
