@@ -1,69 +1,43 @@
 
 
-# Fix: TC Can't Request FC Input on Change Order
+# Fix: FC Submit to TC + Close for Pricing + End-to-End CO Flow
 
-## Root Cause — Two Permission Bugs
+## Problems Found
 
-### Bug 1: Database function `can_request_fc_change_order_input`
-The function only allows users from `co.assigned_to_org_id` (the GC org) to request FC input. The TC who created the CO is in `co.org_id`, not `co.assigned_to_org_id`. So the RPC returns 403.
+### Bug 1: "Submit to TC" does nothing (FC)
+The `submit_to_tc` action fires from the sticky footer and the banner, but `handleAction()` has no case for it. It falls through to the default `scrollTo(top)`. The mutation `completeFCInput` already exists and calls the `complete_fc_change_order_input` RPC correctly.
 
-**Current:** `user_in_org(_user_id, co.assigned_to_org_id)`
-**Fix:** `(user_in_org(_user_id, co.assigned_to_org_id) OR user_in_org(_user_id, co.org_id))`
+### Bug 2: "Close for Pricing" does nothing (GC)
+The `close_for_pricing` action fires from the banner and hero block but is not handled in `handleAction()`. There is also no mutation for it in `useChangeOrderDetail.ts` — we need to add one.
 
-### Bug 2: Client-side check in `useCORoleContext.ts`
-`canRequestFCInput` for non-draft statuses checks `co.assigned_to_org_id === myOrgId` — which is the GC org, not the TC org. So the sidebar's "Request FC input" button is also hidden.
-
-**Current:**
-```
-co.assigned_to_org_id === myOrgId && ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)
-```
-**Fix:** Add `|| co.org_id === myOrgId` for those same statuses.
+### Bug 3: TC doesn't see FC accepted
+This actually works once `completeFCInput` executes (it sets collaborator status to `completed` and `fc_input_needed = false`). The problem is Bug 1 — FC can never submit, so the status never changes.
 
 ## Changes
 
-### 1. Database Migration — Fix `can_request_fc_change_order_input`
+### 1. `src/hooks/useChangeOrderDetail.ts` — Add `closeForPricing` mutation
 
-```sql
-CREATE OR REPLACE FUNCTION public.can_request_fc_change_order_input(
-  _co_id uuid, _fc_org_id uuid, _user_id uuid DEFAULT auth.uid()
-) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.change_orders co
-    JOIN public.organizations org ON org.id = _fc_org_id
-    JOIN public.project_team pt ON pt.project_id = co.project_id AND pt.org_id = _fc_org_id
-    WHERE co.id = _co_id
-      AND (
-        public.user_in_org(_user_id, co.assigned_to_org_id)
-        OR public.user_in_org(_user_id, co.org_id)
-      )
-      AND co.status IN ('draft', 'shared', 'rejected', 'work_in_progress', 'closed_for_pricing')
-      AND org.type = 'FC'
-      AND _fc_org_id <> co.org_id
-      AND _fc_org_id <> co.assigned_to_org_id
-  );
-$$;
-```
+Add a new mutation that updates the CO status to `closed_for_pricing` and sets `closed_for_pricing_at`. Also add an activity log entry. Export it alongside other mutations.
 
-### 2. `src/hooks/useCORoleContext.ts` — Fix `canRequestFCInput`
+### 2. `src/components/change-orders/CODetailLayout.tsx` — Wire up missing actions
 
-Change the condition to:
-```ts
-const canRequestFCInput = !!co && isTC && (
-  ((co.assigned_to_org_id === myOrgId || co.org_id === myOrgId) &&
-    ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)) ||
-  (co.org_id === myOrgId && co.status === 'draft')
-);
-```
+Add cases to `handleAction()`:
+
+- **`submit_to_tc`**: Call `completeFCInput.mutateAsync()` then show success toast "Submitted to Trade Contractor"
+- **`close_for_pricing`**: Call `closeForPricing.mutateAsync(co.id)` then show success toast "Closed for pricing"
+
+Also destructure `closeForPricing` from the hook.
+
+### 3. `src/components/change-orders/COStickyFooter.tsx` — No changes needed
+Already fires the correct action strings.
 
 ## Files Changed
-- **Database** — replace `can_request_fc_change_order_input` function (1 migration)
-- **`src/hooks/useCORoleContext.ts`** — fix `canRequestFCInput` condition (~2 lines)
+- `src/hooks/useChangeOrderDetail.ts` — add `closeForPricing` mutation (~15 lines), export it
+- `src/components/change-orders/CODetailLayout.tsx` — add `submit_to_tc` and `close_for_pricing` cases (~15 lines), destructure `closeForPricing`
 
 ## What stays the same
-- `CODetailLayout.tsx` — no changes needed, `handleAction('request_fc')` already works
-- `COSidebar.tsx` / `FCInputRequestCard.tsx` — no changes
-- `useProjectFCOrgs.ts` — already returns FC_Test correctly
-- `CONextActionBanner.tsx` — no changes
+- Database RPCs — `complete_fc_change_order_input` already works correctly
+- `CONextActionBanner.tsx`, `COStickyFooter.tsx`, `COHeroBlock.tsx` — already fire correct action strings
+- RLS policies — no changes needed
+- `useCORoleContext.ts` — no changes needed
 
