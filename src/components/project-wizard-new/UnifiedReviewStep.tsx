@@ -169,7 +169,7 @@ export function UnifiedReviewStep({
             </div>
           </CardContent>
         </Card>
-      )
+      )}
       {contractMode !== 'tm' && buildingType && (
         <Card>
           <CardHeader className="pb-3">
