@@ -199,7 +199,68 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
           </div>
         </div>
 
-        {/* Contracts */}
+        {/* Building Info (T&M projects) */}
+        {scopeDetails && (
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Home className="w-3.5 h-3.5" /> Building Info
+            </h4>
+            <div className="rounded-lg border border-border divide-y divide-border text-sm">
+              {scopeDetails.home_type && (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Building Type</span>
+                  <span className="font-medium text-foreground capitalize">{scopeDetails.home_type.replace(/_/g, ' ')}</span>
+                </div>
+              )}
+              {(scopeDetails.stories || scopeDetails.floors) && (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Stories</span>
+                  <span className="font-medium text-foreground">{scopeDetails.stories || scopeDetails.floors}</span>
+                </div>
+              )}
+              {scopeDetails.foundation_type && (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Foundation</span>
+                  <span className="font-medium text-foreground capitalize">{scopeDetails.foundation_type}</span>
+                </div>
+              )}
+              {scopeDetails.basement_type && (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Basement</span>
+                  <span className="font-medium text-foreground">
+                    {scopeDetails.basement_type}{scopeDetails.basement_finish ? ` — ${scopeDetails.basement_finish}` : ''}
+                  </span>
+                </div>
+              )}
+              {scopeDetails.garage_type && (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Garage</span>
+                  <span className="font-medium text-foreground capitalize">{scopeDetails.garage_type}</span>
+                </div>
+              )}
+              {scopeDetails.siding_included != null && (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Siding</span>
+                  <span className="font-medium text-foreground">
+                    {scopeDetails.siding_included
+                      ? (Array.isArray(scopeDetails.siding_materials) && scopeDetails.siding_materials.length
+                        ? (scopeDetails.siding_materials as string[]).join(', ')
+                        : 'Yes')
+                      : 'No'}
+                  </span>
+                </div>
+              )}
+              {scopeDetails.total_sqft && (
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Total Sqft</span>
+                  <span className="font-medium text-foreground">{Number(scopeDetails.total_sqft).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+
         {contracts.length > 0 && (
           <div className="space-y-2.5">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
