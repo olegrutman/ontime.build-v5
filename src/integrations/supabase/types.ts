@@ -5899,6 +5899,10 @@ export type Database = {
       is_platform_staff: { Args: { _user_id: string }; Returns: boolean }
       is_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
+      is_project_participant: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_supplier_for_purchase_order: {
         Args: { _po_id: string; _user_id?: string }
         Returns: boolean
