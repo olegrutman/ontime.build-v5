@@ -206,6 +206,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                     canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
                     onRefresh={refreshDetail}
                     isEven={idx % 2 === 0}
+                    index={idx + 1}
                   />
                 ))
               )}

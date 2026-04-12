@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Check, Clock, DollarSign, EyeOff } from 'lucide-react';
+import { Loader2, Check, Clock, DollarSign, EyeOff, Hash, Lock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COLaborRole, COPricingMode } from '@/types/changeOrder';
 
 interface LaborEntryFormProps {
@@ -28,6 +29,8 @@ interface LaborEntryFormProps {
 
 const QUICK_HOURS = [2, 4, 8, 10];
 
+type EntryMode = 'hourly' | 'lump_sum' | 'unit_price';
+
 export function LaborEntryForm({
   coId, lineItemId, orgId, enteredByRole, pricingType,
   isTC = false, isFC = false, isActualCost = false,
@@ -35,7 +38,7 @@ export function LaborEntryForm({
 }: LaborEntryFormProps) {
   const { user } = useAuth();
 
-  const [mode, setMode] = useState<COPricingMode>(
+  const [mode, setMode] = useState<EntryMode>(
     pricingType === 'fixed' ? 'lump_sum' : 'hourly'
   );
   const [entryDate, setEntryDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -43,15 +46,20 @@ export function LaborEntryForm({
   const [rate, setRate] = useState('');
   const [markup, setMarkup] = useState('');
   const [lumpSum, setLumpSum] = useState('');
+  const [qty, setQty] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
+
+  // Internal cost fields
+  const [internalCostOpen, setInternalCostOpen] = useState(false);
+  const [internalCost, setInternalCost] = useState('');
 
   useEffect(() => {
     let cancelled = false;
     async function loadDefaults() {
       if (!user || !orgId) return;
-      // Load from org_settings first (authoritative), fallback to profile
       const [orgRes, profileRes] = await Promise.all([
         supabase.from('org_settings').select('default_hourly_rate, labor_markup_percent').eq('organization_id', orgId).maybeSingle(),
         supabase.from('profiles').select('hourly_rate').eq('user_id', user.id).single(),
@@ -72,11 +80,23 @@ export function LaborEntryForm({
   const hoursValue = parseFloat(hours) || 0;
   const rateValue = parseFloat(rate) || 0;
   const lumpSumValue = parseFloat(lumpSum) || 0;
+  const qtyValue = parseFloat(qty) || 0;
+  const unitPriceValue = parseFloat(unitPrice) || 0;
   const markupPct = parseFloat(markup) || 0;
+  const internalCostValue = parseFloat(internalCost) || 0;
 
-  const baseTotal = mode === 'lump_sum' ? lumpSumValue : hoursValue * rateValue;
+  const baseTotal =
+    mode === 'lump_sum' ? lumpSumValue
+    : mode === 'unit_price' ? qtyValue * unitPriceValue
+    : hoursValue * rateValue;
+
   const markupAmount = isTC && markupPct > 0 ? baseTotal * (markupPct / 100) : 0;
   const computedTotal = baseTotal + markupAmount;
+
+  // Margin preview
+  const showMarginPreview = !isActualCost && computedTotal > 0 && internalCostValue > 0;
+  const marginDollars = computedTotal - internalCostValue;
+  const marginPercent = computedTotal > 0 ? (marginDollars / computedTotal) * 100 : 0;
 
   const projectedUsed = nteUsed + computedTotal;
   const ntePercent = nteCap && nteCap > 0 ? (projectedUsed / nteCap) * 100 : null;
@@ -85,6 +105,7 @@ export function LaborEntryForm({
   const validationMessage =
     !entryDate ? 'Select a date.'
     : mode === 'lump_sum' ? (lumpSumValue <= 0 ? 'Enter an amount greater than zero.' : null)
+    : mode === 'unit_price' ? (qtyValue <= 0 ? 'Enter quantity.' : unitPriceValue <= 0 ? 'Enter unit price.' : null)
     : hoursValue <= 0 ? 'Enter hours greater than zero.'
     : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
     : null;
@@ -104,9 +125,30 @@ export function LaborEntryForm({
   function resetForm() {
     setHours('');
     setLumpSum('');
+    setQty('');
+    setUnitPrice('');
     setDescription('');
+    setInternalCost('');
+    setInternalCostOpen(false);
     setShowNTEWarn(false);
     setEntryDate(format(new Date(), 'yyyy-MM-dd'));
+  }
+
+  // Map unit_price to hourly for DB (qty=hours, unitPrice=rate)
+  function getDbMode(): COPricingMode {
+    return mode === 'lump_sum' ? 'lump_sum' : 'hourly';
+  }
+
+  function getDbHours() {
+    if (mode === 'hourly') return hoursValue;
+    if (mode === 'unit_price') return qtyValue;
+    return null;
+  }
+
+  function getDbRate() {
+    const baseRate = mode === 'hourly' ? rateValue : mode === 'unit_price' ? unitPriceValue : null;
+    if (baseRate && isTC && markupPct > 0) return baseRate + baseRate * (markupPct / 100);
+    return baseRate;
   }
 
   async function attemptSave() {
@@ -126,20 +168,36 @@ export function LaborEntryForm({
 
     setSaving(true);
     try {
+      // Save billable entry
       const { error } = await supabase.from('co_labor_entries').insert({
         co_id: coId,
         co_line_item_id: lineItemId,
         org_id: orgId,
         entered_by_role: enteredByRole,
         entry_date: entryDate,
-        pricing_mode: mode,
-        hours: mode === 'hourly' ? hoursValue : null,
-        hourly_rate: mode === 'hourly' ? (rateValue + (isTC && markupPct > 0 ? rateValue * (markupPct / 100) : 0)) : null,
+        pricing_mode: getDbMode(),
+        hours: getDbHours(),
+        hourly_rate: getDbRate(),
         lump_sum: mode === 'lump_sum' ? (lumpSumValue + (isTC && markupPct > 0 ? lumpSumValue * (markupPct / 100) : 0)) : null,
         description: description.trim() || null,
         is_actual_cost: isActualCost,
       });
       if (error) throw error;
+
+      // Save internal cost if provided
+      if (!isActualCost && internalCostValue > 0) {
+        await supabase.from('co_labor_entries').insert({
+          co_id: coId,
+          co_line_item_id: lineItemId,
+          org_id: orgId,
+          entered_by_role: enteredByRole,
+          entry_date: entryDate,
+          pricing_mode: 'lump_sum',
+          lump_sum: internalCostValue,
+          description: description.trim() ? `Internal: ${description.trim()}` : 'Internal cost',
+          is_actual_cost: true,
+        });
+      }
 
       // NTE threshold notifications
       if (nteCap && nteCap > 0 && !isActualCost) {
@@ -194,12 +252,12 @@ export function LaborEntryForm({
       <div className="px-4 py-2.5 bg-muted/40 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           {isActualCost ? (
-            <EyeOff className="h-4 w-4 text-muted-foreground" />
+            <Lock className="h-4 w-4 text-muted-foreground" />
           ) : (
             <DollarSign className="h-4 w-4" style={{ color: roleColor }} />
           )}
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: isActualCost ? undefined : roleColor }}>
-            {isActualCost ? 'Log Actual Cost (Private)' : 'Enter Pricing'}
+            {isActualCost ? 'Log Internal Cost (Private)' : 'Enter Pricing'}
           </span>
         </div>
         {onCancel && (
@@ -214,35 +272,53 @@ export function LaborEntryForm({
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Mode toggle — larger pills */}
-        <div className="flex gap-2">
+        {/* 3-tile Entry Type selector */}
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setMode('hourly')}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all min-h-[48px]',
+              'flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-xs font-semibold border-2 transition-all min-h-[56px]',
               mode === 'hourly'
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40',
             )}
           >
-            <Clock className="h-4 w-4" /> Hourly
+            <Clock className="h-4 w-4" />
+            <span>Hourly</span>
+            <span className={cn('text-[9px] font-normal', mode === 'hourly' ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>Rate × Hours</span>
           </button>
           <button
             type="button"
             onClick={() => setMode('lump_sum')}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all min-h-[48px]',
+              'flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-xs font-semibold border-2 transition-all min-h-[56px]',
               mode === 'lump_sum'
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40',
             )}
           >
-            <DollarSign className="h-4 w-4" /> Lump Sum
+            <DollarSign className="h-4 w-4" />
+            <span>Lump Sum</span>
+            <span className={cn('text-[9px] font-normal', mode === 'lump_sum' ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>Fixed Amount</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('unit_price')}
+            className={cn(
+              'flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-xs font-semibold border-2 transition-all min-h-[56px]',
+              mode === 'unit_price'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40',
+            )}
+          >
+            <Hash className="h-4 w-4" />
+            <span>Unit Price</span>
+            <span className={cn('text-[9px] font-normal', mode === 'unit_price' ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>Qty × Unit</span>
           </button>
         </div>
 
-        {/* Quick-pick hours — visible for all roles in hourly mode */}
+        {/* Quick-pick hours */}
         {!isActualCost && mode === 'hourly' && (
           <div className="flex gap-2">
             {QUICK_HOURS.map(h => (
@@ -263,32 +339,43 @@ export function LaborEntryForm({
           </div>
         )}
 
-        {/* Date — friendly label with hidden picker */}
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground mb-1 block">Date</Label>
-          <button
-            type="button"
-            onClick={() => {
-              const input = document.getElementById(`labor-date-${lineItemId}`) as HTMLInputElement;
-              input?.showPicker?.();
-            }}
-            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium min-h-[44px] hover:border-primary/30 transition-colors"
-          >
-            <span>{dateLabel}</span>
-            <span className="text-muted-foreground">▾</span>
-          </button>
-          <input
-            id={`labor-date-${lineItemId}`}
-            type="date"
-            value={entryDate}
-            onChange={e => setEntryDate(e.target.value)}
-            className="sr-only"
-          />
+        {/* Date + Description side-by-side */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Date</Label>
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.getElementById(`labor-date-${lineItemId}`) as HTMLInputElement;
+                input?.showPicker?.();
+              }}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-background text-sm font-medium min-h-[44px] hover:border-primary/30 transition-colors"
+            >
+              <span className="text-xs">{dateLabel}</span>
+              <span className="text-muted-foreground">▾</span>
+            </button>
+            <input
+              id={`labor-date-${lineItemId}`}
+              type="date"
+              value={entryDate}
+              onChange={e => setEntryDate(e.target.value)}
+              className="sr-only"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Notes (optional)</Label>
+            <Input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What work was done…"
+              className="h-[44px] text-sm"
+            />
+          </div>
         </div>
 
-        {/* Fields — stacked vertically */}
+        {/* Fields based on mode */}
         {mode === 'hourly' ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-medium text-muted-foreground mb-1 block">Hours</Label>
               <Input
@@ -304,7 +391,7 @@ export function LaborEntryForm({
             <div>
               <div className="flex items-baseline gap-1 mb-1">
                 <Label className="text-xs font-medium text-muted-foreground">Rate ($/hr)</Label>
-                {isFC && <span className="text-[10px] text-muted-foreground">from your profile</span>}
+                {isFC && <span className="text-[10px] text-muted-foreground">from profile</span>}
               </div>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
@@ -314,6 +401,36 @@ export function LaborEntryForm({
                   min="0"
                   value={rate}
                   onChange={e => setRate(e.target.value)}
+                  className="h-11 text-base font-semibold pl-7"
+                />
+              </div>
+            </div>
+          </div>
+        ) : mode === 'unit_price' ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1 block">Quantity</Label>
+              <Input
+                type="number"
+                step="1"
+                min="0"
+                value={qty}
+                onChange={e => setQty(e.target.value)}
+                placeholder="0"
+                className="h-11 text-base font-semibold"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1 block">Unit Price</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={unitPrice}
+                  onChange={e => setUnitPrice(e.target.value)}
+                  placeholder="0.00"
                   className="h-11 text-base font-semibold pl-7"
                 />
               </div>
@@ -353,18 +470,6 @@ export function LaborEntryForm({
           </div>
         )}
 
-        {/* Description */}
-        <div>
-          <Label className="text-xs font-medium text-muted-foreground mb-1 block">Notes (optional)</Label>
-          <Textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="What work was done…"
-            rows={2}
-            className="text-sm resize-none"
-          />
-        </div>
-
         {/* Live total bar */}
         {computedTotal > 0 && (
           <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-primary/5 border border-primary/15">
@@ -376,6 +481,57 @@ export function LaborEntryForm({
               ${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
+        )}
+
+        {/* Live margin preview */}
+        {showMarginPreview && (
+          <div className={cn(
+            'flex items-center justify-between rounded-xl px-4 py-2.5 border',
+            marginDollars >= 0
+              ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/30'
+              : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/30',
+          )}>
+            <span className="text-xs font-medium text-muted-foreground">Margin on this entry</span>
+            <span className={cn('text-sm font-bold', marginDollars >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
+              ${marginDollars.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({marginPercent.toFixed(1)}%)
+            </span>
+          </div>
+        )}
+
+        {/* Internal cost section — collapsible */}
+        {!isActualCost && (isTC || isFC) && (
+          <Collapsible open={internalCostOpen} onOpenChange={setInternalCostOpen}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/30 transition-colors text-xs"
+              >
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                  <span className="font-medium">Log internal cost</span>
+                  <span className="text-[10px] px-1.5 py-0 rounded bg-muted text-muted-foreground">Private · optional</span>
+                </div>
+                <ChevronDown className={cn('h-3 w-3 text-muted-foreground transition-transform', internalCostOpen && 'rotate-180')} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="pt-2">
+                <Label className="text-xs font-medium text-muted-foreground mb-1 block">Your Cost</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={internalCost}
+                    onChange={e => setInternalCost(e.target.value)}
+                    placeholder="0.00"
+                    className="h-11 text-base font-semibold pl-7"
+                  />
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* NTE warning */}
@@ -394,7 +550,7 @@ export function LaborEntryForm({
           </div>
         )}
 
-        {/* Save button — full-width prominent */}
+        {/* Save button */}
         {!showNTEWarn && (
           <Button
             onClick={attemptSave}

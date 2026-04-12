@@ -1,7 +1,7 @@
 import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown, EyeOff, CheckCircle, MapPin, Plus } from 'lucide-react';
+import { ChevronDown, EyeOff, CheckCircle, MapPin, Plus, Lock, TrendingUp } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +25,7 @@ interface COLineItemRowProps {
   canAddLabor: boolean;
   onRefresh: () => void;
   isEven?: boolean;
+  index?: number;
 }
 
 function fmt(n: number) {
@@ -41,16 +42,16 @@ function getStatusColor(entries: COLaborEntry[], showGCApproval: boolean): Statu
   return 'gray';
 }
 
-const STATUS_DOT_CLASSES: Record<StatusColor, string> = {
-  gray: 'bg-muted-foreground/30',
-  amber: 'bg-amber-400',
-  green: 'bg-emerald-500',
+const STATUS_BORDER: Record<StatusColor, string> = {
+  gray: 'border-l-muted-foreground/30',
+  amber: 'border-l-amber-400',
+  green: 'border-l-emerald-500',
 };
 
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, pricingType, nteCap, nteUsed = 0,
-  canAddLabor, onRefresh, isEven = true,
+  canAddLabor, onRefresh, isEven = true, index,
 }, ref) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -79,6 +80,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const latestEntry = visibleBillable.length > 0 ? visibleBillable[visibleBillable.length - 1] : null;
   const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
 
+  // Margin calculation
+  const billableTotal = isFC ? fcTotal : tcTotal;
+  const hasMargin = billableTotal > 0 && actualTotal > 0;
+  const marginAmount = billableTotal - actualTotal;
+  const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
+
   async function handleGCApproval(entryId: string, approved: boolean) {
     try {
       const { error } = await supabase
@@ -97,12 +104,15 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   function renderEntry(entry: COLaborEntry, showApproval: boolean, muted = false) {
     const gcApproved = (entry as any).gc_approved;
+    // Find matching actual cost for this entry's date (for internal cost column)
+    const matchingActual = actualCosts.find(a => a.entry_date === entry.entry_date);
+
     return (
       <div key={entry.id} className={cn(
-        'flex items-center justify-between text-xs rounded-lg px-3 py-2',
+        'flex items-center justify-between text-xs rounded-lg px-3 py-2.5',
         muted ? 'bg-muted/10' : 'bg-muted/20',
       )}>
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {showApproval && (
             <Checkbox
               checked={!!gcApproved}
@@ -126,30 +136,44 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             {entry.description ? ` · ${entry.description}` : ''}
           </span>
         </div>
-        <span className={cn('font-medium shrink-0 ml-2', muted ? 'text-muted-foreground' : 'text-foreground')}>
-          ${fmt(entry.line_total ?? 0)}
-        </span>
+        <div className="flex items-center gap-3 shrink-0 ml-2">
+          {/* Internal cost column — only visible to entry owner */}
+          {(isTC || isFC) && !muted && matchingActual && (
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Lock className="h-2.5 w-2.5" />
+              ${fmt(matchingActual.line_total ?? 0)}
+            </span>
+          )}
+          <span className={cn('font-semibold', muted ? 'text-muted-foreground' : 'text-foreground')}>
+            ${fmt(entry.line_total ?? 0)}
+          </span>
+        </div>
       </div>
     );
   }
 
   return (
     <div ref={ref} className={cn(
-      'border-b border-border last:border-b-0',
+      'border-b border-border last:border-b-0 border-l-4 transition-colors',
+      STATUS_BORDER[statusColor],
       !isEven && 'bg-muted/[0.03]',
     )}>
       {/* Item header */}
       <div className="px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5 min-w-0">
-            {/* Status dot */}
-            <div className={cn(
-              'w-2.5 h-2.5 rounded-full shrink-0 mt-1',
-              STATUS_DOT_CLASSES[statusColor],
-            )} />
+            {/* Numbered index */}
+            {index !== undefined && (
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[hsl(220,30%,20%)] text-white text-[11px] font-bold shrink-0 mt-0.5">
+                {index}
+              </div>
+            )}
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{item.item_name}</p>
-              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              <p className="text-sm font-semibold text-foreground leading-tight">{item.item_name}</p>
+              {item.description && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+              )}
+              <div className="flex items-center gap-1.5 flex-wrap mt-1">
                 {item.category_name && (
                   <span className="text-[10px] text-muted-foreground">{item.category_name}</span>
                 )}
@@ -170,43 +194,60 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     {CO_REASON_LABELS[item.reason as COReasonCode]}
                   </span>
                 )}
+                {/* Location pill */}
+                {item.location_tag && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-[10px] font-medium text-muted-foreground">
+                    <MapPin className="h-2.5 w-2.5" />
+                    {item.location_tag}
+                  </span>
+                )}
               </div>
-              {item.description && (
-                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>
-              )}
-              {/* Location pill */}
-              {item.location_tag && (
-                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-accent text-[10px] font-medium text-muted-foreground">
-                  <MapPin className="h-2.5 w-2.5" />
-                  {item.location_tag}
-                </span>
-              )}
             </div>
           </div>
-          {/* Right side: entry count + total */}
-          <div className="shrink-0 text-right">
+          {/* Right side: status chip + total + margin */}
+          <div className="shrink-0 text-right flex flex-col items-end gap-1">
+            {/* Status chip */}
+            {entryCount > 0 ? (
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                Priced
+              </span>
+            ) : canAddLabor ? (
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                Needs Pricing
+              </span>
+            ) : null}
+
             {totalForRole > 0 && (
               <span className="text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             )}
             {entryCount > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[10px] text-muted-foreground">
                 {entryCount} entr{entryCount === 1 ? 'y' : 'ies'}
               </p>
             )}
-            {entryCount === 0 && canAddLabor && (
-              <span className="text-[10px] font-medium text-primary">Needs pricing</span>
+            {/* Margin badge */}
+            {hasMargin && (isTC || isFC) && (
+              <span className={cn(
+                'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                marginAmount >= 0
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
+                  : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
+              )}>
+                <TrendingUp className="h-2.5 w-2.5" />
+                {marginPct.toFixed(0)}%
+              </span>
             )}
           </div>
         </div>
 
         {/* Latest entry preview */}
         {latestEntry && !historyOpen && (
-          <div className="mt-2 ml-5 flex items-center justify-between text-[11px] text-muted-foreground bg-muted/30 rounded px-2.5 py-1.5">
+          <div className="mt-2 ml-8 flex items-center justify-between text-[11px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
             <span className="truncate">
               Latest: {latestEntry.entry_date} · {latestEntry.pricing_mode === 'lump_sum' ? 'lump sum' : `${latestEntry.hours ?? 0} hrs`}
               {latestEntry.description ? ` · ${latestEntry.description}` : ''}
             </span>
-            <span className="font-medium text-foreground shrink-0 ml-2">${fmt(latestEntry.line_total ?? 0)}</span>
+            <span className="font-semibold text-foreground shrink-0 ml-2">${fmt(latestEntry.line_total ?? 0)}</span>
           </div>
         )}
       </div>
@@ -239,13 +280,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             <button
               type="button"
               className={cn(
-                'w-full flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-colors border-t border-border/30',
+                'w-full flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-colors border-t border-border/30',
                 formOpen
                   ? 'bg-primary/[0.05] text-primary'
                   : 'text-primary hover:bg-primary/[0.03]'
               )}
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-3.5 w-3.5" />
               {formOpen ? 'Hide form' : 'Add pricing entry'}
             </button>
           </CollapsibleTrigger>
@@ -292,11 +333,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs gap-1 text-muted-foreground"
+            className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
             onClick={() => setShowActualForm(true)}
           >
-            <EyeOff className="h-3 w-3" />
-            Log actual cost (private)
+            <Lock className="h-3 w-3" />
+            Log internal cost (private)
           </Button>
         </div>
       )}
@@ -307,7 +348,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="w-full flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground hover:bg-muted/20 transition-colors border-t border-border/50"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-muted-foreground hover:bg-muted/20 transition-colors border-t border-border/50"
             >
               <ChevronDown className={cn('h-3 w-3 transition-transform', historyOpen && 'rotate-180')} />
               <span className="font-medium">
@@ -324,6 +365,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="px-4 pb-3 space-y-1.5">
+              {/* Column headers */}
+              {(isTC || isFC) && actualCosts.length > 0 && (
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-3 pb-1">
+                  <span>Entry details</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1"><Lock className="h-2.5 w-2.5" /> Int. cost</span>
+                    <span>Billed</span>
+                  </div>
+                </div>
+              )}
+
               {visibleBillable.map(entry => renderEntry(entry, showGCApproval))}
 
               {isTC && tcDownstreamCosts.length > 0 && (
@@ -336,49 +388,32 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 </div>
               )}
 
-              {/* FC actual costs */}
-              {isFC && actualCosts.length > 0 && (
+              {/* Actual costs section */}
+              {(isFC || isTC) && actualCosts.length > 0 && (
                 <div className="mt-2 space-y-1 border-t border-border pt-2">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <EyeOff className="h-3 w-3" /> Actual costs — private
+                    <Lock className="h-3 w-3" /> Internal costs — private
                   </div>
                   {actualCosts.map(entry => (
-                    <div key={entry.id} className="flex items-center justify-between text-xs px-3 py-1">
+                    <div key={entry.id} className="flex items-center justify-between text-xs px-3 py-1.5 rounded-lg bg-muted/10">
                       <span className="text-muted-foreground truncate">
                         {entry.entry_date} · {entry.description ?? 'Cost entry'}
                       </span>
                       <span className="font-medium text-foreground shrink-0 ml-2">${fmt(entry.line_total ?? 0)}</span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between text-xs font-medium px-3">
-                    <span className="text-muted-foreground">Actual total</span>
+                  <div className="flex items-center justify-between text-xs font-medium px-3 pt-1">
+                    <span className="text-muted-foreground">Internal total</span>
                     <span className="text-foreground">${fmt(actualTotal)}</span>
                   </div>
-                  {fcTotal > 0 && actualTotal > 0 && (
+                  {hasMargin && (
                     <div className="flex items-center justify-between text-xs px-3">
-                      <span className="text-muted-foreground">Margin</span>
-                      <span className={cn('font-medium', fcTotal - actualTotal > 0 ? 'text-emerald-600' : 'text-destructive')}>
-                        ${fmt(fcTotal - actualTotal)} ({((fcTotal - actualTotal) / fcTotal * 100).toFixed(1)}%)
+                      <span className="text-muted-foreground">Gross margin</span>
+                      <span className={cn('font-bold', marginAmount >= 0 ? 'text-emerald-600' : 'text-destructive')}>
+                        ${fmt(marginAmount)} ({marginPct.toFixed(1)}%)
                       </span>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* TC actual costs */}
-              {isTC && actualCosts.length > 0 && (
-                <div className="mt-2 space-y-1 border-t border-border pt-2">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <EyeOff className="h-3 w-3" /> Actual costs — private
-                  </div>
-                  {actualCosts.map(entry => (
-                    <div key={entry.id} className="flex items-center justify-between text-xs px-3 py-1">
-                      <span className="text-muted-foreground truncate">
-                        {entry.entry_date} · {entry.description ?? 'Cost entry'}
-                      </span>
-                      <span className="font-medium text-foreground shrink-0 ml-2">${fmt(entry.line_total ?? 0)}</span>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>
