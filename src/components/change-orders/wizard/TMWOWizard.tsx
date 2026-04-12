@@ -46,9 +46,7 @@ const WORK_TYPES: WorkTypeDef[] = [
 // ── Wizard data ───────────────────────────────────────
 interface TMWOData {
   workType: WorkTypeKey | null;
-  subtypes: string[];
-  customSubtype: string;
-  quantity: string;
+  selectedItems: SelectedScopeItem[];
   scopeNotes: string;
   locationTag: string;
   materialsNeeded: boolean;
@@ -66,9 +64,7 @@ interface TMWOData {
 
 const INITIAL_DATA: TMWOData = {
   workType: null,
-  subtypes: [],
-  customSubtype: '',
-  quantity: '',
+  selectedItems: [],
   scopeNotes: '',
   locationTag: '',
   materialsNeeded: false,
