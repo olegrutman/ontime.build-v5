@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, MapPin, Users, FileText, Shield, Building2, DollarSign } from 'lucide-react';
+import { Check, MapPin, Users, FileText, Shield, Building2, DollarSign, Hammer } from 'lucide-react';
 import { WizardSummary } from '@/components/setup-wizard-v2/WizardSummary';
 import { SOVLivePreview } from '@/components/setup-wizard-v2/SOVLivePreview';
 import { generateSOVLines } from '@/hooks/useSetupWizardV2';
 import type { BuildingType, Answers, WizardQuestion, SOVLine } from '@/hooks/useSetupWizardV2';
 import type { TeamMember } from '@/types/projectWizard';
 import type { OrgType } from '@/types/organization';
+import type { TMBuildingInfo } from './TMBuildingInfoStep';
 import { formatCurrency } from '@/lib/utils';
 
 interface ProjectBasicsData {
@@ -30,6 +31,7 @@ export interface UnifiedReviewStepProps {
   creatorRole?: string | null;
   creatorOrgType?: OrgType;
   contractMode?: 'fixed' | 'tm';
+  tmBuildingInfo?: TMBuildingInfo;
 }
 
 export function UnifiedReviewStep({
@@ -43,6 +45,7 @@ export function UnifiedReviewStep({
   creatorRole,
   creatorOrgType,
   contractMode = 'fixed',
+  tmBuildingInfo,
 }: UnifiedReviewStepProps) {
   const isTC = creatorOrgType === 'TC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
