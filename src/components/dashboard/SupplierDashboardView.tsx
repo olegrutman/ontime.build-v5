@@ -317,7 +317,7 @@ export function SupplierDashboardView({
                     <TdN>{p.name}</TdN>,
                     <span>{p.phase}</span>,
                     <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
-                    <span style={{ fontSize: '0.68rem' }}>{p.risk === 'Not Started' ? 'Not started' : p.risk === 'Closed' ? 'Closed out' : 'Active'}</span>,
+                    <span style={{ fontSize: '0.68rem' }}>{p.estimate === 0 ? 'Not started' : p.risk === 'Over Budget' ? 'Over Budget' : 'Active'}</span>,
                   ]} />
                 ))}
                 <TRow isTotal cells={['—', '—', <TdM>{fmt(totalEstimate)}</TdM>, '—']} />
@@ -335,7 +335,7 @@ export function SupplierDashboardView({
                   const variance = p.ordered - p.estimate;
                   const usage = p.estimate > 0 ? Math.round((p.ordered / p.estimate) * 100) : 0;
                   const vColor = variance > 0 ? C.yellow : C.green;
-                  const barCol = variance > 0 ? C.yellow : p.risk === 'Closed' ? C.green : C.green;
+                  const barCol = variance > 0 ? C.yellow : C.green;
                   return (
                     <TRow key={i} cells={[
                       <TdN>{p.name}</TdN>,
@@ -466,23 +466,9 @@ export function SupplierDashboardView({
             <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>🚚 Scheduled Deliveries</span>
             <span style={{ fontSize: '0.68rem', fontWeight: 600, color: C.amber, cursor: 'pointer' }}>Full Schedule →</span>
           </div>
-          {DEMO_DELIVERIES.map((d, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderBottom: i < DEMO_DELIVERIES.length - 1 ? `1px solid ${C.border}` : 'none' }}>
-              <div style={{ width: 52, textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: C.ink, ...fontVal }}>{d.date}</div>
-                <div style={{ fontSize: '0.58rem', color: C.faint }}>{d.day}</div>
-              </div>
-              <div style={{ width: 1, height: 36, background: C.border, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.78rem', color: C.ink }}>{d.title}</div>
-                <div style={{ fontSize: '0.64rem', color: C.muted }}>{d.qty}</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.ink2 }}>{fmt(d.value)}</div>
-                <div style={{ fontSize: '0.58rem', color: C.faint }}>{d.project}</div>
-              </div>
-            </div>
-          ))}
+          <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+            <span style={{ fontSize: '0.78rem', color: C.muted }}>No scheduled deliveries</span>
+          </div>
         </div>
 
         {/* ─── Project Budget Forecast ─── */}
