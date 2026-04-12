@@ -152,7 +152,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
   function handleBack() { if (step > 0) setStep(s => s - 1); }
 
   // Adapter object for StepCatalog
-  const catalogData: COWizardData = useMemo(() => ({
+  const catalogData = useMemo(() => ({
     locationTag: data.locationTag || 'TBD',
     reason: (data.workType as COReasonCode) ?? 'other',
     selectedItems: data.selectedItems,
@@ -164,7 +164,12 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     shareDraftNow: data.shareDraftNow,
     fcInputNeeded: data.fcInputNeeded,
     fcOrgId: data.fcOrgId,
-  }), [data]);
+    nteCap: '',
+    gcBudget: '',
+    assignedToOrgId: '',
+    materialsOnSite: false,
+    quickHours: null,
+  } satisfies COWizardData), [data]);
 
   function handleCatalogChange(patch: Partial<COWizardData>) {
     if (patch.selectedItems !== undefined) {
@@ -685,7 +690,7 @@ function StepReview({
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Summary</p>
         <SummaryRow label="Work Type" value={selectedWorkType?.label ?? data.workType ?? '—'} />
         {data.selectedItems.length > 0 && <SummaryRow label="Scope Items" value={data.selectedItems.map(i => i.item_name).join(', ')} />}
-        {data.quantity && <SummaryRow label="Quantity" value={data.quantity} />}
+        {data.locationTag && <SummaryRow label="Location" value={data.locationTag} />}
         {data.locationTag && <SummaryRow label="Location" value={data.locationTag} />}
         {data.materialsNeeded && <SummaryRow label="Materials" value={`${data.materialsResponsible} supplies`} />}
         {data.equipmentNeeded && <SummaryRow label="Equipment" value={`${data.equipmentResponsible} provides`} />}
