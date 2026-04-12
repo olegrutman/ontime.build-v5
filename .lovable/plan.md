@@ -1,36 +1,69 @@
 
 
-# Fix: "Request FC Hours" Button + FC Visibility
+# Fix: TC Can't Request FC Input on Change Order
 
-## The Problem
+## Root Cause — Two Permission Bugs
 
-Two connected issues:
+### Bug 1: Database function `can_request_fc_change_order_input`
+The function only allows users from `co.assigned_to_org_id` (the GC org) to request FC input. The TC who created the CO is in `co.org_id`, not `co.assigned_to_org_id`. So the RPC returns 403.
 
-1. The amber "Request FC Hours" button in the banner does nothing. It fires action `request_fc`, but `handleAction()` only handles `scroll_scope`, `scroll_materials`, `scroll_pricing`, `scroll_fc`, and `log_hours`. The `request_fc` action falls through to the default case which just scrolls to the top of the page.
+**Current:** `user_in_org(_user_id, co.assigned_to_org_id)`
+**Fix:** `(user_in_org(_user_id, co.assigned_to_org_id) OR user_in_org(_user_id, co.org_id))`
 
-2. FC can't see the CO because they're not in `org_id` (TC) or `assigned_to_org_id` (GC), and there are zero collaborator records. This is a downstream consequence of bug #1 — the FC was never added as a collaborator because the button didn't work.
+### Bug 2: Client-side check in `useCORoleContext.ts`
+`canRequestFCInput` for non-draft statuses checks `co.assigned_to_org_id === myOrgId` — which is the GC org, not the TC org. So the sidebar's "Request FC input" button is also hidden.
 
-## The Fix
+**Current:**
+```
+co.assigned_to_org_id === myOrgId && ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)
+```
+**Fix:** Add `|| co.org_id === myOrgId` for those same statuses.
 
-### `CODetailLayout.tsx` — Wire up the `request_fc` action
+## Changes
 
-Add a `case 'request_fc'` to `handleAction()` that:
-- If there's exactly one FC org option, automatically call `requestFCInput.mutateAsync(fcOrgOptions[0].id)` and show a success toast
-- If there are multiple FC org options, scroll to the sidebar's FC card so the user can pick one
-- If there are no FC options, show an info toast ("No field crews on this project")
+### 1. Database Migration — Fix `can_request_fc_change_order_input`
 
-This connects the banner button to the same RPC (`request_fc_change_order_input`) that the sidebar card already uses.
+```sql
+CREATE OR REPLACE FUNCTION public.can_request_fc_change_order_input(
+  _co_id uuid, _fc_org_id uuid, _user_id uuid DEFAULT auth.uid()
+) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.change_orders co
+    JOIN public.organizations org ON org.id = _fc_org_id
+    JOIN public.project_team pt ON pt.project_id = co.project_id AND pt.org_id = _fc_org_id
+    WHERE co.id = _co_id
+      AND (
+        public.user_in_org(_user_id, co.assigned_to_org_id)
+        OR public.user_in_org(_user_id, co.org_id)
+      )
+      AND co.status IN ('draft', 'shared', 'rejected', 'work_in_progress', 'closed_for_pricing')
+      AND org.type = 'FC'
+      AND _fc_org_id <> co.org_id
+      AND _fc_org_id <> co.assigned_to_org_id
+  );
+$$;
+```
 
-### Also handle `submit` and `approve`/`reject` actions
+### 2. `src/hooks/useCORoleContext.ts` — Fix `canRequestFCInput`
 
-While we're here, the banner also has `submit`, `approve`, `reject`, and `close_for_pricing` actions that similarly fall through to the default scroll-to-top. Wire these to the existing mutation functions (`submitCO`, `approveCO`, `rejectCO`) already available in the hook.
+Change the condition to:
+```ts
+const canRequestFCInput = !!co && isTC && (
+  ((co.assigned_to_org_id === myOrgId || co.org_id === myOrgId) &&
+    ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)) ||
+  (co.org_id === myOrgId && co.status === 'draft')
+);
+```
 
 ## Files Changed
-- `src/components/change-orders/CODetailLayout.tsx` — add cases to `handleAction` (~15 lines)
+- **Database** — replace `can_request_fc_change_order_input` function (1 migration)
+- **`src/hooks/useCORoleContext.ts`** — fix `canRequestFCInput` condition (~2 lines)
 
 ## What stays the same
-- Database functions — no changes needed
-- RLS policies — no changes needed
-- `CONextActionBanner.tsx` — no changes needed
-- Once TC clicks "Request FC Hours" and it works, the FC gets added as a collaborator and can see the CO via the existing `can_access_change_order` function
+- `CODetailLayout.tsx` — no changes needed, `handleAction('request_fc')` already works
+- `COSidebar.tsx` / `FCInputRequestCard.tsx` — no changes
+- `useProjectFCOrgs.ts` — already returns FC_Test correctly
+- `CONextActionBanner.tsx` — no changes
 
