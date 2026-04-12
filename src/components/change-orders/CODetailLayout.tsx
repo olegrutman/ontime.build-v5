@@ -266,20 +266,20 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                   {/* Totals strip */}
                   {lineItems.length > 0 && (
                     <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
-                      <div className="flex-1 px-3 py-2 text-center border-r border-border">
-                        <p className="text-muted-foreground font-medium">Billable to GC</p>
-                        <p className="font-mono font-bold text-foreground mt-0.5">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+                      <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
+                        <p className="text-muted-foreground font-medium">{isGC ? 'Labor Total' : isTC ? 'Billable to GC' : 'Billed to TC'}</p>
+                        <p className="font-mono font-bold text-foreground mt-0.5">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                       </div>
                       {(isTC || isFC) && (
                         <>
                           <div className="flex-1 px-3 py-2 text-center border-r border-border">
                             <p className="text-muted-foreground font-medium">Internal Cost</p>
-                            <p className="font-mono font-bold text-foreground mt-0.5">${actualCostTotal.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+                            <p className="font-mono font-bold text-foreground mt-0.5">${actualCostTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                           </div>
                           <div className="flex-1 px-3 py-2 text-center" style={{ background: grossMargin >= 0 ? 'hsl(152 82% 39% / 0.06)' : 'hsl(0 84% 60% / 0.06)' }}>
                             <p className="text-muted-foreground font-medium">Gross Margin</p>
                             <p className={cn('font-mono font-bold mt-0.5', grossMargin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
-                              ${grossMargin.toLocaleString('en-US', { minimumFractionDigits: 0 })} ({grossMarginPct.toFixed(0)}%)
+                              ${grossMargin.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({grossMarginPct.toFixed(0)}%)
                             </p>
                           </div>
                         </>
@@ -298,7 +298,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                       </div>
                       <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">
                         {pricedCount}/{lineItems.length} priced
-                        {totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0 })}</span> logged</>}
+                        {totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
                       </span>
                     </div>
                   )}
