@@ -194,7 +194,7 @@ export default function CreateProjectNew() {
         });
         if (scopeErr) {
           console.error('Failed to save scope details:', scopeErr);
-          toast.warning('Project created but building info could not be saved. You can update it later.');
+          toast({ title: 'Project created', description: 'Building info could not be saved. You can update it later.', variant: 'destructive' });
         }
       }
 
