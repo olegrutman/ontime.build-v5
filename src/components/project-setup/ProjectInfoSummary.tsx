@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
 import { formatCurrency } from '@/lib/utils';
-import { Building2, MapPin, Calendar, Users, FileText, Layers } from 'lucide-react';
+import { Building2, MapPin, Calendar, Users, FileText, Layers, Home } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProjectInfoSummaryProps {
