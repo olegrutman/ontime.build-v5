@@ -74,7 +74,18 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
   const [isFiltered, setIsFiltered] = useState(!!mappedDivision);
 
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
-  const searchResults = useMemo(() => search(query), [query, search]);
+  // Prioritize search results: matching division first, then others
+  const searchResults = useMemo(() => {
+    const results = search(query);
+    if (!mappedDivision || !query) return results;
+    const inDiv: ScopeCatalogItem[] = [];
+    const rest: ScopeCatalogItem[] = [];
+    for (const r of results) {
+      if (r.division?.toLowerCase() === mappedDivision) inDiv.push(r);
+      else rest.push(r);
+    }
+    return [...inDiv, ...rest];
+  }, [query, search, mappedDivision]);
 
   // Saved location from localStorage for shortcut
   const savedLocationKey = `co_wizard_last_location_${projectId}`;
