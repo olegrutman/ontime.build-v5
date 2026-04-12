@@ -37,17 +37,16 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   if (isGC) {
     return [
       {
-        label: 'Field Crew Cost',
-        value: fmtCurrency(financials.fcLaborTotal),
-        color: '#F5A623',
-        sub: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs logged` : undefined,
-        badge: financials.fcLaborTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
-      },
-      {
-        label: 'My Billable (Labor)',
+        label: 'TC Labor',
         value: fmtCurrency(financials.tcBillableToGC),
         color: 'hsl(var(--primary))',
         badge: financials.tcBillableToGC > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
+      },
+      {
+        label: 'TC Submitted',
+        value: fmtCurrency(financials.grandTotal),
+        color: '#F5A623',
+        badge: financials.grandTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
       },
       {
         label: 'Materials + Equipment',
@@ -56,7 +55,7 @@ function getTiles(props: COKPIStripProps): KPITile[] {
         sub: matEquip > 0 ? '2 categories' : undefined,
       },
       {
-        label: 'Total to GC',
+        label: 'Total Cost',
         value: fmtCurrency(totalToGC),
         color: '#F5A623',
       },
@@ -66,14 +65,14 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   if (isTC) {
     return [
       {
-        label: 'Field Crew Cost',
+        label: 'FC Cost',
         value: fmtCurrency(financials.fcLaborTotal),
         color: '#F5A623',
         sub: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs logged` : undefined,
         badge: financials.fcLaborTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
       },
       {
-        label: 'My Billable (Labor)',
+        label: 'My Billable',
         value: fmtCurrency(financials.tcBillableToGC),
         color: 'hsl(var(--primary))',
         badge: financials.tcBillableToGC > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
