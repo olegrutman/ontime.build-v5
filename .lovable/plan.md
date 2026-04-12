@@ -1,41 +1,44 @@
 
 
-# Fix FC Contract Save — 3 Bugs
+# Fix: TC Can't See FC in Change Order Wizard
 
-## What's broken
+## Root Cause
 
-1. **INSERT fails**: The insert statement includes `direction: 'downstream'` but that column doesn't exist on `project_contracts`. The error is caught and shown as a generic toast, but the real cause is hidden.
+The `project_participants` table RLS policy "Users can view their participation" only allows reading rows where:
+1. You're in the participant's organization, OR
+2. You're in the **project owner's** organization (the GC)
 
-2. **UPDATE result ignored**: When the contract already exists (sum = $0), `updateContract()` is called but its return value is never checked. `setFcDirty(false)` runs unconditionally, making it look saved. On page refresh, the value reverts to $0.
+Since the TC is not in the GC's org, they can only see their own row. The FC row is invisible to them. That's why the "Select field crew" dropdown is empty.
 
-3. **Org direction inconsistency**: `saveFcContract` puts FC as `from_org_id`, but `createFcContract` in `useProjectFinancials` puts TC as `from_org_id`. This mismatch can create duplicate contracts.
+## The Fix
 
-## Fix — `TCProjectOverview.tsx`
+Add a new RLS SELECT policy that allows any **accepted project participant** to see all other participants in the same project. This is safe — if you're already on the team, you should be able to see who else is on the team.
 
-### Remove `direction` from INSERT (line ~349)
-Delete the `direction: 'downstream'` property from the insert object. It's not a real column.
+### Database Migration — New RLS Policy
 
-### Align org direction with `createFcContract`
-Change the INSERT to match the convention used in `useProjectFinancials`:
-- `from_org_id: currentOrgId` (TC — the one creating the contract)
-- `to_org_id: targetOrg.org_id` (FC — the one receiving)
-- `from_role: 'Trade Contractor'`
-- `to_role: 'Field Crew'`
-
-### Check `updateContract` return value
-Wrap the update call to throw on failure:
+```sql
+CREATE POLICY "Accepted participants can view co-participants"
+ON public.project_participants
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.project_participants my
+    WHERE my.project_id = project_participants.project_id
+      AND my.invite_status = 'ACCEPTED'
+      AND user_in_org(auth.uid(), my.organization_id)
+  )
+);
 ```
-const ok = await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
-if (!ok) throw new Error('Failed to update contract');
-```
 
-This ensures the catch block fires and shows the error toast instead of silently proceeding.
+This says: "If you are an accepted participant in this project (via your org), you can see all other participants in the same project."
 
-## Files changed
-- `src/components/project/TCProjectOverview.tsx` — fix all 3 bugs in `saveFcContract` (~10 lines changed)
+## Files Changed
+- **Database only** — one new RLS policy. No code changes needed.
 
 ## What stays the same
-- `useProjectFinancials.ts` — no changes
-- Database schema — no changes
-- RLS policies — no changes
+- All existing RLS policies remain unchanged
+- COWizard query code unchanged — it already queries correctly, RLS was just blocking the results
+- TMWOWizard query code unchanged
 
