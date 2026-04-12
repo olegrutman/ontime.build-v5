@@ -14,16 +14,16 @@ interface VisualLocationPickerProps {
 
 type InsideOutside = 'inside' | 'outside' | null;
 
-// Residential area options
-const RESIDENTIAL_AREAS = [
+// Multifamily area options (units, corridors)
+const MULTIFAMILY_AREAS = [
   { label: 'Unit interior', icon: '🏠' },
   { label: 'Corridor', icon: '🚶' },
   { label: 'Stairwell', icon: '🪜' },
   { label: 'Other', icon: '📍' },
 ];
 
-// Room options shown after "Unit interior" is selected
-const UNIT_ROOM_OPTIONS = [
+// Single family area options (rooms directly)
+const SINGLE_FAMILY_AREAS = [
   { label: 'Kitchen', icon: '🍳' },
   { label: 'Bathroom', icon: '🚿' },
   { label: 'Living Room', icon: '🛋️' },
@@ -33,11 +33,14 @@ const UNIT_ROOM_OPTIONS = [
   { label: 'Other', icon: '📍' },
 ];
 
-// Commercial area options
-const COMMERCIAL_AREAS = [
-  { label: 'Office', icon: '🏢' },
-  { label: 'Lobby', icon: '🚪' },
-  { label: 'Restroom', icon: '🚻' },
+// Room options shown after "Unit interior" is selected (multifamily)
+const UNIT_ROOM_OPTIONS = [
+  { label: 'Kitchen', icon: '🍳' },
+  { label: 'Bathroom', icon: '🚿' },
+  { label: 'Living Room', icon: '🛋️' },
+  { label: 'Bedroom', icon: '🛏️' },
+  { label: 'Laundry', icon: '🧺' },
+  { label: 'Closet', icon: '🚪' },
   { label: 'Other', icon: '📍' },
 ];
 
@@ -80,34 +83,40 @@ export function VisualLocationPicker({
   const [selectedElevation, setSelectedElevation] = useState<string | null>(null);
   const [customElevation, setCustomElevation] = useState('');
 
-  // Determine project type characteristics
-  const isCommercial = useMemo(() => {
-    if (!profile) return false;
-    // Check via project type name/slug pattern
-    return false; // Will be resolved from project_types table
-  }, [profile]);
-
+  // Derive building characteristics from scope
+  const homeType = scope?.home_type ?? null;
   const isMultifamily = useMemo(() => {
-    // Default to multifamily for apartments, townhomes, hotels, mixed-use
-    return true; // Safe default — multifamily elevation labels are more universal
-  }, []);
+    return ['apartments_mf', 'townhomes', 'hotel_hospitality', 'senior_living'].includes(homeType ?? '');
+  }, [homeType]);
+  const isSingleFamily = useMemo(() => {
+    return ['custom_home', 'track_home'].includes(homeType ?? '');
+  }, [homeType]);
 
   // Level options from project scope
   const levelOptions = useMemo(() => {
-    if (!scope) {
-      // Generate from profile stories count
-      const stories = profile?.stories ?? 2;
-      const levels: string[] = [];
-      if (profile?.has_basement) levels.push('Basement');
-      levels.push('Ground');
-      for (let i = 2; i <= stories; i++) levels.push(`Level ${i}`);
-      if (stories > 2) levels.push('Attic');
-      return levels;
-    }
-    return getLevelOptions(scope);
+    if (scope) return getLevelOptions(scope);
+    // Fallback from profile
+    const stories = profile?.stories ?? 2;
+    const levels: string[] = [];
+    if (profile?.has_basement) levels.push('Basement');
+    levels.push('Ground');
+    for (let i = 2; i <= stories; i++) levels.push(`Level ${i}`);
+    if (stories > 2) levels.push('Attic');
+    return levels;
   }, [scope, profile]);
 
-  const areaOptions = isCommercial ? COMMERCIAL_AREAS : RESIDENTIAL_AREAS;
+  // Build area options based on building type
+  const areaOptions = useMemo(() => {
+    const base = isSingleFamily ? [...SINGLE_FAMILY_AREAS] : [...MULTIFAMILY_AREAS];
+    // Add garage for single family if scope says so
+    if (isSingleFamily && scope?.garage_type && scope.garage_type.toLowerCase() !== 'none') {
+      // Insert before "Other"
+      const otherIdx = base.findIndex(a => a.label === 'Other');
+      base.splice(otherIdx >= 0 ? otherIdx : base.length, 0, { label: 'Garage', icon: '🚗' });
+    }
+    return base;
+  }, [isSingleFamily, scope]);
+
   const elevationOptions = isMultifamily ? MULTIFAMILY_ELEVATIONS : SINGLE_FAMILY_ELEVATIONS;
 
   // Build the tag live
