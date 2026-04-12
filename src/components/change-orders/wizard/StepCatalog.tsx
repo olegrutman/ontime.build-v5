@@ -181,12 +181,12 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
             <button onClick={() => setPhase('location')} className="ml-1 text-muted-foreground hover:text-foreground">✕</button>
           )}
         </div>
-        {data.reason && (
+        {data.reason && CO_REASON_COLORS[data.reason] && (
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
             style={{ backgroundColor: CO_REASON_COLORS[data.reason].bg, color: CO_REASON_COLORS[data.reason].text }}
           >
-            {CO_REASON_LABELS[data.reason]}
+            {CO_REASON_LABELS[data.reason] ?? data.reason}
             {!lockedFromWizard && (
               <button onClick={() => setPhase('reason')} className="ml-1 opacity-60 hover:opacity-100">✕</button>
             )}
