@@ -154,7 +154,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
   // Adapter object for StepCatalog
   const catalogData = useMemo(() => ({
     locationTag: data.locationTag || 'TBD',
-    reason: (data.workType as COReasonCode) ?? 'other',
+    reason: 'other' as COReasonCode,
     selectedItems: data.selectedItems,
     pricingType: 'tm' as any,
     materialsNeeded: data.materialsNeeded,
