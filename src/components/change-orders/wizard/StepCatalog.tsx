@@ -78,8 +78,8 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
   const searchResults = useMemo(() => {
     const results = search(query);
     if (!mappedDivision || !query) return results;
-    const inDiv: ScopeCatalogItem[] = [];
-    const rest: ScopeCatalogItem[] = [];
+    const inDiv: typeof results = [];
+    const rest: typeof results = [];
     for (const r of results) {
       if (r.division?.toLowerCase() === mappedDivision) inDiv.push(r);
       else rest.push(r);
