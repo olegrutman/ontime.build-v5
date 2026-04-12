@@ -1,96 +1,54 @@
 
 
-# Full Redesign — Work Order Detail Page
+# Smart Scope Filtering Based on Work Type
 
-## Overview
-Complete UI-only rebuild of the WO detail page. All data hooks, mutations, props, and Supabase calls remain unchanged. Only the visual layer is rewritten.
+## The Problem (Plain English)
 
-## Scope of Work
+When you create a new Work Order, step 1 asks "What type of work?" (e.g., Framing, Demolition, Exterior). But when you get to step 2 (Scope), the catalog shows **everything** — all divisions, all categories, all items. If you picked "Framing", you still see Roofing, Exterior Skin, Windows, etc. That's confusing and wastes time.
 
-This is a large redesign touching **6 files** (rewrite) and **2 files** (minor adjustments). The plan is split into phases to keep each change manageable.
+## How It Should Work
 
----
+When you pick a work type like **Framing**, the scope catalog should:
 
-## File Changes
+1. **Auto-navigate** into the matching division (e.g., jump straight into the "Framing" division) instead of showing the top-level grid of all divisions
+2. **Still let you browse other divisions** if you want — but show a clear "Showing items for: Framing" header with a link to "Browse all trades" if needed
+3. **Pre-filter search results** to prioritize items from the matching division (show them first, then "Other trades" results below a separator)
 
-### 1. `CODetailLayout.tsx` — Full rewrite of page structure
+For work types that don't map 1:1 to a catalog division (like "Backout" or "Other"), just show the full catalog like today.
 
-**Current**: Header strip, KPI strip, hero block, contextual alert, two-column layout with inline main content.
+## The Mapping
 
-**New structure**:
-- **Sticky topbar**: Back arrow + breadcrumb + "Duplicate" and "⋯" ghost buttons (right side). Remove the status badge from topbar.
-- **WO Header Card** (full-width, spans both columns): Top = WO number (monospace) + large title (Barlow Condensed) + tag pills (location, category, date, status) + TC name/avatar right-aligned. Bottom = 5-step status pipeline (Created → Pricing → Review → Submitted → Approved) with checkmarks for completed, amber glow for active, grey for future. Separated by a top border on a light surface.
-- **Next Action Banner**: Full-width navy card replacing `COHeroBlock`. Icon box + "Next Action Required" label + bold title + subtitle + 1-2 action buttons. Dynamic content derived from the same `getCards` logic but rendered as a single banner instead of a card grid.
-- **KPI Row**: 4 cards always, using design-token colors. Labels in plain English: "Field Crew Cost", "My Billable (Labor)", "Materials + Equipment", "Total to GC". Top accent bars with Barlow Condensed values.
-- **Two-column layout**: Main (flex-1) + Sidebar (w-[300px] sticky). Remove `COTeamCard` from main (team info absorbed into header). Remove `COWhosHere` and `COAcceptBanner` from above the body — integrate accept banner into the Next Action Banner when relevant.
-- **Responsive**: Below 900px sidebar stacks below. KPI grid 2x2.
+| Work Type (Step 1) | Auto-opens Division |
+|---|---|
+| Framing | `framing` |
+| Reframing | `framing` |
+| Sheathing | `framing` (sheathing category) |
+| Blocking | `framing` (blocking category) |
+| Exterior | `exterior` |
+| Stairs | `framing` |
+| Demolition | Show all (no direct match) |
+| Backout | Show all (no direct match) |
+| Other | Show all |
 
-### 2. `COLineItemRow.tsx` — Full rewrite of scope line items
+## Technical Changes
 
-**Current**: Left border stripe, numbered index, status chip, collapsible history, auto-expand form.
+### 1. `StepCatalog.tsx` — Accept optional `workType` prop
 
-**New**:
-- 3px left amber border stripe
-- Amber-numbered index circle (far left)
-- Bold item name + meta chips (category, unit, pricing status) + 2-line plain text description (strip markdown asterisks)
-- Right side: monospace billable amount + green "Internal / $X" pill (or grey "Internal / Not logged") + margin % chip
-- Clicking row toggles entries panel
-- **Entries panel** (expanded): Light grey bg, column headers (Date, Description, Hours, Billable, Internal Cost w/ lock, delete). Each entry row shows all 5 columns. No internal cost = subtle "+ add cost" grey link.
-- **Add pricing entry toggle bar**: Plus icon + "Add pricing entry" + sub-label "Log hours, flat rate, or unit pricing". Expands inline form below.
-- **Empty state**: Money icon + "No pricing added yet" + explanation + same toggle bar.
-- **Bottom of card**: Full-width "＋ Add another scope item" dashed row, amber on hover.
+- Add `workType?: string` to `StepCatalogProps`
+- On mount, if `workType` maps to a known division, auto-set `level='category'` and `activeDivision` to that division (skip the top-level grid)
+- Add a small banner at the top: "Showing scope for **Framing**" with a "Browse all trades →" link that resets to `level='division'`
+- For search: sort results so items matching the active division appear first, with a visual separator before "Other trades" results
 
-### 3. `LaborEntryForm.tsx` — Visual reskin to match amber-themed inline form
+### 2. `TMWOWizard.tsx` — Pass `workType` to `StepCatalog`
 
-**Current**: Primary-colored border and tiles, emerald save button.
+- Pass the selected `data.workType` through the `catalogData` adapter or as a separate prop to `StepCatalog`
+- The existing `COWizard` and `AddScopeItemButton` don't pass `workType`, so they get the current behavior (full catalog) — no breaking changes
 
-**New**:
-- Amber border (2px) + amber-tinted header ("Add pricing entry" with amber bg)
-- Entry type tiles: amber border + pale amber bg when selected (instead of primary)
-- Form fields in 2-col grid (Description + Date, Hours + Billable Amount)
-- Live margin preview: green bg panel
-- Internal cost section: open by default, lock icon, "Private · optional" green badge, note about privacy, fields for Your Cost + Cost Type dropdown (Labor wages, Subcontractor, Materials, Equipment, Other)
-- Footer: Cancel (ghost) + "Save Entry ✓" amber button (replace emerald)
+### 3. `useScopeCatalog.ts` — No changes needed
 
-### 4. `COKPIStrip.tsx` — Update labels and ensure 4 cards always
+The hook already returns all divisions structured. The filtering is purely a UI concern in `StepCatalog`.
 
-**Current**: Dynamic number of tiles, abbreviated labels like "FC cost", "Mat + Equip".
+## Result
 
-**New**: Always 4 tiles with plain English labels. Sub-labels (e.g., "52 hrs logged"). Status badges. Design tokens: Navy (#0D1F3C), Amber (#F5A623), Green (#059669).
-
-### 5. `COSidebar.tsx` — Redesign into 3 distinct cards
-
-**Current**: Budget tracker + status actions + financials + profitability + SOV + FC pricing toggle + FC input + NTE.
-
-**New 3 cards**:
-- **Actions card** (navy bg): "Actions" label, current status with pulsing amber dot, large amber "Submit for Approval" button, two secondary ghost buttons. Wraps existing `COStatusActions` logic.
-- **Financials card** (white): Billable to GC, Equipment, Materials, divider, Total to GC bold. Below: TC Profitability section — Revenue, Internal Costs, green-highlighted margin block with $ + % + thin bar. Margin always visible (no eye icon).
-- **Field Crew card** (white): Title, status text, dropdown, "Request FC Input" amber button. Wraps existing `FCInputRequestCard` logic.
-
-### 6. `COHeaderStrip.tsx` — Replace with new WO Header Card + Pipeline
-
-Completely rewrite to include the status pipeline visualization. The pipeline component reads `co.status` and maps it to the 5 steps.
-
-### 7. Minor updates
-- `COHeroBlock.tsx` → Repurpose as `CONextActionBanner.tsx` (single navy banner instead of card grid). Same data logic, different render.
-- `COContextualAlert.tsx` → Remove (absorbed into Next Action Banner).
-- `COProfitabilityCard.tsx` → Remove as standalone; merged into sidebar financials card.
-- `COStickyFooter.tsx` → Keep, minor style updates (amber button style).
-
-## Design Tokens Used
-- Navy: `#0D1F3C`, Amber: `#F5A623`, Background: `#F0F2F7`, Surface: `#FFFFFF`, Border: `#E4E8F0`, Green: `#059669`, Red: `#DC2626`
-- Border radius: `rounded-xl` (12px) for cards, `rounded-lg` (8px) for components
-- Fonts: Barlow Condensed (headings/numbers), IBM Plex Mono (currency/IDs), DM Sans (body)
-- Subtle box shadows throughout
-
-## What stays the same
-- All data hooks (`useChangeOrderDetail`, `useCORoleContext`, etc.)
-- All mutations and Supabase calls
-- All prop interfaces and data flow
-- `AddScopeItemButton`, `COMaterialsPanel`, `COEquipmentPanel` components (minor wrapper styling only)
-- `COActivityFeed` component (wrapped in collapsible card)
-- Database schema and RLS policies
-- Mobile sticky footer behavior
-
-## Estimated file count: ~8 files modified/created
+Picking "Framing" → scope step opens directly to the Framing division's categories. You see only framing-related items immediately. One click to browse everything else if needed. Search still works across everything but shows relevant items first.
 
