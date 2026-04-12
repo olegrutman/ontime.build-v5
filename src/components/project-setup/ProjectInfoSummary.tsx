@@ -107,7 +107,22 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
     },
   });
 
-  const isLoading = projLoading || answersLoading || contractsLoading || teamLoading;
+  // Fetch scope details (T&M projects)
+  const { data: scopeDetails, isLoading: scopeLoading } = useQuery({
+    queryKey: ['project_scope_details_summary', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_scope_details')
+        .select('home_type, floors, stories, foundation_type, basement_type, basement_finish, garage_type, siding_included, siding_materials, total_sqft')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const isLoading = projLoading || answersLoading || contractsLoading || teamLoading || scopeLoading;
 
   if (isLoading) {
     return (
