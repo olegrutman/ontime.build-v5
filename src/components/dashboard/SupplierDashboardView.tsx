@@ -233,20 +233,8 @@ export interface SupplierDashboardViewProps {
 
 const BAR_COLORS = [C.amber, C.blue, C.green, C.yellow, C.purple, C.red, C.navy];
 
-/* ─── Demo data for supplier ─── */
-const DEMO_PROJECTS = [
-  { projectId: 'demo-cherry-hills', name: 'Cherry Hills', phase: 'Framing L2-4', estimate: 90000, ordered: 73800, billed: 65400, received: 58000, overBy: 0, risk: 'On Track' as const },
-  { projectId: 'demo-tower-14', name: 'Tower 14', phase: 'Structural L6-9', estimate: 143000, ordered: 143200, billed: 121000, received: 109000, overBy: 6000, risk: 'Over Budget' as const },
-  { projectId: 'demo-mesa', name: 'Mesa Logistics', phase: 'MEP Rough-in', estimate: 48000, ordered: 48000, billed: 48000, received: 48000, overBy: 0, risk: 'Closed' as const },
-  { projectId: 'demo-apex', name: 'Apex Retail', phase: 'Pre-construction', estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, risk: 'Not Started' as const },
-  { projectId: 'demo-hyatt', name: 'Hyatt Studios', phase: 'EIFS L2-4', estimate: 38000, ordered: 32000, billed: 28000, received: 24000, overBy: 0, risk: 'On Track' as const },
-];
+/* ─── No demo data — real projects only ─── */
 
-const DEMO_DELIVERIES = [
-  { date: 'TMW', day: 'Tomorrow', title: 'Framing lumber L3–4', qty: '4,200 LF · DEL-221', value: 24600, project: 'Cherry Hills' },
-  { date: 'Apr 7', day: 'Monday', title: 'EIFS base coat kit', qty: '2,400 SF kit · DEL-215', value: 18000, project: 'Hyatt Studios' },
-  { date: 'Apr 8', day: 'Tuesday', title: 'Structural steel lot 3', qty: '22 tons · DEL-198', value: 44000, project: 'Tower 14' },
-];
 
 export function SupplierDashboardView({
   projects, financials, projectFinancials, billing, attentionItems, pendingInvites, recentDocs,
@@ -262,24 +250,20 @@ export function SupplierDashboardView({
   const projectCreated = projects.length > 0;
   const activeProjects = projects.filter(p => !['archived', 'completed'].includes(p.status));
 
-  // Use real data where available, fall back to demo
+  // Use real data only — no demo fallback
   const pf = projectFinancials;
-  const hasRealData = pf.length > 0;
 
-  // Derive aggregates from projectFinancials or demo
-  const dp = hasRealData
-    ? pf.map((p, i) => ({
-        projectId: p.projectId,
-        name: p.projectName,
-        phase: projects.find(pr => pr.id === p.projectId)?.project_type || '',
-        estimate: p.revenue,
-        ordered: p.costs,
-        billed: p.paidToYou + p.pendingToCollect,
-        received: p.paidToYou,
-        overBy: Math.max(0, p.costs - p.revenue),
-        risk: p.costs > p.revenue ? 'Over Budget' as const : 'On Track' as const,
-      }))
-    : DEMO_PROJECTS;
+  const dp = pf.map((p) => ({
+    projectId: p.projectId,
+    name: p.projectName,
+    phase: projects.find(pr => pr.id === p.projectId)?.project_type || '',
+    estimate: p.revenue,
+    ordered: p.costs,
+    billed: p.paidToYou + p.pendingToCollect,
+    received: p.paidToYou,
+    overBy: Math.max(0, p.costs - p.revenue),
+    risk: p.costs > p.revenue ? 'Over Budget' as const : 'On Track' as const,
+  }));
 
   const totalEstimate = dp.reduce((s, p) => s + p.estimate, 0);
   const totalOrdered = dp.reduce((s, p) => s + p.ordered, 0);
@@ -333,7 +317,7 @@ export function SupplierDashboardView({
                     <TdN>{p.name}</TdN>,
                     <span>{p.phase}</span>,
                     <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
-                    <span style={{ fontSize: '0.68rem' }}>{p.risk === 'Not Started' ? 'Not started' : p.risk === 'Closed' ? 'Closed out' : 'Active'}</span>,
+                    <span style={{ fontSize: '0.68rem' }}>{p.estimate === 0 ? 'Not started' : p.risk === 'Over Budget' ? 'Over Budget' : 'Active'}</span>,
                   ]} />
                 ))}
                 <TRow isTotal cells={['—', '—', <TdM>{fmt(totalEstimate)}</TdM>, '—']} />
@@ -351,7 +335,7 @@ export function SupplierDashboardView({
                   const variance = p.ordered - p.estimate;
                   const usage = p.estimate > 0 ? Math.round((p.ordered / p.estimate) * 100) : 0;
                   const vColor = variance > 0 ? C.yellow : C.green;
-                  const barCol = variance > 0 ? C.yellow : p.risk === 'Closed' ? C.green : C.green;
+                  const barCol = variance > 0 ? C.yellow : C.green;
                   return (
                     <TRow key={i} cells={[
                       <TdN>{p.name}</TdN>,
@@ -482,23 +466,9 @@ export function SupplierDashboardView({
             <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>🚚 Scheduled Deliveries</span>
             <span style={{ fontSize: '0.68rem', fontWeight: 600, color: C.amber, cursor: 'pointer' }}>Full Schedule →</span>
           </div>
-          {DEMO_DELIVERIES.map((d, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderBottom: i < DEMO_DELIVERIES.length - 1 ? `1px solid ${C.border}` : 'none' }}>
-              <div style={{ width: 52, textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: C.ink, ...fontVal }}>{d.date}</div>
-                <div style={{ fontSize: '0.58rem', color: C.faint }}>{d.day}</div>
-              </div>
-              <div style={{ width: 1, height: 36, background: C.border, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.78rem', color: C.ink }}>{d.title}</div>
-                <div style={{ fontSize: '0.64rem', color: C.muted }}>{d.qty}</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.ink2 }}>{fmt(d.value)}</div>
-                <div style={{ fontSize: '0.58rem', color: C.faint }}>{d.project}</div>
-              </div>
-            </div>
-          ))}
+          <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+            <span style={{ fontSize: '0.78rem', color: C.muted }}>No scheduled deliveries</span>
+          </div>
         </div>
 
         {/* ─── Project Budget Forecast ─── */}
@@ -514,7 +484,7 @@ export function SupplierDashboardView({
                   const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
                   const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
                   const outBal = Math.max(0, p.billed - p.received);
-                  const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : p.risk === 'Closed' ? 'pm' : p.risk === 'Not Started' ? 'pw' : 'pg';
+                  const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : 'pg';
                   return (
                     <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                       <TdN>{p.name}</TdN>,
