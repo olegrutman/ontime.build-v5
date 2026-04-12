@@ -18,6 +18,7 @@ import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestions
 import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
+import { TMBuildingInfoStep, initialTMBuildingInfo, type TMBuildingInfo } from '@/components/project-wizard-new/TMBuildingInfoStep';
 
 interface StepDef {
   id: string;
@@ -37,6 +38,7 @@ const FIXED_STEPS: StepDef[] = [
 const TM_STEPS: StepDef[] = [
   { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
+  { id: 'building_info', label: 'Building Info', description: 'Building details for WOs' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
 
