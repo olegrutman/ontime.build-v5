@@ -14,7 +14,27 @@ interface StepCatalogProps {
   data: COWizardData;
   onChange: (patch: Partial<COWizardData>) => void;
   projectId: string;
+  workType?: string;
 }
+
+// Maps work-type keys to catalog division slugs
+const WORK_TYPE_DIVISION_MAP: Record<string, string> = {
+  framing: 'framing',
+  reframing: 'framing',
+  sheathing: 'framing',
+  blocking: 'framing',
+  exterior: 'exterior',
+  stairs: 'framing',
+};
+
+const WORK_TYPE_LABELS: Record<string, string> = {
+  framing: 'Framing',
+  reframing: 'Reframing',
+  sheathing: 'Sheathing',
+  blocking: 'Blocking',
+  exterior: 'Exterior Scope',
+  stairs: 'Stairs',
+};
 
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
 type Phase = 'location' | 'reason' | 'items';
