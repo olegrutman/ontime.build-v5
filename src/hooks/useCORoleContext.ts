@@ -48,7 +48,8 @@ export function useCORoleContext(
     const fcCollabName = currentCollaborator?.organization?.name ?? 'Field crew';
 
     const canRequestFCInput = !!co && isTC && (
-      (co.assigned_to_org_id === myOrgId && ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)) ||
+      ((co.assigned_to_org_id === myOrgId || co.org_id === myOrgId) &&
+        ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)) ||
       (co.org_id === myOrgId && co.status === 'draft')
     );
     const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
