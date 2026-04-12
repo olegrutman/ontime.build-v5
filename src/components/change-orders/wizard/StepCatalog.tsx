@@ -14,7 +14,27 @@ interface StepCatalogProps {
   data: COWizardData;
   onChange: (patch: Partial<COWizardData>) => void;
   projectId: string;
+  workType?: string;
 }
+
+// Maps work-type keys to catalog division slugs
+const WORK_TYPE_DIVISION_MAP: Record<string, string> = {
+  framing: 'framing',
+  reframing: 'framing',
+  sheathing: 'framing',
+  blocking: 'framing',
+  exterior: 'exterior',
+  stairs: 'framing',
+};
+
+const WORK_TYPE_LABELS: Record<string, string> = {
+  framing: 'Framing',
+  reframing: 'Reframing',
+  sheathing: 'Sheathing',
+  blocking: 'Blocking',
+  exterior: 'Exterior Scope',
+  stairs: 'Stairs',
+};
 
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
 type Phase = 'location' | 'reason' | 'items';
@@ -29,8 +49,12 @@ const REASONS: { code: COReasonCode; description: string }[] = [
   { code: 'other',             description: 'Anything else' },
 ];
 
-export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
+export function StepCatalog({ data, onChange, projectId, workType }: StepCatalogProps) {
   const { divisions, search, isLoading } = useScopeCatalog();
+
+  // Resolve work type → division auto-filter
+  const mappedDivision = workType ? WORK_TYPE_DIVISION_MAP[workType] ?? null : null;
+  const workTypeLabel = workType ? WORK_TYPE_LABELS[workType] ?? workType : null;
 
   // When location & reason are pre-set by the wizard, lock them (read-only pills)
   const [lockedFromWizard] = useState(() => !!(data.locationTag && data.reason));
@@ -43,13 +67,25 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
   });
 
   const [query, setQuery] = useState('');
-  const [level, setLevel] = useState<DrillLevel>('division');
-  const [activeDivision, setActiveDivision] = useState<string | null>(null);
+  const [level, setLevel] = useState<DrillLevel>(() => mappedDivision ? 'category' : 'division');
+  const [activeDivision, setActiveDivision] = useState<string | null>(mappedDivision);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [isFiltered, setIsFiltered] = useState(!!mappedDivision);
 
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
-  const searchResults = useMemo(() => search(query), [query, search]);
+  // Prioritize search results: matching division first, then others
+  const searchResults = useMemo(() => {
+    const results = search(query);
+    if (!mappedDivision || !query) return results;
+    const inDiv: typeof results = [];
+    const rest: typeof results = [];
+    for (const r of results) {
+      if (r.division?.toLowerCase() === mappedDivision) inDiv.push(r);
+      else rest.push(r);
+    }
+    return [...inDiv, ...rest];
+  }, [query, search, mappedDivision]);
 
   // Saved location from localStorage for shortcut
   const savedLocationKey = `co_wizard_last_location_${projectId}`;
@@ -193,6 +229,22 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
           </div>
         )}
       </div>
+
+      {/* Smart filter banner */}
+      {isFiltered && workTypeLabel && (
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-accent text-accent-foreground text-sm">
+          <span>Showing scope for <strong>{workTypeLabel}</strong></span>
+          <button
+            onClick={() => {
+              setIsFiltered(false);
+              navTo('division');
+            }}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Browse all trades →
+          </button>
+        </div>
+      )}
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

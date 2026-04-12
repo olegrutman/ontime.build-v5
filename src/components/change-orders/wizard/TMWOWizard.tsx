@@ -379,7 +379,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
 
             {currentStep.key === 'work_type' && <StepWorkType data={data} onChange={update} />}
             {currentStep.key === 'scope' && (
-              <StepCatalog data={catalogData} onChange={handleCatalogChange} projectId={projectId} />
+              <StepCatalog data={catalogData} onChange={handleCatalogChange} projectId={projectId} workType={data.workType ?? undefined} />
             )}
             {currentStep.key === 'location' && (
               <StepLocation projectId={projectId} data={data} onChange={update} savedLocation={savedLocation} userId={user?.id} />
