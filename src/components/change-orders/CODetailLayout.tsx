@@ -54,6 +54,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
     nteLog, activity, financials, isLoading,
     requestFCInput, completeFCInput,
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
+    submitCO, approveCO, rejectCO,
   } = useChangeOrderDetail(coId);
   useCORealtime(coId);
   const { data: projectFCOrgs = [] } = useProjectFCOrgs(projectId);
@@ -81,13 +82,52 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
 
   function handleBack() { navigate(`/project/${projectId}/change-orders`); }
 
-  function handleAction(action: string) {
+  async function handleAction(action: string) {
     switch (action) {
       case 'scroll_scope': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_materials': materialsRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_pricing': pricingRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_fc': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
+      case 'request_fc':
+        if (fcOrgOptions.length === 1) {
+          try {
+            await requestFCInput.mutateAsync(fcOrgOptions[0].id);
+            toast.success(`Requested hours from ${fcOrgOptions[0].name}`);
+          } catch { toast.error('Failed to request FC input'); }
+        } else if (fcOrgOptions.length > 1) {
+          document.getElementById('fc-request-card')?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          toast.info('No field crews found on this project');
+        }
+        break;
+      case 'submit':
+        if (co) {
+          try {
+            await submitCO.mutateAsync(co.id);
+            toast.success('Submitted for approval');
+          } catch (e: any) { toast.error(e?.message ?? 'Failed to submit'); }
+        }
+        break;
+      case 'approve':
+        if (co) {
+          try {
+            await approveCO.mutateAsync(co.id);
+            toast.success('Approved');
+          } catch (e: any) { toast.error(e?.message ?? 'Failed to approve'); }
+        }
+        break;
+      case 'reject':
+        if (co) {
+          const note = window.prompt('Rejection reason:');
+          if (note) {
+            try {
+              await rejectCO.mutateAsync({ coId: co.id, note });
+              toast.success('Rejected');
+            } catch (e: any) { toast.error(e?.message ?? 'Failed to reject'); }
+          }
+        }
+        break;
       default: window.scrollTo({ top: 0, behavior: 'smooth' }); break;
     }
   }
