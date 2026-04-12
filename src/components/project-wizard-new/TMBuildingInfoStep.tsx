@@ -6,7 +6,9 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Building2 } from 'lucide-react';
-import { PROJECT_TYPES, SIDING_MATERIALS } from '@/types/projectWizard';
+import { SIDING_MATERIALS } from '@/types/projectWizard';
+import { BUILDING_TYPES, type BuildingType } from '@/hooks/useSetupWizardV2';
+import { cn } from '@/lib/utils';
 
 export interface TMBuildingInfo {
   materialResponsibility: 'GC' | 'TC' | 'SPLIT';
@@ -88,16 +90,26 @@ export function TMBuildingInfoStep({ data, onChange }: Props) {
           {/* Building type */}
           <div className="space-y-1.5">
             <Label>Building Type *</Label>
-            <Select value={data.buildingType} onValueChange={(v) => onChange({ buildingType: v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select building type" />
-              </SelectTrigger>
-              <SelectContent>
-                {PROJECT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+              {BUILDING_TYPES.map((bt) => (
+                <button
+                  key={bt.slug}
+                  type="button"
+                  onClick={() => onChange({ buildingType: bt.slug })}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all text-center',
+                    'hover:border-primary/60 hover:bg-primary/5',
+                    data.buildingType === bt.slug
+                      ? 'border-primary bg-primary/10 shadow-sm'
+                      : 'border-border bg-card',
+                  )}
+                >
+                  <span className="text-2xl">{bt.icon}</span>
+                  <span className="font-heading text-xs font-bold leading-tight">{bt.label}</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">{bt.description}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
