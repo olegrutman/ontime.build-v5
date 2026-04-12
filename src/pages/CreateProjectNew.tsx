@@ -179,7 +179,7 @@ export default function CreateProjectNew() {
         await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
       } else {
         // Save T&M building info to project_scope_details
-        await supabase.from('project_scope_details').insert({
+        const { error: scopeErr } = await supabase.from('project_scope_details').insert({
           project_id: pid,
           home_type: tmScope.buildingType,
           floors: tmScope.stories,
@@ -189,9 +189,13 @@ export default function CreateProjectNew() {
           basement_finish: tmScope.foundationType === 'Basement' ? (tmScope.basementFinish || null) : null,
           garage_type: tmScope.garageType,
           siding_included: tmScope.sidingIncluded,
-          siding_materials: tmScope.sidingIncluded ? tmScope.sidingMaterials : null,
+          siding_materials: tmScope.sidingIncluded && tmScope.sidingMaterials?.length ? tmScope.sidingMaterials : null,
           total_sqft: tmScope.totalSqft || null,
         });
+        if (scopeErr) {
+          console.error('Failed to save scope details:', scopeErr);
+          toast.warning('Project created but building info could not be saved. You can update it later.');
+        }
       }
 
       // Save team members
