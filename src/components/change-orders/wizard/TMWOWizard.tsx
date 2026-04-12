@@ -17,7 +17,9 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { VisualLocationPicker } from '../VisualLocationPicker';
-import type { COCreatedByRole } from '@/types/changeOrder';
+import { StepCatalog } from './StepCatalog';
+import type { COCreatedByRole, ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
+import type { SelectedScopeItem, COWizardData } from './COWizard';
 
 // ── Work Type definitions ─────────────────────────────
 type WorkTypeKey = 'demolition' | 'framing' | 'reframing' | 'sheathing' | 'blocking' | 'backout' | 'exterior' | 'stairs' | 'other';
@@ -134,7 +136,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
   function canAdvance(): boolean {
     const s = STEPS[step];
     if (s.key === 'work_type') return !!data.workType;
-    if (s.key === 'scope') return data.subtypes.length > 0 || !!data.customSubtype;
+    if (s.key === 'scope') return data.selectedItems.length > 0;
     if (s.key === 'location') return !!data.locationTag;
     if (s.key === 'resources') return true;
     if (s.key === 'review') return !!data.aiDescription.trim();
@@ -153,9 +155,31 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
   }
   function handleBack() { if (step > 0) setStep(s => s - 1); }
 
+  // Adapter object for StepCatalog
+  const catalogData: COWizardData = useMemo(() => ({
+    locationTag: data.locationTag || 'TBD',
+    reason: (data.workType as COReasonCode) ?? 'other',
+    selectedItems: data.selectedItems,
+    pricingType: 'tm' as any,
+    materialsNeeded: data.materialsNeeded,
+    materialsResponsible: data.materialsResponsible,
+    equipmentNeeded: data.equipmentNeeded,
+    equipmentResponsible: data.equipmentResponsible,
+    shareDraftNow: data.shareDraftNow,
+    fcInputNeeded: data.fcInputNeeded,
+    fcOrgId: data.fcOrgId,
+  }), [data]);
+
+  function handleCatalogChange(patch: Partial<COWizardData>) {
+    if (patch.selectedItems !== undefined) {
+      update({ selectedItems: patch.selectedItems });
+    }
+  }
+
   async function generateAIDescription() {
     setGeneratingAI(true);
     try {
+      const itemNames = data.selectedItems.map(i => i.item_name).join(', ');
       const { data: resp, error } = await supabase.functions.invoke('generate-work-order-description', {
         body: {
           work_type: data.workType,
@@ -165,8 +189,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
           requires_equipment: data.equipmentNeeded,
           material_responsibility: data.materialsResponsible,
           equipment_responsibility: data.equipmentResponsible,
-          structural_element: data.subtypes.join(', '),
-          scope_size: data.quantity || undefined,
+          structural_element: itemNames,
           urgency: data.urgency,
           existing_conditions: data.scopeNotes || undefined,
         },
@@ -177,11 +200,9 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
       }
     } catch (err) {
       console.error('AI generation failed:', err);
-      // Build a fallback description
       const parts = [
         selectedWorkType?.label ?? data.workType,
-        data.subtypes.length > 0 ? `— ${data.subtypes.join(', ')}` : '',
-        data.quantity ? `(${data.quantity})` : '',
+        data.selectedItems.length > 0 ? `— ${data.selectedItems.map(i => i.item_name).join(', ')}` : '',
         data.locationTag ? `at ${data.locationTag}` : '',
         data.scopeNotes ? `\n\n${data.scopeNotes}` : '',
       ].filter(Boolean);
@@ -236,24 +257,26 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
         });
       if (insertError) throw insertError;
 
-      // Insert a line item for the work type
-      const lineItemName = [
-        selectedWorkType?.label,
-        data.subtypes.length > 0 ? `— ${data.subtypes.join(', ')}` : '',
-      ].filter(Boolean).join(' ');
-
-      await supabase.from('co_line_items').insert({
-        co_id: preGeneratedId,
-        org_id: orgId,
-        created_by_role: role,
-        item_name: lineItemName,
-        unit: data.quantity ? 'ea' : 'LS',
-        qty: data.quantity ? parseFloat(data.quantity) : 1,
-        sort_order: 0,
-        location_tag: data.locationTag || null,
-        reason: data.workType as string,
-        description: data.aiDescription,
-      });
+      // Insert line items from selected scope catalog items
+      if (data.selectedItems.length > 0) {
+        const lineRows = data.selectedItems.map((item, idx) => ({
+          co_id: preGeneratedId,
+          org_id: orgId,
+          created_by_role: role,
+          item_name: item.item_name,
+          unit: item.unit,
+          qty: 1,
+          sort_order: idx,
+          location_tag: data.locationTag || null,
+          reason: data.workType as string,
+          catalog_item_id: item.id,
+          division: item.division,
+          category_name: item.category_name,
+          description: data.aiDescription,
+        }));
+        const { error: lineError } = await supabase.from('co_line_items').insert(lineRows);
+        if (lineError) throw lineError;
+      }
 
       // FC collaborator
       if (data.fcInputNeeded && data.fcOrgId) {
@@ -354,7 +377,9 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
             )}
 
             {currentStep.key === 'work_type' && <StepWorkType data={data} onChange={update} />}
-            {currentStep.key === 'scope' && <StepScopeDetails data={data} onChange={update} selectedWorkType={selectedWorkType} />}
+            {currentStep.key === 'scope' && (
+              <StepCatalog data={catalogData} onChange={handleCatalogChange} projectId={projectId} />
+            )}
             {currentStep.key === 'location' && (
               <StepLocation projectId={projectId} data={data} onChange={update} savedLocation={savedLocation} userId={user?.id} />
             )}
@@ -426,7 +451,7 @@ function StepWorkType({ data, onChange }: { data: TMWOData; onChange: (p: Partia
           <button
             key={wt.key}
             type="button"
-            onClick={() => onChange({ workType: wt.key, subtypes: [], customSubtype: '' })}
+            onClick={() => onChange({ workType: wt.key, selectedItems: [] })}
             className={cn(
               'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center min-h-[90px]',
               data.workType === wt.key ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
@@ -441,77 +466,7 @@ function StepWorkType({ data, onChange }: { data: TMWOData; onChange: (p: Partia
   );
 }
 
-// ── Step 2: Scope Details ────────────────────────────
-function StepScopeDetails({
-  data, onChange, selectedWorkType,
-}: {
-  data: TMWOData; onChange: (p: Partial<TMWOData>) => void; selectedWorkType?: WorkTypeDef;
-}) {
-  function toggleSubtype(st: string) {
-    const current = data.subtypes;
-    onChange({
-      subtypes: current.includes(st) ? current.filter(s => s !== st) : [...current, st],
-    });
-  }
-
-  return (
-    <div className="space-y-5">
-      {selectedWorkType && selectedWorkType.subtypes.length > 0 && (
-        <div className="space-y-3">
-          <Label>What specifically? <span className="text-muted-foreground font-normal">(select all that apply)</span></Label>
-          <div className="flex flex-wrap gap-2">
-            {selectedWorkType.subtypes.map(st => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => toggleSubtype(st)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
-                  data.subtypes.includes(st)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-card text-muted-foreground hover:border-primary/40',
-                )}
-              >
-                {data.subtypes.includes(st) && <Check className="h-3 w-3" />}
-                {st}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(selectedWorkType?.key === 'other' || !selectedWorkType) && (
-        <div className="space-y-2">
-          <Label>Describe the work type</Label>
-          <Input
-            value={data.customSubtype}
-            onChange={e => onChange({ customSubtype: e.target.value })}
-            placeholder="e.g. Custom millwork framing"
-          />
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <Label>Size / Quantity <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <Input
-          value={data.quantity}
-          onChange={e => onChange({ quantity: e.target.value })}
-          placeholder="e.g. 12 LF, 3 openings, 200 SF"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Scope notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <Textarea
-          value={data.scopeNotes}
-          onChange={e => onChange({ scopeNotes: e.target.value })}
-          placeholder="Describe what needs to be done in plain language…"
-          rows={3}
-        />
-      </div>
-    </div>
-  );
-}
+// Step 2 now uses StepCatalog — no local component needed
 
 // ── Step 3: Location ─────────────────────────────────
 function StepLocation({
@@ -733,8 +688,7 @@ function StepReview({
       <div className="rounded-lg border border-border bg-card p-4 space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Summary</p>
         <SummaryRow label="Work Type" value={selectedWorkType?.label ?? data.workType ?? '—'} />
-        {data.subtypes.length > 0 && <SummaryRow label="Details" value={data.subtypes.join(', ')} />}
-        {data.customSubtype && <SummaryRow label="Details" value={data.customSubtype} />}
+        {data.selectedItems.length > 0 && <SummaryRow label="Scope Items" value={data.selectedItems.map(i => i.item_name).join(', ')} />}
         {data.quantity && <SummaryRow label="Quantity" value={data.quantity} />}
         {data.locationTag && <SummaryRow label="Location" value={data.locationTag} />}
         {data.materialsNeeded && <SummaryRow label="Materials" value={`${data.materialsResponsible} supplies`} />}
