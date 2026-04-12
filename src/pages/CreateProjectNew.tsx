@@ -60,6 +60,7 @@ export default function CreateProjectNew() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [saving, setSaving] = useState(false);
   const [contractMode, setContractMode] = useState<ContractMode>('fixed');
+  const [tmScope, setTmScope] = useState<TMBuildingInfo>(initialTMBuildingInfo);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
@@ -89,7 +90,8 @@ export default function CreateProjectNew() {
     const stepId = activeSteps[currentStep]?.id;
     switch (stepId) {
       case 'basics': return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
-      case 'mode': return true; // always valid, a mode is always selected
+      case 'mode': return true;
+      case 'building_info': return !!(tmScope.buildingType && tmScope.stories >= 1 && tmScope.foundationType);
       case 'contracts': {
         const hasGcContract = typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
         if (isTC) {
