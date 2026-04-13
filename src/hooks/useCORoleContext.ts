@@ -57,8 +57,9 @@ export function useCORoleContext(
     const isActiveStatus = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co?.status ?? '');
     const isRunningPricing = co?.pricing_type === 'tm' || co?.pricing_type === 'nte';
     const baseCanEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isGC || isTC || isFC);
-    // Bug 15: FC must be an active collaborator before they can edit
-    const canEdit = baseCanEdit && (!isFC || isCollaboratorOrg);
+    // Bug 15: FC must be an active collaborator OR the CO creator before they can edit
+    const isFCCreator = isFC && co?.org_id === myOrgId;
+    const canEdit = baseCanEdit && (!isFC || isCollaboratorOrg || isFCCreator);
     const nteBlocked = co?.pricing_type === 'nte' && !!co?.nte_cap && (financials.nteUsedPercent ?? 0) >= 100;
 
     const VALID = ['fixed', 'tm', 'nte'];
