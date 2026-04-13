@@ -60,7 +60,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
   const actionableCOs = changeOrders.filter(co => {
     if (co.collaboratorOrgId !== orgId) return false;
     if (co.collaboratorStatus !== 'active') return false;
-    return ['closed_for_pricing', 'work_in_progress', 'shared'].includes(co.status);
+    return ['draft', 'closed_for_pricing', 'work_in_progress', 'shared'].includes(co.status);
   });
 
   // COs created by the FC org (also catch historical misassigned ones)
