@@ -123,13 +123,14 @@ export function useChangeOrders(projectId: string | null) {
   for (const co of changeOrders) {
     const isMine = co.org_id === orgId;
     const isCollaborator = co.collaboratorOrgId === orgId && (co.collaboratorStatus === 'active' || co.collaboratorStatus === 'completed');
+    const isDownstream = (co as any)._isDownstreamOrg === true;
 
     if (isMine) {
       const bucket = co.status as COStatus;
       if (bucket in grouped.mine) {
         grouped.mine[bucket as keyof typeof grouped.mine].push(co);
       }
-    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator) {
+    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator || isDownstream) {
       grouped.sharedWithMe.push(co);
     }
   }
