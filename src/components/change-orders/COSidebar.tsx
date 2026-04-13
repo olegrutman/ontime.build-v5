@@ -226,8 +226,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
         </div>
       )}
 
-      {/* FC Pricing Toggle */}
-      {isTC && collaborators.length > 0 && (
+      {/* FC Pricing Toggle — show when TC has collaborators OR viewing FC-created CO */}
+      {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
         <FCPricingToggleCard
           co={co} financials={financials} myOrgId={myOrgId}
           onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName="GC"
