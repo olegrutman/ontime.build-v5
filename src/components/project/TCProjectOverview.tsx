@@ -763,7 +763,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
               )}
             </div>
 
-            <button
+            {materialResp && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: `1px solid ${C.border}`, marginBottom: 8 }}>
+                <Package size={13} style={{ color: C.muted, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.72rem', color: C.muted }}>Materials:</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: C.ink }}>
+                  {materialResp === 'GC' ? 'General Contractor' : materialResp === 'TC' ? 'Trade Contractor' : materialResp}
+                </span>
+              </div>
+            )}
               onClick={() => setAddDialogOpen(true)}
               style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...fontLabel }}
             >
