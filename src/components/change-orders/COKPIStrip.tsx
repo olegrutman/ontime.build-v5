@@ -55,10 +55,10 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       },
       {
         label: 'GC Budget',
-        value: props.co.gc_budget ? fmtCurrency(props.co.gc_budget) : '—',
+        value: (props.co as any).gc_budget ? fmtCurrency((props.co as any).gc_budget) : '—',
         color: '#6366F1',
-        badge: props.co.gc_budget && totalToGC > 0
-          ? { text: `${((totalToGC / props.co.gc_budget) * 100).toFixed(0)}%`, variant: totalToGC <= props.co.gc_budget ? 'healthy' as const : 'watch' as const }
+        badge: (props.co as any).gc_budget && totalToGC > 0
+          ? { text: `${((totalToGC / (props.co as any).gc_budget) * 100).toFixed(0)}%`, variant: totalToGC <= (props.co as any).gc_budget ? 'healthy' as const : 'watch' as const }
           : undefined,
       },
     ];
