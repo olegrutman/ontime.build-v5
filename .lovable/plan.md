@@ -1,35 +1,43 @@
 
 
-# Fix: FC-Created COs Missing from FC and TC Pages
+# Fix CO/WO Numbering to Use Invoice-Style Convention
 
 ## Problem
+CO numbers are currently generated as a simple global count (`CO-001`, `CO-002`) across the entire project. Different roles see different subsets of COs, causing duplicate number collisions. The numbering should follow the invoice pattern: identify the creator org initials and their upstream org initials, then sequence within that pair.
 
-Two bugs with FC-created Change Orders:
+## New Format
+```text
+CO-{ProjectCode}-{CreatorInitials}-{UpstreamInitials}-{Sequence}
+WO-{ProjectCode}-{CreatorInitials}-{UpstreamInitials}-{Sequence}
 
-1. **FC can't see their own COs** — The FC home screen (`FCHomeScreen.tsx`) only displays COs where the FC is an invited collaborator. It completely ignores COs where `org_id` matches the FC's organization (i.e., COs the FC created themselves).
+Examples:
+  CO-MAI-TC-GC-0001   (TC_Test created, assigned to GC_Test)
+  CO-MAI-FC-TC-0001   (FC_Test created, assigned to TC_Test)
+  WO-MAI-TC-GC-0001   (WO by TC, upstream is GC)
+```
 
-2. **TC still can't see FC-created COs** — The existing CO in the database (`d50f80af`) was created before the wizard fix and has `assigned_to_org_id` set to the GC org instead of the TC. New COs created after the wizard fix should route correctly, but the visibility logic in `useChangeOrders.ts` also needs a fallback for the TC to see COs from their downstream FC.
+## Changes
 
-## Fix
+### 1. Create shared helper: `src/lib/generateCONumber.ts`
+- Reuse the same `getProjectCode` / `getOrgInitials` logic from invoice numbering
+- Accept `projectId`, `orgId` (creator), `assignedToOrgId` (upstream), `isTM` flag
+- Query project name for 3-letter code
+- Query org names for initials
+- Query existing `co_number` values matching the prefix pattern to find max sequence
+- Return next number like `CO-MAI-FC-TC-0001`
 
-### 1. FCHomeScreen — Show FC's own COs
-**File: `src/components/change-orders/FCHomeScreen.tsx`**
+### 2. Update `COWizard.tsx` (lines 229-234)
+- Replace the simple count-based `coNumber` generation with a call to the new `generateCONumber` helper
+- Pass `orgId`, `resolvedAssignedToOrgId`, `projectId`, `isTM: false`
 
-Add a second list section below "Open COs requiring your input" that shows COs where `co.org_id === orgId` (COs the FC created). These should be displayed as a simple card list with status, title, and click-through navigation, similar to how `COListPage` renders cards.
+### 3. Update `TMWOWizard.tsx` (lines 222-227)
+- Same replacement, using `isTM: true` so it produces `WO-` prefix
 
-### 2. useChangeOrders — TC sees downstream FC COs
-**File: `src/hooks/useChangeOrders.ts`**
+## Technical Detail
+The helper queries:
+1. `projects.name` for the 3-letter project code
+2. `organizations.name` for creator and upstream org initials  
+3. `change_orders.co_number` filtered by project to find max existing sequence matching the prefix
 
-In the visibility grouping loop (line ~120), add a condition: if the current org is a TC and the CO's `org_id` belongs to a downstream FC on this project, treat it as a "sharedWithMe" CO. This requires checking against the project contracts data.
-
-A simpler approach: fetch the project's contract chain in the query function. If there's a contract where `to_org_id === currentOrgId` and `from_org_id === co.org_id`, the current org is upstream of the CO creator and should see it.
-
-### 3. Fix existing bad data
-**Migration** — Update the existing FC-created CO (`d50f80af`) to set `assigned_to_org_id` to the TC org (`ab07e031`) instead of the GC org. This is a one-time data fix.
-
-Alternatively, skip the migration and rely on the visibility logic fix in step 2, which will handle both old and new COs.
-
-## Files Changed
-- `src/components/change-orders/FCHomeScreen.tsx` — add "My Change Orders" section showing FC-created COs
-- `src/hooks/useChangeOrders.ts` — add downstream-org visibility check so TC sees FC-created COs
+This mirrors exactly how `CreateInvoiceFromSOV.tsx` generates `INV-MAI-TC-GC-0001`.
 
