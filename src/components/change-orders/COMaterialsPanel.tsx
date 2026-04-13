@@ -407,6 +407,11 @@ export function COMaterialsPanel({
       const { error } = await supabase.from('co_material_items').insert(rows);
       if (error) throw error;
 
+      // Auto-enable materials_needed flag on first add
+      if (materials.length === 0) {
+        await supabase.from('change_orders').update({ materials_needed: true }).eq('id', coId);
+      }
+
       setDraftRows([]);
       toast.success(`${valid.length} material${valid.length > 1 ? 's' : ''} added`);
       onRefresh();
@@ -446,6 +451,12 @@ export function COMaterialsPanel({
       });
 
       if (error) throw error;
+
+      // Auto-enable materials_needed flag on first add
+      if (materials.length === 0) {
+        await supabase.from('change_orders').update({ materials_needed: true }).eq('id', coId);
+      }
+
       toast.success('Material added');
       onRefresh();
       setPickerOpen(false);
