@@ -993,10 +993,14 @@ export const WIZARD_STEPS = [
    MAIN HOOK
    ══════════════════════════════════════════════════════════════════════ */
 
-export function useSetupWizardV2(projectId?: string) {
+export function useSetupWizardV2(
+  projectId?: string,
+  initialAnswers?: Answers,
+  initialBuildingType?: BuildingType | null,
+) {
   const qc = useQueryClient();
-  const [answers, setAnswers] = useState<Answers>({});
-  const [buildingType, setBuildingType] = useState<BuildingType | null>(null);
+  const [answers, setAnswers] = useState<Answers>(initialAnswers ?? {});
+  const [buildingType, setBuildingType] = useState<BuildingType | null>(initialBuildingType ?? null);
 
   const visibleQuestions = useMemo(
     () => buildingType ? getVisibleQuestions(buildingType, answers) : [],
