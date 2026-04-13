@@ -349,12 +349,12 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
               {/* Materials */}
               {(co.materials_needed || materials.length > 0 || (isTC && canEdit)) && (
                 <div ref={materialsRef}>
-                  <COMaterialsPanel
+                <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
                     coTitle={displayTitle} materials={materials}
                     isTC={isTC} isGC={isGC} isFC={isFC}
                     materialsOnSite={co.materials_on_site}
-                    materialsResponsible={co.materials_responsible}
+                    materialsResponsible={responsibility.materialResponsible}
                     canEdit={canEdit} onRefresh={refreshDetail}
                   />
                 </div>
@@ -365,7 +365,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
-                  equipmentResponsible={co.equipment_responsible}
+                  equipmentResponsible={responsibility.equipmentResponsible}
                   canEdit={canEdit} onRefresh={refreshDetail}
                 />
               )}
