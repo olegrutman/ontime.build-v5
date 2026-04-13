@@ -1,56 +1,47 @@
 
 
-# Clean Up Scope & Labor UX — Plain English Explanation
+# Persist Project Wizard Draft in sessionStorage
 
-## What's wrong today
+## Problem
+All wizard state is held in React `useState`. If the user navigates away (e.g., clicks a notification, checks another page), everything they entered is gone.
 
-1. **Dollar amounts show three decimals** — numbers like "$5,604.988" appear in the totals strip and progress bar because the formatting doesn't cap decimals. Should always show whole dollars or two decimals max.
+## Solution
+Save the wizard draft to `sessionStorage` on every change, and restore it when the component mounts. Session storage is ideal here — it persists across page navigations but clears when the browser tab is closed (so stale drafts don't linger).
 
-2. **GC sees confusing labels** — The KPI cards show "Field Crew Cost" and "My Billable (Labor)" to the GC. The GC doesn't know or care about the TC's field crew. From the GC's perspective, they just need to know: "What is the TC charging me?" and "What's the total?"
+## What gets saved
+All wizard state under a single key `project_wizard_draft`:
+- `basics` (name, address, city, state, zip, startDate)
+- `team` (array of team members)
+- `currentStep` (which step they're on)
+- `contractMode` (fixed vs T&M)
+- `tmScope` (T&M building info)
+- `wizardAnswers` (scope answers from the setup wizard hook)
+- `wizardBuildingType` (selected building type)
 
-3. **Scope & Labor totals strip says "Billable to GC" to everyone** — When the GC is looking at this, it should say "Labor Total" or "Submitted Cost", not "Billable to GC" (they ARE the GC). The label only makes sense for TC/FC.
+## How it works
+1. On mount, check `sessionStorage` for `project_wizard_draft`. If found, restore all fields.
+2. On every state change, debounce-write the combined state to `sessionStorage`.
+3. On successful project creation, clear the stored draft.
+4. The `useSetupWizardV2` hook needs a small addition: accept optional initial values for `answers` and `buildingType` so the page can seed them from the restored draft.
 
-## What we'll fix
+## Changes
 
-### 1. Fix all decimal formatting (3 files)
+### 1. `src/hooks/useSetupWizardV2.ts`
+Add optional `initialAnswers` and `initialBuildingType` parameters to the hook so the wizard page can pass in restored draft values:
+```ts
+export function useSetupWizardV2(projectId?: string, initialAnswers?: Answers, initialBuildingType?: BuildingType | null)
+```
+Use these as `useState` defaults instead of `{}` and `null`.
 
-Add `maximumFractionDigits: 2` everywhere dollars are displayed. Specifically:
-- **CODetailLayout.tsx** — the totals strip and progress bar summary (lines 271, 277, 281, 293)
-- **COLineItemRow.tsx** — the `fmt()` function already does 2 decimals, so it's fine
-- **COKPIStrip.tsx** — already shows whole dollars, fine
+### 2. `src/pages/CreateProjectNew.tsx`
+- Add a `DRAFT_KEY = 'project_wizard_draft'` constant.
+- On mount: read from `sessionStorage`, parse, and use values as initial state for `useState` calls and pass to `useSetupWizardV2`.
+- Add a `useEffect` that writes all state to `sessionStorage` whenever any value changes (with a simple debounce via `setTimeout`).
+- After successful `createProject()`, call `sessionStorage.removeItem(DRAFT_KEY)`.
+- Expose wizard `answers` and `buildingType` to the effect via the hook's returned values.
 
-### 2. Role-aware labels in KPI cards
+### 3. No database changes needed
 
-**For GC**, change the 4 KPI tiles to:
-- "TC Labor" (what the TC is charging) → instead of "Field Crew Cost"  
-- "TC Submitted" (the TC's billable amount) → instead of "My Billable (Labor)"
-- "Materials + Equipment" (same)
-- "Total Cost" → instead of "Total to GC"
-
-**For TC**, keep as-is but rename:
-- "Field Crew Cost" → "FC Cost" (shorter, clearer)
-- "My Billable (Labor)" → "My Billable" (drop the parenthetical)
-
-**For FC**, no changes needed — already makes sense.
-
-### 3. Role-aware labels in Scope & Labor totals strip
-
-- **GC sees**: "Labor Total" (single column, no internal cost or margin — those are private)
-- **TC sees**: "Billable to GC" | "Internal Cost" | "Gross Margin" (current, correct)
-- **FC sees**: "Billed to TC" | "Internal Cost" | "Gross Margin"
-
-### 4. GC should NOT see FC cost separately
-
-The GC's relationship is with the TC. The FC is the TC's subcontractor — the GC shouldn't see a separate "Field Crew Cost" card. Replace it with something meaningful to the GC like the TC's submitted labor total.
-
-## Files changed
-
-- **`src/components/change-orders/COKPIStrip.tsx`** — role-aware tile labels (~10 lines)
-- **`src/components/change-orders/CODetailLayout.tsx`** — fix decimal formatting, role-aware totals strip labels (~8 lines)
-
-## What stays the same
-
-- COLineItemRow — formatting already correct
-- Sidebar financials — already role-aware
-- All database/RLS — no changes
+## Plain English
+When you start filling out the wizard, your progress is automatically saved in your browser. If you leave the page and come back, everything you typed — project name, address, team members, scope answers — will still be there. Once you finish creating the project, the draft is cleared. If you close the tab entirely, the draft is also cleared (it doesn't follow you to other tabs or devices).
 
