@@ -271,6 +271,7 @@ export default function CreateProjectNew() {
         }
       }
 
+      sessionStorage.removeItem(DRAFT_KEY);
       toast({ title: 'Project created!', description: isTM ? 'Your T&M project is ready. Add Work Orders to get started.' : 'Invitations will be sent to team members.' });
       navigate(`/project/${pid}`);
     } catch (error: any) {
