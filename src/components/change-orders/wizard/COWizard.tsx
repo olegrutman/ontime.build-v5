@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, ChevronLeft, ChevronRight, Loader2, Search } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Search, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,7 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
 
 export interface COWizardData {
   reason: COReasonCode | null;
+  workType: string | null;
   locationTag: string;
   selectedItems: SelectedScopeItem[];
   pricingType: COPricingType;
@@ -45,10 +47,12 @@ export interface COWizardData {
   equipmentResponsible: 'GC' | 'TC' | null;
   shareDraftNow: boolean;
   quickHours: number | null;
+  aiDescription: string;
 }
 
 const INITIAL_DATA: COWizardData = {
   reason: null,
+  workType: null,
   locationTag: '',
   selectedItems: [],
   pricingType: 'fixed',
@@ -64,6 +68,7 @@ const INITIAL_DATA: COWizardData = {
   equipmentResponsible: null,
   shareDraftNow: false,
   quickHours: null,
+  aiDescription: '',
 };
 
 const REASON_CARDS: { reason: COReasonCode; label: string; description: string; icon: string }[] = [
@@ -76,6 +81,25 @@ const REASON_CARDS: { reason: COReasonCode; label: string; description: string; 
   { reason: 'other', label: 'Other', description: 'Something else', icon: '📝' },
 ];
 
+// Work type definitions (matching TMWOWizard pattern)
+interface WorkTypeDef {
+  key: string;
+  label: string;
+  icon: string;
+}
+
+const CO_WORK_TYPES: WorkTypeDef[] = [
+  { key: 'framing', label: 'Framing', icon: '🏗️' },
+  { key: 'electrical', label: 'Electrical', icon: '⚡' },
+  { key: 'plumbing', label: 'Plumbing', icon: '🔧' },
+  { key: 'hvac', label: 'HVAC', icon: '❄️' },
+  { key: 'exterior', label: 'Exterior', icon: '🏠' },
+  { key: 'finish', label: 'Finish Work', icon: '🎨' },
+  { key: 'demolition', label: 'Demolition', icon: '🔨' },
+  { key: 'structural', label: 'Structural', icon: '🧱' },
+  { key: 'other', label: 'Other', icon: '📝' },
+];
+
 const PRICING_OPTIONS: { type: COPricingType; title: string; description: string }[] = [
   { type: 'fixed', title: 'Fixed price', description: 'Lump sum or itemized price, approved before work.' },
   { type: 'tm', title: 'Time & material', description: 'Hours and costs logged as work happens.' },
@@ -83,11 +107,11 @@ const PRICING_OPTIONS: { type: COPricingType; title: string; description: string
 ];
 
 const STEPS = [
-  { key: 'why', label: 'Why', description: 'What triggered this change?' },
+  { key: 'why', label: 'Why', description: 'Reason & work type' },
   { key: 'where', label: 'Where', description: 'Location of the work' },
   { key: 'scope', label: 'Scope', description: 'Select work items' },
   { key: 'how', label: 'How', description: 'Pricing & configuration' },
-  { key: 'team', label: 'Team', description: 'Confirm & create' },
+  { key: 'review', label: 'Review', description: 'Confirm & create' },
 ] as const;
 
 interface COWizardProps {
@@ -108,12 +132,22 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
     reason: preSelectedReason ?? null,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
   const { shareCO } = useChangeOrders(projectId);
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' : currentRole === 'TC_PM' ? 'TC' : 'FC';
   const orgName = (userOrgRoles?.[0] as any)?.organization?.name ?? role;
+
+  // Project name for AI
+  const { data: project } = useQuery({
+    queryKey: ['project-name-co', projectId],
+    queryFn: async () => {
+      const { data: p } = await supabase.from('projects').select('name').eq('id', projectId).single();
+      return p;
+    },
+  });
 
   function update(patch: Partial<COWizardData>) {
     setData(prev => ({ ...prev, ...patch }));
@@ -125,6 +159,8 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
     catch { return null; }
   })();
 
+  const selectedWorkType = CO_WORK_TYPES.find(w => w.key === data.workType);
+
   function canAdvance(): boolean {
     const s = STEPS[step];
     if (s.key === 'why') return !!data.reason;
@@ -135,11 +171,55 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
       return true;
     }
-    if (s.key === 'team') return data.selectedItems.length > 0;
+    if (s.key === 'review') return data.selectedItems.length > 0;
     return true;
   }
 
-  function handleNext() { if (step < STEPS.length - 1) setStep(s => s + 1); }
+  async function generateAIDescription() {
+    setGeneratingAI(true);
+    try {
+      const itemNames = data.selectedItems.map(i => i.item_name).join(', ');
+      const { data: resp, error } = await supabase.functions.invoke('generate-work-order-description', {
+        body: {
+          work_type: data.workType || data.reason,
+          location: { inside_outside: 'inside' },
+          project_name: project?.name ?? 'Project',
+          requires_materials: data.materialsNeeded,
+          requires_equipment: data.equipmentNeeded,
+          material_responsibility: data.materialsResponsible,
+          equipment_responsibility: data.equipmentResponsible,
+          structural_element: itemNames,
+          existing_conditions: '',
+        },
+      });
+      if (error) throw error;
+      if (resp?.description) {
+        update({ aiDescription: resp.description });
+      }
+    } catch (err) {
+      console.error('AI generation failed:', err);
+      // Fallback: manual description
+      const parts = [
+        selectedWorkType?.label ?? data.reason,
+        data.selectedItems.length > 0 ? `— ${data.selectedItems.map(i => i.item_name).join(', ')}` : '',
+        data.locationTag ? `at ${data.locationTag}` : '',
+      ].filter(Boolean);
+      update({ aiDescription: parts.join(' ') });
+    } finally {
+      setGeneratingAI(false);
+    }
+  }
+
+  function handleNext() {
+    if (step < STEPS.length - 1) {
+      const nextStep = step + 1;
+      setStep(nextStep);
+      // Auto-generate AI description when entering review step
+      if (STEPS[nextStep].key === 'review' && !data.aiDescription) {
+        generateAIDescription();
+      }
+    }
+  }
   function handleBack() { if (step > 0) setStep(s => s - 1); }
 
   async function handleSubmit() {
@@ -152,7 +232,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         .eq('project_id', projectId);
       const seq = (count ?? 0) + 1;
       const coNumber = `CO-${String(seq).padStart(3, '0')}`;
-      const title = `${coNumber} · ${format(new Date(), 'MMM d, yyyy')}`;
+      const title = `${coNumber} · ${selectedWorkType?.label ? selectedWorkType.label + ' · ' : ''}${format(new Date(), 'MMM d, yyyy')}`;
       const preGeneratedId = crypto.randomUUID();
 
       // Auto-resolve assigned org for TC/FC
@@ -177,6 +257,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
           gc_budget: data.gcBudget ? parseFloat(data.gcBudget) : null,
           reason: data.reason,
+          reason_note: data.aiDescription || null,
           location_tag: data.locationTag || null,
           assigned_to_org_id: resolvedAssignedToOrgId,
           fc_input_needed: data.fcInputNeeded,
@@ -222,9 +303,6 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           status: 'invited',
         });
       }
-
-      // GC→TC assignment is tracked via assigned_to_org_id on the CO itself.
-      // No collaborator row needed — collaborator rows are for FC input requests.
 
       // Activity log
       await supabase.from('co_activity').insert({
@@ -328,7 +406,17 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
             )}
             {currentStep.key === 'scope' && <StepCatalog data={data} onChange={update} projectId={projectId} />}
             {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
-            {currentStep.key === 'team' && <StepTeam data={data} projectId={projectId} role={role} isTM={isTM} />}
+            {currentStep.key === 'review' && (
+              <StepReview
+                data={data}
+                onChange={update}
+                role={role}
+                isTM={isTM}
+                projectId={projectId}
+                generatingAI={generatingAI}
+                onRegenerate={generateAIDescription}
+              />
+            )}
           </div>
 
           {/* Footer */}
@@ -384,28 +472,57 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   );
 }
 
-// ── Step 1: Why ──────────────────────────────────────
+// ── Step 1: Why + Work Type ──────────────────────────
 function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">What triggered this {isTM ? 'work order' : 'change order'}?</p>
-      <div className="grid grid-cols-2 gap-3">
-        {REASON_CARDS.map(card => (
-          <button
-            key={card.reason}
-            type="button"
-            onClick={() => onChange({ reason: card.reason })}
-            className={cn(
-              'flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all text-left min-h-[80px]',
-              data.reason === card.reason ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
-            )}
-          >
-            <span className="text-lg">{card.icon}</span>
-            <span className="text-sm font-semibold text-foreground">{card.label}</span>
-            <span className="text-[11px] text-muted-foreground leading-tight">{card.description}</span>
-          </button>
-        ))}
+    <div className="space-y-6">
+      {/* Reason */}
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">What triggered this {isTM ? 'work order' : 'change order'}?</p>
+        <div className="grid grid-cols-2 gap-3">
+          {REASON_CARDS.map(card => (
+            <button
+              key={card.reason}
+              type="button"
+              onClick={() => onChange({ reason: card.reason })}
+              className={cn(
+                'flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all text-left min-h-[80px]',
+                data.reason === card.reason ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
+              )}
+            >
+              <span className="text-lg">{card.icon}</span>
+              <span className="text-sm font-semibold text-foreground">{card.label}</span>
+              <span className="text-[11px] text-muted-foreground leading-tight">{card.description}</span>
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Work Type sub-step — shown after reason is selected */}
+      {data.reason && (
+        <div className="space-y-3 pt-4 border-t border-border">
+          <div>
+            <p className="text-sm font-medium text-foreground">What area of work? <span className="text-muted-foreground font-normal">(optional)</span></p>
+            <p className="text-xs text-muted-foreground">Helps auto-filter the scope catalog in the next step</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {CO_WORK_TYPES.map(wt => (
+              <button
+                key={wt.key}
+                type="button"
+                onClick={() => onChange({ workType: data.workType === wt.key ? null : wt.key })}
+                className={cn(
+                  'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
+                  data.workType === wt.key ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
+                )}
+              >
+                <span className="text-xl">{wt.icon}</span>
+                <span className="text-xs font-semibold text-foreground">{wt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -451,6 +568,8 @@ function StepWhere({
 }
 
 // ── Step 3: Scope ────────────────────────────────────
+// Uses StepCatalog directly
+
 // ── Step 4: How ──────────────────────────────────────
 function StepHow({
   data, onChange, role, projectId,
@@ -596,8 +715,18 @@ function StepHow({
   );
 }
 
-// ── Step 4: Team ─────────────────────────────────────
-function StepTeam({ data, projectId, role, isTM = false }: { data: COWizardData; projectId: string; role: COCreatedByRole; isTM?: boolean }) {
+// ── Step 5: Review (with AI description) ─────────────
+function StepReview({
+  data, onChange, role, isTM, projectId, generatingAI, onRegenerate,
+}: {
+  data: COWizardData;
+  onChange: (p: Partial<COWizardData>) => void;
+  role: COCreatedByRole;
+  isTM: boolean;
+  projectId: string;
+  generatingAI: boolean;
+  onRegenerate: () => void;
+}) {
   const { data: assignedOrg } = useQuery({
     queryKey: ['org-name', data.assignedToOrgId],
     enabled: !!data.assignedToOrgId,
@@ -624,11 +753,38 @@ function StepTeam({ data, projectId, role, isTM = false }: { data: COWizardData;
 
   const COLORS: Record<string, string> = { GC: 'bg-blue-500', TC: 'bg-emerald-500', FC: 'bg-amber-500' };
 
+  const selectedWorkType = CO_WORK_TYPES.find(w => w.key === data.workType);
+
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">Confirm participants and create this {isTM ? 'work order' : 'change order'}.</p>
-
+      {/* AI-generated scope description */}
       <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Scope Description</Label>
+          <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generatingAI} className="gap-1.5 h-7 text-xs">
+            <Sparkles className="h-3.5 w-3.5" />
+            {generatingAI ? 'Generating…' : 'Regenerate'}
+          </Button>
+        </div>
+        {generatingAI ? (
+          <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-muted/30">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">AI is drafting your scope description…</span>
+          </div>
+        ) : (
+          <Textarea
+            value={data.aiDescription}
+            onChange={e => onChange({ aiDescription: e.target.value })}
+            rows={4}
+            placeholder="Scope description…"
+          />
+        )}
+        <p className="text-[11px] text-muted-foreground">AI-drafted — edit freely before creating.</p>
+      </div>
+
+      {/* Team */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Team</p>
         {participants.map((p, i) => (
           <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
             <span className={cn('w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white', COLORS[p.role] ?? 'bg-muted')}>
@@ -647,29 +803,19 @@ function StepTeam({ data, projectId, role, isTM = false }: { data: COWizardData;
       <div className="rounded-lg border border-border bg-card p-4 space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Summary</p>
         {data.reason && (
-          <div className="flex gap-2 text-sm">
-            <span className="text-muted-foreground w-20 shrink-0">Reason</span>
-            <span className="font-medium text-foreground">{CO_REASON_LABELS[data.reason]}</span>
-          </div>
+          <SummaryRow label="Reason" value={CO_REASON_LABELS[data.reason]} />
+        )}
+        {selectedWorkType && (
+          <SummaryRow label="Work Type" value={selectedWorkType.label} />
         )}
         {data.locationTag && (
-          <div className="flex gap-2 text-sm">
-            <span className="text-muted-foreground w-20 shrink-0">Location</span>
-            <span className="font-medium text-foreground">{data.locationTag}</span>
-          </div>
+          <SummaryRow label="Location" value={data.locationTag} />
         )}
-        <div className="flex gap-2 text-sm">
-          <span className="text-muted-foreground w-20 shrink-0">Pricing</span>
-          <span className="font-medium text-foreground">
-            {data.pricingType === 'fixed' ? 'Fixed Price' : data.pricingType === 'tm' ? 'Time & Material' : 'Not-to-Exceed'}
-            {data.pricingType === 'nte' && data.nteCap && ` · $${parseFloat(data.nteCap).toLocaleString()}`}
-          </span>
-        </div>
+        <SummaryRow label="Pricing" value={
+          data.pricingType === 'fixed' ? 'Fixed Price' : data.pricingType === 'tm' ? 'Time & Material' : `Not-to-Exceed${data.nteCap ? ` · $${parseFloat(data.nteCap).toLocaleString()}` : ''}`
+        } />
         {data.selectedItems.length > 0 && (
-          <div className="flex gap-2 text-sm">
-            <span className="text-muted-foreground w-20 shrink-0">Scope</span>
-            <span className="font-medium text-foreground">{data.selectedItems.length} items</span>
-          </div>
+          <SummaryRow label="Scope" value={`${data.selectedItems.length} items`} />
         )}
       </div>
     </div>
@@ -677,6 +823,15 @@ function StepTeam({ data, projectId, role, isTM = false }: { data: COWizardData;
 }
 
 // ── Shared sub-components ────────────────────────────
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2 text-sm">
+      <span className="text-muted-foreground w-20 shrink-0">{label}</span>
+      <span className="font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
 function PricingTypeSelector({ data, onChange }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void }) {
   return (
     <div className="space-y-3">
