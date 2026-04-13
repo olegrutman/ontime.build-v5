@@ -357,6 +357,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
   const roleContext = getRoleContext();
 
+  if (!canViewInvoices) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+        <p className="text-sm text-muted-foreground">You do not have permission to view invoices.</p>
+      </div>
+    );
+  }
+
   const getInvoicePermissions = (invoice: Invoice) => {
     if (invoice.contract_id) {
       const contract = contracts.find(c => c.id === invoice.contract_id);
