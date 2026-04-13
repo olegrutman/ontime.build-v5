@@ -67,10 +67,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
 
-  const visibleBillable = isGC ? tcBillable : isFC ? fcBillable : tcBillable;
+  const hideGCBreakdown = isGC && pricingType === 'fixed';
+  const visibleBillable = hideGCBreakdown ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
   const tcDownstreamCosts = isTC ? fcBillable : [];
-  const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
-  const entryCount = visibleBillable.length;
+  const totalForRole = hideGCBreakdown ? 0 : isGC ? tcTotal : isFC ? fcTotal : tcTotal;
+  const entryCount = hideGCBreakdown ? billable.length : visibleBillable.length;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
@@ -200,7 +201,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
       {/* Expanded entries panel */}
       {expanded && (
         <div className="bg-accent/30 border-t border-border">
-          {entryCount === 0 && !autoExpand ? (
+          {hideGCBreakdown ? (
+            <div className="px-6 py-8 text-center">
+              <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-foreground">Pricing details hidden</p>
+              <p className="text-xs text-muted-foreground mt-1">GC only sees the final submitted amount on fixed-price change orders.</p>
+            </div>
+          ) : entryCount === 0 && !autoExpand ? (
             /* Empty state */
             <div className="px-6 py-8 text-center">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
