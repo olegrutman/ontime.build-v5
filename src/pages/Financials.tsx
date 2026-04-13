@@ -26,11 +26,21 @@ export default function Financials() {
     );
   }
 
-  if (isSupplier) {
+  if (isSupplier || !canViewFinancials) {
     return (
       <AppLayout title="Financials">
-        <div className="p-6 text-muted-foreground">
-          Financial snapshots are not available for Supplier organizations.
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="rounded-full bg-muted p-4 mb-4">
+            <Lock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-1">
+            {isSupplier ? 'Not available' : 'Access restricted'}
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            {isSupplier
+              ? 'Financial snapshots are not available for Supplier organizations.'
+              : 'You do not have permission to view financial data. Contact your administrator.'}
+          </p>
         </div>
       </AppLayout>
     );
