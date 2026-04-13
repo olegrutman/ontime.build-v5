@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import { ChevronRight, Pencil, X, UserPlus, RotateCw, Loader2, Search, Building2 } from 'lucide-react';
+import { ChevronRight, Pencil, X, UserPlus, RotateCw, Loader2, Search, Building2, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -436,10 +436,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [resending, setResending] = useState<string | null>(null);
+  const [materialResp, setMaterialResp] = useState<string | null>(null);
 
   const fetchTeam = useCallback(async () => {
-    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, invited_name, invited_email, status').eq('project_id', projectId);
-    setTeam(data || []);
+    const [teamRes, contractRes] = await Promise.all([
+      supabase.from('project_team').select('id, role, invited_org_name, invited_name, invited_email, status').eq('project_id', projectId),
+      supabase.from('project_contracts').select('material_responsibility').eq('project_id', projectId).not('material_responsibility', 'is', null).limit(1),
+    ]);
+    setTeam(teamRes.data || []);
+    setMaterialResp(contractRes.data?.[0]?.material_responsibility ?? null);
   }, [projectId]);
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
@@ -757,6 +762,16 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 <div style={{ padding: 16, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No team members yet</div>
               )}
             </div>
+
+            {materialResp && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: `1px solid ${C.border}`, marginBottom: 8 }}>
+                <Package size={13} style={{ color: C.muted, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.72rem', color: C.muted }}>Materials:</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: C.ink }}>
+                  {materialResp === 'GC' ? 'General Contractor' : materialResp === 'TC' ? 'Trade Contractor' : materialResp}
+                </span>
+              </div>
+            )}
 
             <button
               onClick={() => setAddDialogOpen(true)}
