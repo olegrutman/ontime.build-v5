@@ -237,7 +237,21 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
       // Auto-resolve assigned org for TC/FC
       let resolvedAssignedToOrgId = data.assignedToOrgId || null;
-      if (!resolvedAssignedToOrgId && (role === 'TC' || role === 'FC')) {
+      if (!resolvedAssignedToOrgId && role === 'FC') {
+        // FC's upstream is the TC who hired them — look up via contract
+        const { data: fcContract } = await supabase
+          .from('project_contracts')
+          .select('to_org_id')
+          .eq('project_id', projectId)
+          .eq('from_org_id', orgId)
+          .single();
+        if (fcContract?.to_org_id) {
+          resolvedAssignedToOrgId = fcContract.to_org_id;
+        } else {
+          const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
+          resolvedAssignedToOrgId = proj?.organization_id ?? null;
+        }
+      } else if (!resolvedAssignedToOrgId && role === 'TC') {
         const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
         resolvedAssignedToOrgId = proj?.organization_id ?? null;
       }
