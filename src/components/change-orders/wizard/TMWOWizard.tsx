@@ -219,12 +219,13 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     if (!orgId || !user) { toast.error('Not authenticated'); return; }
     setSubmitting(true);
     try {
-      const { count } = await supabase
-        .from('change_orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('project_id', projectId);
-      const seq = (count ?? 0) + 1;
-      const woNumber = `WO-${String(seq).padStart(3, '0')}`;
+      let resolvedAssignedToOrgId: string | null = null;
+      if (role === 'TC' || role === 'FC') {
+        const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
+        resolvedAssignedToOrgId = proj?.organization_id ?? null;
+      }
+
+      const woNumber = await generateCONumber({ projectId, creatorOrgId: orgId, assignedToOrgId: resolvedAssignedToOrgId, isTM: true });
       const title = `${woNumber} · ${selectedWorkType?.label ?? 'Work Order'} · ${format(new Date(), 'MMM d')}`;
       const preGeneratedId = crypto.randomUUID();
 

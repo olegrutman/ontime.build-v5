@@ -226,19 +226,9 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
     if (!orgId || !user) { toast.error('Not authenticated'); return; }
     setSubmitting(true);
     try {
-      const { count } = await supabase
-        .from('change_orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('project_id', projectId);
-      const seq = (count ?? 0) + 1;
-      const coNumber = `CO-${String(seq).padStart(3, '0')}`;
-      const title = `${coNumber} · ${selectedWorkType?.label ? selectedWorkType.label + ' · ' : ''}${format(new Date(), 'MMM d, yyyy')}`;
-      const preGeneratedId = crypto.randomUUID();
-
-      // Auto-resolve assigned org for TC/FC
+      // Auto-resolve assigned org for TC/FC (needed before generating CO number)
       let resolvedAssignedToOrgId = data.assignedToOrgId || null;
       if (!resolvedAssignedToOrgId && role === 'FC') {
-        // FC's upstream is the TC who hired them — look up via contract
         const { data: fcContract } = await supabase
           .from('project_contracts')
           .select('to_org_id')
@@ -255,6 +245,12 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
         resolvedAssignedToOrgId = proj?.organization_id ?? null;
       }
+
+      const coNumber = await generateCONumber({ projectId, creatorOrgId: orgId, assignedToOrgId: resolvedAssignedToOrgId, isTM: false });
+      const title = `${coNumber} · ${selectedWorkType?.label ? selectedWorkType.label + ' · ' : ''}${format(new Date(), 'MMM d, yyyy')}`;
+      const preGeneratedId = crypto.randomUUID();
+
+      // resolvedAssignedToOrgId already computed above for CO number generation
 
       const { error: insertError } = await supabase
         .from('change_orders')
