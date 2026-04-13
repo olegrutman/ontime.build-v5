@@ -59,6 +59,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
+  const canViewInvoices = permissions?.canViewInvoices ?? false;
 
   const sovReadiness = useSOVReadiness(projectId, currentOrgId);
 
