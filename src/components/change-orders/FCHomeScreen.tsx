@@ -63,6 +63,9 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
     return ['closed_for_pricing', 'work_in_progress', 'shared'].includes(co.status);
   });
 
+  // COs created by the FC org
+  const myCOs = changeOrders.filter(co => co.org_id === orgId);
+
   function handleHeroTap(key: string, reason: COReasonCode | null) {
     if (key === 'something_happened' || key === 'saw_damage') {
       setPreSelectedReason(reason ?? undefined);
