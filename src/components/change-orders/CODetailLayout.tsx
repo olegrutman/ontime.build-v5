@@ -233,7 +233,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} isTM={isTM} />
 
           {/* KPI Row */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
@@ -343,7 +343,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
               </div>
 
               {/* Materials */}
-              {(co.materials_needed || materials.length > 0) && (
+              {(co.materials_needed || materials.length > 0 || (isTC && canEdit)) && (
                 <div ref={materialsRef}>
                   <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
@@ -357,7 +357,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
               )}
 
               {/* Equipment */}
-              {(co.equipment_needed || equipment.length > 0) && (
+              {(co.equipment_needed || equipment.length > 0 || (isTC && canEdit)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}

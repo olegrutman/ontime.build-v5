@@ -109,6 +109,11 @@ export function COEquipmentPanel({
       const { error } = await supabase.from('co_equipment_items').insert(rows);
       if (error) throw error;
 
+      // Auto-enable equipment_needed flag on first add
+      if (equipment.length === 0) {
+        await supabase.from('change_orders').update({ equipment_needed: true }).eq('id', coId);
+      }
+
       setDrafts([]);
       toast.success(`${valid.length} equipment item${valid.length > 1 ? 's' : ''} added`);
       onRefresh();
