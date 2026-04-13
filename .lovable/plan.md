@@ -1,38 +1,33 @@
 
 
-# CO Flow Bug Analysis and Fixes
+# Fix: TC Can't Add Materials/Equipment After CO Creation
 
-## Bugs Found
+## Problem
+The Materials and Equipment panels on the CO detail page are conditionally rendered only when `co.materials_needed` or `co.equipment_needed` is `true` (set during wizard creation). If the TC didn't check those boxes in the wizard, there's no way to add materials or equipment after the fact. The panels simply don't appear.
 
-### Bug 1: FCHomeScreen missing approved/completed COs section
-`FCHomeScreen.tsx` has only two sections:
-- "Open COs requiring your input" — filters to `collaboratorStatus === 'active'` AND status in `[shared, wip, closed_for_pricing]`
-- "My Change Orders" — filters to `co.org_id === orgId`
+## Solution
+Always show Materials and Equipment panels for the CO owner (TC) when they can edit, regardless of the `materials_needed`/`equipment_needed` flags. When the TC adds their first material or equipment item, auto-update the corresponding flag to `true` on the CO record.
 
-There is **no section** showing approved COs where the FC was a collaborator. Once an FC completes their input (collaborator status → `completed`) and the CO gets approved, it vanishes from the FC view entirely. The FC cannot bill against it.
+## Changes
 
-### Bug 2: "My Change Orders" filter too narrow
-`myCOs` checks `co.org_id === orgId`, but historically some FC-created COs were saved with TC's org_id instead of FC's. Even with the fix going forward, it should also match on `created_by_role === 'FC'` with a collaborator check as a fallback.
+### 1. Update `CODetailLayout.tsx` — always show panels for TC
+Change the render conditions on lines 346 and 360:
+- Materials: `(co.materials_needed || materials.length > 0)` → add `|| (isTC && canEdit)`
+- Equipment: `(co.equipment_needed || equipment.length > 0)` → add `|| (isTC && canEdit)`
 
-### Bug 3: Historical bad data — FC-created COs have wrong org_id
-Two FC-created COs (532da6cd, d50f80af) have `org_id = TC_Test` instead of `FC_Test`. RLS blocks the FC from seeing them entirely since neither `org_id`, `assigned_to_org_id`, nor any collaborator record links them to the FC org.
+This ensures TC always sees both panels when they have edit access.
 
-### Bug 4: Duplicate CO numbers
-Two approved COs both have `co_number = 'CO-002'`. The new numbering system prevents this going forward but existing data needs cleanup.
+### 2. Update `COMaterialsPanel.tsx` — auto-set `materials_needed` on first add
+After a successful material insert, if `co.materials_needed` is false, update the CO record to set `materials_needed = true`. This ensures the panel remains visible and other roles see it correctly.
 
-## Plan
+### 3. Update `COEquipmentPanel.tsx` — auto-set `equipment_needed` on first add
+Same pattern: after inserting equipment, set `equipment_needed = true` on the CO if not already set.
 
-### 1. Add "Approved / Billable" section to FCHomeScreen
-Add a third section below "My Change Orders" that shows COs where FC is a collaborator with `completed` status AND the CO status is `approved` or `contracted`. This lets FC see and navigate to approved COs for billing.
+### 4. Update KPI strip condition (line 236)
+Also update the `hasMaterials` / `hasEquipment` props on the KPI strip to include the `isTC && canEdit` condition so KPI tiles are consistent.
 
-### 2. Broaden the "My Change Orders" filter
-Change `myCOs` from `co.org_id === orgId` to also include COs where `co.created_by_role === 'FC'` and the FC org is a collaborator. This catches edge cases where org_id was set incorrectly.
-
-### 3. Fix historical data via migration
-- Update the two FC-created COs to set `org_id = FC_Test (6e563ffc)` and `assigned_to_org_id = TC_Test (ab07e031)`
-- Re-number them with the new convention (e.g., `CO-MAI-FC-TC-0001`, `CO-MAI-FC-TC-0002`)
-
-### Files Modified
-- `src/components/change-orders/FCHomeScreen.tsx` — add approved section, fix myCOs filter
-- Database migration — fix historical org_id and co_number data
+## Technical Detail
+- No database or RLS changes needed — the INSERT policies already check `user_in_org(auth.uid(), org_id)` which passes for TC
+- The `materials_needed` / `equipment_needed` flags are simple booleans on `change_orders` table, updatable by TC via existing UPDATE RLS policy
+- Both panels already accept `canEdit` prop and handle the add UI internally
 
