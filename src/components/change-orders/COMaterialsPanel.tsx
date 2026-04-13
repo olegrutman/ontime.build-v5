@@ -1028,7 +1028,7 @@ export function COMaterialsPanel({
                 onAddItem={handlePickerAdd}
                 editingItem={null}
                 onClearEdit={() => {}}
-                hidePricing={false}
+                hidePricing={!showPricingColumns}
                 onClose={() => setPickerOpen(false)}
                 onExitPicker={() => setPickerOpen(false)}
               />
