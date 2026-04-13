@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { AppLayout } from '@/components/layout';
 import { cn } from '@/lib/utils';
 import { ProjectBasics, TeamMember } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
-import { useSetupWizardV2 } from '@/hooks/useSetupWizardV2';
+import { useSetupWizardV2, type BuildingType, type Answers } from '@/hooks/useSetupWizardV2';
 
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
@@ -51,16 +51,28 @@ const initialBasics: ProjectBasics = {
   zip: '',
 };
 
+const DRAFT_KEY = 'project_wizard_draft';
+
+function loadDraft() {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function CreateProjectNew() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, userOrgRoles, profile, loading: authLoading } = useAuth();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [basics, setBasics] = useState<ProjectBasics>(initialBasics);
-  const [team, setTeam] = useState<TeamMember[]>([]);
+
+  const draft = useRef(loadDraft()).current;
+
+  const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 0);
+  const [basics, setBasics] = useState<ProjectBasics>(draft?.basics ?? initialBasics);
+  const [team, setTeam] = useState<TeamMember[]>(draft?.team ?? []);
   const [saving, setSaving] = useState(false);
-  const [contractMode, setContractMode] = useState<ContractMode>('fixed');
-  const [tmScope, setTmScope] = useState<TMBuildingInfo>(initialTMBuildingInfo);
+  const [contractMode, setContractMode] = useState<ContractMode>(draft?.contractMode ?? 'fixed');
+  const [tmScope, setTmScope] = useState<TMBuildingInfo>(draft?.tmScope ?? initialTMBuildingInfo);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
@@ -68,7 +80,29 @@ export default function CreateProjectNew() {
                       currentOrg?.type === 'TC' ? 'Trade Contractor' :
                       currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
 
-  const wizard = useSetupWizardV2();
+  const wizard = useSetupWizardV2(
+    undefined,
+    draft?.wizardAnswers as Answers | undefined,
+    (draft?.wizardBuildingType as BuildingType) ?? null,
+  );
+
+  // Persist draft to sessionStorage on changes (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+          currentStep,
+          basics,
+          team,
+          contractMode,
+          tmScope,
+          wizardAnswers: wizard.answers,
+          wizardBuildingType: wizard.buildingType,
+        }));
+      } catch { /* quota exceeded — ignore */ }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType]);
 
   const isTM = contractMode === 'tm';
   const activeSteps = useMemo(() => isTM ? TM_STEPS : FIXED_STEPS, [isTM]);
