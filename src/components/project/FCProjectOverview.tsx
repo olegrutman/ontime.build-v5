@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Pencil, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';

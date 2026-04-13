@@ -26,7 +26,8 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
     });
   }
 
-  if (downstreamContract) {
+  // GC should not see the downstream (TC↔FC) contract
+  if (downstreamContract && viewerRole !== 'General Contractor') {
     rows.push({
       fromName: downstreamContract.from_org_name || downstreamContract.from_role || 'Unknown',
       toName: downstreamContract.to_org_name || downstreamContract.to_role || 'Unknown',
