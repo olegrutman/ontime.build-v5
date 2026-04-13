@@ -35,27 +35,33 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   const matEquip = financials.materialsTotal + financials.equipmentTotal;
 
   if (isGC) {
-    const tiles: KPITile[] = [
+    return [
       {
         label: 'TC Submitted',
         value: fmtCurrency(financials.grandTotal),
         color: 'hsl(var(--primary))',
         badge: financials.grandTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
       },
-    ];
-    if (matEquip > 0) {
-      tiles.push({
+      {
         label: 'Materials + Equipment',
         value: fmtCurrency(matEquip),
         color: '#059669',
-      });
-      tiles.push({
+      },
+      {
         label: 'Total Cost',
         value: fmtCurrency(totalToGC),
         color: '#F5A623',
-      });
-    }
-    return tiles;
+        badge: totalToGC > 0 ? { text: 'Final', variant: 'healthy' } : undefined,
+      },
+      {
+        label: 'GC Budget',
+        value: props.co.gc_budget ? fmtCurrency(props.co.gc_budget) : '—',
+        color: '#6366F1',
+        badge: props.co.gc_budget && totalToGC > 0
+          ? { text: `${((totalToGC / props.co.gc_budget) * 100).toFixed(0)}%`, variant: totalToGC <= props.co.gc_budget ? 'healthy' as const : 'watch' as const }
+          : undefined,
+      },
+    ];
   }
 
   if (isTC) {
