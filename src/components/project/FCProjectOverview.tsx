@@ -152,6 +152,26 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const fcContract = financials.downstreamContract || financials.upstreamContract;
   const contractSum = fcContract?.contract_sum || 0;
   const laborBudget = financials.laborBudget || 0;
+
+  // Editable internal budget
+  const [draftBudget, setDraftBudget] = useState(laborBudget);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [savingBudget, setSavingBudget] = useState(false);
+
+  const saveBudget = async () => {
+    if (!fcContract?.id) { toast.error('No contract found'); return; }
+    setSavingBudget(true);
+    const ok = await financials.updateLaborBudget(fcContract.id, draftBudget);
+    setSavingBudget(false);
+    if (ok) {
+      toast.success('Internal budget saved');
+      financials.refetch();
+      setEditingBudget(false);
+    } else {
+      toast.error('Failed to save budget');
+    }
+  };
+
   const tcName = (() => {
     if (!fcContract) return 'Trade Contractor';
     if (currentOrgId && fcContract.from_org_id === currentOrgId) return fcContract.to_org_name || 'Trade Contractor';
