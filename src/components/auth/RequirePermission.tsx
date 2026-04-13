@@ -93,26 +93,11 @@ interface RequireOrgTypeProps {
 }
 
 export function RequireOrgType({ orgTypes, children, fallback = null }: RequireOrgTypeProps) {
-  const { currentRole } = useAuth();
+  const { userOrgRoles } = useAuth();
 
   const orgType = React.useMemo(() => {
-    if (!currentRole) return null;
-    
-    switch (currentRole) {
-      case 'GC_PM':
-        return 'GC';
-      case 'TC_PM':
-        return 'TC';
-      case 'FC_PM':
-        return 'FC';
-      case 'FS':
-        return 'TC'; // Field supervisors are under TC
-      case 'SUPPLIER':
-        return 'SUPPLIER';
-      default:
-        return null;
-    }
-  }, [currentRole]);
+    return (userOrgRoles[0]?.organization?.type as 'GC' | 'TC' | 'FC' | 'SUPPLIER') ?? null;
+  }, [userOrgRoles]);
 
   if (!orgType || !orgTypes.includes(orgType)) {
     return <>{fallback}</>;

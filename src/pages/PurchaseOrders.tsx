@@ -17,7 +17,7 @@ import { Plus, Send, FileText, Download, Trash2, Package } from 'lucide-react';
 import { PurchaseOrder, PO_STATUS_LABELS, PO_STATUS_COLORS, POStatus } from '@/types/purchaseOrder';
 
 export default function PurchaseOrders() {
-  const { user, userOrgRoles, currentRole, loading: authLoading } = useAuth();
+  const { user, userOrgRoles, currentRole, permissions, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -259,6 +259,7 @@ export default function PurchaseOrders() {
     <AppLayout title="Purchase Orders" subtitle="Create and send purchase orders to suppliers">
       <div className="space-y-4 sm:space-y-6">
         <div className="flex justify-end">
+          {(permissions?.canCreatePOs ?? false) && (
           <Dialog open={newPOOpen} onOpenChange={setNewPOOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="sm:size-default">
@@ -349,6 +350,7 @@ export default function PurchaseOrders() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
