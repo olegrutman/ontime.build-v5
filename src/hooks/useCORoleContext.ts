@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { COCreatedByRole, COCollaborator, COFinancials, ChangeOrder } from '@/types/changeOrder';
 
@@ -28,6 +29,25 @@ export function useCORoleContext(
 ): UseCORoleContextResult {
   const { currentRole, userOrgRoles } = useAuth();
 
+  // For FC-created COs with no collaborators, resolve the FC org name
+  const isFCCreatedCO = co?.created_by_role === 'FC';
+  const fcCreatorOrgId = isFCCreatedCO ? co?.org_id : null;
+  const needsFCOrgLookup = !!fcCreatorOrgId && collaborators.length === 0;
+
+  const { data: fcCreatorOrg } = useQuery({
+    queryKey: ['fc-creator-org', fcCreatorOrgId],
+    enabled: needsFCOrgLookup,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', fcCreatorOrgId!)
+        .single();
+      return data;
+    },
+  });
+
   return useMemo(() => {
     const activeMembership =
       userOrgRoles.find(({ organization_id }) => organization_id === co?.assigned_to_org_id) ??
@@ -46,7 +66,13 @@ export function useCORoleContext(
     const collaboratorOrgIds = new Set(collaborators.map(c => c.organization_id));
     const currentCollaborator = collaborators.find(c => c.status === 'active') ?? null;
     const isCollaboratorOrg = collaborators.some(c => c.organization_id === myOrgId && c.status === 'active');
-    const fcCollabName = currentCollaborator?.organization?.name ?? 'Field crew';
+    
+    // Resolve FC name: from active collaborator, any collaborator, FC creator org, or fallback
+    const fcCollabName =
+      currentCollaborator?.organization?.name ??
+      collaborators[0]?.organization?.name ??
+      fcCreatorOrg?.name ??
+      'Field crew';
 
     const canRequestFCInput = !!co && isTC && (
       ((co.assigned_to_org_id === myOrgId || co.org_id === myOrgId) &&
@@ -71,5 +97,5 @@ export function useCORoleContext(
       canEdit, canRequestFCInput, canCompleteFCInput, nteBlocked, pricingType,
       collaboratorOrgIds, currentCollaborator, fcCollabName, isCollaboratorOrg,
     };
-  }, [co, collaborators, financials, currentRole, userOrgRoles]);
+  }, [co, collaborators, financials, currentRole, userOrgRoles, fcCreatorOrg]);
 }
