@@ -63,8 +63,18 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
     return ['closed_for_pricing', 'work_in_progress', 'shared'].includes(co.status);
   });
 
-  // COs created by the FC org
-  const myCOs = changeOrders.filter(co => co.org_id === orgId);
+  // COs created by the FC org (also catch historical misassigned ones)
+  const myCOs = changeOrders.filter(co =>
+    co.org_id === orgId ||
+    (co.created_by_role === 'FC' && co.collaboratorOrgId === orgId)
+  );
+
+  // Approved/billable COs where FC was a collaborator
+  const billableCOs = changeOrders.filter(co => {
+    if (co.collaboratorOrgId !== orgId) return false;
+    if (co.collaboratorStatus !== 'completed') return false;
+    return ['approved', 'contracted'].includes(co.status);
+  });
 
   function handleHeroTap(key: string, reason: COReasonCode | null) {
     if (key === 'something_happened' || key === 'saw_damage') {
