@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermission } from '@/components/auth/RequirePermission';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
@@ -38,6 +39,7 @@ interface CODetailLayoutProps {
 export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const canApprove = usePermission('canApprove');
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
 
@@ -127,6 +129,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
         break;
       case 'approve':
         if (co) {
+          if (!canApprove) { toast.error('You do not have permission to approve'); break; }
           try {
             await approveCO.mutateAsync(co.id);
             toast.success('Approved');
@@ -135,6 +138,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
         break;
       case 'reject':
         if (co) {
+          if (!canApprove) { toast.error('You do not have permission to reject'); break; }
           const note = window.prompt('Rejection reason:');
           if (note) {
             try {

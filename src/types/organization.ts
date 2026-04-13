@@ -119,7 +119,7 @@ export const PERMISSION_TO_DB_COLUMN: Record<keyof RolePermissions, keyof Member
   canCreateChangeOrders: 'can_create_work_orders',
   canCreatePOs: 'can_create_pos',
   canSubmitTime: 'can_submit_time',
-  canCreateRFIs: null, // DB column exists but types not yet regenerated
+  canCreateRFIs: 'can_create_rfis',
 };
 
 /** Zero permissions (used for null/unknown roles) */
