@@ -436,10 +436,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [resending, setResending] = useState<string | null>(null);
+  const [materialResp, setMaterialResp] = useState<string | null>(null);
 
   const fetchTeam = useCallback(async () => {
-    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, invited_name, invited_email, status').eq('project_id', projectId);
-    setTeam(data || []);
+    const [teamRes, contractRes] = await Promise.all([
+      supabase.from('project_team').select('id, role, invited_org_name, invited_name, invited_email, status').eq('project_id', projectId),
+      supabase.from('project_contracts').select('material_responsibility').eq('project_id', projectId).not('material_responsibility', 'is', null).limit(1),
+    ]);
+    setTeam(teamRes.data || []);
+    setMaterialResp(contractRes.data?.[0]?.material_responsibility ?? null);
   }, [projectId]);
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
