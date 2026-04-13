@@ -86,11 +86,23 @@ export function useChangeOrders(projectId: string | null) {
         }
       }
 
+      // Fetch downstream org IDs (orgs that have a contract FROM them TO current org)
+      const { data: downstreamContracts } = await supabase
+        .from('project_contracts')
+        .select('from_org_id')
+        .eq('project_id', projectId!)
+        .eq('to_org_id', orgId!);
+
+      const downstreamOrgIds = new Set(
+        (downstreamContracts ?? []).map(c => c.from_org_id).filter(Boolean) as string[]
+      );
+
       return allCOs.map(c => ({
         ...c,
         collaboratorStatus: collaboratorMap.get(c.id)?.status,
         collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
-      })) as ChangeOrderWithMembers[];
+        _isDownstreamOrg: downstreamOrgIds.has(c.org_id),
+      })) as (ChangeOrderWithMembers & { _isDownstreamOrg?: boolean })[];
     },
   });
 
@@ -111,13 +123,14 @@ export function useChangeOrders(projectId: string | null) {
   for (const co of changeOrders) {
     const isMine = co.org_id === orgId;
     const isCollaborator = co.collaboratorOrgId === orgId && (co.collaboratorStatus === 'active' || co.collaboratorStatus === 'completed');
+    const isDownstream = (co as any)._isDownstreamOrg === true;
 
     if (isMine) {
       const bucket = co.status as COStatus;
       if (bucket in grouped.mine) {
         grouped.mine[bucket as keyof typeof grouped.mine].push(co);
       }
-    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator) {
+    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator || isDownstream) {
       grouped.sharedWithMe.push(co);
     }
   }

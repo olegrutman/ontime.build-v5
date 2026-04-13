@@ -63,6 +63,9 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
     return ['closed_for_pricing', 'work_in_progress', 'shared'].includes(co.status);
   });
 
+  // COs created by the FC org
+  const myCOs = changeOrders.filter(co => co.org_id === orgId);
+
   function handleHeroTap(key: string, reason: COReasonCode | null) {
     if (key === 'something_happened' || key === 'saw_damage') {
       setPreSelectedReason(reason ?? undefined);
@@ -141,6 +144,49 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
                     <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                       {co.status === 'closed_for_pricing' ? 'Log hours' : 'TC is waiting'}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground mt-0.5 truncate">
+                    {co.title ?? 'Change order'}
+                  </p>
+                  {co.location_tag && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground truncate">{co.location_tag}</span>
+                    </div>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* My Change Orders */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground px-1">
+          My Change Orders
+        </h3>
+
+        {myCOs.length === 0 ? (
+          <div className="co-light-shell flex items-center justify-center py-8 text-center">
+            <p className="text-sm text-muted-foreground">No change orders created yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {myCOs.map(co => (
+              <button
+                key={co.id}
+                type="button"
+                onClick={() => navigate(`/project/${projectId}/change-orders/${co.id}`)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-left min-h-[56px]"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                      {CO_STATUS_LABELS[co.status as COStatus] ?? co.status}
                     </span>
                   </div>
                   <p className="text-sm font-medium text-foreground mt-0.5 truncate">
