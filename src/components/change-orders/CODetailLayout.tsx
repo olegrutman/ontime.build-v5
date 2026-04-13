@@ -267,8 +267,10 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                   {lineItems.length > 0 && (
                     <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
                       <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
-                        <p className="text-muted-foreground font-medium">{isGC ? 'Labor Total' : isTC ? 'Billable to GC' : 'Billed to TC'}</p>
-                        <p className="font-mono font-bold text-foreground mt-0.5">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                        <p className="text-muted-foreground font-medium">{isGC ? 'TC Submitted' : isTC ? 'Billable to GC' : 'Billed to TC'}</p>
+                        <p className="font-mono font-bold text-foreground mt-0.5">
+                          ${ (isGC ? financials.grandTotal : totalLogged).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
+                        </p>
                       </div>
                       {(isTC || isFC) && (
                         <>
@@ -298,7 +300,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                       </div>
                       <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">
                         {pricedCount}/{lineItems.length} priced
-                        {totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
+                        {!isGC && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
                       </span>
                     </div>
                   )}

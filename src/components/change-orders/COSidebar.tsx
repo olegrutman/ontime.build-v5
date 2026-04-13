@@ -106,27 +106,9 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
         <div className="px-4 py-3 space-y-2">
           {isGC && (
             <>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Billable to GC</span>
-                <span className="font-mono font-medium">{fmtCurrency(financials.tcBillableToGC)}</span>
-              </div>
-              {financials.equipmentTotal > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Equipment</span>
-                  <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>
-                </div>
-              )}
-              {financials.materialsTotal > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Materials</span>
-                  <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>
-                </div>
-              )}
-              <div className="border-t border-border pt-2 mt-2">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>Total to GC</span>
-                  <span className="font-mono">{fmtCurrency(totalApprovedSpend)}</span>
-                </div>
+              <div className="flex justify-between text-sm font-semibold">
+                <span>TC Submitted</span>
+                <span className="font-mono">{fmtCurrency(financials.grandTotal)}</span>
               </div>
             </>
           )}
