@@ -5,14 +5,16 @@ import { AppLayout } from '@/components/layout';
 import { DashboardFinancialCard } from '@/components/dashboard/DashboardFinancialCard';
 import { FinancialTrendCharts } from '@/components/dashboard/FinancialTrendCharts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Lock } from 'lucide-react';
 
 export default function Financials() {
-  const { userOrgRoles, loading: authLoading } = useAuth();
+  const { userOrgRoles, permissions, loading: authLoading } = useAuth();
   const { billing, financials, loading: dataLoading } = useDashboardData();
   const { spendTrend, woTrend, loading: trendsLoading } = useFinancialTrends();
 
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
+  const canViewFinancials = permissions?.canViewRates ?? false;
 
   if (authLoading || dataLoading) {
     return (

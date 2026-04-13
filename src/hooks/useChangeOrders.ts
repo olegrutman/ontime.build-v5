@@ -144,10 +144,15 @@ export function useChangeOrders(projectId: string | null) {
     invoiced: [],
   };
 
-  const allCOs = [...changeOrders];
-  for (const co of allCOs) {
-    const column = STATUS_TO_COLUMN[co.status] ?? 'wip';
-    boardColumns[column].push(co);
+  for (const co of changeOrders) {
+    const isMine = co.org_id === orgId;
+    const isAssigned = co.assigned_to_org_id === orgId;
+    const isCollaborator = co.collaboratorOrgId === orgId;
+    const isDownstream = (co as any)._isDownstreamOrg === true;
+    if (isMine || isAssigned || isCollaborator || isDownstream) {
+      const column = STATUS_TO_COLUMN[co.status] ?? 'wip';
+      boardColumns[column].push(co);
+    }
   }
 
   const createCO = useMutation({
