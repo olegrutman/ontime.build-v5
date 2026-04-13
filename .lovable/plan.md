@@ -1,48 +1,35 @@
 
 
-# Fix: FC-Created Change Orders Not Visible to TC
+# Fix: FC-Created COs Missing from FC and TC Pages
 
-## The Bug
+## Problem
 
-When a Field Crew (FC) creates a Change Order, the CO shows up on the GC's page but not the TC's page.
+Two bugs with FC-created Change Orders:
 
-**Root cause:** When FC creates a CO, the wizard sets `assigned_to_org_id` to the **project's organization** (the GC), because it does `projects.organization_id`. But the TC is the FC's direct upstream — the TC hired the FC, not the GC. So the TC never matches any visibility condition:
+1. **FC can't see their own COs** — The FC home screen (`FCHomeScreen.tsx`) only displays COs where the FC is an invited collaborator. It completely ignores COs where `org_id` matches the FC's organization (i.e., COs the FC created themselves).
 
-- `co.org_id === tcOrgId` — false, it's FC's org
-- `co.assigned_to_org_id === tcOrgId` — false, it's GC's org
-- `isCollaborator` — false, TC isn't added as collaborator
+2. **TC still can't see FC-created COs** — The existing CO in the database (`d50f80af`) was created before the wizard fix and has `assigned_to_org_id` set to the GC org instead of the TC. New COs created after the wizard fix should route correctly, but the visibility logic in `useChangeOrders.ts` also needs a fallback for the TC to see COs from their downstream FC.
 
-The GC sees it because `assigned_to_org_id` happens to be the GC's org.
+## Fix
 
-## The Fix
+### 1. FCHomeScreen — Show FC's own COs
+**File: `src/components/change-orders/FCHomeScreen.tsx`**
 
-**File: `src/components/change-orders/wizard/COWizard.tsx`** (~10 lines changed)
+Add a second list section below "Open COs requiring your input" that shows COs where `co.org_id === orgId` (COs the FC created). These should be displayed as a simple card list with status, title, and click-through navigation, similar to how `COListPage` renders cards.
 
-In the auto-resolve block (line 240-243), when `role === 'FC'`, look up the FC's upstream contract (`project_contracts` where `from_org_id = FC org`) to find the TC's org (`to_org_id`), and set `assigned_to_org_id` to the TC — not the project owner.
+### 2. useChangeOrders — TC sees downstream FC COs
+**File: `src/hooks/useChangeOrders.ts`**
 
-```
-if (role === 'FC') {
-  // Find FC's upstream contract to get TC org
-  const { data: fcContract } = await supabase
-    .from('project_contracts')
-    .select('to_org_id')
-    .eq('project_id', projectId)
-    .eq('from_org_id', orgId)
-    .single();
-  resolvedAssignedToOrgId = fcContract?.to_org_id ?? proj?.organization_id ?? null;
-}
-```
+In the visibility grouping loop (line ~120), add a condition: if the current org is a TC and the CO's `org_id` belongs to a downstream FC on this project, treat it as a "sharedWithMe" CO. This requires checking against the project contracts data.
 
-**File: `src/hooks/useChangeOrders.ts`** (~5 lines changed)
+A simpler approach: fetch the project's contract chain in the query function. If there's a contract where `to_org_id === currentOrgId` and `from_org_id === co.org_id`, the current org is upstream of the CO creator and should see it.
 
-Additionally, the visibility logic in the grouping loop should also account for the TC seeing COs where the FC (a downstream sub) created the CO. Add a check: if the CO's `org_id` belongs to an org that has a contract with `to_org_id = tcOrgId` on this project, the TC should see it. However, this requires an extra query. A simpler approach: also check if the current org is the `assigned_to_org_id` of the CO (which the wizard fix above now correctly sets to TC).
+### 3. Fix existing bad data
+**Migration** — Update the existing FC-created CO (`d50f80af`) to set `assigned_to_org_id` to the TC org (`ab07e031`) instead of the GC org. This is a one-time data fix.
 
-The current condition `(co.assigned_to_org_id === orgId && co.org_id !== orgId)` already handles this — the wizard fix alone should be sufficient for new COs. For existing FC-created COs with wrong `assigned_to_org_id`, we can add a fallback check using contract data.
-
-## Plain English
-
-When your field crew creates a change order, the system was accidentally sending it to the GC instead of to you (the TC who hired them). The fix makes it so FC change orders get routed to the TC — their direct boss — not the project owner.
+Alternatively, skip the migration and rely on the visibility logic fix in step 2, which will handle both old and new COs.
 
 ## Files Changed
-- `src/components/change-orders/wizard/COWizard.tsx` — fix FC org resolution to use upstream contract
+- `src/components/change-orders/FCHomeScreen.tsx` — add "My Change Orders" section showing FC-created COs
+- `src/hooks/useChangeOrders.ts` — add downstream-org visibility check so TC sees FC-created COs
 
