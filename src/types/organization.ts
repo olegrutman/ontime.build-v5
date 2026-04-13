@@ -53,6 +53,7 @@ export interface MemberPermissions {
   can_manage_team: boolean;
   can_view_financials: boolean;
   can_submit_time: boolean;
+  can_create_rfis: boolean;
   updated_at: string;
 }
 
