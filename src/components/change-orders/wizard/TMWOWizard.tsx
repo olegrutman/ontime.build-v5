@@ -169,6 +169,8 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     assignedToOrgId: '',
     materialsOnSite: false,
     quickHours: null,
+    workType: data.workType as string | null,
+    aiDescription: data.aiDescription ?? '',
   } satisfies COWizardData), [data]);
 
   function handleCatalogChange(patch: Partial<COWizardData>) {
