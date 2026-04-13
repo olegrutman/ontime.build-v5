@@ -1,91 +1,48 @@
 
 
-# Multi-Fix Plan: FC Budget, GC Privacy, Scope UI, Supplier & Overview Pages, CO Wizard
+# Fix: FC-Created Change Orders Not Visible to TC
 
-## Plain English Summary
+## The Bug
 
-You're asking for 6 things:
+When a Field Crew (FC) creates a Change Order, the CO shows up on the GC's page but not the TC's page.
 
-1. **FC can't set their internal cost/budget on Overview** — Right now the FC sees "Internal Cost Budget: —" but there's no way to type a number in. The `updateLaborBudget` function exists but the FC overview never wires it up.
+**Root cause:** When FC creates a CO, the wizard sets `assigned_to_org_id` to the **project's organization** (the GC), because it does `projects.organization_id`. But the TC is the FC's direct upstream — the TC hired the FC, not the GC. So the TC never matches any visibility condition:
 
-2. **GC sees the TC↔FC contract on project info** — The `OverviewContractsSection` blindly shows both upstream and downstream contracts to everyone. GC should only see the GC↔TC contract, never the TC↔FC one.
+- `co.org_id === tcOrgId` — false, it's FC's org
+- `co.assigned_to_org_id === tcOrgId` — false, it's GC's org
+- `isCollaborator` — false, TC isn't added as collaborator
 
-3. **Scope section on project info needs better design** — The current collapsible card is functional but dense. It needs clearer visual hierarchy, better grouping, and a more scannable layout.
+The GC sees it because `assigned_to_org_id` happens to be the GC's org.
 
-4. **Check supplier overview page** — Verify the `SupplierProjectOverview` links, hooks, and data flow are working correctly.
+## The Fix
 
-5. **Check TC, FC, GC overview pages** — Verify hooks, links, and navigation across all three role overviews work end to end.
+**File: `src/components/change-orders/wizard/COWizard.tsx`** (~10 lines changed)
 
-6. **CO wizard on fixed projects should follow WO wizard principles** — The T&M wizard has work type selection, AI scope descriptions, smart catalog filtering, and visual location picking. The fixed-price CO wizard should use the same polished flow.
+In the auto-resolve block (line 240-243), when `role === 'FC'`, look up the FC's upstream contract (`project_contracts` where `from_org_id = FC org`) to find the TC's org (`to_org_id`), and set `assigned_to_org_id` to the TC — not the project owner.
 
----
+```
+if (role === 'FC') {
+  // Find FC's upstream contract to get TC org
+  const { data: fcContract } = await supabase
+    .from('project_contracts')
+    .select('to_org_id')
+    .eq('project_id', projectId)
+    .eq('from_org_id', orgId)
+    .single();
+  resolvedAssignedToOrgId = fcContract?.to_org_id ?? proj?.organization_id ?? null;
+}
+```
 
-## Technical Changes
+**File: `src/hooks/useChangeOrders.ts`** (~5 lines changed)
 
-### 1. FC Internal Budget — Editable KPI Card
-**File: `src/components/project/FCProjectOverview.tsx`**
+Additionally, the visibility logic in the grouping loop should also account for the TC seeing COs where the FC (a downstream sub) created the CO. Add a check: if the CO's `org_id` belongs to an org that has a contract with `to_org_id = tcOrgId` on this project, the TC should see it. However, this requires an extra query. A simpler approach: also check if the current org is the `assigned_to_org_id` of the CO (which the wizard fix above now correctly sets to TC).
 
-- Add `useState` for `draftBudget` initialized from `financials.laborBudget`
-- Add an `EditField`-style inline edit on the "Internal Cost Budget" row inside Card 1
-- Wire the save to `financials.updateLaborBudget(fcContract.id, amount)` 
-- On save, call `financials.refetch()` to update margin calculations
-- Also make Card 2 (Net Margin) sub-text say "Enter budget below" with a link instead of just showing dashes
+The current condition `(co.assigned_to_org_id === orgId && co.org_id !== orgId)` already handles this — the wizard fix alone should be sufficient for new COs. For existing FC-created COs with wrong `assigned_to_org_id`, we can add a fallback check using contract data.
 
-### 2. Hide TC↔FC Contract from GC
-**File: `src/components/project/OverviewContractsSection.tsx`**
+## Plain English
 
-- Add role check: if `viewerRole === 'General Contractor'`, skip `downstreamContract`
-- Only TC and FC should see the downstream contract
-- Simple 3-line conditional change
-
-### 3. Scope Section Redesign  
-**File: `src/components/project/ProjectScopeSection.tsx`**
-
-- Replace the dense collapsible card with a cleaner layout:
-  - Top: summary chips (home type, floors, foundation) always visible
-  - Inclusion badges promoted to top level with colored dots (green = included, gray = not)
-  - Expandable detail sections use a 2-column grid with icons and clear headers
-  - Scope description shown as a highlighted callout block when present
-  - Fewer nesting levels, larger touch targets
-  - "Edit" button stays in header
-
-### 4. Supplier Overview Page Audit
-**File: `src/components/project/SupplierProjectOverview.tsx`**
-
-- Verify all `onNavigate()` calls use valid tab names
-- Check that PO queries, estimate queries, and material data flows work
-- Fix any broken links or missing data connections
-- Verify the KPI cards reference the correct financial fields
-
-### 5. TC / FC / GC Overview Audit
-**Files: `TCProjectOverview.tsx`, `FCProjectOverview.tsx`, `GCProjectOverviewContent.tsx`**
-
-- Verify all `onNavigate()` calls map to real tab routes
-- Check that CO queries don't leak cross-org data
-- Verify change order click-through navigates correctly
-- Ensure invoice links, RFI links, and PO links all resolve
-
-### 6. CO Wizard for Fixed Projects — Follow WO Wizard Principles
-**File: `src/components/change-orders/wizard/COWizard.tsx`**
-
-- **Step 1 (Why)**: Keep reason cards but add a sub-step for "structural element" selection (like WO wizard's work type step) — e.g., after selecting "Addition", user picks what kind (Framing, Electrical, Plumbing, Finish)
-- **Step 2 (Where)**: Already uses `VisualLocationPicker` — verify it reads `project_scope_details` for smart options (like the WO wizard does)
-- **Step 3 (Scope)**: Add auto-navigation to relevant catalog division based on Step 1 selection (matching WO wizard behavior where "framing" auto-opens framing division)
-- **Step 5 (Review)**: Add AI-generated scope description (call `generate-work-order-description` edge function) as the WO wizard does — show it in a preview card with edit capability
-- Keep the CO-specific "Pricing & Configuration" step (Step 4) as-is since fixed-price COs need the pricing type selector
+When your field crew creates a change order, the system was accidentally sending it to the GC instead of to you (the TC who hired them). The fix makes it so FC change orders get routed to the TC — their direct boss — not the project owner.
 
 ## Files Changed
-- `src/components/project/FCProjectOverview.tsx` — add editable budget field (~30 lines)
-- `src/components/project/OverviewContractsSection.tsx` — add role gate (~3 lines)
-- `src/components/project/ProjectScopeSection.tsx` — redesign layout (~80 lines)
-- `src/components/project/SupplierProjectOverview.tsx` — audit and fix links
-- `src/components/project/TCProjectOverview.tsx` — audit links
-- `src/components/project/GCProjectOverviewContent.tsx` — audit links
-- `src/components/change-orders/wizard/COWizard.tsx` — add work-type substep, AI description, smart catalog nav (~60 lines)
-
-## What stays the same
-- Database schema — no migrations needed
-- All existing hooks — `useProjectFinancials`, `updateLaborBudget` already work
-- TMWOWizard — untouched
-- RLS policies — no changes
+- `src/components/change-orders/wizard/COWizard.tsx` — fix FC org resolution to use upstream contract
 
