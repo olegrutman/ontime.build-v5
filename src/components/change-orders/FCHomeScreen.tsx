@@ -206,6 +206,14 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
                     <div className="flex items-center gap-1 mt-0.5">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground truncate">{co.location_tag}</span>
+                    </div>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Approved / Billable COs */}
@@ -225,7 +233,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                       {CO_STATUS_LABELS[co.status as COStatus] ?? co.status}
                     </span>
                   </div>
@@ -245,14 +253,6 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
           </div>
         </div>
       )}
-                  )}
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
       <COWizard
         open={wizardOpen}
