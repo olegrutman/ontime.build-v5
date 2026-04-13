@@ -90,6 +90,14 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
         </div>
       </div>
 
+      {/* FC Pricing Toggle — move higher so TC sees it immediately */}
+      {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
+        <FCPricingToggleCard
+          co={co} financials={financials} myOrgId={myOrgId}
+          onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName="GC"
+        />
+      )}
+
       {/* Financials Card */}
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         <div className="px-4 py-3 border-b border-border">
@@ -224,14 +232,6 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             />
           </div>
         </div>
-      )}
-
-      {/* FC Pricing Toggle — show when TC has collaborators OR viewing FC-created CO */}
-      {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
-        <FCPricingToggleCard
-          co={co} financials={financials} myOrgId={myOrgId}
-          onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName="GC"
-        />
       )}
 
       {/* NTE */}
