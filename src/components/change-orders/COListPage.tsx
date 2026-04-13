@@ -11,6 +11,7 @@ import { COBoardCard } from './COBoardCard';
 import { FCHomeScreen } from './FCHomeScreen';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePermission } from '@/components/auth/RequirePermission';
 
 
 interface COListPageProps {
@@ -30,6 +31,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const orgType = userOrgRoles?.[0]?.organization?.type;
   const isFC = orgType === 'FC';
 
+  const canCreateCO = usePermission('canCreateChangeOrders');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
   function handleCardClick(id: string) {
@@ -110,10 +112,12 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{total === 0 ? (isTM ? 'No work orders yet' : 'No change orders yet') : `${total} total`}</p>
           </div>
 
-          <Button size="sm" onClick={() => setWizardOpen(true)} className="gap-1.5 shrink-0">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">{isTM ? 'New WO' : 'New CO'}</span>
-          </Button>
+          {canCreateCO && (
+            <Button size="sm" onClick={() => setWizardOpen(true)} className="gap-1.5 shrink-0">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">{isTM ? 'New WO' : 'New CO'}</span>
+            </Button>
+          )}
         </div>
 
         {/* Filter pills */}
@@ -172,10 +176,12 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         <div className="co-light-shell flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
           <p className="text-lg font-medium text-foreground">No {isTM ? 'work orders' : 'change orders'} yet</p>
           <p className="text-sm text-muted-foreground max-w-sm">Create a {isTM ? 'work order' : 'change order'} to track scope changes on this project.</p>
-          <Button onClick={() => setWizardOpen(true)} className="gap-1.5 mt-2">
-            <Plus className="h-4 w-4" />
-            New {isTM ? 'Work Order' : 'Change Order'}
-          </Button>
+          {canCreateCO && (
+            <Button onClick={() => setWizardOpen(true)} className="gap-1.5 mt-2">
+              <Plus className="h-4 w-4" />
+              New {isTM ? 'Work Order' : 'Change Order'}
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>

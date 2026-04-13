@@ -32,6 +32,7 @@ const PERM_LABELS: { key: keyof MemberPermissions; label: string }[] = [
   { key: 'can_create_pos', label: 'Create Purchase Orders' },
   { key: 'can_submit_time', label: 'Submit Time' },
   { key: 'can_manage_team', label: 'Manage Team' },
+  { key: 'can_create_rfis', label: 'Create RFIs' },
 ];
 
 /** Map DB column → role default key(s). We pick the primary mapping. */
@@ -45,6 +46,7 @@ const DB_COL_TO_ROLE_KEY: Record<keyof MemberPermissions, keyof RolePermissions 
   can_create_pos: 'canCreatePOs',
   can_submit_time: 'canSubmitTime',
   can_manage_team: 'canManageOrg',
+  can_create_rfis: 'canCreateRFIs',
 };
 
 function getEffectiveValue(
