@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { generateCONumber } from '@/lib/generateCONumber';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
@@ -229,11 +230,6 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
       const title = `${woNumber} · ${selectedWorkType?.label ?? 'Work Order'} · ${format(new Date(), 'MMM d')}`;
       const preGeneratedId = crypto.randomUUID();
 
-      let resolvedAssignedToOrgId: string | null = null;
-      if (role === 'TC' || role === 'FC') {
-        const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
-        resolvedAssignedToOrgId = proj?.organization_id ?? null;
-      }
 
       const { error: insertError } = await supabase
         .from('change_orders')

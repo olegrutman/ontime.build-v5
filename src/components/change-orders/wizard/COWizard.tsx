@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { generateCONumber } from '@/lib/generateCONumber';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
