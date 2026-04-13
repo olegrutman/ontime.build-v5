@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Edit, Home, Building2, ArrowUpDown, Layers, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
+import { ClipboardList, Edit, Home, Building2, ArrowUpDown, Layers, ChevronDown, ChevronRight, Check, X, Hammer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,59 +56,49 @@ interface ProjectScopeSectionProps {
   projectType: string;
 }
 
-function ScopeRow({ label, value }: { label: string; value: React.ReactNode }) {
+/* ─── Small helper components ─── */
+
+function ScopeChip({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/60">
+      {icon && <span className="text-muted-foreground">{icon}</span>}
+      <span className="text-[11px] text-muted-foreground font-medium">{label}:</span>
+      <span className="text-xs font-semibold text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function InclusionDot({ included }: { included: boolean | null }) {
+  if (included === null || included === undefined) return null;
+  return (
+    <span className={cn(
+      "inline-block w-2 h-2 rounded-full shrink-0",
+      included ? "bg-green-500" : "bg-muted-foreground/30"
+    )} />
+  );
+}
+
+function InclusionRow({ label, included }: { label: string; included: boolean | null }) {
+  if (included === null || included === undefined) return null;
+  return (
+    <div className="flex items-center gap-2 py-1">
+      <InclusionDot included={included} />
+      <span className={cn("text-xs", included ? "text-foreground font-medium" : "text-muted-foreground")}>{label}</span>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
   return (
-    <div className="flex justify-between py-2 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-right">{value}</span>
+    <div className="flex justify-between items-center py-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-foreground text-right">{value}</span>
     </div>
   );
 }
 
-function BooleanIndicator({ value }: { value: boolean | null }) {
-  if (value === null || value === undefined) return null;
-  return value ? (
-    <Check className="h-4 w-4 text-green-500" />
-  ) : (
-    <X className="h-4 w-4 text-muted-foreground/50" />
-  );
-}
-
-function InclusionBadges({ scope }: { scope: ScopeDetails }) {
-  const inclusions = [
-    { label: 'Siding', included: scope.siding_included },
-    { label: 'Fascia', included: scope.fascia_included },
-    { label: 'Soffit', included: scope.soffit_included },
-    { label: 'Windows', included: scope.windows_included },
-    { label: 'WRB', included: scope.wrb_included },
-    { label: 'Ext. Doors', included: scope.ext_doors_included },
-    { label: 'Decking', included: scope.decking_included },
-    { label: 'Decorative', included: scope.decorative_included },
-  ].filter(item => item.included !== null);
-
-  if (inclusions.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {inclusions.map(item => (
-        <Badge 
-          key={item.label}
-          variant={item.included ? 'default' : 'secondary'}
-          className={cn(
-            "text-[10px] h-5 px-1.5",
-            item.included 
-              ? "bg-primary/10 text-primary border-primary/20" 
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          {item.included ? <Check className="h-2.5 w-2.5 mr-0.5" /> : null}
-          {item.label}
-        </Badge>
-      ))}
-    </div>
-  );
-}
+/* ─── Main component ─── */
 
 export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSectionProps) {
   const navigate = useNavigate();
@@ -140,54 +130,58 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
 
   const getSidingMaterials = () => {
     if (!scope) return null;
-    const materials = scope.siding_materials || [];
-    if (scope.siding_material_other) {
-      materials.push(scope.siding_material_other);
-    }
+    const materials = [...(scope.siding_materials || [])];
+    if (scope.siding_material_other) materials.push(scope.siding_material_other);
     return materials.length > 0 ? materials.join(', ') : null;
   };
 
   const getDecorativeItems = () => {
     if (!scope) return null;
-    const items = scope.decorative_items || [];
-    if (scope.decorative_item_other) {
-      items.push(scope.decorative_item_other);
-    }
+    const items = [...(scope.decorative_items || [])];
+    if (scope.decorative_item_other) items.push(scope.decorative_item_other);
     return items.length > 0 ? items.join(', ') : null;
   };
 
-  // Build summary stats
-  const buildSummary = () => {
-    if (!scope) return [];
-    const items: string[] = [];
-    
+  // Build summary chips
+  const summaryChips: { label: string; value: string | number }[] = [];
+  if (scope) {
     if (isSingleFamily) {
-      if (scope.home_type) items.push(scope.home_type);
-      if (scope.floors) items.push(`${scope.floors} floor${scope.floors > 1 ? 's' : ''}`);
+      if (scope.home_type) summaryChips.push({ label: 'Type', value: scope.home_type });
+      if (scope.floors) summaryChips.push({ label: 'Floors', value: scope.floors });
+      if (scope.foundation_type) summaryChips.push({ label: 'Foundation', value: scope.foundation_type });
     } else if (isMultiFamily) {
-      if (scope.num_buildings) items.push(`${scope.num_buildings} building${scope.num_buildings > 1 ? 's' : ''}`);
-      if (scope.stories) items.push(`${scope.stories} stories`);
-      if (scope.num_units) items.push(`${scope.num_units} units`);
+      if (scope.num_buildings) summaryChips.push({ label: 'Buildings', value: scope.num_buildings });
+      if (scope.stories) summaryChips.push({ label: 'Stories', value: scope.stories });
+      if (scope.num_units) summaryChips.push({ label: 'Units', value: scope.num_units });
     }
-    
-    return items;
-  };
+    if (scope.roof_type) summaryChips.push({ label: 'Roof', value: scope.roof_type });
+  }
+
+  // Inclusions list
+  const inclusions = scope ? [
+    { label: 'Siding', included: scope.siding_included },
+    { label: 'Fascia', included: scope.fascia_included },
+    { label: 'Soffit', included: scope.soffit_included },
+    { label: 'Windows', included: scope.windows_included },
+    { label: 'WRB', included: scope.wrb_included },
+    { label: 'Ext. Doors', included: scope.ext_doors_included },
+    { label: 'Decking', included: scope.decking_included },
+    { label: 'Decorative', included: scope.decorative_included },
+  ].filter(item => item.included !== null) : [];
 
   if (loading) {
     return (
       <Card className="overflow-hidden">
         <CardHeader className="bg-muted/30 py-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-primary" />
-              Scope
-            </CardTitle>
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Scope</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-4">
           <div className="space-y-2">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-7 w-full" />
             ))}
           </div>
         </CardContent>
@@ -195,46 +189,52 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
     );
   }
 
-  const summaryItems = buildSummary();
-
   return (
     <Card className="overflow-hidden">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <CardHeader className="bg-muted/30 py-3 cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-1.5">
                   {isOpen ? (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
-                  <ClipboardList className="h-5 w-5 text-primary" />
+                  <ClipboardList className="h-5 w-5 text-primary shrink-0" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <CardTitle className="text-base font-medium">Scope</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {scope?.scope_description
-                      ? scope.scope_description.length > 120
-                        ? scope.scope_description.slice(0, 120) + '…'
-                        : scope.scope_description
-                      : scope
-                        ? summaryItems.join(' • ') || 'Details configured'
-                        : 'Not configured'}
-                  </p>
+                  {!isOpen && scope && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {summaryChips.slice(0, 4).map((chip, i) => (
+                        <span key={i} className="text-[11px] px-2 py-0.5 rounded-md bg-primary/8 text-primary font-medium border border-primary/15">
+                          {chip.value}
+                        </span>
+                      ))}
+                      {inclusions.filter(i => i.included).length > 0 && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-green-500/10 text-green-700 dark:text-green-400 font-medium border border-green-500/20">
+                          {inclusions.filter(i => i.included).length} inclusions
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {!scope && (
+                    <p className="text-sm text-muted-foreground mt-0.5">Not configured</p>
+                  )}
                 </div>
               </div>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="ghost"
-                className="h-10 text-sm px-3"
+                className="h-9 text-sm px-3 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/projects/${projectId}/scope`);
                 }}
               >
-                <Edit className="h-4 w-4 mr-1.5" />
+                <Edit className="h-3.5 w-3.5 mr-1.5" />
                 {scope ? 'Edit' : 'Add'}
               </Button>
             </div>
@@ -242,91 +242,122 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="p-4 pt-2">
+          <CardContent className="p-4 pt-3">
             {!scope ? (
-              <p className="text-sm text-muted-foreground">
-                No scope details added yet.
-              </p>
+              <div className="text-center py-6">
+                <Hammer className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No scope details added yet.</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => navigate(`/projects/${projectId}/scope`)}
+                >
+                  Configure Scope
+                </Button>
+              </div>
             ) : (
               <div className="space-y-4">
-                {/* Inclusions Summary */}
-                <div>
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                    Scope Inclusions
-                  </h4>
-                  <InclusionBadges scope={scope} />
-                </div>
+                {/* Scope Description callout */}
+                {scope.scope_description && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-3.5 py-2.5">
+                    <p className="text-xs font-medium text-primary mb-1">Scope Description</p>
+                    <p className="text-sm text-foreground leading-relaxed">{scope.scope_description}</p>
+                  </div>
+                )}
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                {/* Summary chips — always visible */}
+                {summaryChips.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {summaryChips.map((chip, i) => (
+                      <ScopeChip key={i} label={chip.label} value={chip.value} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Inclusions grid */}
+                {inclusions.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Scope Inclusions
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5">
+                      {inclusions.map(item => (
+                        <InclusionRow key={item.label} label={item.label} included={item.included} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Detail sections — 2 col grid */}
+                <div className="grid gap-3 sm:grid-cols-2">
                   {/* Structure */}
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                      <Building2 className="h-3 w-3" />
-                      Structure
-                    </h4>
-                    <div className="divide-y divide-border/50">
+                  <div className="rounded-lg border border-border/60 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Building2 className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Structure</span>
+                    </div>
+                    <div className="divide-y divide-border/40">
                       {isSingleFamily && (
                         <>
-                          <ScopeRow label="Type" value={scope.home_type} />
-                          <ScopeRow label="Floors" value={scope.floors} />
-                          <ScopeRow label="Foundation" value={scope.foundation_type} />
+                          <DetailRow label="Type" value={scope.home_type} />
+                          <DetailRow label="Floors" value={scope.floors} />
+                          <DetailRow label="Foundation" value={scope.foundation_type} />
                           {scope.basement_type && (
-                            <ScopeRow label="Basement" value={`${scope.basement_type}${scope.basement_finish ? ` (${scope.basement_finish})` : ''}`} />
+                            <DetailRow label="Basement" value={`${scope.basement_type}${scope.basement_finish ? ` (${scope.basement_finish})` : ''}`} />
                           )}
                         </>
                       )}
                       {isMultiFamily && (
                         <>
-                          <ScopeRow label="Buildings" value={scope.num_buildings} />
-                          <ScopeRow label="Stories" value={scope.stories} />
-                          <ScopeRow label="Construction" value={scope.construction_type_other || scope.construction_type} />
-                          <ScopeRow label="Units" value={scope.num_units} />
+                          <DetailRow label="Buildings" value={scope.num_buildings} />
+                          <DetailRow label="Stories" value={scope.stories} />
+                          <DetailRow label="Construction" value={scope.construction_type_other || scope.construction_type} />
+                          <DetailRow label="Units" value={scope.num_units} />
                         </>
                       )}
                     </div>
                   </div>
 
                   {/* Roof & Outdoor */}
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                      <Home className="h-3 w-3" />
-                      Roof & Outdoor
-                    </h4>
-                    <div className="divide-y divide-border/50">
-                      <ScopeRow label="Roof Type" value={scope.roof_type} />
-                      {scope.has_roof_deck && <ScopeRow label="Roof Deck" value={scope.roof_deck_type || 'Yes'} />}
-                      {scope.has_balconies && <ScopeRow label="Balconies" value={scope.balcony_type || 'Yes'} />}
-                      {scope.decking_included && <ScopeRow label="Decking" value={scope.decking_type_other || scope.decking_type || 'Yes'} />}
+                  <div className="rounded-lg border border-border/60 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Home className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Roof & Outdoor</span>
+                    </div>
+                    <div className="divide-y divide-border/40">
+                      <DetailRow label="Roof Type" value={scope.roof_type} />
+                      {scope.has_roof_deck && <DetailRow label="Roof Deck" value={scope.roof_deck_type || 'Yes'} />}
+                      {scope.has_balconies && <DetailRow label="Balconies" value={scope.balcony_type || 'Yes'} />}
+                      {scope.decking_included && <DetailRow label="Decking" value={scope.decking_type_other || scope.decking_type || 'Yes'} />}
                     </div>
                   </div>
 
                   {/* Exterior Materials */}
                   {(getSidingMaterials() || getDecorativeItems()) && (
-                    <div className="bg-muted/30 rounded-lg p-3 sm:col-span-2">
-                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                        <Layers className="h-3 w-3" />
-                        Materials
-                      </h4>
-                      <div className="divide-y divide-border/50">
-                        <ScopeRow label="Siding" value={getSidingMaterials()} />
-                        <ScopeRow label="Fascia/Soffit" value={scope.fascia_soffit_material_other || scope.fascia_soffit_material} />
-                        <ScopeRow label="Decorative" value={getDecorativeItems()} />
+                    <div className="rounded-lg border border-border/60 p-3 sm:col-span-2">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Layers className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Materials</span>
+                      </div>
+                      <div className="divide-y divide-border/40">
+                        <DetailRow label="Siding" value={getSidingMaterials()} />
+                        <DetailRow label="Fascia/Soffit" value={scope.fascia_soffit_material_other || scope.fascia_soffit_material} />
+                        <DetailRow label="Decorative" value={getDecorativeItems()} />
                       </div>
                     </div>
                   )}
 
                   {/* Vertical Access */}
                   {(scope.stairs_type || scope.has_elevator) && (
-                    <div className="bg-muted/30 rounded-lg p-3 sm:col-span-2">
-                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                        <ArrowUpDown className="h-3 w-3" />
-                        Vertical Access
-                      </h4>
-                      <div className="divide-y divide-border/50">
-                        <ScopeRow label="Stairs" value={scope.stairs_type} />
-                        {scope.has_elevator && (
-                          <ScopeRow label="Elevator Shaft" value={scope.shaft_type || 'Yes'} />
-                        )}
+                    <div className="rounded-lg border border-border/60 p-3 sm:col-span-2">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <ArrowUpDown className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Vertical Access</span>
+                      </div>
+                      <div className="divide-y divide-border/40">
+                        <DetailRow label="Stairs" value={scope.stairs_type} />
+                        {scope.has_elevator && <DetailRow label="Elevator Shaft" value={scope.shaft_type || 'Yes'} />}
                       </div>
                     </div>
                   )}

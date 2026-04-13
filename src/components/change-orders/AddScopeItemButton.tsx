@@ -22,6 +22,7 @@ interface AddScopeItemButtonProps {
 
 const EMPTY_WIZARD: COWizardData = {
   reason: null,
+  workType: null,
   locationTag: '',
   selectedItems: [],
   pricingType: 'fixed',
@@ -37,6 +38,7 @@ const EMPTY_WIZARD: COWizardData = {
   equipmentResponsible: null,
   shareDraftNow: false,
   quickHours: null,
+  aiDescription: '',
 };
 
 export function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, onAdded }: AddScopeItemButtonProps) {

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Pencil, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -151,6 +152,26 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const fcContract = financials.downstreamContract || financials.upstreamContract;
   const contractSum = fcContract?.contract_sum || 0;
   const laborBudget = financials.laborBudget || 0;
+
+  // Editable internal budget
+  const [draftBudget, setDraftBudget] = useState(laborBudget);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [savingBudget, setSavingBudget] = useState(false);
+
+  const saveBudget = async () => {
+    if (!fcContract?.id) { toast.error('No contract found'); return; }
+    setSavingBudget(true);
+    const ok = await financials.updateLaborBudget(fcContract.id, draftBudget);
+    setSavingBudget(false);
+    if (ok) {
+      toast.success('Internal budget saved');
+      financials.refetch();
+      setEditingBudget(false);
+    } else {
+      toast.error('Failed to save budget');
+    }
+  };
+
   const tcName = (() => {
     if (!fcContract) return 'Trade Contractor';
     if (currentOrgId && fcContract.from_org_id === currentOrgId) return fcContract.to_org_name || 'Trade Contractor';
@@ -229,7 +250,38 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <TRow cells={[<TdN>Contract Value (set by {tcName})</TdN>, <TdM>{fmt(contractSum)}</TdM>, 'Lump sum']} />
                 <TRow cells={[<TdN>Approved COs</TdN>, <TdM>+{fmt(coTotal)}</TdM>, `${approvedCOs.length} approved`]} />
                 <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedTotal)}</TdM>, '—']} isTotal />
-                <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{laborBudget > 0 ? fmt(laborBudget) : '—'}</TdM>, 'Labor + materials']} />
+                <tr style={{ cursor: 'pointer' }} className="hover:bg-[rgba(245,166,35,.05)]">
+                  <td style={cellStyle}>
+                    <TdN>Internal Cost Budget</TdN>
+                  </td>
+                  <td style={cellStyle}>
+                    {editingBudget ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={e => e.stopPropagation()}>
+                        <span style={{ fontSize: '0.78rem', color: C.muted }}>$</span>
+                        <input
+                          autoFocus
+                          type="number"
+                          value={draftBudget || ''}
+                          onChange={e => setDraftBudget(parseInt(e.target.value) || 0)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveBudget(); if (e.key === 'Escape') { setEditingBudget(false); setDraftBudget(laborBudget); } }}
+                          style={{ width: 100, padding: '2px 6px', borderRadius: 6, border: `1px solid ${C.amber}`, fontSize: '0.78rem', outline: 'none', ...fontMono }}
+                        />
+                        <button onClick={saveBudget} disabled={savingBudget} style={{ padding: '2px 8px', borderRadius: 6, background: C.amber, color: '#fff', fontSize: '0.68rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                          {savingBudget ? '…' : '✓'}
+                        </button>
+                        <button onClick={() => { setEditingBudget(false); setDraftBudget(laborBudget); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 2 }}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); setEditingBudget(true); }}>
+                        <TdM>{laborBudget > 0 ? fmt(laborBudget) : 'Set budget'}</TdM>
+                        <Pencil size={11} style={{ color: C.faint }} />
+                      </div>
+                    )}
+                  </td>
+                  <td style={cellStyle}>{laborBudget > 0 ? 'Labor + materials' : <span style={{ color: C.amber, fontSize: '0.68rem', fontWeight: 600 }}>Click to set</span>}</td>
+                </tr>
                 {laborBudget > 0 && (
                   <TRow cells={[<TdN>Net Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netMargin)}</span>, <span style={{ color: C.green, fontWeight: 700 }}>{marginPct}%</span>]} isTotal />
                 )}
@@ -243,8 +295,13 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 2 — Net Margin */}
-        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label="NET MARGIN" value={laborBudget > 0 ? fmt(netMargin) : '—'} sub={laborBudget > 0 ? `${marginPct}% · contract + COs minus internal costs` : 'Set internal budget to see margin'} pills={laborBudget > 0 ? [{ type: 'pg', text: `${marginPct}%` }] : [{ type: 'pm', text: 'No budget' }]} idx={1}>
+        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label="NET MARGIN" value={laborBudget > 0 ? fmt(netMargin) : '—'} sub={laborBudget > 0 ? `${marginPct}% · contract + COs minus internal costs` : 'Set internal budget in Card 1 to see margin'} pills={laborBudget > 0 ? [{ type: netMargin >= 0 ? 'pg' : 'pr', text: `${marginPct}%` }] : [{ type: 'pm', text: 'No budget' }]} idx={1}>
           <div style={{ padding: 12 }}>
+            {laborBudget <= 0 && (
+              <div style={{ padding: '14px 12px', borderRadius: 8, background: C.amberPale, border: `1px solid ${C.border}`, fontSize: '0.76rem', color: C.muted, marginBottom: 12, ...fontLabel }}>
+                <strong style={{ color: C.ink }}>💡 Tip:</strong> Expand the "My Contract" card and set your Internal Cost Budget to see your net margin here.
+              </div>
+            )}
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
