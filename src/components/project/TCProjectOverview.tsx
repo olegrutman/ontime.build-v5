@@ -772,6 +772,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 </span>
               </div>
             )}
+
+            <button
               onClick={() => setAddDialogOpen(true)}
               style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...fontLabel }}
             >
