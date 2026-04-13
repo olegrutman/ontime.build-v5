@@ -1,33 +1,99 @@
 
 
-# Fix: TC Can't Add Materials/Equipment After CO Creation
+# Full Audit: Rules, Hooks, and RLS Policies
 
-## Problem
-The Materials and Equipment panels on the CO detail page are conditionally rendered only when `co.materials_needed` or `co.equipment_needed` is `true` (set during wizard creation). If the TC didn't check those boxes in the wizard, there's no way to add materials or equipment after the fact. The panels simply don't appear.
+## System Architecture — Two Separate Permission Models
 
-## Solution
-Always show Materials and Equipment panels for the CO owner (TC) when they can edit, regardless of the `materials_needed`/`equipment_needed` flags. When the TC adds their first material or equipment item, auto-update the corresponding flag to `true` on the CO record.
+The codebase has **two independent permission systems** that don't talk to each other:
 
-## Changes
+### 1. `RolePermissions` (Active, Enforced)
+**Location**: `src/types/organization.ts` + `src/hooks/useAuth.tsx`
+- 12 boolean flags: `canViewRates`, `canApprove`, `canCreateChangeOrders`, etc.
+- Computed via `getEffectivePermissions()`: role defaults → overridden by `member_permissions` DB row → admin gets all
+- Used by `RequirePermission` component, `usePermission` hook
+- **Only used in 2 places**: `ProjectContractsSection` (checks `canInviteMembers`) and `ContractSOVEditor` / `ProjectSOVEditor` (uses `RequireOrgType`)
+- **Most features ignore it entirely** — CO creation, invoice submission, PO creation, etc. do NOT check these permissions
 
-### 1. Update `CODetailLayout.tsx` — always show panels for TC
-Change the render conditions on lines 346 and 360:
-- Materials: `(co.materials_needed || materials.length > 0)` → add `|| (isTC && canEdit)`
-- Equipment: `(co.equipment_needed || equipment.length > 0)` → add `|| (isTC && canEdit)`
+### 2. `DEFAULT_ROLE_RULES` (Display Only, NOT Enforced)
+**Location**: `src/constants/defaultRoleRules.ts` + `src/pages/platform/PlatformRoles.tsx`
+- 24 rules across SOV, Change Orders, Invoices, Contracts, Dashboard, Projects
+- Stored in `platform_settings` as JSON
+- **Only rendered** on the PlatformRoles admin page as a toggleable table
+- **Zero enforcement** — no hook, no component, no guard reads these rules at runtime
 
-This ensures TC always sees both panels when they have edit access.
+---
 
-### 2. Update `COMaterialsPanel.tsx` — auto-set `materials_needed` on first add
-After a successful material insert, if `co.materials_needed` is false, update the CO record to set `materials_needed = true`. This ensures the panel remains visible and other roles see it correctly.
+## RLS Policy Audit — Change Orders
 
-### 3. Update `COEquipmentPanel.tsx` — auto-set `equipment_needed` on first add
-Same pattern: after inserting equipment, set `equipment_needed = true` on the CO if not already set.
+### `change_orders` table
+| Operation | Policy | Assessment |
+|-----------|--------|------------|
+| SELECT | `can_access_change_order(id)` (SECURITY DEFINER) | Correct — checks org_id, assigned_to_org_id, and collaborators |
+| SELECT | Direct: `user_in_org(org_id) OR user_in_org(assigned_to_org_id)` | Redundant with above but harmless (both PERMISSIVE) |
+| INSERT | `user_in_org(auth.uid(), org_id)` | Correct |
+| UPDATE (owner) | `user_in_org(auth.uid(), org_id)` | Correct |
+| UPDATE (assigned) | 3 separate policies for shared/submitted/approved states | Correct — status transitions are gated |
 
-### 4. Update KPI strip condition (line 236)
-Also update the `hasMaterials` / `hasEquipment` props on the KPI strip to include the `isTC && canEdit` condition so KPI tiles are consistent.
+### `co_line_items`, `co_labor_entries`, `co_material_items`, `co_equipment_items`
+- SELECT: `can_access_change_order(co_id)` — Correct
+- INSERT: `user_in_org(auth.uid(), org_id)` — Correct
+- UPDATE/DELETE: `user_in_org(auth.uid(), org_id)` — Correct
 
-## Technical Detail
-- No database or RLS changes needed — the INSERT policies already check `user_in_org(auth.uid(), org_id)` which passes for TC
-- The `materials_needed` / `equipment_needed` flags are simple booleans on `change_orders` table, updatable by TC via existing UPDATE RLS policy
-- Both panels already accept `canEdit` prop and handle the add UI internally
+### `change_order_collaborators`
+- SELECT: `can_access_change_order(co_id)` — Correct
+- **No INSERT/UPDATE/DELETE policies** — collaborators are managed exclusively via RPC functions (SECURITY DEFINER), which is correct
+
+### `can_access_change_order` function (SECURITY DEFINER)
+```text
+Grants access if:
+  1. User is in the creator org (org_id)
+  2. User is in the assigned org (assigned_to_org_id)  
+  3. User is in an org that is an 'active' or 'completed' collaborator
+```
+This is correct and covers the FC collaboration flow.
+
+---
+
+## Bugs Found
+
+### Bug 1: FC CO Visibility — Likely Working But Untestable
+The CO `6d45bab6` (TC-created, draft) has FC_Test as an active collaborator. RLS via `can_access_change_order` should grant access. FCHomeScreen was recently patched to include `draft` status. **This fix may not have been tested yet by the user.**
+
+### Bug 2: `RolePermissions` Are Largely Unused (Major Gap)
+Despite defining 12 permission flags, almost no feature checks them:
+- `canCreateChangeOrders` — never checked before opening CO wizard
+- `canApprove` — never checked before approving a CO
+- `canCreatePOs` — never checked before PO creation
+- `canViewRates` / `canViewMargins` — never checked in financial views
+- `canSubmitTime` — never checked in labor entry forms
+
+Only `canInviteMembers` is checked (in `ProjectContractsSection`).
+
+### Bug 3: `DEFAULT_ROLE_RULES` Are Dead Code
+The 24 rules on the PlatformRoles page are never enforced. An admin can toggle `co_create` to false for TC but TCs can still create COs freely.
+
+### Bug 4: `useCORoleContext` — FC `canEdit` Too Narrow
+Line 68: `isCollaboratorOrg` only checks `c.status === 'active'`. Once FC submits (status → `completed`), `canEdit` becomes false. This is **intentional** for the submission flow but means FC can't make corrections after submitting without TC resetting the collaborator status.
+
+### Bug 5: No `canCreateRFIs` DB Column Wired
+`PERMISSION_TO_DB_COLUMN` maps `canCreateRFIs` to `null` with the comment "DB column exists but types not yet regenerated". The `member_permissions` table has `can_create_rfis` but it's not wired into the permission merge logic.
+
+---
+
+## Recommended Plan (Bug Fixes Only)
+
+### 1. Wire `canCreateRFIs` into `PERMISSION_TO_DB_COLUMN`
+Change `canCreateRFIs: null` → `canCreateRFIs: 'can_create_rfis'` in `organization.ts` line 122.
+
+### 2. Add permission checks to key CO actions
+- Check `canCreateChangeOrders` before opening CO wizard in `COListPage.tsx`
+- Check `canApprove` before showing approve/reject buttons in `CODetailLayout.tsx`
+
+### 3. Verify FC CO visibility end-to-end
+The `draft` status was just added to FCHomeScreen filters. Confirm the FC user can now see the CO by testing as FC. If the issue persists, the problem would be in the RLS layer (which looks correct in this audit).
+
+### Files to modify
+- `src/types/organization.ts` — fix `canCreateRFIs` mapping
+- `src/components/change-orders/COListPage.tsx` — add `canCreateChangeOrders` check
+- `src/components/change-orders/CODetailLayout.tsx` — add `canApprove` check on action buttons
 
