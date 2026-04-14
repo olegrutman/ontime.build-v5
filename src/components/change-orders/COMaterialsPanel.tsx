@@ -81,17 +81,8 @@ function MarkupEditor({ materialId, initialValue, onRefresh }: { materialId: str
     if (num === initialValue) return;
     setSaving(true);
     try {
-      const lineCostRes = await supabase.from('co_material_items').select('unit_cost, quantity').eq('id', materialId).single();
-      const unitCost = lineCostRes.data?.unit_cost ?? 0;
-      const qty = lineCostRes.data?.quantity ?? 0;
-      const lineCost = qty * unitCost;
-      const markupAmount = lineCost * (num / 100);
-      const billedAmount = lineCost + markupAmount;
-
       const { error } = await supabase.from('co_material_items').update({
         markup_percent: num,
-        markup_amount: markupAmount,
-        billed_amount: billedAmount,
       }).eq('id', materialId);
       if (error) throw error;
       onRefresh();
