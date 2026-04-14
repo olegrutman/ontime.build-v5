@@ -55,7 +55,7 @@ export function useChangeOrders(projectId: string | null) {
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
   };
 
-  const { data: changeOrders = [], isLoading } = useQuery({
+  const { data: queryResult, isLoading } = useQuery({
     queryKey: ['change-orders', projectId, orgId],
     enabled: !!projectId && !!orgId,
     queryFn: async () => {
@@ -86,7 +86,7 @@ export function useChangeOrders(projectId: string | null) {
         }
       }
 
-      // Fetch downstream org IDs (orgs that have a contract FROM them TO current org)
+      // Fetch downstream org IDs and participant role in parallel
       const [{ data: downstreamContracts }, { data: myParticipant }] = await Promise.all([
         supabase
           .from('project_contracts')
@@ -118,6 +118,9 @@ export function useChangeOrders(projectId: string | null) {
       };
     },
   });
+
+  const changeOrders = queryResult?.items ?? [];
+  const isGCOnProject = queryResult?.isGCOnProject ?? false;
 
   const grouped: GroupedChangeOrders = {
     mine: {
