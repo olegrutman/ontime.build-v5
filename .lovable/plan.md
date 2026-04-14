@@ -1,33 +1,32 @@
 
 
-# Fix FC Pricing Base Toggle Logic
+# Fix 5 Bugs in Work Order Detail Page
 
-## Problem
-Two issues with current pricing logic:
+## Bugs Found
 
-1. **Toggle OFF**: `tcBillableToGC` falls back to `laborTotal` (TC + FC combined). It should use **only TC's own labor** (`tcLaborTotal`). The FC's hours/dollars should not affect the GC price when the toggle is off.
-
-2. **Toggle ON**: The calculation already does `fcHours * TC rate` for hourly — this is correct. But the `tcBillableToGC` in `useChangeOrderDetail.ts` falls back to the combined `laborTotal` when `tc_submitted_price` hasn't been persisted yet, which is wrong.
+| # | Bug | Location | Impact |
+|---|-----|----------|--------|
+| 1 | FC Pricing Toggle writes price to DB but never refreshes queries | `FCPricingToggleCard.tsx` useEffect | KPI and sidebar show $0 even though price is calculated — **this is the screenshot bug** |
+| 2 | FC KPI tiles use combined actual costs (TC+FC) instead of FC-only | `COKPIStrip.tsx` lines 96, 112, 117, 119-120 | FC sees TC's internal costs in their margin — privacy violation |
+| 3 | Header strip gross margin computed from unfiltered labor entries | `CODetailLayout.tsx` lines 186-189 | TC scope card margin mixes TC and FC actual costs |
+| 4 | Divide-by-zero in FC margin badge | `COKPIStrip.tsx` line 120 | Shows `NaN%` when FC has costs but no billable entries |
+| 5 | useEffect has no dep guard against redundant DB writes | `FCPricingToggleCard.tsx` line 58-67 | Fires on every re-render when price hasn't changed |
 
 ## Changes
 
-### 1. `src/hooks/useChangeOrderDetail.ts` (line 179-182)
-Change the fallback when toggle is OFF from `laborTotal` to `tcLaborTotal`:
+### 1. `src/components/change-orders/FCPricingToggleCard.tsx`
+- Add `onRefresh()` call after successful DB write in the useEffect — this invalidates queries so the sidebar and KPI tiles update immediately
+- Add a ref to track last-written price to prevent redundant writes on re-renders
 
-```typescript
-const tcBillableToGC = co?.use_fc_pricing_base && co?.tc_submitted_price && co.tc_submitted_price > 0
-  ? co.tc_submitted_price
-  : tcLaborTotal;  // was: laborTotal — only TC's own hours price to GC
-```
+### 2. `src/components/change-orders/COKPIStrip.tsx`
+- Change FC "Internal Cost" tile from `financials.actualCostTotal` → `financials.fcActualCostTotal`
+- Change FC margin calc from `financials.fcLaborTotal - financials.actualCostTotal` → `financials.fcLaborTotal - financials.fcActualCostTotal`
+- Guard margin percentage with `fcLaborTotal > 0` to prevent NaN
 
-### 2. `src/components/change-orders/FCPricingToggleCard.tsx`
-- The hourly path (`fcHours * rate`) is already correct — FC hours times TC's rate.
-- The lump sum path (`fcLumpSum * (1 + markup / 100)`) applies markup to FC's lump sum total — keep as-is for lump sum work orders.
-- Update the helper text when toggle is OFF to clarify: "only your own logged hours will be used for pricing to {gcSideName}."
+### 3. `src/components/change-orders/CODetailLayout.tsx`
+- Replace local `actualCostTotal` calculation with role-aware values from `financials`
+- TC sees: `totalLogged` (all billable) vs `financials.tcActualCostTotal`
+- Keep `totalLogged` as-is for the progress bar (it's already hidden from FC)
 
-### 3. Update `grandTotal` calculation
-`grandTotal` already uses `tcBillableToGC`, so fixing that variable automatically fixes the grand total. No additional change needed.
-
-## Summary
-One-line fix in `useChangeOrderDetail.ts` changes the fallback from combined labor to TC-only labor. This ensures FC hours only affect GC pricing when the toggle is explicitly ON.
+Four files touched, five bugs fixed. The main visible fix: the toggle card will now refresh the page after writing the calculated price, so KPI tiles and sidebar update instantly.
 
