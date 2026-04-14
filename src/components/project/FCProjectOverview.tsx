@@ -74,11 +74,12 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
         .eq('org_id', currentOrgId)
         .order('created_at', { ascending: false });
 
-      // Get WOs where FC is a collaborator
+      // Get WOs where FC is a collaborator (filter by project via inner join)
       const collabPromise = supabase
         .from('change_order_collaborators')
-        .select('co_id, change_orders!inner(id, co_number, title, status, gc_budget, tc_submitted_price, created_at)')
+        .select('co_id, change_orders!inner(id, co_number, title, status, gc_budget, tc_submitted_price, created_at, project_id)')
         .eq('organization_id', currentOrgId)
+        .eq('change_orders.project_id', projectId)
         .neq('status', 'rejected');
 
       const [ownedRes, collabRes] = await Promise.all([ownedPromise, collabPromise]);
@@ -86,23 +87,17 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
       const owned = ownedRes.data || [];
       const collabCOs = (collabRes.data || [])
         .map((c: any) => c.change_orders)
-        .filter((co: any) => co && co.project_id !== undefined || true); // collaborator already filtered
+        .filter(Boolean);
 
       // Merge and deduplicate
       const all = [...owned];
       const existingIds = new Set(owned.map(c => c.id));
       for (const co of collabCOs) {
-        if (co && !existingIds.has(co.id)) {
+        if (!existingIds.has(co.id)) {
           all.push(co);
           existingIds.add(co.id);
         }
       }
-
-      // Filter to this project only (collab query doesn't filter by project)
-      const projectCOs = all.filter((co: any) => {
-        // owned ones are already filtered; collab ones need project check
-        return true; // we'll filter by checking project_id below
-      });
 
       return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
