@@ -1,32 +1,27 @@
 
 
-# Make Sidebar Always Visible During Wizards
+# Fix: Show Project Sidebar on Change Order Detail Page
 
 ## Problem
-When any wizard/dialog opens (PO Wizard, Estimate Upload, etc.), the Radix Dialog overlay (`fixed inset-0 z-50 bg-black/80`) covers the entire viewport, hiding the project sidebar behind it.
-
-## Root Cause
-- `ProjectSidebar` uses flow layout (`min-h-[calc(100vh-52px)]`), not fixed positioning
-- Dialog overlay uses `fixed inset-0`, covering everything
-- Dialog content centers on the full viewport, ignoring sidebar
+The CO detail page (`/project/:id/change-orders/:coId`) renders `CODetailLayout` directly without any project shell or sidebar wrapper. It's a completely standalone page, unlike the main project pages which are wrapped in `ProjectShell` + `ProjectSidebar`.
 
 ## Approach
-Two changes make the sidebar persist through dialogs:
+Wrap the CO detail page in the same `ProjectShell` + `ProjectSidebar` layout used by `ProjectHome.tsx`. This requires:
 
-### 1. Make `ProjectSidebar` fixed-positioned (like `DashboardSidebar` already is)
-- Change from flow layout to `fixed left-0 top-[52px] bottom-0` with the same width
-- Add `lg:ml-[200px] xl:ml-[220px]` to the main content wrapper in `ProjectHome.tsx` so content shifts right
-- This matches the `DashboardSidebar` pattern already used in `AppShell`
+### 1. Update `src/pages/CODetail.tsx`
+- Import `ProjectShell`, `ProjectSidebar`, `ProjectBottomNav`
+- Fetch the project name/status (already fetching `contract_mode`, just expand the select)
+- Wrap `CODetailLayout` in the same shell structure as `ProjectHome`:
+  - `ProjectShell` provides the top context bar
+  - `ProjectSidebar` provides the fixed left nav
+  - Main content area gets the `lg:ml-[200px] xl:ml-[220px]` offset
 
-### 2. Offset dialog overlay and content on desktop
-- In `dialog.tsx`, shift the overlay: add `lg:left-[200px] xl:left-[220px]` instead of `left-0`
-- Shift dialog content centering to account for sidebar width: use CSS `calc()` so the dialog centers in the remaining space
+### 2. Update `src/components/change-orders/CODetailLayout.tsx`
+- Remove or simplify the standalone sticky header (line 203) since `ProjectShell` now provides the top bar
+- Keep the back arrow but make it navigate to the CO list within the project, not replace the entire header
+- The `min-h-screen` on the outer div should become `min-h-0 flex-1` since it's now inside the shell
 
 ### Files to edit
-- `src/components/project/ProjectSidebar.tsx` — change to fixed positioning with `z-40` (same as `DashboardSidebar`)
-- `src/pages/ProjectHome.tsx` — add left margin on `lg:` to offset for the now-fixed sidebar
-- `src/components/ui/dialog.tsx` — offset overlay and content left edge on `lg:` breakpoints
-
-### Technical detail
-The `DashboardSidebar` is already fixed at `z-40`. The dialog is at `z-50`. By shifting the dialog overlay's `left` to match the sidebar width on `lg:` screens, the sidebar remains visible underneath. The dialog content re-centers within the visible area using `left: calc(50% + 100px)` on `lg:` / `calc(50% + 110px)` on `xl:`.
+- `src/pages/CODetail.tsx` — wrap in `ProjectShell` + `ProjectSidebar`
+- `src/components/change-orders/CODetailLayout.tsx` — remove duplicate top bar, adjust outer container to fit inside shell layout
 
