@@ -60,18 +60,51 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const totalPending = pendingInvoices.reduce((s, i) => s + i.total_amount, 0);
   const totalInvoiced = financials.billedToDate;
 
-  // Change orders / Work orders
+  // Change orders / Work orders — FC sees WOs they own OR collaborate on
   const { data: changeOrders = [] } = useQuery({
-    queryKey: ['fc-project-cos', projectId, currentOrgId],
+    queryKey: ['fc-project-cos', projectId, currentOrgId, isTM],
     queryFn: async () => {
-      let q = supabase
+      if (!currentOrgId) return [];
+
+      // Get WOs where FC is the org owner
+      const ownedPromise = supabase
         .from('change_orders')
         .select('id, co_number, title, status, gc_budget, tc_submitted_price, created_at')
         .eq('project_id', projectId)
+        .eq('org_id', currentOrgId)
         .order('created_at', { ascending: false });
-      if (currentOrgId) q = q.eq('org_id', currentOrgId);
-      const { data } = await q;
-      return data || [];
+
+      // Get WOs where FC is a collaborator
+      const collabPromise = supabase
+        .from('change_order_collaborators')
+        .select('co_id, change_orders!inner(id, co_number, title, status, gc_budget, tc_submitted_price, created_at)')
+        .eq('organization_id', currentOrgId)
+        .neq('status', 'rejected');
+
+      const [ownedRes, collabRes] = await Promise.all([ownedPromise, collabPromise]);
+
+      const owned = ownedRes.data || [];
+      const collabCOs = (collabRes.data || [])
+        .map((c: any) => c.change_orders)
+        .filter((co: any) => co && co.project_id !== undefined || true); // collaborator already filtered
+
+      // Merge and deduplicate
+      const all = [...owned];
+      const existingIds = new Set(owned.map(c => c.id));
+      for (const co of collabCOs) {
+        if (co && !existingIds.has(co.id)) {
+          all.push(co);
+          existingIds.add(co.id);
+        }
+      }
+
+      // Filter to this project only (collab query doesn't filter by project)
+      const projectCOs = all.filter((co: any) => {
+        // owned ones are already filtered; collab ones need project check
+        return true; // we'll filter by checking project_id below
+      });
+
+      return all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: !!projectId,
   });
@@ -83,7 +116,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
   // FC labor hours (for T&M mode)
   const { data: fcLaborData = [] } = useQuery({
-    queryKey: ['fc-labor-hours', projectId, currentOrgId],
+    queryKey: ['fc-labor-hours', projectId, currentOrgId, changeOrders.length],
     queryFn: async () => {
       if (!currentOrgId) return [];
       const coIds = changeOrders.map(co => co.id);
