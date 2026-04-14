@@ -47,9 +47,11 @@ function SOVContractSection({
     totalPct, contractMismatch, coveredCount, totalSections,
   } = useSOVPage(projectId, contractId, userOrgId);
 
+  const { isPlatformUser } = useAuth();
   const isContractClient = !!userOrgId && contract.to_org_id === userOrgId;
   const isLocked = currentSOV?.is_locked || false;
   const canEdit = isContractClient && !isLocked;
+  const canEditName = canEdit || isPlatformUser;
   const allReady = prereqs.hasProfile && prereqs.hasScope && prereqs.hasContract;
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
