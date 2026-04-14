@@ -143,23 +143,46 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     setDirty(false);
   };
 
-  // ─── Change Orders ───
+  // ─── Change Orders / Work Orders ───
   const { data: changeOrders = [] } = useQuery({
-    queryKey: ['project-cos-overview', projectId],
+    queryKey: ['project-cos-overview', projectId, isTM],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: cos } = await supabase
         .from('change_orders')
         .select('id, co_number, title, status, gc_budget, tc_submitted_price')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
-      return data || [];
+      if (!cos || cos.length === 0) return [];
+
+      if (isTM) {
+        // For T&M, also fetch material + equipment totals per WO
+        const coIds = cos.map(c => c.id);
+        const [matRes, eqRes] = await Promise.all([
+          supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
+          supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
+        ]);
+        const matByWO: Record<string, number> = {};
+        const eqByWO: Record<string, number> = {};
+        (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
+        (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
+        return cos.map(c => ({
+          ...c,
+          wo_materials_total: matByWO[c.id] || 0,
+          wo_equipment_total: eqByWO[c.id] || 0,
+        }));
+      }
+      return cos.map(c => ({ ...c, wo_materials_total: 0, wo_equipment_total: 0 }));
     },
   });
 
   const approvedCOs = changeOrders.filter(co => co.status === 'approved' || co.status === 'completed');
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'rejected'].includes(co.status));
   const coRevenueTotal = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  const coCostTotal = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
+  // For T&M: total cost = labor (tc_submitted_price) + materials + equipment
+  const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
+  const coMaterialsCost = approvedCOs.reduce((s, co) => s + (co.wo_materials_total || 0), 0);
+  const coEquipmentCost = approvedCOs.reduce((s, co) => s + (co.wo_equipment_total || 0), 0);
+  const coCostTotal = coLaborCost + coMaterialsCost + coEquipmentCost;
 
   // ─── RFIs ───
   const { data: rfis = [] } = useQuery({
@@ -293,26 +316,38 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               </div>
             </KpiCard>
 
-            {/* Card 2 — TC Cost */}
-            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`TC COST (${tcName.toUpperCase()})`} value={coCostTotal > 0 ? fmt(coCostTotal) : '—'} sub={`Sum of ${tcName} submitted prices`} pills={coCostTotal > 0 ? [{ type: 'pg', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No cost' }]} idx={1}>
+            {/* Card 2 — TC Cost (labor + materials + equipment) */}
+            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`TC COST (TOTAL)`} value={coCostTotal > 0 ? fmt(coCostTotal) : '—'} sub={`Labor ${fmt(coLaborCost)} · Materials ${fmt(coMaterialsCost)} · Equip ${fmt(coEquipmentCost)}`} pills={coCostTotal > 0 ? [{ type: 'pg', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No cost' }]} idx={1}>
               <div style={{ padding: 12 }}>
-                {approvedCOs.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <THead cols={['WO #', 'Title', 'TC Price', 'Status']} />
-                    <tbody>
-                      {approvedCOs.slice(0, 8).map(co => (
-                        <TRow key={co.id} cells={[
-                          <TdN>{co.co_number || '—'}</TdN>,
-                          co.title || '—',
-                          <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
-                          <Pill type="pg">Approved</Pill>,
-                        ]} />
-                      ))}
-                      <TRow cells={[<TdN>Total</TdN>, '—', <TdM>{fmt(coCostTotal)}</TdM>, '—']} isTotal />
-                    </tbody>
-                  </table>
-                ) : (
-                  <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No approved WOs yet</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <THead cols={['Cost Type', 'Value']} />
+                  <tbody>
+                    <TRow cells={[<TdN>Labor (TC Submitted)</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
+                    <TRow cells={[<TdN>Materials (billed)</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
+                    <TRow cells={[<TdN>Equipment (billed)</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
+                    <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} isTotal />
+                  </tbody>
+                </table>
+                {approvedCOs.length > 0 && (
+                  <>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginTop: 12, marginBottom: 8 }}>Per Work Order</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <THead cols={['WO #', 'Labor', 'Mat+Eq', 'Total']} />
+                      <tbody>
+                        {approvedCOs.slice(0, 8).map(co => {
+                          const woTotal = (co.tc_submitted_price || 0) + (co.wo_materials_total || 0) + (co.wo_equipment_total || 0);
+                          return (
+                            <TRow key={co.id} cells={[
+                              <TdN>{co.co_number || '—'}</TdN>,
+                              <TdM>{fmt(co.tc_submitted_price || 0)}</TdM>,
+                              <TdM>{fmt((co.wo_materials_total || 0) + (co.wo_equipment_total || 0))}</TdM>,
+                              <TdM>{fmt(woTotal)}</TdM>,
+                            ]} />
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </>
                 )}
               </div>
             </KpiCard>
@@ -328,7 +363,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                       <THead cols={['Metric', 'Value']} />
                       <tbody>
                         <TRow cells={[<TdN>WO Revenue (GC Budget)</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>]} />
-                        <TRow cells={[<TdN>TC Cost (Submitted Prices)</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
+                        <TRow cells={[<TdN>TC Labor Cost</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
+                        <TRow cells={[<TdN>Materials Cost</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
+                        <TRow cells={[<TdN>Equipment Cost</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
+                        <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
                         <TRow cells={[<TdN>Your Margin</TdN>, <TdM>{fmt(woMargin)}</TdM>]} isTotal />
                         <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
                         <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
@@ -344,17 +382,20 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               <div style={{ padding: 12 }}>
                 {changeOrders.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <THead cols={['WO #', 'Title', 'GC Budget', 'TC Price', 'Status']} />
+                    <THead cols={['WO #', 'Title', 'GC Budget', 'Total Cost', 'Status']} />
                     <tbody>
-                      {changeOrders.slice(0, 8).map(co => (
-                        <TRow key={co.id} cells={[
-                          <TdN>{co.co_number || '—'}</TdN>,
-                          co.title || '—',
-                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
-                          <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
-                          <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
-                        ]} />
-                      ))}
+                      {changeOrders.slice(0, 8).map(co => {
+                        const woTotalCost = (co.tc_submitted_price || 0) + (co.wo_materials_total || 0) + (co.wo_equipment_total || 0);
+                        return (
+                          <TRow key={co.id} cells={[
+                            <TdN>{co.co_number || '—'}</TdN>,
+                            co.title || '—',
+                            <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                            <TdM>{woTotalCost > 0 ? fmt(woTotalCost) : '—'}</TdM>,
+                            <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                          ]} />
+                        );
+                      })}
                     </tbody>
                   </table>
                 ) : (
