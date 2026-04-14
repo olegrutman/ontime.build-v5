@@ -1,41 +1,44 @@
 
 
-# Fix Scope & Labor Header Using Wrong Totals
+# Add TC Material Profit Margin
 
 ## What's Wrong
 
-The screenshot shows the Scope & Labor header displaying **$350** for "Billable to GC" when the FC Pricing toggle is ON and the sidebar correctly shows **$650**. The header is using `totalLogged` (raw sum of all billable labor entries) instead of `financials.tcBillableToGC` (which includes the toggle-adjusted price).
+1. **TC profitability is missing material costs**: Revenue includes `materialsTotal` (billed amount with markup), but costs don't include `materialsCost` (supplier price). So materials markup inflates profit incorrectly. Same bug in COSidebar, COProfitabilityCard, and COKPIStrip.
 
-The three header numbers are all wrong because they derive from `totalLogged`:
-- "Billable to GC" shows $350 (raw TC labor) — should be $650 (toggle-adjusted price)
-- "Internal Cost" shows $0 — this one depends on actual cost entries
-- "Gross Margin" shows $350 (100%) — should be $650 - $350 = $300 (46.2%)
+2. **No inline editing of markup on saved materials**: TC can only set markup % when adding a new draft row. Once saved, there's no way to edit it. TC needs to be able to add/change their profit margin on existing materials.
 
-## Fix
+3. **Labels don't clarify the cost vs margin concept**: "Unit cost" and "Markup %" are generic — should be reframed as "Supplier cost" and "My margin" for TC.
 
-**`src/components/change-orders/CODetailLayout.tsx`**
+## Changes
 
-Replace `totalLogged` with the correct role-aware billable amount for the header calculations:
+### 1. Fix TC profitability to include material + equipment costs
+**Files**: `COSidebar.tsx`, `COProfitabilityCard.tsx`, `COKPIStrip.tsx`
 
-**Line 186** — Change the TC's displayed billable from raw labor sum to the financials hook value:
+Add `materialsCost + equipmentCost` to TC costs calculation:
 ```typescript
-const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
-const tcBillableDisplay = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+// Before
+costs = financials.fcLaborTotal + financials.tcActualCostTotal;
+// After  
+costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
 ```
 
-**Line 188** — Recompute gross margin using the correct billable for TC:
-```typescript
-const displayBillable = isTC ? financials.grandTotal : totalLogged;
-const grossMargin = displayBillable - roleActualCost;
-const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
-```
+This ensures the supplier price is treated as TC's cost, and only the markup flows through as profit.
 
-**Line 276** — Use `displayBillable` instead of `totalLogged` for TC:
-```typescript
-${ (isGC ? financials.grandTotal : displayBillable).toLocaleString(...) }
-```
+### 2. Add inline markup editing on saved materials
+**File**: `COMaterialsPanel.tsx`
 
-**Line 307** — Keep `totalLogged` for the progress bar "logged" text (that's raw hours value, correct as-is).
+Make the "Markup %" column editable for saved materials (TC only, when `canEdit`). On blur/change, call `supabase.from('co_material_items').update({ markup_percent })` — the DB trigger recalculates `markup_amount` and `billed_amount` automatically. Then call `onRefresh()`.
 
-One file, three lines changed. The header will now match the sidebar financials exactly.
+### 3. Update labels for TC clarity
+**File**: `COMaterialsPanel.tsx`
+
+- Column header: "Unit cost" → "Supplier cost" (TC only)
+- Column header: "Markup %" → "My margin" (TC only)
+- Footer: "Cost" → "Supplier cost", "Markup" → "My margin"
+
+GC labels stay as-is since they see it differently.
+
+## Summary
+Three files changed. The core fix ensures supplier price = TC cost in profitability math, and lets TCs edit their margin on saved materials.
 
