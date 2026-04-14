@@ -1,23 +1,33 @@
 
 
-# Hide TC-Level Scope & Labor Summary Numbers from FC
+# Fix FC Pricing Base Toggle Logic
 
 ## Problem
-The totals strip inside the "SCOPE & LABOR" card header shows three numbers: "Billed to TC", "Internal Cost", and "Gross Margin". These aggregate ALL labor entries (TC + FC combined) — they represent the TC's financial picture, not the FC's. The FC should not see these.
+Two issues with current pricing logic:
 
-The FC already has their own correct numbers in the sidebar ("My Labor", "FC Profitability") and the KPI strip at the top. The scope card summary is redundant and misleading for them.
+1. **Toggle OFF**: `tcBillableToGC` falls back to `laborTotal` (TC + FC combined). It should use **only TC's own labor** (`tcLaborTotal`). The FC's hours/dollars should not affect the GC price when the toggle is off.
 
-## Change
+2. **Toggle ON**: The calculation already does `fcHours * TC rate` for hourly — this is correct. But the `tcBillableToGC` in `useChangeOrderDetail.ts` falls back to the combined `laborTotal` when `tc_submitted_price` hasn't been persisted yet, which is wrong.
 
-**`src/components/change-orders/CODetailLayout.tsx`**
+## Changes
 
-1. **Line 272-293 (Totals strip)**: Hide the entire 3-column totals strip from FC by changing the render condition or wrapping with `!isFC`. The FC doesn't need "Billed to TC / Internal Cost / Gross Margin" — their own financials are in the sidebar and KPI tiles.
+### 1. `src/hooks/useChangeOrderDetail.ts` (line 179-182)
+Change the fallback when toggle is OFF from `laborTotal` to `tcLaborTotal`:
 
-2. **Line 307 (Progress bar "logged" amount)**: Also hide the `$X,XXX logged` text from the progress bar for FC, since `totalLogged` includes TC entries too.
+```typescript
+const tcBillableToGC = co?.use_fc_pricing_base && co?.tc_submitted_price && co.tc_submitted_price > 0
+  ? co.tc_submitted_price
+  : tcLaborTotal;  // was: laborTotal — only TC's own hours price to GC
+```
 
-Specifically:
-- Wrap the totals strip (lines 272-293) with `!isFC` so only TC and GC see it
-- Change `!isGC` on line 307 to `isTC` so only TC sees the logged total in the progress bar
+### 2. `src/components/change-orders/FCPricingToggleCard.tsx`
+- The hourly path (`fcHours * rate`) is already correct — FC hours times TC's rate.
+- The lump sum path (`fcLumpSum * (1 + markup / 100)`) applies markup to FC's lump sum total — keep as-is for lump sum work orders.
+- Update the helper text when toggle is OFF to clarify: "only your own logged hours will be used for pricing to {gcSideName}."
 
-One file, two small conditional changes.
+### 3. Update `grandTotal` calculation
+`grandTotal` already uses `tcBillableToGC`, so fixing that variable automatically fixes the grand total. No additional change needed.
+
+## Summary
+One-line fix in `useChangeOrderDetail.ts` changes the fallback from combined labor to TC-only labor. This ensures FC hours only affect GC pricing when the toggle is explicitly ON.
 
