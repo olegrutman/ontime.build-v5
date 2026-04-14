@@ -91,7 +91,7 @@ export function CreateUserDialog({ open, onOpenChange, onCreated }: CreateUserDi
       params.role = role;
       params.is_admin = isAdmin;
     }
-    const ok = await execute(params);
+    const ok = await execute(params as any);
     if (ok) {
       setReasonOpen(false);
       onOpenChange(false);
