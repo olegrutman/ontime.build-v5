@@ -41,10 +41,10 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   const matEquip = financials.materialsTotal + financials.equipmentTotal;
 
   if (isGC) {
-    const laborCost = financials.grandTotal;
+    const laborCost = financials.tcBillableToGC;
     const materialCost = financials.materialsTotal;
     const equipmentCost = financials.equipmentTotal;
-    const totalCost = laborCost + materialCost + equipmentCost;
+    const totalCost = financials.grandTotal;
     const gcBudget = (props.co as any).gc_budget as number | null;
 
     return [
