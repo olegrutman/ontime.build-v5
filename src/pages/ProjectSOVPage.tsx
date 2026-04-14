@@ -47,9 +47,11 @@ function SOVContractSection({
     totalPct, contractMismatch, coveredCount, totalSections,
   } = useSOVPage(projectId, contractId, userOrgId);
 
+  const { isPlatformUser } = useAuth();
   const isContractClient = !!userOrgId && contract.to_org_id === userOrgId;
   const isLocked = currentSOV?.is_locked || false;
   const canEdit = isContractClient && !isLocked;
+  const canEditName = canEdit || isPlatformUser;
   const allReady = prereqs.hasProfile && prereqs.hasScope && prereqs.hasContract;
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -297,7 +299,7 @@ function SOVContractSection({
                                 >
                                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
                                   <td className="px-3 py-2 font-medium">
-                                    {canEdit && editingNameId === item.id ? (
+                                    {canEditName && editingNameId === item.id ? (
                                       <Input
                                         type="text"
                                         className="h-7 text-xs"
@@ -309,9 +311,9 @@ function SOVContractSection({
                                       />
                                     ) : (
                                       <span
-                                        className={cn(canEdit && "cursor-pointer hover:text-primary")}
+                                        className={cn(canEditName && "cursor-pointer hover:text-primary")}
                                         onClick={() => {
-                                          if (canEdit) {
+                                          if (canEditName) {
                                             setEditingNameId(item.id);
                                             setEditingName(item.item_name);
                                           }
