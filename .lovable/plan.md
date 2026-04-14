@@ -1,29 +1,24 @@
 
 
-# Fix SOV Billing Status Display
+# Auto-trigger FC Involvement When TC Selects FC in Work Order Wizard
 
 ## Problem
-The `billing_status` column in `project_sov_items` defaults to "unbilled" and is **never updated** by any trigger or function when invoices are created. The triggers only update `total_billed_amount`, `total_completion_percent`, and `billed_to_date`. So items that have been billed still show "Unbilled".
+When a TC creates a work order and selects an FC name with "Field crew input needed" toggled on, the wizard only inserts a `change_order_collaborators` row. It never calls the `request_fc_change_order_input` RPC, so the FC is never actually notified or given access to collaborate on the work order.
 
-## Solution
-Derive the status from the actual financial data instead of trusting the stale column. Two places need updating:
+## Fix
+In `src/components/change-orders/wizard/TMWOWizard.tsx`, after the collaborator row is inserted (line 282-290), add a call to `request_fc_change_order_input` RPC with the newly created CO ID and the selected FC org ID. This is the same RPC already used in the CO detail page when a TC manually requests FC input.
 
-### 1. `src/pages/platform/PlatformProjectDetail.tsx`
-Replace the raw `billing_status` display with a computed status:
-- `total_billed_amount >= value_amount` and both > 0 → **"Fully Billed"** (green)
-- `total_billed_amount > 0` but less than value → **"Partially Billed"** (amber)  
-- `total_billed_amount === 0` or null → **"Unbilled"** (outline/gray)
+### Change in `handleSubmit` (around line 290)
+After the existing collaborator insert block, add:
+```typescript
+await supabase.rpc('request_fc_change_order_input', {
+  _co_id: preGeneratedId,
+  _fc_org_id: data.fcOrgId,
+});
+```
 
-### 2. `src/pages/ProjectSOVPage.tsx`
-The `BillingStatusBadge` component receives `item.billing_status`. Update it (or its caller) to pass a computed status using the same logic above, based on `billed_to_date` and `scheduled_value`.
-
-### 3. Find `BillingStatusBadge` and update it
-Update the badge component to accept the derived status strings and style them with appropriate colors.
-
-No database migration needed — this is purely a display fix using data that already exists.
+This ensures when a TC selects an FC in the wizard, the FC automatically receives the work order and can start collaborating — no extra manual step needed.
 
 ## Files to edit
-- `src/pages/platform/PlatformProjectDetail.tsx`
-- `src/pages/ProjectSOVPage.tsx`  
-- The `BillingStatusBadge` component file (need to locate)
+- `src/components/change-orders/wizard/TMWOWizard.tsx` — 1 line addition after line 290
 
