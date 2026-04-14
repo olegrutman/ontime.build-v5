@@ -376,6 +376,9 @@ export default function PlatformProjectDetail() {
           <TabsTrigger value="setup" className="flex items-center gap-1">
             <Settings className="h-3.5 w-3.5" /> Setup Review
           </TabsTrigger>
+          <TabsTrigger value="sov" className="flex items-center gap-1">
+            <FileText className="h-3.5 w-3.5" /> SOV
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -1017,6 +1020,106 @@ export default function PlatformProjectDetail() {
             onRefresh={fetchData}
           />
         </TabsContent>
+
+        <TabsContent value="sov">
+          {sovs.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No Schedule of Values found for this project.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {sovs.map((sov) => {
+                const contractLabel = sov.contract
+                  ? `${sov.contract.from_org?.name ?? '—'} → ${sov.contract.to_org?.name ?? '—'}`
+                  : sov.sov_name || 'Project SOV';
+                const totalScheduled = sov.items.reduce((s, i) => s + (i.scheduled_value ?? i.value_amount ?? 0), 0);
+                const totalBilled = sov.items.reduce((s, i) => s + (i.total_billed_amount ?? 0), 0);
+                const totalPct = sov.items.reduce((s, i) => s + (i.percent_of_contract ?? 0), 0);
+
+                return (
+                  <Card key={sov.id}>
+                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base">{contractLabel}</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Version {sov.version}
+                          {sov.locked_at && ` · Locked ${format(new Date(sov.locked_at), 'MMM d, yyyy')}`}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={sov.is_locked ? 'default' : 'outline'}
+                        className="flex items-center gap-1"
+                      >
+                        {sov.is_locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                        {sov.is_locked ? 'Locked' : 'Unlocked'}
+                      </Badge>
+                    </CardHeader>
+                    <CardContent className="p-0 overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-10">#</TableHead>
+                            <TableHead>Item Name</TableHead>
+                            <TableHead>Group</TableHead>
+                            <TableHead className="text-right">%</TableHead>
+                            <TableHead className="text-right">Scheduled Value</TableHead>
+                            <TableHead className="text-right">Billed to Date</TableHead>
+                            <TableHead className="text-right">Completion</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sov.items.map((item, idx) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
+                              <TableCell className="font-medium">{item.item_name}</TableCell>
+                              <TableCell className="text-muted-foreground">{item.item_group || '—'}</TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {item.percent_of_contract != null ? `${item.percent_of_contract.toFixed(1)}%` : '—'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {formatCurrencyPrecise(item.scheduled_value ?? item.value_amount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {formatCurrencyPrecise(item.total_billed_amount)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {item.total_completion_percent != null ? `${item.total_completion_percent.toFixed(1)}%` : '0.0%'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {item.billing_status?.replace('_', ' ') || 'pending'}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                        <tfoot>
+                          <TableRow className="bg-muted/50 font-semibold">
+                            <TableCell colSpan={3} className="text-right text-xs uppercase tracking-wide text-muted-foreground">
+                              Totals
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {totalPct.toFixed(1)}%
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {formatCurrencyPrecise(totalScheduled)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {formatCurrencyPrecise(totalBilled)}
+                            </TableCell>
+                            <TableCell colSpan={2} />
+                          </TableRow>
+                        </tfoot>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
       </Tabs>
     </PlatformLayout>
   );
