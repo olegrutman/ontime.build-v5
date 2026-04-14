@@ -290,9 +290,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const fcPendingAmount = financials.payablesInvoiced - financials.payablesPaid;
 
   // ─── Totals ───
-  const revisedGCTotal = gcContractVal + coRevenue;
-  const revisedFCTotal = draftFcVal + coCost;
-  const netTCMargin = tcGrossMargin + coNetMargin;
+  const revisedGCTotal = isTM ? coRevenue : gcContractVal + coRevenue;
+  const revisedFCTotal = isTM ? coCost : draftFcVal + coCost;
+  const netTCMargin = isTM ? coNetMargin : tcGrossMargin + coNetMargin;
   const gcReceivedPct = revisedGCTotal > 0 ? Math.round((totalReceivedFromGC / revisedGCTotal) * 100) : 0;
   const fcPaidPct = revisedFCTotal > 0 ? Math.round((totalPaidToFC / revisedFCTotal) * 100) : 0;
 
