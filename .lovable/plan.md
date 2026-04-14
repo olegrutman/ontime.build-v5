@@ -1,89 +1,29 @@
 
 
-# Fix: GC Can't See TC-Created Work Orders
+# Hide TC Markup Details from GC View
 
-## Root Cause
+## Problem
+When GC views a TC-created work order, they see the TC's internal pricing breakdown:
+- "Unit cost" column showing $15.00
+- "Markup %" column showing 20%
+- Footer showing Cost ($4,410.00) and Markup (+$882.00) separately
 
-When TC creates a WO, the wizard resolves `assigned_to_org_id` from `projects.organization_id`. But this project was **created by TC**, so `projects.organization_id` = TC's own org (`ab07e031`). The WO gets assigned back to TC instead of the upstream GC.
+GC should only see the final billed amount ($5,292.00) — the markup details are TC-internal.
 
-DB evidence:
-- `projects.organization_id` = `ab07e031` (TC org)
-- CO `assigned_to_org_id` = `ab07e031` (TC org — wrong, should be GC)
-- GC org = `96a802b8` (exists as participant with role GC)
-- No `project_contracts` exist, so the downstream fallback in `useChangeOrders` also fails
+## Fix
 
-GC visibility checks all return false:
-- `isMine`: co.org_id is TC, not GC
-- `isAssigned`: assigned_to_org_id is TC, not GC
-- `isCollaborator`: no collaborator record for GC
-- `isDownstream`: no contracts → empty set
+**`src/components/change-orders/COMaterialsPanel.tsx`**
 
-## Fix (2 parts)
+1. **Hide Unit cost and Markup % columns for GC** (lines 755-756): Only show these two columns for TC (not GC). The "Amount" column stays visible for everyone.
 
-### 1. Fix `assigned_to_org_id` resolution in wizards
+2. **Hide Cost/Markup footer breakdown for GC** (lines 947-957): The "Cost" and "Markup" subtotal rows should only render for TC, not GC. GC only sees the "Total" line.
 
-**`src/components/change-orders/wizard/TMWOWizard.tsx`** (line ~224-226)
-**`src/components/change-orders/wizard/COWizard.tsx`** (line ~245-247)
+3. **Keep the Amount column visible for GC**: GC still sees Description, Qty, UOM, and the final Amount.
 
-Current logic for TC:
-```typescript
-const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
-resolvedAssignedToOrgId = proj?.organization_id ?? null;
-```
+Specifically:
+- Line 755: Change `{showPricingColumns && ...}` to `{showPricingColumns && !isGC && ...}` for "Unit cost" header
+- Line 756: Same for "Markup %" header  
+- Lines 780-807: Wrap the unit cost and markup cells with `!isGC` guard
+- Lines 947-957: Wrap the Cost and Markup footer rows with `!isGC`
 
-New logic: First try to find the GC org from `project_participants`, falling back to `projects.organization_id`:
-```typescript
-// For TC: find the GC on this project to assign to
-const { data: gcParticipant } = await supabase
-  .from('project_participants')
-  .select('organization_id')
-  .eq('project_id', projectId)
-  .eq('role', 'GC')
-  .eq('invite_status', 'ACCEPTED')
-  .limit(1)
-  .maybeSingle();
-
-if (gcParticipant?.organization_id) {
-  resolvedAssignedToOrgId = gcParticipant.organization_id;
-} else {
-  // Fallback: project owner
-  const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
-  resolvedAssignedToOrgId = proj?.organization_id ?? null;
-}
-```
-
-### 2. Add GC participant fallback in `useChangeOrders.ts`
-
-Even with the wizard fix, existing COs still have wrong `assigned_to_org_id`. Add a participant-role-based visibility check so GC sees all COs on projects where they're a GC participant.
-
-**`src/hooks/useChangeOrders.ts`** (line ~89-98)
-
-After the downstream contracts query, also fetch current org's participant role:
-```typescript
-const { data: myParticipant } = await supabase
-  .from('project_participants')
-  .select('role')
-  .eq('project_id', projectId!)
-  .eq('organization_id', orgId!)
-  .eq('invite_status', 'ACCEPTED')
-  .maybeSingle();
-const isGCOnProject = myParticipant?.role === 'GC';
-```
-
-Then in the grouping logic (line ~133), add GC sees all non-own COs:
-```typescript
-} else if (
-  (co.assigned_to_org_id === orgId && co.org_id !== orgId) ||
-  isCollaborator ||
-  isDownstream ||
-  isGCOnProject  // GC sees all COs on their projects
-) {
-  grouped.sharedWithMe.push(co);
-}
-```
-
-Same addition in the board columns loop (line ~152).
-
-### Summary
-Three files, two changes each in the wizards + one visibility fix in the hook. Future WOs will correctly target GC, and existing ones become visible via the participant fallback.
-
+One file, ~6 line changes. GC sees only quantities and final amounts.
