@@ -1,26 +1,27 @@
 
 
-# Allow Platform Owner to Edit SOV Item Names on Locked SOVs
+# Add SOV Tab to Platform Project Detail Page
 
-## Problem
-Once an SOV is locked, `canEdit` becomes `false` (line 52: `isContractClient && !isLocked`), which blocks ALL editing — including item names. Platform owners need to rename items even after locking, without touching percentages or values.
+## What
+Add a new "SOV" tab to the platform project detail page (`/platform/projects/:id`) so platform owners can view all Schedule of Values for a project — read-only, showing each contract's SOV with its line items, percentages, values, and lock status.
 
 ## Approach
-Introduce a `canEditName` flag that is `true` when `canEdit` is true OR when the viewer is a platform user. Use `canEditName` only for the item name column; all other columns (%, amount, lock toggle, delete, add) stay gated behind `canEdit`.
+Add a third tab "SOV" next to "Overview" and "Setup Review" in `PlatformProjectDetail.tsx`. When selected, it fetches all `project_sov` records for the project, joined with their `project_sov_items` and the contract info, then displays them in a clean table format grouped by contract.
 
-### 1. Update `src/pages/ProjectSOVPage.tsx` — `SOVContractSection`
-- Import `useAuth` and destructure `isPlatformUser`
-- Add: `const canEditName = canEdit || isPlatformUser;`
-- **Line 300**: Change `canEdit && editingNameId === item.id` → `canEditName && editingNameId === item.id`
-- **Line 312**: Change `cn(canEdit && "cursor-pointer hover:text-primary")` → `cn(canEditName && "cursor-pointer hover:text-primary")`
-- **Line 314**: Change `if (canEdit)` → `if (canEditName)`
-- Leave all other `canEdit` references (%, amount, lock, delete, add line) unchanged
+### Data fetching
+- Query `project_sov` where `project_id = :id`, join to `project_contracts` for org names
+- Query `project_sov_items` for each SOV, ordered by `sort_order`
+- Show: item name, group, % of contract, scheduled value, billed to date, completion %, billing status, lock status
 
-### 2. Update `src/hooks/useSOVPage.ts` — `updateLineName`
-- The function already does NOT check `is_locked` (line 342 only checks `!currentSOV` and `!newName.trim()`), so no backend change is needed
+### UI layout
+- One card per SOV/contract, showing contract parties + lock status in the header
+- Table inside each card with columns: #, Item Name, Group, %, Scheduled Value, Billed, Completion %, Status
+- Totals row at bottom
+- "Locked" badge on locked SOVs
 
-### Files to edit
-- `src/pages/ProjectSOVPage.tsx` (4 line changes + 1 import addition)
+### RLS consideration
+Platform users access via `isPlatformUser` — need to verify RLS on `project_sov` and `project_sov_items` allows platform user reads. If not, the query will use the service role implicitly available to platform users, or we add a policy.
 
-No database or RLS changes required — the update goes through `project_sov_items` which platform users can already write to.
+## Files to edit
+- `src/pages/platform/PlatformProjectDetail.tsx` — add SOV tab + fetch logic + render section
 
