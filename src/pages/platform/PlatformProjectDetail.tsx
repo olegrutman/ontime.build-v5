@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlatformLayout } from '@/components/platform/PlatformLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench, GitBranch, Settings, Lock, Unlock } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench, GitBranch, Settings, Lock, Unlock, Pencil } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { formatCurrencyPrecise } from '@/lib/utils';
 
 interface ProjectData {
@@ -181,6 +182,9 @@ export default function PlatformProjectDetail() {
   const [forceAcceptTeamId, setForceAcceptTeamId] = useState<string | null>(null);
   const [forceAcceptOrgName, setForceAcceptOrgName] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemName, setEditingItemName] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Delete entity state
   const [deleteInvoiceOpen, setDeleteInvoiceOpen] = useState(false);
@@ -1074,7 +1078,43 @@ export default function PlatformProjectDetail() {
                           {sov.items.map((item, idx) => (
                             <TableRow key={item.id}>
                               <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                              <TableCell className="font-medium">{item.item_name}</TableCell>
+                              <TableCell className="font-medium">
+                                {editingItemId === item.id ? (
+                                  <Input
+                                    ref={editInputRef}
+                                    className="h-7 text-sm min-w-[180px]"
+                                    value={editingItemName}
+                                    onChange={(e) => setEditingItemName(e.target.value)}
+                                    onBlur={async () => {
+                                      const trimmed = editingItemName.trim();
+                                      if (trimmed && trimmed !== item.item_name) {
+                                        await supabase.from('project_sov_items').update({ item_name: trimmed }).eq('id', item.id);
+                                        setSovs((prev) => prev.map((s) => ({
+                                          ...s,
+                                          items: s.items.map((i) => i.id === item.id ? { ...i, item_name: trimmed } : i),
+                                        })));
+                                      }
+                                      setEditingItemId(null);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                      if (e.key === 'Escape') setEditingItemId(null);
+                                    }}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <button
+                                    className="flex items-center gap-1 hover:text-primary text-left"
+                                    onClick={() => {
+                                      setEditingItemId(item.id);
+                                      setEditingItemName(item.item_name);
+                                    }}
+                                  >
+                                    {item.item_name}
+                                    <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                                  </button>
+                                )}
+                              </TableCell>
                               <TableCell className="text-muted-foreground">{item.item_group || '—'}</TableCell>
                               <TableCell className="text-right font-mono text-sm">
                                 {item.percent_of_contract != null ? `${item.percent_of_contract.toFixed(1)}%` : '—'}
