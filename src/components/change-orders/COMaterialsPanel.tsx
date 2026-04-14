@@ -235,7 +235,7 @@ export function COMaterialsPanel({
 
   // Fetch supplier pricing from PO line items when PO is priced
   useEffect(() => {
-    if (!hasPricedPO || !activePricingRequest) {
+    if (!showPricingColumns || !hasPricedPO || !activePricingRequest) {
       setSupplierPriceMap(new Map());
       return;
     }
@@ -270,7 +270,7 @@ export function COMaterialsPanel({
 
     fetchSupplierPricing();
     return () => { cancelled = true; };
-  }, [hasPricedPO, activePricingRequest]);
+  }, [showPricingColumns, hasPricedPO, activePricingRequest]);
 
   useEffect(() => {
     if (!canManageMaterials || !projectId) return;
@@ -393,7 +393,7 @@ export function COMaterialsPanel({
   }
 
   async function applySupplierPricing() {
-    if (supplierPriceMap.size === 0) return;
+    if (!showPricingColumns || supplierPriceMap.size === 0) return;
     setApplyingPricing(true);
     try {
       const updates = materials
@@ -963,7 +963,7 @@ export function COMaterialsPanel({
             </div>
           )}
 
-          {materials.length > 0 && canManageMaterials && !isFC && (
+          {materials.length > 0 && canManageMaterials && !isFC && showPricingColumns && (
             <div className="px-4 py-3 border-t border-border space-y-3">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="space-y-1">
