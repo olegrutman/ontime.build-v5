@@ -323,7 +323,7 @@ export function GCDashboardView({
               </tbody>
             </table>
           </KpiCard>
-        </div>
+        </KpiGrid>
 
         {/* Portfolio Metrics Table */}
         {projects.length > 0 && (
