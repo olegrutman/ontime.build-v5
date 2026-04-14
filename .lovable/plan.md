@@ -1,26 +1,48 @@
 
 
-# Fix: Material Responsibility Not Shown on TC Project Team Card
+# Fix: TC Sees Material Prices When GC Is Responsible
 
-## Problem
-The TC Project Overview page renders its own inline team card (inside `TCProjectOverview.tsx`, Card 9 at line 723) which lists team members but **never fetches or displays material responsibility**. The `ProjectOverviewTeamCard` component (which does show material responsibility) is imported in `ProjectHome.tsx` but never used — the TC path goes directly to `TCProjectOverview` which has its own team rendering.
+## Root Cause
 
-The database confirms `material_responsibility = 'GC'` is correctly stored in `project_contracts` for this project. The issue is purely a UI display gap.
+The `useCOResponsibility` hook has a query bug. It fetches from `project_contracts` with `.limit(1).maybeSingle()` but does **not** filter out rows where `material_responsibility` is null.
+
+This project has two contracts:
+- TC → GC contract: `material_responsibility = 'GC'`
+- FC → TC contract: `material_responsibility = null`
+
+When the FC → TC contract is returned first, the hook defaults `materialResponsible` to `'TC'`. This makes `showPricingColumns = true` for the TC user, exposing unit prices in both the CO materials table and the Add Material product picker.
+
+The `PurchaseOrdersTab` does this correctly — it filters with `.not('material_responsibility', 'is', null)` before `.limit(1)`. The CO hook is missing that filter.
 
 ## Fix
 
-### File: `src/components/project/TCProjectOverview.tsx`
+### File: `src/hooks/useCOResponsibility.ts` (line 30-33)
 
-**1. Fetch material responsibility** (alongside the existing `fetchTeam` call):
-- Query `project_contracts` for `material_responsibility` where it's not null, same pattern used by `ProjectOverviewTeamCard` (line 58 of that file).
-- Store in a `materialResp` state variable.
+Add the missing null filter to the query:
 
-**2. Display material responsibility in the Team card** (after the team member list, before the "Invite FC" button, around line 759):
-- Add a row showing: `📦 Materials: General Contractor` or `Trade Contractor` (matching the pattern in `ProjectOverviewTeamCard` lines 139-143).
-- Use the existing `C.muted` / `C.border` color tokens for consistency.
+```typescript
+// Before (buggy):
+.from('project_contracts')
+.select('material_responsibility')
+.eq('project_id', projectId!)
+.limit(1)
+.maybeSingle();
+
+// After (fixed):
+.from('project_contracts')
+.select('material_responsibility')
+.eq('project_id', projectId!)
+.not('material_responsibility', 'is', null)
+.limit(1)
+.maybeSingle();
+```
+
+This single-line change ensures the hook only picks up contracts where material responsibility was explicitly set, matching the behavior in `PurchaseOrdersTab`, `OverviewTeamCard`, `TeamMembersCard`, `TCProjectOverview`, and `ProjectOverviewTeamCard` — all of which already filter for non-null.
 
 ### No other files need changes
-- The DB already stores the correct value.
-- RLS policies on `project_contracts` already allow project participants to read.
-- The `useCOResponsibility` hook correctly reads from `project_contracts` for CO-level decisions.
+
+- The `showPricingColumns` logic in `COMaterialsPanel.tsx` (line 146) is already correct: `isTC && materialsResponsible === 'TC'` — it just needs the correct value.
+- The `hidePricing` prop on `ProductPickerContent` was already fixed to `!showPricingColumns` in the previous pass.
+- The `QuantityPanel` line total display is properly gated by `!hidePricing`.
+- No database or RLS changes needed.
 
