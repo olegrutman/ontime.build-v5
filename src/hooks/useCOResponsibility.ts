@@ -29,6 +29,7 @@ export function useCOResponsibility(
         .from('project_contracts')
         .select('material_responsibility')
         .eq('project_id', projectId!)
+        .not('material_responsibility', 'is', null)
         .limit(1)
         .maybeSingle();
       return {
