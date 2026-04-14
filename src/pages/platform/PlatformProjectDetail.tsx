@@ -100,7 +100,30 @@ interface WorkOrderRow {
   created_at: string;
 }
 
-interface CORow {
+interface PlatformSOV {
+  id: string;
+  contract_id: string | null;
+  sov_name: string | null;
+  is_locked: boolean;
+  locked_at: string | null;
+  version: number;
+  contract?: { from_org: { name: string } | null; to_org: { name: string } | null } | null;
+  items: PlatformSOVItem[];
+}
+
+interface PlatformSOVItem {
+  id: string;
+  item_name: string;
+  item_group: string | null;
+  percent_of_contract: number | null;
+  scheduled_value: number | null;
+  value_amount: number | null;
+  total_billed_amount: number | null;
+  total_completion_percent: number | null;
+  billing_status: string;
+  sort_order: number;
+}
+
   id: string;
   co_number: string | null;
   status: string;
@@ -150,6 +173,7 @@ export default function PlatformProjectDetail() {
   const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
   const [changeOrders, setChangeOrders] = useState<CORow[]>([]);
+  const [sovs, setSovs] = useState<PlatformSOV[]>([]);
   const { execute, loading: actionLoading } = useSupportAction();
   const { platformRole } = useAuth();
   const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
@@ -254,6 +278,40 @@ export default function PlatformProjectDetail() {
       .order('created_at', { ascending: false })
       .limit(20);
     setChangeOrders((coData || []) as unknown as CORow[]);
+
+    // Fetch SOV data
+    const { data: sovData } = await supabase
+      .from('project_sov')
+      .select(`
+        id, contract_id, sov_name, is_locked, locked_at, version,
+        contract:project_contracts(
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        )
+      `)
+      .eq('project_id', projectId);
+
+    if (sovData && sovData.length > 0) {
+      const sovIds = sovData.map((s: any) => s.id);
+      const { data: itemsData } = await supabase
+        .from('project_sov_items')
+        .select('id, sov_id, item_name, item_group, percent_of_contract, scheduled_value, value_amount, total_billed_amount, total_completion_percent, billing_status, sort_order')
+        .in('sov_id', sovIds)
+        .order('sort_order');
+
+      const itemsBySov = (itemsData || []).reduce((acc: Record<string, PlatformSOVItem[]>, item: any) => {
+        if (!acc[item.sov_id]) acc[item.sov_id] = [];
+        acc[item.sov_id].push(item);
+        return acc;
+      }, {});
+
+      setSovs(sovData.map((s: any) => ({
+        ...s,
+        items: itemsBySov[s.id] || [],
+      })) as PlatformSOV[]);
+    } else {
+      setSovs([]);
+    }
 
     setLoading(false);
   };
