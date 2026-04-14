@@ -19,8 +19,9 @@ import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 import { StepCatalog } from './StepCatalog';
-import type { COCreatedByRole, ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
+import type { COCreatedByRole, ScopeCatalogItem, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { SelectedScopeItem, COWizardData } from './COWizard';
+import { PricingTypeSelector, ToggleWithSelector, ShareToggle } from './SharedWizardComponents';
 
 // ── Work Type definitions ─────────────────────────────
 type WorkTypeKey = 'demolition' | 'framing' | 'reframing' | 'sheathing' | 'blocking' | 'backout' | 'exterior' | 'stairs' | 'other';
@@ -50,6 +51,10 @@ interface TMWOData {
   selectedItems: SelectedScopeItem[];
   scopeNotes: string;
   locationTag: string;
+  pricingType: COPricingType;
+  nteCap: string;
+  gcBudget: string;
+  assignedToOrgId: string;
   materialsNeeded: boolean;
   materialsResponsible: 'GC' | 'TC' | null;
   materialNotes: string;
@@ -68,6 +73,10 @@ const INITIAL_DATA: TMWOData = {
   selectedItems: [],
   scopeNotes: '',
   locationTag: '',
+  pricingType: 'tm',
+  nteCap: '',
+  gcBudget: '',
+  assignedToOrgId: '',
   materialsNeeded: false,
   materialsResponsible: null,
   materialNotes: '',
@@ -85,7 +94,7 @@ const STEPS = [
   { key: 'work_type', label: 'Work Type', description: 'What kind of work is this?' },
   { key: 'scope', label: 'Scope Details', description: 'Describe the scope of work' },
   { key: 'location', label: 'Location', description: 'Where will this work happen?' },
-  { key: 'resources', label: 'Resources', description: 'Materials, equipment & urgency' },
+  { key: 'how', label: 'How', description: 'Pricing & configuration' },
   { key: 'review', label: 'Review', description: 'Review and submit' },
 ] as const;
 
@@ -135,7 +144,11 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     if (s.key === 'work_type') return !!data.workType;
     if (s.key === 'scope') return data.selectedItems.length > 0;
     if (s.key === 'location') return !!data.locationTag;
-    if (s.key === 'resources') return true;
+    if (s.key === 'how') {
+      if (role === 'GC' && !data.assignedToOrgId) return false;
+      if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+      return true;
+    }
     if (s.key === 'review') return !!data.aiDescription.trim();
     return true;
   }
