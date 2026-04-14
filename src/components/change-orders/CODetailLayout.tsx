@@ -71,6 +71,8 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
     co?.id, projectId,
     (co as any)?.co_material_responsible_override,
     (co as any)?.co_equipment_responsible_override,
+    (co as any)?.materials_responsible,
+    (co as any)?.equipment_responsible,
   );
 
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(

@@ -17,6 +17,8 @@ export function useCOResponsibility(
   projectId: string | undefined,
   coMaterialOverride: string | null | undefined,
   coEquipmentOverride: string | null | undefined,
+  coMaterialDefault?: string | null,
+  coEquipmentDefault?: string | null,
 ): UseCOResponsibilityResult {
   const queryClient = useQueryClient();
 
@@ -44,11 +46,15 @@ export function useCOResponsibility(
 
   const materialResponsible: 'GC' | 'TC' = coMaterialOverride
     ? (coMaterialOverride as 'GC' | 'TC')
-    : contractDefaults?.materialResponsibility ?? 'TC';
+    : coMaterialDefault
+      ? (coMaterialDefault as 'GC' | 'TC')
+      : contractDefaults?.materialResponsibility ?? 'TC';
 
   const equipmentResponsible: 'GC' | 'TC' = coEquipmentOverride
     ? (coEquipmentOverride as 'GC' | 'TC')
-    : 'TC'; // default equipment to TC
+    : coEquipmentDefault
+      ? (coEquipmentDefault as 'GC' | 'TC')
+      : 'TC';
 
   const updateOverride = useMutation({
     mutationFn: async (patch: Record<string, string | null>) => {
