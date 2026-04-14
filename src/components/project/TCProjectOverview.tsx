@@ -698,24 +698,24 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       </div>
       {/* Desktop: full Cash Flow Ladder */}
       <div className="hidden sm:block" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', ...fontLabel }}>
-        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💧 Cash Flow — {projectName}</div>
+        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💧 {isTM ? 'WO Cash Flow' : 'Cash Flow'} — {projectName}</div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }} className="max-md:flex-col">
           {/* GC Column */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.navy, color: '#fff', borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>General Contractor</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{gcName}</div>
-              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(gcContractVal)}</div>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>{isTM ? 'WO Revenue' : 'General Contractor'}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{isTM ? `${approvedCOs.length} approved WOs` : gcName}</div>
+              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(effectiveGCVal)}</div>
             </div>
             <div style={{ fontSize: '1.2rem', color: C.muted }}>↓</div>
-            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 2 }}>TC Contract: {fmt(gcContractVal)}</div>
+            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 2 }}>{isTM ? 'GC Budget total' : `TC Contract: ${fmt(effectiveGCVal)}`}</div>
           </div>
           {/* TC Column (You) */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.amberPale, border: `2px solid ${C.amber}`, borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
               <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.amberD, marginBottom: 4 }}>YOU (Trade Contractor)</div>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.ink, marginBottom: 2 }}>{userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
-              <div style={{ fontSize: '1.1rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+              <div style={{ fontSize: '1.1rem', color: C.ink, ...fontVal }}>{fmt(effectiveGCVal)}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <div style={{ fontSize: '1.2rem', color: C.muted }}>↓</div>
@@ -724,14 +724,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 <div style={{ fontSize: '0.88rem', color: C.green, ...fontMono }}>{fmt(netTCMargin)}</div>
               </div>
             </div>
-            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>FC Contract: {fmt(draftFcVal)}</div>
+            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>{isTM ? `TC Labor: ${fmt(effectiveFCVal)}` : `FC Contract: ${fmt(effectiveFCVal)}`}</div>
           </div>
-          {/* FC Column */}
+          {/* FC / Labor Column */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.navy, color: '#fff', borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>Field Crew</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{fcName}</div>
-              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(draftFcVal)}</div>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>{isTM ? 'TC Labor Cost' : 'Field Crew'}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{isTM ? 'Your submitted labor' : fcName}</div>
+              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(effectiveFCVal)}</div>
             </div>
             <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>Internal costs managed by Field Crew</div>
           </div>
