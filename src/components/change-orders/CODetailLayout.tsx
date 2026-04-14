@@ -185,8 +185,9 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
   ).length;
   const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
   const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
-  const grossMargin = totalLogged - roleActualCost;
-  const grossMarginPct = totalLogged > 0 ? (grossMargin / totalLogged) * 100 : 0;
+  const displayBillable = isTC ? financials.grandTotal : totalLogged;
+  const grossMargin = displayBillable - roleActualCost;
+  const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
 
   const sidebarProps = {
     co, isGC, isTC, isFC, role, myOrgId, projectId,
@@ -273,7 +274,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                       <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
                         <p className="text-muted-foreground font-medium">{isGC ? 'TC Submitted' : isTC ? 'Billable to GC' : 'Billed to TC'}</p>
                         <p className="font-mono font-bold text-foreground mt-0.5">
-                          ${ (isGC ? financials.grandTotal : totalLogged).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
+                          ${ (isGC ? financials.grandTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
                         </p>
                       </div>
                       {(isTC || isFC) && (
