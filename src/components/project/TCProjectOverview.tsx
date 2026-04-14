@@ -672,21 +672,21 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       {/* Cash Flow Ladder */}
       {/* Mobile: compact horizontal summary */}
       <div className="sm:hidden" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '14px 16px', ...fontLabel }}>
-        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink, marginBottom: 10 }}>💧 Cash Flow</div>
+        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink, marginBottom: 10 }}>💧 {isTM ? 'WO Cash Flow' : 'Cash Flow'}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
           <div style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>GC</div>
-            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>{isTM ? 'Revenue' : 'GC'}</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(effectiveGCVal)}</div>
           </div>
           <div style={{ fontSize: '0.9rem', color: C.muted }}>→</div>
           <div style={{ textAlign: 'center', flex: 1, background: C.amberPale, borderRadius: 8, padding: '4px 6px', border: `1.5px solid ${C.amber}` }}>
             <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.amberD, fontWeight: 600 }}>You</div>
-            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(effectiveGCVal)}</div>
           </div>
           <div style={{ fontSize: '0.9rem', color: C.muted }}>→</div>
           <div style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>FC</div>
-            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(draftFcVal)}</div>
+            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>{isTM ? 'Labor' : 'FC'}</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(effectiveFCVal)}</div>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
