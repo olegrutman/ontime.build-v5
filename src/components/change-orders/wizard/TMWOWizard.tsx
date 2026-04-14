@@ -170,7 +170,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     locationTag: data.locationTag || 'TBD',
     reason: 'other' as COReasonCode,
     selectedItems: data.selectedItems,
-    pricingType: 'tm' as any,
+    pricingType: data.pricingType as any,
     materialsNeeded: data.materialsNeeded,
     materialsResponsible: data.materialsResponsible,
     equipmentNeeded: data.equipmentNeeded,
