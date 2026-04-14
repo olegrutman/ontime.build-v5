@@ -24,8 +24,29 @@ interface AttentionItem { id: string; type: 'invoice' | 'invite' | 'sent_invite'
 interface PendingInvite { id: string; projectId: string; projectName: string; invitedByOrgName: string; role: string; }
 interface StatusCounts { setup: number; active: number; on_hold: number; completed: number; archived: number; }
 
-/* ─── No demo data — real projects only ─── */
-
+export interface SupplierDashboardViewProps {
+  projects: ProjectWithDetails[];
+  financials: FinancialSummary;
+  projectFinancials: ProjectFinancialDetail[];
+  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
+  attentionItems: AttentionItem[];
+  pendingInvites: PendingInvite[];
+  recentDocs: RecentDoc[];
+  statusCounts: StatusCounts;
+  profile: { first_name?: string | null; phone?: string | null } | null;
+  organization: any;
+  userSettings: any;
+  updateUserSettings: (s: any) => Promise<void>;
+  isOrgAdmin: boolean;
+  userOrgRolesLength: number;
+  orgType: string | null;
+  orgId: string | undefined;
+  soleMember: boolean;
+  onSetSoleMember: () => void;
+  onSetPartOfTeam: () => void;
+  onRefresh: () => Promise<void>;
+  loading: boolean;
+}
 
 export function SupplierDashboardView({
   projects, financials, projectFinancials, billing, attentionItems, pendingInvites, recentDocs,
