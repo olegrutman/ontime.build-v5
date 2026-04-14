@@ -1129,9 +1129,15 @@ export default function PlatformProjectDetail() {
                                 {item.total_completion_percent != null ? `${item.total_completion_percent.toFixed(1)}%` : '0.0%'}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className="text-xs capitalize">
-                                  {item.billing_status?.replace('_', ' ') || 'pending'}
-                                </Badge>
+                                {(() => {
+                                  const billed = item.total_billed_amount ?? 0;
+                                  const value = item.value_amount ?? 0;
+                                  if (billed > 0 && value > 0 && billed >= value)
+                                    return <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-xs">Fully Billed</Badge>;
+                                  if (billed > 0)
+                                    return <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 text-xs">Partially Billed</Badge>;
+                                  return <Badge variant="outline" className="text-xs">Unbilled</Badge>;
+                                })()}
                               </TableCell>
                             </TableRow>
                           ))}
