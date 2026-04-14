@@ -69,6 +69,15 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
     (co.created_by_role === 'FC' && co.collaboratorOrgId === orgId)
   );
 
+  // Active WOs where FC is collaborator but not needing immediate input
+  const actionableIds = new Set(actionableCOs.map(co => co.id));
+  const activeCOs = changeOrders.filter(co => {
+    if (co.collaboratorOrgId !== orgId) return false;
+    if (co.collaboratorStatus !== 'active' && co.collaboratorStatus !== 'completed') return false;
+    if (actionableIds.has(co.id)) return false;
+    return ['submitted', 'work_in_progress', 'shared', 'closed_for_pricing', 'approved', 'contracted'].includes(co.status);
+  });
+
   // Approved/billable COs where FC was a collaborator
   const billableCOs = changeOrders.filter(co => {
     if (co.collaboratorOrgId !== orgId) return false;
@@ -172,6 +181,44 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
           </div>
         )}
       </div>
+
+      {/* Active Work Orders */}
+      {activeCOs.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-foreground px-1">
+            Active Work Orders
+          </h3>
+          <div className="space-y-2">
+            {activeCOs.map(co => (
+              <button
+                key={co.id}
+                type="button"
+                onClick={() => navigate(`/project/${projectId}/change-orders/${co.id}`)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-left min-h-[56px]"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                      {CO_STATUS_LABELS[co.status as COStatus] ?? co.status}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground mt-0.5 truncate">
+                    {co.title ?? 'Change order'}
+                  </p>
+                  {co.location_tag && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground truncate">{co.location_tag}</span>
+                    </div>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* My Change Orders */}
       <div className="space-y-2">
