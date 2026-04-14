@@ -1,26 +1,27 @@
 
 
-# Show Active Work Orders to FC for Billing Visibility
+# Hide Pricing & Supplier Controls from FC on Work Order Detail
 
 ## Problem
-The FC home screen only shows work orders in two narrow buckets:
-- "Open COs requiring your input" — only `active` collaborator + draft/shared/wip/closed_for_pricing
-- "Approved / Billable" — only `completed` collaborator + approved/contracted
-
-Work orders where the FC is an active collaborator but already submitted (or in other active states) fall through the cracks. The FC can't see them and therefore can't track or bill them.
-
-## Fix
-Add a new section **"Active Work Orders"** between "Open COs requiring your input" and "My Change Orders" that shows all work orders where:
-- FC is a collaborator (`collaboratorOrgId === orgId`)
-- Collaborator status is `active` or `completed`
-- WO status is `submitted`, `work_in_progress`, `shared`, `closed_for_pricing`, `approved`, or `contracted`
-- Exclude ones already shown in the "requiring input" section
-
-This gives the FC full visibility into all work orders they're involved in.
+The FC currently sees financial data they shouldn't: line item dollar amounts, "Priced" badges, the "Apply supplier pricing" button, "Open linked PO" link, and supplier pricing section. The FC should only enter materials (description, qty, UOM) and submit to TC.
 
 ## Changes
-**`src/components/change-orders/FCHomeScreen.tsx`**
-- Add an `activeCOs` filter that captures WOs where FC is collaborator with `active` or `completed` status, excluding the ones already in `actionableCOs`
-- Render a new "Active Work Orders" card list section with the same card style
-- Update the `billableCOs` section to remain as-is (or merge into active — keeping it separate for clarity)
+
+### 1. `src/components/change-orders/COMaterialsPanel.tsx`
+- **Hide the entire "Supplier pricing" section for FC**: Change the gate on line 918 from `canManageMaterials` to `canManageMaterials && !isFC`. This hides the supplier pricing request area, "Apply supplier pricing" button, and "Open linked PO" link from FC.
+- The pricing columns (unit cost, markup, amount) are already hidden via `showPricingColumns` being `false` for FC — no change needed there.
+
+### 2. `src/components/change-orders/COLineItemRow.tsx`
+- **Hide dollar amounts for FC**: Wrap the `totalForRole > 0` display (line 166-168) and the "Priced" badge (line 156-159) with `!isFC` checks so the FC doesn't see prices or pricing status on scope line items.
+- Hide the internal cost pill for FC as well.
+
+### 3. `src/components/change-orders/COSidebar.tsx`
+- **Hide FC Profitability section**: The FC should not see Revenue, Internal Costs, or Gross Margin. Remove the `isFC` from the profitability condition on line 157, changing `(isTC || isFC)` to just `isTC`.
+- The "My Labor" / "Total" section (lines 141-154) can stay — it just shows the FC's own logged hours total.
+
+### 4. `src/components/change-orders/COKPIStrip.tsx`
+- Verify FC tiles don't expose TC/GC pricing. The FC-specific tiles already show only FC labor — confirm and leave as-is if correct.
+
+## Summary
+Four files, surgical changes: hide supplier pricing controls, line item dollar amounts, and profitability from the FC role. FC keeps: material entry (description/qty/UOM), hour logging, and submit-to-TC flow.
 
