@@ -39,6 +39,7 @@ interface PSMBrowserProps {
   supplierId: string | null;
   onAddItem: (item: POWizardV2LineItem) => void;
   onSwitchToCatalog: () => void;
+  hidePricing?: boolean;
 }
 
 export function PSMBrowser({
@@ -46,6 +47,7 @@ export function PSMBrowser({
   supplierId,
   onAddItem,
   onSwitchToCatalog,
+  hidePricing = false,
 }: PSMBrowserProps) {
   const [step, setStep] = useState<PSMStep>('category');
   const [loading, setLoading] = useState(true);
@@ -506,9 +508,10 @@ export function PSMBrowser({
             product={selectedProduct}
             onAdd={handleAddPSMItem}
             onClose={() => setStep('products')}
-            estimateUnitPrice={matchedEstItem?.unit_price}
+            estimateUnitPrice={hidePricing ? null : matchedEstItem?.unit_price}
             estimateItemId={matchedEstItem?.id}
             estimatePackName={matchedEstItem?.pack_name}
+            hidePricing={hidePricing}
           />
         );
       })()}

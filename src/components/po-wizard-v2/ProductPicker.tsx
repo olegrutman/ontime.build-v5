@@ -407,12 +407,13 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
       )}
       {step === 'estimate' && projectId && (
         <div className="p-4">
-          <EstimateSubTabs
+         <EstimateSubTabs
             projectId={projectId}
             supplierId={supplierId}
             onSelectPack={handleSelectPack}
             onSwitchToCatalog={() => handleSourceSelect('catalog')}
             onAddPSMItem={onAddPSMItem || onAddItem}
+            hidePricing={hidePricing}
           />
         </div>
       )}

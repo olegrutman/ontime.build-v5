@@ -26,6 +26,7 @@ interface EstimateSubTabsProps {
   onSelectPack: (pack: EstimatePack, estimateId: string) => void;
   onSwitchToCatalog: () => void;
   onAddPSMItem: (item: POWizardV2LineItem) => void;
+  hidePricing?: boolean;
 }
 
 export function EstimateSubTabs({
@@ -34,6 +35,7 @@ export function EstimateSubTabs({
   onSelectPack,
   onSwitchToCatalog,
   onAddPSMItem,
+  hidePricing = false,
 }: EstimateSubTabsProps) {
   const [tab, setTab] = useState<string>('packs');
 
@@ -66,6 +68,7 @@ export function EstimateSubTabs({
             supplierId={supplierId}
             onAddItem={onAddPSMItem}
             onSwitchToCatalog={onSwitchToCatalog}
+            hidePricing={hidePricing}
           />
         </TabsContent>
       </Tabs>
