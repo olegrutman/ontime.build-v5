@@ -362,23 +362,23 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       {/* 8 KPI Cards — 4-col grid */}
       <KpiGrid>
 
-        {/* Card 1 — GC Contract (read-only) */}
-        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `${gcName.toUpperCase()} T&M REVENUE` : `${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: `${gcName} set this` }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+        {/* Card 1 — GC Contract / T&M Revenue */}
+        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `WO REVENUE (FROM ${gcName.toUpperCase()})` : `${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={effectiveGCVal > 0 ? fmt(effectiveGCVal) : '—'} sub={isTM ? `Sum of ${approvedCOs.length} approved WO${approvedCOs.length !== 1 ? 's' : ''}` : `${gcName} · read-only`} pills={effectiveGCVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: isTM ? `${approvedCOs.length} WOs` : `${gcName} set this` }] : [{ type: 'pm', text: isTM ? 'No approved WOs' : 'Not Set' }]} idx={0}>
           <div style={{ padding: '12px 16px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>{isTM ? 'T&M Total (approved WOs)' : `Contract Value (set by ${gcName})`}</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>{isTM ? `Approved WOs (billed to ${gcName})` : `Approved COs (billed to ${gcName})`}</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>{isTM ? 'Approved WO Revenue' : `Contract Value (set by ${gcName})`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
+                {!isTM && <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />}
                 <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
                 <TRow cells={[<TdN>Pending from {gcName}</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
-                <TRow cells={[<TdN>Remaining to Bill</TdN>, <TdM>{fmt(revisedGCTotal - totalReceivedFromGC - totalPendingFromGC)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>Remaining to Bill</TdN>, <TdM>{fmt((isTM ? effectiveGCVal : revisedGCTotal) - totalReceivedFromGC - totalPendingFromGC)}</TdM>]} isTotal />
               </tbody>
             </table>
             <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: C.blueBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
               <span style={{ fontSize: 14 }}>ℹ️</span>
-              <span>{isTM ? 'This total reflects approved Work Orders.' : <>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</>}</span>
+              <span>{isTM ? `Revenue is the sum of approved Work Order gc_budget values (${approvedCOs.length} WOs).` : <>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</>}</span>
             </div>
           </div>
         </KpiCard>
