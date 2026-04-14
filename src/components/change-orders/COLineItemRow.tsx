@@ -153,7 +153,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           {/* Right side */}
           <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
             {/* Status chip */}
-            {entryCount > 0 ? (
+            {!isFC && (entryCount > 0 ? (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                 Priced
               </span>
@@ -161,14 +161,14 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
                 Needs Pricing
               </span>
-            ) : null}
+            ) : null)}
 
-            {totalForRole > 0 && (
+            {!isFC && totalForRole > 0 && (
               <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             )}
 
             {/* Internal cost pill */}
-            {(isTC || isFC) && (
+            {isTC && (
               actualTotal > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                   <Lock className="h-2.5 w-2.5" /> Internal / ${fmt(actualTotal)}
