@@ -1,48 +1,56 @@
 
 
-# GC KPI Cards: Separate Cost Breakdown + Editable Budget
+# Three Changes to Wizards
 
-## What Changes
+## 1. Location labels: "Inside/Outside" → "Interior/Exterior"
 
-Currently GC sees 4 KPI tiles: "TC Submitted", "Materials + Equipment" (combined), "Total Cost", "GC Budget" (read-only, set at creation). 
+**File**: `src/components/change-orders/VisualLocationPicker.tsx`
 
-New layout — 5 KPI tiles in the GC view:
+Change the two TapCard labels from "Inside"/"Outside" to "Interior"/"Exterior". Also update the assembled tag text that gets saved (lines 125, 144) from `['Inside']`/`['Outside']` to `['Interior']`/`['Exterior']`.
 
-| Labor Cost | Material Cost | Equipment Cost | Total Cost | GC Budget (editable) |
-|---|---|---|---|---|
+The internal state values (`'inside'`/`'outside'`) stay the same — only the user-facing labels and tag strings change.
 
-- **Labor Cost** = `financials.grandTotal` (TC submitted labor)
-- **Material Cost** = `financials.materialsTotal` (final billed amount, no markup breakdown)
-- **Equipment Cost** = `financials.equipmentTotal`
-- **Total Cost** = labor + materials + equipment (sum of above 3)
-- **GC Budget** = editable inline — click to enter/edit, saves to `change_orders.gc_budget`. Shows percentage badge comparing total cost vs budget.
+## 2. Verify material responsibility is coded correctly
 
-## Technical Changes
+After review, material responsibility is **correctly implemented**:
 
-### 1. Update GC tiles in `COKPIStrip.tsx`
+- **TMWOWizard**: Stores `materials_responsible` and `equipment_responsible` on the `change_orders` row (lines 266-268). Users pick "TC supplies" or "GC supplies" in the Resources step.
+- **COWizard**: Same fields stored (lines 292-293), using the `ToggleWithSelector` component.
+- **`useCOResponsibility` hook**: Resolves the effective responsibility by checking the CO-level override first, then falling back to the project contract's `material_responsibility` setting. It correctly filters out null contracts (line 32).
+- **Project setup (`ContractsStep`)**: Stores the project-level default via `material_responsibility` answer.
 
-Replace the current 4-tile GC array with 5 tiles. The grid changes from `lg:grid-cols-4` to `lg:grid-cols-5` when GC. Add an `editable` flag to the KPITile interface.
+No code changes needed here — the logic is sound.
 
-For the GC Budget tile, render an inline input (click "—" or the value to edit). On blur/enter, call `supabase.from('change_orders').update({ gc_budget: value }).eq('id', co.id)` and trigger a refetch via `onRefresh` callback.
+## 3. Add "How" step to the TMWOWizard
 
-### 2. Wire `onRefresh` into COKPIStrip
+The CO wizard has a "How" step (Step 4) with role-specific config:
+- **GC**: Assign to TC, pricing type selector, GC budget, materials/equipment toggles, share toggle
+- **TC**: Pricing type selector, FC input needed, share toggle
+- **FC**: Quick log hours, share toggle
 
-**`CODetailLayout.tsx`** — pass `onRefresh={refetchCO}` (the existing query refetch) to `COKPIStrip`.
+The TMWOWizard currently lacks this step — it hardcodes `pricing_type: 'tm'` and buries materials/FC input into a "Resources" step. The plan is to **replace** the TMWOWizard's "Resources" step with a "How" step that mirrors the CO wizard.
 
-**`COKPIStrip.tsx`** — add `onRefresh?: () => void` to props. The budget tile uses it after saving.
+**File**: `src/components/change-orders/wizard/TMWOWizard.tsx`
 
-### 3. Specific tile breakdown for GC
+Changes:
+- Rename step 4 from `{ key: 'resources', ... }` to `{ key: 'how', label: 'How', description: 'Pricing & configuration' }`
+- Add `pricingType`, `nteCap`, `gcBudget`, `assignedToOrgId` fields to `TMWOData` and `INITIAL_DATA`
+- Replace `StepResources` with a new `StepHow` component that renders role-aware config:
+  - **GC view**: Assign to TC dropdown, pricing type selector (Fixed/T&M/NTE), GC budget input, materials/equipment toggles, share toggle
+  - **TC view**: Pricing type selector, materials/equipment toggles, FC input + crew selector, urgency, share toggle
+  - **FC view**: Quick log hours, share toggle
+- Update `handleSubmit` to use `data.pricingType` instead of hardcoded `'tm'`, and store `nte_cap` and `gc_budget` from the new fields
+- Update `canAdvance` for the `'how'` step: GC must select assignee; NTE must have cap value
+- Import `PricingTypeSelector`, `ToggleWithSelector`, `ShareToggle` from COWizard (export them) or duplicate them locally
+- Update the step rendering to use `currentStep.key === 'how'`
 
-```
-tiles = [
-  { label: 'Labor Cost',     value: financials.grandTotal },
-  { label: 'Material Cost',  value: financials.materialsTotal },
-  { label: 'Equipment Cost', value: financials.equipmentTotal },
-  { label: 'Total Cost',     value: totalCost, badge: 'Final' },
-  { label: 'GC Budget',      value: co.gc_budget, editable: true,
-    badge: shows "X%" + healthy/watch based on totalCost vs budget },
-]
-```
+**File**: `src/components/change-orders/wizard/COWizard.tsx`
+- Export `PricingTypeSelector`, `ToggleWithSelector`, `ShareToggle` so TMWOWizard can reuse them (or move to a shared file)
 
-Two files changed: `COKPIStrip.tsx` (tile definitions + inline edit), `CODetailLayout.tsx` (pass onRefresh prop).
+## Technical details
+
+- The `PRICING_OPTIONS` array and shared sub-components (`PricingTypeSelector`, `ToggleWithSelector`, `ShareToggle`) will be extracted from COWizard and shared
+- TMWOWizard submit logic (line 259) changes from `pricing_type: 'tm'` to `pricing_type: data.pricingType`
+- The `gc_budget` field (line 270) changes from `data.estimatedCost` to `data.gcBudget` for GC role, keeping `estimatedCost` in the review step for non-GC roles
+- No database changes required — all fields already exist on the `change_orders` table
 
