@@ -19,8 +19,9 @@ import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 import { StepCatalog } from './StepCatalog';
-import type { COCreatedByRole, ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
+import type { COCreatedByRole, ScopeCatalogItem, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { SelectedScopeItem, COWizardData } from './COWizard';
+import { PricingTypeSelector, ToggleWithSelector, ShareToggle } from './SharedWizardComponents';
 
 // ── Work Type definitions ─────────────────────────────
 type WorkTypeKey = 'demolition' | 'framing' | 'reframing' | 'sheathing' | 'blocking' | 'backout' | 'exterior' | 'stairs' | 'other';
@@ -50,6 +51,10 @@ interface TMWOData {
   selectedItems: SelectedScopeItem[];
   scopeNotes: string;
   locationTag: string;
+  pricingType: COPricingType;
+  nteCap: string;
+  gcBudget: string;
+  assignedToOrgId: string;
   materialsNeeded: boolean;
   materialsResponsible: 'GC' | 'TC' | null;
   materialNotes: string;
@@ -68,6 +73,10 @@ const INITIAL_DATA: TMWOData = {
   selectedItems: [],
   scopeNotes: '',
   locationTag: '',
+  pricingType: 'tm',
+  nteCap: '',
+  gcBudget: '',
+  assignedToOrgId: '',
   materialsNeeded: false,
   materialsResponsible: null,
   materialNotes: '',
@@ -85,7 +94,7 @@ const STEPS = [
   { key: 'work_type', label: 'Work Type', description: 'What kind of work is this?' },
   { key: 'scope', label: 'Scope Details', description: 'Describe the scope of work' },
   { key: 'location', label: 'Location', description: 'Where will this work happen?' },
-  { key: 'resources', label: 'Resources', description: 'Materials, equipment & urgency' },
+  { key: 'how', label: 'How', description: 'Pricing & configuration' },
   { key: 'review', label: 'Review', description: 'Review and submit' },
 ] as const;
 
@@ -135,7 +144,11 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     if (s.key === 'work_type') return !!data.workType;
     if (s.key === 'scope') return data.selectedItems.length > 0;
     if (s.key === 'location') return !!data.locationTag;
-    if (s.key === 'resources') return true;
+    if (s.key === 'how') {
+      if (role === 'GC' && !data.assignedToOrgId) return false;
+      if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+      return true;
+    }
     if (s.key === 'review') return !!data.aiDescription.trim();
     return true;
   }
@@ -157,7 +170,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     locationTag: data.locationTag || 'TBD',
     reason: 'other' as COReasonCode,
     selectedItems: data.selectedItems,
-    pricingType: 'tm' as any,
+    pricingType: data.pricingType as any,
     materialsNeeded: data.materialsNeeded,
     materialsResponsible: data.materialsResponsible,
     equipmentNeeded: data.equipmentNeeded,
@@ -165,9 +178,9 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     shareDraftNow: data.shareDraftNow,
     fcInputNeeded: data.fcInputNeeded,
     fcOrgId: data.fcOrgId,
-    nteCap: '',
-    gcBudget: '',
-    assignedToOrgId: '',
+    nteCap: data.nteCap,
+    gcBudget: data.gcBudget,
+    assignedToOrgId: data.assignedToOrgId,
     materialsOnSite: false,
     quickHours: null,
     workType: data.workType as string | null,
@@ -256,18 +269,19 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
           title,
           co_number: woNumber,
           status: 'draft',
-          pricing_type: 'tm',
+           pricing_type: data.pricingType,
+          nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
           reason: data.workType as string,
           reason_note: data.aiDescription,
           location_tag: data.locationTag || null,
-          assigned_to_org_id: resolvedAssignedToOrgId,
+          assigned_to_org_id: role === 'GC' && data.assignedToOrgId ? data.assignedToOrgId : resolvedAssignedToOrgId,
           fc_input_needed: data.fcInputNeeded,
           materials_needed: data.materialsNeeded,
           materials_responsible: data.materialsResponsible,
           equipment_needed: data.equipmentNeeded,
           equipment_responsible: data.equipmentResponsible,
           draft_shared_with_next: data.shareDraftNow,
-          gc_budget: data.estimatedCost ? parseFloat(data.estimatedCost) : null,
+          gc_budget: role === 'GC' && data.gcBudget ? parseFloat(data.gcBudget) : (data.estimatedCost ? parseFloat(data.estimatedCost) : null),
         });
       if (insertError) throw insertError;
 
@@ -401,7 +415,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
             {currentStep.key === 'location' && (
               <StepLocation projectId={projectId} data={data} onChange={update} savedLocation={savedLocation} userId={user?.id} />
             )}
-            {currentStep.key === 'resources' && <StepResources data={data} onChange={update} role={role} projectId={projectId} />}
+            {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
             {currentStep.key === 'review' && (
               <StepReview data={data} onChange={update} selectedWorkType={selectedWorkType} generatingAI={generatingAI} onRegenerate={generateAIDescription} />
             )}
@@ -523,119 +537,137 @@ function StepLocation({
   );
 }
 
-// ── Step 4: Resources ────────────────────────────────
-function StepResources({
+// ── Step 4: How (role-aware) ──────────────────────────
+function StepHow({
   data, onChange, role, projectId,
 }: {
   data: TMWOData; onChange: (p: Partial<TMWOData>) => void; role: COCreatedByRole; projectId: string;
 }) {
-  const { data: fcMembers = [] } = useQuery({
-    queryKey: ['tmwo-fc-team', projectId],
-    enabled: role === 'TC',
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['tmwo-team', projectId],
+    enabled: !!projectId,
     queryFn: async () => {
       const { data: rows } = await supabase
         .from('project_participants')
         .select('id, organization_id, role, organizations:organization_id(id, name)')
         .eq('project_id', projectId)
         .eq('invite_status', 'ACCEPTED');
-      return (rows ?? [])
-        .filter((r: any) => r.role === 'Field Crew' || r.role === 'FC')
-        .map((r: any) => ({ org_id: r.organization_id, org_name: r.organizations?.name ?? 'Unknown' }));
+      return (rows ?? []).map((r: any) => ({
+        org_id: r.organization_id,
+        org_name: r.organizations?.name ?? 'Unknown',
+        role: r.role ?? '',
+      }));
     },
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Materials */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Materials needed</p>
-            <p className="text-xs text-muted-foreground">Does this work require materials?</p>
-          </div>
-          <Switch
-            checked={data.materialsNeeded}
-            onCheckedChange={v => onChange({ materialsNeeded: v, materialsResponsible: v ? (data.materialsResponsible ?? 'TC') : null })}
-          />
-        </div>
-        {data.materialsNeeded && (
-          <div className="space-y-3 pl-4 border-l-2 border-primary/20">
-            <div className="flex gap-2">
-              {(['TC', 'GC'] as const).map(p => (
-                <button
-                  key={p}
-                  onClick={() => onChange({ materialsResponsible: p })}
-                  className={cn(
-                    'flex-1 py-2 rounded-lg text-sm font-medium border-2 transition-all',
-                    data.materialsResponsible === p ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
-                  )}
-                >
-                  {p} supplies
-                </button>
-              ))}
-            </div>
-            <Textarea
-              value={data.materialNotes}
-              onChange={e => onChange({ materialNotes: e.target.value })}
-              placeholder="Material notes (optional)…"
-              rows={2}
-            />
-          </div>
-        )}
-      </div>
+  const tcMembers = teamMembers.filter(m => m.role === 'Trade Contractor' || m.role === 'TC');
+  const fcMembers = teamMembers.filter(m => m.role === 'Field Crew' || m.role === 'FC');
 
-      {/* Equipment */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Equipment needed</p>
-            <p className="text-xs text-muted-foreground">Scaffolding, lifts, specialty tools?</p>
+  // ── GC view ──
+  if (role === 'GC') {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label>Assign to *</Label>
+          <Select value={data.assignedToOrgId} onValueChange={v => onChange({ assignedToOrgId: v })}>
+            <SelectTrigger><SelectValue placeholder="Select a trade contractor" /></SelectTrigger>
+            <SelectContent>
+              {tcMembers.map(m => <SelectItem key={m.org_id} value={m.org_id}>{m.org_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <PricingTypeSelector
+          pricingType={data.pricingType}
+          nteCap={data.nteCap}
+          onPricingTypeChange={v => onChange({ pricingType: v })}
+          onNteCapChange={v => onChange({ nteCap: v })}
+        />
+
+        <div className="space-y-1.5">
+          <Label>Your budget (internal)</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+            <Input type="number" value={data.gcBudget} onChange={e => onChange({ gcBudget: e.target.value })} className="pl-7" placeholder="0.00" />
           </div>
-          <Switch
+          <p className="text-xs text-muted-foreground">Private — not visible to TC or FC</p>
+        </div>
+
+        <div className="space-y-4">
+          <ToggleWithSelector
+            label="Materials needed"
+            hint="Track materials on this WO"
+            checked={data.materialsNeeded}
+            onToggle={v => onChange({ materialsNeeded: v, materialsResponsible: v ? (data.materialsResponsible ?? 'TC') : null })}
+            party={data.materialsResponsible}
+            onPartyChange={v => onChange({ materialsResponsible: v })}
+          />
+          <ToggleWithSelector
+            label="Equipment needed"
+            hint="Track equipment costs"
             checked={data.equipmentNeeded}
-            onCheckedChange={v => onChange({ equipmentNeeded: v, equipmentResponsible: v ? (data.equipmentResponsible ?? 'TC') : null })}
+            onToggle={v => onChange({ equipmentNeeded: v, equipmentResponsible: v ? (data.equipmentResponsible ?? 'TC') : null })}
+            party={data.equipmentResponsible}
+            onPartyChange={v => onChange({ equipmentResponsible: v })}
           />
         </div>
-        {data.equipmentNeeded && (
-          <div className="flex gap-2 pl-4 border-l-2 border-primary/20">
-            {(['TC', 'GC'] as const).map(p => (
+
+        <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
+      </div>
+    );
+  }
+
+  // ── TC view ──
+  if (role === 'TC') {
+    return (
+      <div className="space-y-6">
+        <PricingTypeSelector
+          pricingType={data.pricingType}
+          nteCap={data.nteCap}
+          onPricingTypeChange={v => onChange({ pricingType: v })}
+          onNteCapChange={v => onChange({ nteCap: v })}
+        />
+
+        <div className="space-y-4">
+          <ToggleWithSelector
+            label="Materials needed"
+            hint="Track materials on this WO"
+            checked={data.materialsNeeded}
+            onToggle={v => onChange({ materialsNeeded: v, materialsResponsible: v ? (data.materialsResponsible ?? 'TC') : null })}
+            party={data.materialsResponsible}
+            onPartyChange={v => onChange({ materialsResponsible: v })}
+          />
+          <ToggleWithSelector
+            label="Equipment needed"
+            hint="Track equipment costs"
+            checked={data.equipmentNeeded}
+            onToggle={v => onChange({ equipmentNeeded: v, equipmentResponsible: v ? (data.equipmentResponsible ?? 'TC') : null })}
+            party={data.equipmentResponsible}
+            onPartyChange={v => onChange({ equipmentResponsible: v })}
+          />
+        </div>
+
+        {/* Urgency */}
+        <div className="space-y-3">
+          <Label>Urgency</Label>
+          <div className="flex gap-2">
+            {(['Standard', 'Urgent', 'Emergency'] as const).map(u => (
               <button
-                key={p}
-                onClick={() => onChange({ equipmentResponsible: p })}
+                key={u}
+                onClick={() => onChange({ urgency: u })}
                 className={cn(
-                  'flex-1 py-2 rounded-lg text-sm font-medium border-2 transition-all',
-                  data.equipmentResponsible === p ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
+                  'flex-1 py-2.5 rounded-lg text-sm font-medium border-2 transition-all',
+                  data.urgency === u ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
+                  u === 'Emergency' && data.urgency === u && 'border-destructive bg-destructive/10 text-destructive',
                 )}
               >
-                {p} provides
+                {u}
               </button>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Urgency */}
-      <div className="space-y-3">
-        <Label>Urgency</Label>
-        <div className="flex gap-2">
-          {(['Standard', 'Urgent', 'Emergency'] as const).map(u => (
-            <button
-              key={u}
-              onClick={() => onChange({ urgency: u })}
-              className={cn(
-                'flex-1 py-2.5 rounded-lg text-sm font-medium border-2 transition-all',
-                data.urgency === u ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
-                u === 'Emergency' && data.urgency === u && 'border-destructive bg-destructive/10 text-destructive',
-              )}
-            >
-              {u}
-            </button>
-          ))}
         </div>
-      </div>
 
-      {/* FC input — TC only */}
-      {role === 'TC' && (
+        {/* FC input */}
         <div className="space-y-3 pt-2 border-t border-border">
           <div className="flex items-center justify-between">
             <div>
@@ -653,16 +685,16 @@ function StepResources({
             </Select>
           )}
         </div>
-      )}
 
-      {/* Share toggle */}
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <div>
-          <p className="text-sm font-medium">Share immediately</p>
-          <p className="text-xs text-muted-foreground">If off, stays as a private draft</p>
-        </div>
-        <Switch checked={data.shareDraftNow} onCheckedChange={v => onChange({ shareDraftNow: v })} />
+        <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
       </div>
+    );
+  }
+
+  // ── FC view ──
+  return (
+    <div className="space-y-6">
+      <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} label="Share with TC immediately" />
     </div>
   );
 }

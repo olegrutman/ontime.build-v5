@@ -122,7 +122,7 @@ export function VisualLocationPicker({
   // Build the tag live
   const assembledTag = useMemo(() => {
     if (insideOutside === 'inside') {
-      const parts = ['Inside'];
+      const parts = ['Interior'];
       if (selectedLevel) parts.push(selectedLevel);
       if (selectedArea === 'Other' && customArea.trim()) {
         parts.push(customArea.trim());
@@ -141,7 +141,7 @@ export function VisualLocationPicker({
       return parts.join(' · ');
     }
     if (insideOutside === 'outside') {
-      const parts = ['Outside'];
+      const parts = ['Exterior'];
       if (selectedElevation === 'Other' && customElevation.trim()) {
         parts.push(customElevation.trim());
       } else if (selectedElevation && selectedElevation !== 'Other') {
@@ -234,7 +234,7 @@ export function VisualLocationPicker({
       {/* Inside / Outside selection */}
       <div className={cn('grid gap-3', compact ? 'grid-cols-2' : 'grid-cols-2')}>
         <TapCard
-          label="Inside"
+          label="Interior"
           icon={<Home className="h-5 w-5" />}
           selected={insideOutside === 'inside'}
           onClick={() => {
@@ -244,7 +244,7 @@ export function VisualLocationPicker({
           }}
         />
         <TapCard
-          label="Outside"
+          label="Exterior"
           icon={<Trees className="h-5 w-5" />}
           selected={insideOutside === 'outside'}
           onClick={() => {
