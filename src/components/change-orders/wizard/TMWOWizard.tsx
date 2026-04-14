@@ -698,7 +698,6 @@ function StepHow({
     </div>
   );
 }
-}
 
 // ── Step 5: Review ───────────────────────────────────
 function StepReview({
