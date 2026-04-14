@@ -386,7 +386,7 @@ function SOVContractSection({
                                         ${(item.billed_to_date || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </td>
                                       <td className="px-3 py-2 text-right hidden lg:table-cell">
-                                        <BillingStatusBadge status={item.billing_status} />
+                                        <BillingStatusBadge status={deriveBillingStatus(item.total_billed_amount, item.value_amount)} />
                                       </td>
                                     </>
                                   )}
@@ -603,8 +603,16 @@ function StatusChip({ ok, label, link }: { ok: boolean; label: string; link: str
   );
 }
 
+function deriveBillingStatus(totalBilled: number | null, valueAmount: number | null): string {
+  const billed = totalBilled ?? 0;
+  const value = valueAmount ?? 0;
+  if (billed > 0 && value > 0 && billed >= value) return 'fully_billed';
+  if (billed > 0) return 'partially_billed';
+  return 'unbilled';
+}
+
 function BillingStatusBadge({ status }: { status: string }) {
-  if (status === 'paid') return <Badge className="bg-green-100 text-green-800 text-xs">Paid</Badge>;
-  if (status === 'partial') return <Badge className="bg-blue-100 text-blue-800 text-xs">Partial</Badge>;
+  if (status === 'fully_billed' || status === 'paid') return <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-xs">Fully Billed</Badge>;
+  if (status === 'partially_billed' || status === 'partial') return <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 text-xs">Partially Billed</Badge>;
   return <Badge variant="outline" className="text-xs">Unbilled</Badge>;
 }
