@@ -316,26 +316,38 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               </div>
             </KpiCard>
 
-            {/* Card 2 — TC Cost */}
-            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`TC COST (${tcName.toUpperCase()})`} value={coCostTotal > 0 ? fmt(coCostTotal) : '—'} sub={`Sum of ${tcName} submitted prices`} pills={coCostTotal > 0 ? [{ type: 'pg', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No cost' }]} idx={1}>
+            {/* Card 2 — TC Cost (labor + materials + equipment) */}
+            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`TC COST (TOTAL)`} value={coCostTotal > 0 ? fmt(coCostTotal) : '—'} sub={`Labor ${fmt(coLaborCost)} · Materials ${fmt(coMaterialsCost)} · Equip ${fmt(coEquipmentCost)}`} pills={coCostTotal > 0 ? [{ type: 'pg', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No cost' }]} idx={1}>
               <div style={{ padding: 12 }}>
-                {approvedCOs.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <THead cols={['WO #', 'Title', 'TC Price', 'Status']} />
-                    <tbody>
-                      {approvedCOs.slice(0, 8).map(co => (
-                        <TRow key={co.id} cells={[
-                          <TdN>{co.co_number || '—'}</TdN>,
-                          co.title || '—',
-                          <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
-                          <Pill type="pg">Approved</Pill>,
-                        ]} />
-                      ))}
-                      <TRow cells={[<TdN>Total</TdN>, '—', <TdM>{fmt(coCostTotal)}</TdM>, '—']} isTotal />
-                    </tbody>
-                  </table>
-                ) : (
-                  <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No approved WOs yet</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <THead cols={['Cost Type', 'Value']} />
+                  <tbody>
+                    <TRow cells={[<TdN>Labor (TC Submitted)</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
+                    <TRow cells={[<TdN>Materials (billed)</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
+                    <TRow cells={[<TdN>Equipment (billed)</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
+                    <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} isTotal />
+                  </tbody>
+                </table>
+                {approvedCOs.length > 0 && (
+                  <>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginTop: 12, marginBottom: 8 }}>Per Work Order</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <THead cols={['WO #', 'Labor', 'Mat+Eq', 'Total']} />
+                      <tbody>
+                        {approvedCOs.slice(0, 8).map(co => {
+                          const woTotal = (co.tc_submitted_price || 0) + (co.wo_materials_total || 0) + (co.wo_equipment_total || 0);
+                          return (
+                            <TRow key={co.id} cells={[
+                              <TdN>{co.co_number || '—'}</TdN>,
+                              <TdM>{fmt(co.tc_submitted_price || 0)}</TdM>,
+                              <TdM>{fmt((co.wo_materials_total || 0) + (co.wo_equipment_total || 0))}</TdM>,
+                              <TdM>{fmt(woTotal)}</TdM>,
+                            ]} />
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </>
                 )}
               </div>
             </KpiCard>
