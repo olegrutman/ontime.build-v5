@@ -235,11 +235,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
   const draftFcVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
 
-  // ─── Margins ───
-  const tcGrossMargin = gcContractVal - draftFcVal;
-  const tcMarginPct = gcContractVal > 0 ? ((tcGrossMargin / gcContractVal) * 100).toFixed(1) : '0';
-
-  // ─── Change Orders ───
+  // ─── Change Orders (fetch first so T&M can derive contract values) ───
   const { data: changeOrders = [] } = useQuery({
     queryKey: ['tc-project-cos', projectId],
     queryFn: async () => {
@@ -258,6 +254,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const coRevenue = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
   const coCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
   const coNetMargin = coRevenue - coCost;
+
+  // ─── T&M: derive "contract" values from WOs when no project_contracts exist ───
+  const effectiveGCVal = isTM && gcContractVal === 0 ? coRevenue : gcContractVal;
+  const effectiveFCVal = isTM && draftFcVal === 0 ? coCost : draftFcVal;
+
+  // ─── Margins ───
+  const tcGrossMargin = effectiveGCVal - effectiveFCVal;
+  const tcMarginPct = effectiveGCVal > 0 ? ((tcGrossMargin / effectiveGCVal) * 100).toFixed(1) : '0';
 
   // ─── RFIs ───
   const { data: rfis = [] } = useQuery({
