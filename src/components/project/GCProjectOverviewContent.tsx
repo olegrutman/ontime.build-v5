@@ -143,23 +143,46 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     setDirty(false);
   };
 
-  // ─── Change Orders ───
+  // ─── Change Orders / Work Orders ───
   const { data: changeOrders = [] } = useQuery({
-    queryKey: ['project-cos-overview', projectId],
+    queryKey: ['project-cos-overview', projectId, isTM],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: cos } = await supabase
         .from('change_orders')
         .select('id, co_number, title, status, gc_budget, tc_submitted_price')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
-      return data || [];
+      if (!cos || cos.length === 0) return [];
+
+      if (isTM) {
+        // For T&M, also fetch material + equipment totals per WO
+        const coIds = cos.map(c => c.id);
+        const [matRes, eqRes] = await Promise.all([
+          supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
+          supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
+        ]);
+        const matByWO: Record<string, number> = {};
+        const eqByWO: Record<string, number> = {};
+        (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
+        (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
+        return cos.map(c => ({
+          ...c,
+          wo_materials_total: matByWO[c.id] || 0,
+          wo_equipment_total: eqByWO[c.id] || 0,
+        }));
+      }
+      return cos.map(c => ({ ...c, wo_materials_total: 0, wo_equipment_total: 0 }));
     },
   });
 
   const approvedCOs = changeOrders.filter(co => co.status === 'approved' || co.status === 'completed');
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'rejected'].includes(co.status));
   const coRevenueTotal = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  const coCostTotal = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
+  // For T&M: total cost = labor (tc_submitted_price) + materials + equipment
+  const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
+  const coMaterialsCost = approvedCOs.reduce((s, co) => s + (co.wo_materials_total || 0), 0);
+  const coEquipmentCost = approvedCOs.reduce((s, co) => s + (co.wo_equipment_total || 0), 0);
+  const coCostTotal = coLaborCost + coMaterialsCost + coEquipmentCost;
 
   // ─── RFIs ───
   const { data: rfis = [] } = useQuery({
