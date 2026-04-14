@@ -395,7 +395,7 @@ export function PSMBrowser({
   }, [onAddItem]);
 
   const handleAddUnmatchedItem = useCallback((estimateItem: EstimateItem, quantity: number) => {
-    const unitPrice = estimateItem.unit_price;
+    const unitPrice = hidePricing ? null : estimateItem.unit_price;
     const lineItem: POWizardV2LineItem = {
       id: `psm-unmatched-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       catalog_item_id: '',
@@ -414,7 +414,7 @@ export function PSMBrowser({
       original_unit_price: unitPrice,
     };
     onAddItem(lineItem);
-  }, [onAddItem]);
+  }, [onAddItem, hidePricing]);
 
   const handleCloseNoop = useCallback(() => {
     // No-op close for StepByStepFilter — we manage navigation via handleBack

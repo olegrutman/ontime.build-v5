@@ -325,26 +325,29 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
 
   const handleSelectPack = useCallback((pack: EstimatePack, estimateId: string) => {
     if (!onLoadPack) return;
-    const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => ({
-      id: `pack-${idx}-${Date.now()}`,
-      catalog_item_id: item.catalog_item_id || '',
-      supplier_sku: item.supplier_sku || '',
-      name: item.description,
-      specs: item.supplier_sku || '',
-      quantity: item.quantity,
-      unit_mode: 'EACH' as const,
-      uom: item.uom,
-      item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
-      unit_price: item.unit_price,
-      line_total: item.unit_price != null ? item.quantity * item.unit_price : null,
-      source_estimate_item_id: item.id,
-      source_pack_name: item.pack_name,
-      price_source: item.unit_price != null ? 'FROM_ESTIMATE' as const : null,
-      original_unit_price: item.unit_price,
-    }));
+    const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => {
+      const price = hidePricing ? null : item.unit_price;
+      return {
+        id: `pack-${idx}-${Date.now()}`,
+        catalog_item_id: item.catalog_item_id || '',
+        supplier_sku: item.supplier_sku || '',
+        name: item.description,
+        specs: item.supplier_sku || '',
+        quantity: item.quantity,
+        unit_mode: 'EACH' as const,
+        uom: item.uom,
+        item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
+        unit_price: price,
+        line_total: price != null ? item.quantity * price : null,
+        source_estimate_item_id: item.id,
+        source_pack_name: item.pack_name,
+        price_source: price != null ? 'FROM_ESTIMATE' as const : null,
+        original_unit_price: price,
+      };
+    });
     onLoadPack(lineItems, estimateId, pack.name);
     onExitPicker();
-  }, [onLoadPack, onExitPicker]);
+  }, [onLoadPack, onExitPicker, hidePricing]);
 
   const getTitle = useCallback(() => {
     const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
