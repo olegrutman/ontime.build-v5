@@ -1,30 +1,26 @@
 
 
-# Fix KPI Card Internal Text Alignment
+# Allow Platform Owner to Edit SOV Item Names on Locked SOVs
 
 ## Problem
-Inside each KPI card, the text elements (label, value, subtitle) don't line up across cards in the same row. Short labels like "PENDING FROM GC_TEST" vs long ones like "PENDING · YOU OWE FC_TEST" cause the dollar value and subtitle to sit at different vertical positions even though `minHeight` zones exist.
+Once an SOV is locked, `canEdit` becomes `false` (line 52: `isContractClient && !isLocked`), which blocks ALL editing — including item names. Platform owners need to rename items even after locking, without touching percentages or values.
 
-## Root Cause (in `src/components/shared/KpiCard.tsx`)
-- **Label zone** (line 104): uses `alignItems: 'flex-end'` which pushes short labels to the bottom of the 28px zone — this is wrong. Labels should anchor to the **top** so the value always starts at the same Y position.
-- **Value zone** (line 108): has no fixed height, so if a value wraps or differs in character count, everything below shifts.
-- **Sub zone** (line 110): correctly has `minHeight: 24` but the label misalignment above cascades down.
+## Approach
+Introduce a `canEditName` flag that is `true` when `canEdit` is true OR when the viewer is a platform user. Use `canEditName` only for the item name column; all other columns (%, amount, lock toggle, delete, add) stay gated behind `canEdit`.
 
-## Fix — 1 file, 3 lines
+### 1. Update `src/pages/ProjectSOVPage.tsx` — `SOVContractSection`
+- Import `useAuth` and destructure `isPlatformUser`
+- Add: `const canEditName = canEdit || isPlatformUser;`
+- **Line 300**: Change `canEdit && editingNameId === item.id` → `canEditName && editingNameId === item.id`
+- **Line 312**: Change `cn(canEdit && "cursor-pointer hover:text-primary")` → `cn(canEditName && "cursor-pointer hover:text-primary")`
+- **Line 314**: Change `if (canEdit)` → `if (canEditName)`
+- Leave all other `canEdit` references (%, amount, lock, delete, add line) unchanged
 
-**File: `src/components/shared/KpiCard.tsx`**
+### 2. Update `src/hooks/useSOVPage.ts` — `updateLineName`
+- The function already does NOT check `is_locked` (line 342 only checks `!currentSOV` and `!newName.trim()`), so no backend change is needed
 
-1. **Label zone (line 104)**: Change `alignItems: 'flex-end'` → `alignItems: 'flex-start'` — labels anchor to top of their zone, so the value below always starts at the same position regardless of label length.
+### Files to edit
+- `src/pages/ProjectSOVPage.tsx` (4 line changes + 1 import addition)
 
-2. **Value zone (line 108)**: Add `minHeight: 36` and `display: 'flex', alignItems: 'center'` — ensures the dollar amount row has a consistent fixed height.
-
-3. **Sub zone (line 110)**: Already correct — no change needed.
-
-This ensures across any row of 4 cards:
-- All labels start at the same top position
-- All dollar values sit at the same vertical line
-- All subtitles align
-- All "Expand for detail" bars align at the bottom
-
-No other files need changes — all 8 consumer files import from this shared component.
+No database or RLS changes required — the update goes through `project_sov_items` which platform users can already write to.
 
