@@ -4,10 +4,11 @@ import { PlatformLayout } from '@/components/platform/PlatformLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { CreateUserDialog } from '@/components/platform/CreateUserDialog';
 
 interface UserRow {
   user_id: string;
@@ -23,6 +24,8 @@ export default function PlatformUsers() {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const PAGE_SIZE = 25;
 
   useEffect(() => { setPage(0); }, [query]);
@@ -47,17 +50,24 @@ export default function PlatformUsers() {
       setLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [query, page]);
+  }, [query, page, refreshKey]);
 
   return (
     <PlatformLayout
       title="Users"
       breadcrumbs={[{ label: 'Platform', href: '/platform' }, { label: 'Users' }]}
     >
-      <div className="relative mb-4 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by email or name..." className="pl-10" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by email or name..." className="pl-10" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" /> Add User
+        </Button>
       </div>
+
+      <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => setRefreshKey((k) => k + 1)} />
 
       {!loading && totalCount > 0 && (
         <p className="text-sm text-muted-foreground mb-3">

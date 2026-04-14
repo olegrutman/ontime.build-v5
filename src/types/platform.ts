@@ -30,7 +30,8 @@ export type SupportActionType =
   | 'DELETE_PROJECT'
   | 'DELETE_INVOICE'
   | 'DELETE_PURCHASE_ORDER'
-  | 'DELETE_CHANGE_ORDER';
+  | 'DELETE_CHANGE_ORDER'
+  | 'CREATE_USER_AND_ADD';
 
 export interface SupportActionLog {
   id: string;
@@ -133,4 +134,5 @@ export const ACTION_TYPE_LABELS: Record<SupportActionType, string> = {
   DELETE_INVOICE: 'Invoice Deleted',
   DELETE_PURCHASE_ORDER: 'Purchase Order Deleted',
   DELETE_CHANGE_ORDER: 'Change Order Deleted',
+  CREATE_USER_AND_ADD: 'User Created & Assigned',
 };
