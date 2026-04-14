@@ -356,7 +356,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       </div>
 
       {/* 8 KPI Cards — 4-col grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-2 max-sm:!gap-2">
+      <KpiGrid>
 
         {/* Card 1 — GC Contract (read-only) */}
         <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `${gcName.toUpperCase()} T&M REVENUE` : `${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: `${gcName} set this` }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>

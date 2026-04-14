@@ -261,7 +261,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   return (
     <div className="space-y-4">
       {/* KPI Cards — 4-col grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
+      <KpiGrid>
 
         {/* Card 1 — Owner Budget */}
         <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.billedToDate)} invoiced to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
