@@ -269,18 +269,19 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
           title,
           co_number: woNumber,
           status: 'draft',
-          pricing_type: 'tm',
+           pricing_type: data.pricingType,
+          nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
           reason: data.workType as string,
           reason_note: data.aiDescription,
           location_tag: data.locationTag || null,
-          assigned_to_org_id: resolvedAssignedToOrgId,
+          assigned_to_org_id: role === 'GC' && data.assignedToOrgId ? data.assignedToOrgId : resolvedAssignedToOrgId,
           fc_input_needed: data.fcInputNeeded,
           materials_needed: data.materialsNeeded,
           materials_responsible: data.materialsResponsible,
           equipment_needed: data.equipmentNeeded,
           equipment_responsible: data.equipmentResponsible,
           draft_shared_with_next: data.shareDraftNow,
-          gc_budget: data.estimatedCost ? parseFloat(data.estimatedCost) : null,
+          gc_budget: role === 'GC' && data.gcBudget ? parseFloat(data.gcBudget) : (data.estimatedCost ? parseFloat(data.estimatedCost) : null),
         });
       if (insertError) throw insertError;
 
@@ -414,7 +415,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
             {currentStep.key === 'location' && (
               <StepLocation projectId={projectId} data={data} onChange={update} savedLocation={savedLocation} userId={user?.id} />
             )}
-            {currentStep.key === 'resources' && <StepResources data={data} onChange={update} role={role} projectId={projectId} />}
+            {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
             {currentStep.key === 'review' && (
               <StepReview data={data} onChange={update} selectedWorkType={selectedWorkType} generatingAI={generatingAI} onRegenerate={generateAIDescription} />
             )}
