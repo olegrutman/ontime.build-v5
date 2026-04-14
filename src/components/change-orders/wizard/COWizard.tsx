@@ -101,11 +101,8 @@ const CO_WORK_TYPES: WorkTypeDef[] = [
   { key: 'other', label: 'Other', icon: '📝' },
 ];
 
-const PRICING_OPTIONS: { type: COPricingType; title: string; description: string }[] = [
-  { type: 'fixed', title: 'Fixed price', description: 'Lump sum or itemized price, approved before work.' },
-  { type: 'tm', title: 'Time & material', description: 'Hours and costs logged as work happens.' },
-  { type: 'nte', title: 'Not to exceed', description: 'T&M with a cap. Must notify before exceeding.' },
-];
+// Pricing options moved to SharedWizardComponents
+import { PricingTypeSelector, ToggleWithSelector, ShareToggle } from './SharedWizardComponents';
 
 const STEPS = [
   { key: 'why', label: 'Why', description: 'Reason & work type' },
@@ -639,7 +636,7 @@ function StepHow({
           </Select>
         </div>
 
-        <PricingTypeSelector data={data} onChange={onChange} />
+        <PricingTypeSelector pricingType={data.pricingType} nteCap={data.nteCap} onPricingTypeChange={v => onChange({ pricingType: v })} onNteCapChange={v => onChange({ nteCap: v })} />
 
         <div className="space-y-1.5">
           <Label>Your budget (internal)</Label>
@@ -678,7 +675,7 @@ function StepHow({
   if (role === 'TC') {
     return (
       <div className="space-y-6">
-        <PricingTypeSelector data={data} onChange={onChange} />
+        <PricingTypeSelector pricingType={data.pricingType} nteCap={data.nteCap} onPricingTypeChange={v => onChange({ pricingType: v })} onNteCapChange={v => onChange({ nteCap: v })} />
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
