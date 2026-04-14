@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,16 +55,21 @@ export function FCPricingToggleCard({
     ? fcHours * rate
     : fcLumpSum * (1 + markup / 100);
 
+  const lastWrittenPrice = useRef<number | null>(null);
+
   useEffect(() => {
     if (!isOn || !fcHasSubmitted || calculatedPrice <= 0) return;
+    if (lastWrittenPrice.current === calculatedPrice) return;
+    lastWrittenPrice.current = calculatedPrice;
     supabase
       .from('change_orders')
       .update({ tc_submitted_price: calculatedPrice, updated_at: new Date().toISOString() })
       .eq('id', co.id)
       .then(({ error }) => {
         if (error) console.error('Failed to persist FC pricing base price', error);
+        else onRefresh();
       });
-  }, [isOn, fcHasSubmitted, calculatedPrice, co.id]);
+  }, [isOn, fcHasSubmitted, calculatedPrice, co.id, onRefresh]);
 
   async function handleToggle(checked: boolean) {
     setToggling(true);

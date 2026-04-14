@@ -184,8 +184,8 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
     laborEntries.some(e => e.co_line_item_id === li.id && !e.is_actual_cost)
   ).length;
   const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const actualCostTotal = laborEntries.filter(e => e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const grossMargin = totalLogged - actualCostTotal;
+  const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
+  const grossMargin = totalLogged - roleActualCost;
   const grossMarginPct = totalLogged > 0 ? (grossMargin / totalLogged) * 100 : 0;
 
   const sidebarProps = {
@@ -280,7 +280,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                         <>
                           <div className="flex-1 px-3 py-2 text-center border-r border-border">
                             <p className="text-muted-foreground font-medium">Internal Cost</p>
-                            <p className="font-mono font-bold text-foreground mt-0.5">${actualCostTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                            <p className="font-mono font-bold text-foreground mt-0.5">${roleActualCost.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
                           </div>
                           <div className="flex-1 px-3 py-2 text-center" style={{ background: grossMargin >= 0 ? 'hsl(152 82% 39% / 0.06)' : 'hsl(0 84% 60% / 0.06)' }}>
                             <p className="text-muted-foreground font-medium">Gross Margin</p>

@@ -93,7 +93,8 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   }
 
   // FC
-  const fcMargin = financials.fcLaborTotal - financials.actualCostTotal;
+  const fcMargin = financials.fcLaborTotal - financials.fcActualCostTotal;
+  const fcMarginPct = financials.fcLaborTotal > 0 ? ((fcMargin / financials.fcLaborTotal) * 100).toFixed(0) : '0';
   return [
     {
       label: 'Hours Logged',
@@ -109,15 +110,15 @@ function getTiles(props: COKPIStripProps): KPITile[] {
     },
     {
       label: 'Internal Cost',
-      value: financials.actualCostTotal > 0 ? fmtCurrency(financials.actualCostTotal) : '—',
+      value: financials.fcActualCostTotal > 0 ? fmtCurrency(financials.fcActualCostTotal) : '—',
       color: '#DC2626',
     },
     {
       label: 'Margin',
-      value: financials.actualCostTotal > 0 ? fmtCurrency(fcMargin) : '—',
+      value: financials.fcActualCostTotal > 0 ? fmtCurrency(fcMargin) : '—',
       color: fcMargin >= 0 ? '#059669' : '#DC2626',
-      badge: financials.actualCostTotal > 0
-        ? { text: `${((fcMargin / financials.fcLaborTotal) * 100).toFixed(0)}%`, variant: fcMargin >= 0 ? 'healthy' as const : 'watch' as const }
+      badge: financials.fcActualCostTotal > 0
+        ? { text: `${fcMarginPct}%`, variant: fcMargin >= 0 ? 'healthy' as const : 'watch' as const }
         : undefined,
     },
   ];
