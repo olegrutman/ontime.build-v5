@@ -69,6 +69,15 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
     (co.created_by_role === 'FC' && co.collaboratorOrgId === orgId)
   );
 
+  // Active WOs where FC is collaborator but not needing immediate input
+  const actionableIds = new Set(actionableCOs.map(co => co.id));
+  const activeCOs = changeOrders.filter(co => {
+    if (co.collaboratorOrgId !== orgId) return false;
+    if (co.collaboratorStatus !== 'active' && co.collaboratorStatus !== 'completed') return false;
+    if (actionableIds.has(co.id)) return false;
+    return ['submitted', 'work_in_progress', 'shared', 'closed_for_pricing', 'approved', 'contracted'].includes(co.status);
+  });
+
   // Approved/billable COs where FC was a collaborator
   const billableCOs = changeOrders.filter(co => {
     if (co.collaboratorOrgId !== orgId) return false;
