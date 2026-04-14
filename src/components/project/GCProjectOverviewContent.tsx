@@ -263,97 +263,206 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
       {/* KPI Cards — 4-col grid */}
       <KpiGrid>
 
-        {/* Card 1 — Owner Budget */}
-        <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.billedToDate)} invoiced to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
-          <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
-            <EditField label="Owner Contract Value" value={`$${draftOwnerBudget.toLocaleString()}`} onSave={(v) => { const n = parseInt(v.replace(/[^0-9]/g, '')) || 0; setDraftOwnerBudget(n); setDirtyOwner(n !== ownerBudgetReal); }} type="number" />
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-              <THead cols={['Budget Item', 'Value']} />
-              <tbody>
-                <TRow cells={[<TdN>Approved COs to Owner</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                <TRow cells={[<TdN>Revised Contract Total</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal)}</TdM>]} isTotal />
-                <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(financials.billedToDate)}</TdM>]} />
-                <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.billedToDate)}</TdM>]} />
-              </tbody>
-            </table>
-            {dirtyOwner && (
-              <button onClick={saveOwnerBudget} disabled={savingOwner} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, opacity: savingOwner ? 0.6 : 1, ...fontLabel }}>{savingOwner ? 'Saving…' : 'Save Owner Budget'}</button>
-            )}
-            {dirtyOwner && <div style={{ fontSize: '0.6rem', color: C.amber, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block' }} />Unsaved changes</div>}
-          </div>
-        </KpiCard>
+        {isTM ? (
+          <>
+            {/* ═══ T&M MODE: WO-driven cards 1-4 ═══ */}
 
-        {/* Card 2 — TC Contract (EDITABLE) */}
-        <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`${tcName.toUpperCase()} CONTRACT`} value={tcContractVal > 0 ? fmt(draftContractVal) : '—'} sub={tcContractVal > 0 ? `${tcName} · ${liveMarginPct}% your margin` : 'No contract found'} pills={tcContractVal > 0 ? [{ type: 'pg', text: `${fmt(liveMargin)} margin` }, { type: 'pn', text: `${liveMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>Contract Terms</div>
-            <EditField label="Trade Contractor" value={contractDraft.contractor} onSave={(v) => updateField('contractor', v)} />
-            <EditField label="Contract Value" value={`$${draftContractVal.toLocaleString()}`} onSave={(v) => updateField('value', v.replace(/[^0-9]/g, ''))} type="number" />
-            <EditField label="Contract Type" value={contractDraft.type} onSave={(v) => updateField('type', v)} type="select" />
-            {dirty && (
-              <button onClick={saveContract} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, ...fontLabel }}>Save Contract Changes</button>
-            )}
-            {dirty && <div style={{ fontSize: '0.6rem', color: C.amber, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block' }} />Unsaved changes</div>}
+            {/* Card 1 — WO Revenue */}
+            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="WO REVENUE (BILLED TO OWNER)" value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of GC budgets`} pills={coRevenueTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
+              <div style={{ padding: 12 }}>
+                {changeOrders.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <THead cols={['WO #', 'Title', 'GC Budget', 'Status']} />
+                    <tbody>
+                      {changeOrders.slice(0, 8).map(co => (
+                        <TRow key={co.id} cells={[
+                          <TdN>{co.co_number || '—'}</TdN>,
+                          co.title || '—',
+                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                          <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                        ]} />
+                      ))}
+                      {approvedCOs.length > 0 && (
+                        <TRow cells={[<TdN>{approvedCOs.length} approved</TdN>, '—', <TdM>{fmt(coRevenueTotal)}</TdM>, '—']} isTotal />
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No work orders yet</div>
+                )}
+              </div>
+            </KpiCard>
 
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginTop: 16, marginBottom: 8 }}>Margin Breakdown</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Item', 'Value']} />
-              <tbody>
-                <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(draftContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>Your Gross Margin</TdN>, <TdM>{fmt(liveMargin)}</TdM>]} isTotal />
-                <TRow cells={[<TdN>CO Revenue (owner)</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                <TRow cells={[<TdN>CO Cost (to {tcName})</TdN>, <TdM>+{fmt(coCostTotal)}</TdM>]} />
-                <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(liveMargin + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
-              </tbody>
-            </table>
-          </div>
-        </KpiCard>
+            {/* Card 2 — TC Cost */}
+            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`TC COST (${tcName.toUpperCase()})`} value={coCostTotal > 0 ? fmt(coCostTotal) : '—'} sub={`Sum of ${tcName} submitted prices`} pills={coCostTotal > 0 ? [{ type: 'pg', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No cost' }]} idx={1}>
+              <div style={{ padding: 12 }}>
+                {approvedCOs.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <THead cols={['WO #', 'Title', 'TC Price', 'Status']} />
+                    <tbody>
+                      {approvedCOs.slice(0, 8).map(co => (
+                        <TRow key={co.id} cells={[
+                          <TdN>{co.co_number || '—'}</TdN>,
+                          co.title || '—',
+                          <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
+                          <Pill type="pg">Approved</Pill>,
+                        ]} />
+                      ))}
+                      <TRow cells={[<TdN>Total</TdN>, '—', <TdM>{fmt(coCostTotal)}</TdM>, '—']} isTotal />
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No approved WOs yet</div>
+                )}
+              </div>
+            </KpiCard>
 
-        {/* Card 3 — Your Margin */}
-        <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(liveMargin + coRevenueTotal - coCostTotal) : '—'} sub={ownerBudget > 0 ? `${liveMarginPct}% gross · incl. CO impact` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: Number(liveMarginPct) > 15 ? 'pg' : Number(liveMarginPct) > 5 ? 'pw' : 'pr', text: `${liveMarginPct}%` }] : []} idx={2}>
-          <div style={{ padding: 12 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Metric', 'Value']} />
-              <tbody>
-                <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(tcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(marginDollar)}</TdM>]} />
-                <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
-                <TRow cells={[<TdN>CO Net</TdN>, <TdM>{fmt(coRevenueTotal - coCostTotal)}</TdM>]} />
-                <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(marginDollar + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
-                <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
-                <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
-              </tbody>
-            </table>
-          </div>
-        </KpiCard>
+            {/* Card 3 — Your Margin (WO-driven) */}
+            {(() => {
+              const woMargin = coRevenueTotal - coCostTotal;
+              const woMarginPct = coRevenueTotal > 0 ? ((woMargin / coRevenueTotal) * 100).toFixed(1) : '0';
+              return (
+                <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={coRevenueTotal > 0 ? fmt(woMargin) : '—'} sub={coRevenueTotal > 0 ? `${woMarginPct}% · WO revenue minus TC cost` : 'Create WOs to see margin'} pills={coRevenueTotal > 0 ? [{ type: Number(woMarginPct) > 15 ? 'pg' : Number(woMarginPct) > 5 ? 'pw' : 'pr', text: `${woMarginPct}%` }] : []} idx={2}>
+                  <div style={{ padding: 12 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <THead cols={['Metric', 'Value']} />
+                      <tbody>
+                        <TRow cells={[<TdN>WO Revenue (GC Budget)</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>]} />
+                        <TRow cells={[<TdN>TC Cost (Submitted Prices)</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
+                        <TRow cells={[<TdN>Your Margin</TdN>, <TdM>{fmt(woMargin)}</TdM>]} isTotal />
+                        <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
+                        <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
+                      </tbody>
+                    </table>
+                  </div>
+                </KpiCard>
+              );
+            })()}
 
-        {/* Card 4 — Change Orders / Work Orders */}
-        <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label={isTM ? 'WORK ORDERS' : 'CHANGE ORDERS'} value={changeOrders.length > 0 ? `${changeOrders.length} ${isTM ? 'WOs' : 'COs'}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
-          <div style={{ padding: 12 }}>
-            {changeOrders.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={['CO #', 'Title', 'GC Budget', 'TC Price', 'Status']} />
-                <tbody>
-                  {changeOrders.slice(0, 8).map(co => (
-                    <TRow key={co.id} cells={[
-                      <TdN>{co.co_number || '—'}</TdN>,
-                      co.title || '—',
-                      <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
-                      <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
-                      <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
-                    ]} />
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No {isTM ? 'work orders' : 'change orders'} yet</div>
-            )}
-            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Create {isTM ? 'Work Order' : 'Change Order'}</button>
-          </div>
-        </KpiCard>
+            {/* Card 4 — Work Orders (list + create) */}
+            <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="WORK ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} WOs` : '0 WOs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
+              <div style={{ padding: 12 }}>
+                {changeOrders.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <THead cols={['WO #', 'Title', 'GC Budget', 'TC Price', 'Status']} />
+                    <tbody>
+                      {changeOrders.slice(0, 8).map(co => (
+                        <TRow key={co.id} cells={[
+                          <TdN>{co.co_number || '—'}</TdN>,
+                          co.title || '—',
+                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                          <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
+                          <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                        ]} />
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No work orders yet</div>
+                )}
+                <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Create Work Order</button>
+              </div>
+            </KpiCard>
+          </>
+        ) : (
+          <>
+            {/* ═══ FIXED-CONTRACT MODE: Original cards 1-4 ═══ */}
+
+            {/* Card 1 — Owner Budget */}
+            <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.billedToDate)} invoiced to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+              <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
+                <EditField label="Owner Contract Value" value={`$${draftOwnerBudget.toLocaleString()}`} onSave={(v) => { const n = parseInt(v.replace(/[^0-9]/g, '')) || 0; setDraftOwnerBudget(n); setDirtyOwner(n !== ownerBudgetReal); }} type="number" />
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                  <THead cols={['Budget Item', 'Value']} />
+                  <tbody>
+                    <TRow cells={[<TdN>Approved COs to Owner</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Revised Contract Total</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(financials.billedToDate)}</TdM>]} />
+                    <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.billedToDate)}</TdM>]} />
+                  </tbody>
+                </table>
+                {dirtyOwner && (
+                  <button onClick={saveOwnerBudget} disabled={savingOwner} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, opacity: savingOwner ? 0.6 : 1, ...fontLabel }}>{savingOwner ? 'Saving…' : 'Save Owner Budget'}</button>
+                )}
+                {dirtyOwner && <div style={{ fontSize: '0.6rem', color: C.amber, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block' }} />Unsaved changes</div>}
+              </div>
+            </KpiCard>
+
+            {/* Card 2 — TC Contract (EDITABLE) */}
+            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`${tcName.toUpperCase()} CONTRACT`} value={tcContractVal > 0 ? fmt(draftContractVal) : '—'} sub={tcContractVal > 0 ? `${tcName} · ${liveMarginPct}% your margin` : 'No contract found'} pills={tcContractVal > 0 ? [{ type: 'pg', text: `${fmt(liveMargin)} margin` }, { type: 'pn', text: `${liveMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>Contract Terms</div>
+                <EditField label="Trade Contractor" value={contractDraft.contractor} onSave={(v) => updateField('contractor', v)} />
+                <EditField label="Contract Value" value={`$${draftContractVal.toLocaleString()}`} onSave={(v) => updateField('value', v.replace(/[^0-9]/g, ''))} type="number" />
+                <EditField label="Contract Type" value={contractDraft.type} onSave={(v) => updateField('type', v)} type="select" />
+                {dirty && (
+                  <button onClick={saveContract} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, ...fontLabel }}>Save Contract Changes</button>
+                )}
+                {dirty && <div style={{ fontSize: '0.6rem', color: C.amber, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block' }} />Unsaved changes</div>}
+
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginTop: 16, marginBottom: 8 }}>Margin Breakdown</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <THead cols={['Item', 'Value']} />
+                  <tbody>
+                    <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
+                    <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(draftContractVal)}</TdM>]} />
+                    <TRow cells={[<TdN>Your Gross Margin</TdN>, <TdM>{fmt(liveMargin)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>CO Revenue (owner)</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>CO Cost (to {tcName})</TdN>, <TdM>+{fmt(coCostTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(liveMargin + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                  </tbody>
+                </table>
+              </div>
+            </KpiCard>
+
+            {/* Card 3 — Your Margin */}
+            <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(liveMargin + coRevenueTotal - coCostTotal) : '—'} sub={ownerBudget > 0 ? `${liveMarginPct}% gross · incl. CO impact` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: Number(liveMarginPct) > 15 ? 'pg' : Number(liveMarginPct) > 5 ? 'pw' : 'pr', text: `${liveMarginPct}%` }] : []} idx={2}>
+              <div style={{ padding: 12 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <THead cols={['Metric', 'Value']} />
+                  <tbody>
+                    <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
+                    <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(tcContractVal)}</TdM>]} />
+                    <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(marginDollar)}</TdM>]} />
+                    <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>CO Net</TdN>, <TdM>{fmt(coRevenueTotal - coCostTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(marginDollar + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
+                    <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
+                  </tbody>
+                </table>
+              </div>
+            </KpiCard>
+
+            {/* Card 4 — Change Orders */}
+            <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="CHANGE ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} COs` : '0 COs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
+              <div style={{ padding: 12 }}>
+                {changeOrders.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <THead cols={['CO #', 'Title', 'GC Budget', 'TC Price', 'Status']} />
+                    <tbody>
+                      {changeOrders.slice(0, 8).map(co => (
+                        <TRow key={co.id} cells={[
+                          <TdN>{co.co_number || '—'}</TdN>,
+                          co.title || '—',
+                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                          <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
+                          <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                        ]} />
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No change orders yet</div>
+                )}
+                <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Create Change Order</button>
+              </div>
+            </KpiCard>
+          </>
+        )}
+
+        {/* Cards 5-8 — shared between T&M and fixed-contract modes */}
 
         {/* Card 5 — Materials Budget */}
         <KpiCard accent={C.purple} icon="📦" iconBg={C.purpleBg} label="MATERIALS" value={matOrdered > 0 ? fmt(matOrdered) : '—'} sub={matEstimate > 0 ? `${fmt(matEstimate)} estimated · ${matPct}% ordered` : 'No material estimates'} pills={matPct > 100 ? [{ type: 'pr', text: 'Over budget' }] : matPct > 0 ? [{ type: 'pg', text: `${matPct}% of est` }] : [{ type: 'pm', text: 'No orders' }]} idx={4}>
