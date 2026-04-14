@@ -453,29 +453,29 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>{gcName} (your revenue)</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>{fcName || 'Field Crew'} (your cost)</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Revenue' : `${gcName} (your revenue)`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'TC Labor Cost' : `${fcName || 'Field Crew'} (your cost)`}</TdN>, <TdM>{fmt(effectiveFCVal)}</TdM>]} />
                 <TRow cells={[<TdN>Your Gross Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(tcGrossMargin)}</span>]} isTotal />
                 <TRow cells={[<TdN>Your Margin %</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
-                <TRow cells={[<TdN>{isTM ? 'WO' : 'CO'} Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>{isTM ? 'WO' : 'CO'} Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />
-                <TRow cells={[<TdN>Your Net Margin after {isTM ? 'WOs' : 'COs'}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
+                {!isTM && <TRow cells={[<TdN>CO Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>CO Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />}
+                <TRow cells={[<TdN>Your Net Margin{isTM ? '' : ` after COs`}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
               </tbody>
             </table>
           </div>
         </KpiCard>
 
         {/* Card 3 — TC Gross Margin */}
-        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label="YOUR GROSS MARGIN" value={gcContractVal > 0 ? fmt(tcGrossMargin) : '—'} sub={gcContractVal > 0 ? `${tcMarginPct}% · ${gcName} contract minus ${fcName || 'Field Crew'} contract` : 'Set contracts to see margin'} pills={gcContractVal > 0 ? [{ type: 'pg', text: `${tcMarginPct}%` }] : []} idx={2}>
+        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label={isTM ? 'WO MARGIN' : 'YOUR GROSS MARGIN'} value={effectiveGCVal > 0 ? fmt(tcGrossMargin) : '—'} sub={effectiveGCVal > 0 ? (isTM ? `${tcMarginPct}% · WO revenue minus TC labor cost` : `${tcMarginPct}% · ${gcName} contract minus ${fcName || 'Field Crew'} contract`) : (isTM ? 'No approved WOs yet' : 'Set contracts to see margin')} pills={effectiveGCVal > 0 ? [{ type: 'pg', text: `${tcMarginPct}%` }] : []} idx={2}>
           <div style={{ padding: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>{gcName}</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>{fcName || 'Field Crew'}</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
-                <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(tcGrossMargin)}</TdM>]} isTotal />
-                <TRow cells={[<TdN>{isTM ? 'WO Revenue' : 'CO Revenue'}</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>{isTM ? 'WO Cost' : 'CO Cost'}</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Revenue' : gcName}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'TC Labor Cost' : (fcName || 'Field Crew')}</TdN>, <TdM>{fmt(effectiveFCVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Margin' : 'Base Margin'}</TdN>, <TdM>{fmt(tcGrossMargin)}</TdM>]} isTotal />
+                {!isTM && <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />}
                 <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(netTCMargin)}</TdM>]} isTotal />
               </tbody>
             </table>
@@ -483,11 +483,11 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 4 — CO Net Margin */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO NET MARGIN' : 'CO NET MARGIN'} value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={coRevenue > 0 ? `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}` : `No approved ${isTM ? 'work orders' : 'change orders'}`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} ${isTM ? 'WOs' : 'COs'}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={coRevenue > 0 ? (isTM ? `Revenue ${fmt(coRevenue)} · Labor Cost ${fmt(coCost)}` : `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}`) : `No approved ${isTM ? 'work orders' : 'change orders'}`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} ${isTM ? 'WOs' : 'COs'}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={[`${isTM ? 'WO' : 'CO'} #`, 'Description', `Billed to ${gcName}`, `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
+                <THead cols={[`${isTM ? 'WO' : 'CO'} #`, 'Description', isTM ? 'GC Budget' : `Billed to ${gcName}`, isTM ? 'TC Labor' : `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
                 <tbody>
                   {changeOrders.slice(0, 8).map(co => {
                     const gcB = co.gc_budget || 0;
