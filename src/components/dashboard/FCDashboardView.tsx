@@ -142,7 +142,7 @@ export function FCDashboardView({
         )}
 
         {/* ═══ 6 KPI Cards — 3-column grid ═══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }} className="max-[900px]:!grid-cols-2 max-[600px]:!grid-cols-1">
+        <KpiGrid>
 
           {/* Card 1 — Contract with TC */}
           <KpiCard
@@ -316,7 +316,7 @@ export function FCDashboardView({
               </tbody>
             </table>
           </KpiCard>
-        </div>
+        </KpiGrid>
 
         {/* ═══ Attention Items ═══ */}
         {(attentionItems.length > 0 || pendingInvoiceDocs.length > 0) && (

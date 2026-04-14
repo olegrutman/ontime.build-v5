@@ -119,7 +119,7 @@ export function TCDashboardView({
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
 
         {/* KPI Grid — 3 cols for TC */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <KpiGrid>
 
           {/* Card 1: GC Contracts (Revenue) */}
           <KpiCard idx={0} accent={C.amber} icon={<Handshake size={18} color={C.amberD} />} iconBg={C.amberPale}
@@ -301,7 +301,7 @@ export function TCDashboardView({
               </tbody>
             </table>
           </KpiCard>
-        </div>
+        </KpiGrid>
 
         {/* Needs Attention */}
         {attentionItems.length > 0 && (

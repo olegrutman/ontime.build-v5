@@ -116,7 +116,7 @@ export function SupplierDashboardView({
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
 
         {/* ─── 6 KPI Cards: 3-col grid × 2 rows ─── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        <KpiGrid>
 
           {/* Card 1 — Total Estimate Value */}
           <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="TOTAL ESTIMATE VALUE" value={fmt(totalEstimate)} sub={`Across ${dp.filter(p => p.estimate > 0).length} active projects`}
@@ -270,7 +270,7 @@ export function SupplierDashboardView({
               </tbody>
             </table>
           </KpiCard>
-        </div>
+        </KpiGrid>
 
         {/* ─── Scheduled Deliveries ─── */}
         <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
