@@ -332,18 +332,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </Collapsible>
           )}
 
-          {/* Auto-expand form for empty items */}
-          {autoExpand && (
-            <div className="px-5 pb-4 pt-2">
-              <LaborEntryForm
-                coId={coId} lineItemId={item.id} orgId={orgId}
-                enteredByRole={enteredByRole} pricingType={pricingType}
-                isTC={isTC} isFC={isFC}
-                nteCap={nteCap} nteUsed={nteUsed}
-                onSaved={onRefresh}
-              />
-            </div>
-          )}
 
           {/* Actual cost form */}
           {showActualForm && (
