@@ -330,7 +330,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             </table>
           </div>
         </KpiCard>
-      </div>
+      </KpiGrid>
 
       {/* PO Register */}
       <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>

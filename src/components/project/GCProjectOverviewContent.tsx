@@ -504,7 +504,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             />
           </div>
         </KpiCard>
-      </div>
+      </KpiGrid>
 
       {/* Warnings */}
       {warnings.length > 0 && (

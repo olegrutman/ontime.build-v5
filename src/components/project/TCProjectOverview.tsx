@@ -663,7 +663,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             />
           </div>
         </KpiCard>
-      </div>
+      </KpiGrid>
 
       {/* Cash Flow Ladder */}
       {/* Mobile: compact horizontal summary */}

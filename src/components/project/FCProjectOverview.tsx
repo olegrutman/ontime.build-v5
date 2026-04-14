@@ -284,7 +284,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             </table>
           </div>
         </KpiCard>
-      </div>
+      </KpiGrid>
 
       {/* Earnings Tracker */}
       <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 20px', ...fontLabel }}>
