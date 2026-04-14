@@ -1,25 +1,23 @@
 
 
-# Restore FC's Own Numbers on Work Order Detail
+# Hide TC-Level Scope & Labor Summary Numbers from FC
 
 ## Problem
-The previous change over-corrected by hiding ALL financial data from FC — including the FC's own labor totals, pricing badges, and profitability. The FC should see their own numbers; they should NOT see TC's numbers.
+The totals strip inside the "SCOPE & LABOR" card header shows three numbers: "Billed to TC", "Internal Cost", and "Gross Margin". These aggregate ALL labor entries (TC + FC combined) — they represent the TC's financial picture, not the FC's. The FC should not see these.
 
-## What the FC should see
-- Their own line item totals (fcTotal) and "Priced" badges on scope items
-- Their own margin badges on line items
-- Their own profitability in the sidebar (FC Revenue, FC Internal Costs, FC Gross Margin)
-- KPI strip already correct — no change needed there
+The FC already has their own correct numbers in the sidebar ("My Labor", "FC Profitability") and the KPI strip at the top. The scope card summary is redundant and misleading for them.
 
-## Changes
+## Change
 
-### 1. `src/components/change-orders/COLineItemRow.tsx`
-- **Line 156**: Remove `!isFC &&` — restore the Priced/Needs Pricing badge for FC (these reflect FC's own entries)
-- **Line 166**: Remove `!isFC &&` — restore the dollar total display for FC (this shows `fcTotal`, the FC's own billable)
-- Internal cost pill (line 171) stays `isTC` only — correct as-is
+**`src/components/change-orders/CODetailLayout.tsx`**
 
-### 2. `src/components/change-orders/COSidebar.tsx`
-- **Line 157**: Change `isTC` back to `(isTC || isFC)` — restore FC Profitability section showing FC's own revenue, costs, and margin
+1. **Line 272-293 (Totals strip)**: Hide the entire 3-column totals strip from FC by changing the render condition or wrapping with `!isFC`. The FC doesn't need "Billed to TC / Internal Cost / Gross Margin" — their own financials are in the sidebar and KPI tiles.
 
-Two files, two surgical reversals. The FC sees their own money, not the TC's.
+2. **Line 307 (Progress bar "logged" amount)**: Also hide the `$X,XXX logged` text from the progress bar for FC, since `totalLogged` includes TC entries too.
+
+Specifically:
+- Wrap the totals strip (lines 272-293) with `!isFC` so only TC and GC see it
+- Change `!isGC` on line 307 to `isTC` so only TC sees the logged total in the progress bar
+
+One file, two small conditional changes.
 
