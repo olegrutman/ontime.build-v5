@@ -153,7 +153,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           {/* Right side */}
           <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
             {/* Status chip */}
-            {!isFC && (entryCount > 0 ? (
+            {(entryCount > 0 ? (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                 Priced
               </span>
@@ -163,7 +163,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </span>
             ) : null)}
 
-            {!isFC && totalForRole > 0 && (
+            {totalForRole > 0 && (
               <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             )}
 
