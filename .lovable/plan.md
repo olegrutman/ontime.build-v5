@@ -1,29 +1,48 @@
 
 
-# Hide TC Markup Details from GC View
+# GC KPI Cards: Separate Cost Breakdown + Editable Budget
 
-## Problem
-When GC views a TC-created work order, they see the TC's internal pricing breakdown:
-- "Unit cost" column showing $15.00
-- "Markup %" column showing 20%
-- Footer showing Cost ($4,410.00) and Markup (+$882.00) separately
+## What Changes
 
-GC should only see the final billed amount ($5,292.00) — the markup details are TC-internal.
+Currently GC sees 4 KPI tiles: "TC Submitted", "Materials + Equipment" (combined), "Total Cost", "GC Budget" (read-only, set at creation). 
 
-## Fix
+New layout — 5 KPI tiles in the GC view:
 
-**`src/components/change-orders/COMaterialsPanel.tsx`**
+| Labor Cost | Material Cost | Equipment Cost | Total Cost | GC Budget (editable) |
+|---|---|---|---|---|
 
-1. **Hide Unit cost and Markup % columns for GC** (lines 755-756): Only show these two columns for TC (not GC). The "Amount" column stays visible for everyone.
+- **Labor Cost** = `financials.grandTotal` (TC submitted labor)
+- **Material Cost** = `financials.materialsTotal` (final billed amount, no markup breakdown)
+- **Equipment Cost** = `financials.equipmentTotal`
+- **Total Cost** = labor + materials + equipment (sum of above 3)
+- **GC Budget** = editable inline — click to enter/edit, saves to `change_orders.gc_budget`. Shows percentage badge comparing total cost vs budget.
 
-2. **Hide Cost/Markup footer breakdown for GC** (lines 947-957): The "Cost" and "Markup" subtotal rows should only render for TC, not GC. GC only sees the "Total" line.
+## Technical Changes
 
-3. **Keep the Amount column visible for GC**: GC still sees Description, Qty, UOM, and the final Amount.
+### 1. Update GC tiles in `COKPIStrip.tsx`
 
-Specifically:
-- Line 755: Change `{showPricingColumns && ...}` to `{showPricingColumns && !isGC && ...}` for "Unit cost" header
-- Line 756: Same for "Markup %" header  
-- Lines 780-807: Wrap the unit cost and markup cells with `!isGC` guard
-- Lines 947-957: Wrap the Cost and Markup footer rows with `!isGC`
+Replace the current 4-tile GC array with 5 tiles. The grid changes from `lg:grid-cols-4` to `lg:grid-cols-5` when GC. Add an `editable` flag to the KPITile interface.
 
-One file, ~6 line changes. GC sees only quantities and final amounts.
+For the GC Budget tile, render an inline input (click "—" or the value to edit). On blur/enter, call `supabase.from('change_orders').update({ gc_budget: value }).eq('id', co.id)` and trigger a refetch via `onRefresh` callback.
+
+### 2. Wire `onRefresh` into COKPIStrip
+
+**`CODetailLayout.tsx`** — pass `onRefresh={refetchCO}` (the existing query refetch) to `COKPIStrip`.
+
+**`COKPIStrip.tsx`** — add `onRefresh?: () => void` to props. The budget tile uses it after saving.
+
+### 3. Specific tile breakdown for GC
+
+```
+tiles = [
+  { label: 'Labor Cost',     value: financials.grandTotal },
+  { label: 'Material Cost',  value: financials.materialsTotal },
+  { label: 'Equipment Cost', value: financials.equipmentTotal },
+  { label: 'Total Cost',     value: totalCost, badge: 'Final' },
+  { label: 'GC Budget',      value: co.gc_budget, editable: true,
+    badge: shows "X%" + healthy/watch based on totalCost vs budget },
+]
+```
+
+Two files changed: `COKPIStrip.tsx` (tile definitions + inline edit), `CODetailLayout.tsx` (pass onRefresh prop).
+
