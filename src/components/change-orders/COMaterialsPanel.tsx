@@ -714,8 +714,8 @@ export function COMaterialsPanel({
                   <th className="text-left px-4 py-2 font-medium">Description</th>
                   <th className="text-right px-2 py-2 font-medium">Qty</th>
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
-                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Unit cost</th>}
-                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Markup %</th>}
+                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">{isTC ? 'Supplier cost' : 'Unit cost'}</th>}
+                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">{isTC ? 'My margin' : 'Markup %'}</th>}
                   {showPricingColumns && <th className="text-right px-4 py-2 font-medium">Amount</th>}
                   {canManageMaterials && <th className="w-8" />}
                 </tr>
@@ -754,8 +754,18 @@ export function COMaterialsPanel({
                         </td>
                       )}
                       {showPricingColumns && (
-                        <td className="text-right px-2 py-2.5 text-muted-foreground">
-                          {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
+                        <td className="text-right px-2 py-2.5">
+                          {canEdit && isTC ? (
+                            <MarkupEditor
+                              materialId={material.id}
+                              initialValue={material.markup_percent}
+                              onRefresh={onRefresh}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
+                            </span>
+                          )}
                         </td>
                       )}
                       {showPricingColumns && (
@@ -898,13 +908,13 @@ export function COMaterialsPanel({
               )}
               {showPricingColumns && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Cost</span>
+                  <span className="text-muted-foreground">{isTC ? 'Supplier cost' : 'Cost'}</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
               {showPricingColumns && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Markup</span>
+                  <span className="text-muted-foreground">{isTC ? 'My margin' : 'Markup'}</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
                 </div>
               )}
