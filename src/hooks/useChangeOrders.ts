@@ -87,15 +87,25 @@ export function useChangeOrders(projectId: string | null) {
       }
 
       // Fetch downstream org IDs (orgs that have a contract FROM them TO current org)
-      const { data: downstreamContracts } = await supabase
-        .from('project_contracts')
-        .select('from_org_id')
-        .eq('project_id', projectId!)
-        .eq('to_org_id', orgId!);
+      const [{ data: downstreamContracts }, { data: myParticipant }] = await Promise.all([
+        supabase
+          .from('project_contracts')
+          .select('from_org_id')
+          .eq('project_id', projectId!)
+          .eq('to_org_id', orgId!),
+        supabase
+          .from('project_participants')
+          .select('role')
+          .eq('project_id', projectId!)
+          .eq('organization_id', orgId!)
+          .eq('invite_status', 'ACCEPTED')
+          .maybeSingle(),
+      ]);
 
       const downstreamOrgIds = new Set(
         (downstreamContracts ?? []).map(c => c.from_org_id).filter(Boolean) as string[]
       );
+      const isGCOnProject = myParticipant?.role === 'GC';
 
       return allCOs.map(c => ({
         ...c,

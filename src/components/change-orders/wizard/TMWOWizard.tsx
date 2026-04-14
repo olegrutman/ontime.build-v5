@@ -222,8 +222,22 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
     try {
       let resolvedAssignedToOrgId: string | null = null;
       if (role === 'TC' || role === 'FC') {
-        const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
-        resolvedAssignedToOrgId = proj?.organization_id ?? null;
+        // Try to find the GC on this project first
+        const { data: gcParticipant } = await supabase
+          .from('project_participants')
+          .select('organization_id')
+          .eq('project_id', projectId)
+          .eq('role', 'GC')
+          .eq('invite_status', 'ACCEPTED')
+          .limit(1)
+          .maybeSingle();
+
+        if (gcParticipant?.organization_id) {
+          resolvedAssignedToOrgId = gcParticipant.organization_id;
+        } else {
+          const { data: proj } = await supabase.from('projects').select('organization_id').eq('id', projectId).single();
+          resolvedAssignedToOrgId = proj?.organization_id ?? null;
+        }
       }
 
       const woNumber = await generateCONumber({ projectId, creatorOrgId: orgId, assignedToOrgId: resolvedAssignedToOrgId, isTM: true });
