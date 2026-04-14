@@ -235,11 +235,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
   const draftFcVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
 
-  // ─── Margins ───
-  const tcGrossMargin = gcContractVal - draftFcVal;
-  const tcMarginPct = gcContractVal > 0 ? ((tcGrossMargin / gcContractVal) * 100).toFixed(1) : '0';
-
-  // ─── Change Orders ───
+  // ─── Change Orders (fetch first so T&M can derive contract values) ───
   const { data: changeOrders = [] } = useQuery({
     queryKey: ['tc-project-cos', projectId],
     queryFn: async () => {
@@ -258,6 +254,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const coRevenue = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
   const coCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
   const coNetMargin = coRevenue - coCost;
+
+  // ─── T&M: derive "contract" values from WOs when no project_contracts exist ───
+  const effectiveGCVal = isTM && gcContractVal === 0 ? coRevenue : gcContractVal;
+  const effectiveFCVal = isTM && draftFcVal === 0 ? coCost : draftFcVal;
+
+  // ─── Margins ───
+  const tcGrossMargin = effectiveGCVal - effectiveFCVal;
+  const tcMarginPct = effectiveGCVal > 0 ? ((tcGrossMargin / effectiveGCVal) * 100).toFixed(1) : '0';
 
   // ─── RFIs ───
   const { data: rfis = [] } = useQuery({
@@ -286,9 +290,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const fcPendingAmount = financials.payablesInvoiced - financials.payablesPaid;
 
   // ─── Totals ───
-  const revisedGCTotal = gcContractVal + coRevenue;
-  const revisedFCTotal = draftFcVal + coCost;
-  const netTCMargin = tcGrossMargin + coNetMargin;
+  const revisedGCTotal = isTM ? coRevenue : gcContractVal + coRevenue;
+  const revisedFCTotal = isTM ? coCost : draftFcVal + coCost;
+  const netTCMargin = isTM ? coNetMargin : tcGrossMargin + coNetMargin;
   const gcReceivedPct = revisedGCTotal > 0 ? Math.round((totalReceivedFromGC / revisedGCTotal) * 100) : 0;
   const fcPaidPct = revisedFCTotal > 0 ? Math.round((totalPaidToFC / revisedFCTotal) * 100) : 0;
 
@@ -351,30 +355,30 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice<span className="max-sm:hidden"> to {gcName}</span></button>
-          <button onClick={() => onNavigate('sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View Contract<span className="max-sm:hidden"> · {gcName}</span></button>
+          <button onClick={() => onNavigate(isTM ? 'change-orders' : 'sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>{isTM ? 'View Work Orders' : <>View Contract<span className="max-sm:hidden"> · {gcName}</span></>}</button>
         </div>
       </div>
 
       {/* 8 KPI Cards — 4-col grid */}
       <KpiGrid>
 
-        {/* Card 1 — GC Contract (read-only) */}
-        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `${gcName.toUpperCase()} T&M REVENUE` : `${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={gcContractVal > 0 ? fmt(gcContractVal) : '—'} sub={`${gcName} · read-only`} pills={gcContractVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: `${gcName} set this` }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+        {/* Card 1 — GC Contract / T&M Revenue */}
+        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `WO REVENUE (FROM ${gcName.toUpperCase()})` : `${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={effectiveGCVal > 0 ? fmt(effectiveGCVal) : '—'} sub={isTM ? `Sum of ${approvedCOs.length} approved WO${approvedCOs.length !== 1 ? 's' : ''}` : `${gcName} · read-only`} pills={effectiveGCVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: isTM ? `${approvedCOs.length} WOs` : `${gcName} set this` }] : [{ type: 'pm', text: isTM ? 'No approved WOs' : 'Not Set' }]} idx={0}>
           <div style={{ padding: '12px 16px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>{isTM ? 'T&M Total (approved WOs)' : `Contract Value (set by ${gcName})`}</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>{isTM ? `Approved WOs (billed to ${gcName})` : `Approved COs (billed to ${gcName})`}</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>{isTM ? 'Approved WO Revenue' : `Contract Value (set by ${gcName})`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
+                {!isTM && <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />}
                 <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
                 <TRow cells={[<TdN>Pending from {gcName}</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
-                <TRow cells={[<TdN>Remaining to Bill</TdN>, <TdM>{fmt(revisedGCTotal - totalReceivedFromGC - totalPendingFromGC)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>Remaining to Bill</TdN>, <TdM>{fmt((isTM ? effectiveGCVal : revisedGCTotal) - totalReceivedFromGC - totalPendingFromGC)}</TdM>]} isTotal />
               </tbody>
             </table>
             <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: C.blueBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
               <span style={{ fontSize: 14 }}>ℹ️</span>
-              <span>{isTM ? 'This total reflects approved Work Orders.' : <>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</>}</span>
+              <span>{isTM ? `Revenue is the sum of approved Work Order gc_budget values (${approvedCOs.length} WOs).` : <>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</>}</span>
             </div>
           </div>
         </KpiCard>
@@ -449,29 +453,29 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>{gcName} (your revenue)</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>{fcName || 'Field Crew'} (your cost)</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Revenue' : `${gcName} (your revenue)`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'TC Labor Cost' : `${fcName || 'Field Crew'} (your cost)`}</TdN>, <TdM>{fmt(effectiveFCVal)}</TdM>]} />
                 <TRow cells={[<TdN>Your Gross Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(tcGrossMargin)}</span>]} isTotal />
                 <TRow cells={[<TdN>Your Margin %</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
-                <TRow cells={[<TdN>{isTM ? 'WO' : 'CO'} Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>{isTM ? 'WO' : 'CO'} Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />
-                <TRow cells={[<TdN>Your Net Margin after {isTM ? 'WOs' : 'COs'}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
+                {!isTM && <TRow cells={[<TdN>CO Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>CO Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />}
+                <TRow cells={[<TdN>Your Net Margin{isTM ? '' : ` after COs`}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
               </tbody>
             </table>
           </div>
         </KpiCard>
 
         {/* Card 3 — TC Gross Margin */}
-        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label="YOUR GROSS MARGIN" value={gcContractVal > 0 ? fmt(tcGrossMargin) : '—'} sub={gcContractVal > 0 ? `${tcMarginPct}% · ${gcName} contract minus ${fcName || 'Field Crew'} contract` : 'Set contracts to see margin'} pills={gcContractVal > 0 ? [{ type: 'pg', text: `${tcMarginPct}%` }] : []} idx={2}>
+        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label={isTM ? 'WO MARGIN' : 'YOUR GROSS MARGIN'} value={effectiveGCVal > 0 ? fmt(tcGrossMargin) : '—'} sub={effectiveGCVal > 0 ? (isTM ? `${tcMarginPct}% · WO revenue minus TC labor cost` : `${tcMarginPct}% · ${gcName} contract minus ${fcName || 'Field Crew'} contract`) : (isTM ? 'No approved WOs yet' : 'Set contracts to see margin')} pills={effectiveGCVal > 0 ? [{ type: 'pg', text: `${tcMarginPct}%` }] : []} idx={2}>
           <div style={{ padding: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>{gcName}</TdN>, <TdM>{fmt(gcContractVal)}</TdM>]} />
-                <TRow cells={[<TdN>{fcName || 'Field Crew'}</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
-                <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(tcGrossMargin)}</TdM>]} isTotal />
-                <TRow cells={[<TdN>{isTM ? 'WO Revenue' : 'CO Revenue'}</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>{isTM ? 'WO Cost' : 'CO Cost'}</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Revenue' : gcName}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'TC Labor Cost' : (fcName || 'Field Crew')}</TdN>, <TdM>{fmt(effectiveFCVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'WO Margin' : 'Base Margin'}</TdN>, <TdM>{fmt(tcGrossMargin)}</TdM>]} isTotal />
+                {!isTM && <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />}
                 <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(netTCMargin)}</TdM>]} isTotal />
               </tbody>
             </table>
@@ -479,11 +483,11 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 4 — CO Net Margin */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO NET MARGIN' : 'CO NET MARGIN'} value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={coRevenue > 0 ? `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}` : `No approved ${isTM ? 'work orders' : 'change orders'}`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} ${isTM ? 'WOs' : 'COs'}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={coRevenue > 0 ? (isTM ? `Revenue ${fmt(coRevenue)} · Labor Cost ${fmt(coCost)}` : `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}`) : `No approved ${isTM ? 'work orders' : 'change orders'}`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} ${isTM ? 'WOs' : 'COs'}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={[`${isTM ? 'WO' : 'CO'} #`, 'Description', `Billed to ${gcName}`, `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
+                <THead cols={[`${isTM ? 'WO' : 'CO'} #`, 'Description', isTM ? 'GC Budget' : `Billed to ${gcName}`, isTM ? 'TC Labor' : `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
                 <tbody>
                   {changeOrders.slice(0, 8).map(co => {
                     const gcB = co.gc_budget || 0;
@@ -668,21 +672,21 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       {/* Cash Flow Ladder */}
       {/* Mobile: compact horizontal summary */}
       <div className="sm:hidden" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '14px 16px', ...fontLabel }}>
-        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink, marginBottom: 10 }}>💧 Cash Flow</div>
+        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink, marginBottom: 10 }}>💧 {isTM ? 'WO Cash Flow' : 'Cash Flow'}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
           <div style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>GC</div>
-            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>{isTM ? 'Revenue' : 'GC'}</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(effectiveGCVal)}</div>
           </div>
           <div style={{ fontSize: '0.9rem', color: C.muted }}>→</div>
           <div style={{ textAlign: 'center', flex: 1, background: C.amberPale, borderRadius: 8, padding: '4px 6px', border: `1.5px solid ${C.amber}` }}>
             <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.amberD, fontWeight: 600 }}>You</div>
-            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(effectiveGCVal)}</div>
           </div>
           <div style={{ fontSize: '0.9rem', color: C.muted }}>→</div>
           <div style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>FC</div>
-            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(draftFcVal)}</div>
+            <div style={{ fontSize: '0.55rem', textTransform: 'uppercase', color: C.faint, fontWeight: 600 }}>{isTM ? 'Labor' : 'FC'}</div>
+            <div style={{ fontSize: '0.95rem', color: C.ink, ...fontVal }}>{fmt(effectiveFCVal)}</div>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
@@ -694,24 +698,24 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       </div>
       {/* Desktop: full Cash Flow Ladder */}
       <div className="hidden sm:block" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '20px 24px', ...fontLabel }}>
-        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💧 Cash Flow — {projectName}</div>
+        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💧 {isTM ? 'WO Cash Flow' : 'Cash Flow'} — {projectName}</div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }} className="max-md:flex-col">
           {/* GC Column */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.navy, color: '#fff', borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>General Contractor</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{gcName}</div>
-              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(gcContractVal)}</div>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>{isTM ? 'WO Revenue' : 'General Contractor'}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{isTM ? `${approvedCOs.length} approved WOs` : gcName}</div>
+              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(effectiveGCVal)}</div>
             </div>
             <div style={{ fontSize: '1.2rem', color: C.muted }}>↓</div>
-            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 2 }}>TC Contract: {fmt(gcContractVal)}</div>
+            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 2 }}>{isTM ? 'GC Budget total' : `TC Contract: ${fmt(effectiveGCVal)}`}</div>
           </div>
           {/* TC Column (You) */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.amberPale, border: `2px solid ${C.amber}`, borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
               <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.amberD, marginBottom: 4 }}>YOU (Trade Contractor)</div>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, color: C.ink, marginBottom: 2 }}>{userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
-              <div style={{ fontSize: '1.1rem', color: C.ink, ...fontVal }}>{fmt(gcContractVal)}</div>
+              <div style={{ fontSize: '1.1rem', color: C.ink, ...fontVal }}>{fmt(effectiveGCVal)}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <div style={{ fontSize: '1.2rem', color: C.muted }}>↓</div>
@@ -720,14 +724,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 <div style={{ fontSize: '0.88rem', color: C.green, ...fontMono }}>{fmt(netTCMargin)}</div>
               </div>
             </div>
-            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>FC Contract: {fmt(draftFcVal)}</div>
+            <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>{isTM ? `TC Labor: ${fmt(effectiveFCVal)}` : `FC Contract: ${fmt(effectiveFCVal)}`}</div>
           </div>
-          {/* FC Column */}
+          {/* FC / Labor Column */}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ background: C.navy, color: '#fff', borderRadius: 10, padding: '14px 12px', marginBottom: 8 }}>
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>Field Crew</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{fcName}</div>
-              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(draftFcVal)}</div>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.7, marginBottom: 4 }}>{isTM ? 'TC Labor Cost' : 'Field Crew'}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, marginBottom: 2 }}>{isTM ? 'Your submitted labor' : fcName}</div>
+              <div style={{ fontSize: '1.1rem', ...fontVal }}>{fmt(effectiveFCVal)}</div>
             </div>
             <div style={{ fontSize: '0.65rem', color: C.faint, marginTop: 4 }}>Internal costs managed by Field Crew</div>
           </div>
