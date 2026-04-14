@@ -53,7 +53,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
   let revenue = 0, costs = 0;
   if (isTC) {
     revenue = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
-    costs = financials.fcLaborTotal + financials.tcActualCostTotal;
+    costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
   } else if (isFC) {
     revenue = financials.fcLaborTotal;
     costs = financials.fcActualCostTotal;

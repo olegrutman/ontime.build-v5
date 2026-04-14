@@ -23,7 +23,7 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
 
   if (isTC) {
     revenue = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
-    costs = financials.fcLaborTotal + financials.tcActualCostTotal;
+    costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
     label = 'TC Profitability';
   } else {
     revenue = financials.fcLaborTotal;

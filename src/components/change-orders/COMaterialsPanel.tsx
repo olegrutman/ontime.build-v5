@@ -72,6 +72,53 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function MarkupEditor({ materialId, initialValue, onRefresh }: { materialId: string; initialValue: number; onRefresh: () => void }) {
+  const [value, setValue] = useState(String(initialValue ?? 0));
+  const [saving, setSaving] = useState(false);
+
+  async function commit() {
+    const num = parseFloat(value) || 0;
+    if (num === initialValue) return;
+    setSaving(true);
+    try {
+      const lineCostRes = await supabase.from('co_material_items').select('unit_cost, quantity').eq('id', materialId).single();
+      const unitCost = lineCostRes.data?.unit_cost ?? 0;
+      const qty = lineCostRes.data?.quantity ?? 0;
+      const lineCost = qty * unitCost;
+      const markupAmount = lineCost * (num / 100);
+      const billedAmount = lineCost + markupAmount;
+
+      const { error } = await supabase.from('co_material_items').update({
+        markup_percent: num,
+        markup_amount: markupAmount,
+        billed_amount: billedAmount,
+      }).eq('id', materialId);
+      if (error) throw error;
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update margin');
+      setValue(String(initialValue));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="relative inline-flex items-center">
+      <Input
+        type="number"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        disabled={saving}
+        className="h-7 text-xs w-16 text-right pr-5"
+      />
+      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+    </div>
+  );
+}
+
 function newDraftRow(): DraftRow {
   return {
     tempId: crypto.randomUUID(),
@@ -714,8 +761,8 @@ export function COMaterialsPanel({
                   <th className="text-left px-4 py-2 font-medium">Description</th>
                   <th className="text-right px-2 py-2 font-medium">Qty</th>
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
-                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Unit cost</th>}
-                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Markup %</th>}
+                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">{isTC ? 'Supplier cost' : 'Unit cost'}</th>}
+                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">{isTC ? 'My margin' : 'Markup %'}</th>}
                   {showPricingColumns && <th className="text-right px-4 py-2 font-medium">Amount</th>}
                   {canManageMaterials && <th className="w-8" />}
                 </tr>
@@ -754,8 +801,18 @@ export function COMaterialsPanel({
                         </td>
                       )}
                       {showPricingColumns && (
-                        <td className="text-right px-2 py-2.5 text-muted-foreground">
-                          {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
+                        <td className="text-right px-2 py-2.5">
+                          {canEdit && isTC ? (
+                            <MarkupEditor
+                              materialId={material.id}
+                              initialValue={material.markup_percent}
+                              onRefresh={onRefresh}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
+                            </span>
+                          )}
                         </td>
                       )}
                       {showPricingColumns && (
@@ -898,13 +955,13 @@ export function COMaterialsPanel({
               )}
               {showPricingColumns && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Cost</span>
+                  <span className="text-muted-foreground">{isTC ? 'Supplier cost' : 'Cost'}</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
               {showPricingColumns && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Markup</span>
+                  <span className="text-muted-foreground">{isTC ? 'My margin' : 'Markup'}</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
                 </div>
               )}
