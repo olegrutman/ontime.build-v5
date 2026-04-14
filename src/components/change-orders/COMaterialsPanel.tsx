@@ -72,6 +72,53 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function MarkupEditor({ materialId, initialValue, onRefresh }: { materialId: string; initialValue: number; onRefresh: () => void }) {
+  const [value, setValue] = useState(String(initialValue ?? 0));
+  const [saving, setSaving] = useState(false);
+
+  async function commit() {
+    const num = parseFloat(value) || 0;
+    if (num === initialValue) return;
+    setSaving(true);
+    try {
+      const lineCostRes = await supabase.from('co_material_items').select('unit_cost, quantity').eq('id', materialId).single();
+      const unitCost = lineCostRes.data?.unit_cost ?? 0;
+      const qty = lineCostRes.data?.quantity ?? 0;
+      const lineCost = qty * unitCost;
+      const markupAmount = lineCost * (num / 100);
+      const billedAmount = lineCost + markupAmount;
+
+      const { error } = await supabase.from('co_material_items').update({
+        markup_percent: num,
+        markup_amount: markupAmount,
+        billed_amount: billedAmount,
+      }).eq('id', materialId);
+      if (error) throw error;
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update margin');
+      setValue(String(initialValue));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="relative inline-flex items-center">
+      <Input
+        type="number"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        disabled={saving}
+        className="h-7 text-xs w-16 text-right pr-5"
+      />
+      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+    </div>
+  );
+}
+
 function newDraftRow(): DraftRow {
   return {
     tempId: crypto.randomUUID(),
