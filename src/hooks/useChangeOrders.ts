@@ -146,7 +146,7 @@ export function useChangeOrders(projectId: string | null) {
       if (bucket in grouped.mine) {
         grouped.mine[bucket as keyof typeof grouped.mine].push(co);
       }
-    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator || isDownstream) {
+    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator || isDownstream || (isGCOnProject && !isMine)) {
       grouped.sharedWithMe.push(co);
     }
   }
@@ -165,7 +165,7 @@ export function useChangeOrders(projectId: string | null) {
     const isAssigned = co.assigned_to_org_id === orgId;
     const isCollaborator = co.collaboratorOrgId === orgId;
     const isDownstream = (co as any)._isDownstreamOrg === true;
-    if (isMine || isAssigned || isCollaborator || isDownstream) {
+    if (isMine || isAssigned || isCollaborator || isDownstream || isGCOnProject) {
       const column = STATUS_TO_COLUMN[co.status] ?? 'wip';
       boardColumns[column].push(co);
     }
