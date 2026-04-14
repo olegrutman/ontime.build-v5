@@ -101,11 +101,11 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, childr
           </div>
         </div>
         {/* Label — fixed height zone for alignment */}
-        <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, marginBottom: 2, fontWeight: 600, minHeight: 28, display: 'flex', alignItems: 'flex-end' }}>
+        <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, marginBottom: 2, fontWeight: 600, minHeight: 28, display: 'flex', alignItems: 'flex-start' }}>
           <span className="line-clamp-2">{label}</span>
         </div>
         {/* Value — single line */}
-        <div style={{ fontSize: '2rem', color: C.ink, lineHeight: 1.1, marginBottom: 2, ...fontVal }}>{value}</div>
+        <div style={{ fontSize: '2rem', color: C.ink, lineHeight: 1.1, marginBottom: 2, minHeight: 36, display: 'flex', alignItems: 'center', ...fontVal }}>{value}</div>
         {/* Sub — fixed height zone */}
         <div style={{ fontSize: '0.67rem', color: C.muted, marginBottom: 10, minHeight: 24 }}>
           <span className="line-clamp-2">{sub}</span>
