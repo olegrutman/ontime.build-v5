@@ -363,7 +363,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                       <THead cols={['Metric', 'Value']} />
                       <tbody>
                         <TRow cells={[<TdN>WO Revenue (GC Budget)</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>]} />
-                        <TRow cells={[<TdN>TC Cost (Submitted Prices)</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
+                        <TRow cells={[<TdN>TC Labor Cost</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
+                        <TRow cells={[<TdN>Materials Cost</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
+                        <TRow cells={[<TdN>Equipment Cost</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
+                        <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
                         <TRow cells={[<TdN>Your Margin</TdN>, <TdM>{fmt(woMargin)}</TdM>]} isTotal />
                         <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
                         <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
@@ -379,17 +382,20 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               <div style={{ padding: 12 }}>
                 {changeOrders.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <THead cols={['WO #', 'Title', 'GC Budget', 'TC Price', 'Status']} />
+                    <THead cols={['WO #', 'Title', 'GC Budget', 'Total Cost', 'Status']} />
                     <tbody>
-                      {changeOrders.slice(0, 8).map(co => (
-                        <TRow key={co.id} cells={[
-                          <TdN>{co.co_number || '—'}</TdN>,
-                          co.title || '—',
-                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
-                          <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
-                          <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
-                        ]} />
-                      ))}
+                      {changeOrders.slice(0, 8).map(co => {
+                        const woTotalCost = (co.tc_submitted_price || 0) + (co.wo_materials_total || 0) + (co.wo_equipment_total || 0);
+                        return (
+                          <TRow key={co.id} cells={[
+                            <TdN>{co.co_number || '—'}</TdN>,
+                            co.title || '—',
+                            <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                            <TdM>{woTotalCost > 0 ? fmt(woTotalCost) : '—'}</TdM>,
+                            <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                          ]} />
+                        );
+                      })}
                     </tbody>
                   </table>
                 ) : (
