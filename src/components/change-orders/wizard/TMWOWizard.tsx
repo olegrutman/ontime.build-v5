@@ -537,119 +537,137 @@ function StepLocation({
   );
 }
 
-// ── Step 4: Resources ────────────────────────────────
-function StepResources({
+// ── Step 4: How (role-aware) ──────────────────────────
+function StepHow({
   data, onChange, role, projectId,
 }: {
   data: TMWOData; onChange: (p: Partial<TMWOData>) => void; role: COCreatedByRole; projectId: string;
 }) {
-  const { data: fcMembers = [] } = useQuery({
-    queryKey: ['tmwo-fc-team', projectId],
-    enabled: role === 'TC',
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['tmwo-team', projectId],
+    enabled: !!projectId,
     queryFn: async () => {
       const { data: rows } = await supabase
         .from('project_participants')
         .select('id, organization_id, role, organizations:organization_id(id, name)')
         .eq('project_id', projectId)
         .eq('invite_status', 'ACCEPTED');
-      return (rows ?? [])
-        .filter((r: any) => r.role === 'Field Crew' || r.role === 'FC')
-        .map((r: any) => ({ org_id: r.organization_id, org_name: r.organizations?.name ?? 'Unknown' }));
+      return (rows ?? []).map((r: any) => ({
+        org_id: r.organization_id,
+        org_name: r.organizations?.name ?? 'Unknown',
+        role: r.role ?? '',
+      }));
     },
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Materials */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Materials needed</p>
-            <p className="text-xs text-muted-foreground">Does this work require materials?</p>
-          </div>
-          <Switch
-            checked={data.materialsNeeded}
-            onCheckedChange={v => onChange({ materialsNeeded: v, materialsResponsible: v ? (data.materialsResponsible ?? 'TC') : null })}
-          />
-        </div>
-        {data.materialsNeeded && (
-          <div className="space-y-3 pl-4 border-l-2 border-primary/20">
-            <div className="flex gap-2">
-              {(['TC', 'GC'] as const).map(p => (
-                <button
-                  key={p}
-                  onClick={() => onChange({ materialsResponsible: p })}
-                  className={cn(
-                    'flex-1 py-2 rounded-lg text-sm font-medium border-2 transition-all',
-                    data.materialsResponsible === p ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
-                  )}
-                >
-                  {p} supplies
-                </button>
-              ))}
-            </div>
-            <Textarea
-              value={data.materialNotes}
-              onChange={e => onChange({ materialNotes: e.target.value })}
-              placeholder="Material notes (optional)…"
-              rows={2}
-            />
-          </div>
-        )}
-      </div>
+  const tcMembers = teamMembers.filter(m => m.role === 'Trade Contractor' || m.role === 'TC');
+  const fcMembers = teamMembers.filter(m => m.role === 'Field Crew' || m.role === 'FC');
 
-      {/* Equipment */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Equipment needed</p>
-            <p className="text-xs text-muted-foreground">Scaffolding, lifts, specialty tools?</p>
+  // ── GC view ──
+  if (role === 'GC') {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label>Assign to *</Label>
+          <Select value={data.assignedToOrgId} onValueChange={v => onChange({ assignedToOrgId: v })}>
+            <SelectTrigger><SelectValue placeholder="Select a trade contractor" /></SelectTrigger>
+            <SelectContent>
+              {tcMembers.map(m => <SelectItem key={m.org_id} value={m.org_id}>{m.org_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <PricingTypeSelector
+          pricingType={data.pricingType}
+          nteCap={data.nteCap}
+          onPricingTypeChange={v => onChange({ pricingType: v })}
+          onNteCapChange={v => onChange({ nteCap: v })}
+        />
+
+        <div className="space-y-1.5">
+          <Label>Your budget (internal)</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+            <Input type="number" value={data.gcBudget} onChange={e => onChange({ gcBudget: e.target.value })} className="pl-7" placeholder="0.00" />
           </div>
-          <Switch
+          <p className="text-xs text-muted-foreground">Private — not visible to TC or FC</p>
+        </div>
+
+        <div className="space-y-4">
+          <ToggleWithSelector
+            label="Materials needed"
+            hint="Track materials on this WO"
+            checked={data.materialsNeeded}
+            onToggle={v => onChange({ materialsNeeded: v, materialsResponsible: v ? (data.materialsResponsible ?? 'TC') : null })}
+            party={data.materialsResponsible}
+            onPartyChange={v => onChange({ materialsResponsible: v })}
+          />
+          <ToggleWithSelector
+            label="Equipment needed"
+            hint="Track equipment costs"
             checked={data.equipmentNeeded}
-            onCheckedChange={v => onChange({ equipmentNeeded: v, equipmentResponsible: v ? (data.equipmentResponsible ?? 'TC') : null })}
+            onToggle={v => onChange({ equipmentNeeded: v, equipmentResponsible: v ? (data.equipmentResponsible ?? 'TC') : null })}
+            party={data.equipmentResponsible}
+            onPartyChange={v => onChange({ equipmentResponsible: v })}
           />
         </div>
-        {data.equipmentNeeded && (
-          <div className="flex gap-2 pl-4 border-l-2 border-primary/20">
-            {(['TC', 'GC'] as const).map(p => (
+
+        <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
+      </div>
+    );
+  }
+
+  // ── TC view ──
+  if (role === 'TC') {
+    return (
+      <div className="space-y-6">
+        <PricingTypeSelector
+          pricingType={data.pricingType}
+          nteCap={data.nteCap}
+          onPricingTypeChange={v => onChange({ pricingType: v })}
+          onNteCapChange={v => onChange({ nteCap: v })}
+        />
+
+        <div className="space-y-4">
+          <ToggleWithSelector
+            label="Materials needed"
+            hint="Track materials on this WO"
+            checked={data.materialsNeeded}
+            onToggle={v => onChange({ materialsNeeded: v, materialsResponsible: v ? (data.materialsResponsible ?? 'TC') : null })}
+            party={data.materialsResponsible}
+            onPartyChange={v => onChange({ materialsResponsible: v })}
+          />
+          <ToggleWithSelector
+            label="Equipment needed"
+            hint="Track equipment costs"
+            checked={data.equipmentNeeded}
+            onToggle={v => onChange({ equipmentNeeded: v, equipmentResponsible: v ? (data.equipmentResponsible ?? 'TC') : null })}
+            party={data.equipmentResponsible}
+            onPartyChange={v => onChange({ equipmentResponsible: v })}
+          />
+        </div>
+
+        {/* Urgency */}
+        <div className="space-y-3">
+          <Label>Urgency</Label>
+          <div className="flex gap-2">
+            {(['Standard', 'Urgent', 'Emergency'] as const).map(u => (
               <button
-                key={p}
-                onClick={() => onChange({ equipmentResponsible: p })}
+                key={u}
+                onClick={() => onChange({ urgency: u })}
                 className={cn(
-                  'flex-1 py-2 rounded-lg text-sm font-medium border-2 transition-all',
-                  data.equipmentResponsible === p ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
+                  'flex-1 py-2.5 rounded-lg text-sm font-medium border-2 transition-all',
+                  data.urgency === u ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
+                  u === 'Emergency' && data.urgency === u && 'border-destructive bg-destructive/10 text-destructive',
                 )}
               >
-                {p} provides
+                {u}
               </button>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Urgency */}
-      <div className="space-y-3">
-        <Label>Urgency</Label>
-        <div className="flex gap-2">
-          {(['Standard', 'Urgent', 'Emergency'] as const).map(u => (
-            <button
-              key={u}
-              onClick={() => onChange({ urgency: u })}
-              className={cn(
-                'flex-1 py-2.5 rounded-lg text-sm font-medium border-2 transition-all',
-                data.urgency === u ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:border-primary/30',
-                u === 'Emergency' && data.urgency === u && 'border-destructive bg-destructive/10 text-destructive',
-              )}
-            >
-              {u}
-            </button>
-          ))}
         </div>
-      </div>
 
-      {/* FC input — TC only */}
-      {role === 'TC' && (
+        {/* FC input */}
         <div className="space-y-3 pt-2 border-t border-border">
           <div className="flex items-center justify-between">
             <div>
@@ -667,18 +685,19 @@ function StepResources({
             </Select>
           )}
         </div>
-      )}
 
-      {/* Share toggle */}
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <div>
-          <p className="text-sm font-medium">Share immediately</p>
-          <p className="text-xs text-muted-foreground">If off, stays as a private draft</p>
-        </div>
-        <Switch checked={data.shareDraftNow} onCheckedChange={v => onChange({ shareDraftNow: v })} />
+        <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
       </div>
+    );
+  }
+
+  // ── FC view ──
+  return (
+    <div className="space-y-6">
+      <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} label="Share with TC immediately" />
     </div>
   );
+}
 }
 
 // ── Step 5: Review ───────────────────────────────────
