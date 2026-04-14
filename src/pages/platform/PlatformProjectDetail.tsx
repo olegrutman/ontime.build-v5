@@ -124,6 +124,7 @@ interface PlatformSOVItem {
   sort_order: number;
 }
 
+interface CORow {
   id: string;
   co_number: string | null;
   status: string;
