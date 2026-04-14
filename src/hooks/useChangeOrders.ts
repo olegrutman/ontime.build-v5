@@ -107,12 +107,15 @@ export function useChangeOrders(projectId: string | null) {
       );
       const isGCOnProject = myParticipant?.role === 'GC';
 
-      return allCOs.map(c => ({
-        ...c,
-        collaboratorStatus: collaboratorMap.get(c.id)?.status,
-        collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
-        _isDownstreamOrg: downstreamOrgIds.has(c.org_id),
-      })) as (ChangeOrderWithMembers & { _isDownstreamOrg?: boolean })[];
+      return {
+        items: allCOs.map(c => ({
+          ...c,
+          collaboratorStatus: collaboratorMap.get(c.id)?.status,
+          collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
+          _isDownstreamOrg: downstreamOrgIds.has(c.org_id),
+        })) as (ChangeOrderWithMembers & { _isDownstreamOrg?: boolean })[],
+        isGCOnProject,
+      };
     },
   });
 
