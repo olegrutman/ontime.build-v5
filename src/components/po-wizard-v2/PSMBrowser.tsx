@@ -39,6 +39,7 @@ interface PSMBrowserProps {
   supplierId: string | null;
   onAddItem: (item: POWizardV2LineItem) => void;
   onSwitchToCatalog: () => void;
+  hidePricing?: boolean;
 }
 
 export function PSMBrowser({
@@ -46,6 +47,7 @@ export function PSMBrowser({
   supplierId,
   onAddItem,
   onSwitchToCatalog,
+  hidePricing = false,
 }: PSMBrowserProps) {
   const [step, setStep] = useState<PSMStep>('category');
   const [loading, setLoading] = useState(true);
@@ -393,7 +395,7 @@ export function PSMBrowser({
   }, [onAddItem]);
 
   const handleAddUnmatchedItem = useCallback((estimateItem: EstimateItem, quantity: number) => {
-    const unitPrice = estimateItem.unit_price;
+    const unitPrice = hidePricing ? null : estimateItem.unit_price;
     const lineItem: POWizardV2LineItem = {
       id: `psm-unmatched-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       catalog_item_id: '',
@@ -412,7 +414,7 @@ export function PSMBrowser({
       original_unit_price: unitPrice,
     };
     onAddItem(lineItem);
-  }, [onAddItem]);
+  }, [onAddItem, hidePricing]);
 
   const handleCloseNoop = useCallback(() => {
     // No-op close for StepByStepFilter — we manage navigation via handleBack
@@ -506,9 +508,10 @@ export function PSMBrowser({
             product={selectedProduct}
             onAdd={handleAddPSMItem}
             onClose={() => setStep('products')}
-            estimateUnitPrice={matchedEstItem?.unit_price}
+            estimateUnitPrice={hidePricing ? null : matchedEstItem?.unit_price}
             estimateItemId={matchedEstItem?.id}
             estimatePackName={matchedEstItem?.pack_name}
+            hidePricing={hidePricing}
           />
         );
       })()}
