@@ -299,7 +299,7 @@ function SOVContractSection({
                                 >
                                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
                                   <td className="px-3 py-2 font-medium">
-                                    {canEdit && editingNameId === item.id ? (
+                                    {canEditName && editingNameId === item.id ? (
                                       <Input
                                         type="text"
                                         className="h-7 text-xs"
@@ -311,9 +311,9 @@ function SOVContractSection({
                                       />
                                     ) : (
                                       <span
-                                        className={cn(canEdit && "cursor-pointer hover:text-primary")}
+                                        className={cn(canEditName && "cursor-pointer hover:text-primary")}
                                         onClick={() => {
-                                          if (canEdit) {
+                                          if (canEditName) {
                                             setEditingNameId(item.id);
                                             setEditingName(item.item_name);
                                           }
