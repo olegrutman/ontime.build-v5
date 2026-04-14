@@ -198,9 +198,9 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
   };
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: 'hsl(var(--background))' }}>
-      {/* Sticky Topbar */}
-      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur border-b border-border">
+    <div className="flex flex-col flex-1 min-h-0" style={{ background: 'hsl(var(--background))' }}>
+      {/* Breadcrumb bar */}
+      <div className="sticky top-0 z-20 bg-card/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 max-w-7xl mx-auto w-full">
           <div className="flex items-center gap-2 min-w-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
@@ -220,7 +220,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
             </Button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Accept Banner */}
       <div className="max-w-7xl mx-auto w-full px-4 pt-3">

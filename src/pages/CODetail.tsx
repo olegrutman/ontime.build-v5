@@ -2,25 +2,46 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CODetailLayout } from '@/components/change-orders/CODetailLayout';
+import { ProjectShell } from '@/components/app-shell/ProjectShell';
+import { ProjectSidebar } from '@/components/project/ProjectSidebar';
+import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 
 export default function CODetail() {
   const { id: projectId, coId } = useParams<{ id: string; coId: string }>();
 
-  const { data: contractMode } = useQuery({
-    queryKey: ['project-contract-mode', projectId],
+  const { data: projectInfo } = useQuery({
+    queryKey: ['project-basic-info', projectId],
     queryFn: async () => {
-      if (!projectId) return 'fixed';
+      if (!projectId) return null;
       const { data } = await supabase
         .from('projects')
-        .select('contract_mode')
+        .select('name, status, contract_mode')
         .eq('id', projectId)
         .single();
-      return (data?.contract_mode as string) ?? 'fixed';
+      return data;
     },
     enabled: !!projectId,
     staleTime: Infinity,
   });
 
+  const contractMode = projectInfo?.contract_mode ?? 'fixed';
+  const isTM = contractMode === 'tm';
+
   if (!projectId || !coId) return null;
-  return <CODetailLayout coId={coId} projectId={projectId} isTM={contractMode === 'tm'} />;
+
+  return (
+    <ProjectShell
+      projectName={projectInfo?.name ?? 'Project'}
+      projectId={projectId}
+      projectStatus={projectInfo?.status ?? 'draft'}
+    >
+      <div className="flex flex-1 overflow-hidden">
+        <ProjectSidebar isTM={isTM} />
+        <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
+          <CODetailLayout coId={coId} projectId={projectId} isTM={isTM} />
+        </main>
+        <ProjectBottomNav />
+      </div>
+    </ProjectShell>
+  );
 }
