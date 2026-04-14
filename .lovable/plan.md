@@ -1,24 +1,26 @@
 
 
-# Auto-trigger FC Involvement When TC Selects FC in Work Order Wizard
+# Show Active Work Orders to FC for Billing Visibility
 
 ## Problem
-When a TC creates a work order and selects an FC name with "Field crew input needed" toggled on, the wizard only inserts a `change_order_collaborators` row. It never calls the `request_fc_change_order_input` RPC, so the FC is never actually notified or given access to collaborate on the work order.
+The FC home screen only shows work orders in two narrow buckets:
+- "Open COs requiring your input" — only `active` collaborator + draft/shared/wip/closed_for_pricing
+- "Approved / Billable" — only `completed` collaborator + approved/contracted
+
+Work orders where the FC is an active collaborator but already submitted (or in other active states) fall through the cracks. The FC can't see them and therefore can't track or bill them.
 
 ## Fix
-In `src/components/change-orders/wizard/TMWOWizard.tsx`, after the collaborator row is inserted (line 282-290), add a call to `request_fc_change_order_input` RPC with the newly created CO ID and the selected FC org ID. This is the same RPC already used in the CO detail page when a TC manually requests FC input.
+Add a new section **"Active Work Orders"** between "Open COs requiring your input" and "My Change Orders" that shows all work orders where:
+- FC is a collaborator (`collaboratorOrgId === orgId`)
+- Collaborator status is `active` or `completed`
+- WO status is `submitted`, `work_in_progress`, `shared`, `closed_for_pricing`, `approved`, or `contracted`
+- Exclude ones already shown in the "requiring input" section
 
-### Change in `handleSubmit` (around line 290)
-After the existing collaborator insert block, add:
-```typescript
-await supabase.rpc('request_fc_change_order_input', {
-  _co_id: preGeneratedId,
-  _fc_org_id: data.fcOrgId,
-});
-```
+This gives the FC full visibility into all work orders they're involved in.
 
-This ensures when a TC selects an FC in the wizard, the FC automatically receives the work order and can start collaborating — no extra manual step needed.
-
-## Files to edit
-- `src/components/change-orders/wizard/TMWOWizard.tsx` — 1 line addition after line 290
+## Changes
+**`src/components/change-orders/FCHomeScreen.tsx`**
+- Add an `activeCOs` filter that captures WOs where FC is collaborator with `active` or `completed` status, excluding the ones already in `actionableCOs`
+- Render a new "Active Work Orders" card list section with the same card style
+- Update the `billableCOs` section to remain as-is (or merge into active — keeping it separate for clarity)
 
