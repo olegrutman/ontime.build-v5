@@ -355,7 +355,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice<span className="max-sm:hidden"> to {gcName}</span></button>
-          <button onClick={() => onNavigate('sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View Contract<span className="max-sm:hidden"> · {gcName}</span></button>
+          <button onClick={() => onNavigate(isTM ? 'change-orders' : 'sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>{isTM ? 'View Work Orders' : <>View Contract<span className="max-sm:hidden"> · {gcName}</span></>}</button>
         </div>
       </div>
 
