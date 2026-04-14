@@ -1,27 +1,27 @@
 
 
-# Add SOV Tab to Platform Project Detail Page
+# Allow Platform Owner to Edit SOV Item Names in Platform Project Detail
 
 ## What
-Add a new "SOV" tab to the platform project detail page (`/platform/projects/:id`) so platform owners can view all Schedule of Values for a project — read-only, showing each contract's SOV with its line items, percentages, values, and lock status.
+Make the Item Name column in the platform SOV tab editable inline — click to edit, Enter/blur to save. Only the name changes; no financial values are touched.
 
-## Approach
-Add a third tab "SOV" next to "Overview" and "Setup Review" in `PlatformProjectDetail.tsx`. When selected, it fetches all `project_sov` records for the project, joined with their `project_sov_items` and the contract info, then displays them in a clean table format grouped by contract.
+## Changes
 
-### Data fetching
-- Query `project_sov` where `project_id = :id`, join to `project_contracts` for org names
-- Query `project_sov_items` for each SOV, ordered by `sort_order`
-- Show: item name, group, % of contract, scheduled value, billed to date, completion %, billing status, lock status
+### 1. Database migration
+Add an UPDATE policy on `project_sov_items` so platform users can update the `item_name` column:
+```sql
+CREATE POLICY "Platform users can update SOV item names"
+ON public.project_sov_items FOR UPDATE
+TO authenticated
+USING (public.is_platform_user(auth.uid()))
+WITH CHECK (public.is_platform_user(auth.uid()));
+```
 
-### UI layout
-- One card per SOV/contract, showing contract parties + lock status in the header
-- Table inside each card with columns: #, Item Name, Group, %, Scheduled Value, Billed, Completion %, Status
-- Totals row at bottom
-- "Locked" badge on locked SOVs
+### 2. `src/pages/platform/PlatformProjectDetail.tsx`
+- Add `editingItemId` state and an `Input` import
+- On the Item Name cell: click to enter edit mode, show an `Input` pre-filled with current name
+- On blur/Enter: call `supabase.from('project_sov_items').update({ item_name }).eq('id', itemId)`, then update local state
+- On Escape: cancel edit
 
-### RLS consideration
-Platform users access via `isPlatformUser` — need to verify RLS on `project_sov` and `project_sov_items` allows platform user reads. If not, the query will use the service role implicitly available to platform users, or we add a policy.
-
-## Files to edit
-- `src/pages/platform/PlatformProjectDetail.tsx` — add SOV tab + fetch logic + render section
+Only the name cell becomes editable — all other columns stay read-only.
 
