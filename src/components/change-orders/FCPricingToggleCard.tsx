@@ -138,7 +138,7 @@ export function FCPricingToggleCard({
 
         {!isOn && (
           <p className="text-[11px] text-muted-foreground">
-            Toggle on to automatically calculate your price to {gcSideName} from {fcCollabName}'s submitted input.
+            Only your own logged hours will be used for pricing to {gcSideName}. Toggle on to use {fcCollabName}'s hours × your rate instead.
           </p>
         )}
       </div>
