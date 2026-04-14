@@ -12,6 +12,8 @@ interface COKPIStripProps {
   financials: COFinancials;
   hasMaterials?: boolean;
   hasEquipment?: boolean;
+  materialResponsible?: 'GC' | 'TC';
+  equipmentResponsible?: 'GC' | 'TC';
   onRefresh?: () => void;
 }
 
@@ -38,53 +40,71 @@ const BADGE_CLASSES = {
 
 function getTiles(props: COKPIStripProps): KPITile[] {
   const { isGC, isTC, isFC, financials } = props;
-  const matEquip = financials.materialsTotal + financials.equipmentTotal;
+  const matResp = props.materialResponsible ?? 'TC';
+  const eqResp = props.equipmentResponsible ?? 'TC';
 
   if (isGC) {
     const laborCost = financials.tcBillableToGC;
-    const materialCost = financials.materialsTotal;
-    const equipmentCost = financials.equipmentTotal;
-    const totalCost = financials.grandTotal;
     const gcBudget = (props.co as any).gc_budget as number | null;
 
-    return [
+    // Only count mat/equip in TC cost when TC is the responsible party
+    const tcMaterialCost = matResp === 'TC' ? financials.materialsTotal : 0;
+    const tcEquipmentCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
+    const totalTCCost = laborCost + tcMaterialCost + tcEquipmentCost;
+
+    const tiles: KPITile[] = [
       {
-        label: 'Labor Cost',
+        label: 'TC Labor',
         value: fmtCurrency(laborCost),
         color: 'hsl(var(--primary))',
       },
-      {
-        label: 'Material Cost',
-        value: fmtCurrency(materialCost),
-        color: '#059669',
-      },
-      {
-        label: 'Equipment Cost',
-        value: fmtCurrency(equipmentCost),
-        color: '#F59E0B',
-      },
-      {
-        label: 'Total Cost',
-        value: fmtCurrency(totalCost),
-        color: '#F5A623',
-        badge: totalCost > 0 ? { text: 'Final', variant: 'healthy' } : undefined,
-      },
-      {
-        label: 'GC Budget',
-        value: gcBudget ? fmtCurrency(gcBudget) : '—',
-        color: '#6366F1',
-        editable: true,
-        editValue: gcBudget,
-        badge: gcBudget && totalCost > 0
-          ? { text: `${((totalCost / gcBudget) * 100).toFixed(0)}%`, variant: totalCost <= gcBudget ? 'healthy' as const : 'watch' as const }
-          : undefined,
-      },
     ];
+
+    // Only show mat/equip tiles if TC is responsible for them
+    if (matResp === 'TC') {
+      tiles.push({
+        label: 'Material Cost',
+        value: fmtCurrency(financials.materialsTotal),
+        color: '#059669',
+      });
+    }
+    if (eqResp === 'TC') {
+      tiles.push({
+        label: 'Equipment Cost',
+        value: fmtCurrency(financials.equipmentTotal),
+        color: '#F59E0B',
+      });
+    }
+
+    tiles.push({
+      label: 'Total TC Cost',
+      value: fmtCurrency(totalTCCost),
+      color: '#F5A623',
+      badge: totalTCCost > 0 ? { text: 'Final', variant: 'healthy' } : undefined,
+    });
+
+    tiles.push({
+      label: 'GC Budget',
+      value: gcBudget ? fmtCurrency(gcBudget) : '—',
+      color: '#6366F1',
+      editable: true,
+      editValue: gcBudget,
+      badge: gcBudget && totalTCCost > 0
+        ? { text: `${((totalTCCost / gcBudget) * 100).toFixed(0)}%`, variant: totalTCCost <= gcBudget ? 'healthy' as const : 'watch' as const }
+        : undefined,
+    });
+
+    return tiles;
   }
 
   if (isTC) {
+    // TC only bills GC for mat/equip when TC is the responsible party
+    const tcMatCost = matResp === 'TC' ? financials.materialsTotal : 0;
+    const tcEqCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
+    const matEquip = tcMatCost + tcEqCost;
     const totalToGC = financials.tcBillableToGC + matEquip;
-    return [
+
+    const tiles: KPITile[] = [
       {
         label: 'FC Cost',
         value: fmtCurrency(financials.fcLaborTotal),
@@ -98,17 +118,23 @@ function getTiles(props: COKPIStripProps): KPITile[] {
         color: 'hsl(var(--primary))',
         badge: financials.tcBillableToGC > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
       },
-      {
+    ];
+
+    if (matEquip > 0) {
+      tiles.push({
         label: 'Materials + Equipment',
         value: fmtCurrency(matEquip),
         color: '#059669',
-      },
-      {
-        label: 'Total to GC',
-        value: fmtCurrency(financials.grandTotal),
-        color: '#F5A623',
-      },
-    ];
+      });
+    }
+
+    tiles.push({
+      label: 'Total to GC',
+      value: fmtCurrency(totalToGC),
+      color: '#F5A623',
+    });
+
+    return tiles;
   }
 
   // FC
@@ -206,7 +232,8 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
 
 export function COKPIStrip(props: COKPIStripProps) {
   const tiles = getTiles(props);
-  const gridCols = props.isGC ? 'lg:grid-cols-5' : 'lg:grid-cols-4';
+  const colCount = tiles.length;
+  const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3';
 
   return (
     <div className={`grid grid-cols-2 ${gridCols} gap-2.5`}>

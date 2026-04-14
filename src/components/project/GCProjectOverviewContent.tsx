@@ -149,7 +149,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     queryFn: async () => {
       const { data: cos } = await supabase
         .from('change_orders')
-        .select('id, co_number, title, status, gc_budget, tc_submitted_price')
+        .select('id, co_number, title, status, gc_budget, tc_submitted_price, materials_responsible, equipment_responsible')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
       if (!cos || cos.length === 0) return [];
@@ -171,17 +171,23 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           wo_equipment_total: eqByWO[c.id] || 0,
         }));
       }
-      return cos.map(c => ({ ...c, wo_materials_total: 0, wo_equipment_total: 0 }));
+      return cos.map(c => ({ ...c, wo_materials_total: 0, wo_equipment_total: 0, materials_responsible: null, equipment_responsible: null }));
     },
   });
 
   const approvedCOs = changeOrders.filter(co => co.status === 'approved' || co.status === 'completed');
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'rejected'].includes(co.status));
   const coRevenueTotal = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  // For T&M: total cost = labor (tc_submitted_price) + materials + equipment
+  // For T&M: only count mat/equip in TC cost when TC is the responsible party per WO
   const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
-  const coMaterialsCost = approvedCOs.reduce((s, co) => s + (co.wo_materials_total || 0), 0);
-  const coEquipmentCost = approvedCOs.reduce((s, co) => s + (co.wo_equipment_total || 0), 0);
+  const coMaterialsCost = approvedCOs.reduce((s, co) => {
+    const matResp = (co as any).materials_responsible ?? materialResp ?? 'TC';
+    return s + (matResp === 'TC' ? (co.wo_materials_total || 0) : 0);
+  }, 0);
+  const coEquipmentCost = approvedCOs.reduce((s, co) => {
+    const eqResp = (co as any).equipment_responsible ?? 'TC';
+    return s + (eqResp === 'TC' ? (co.wo_equipment_total || 0) : 0);
+  }, 0);
   const coCostTotal = coLaborCost + coMaterialsCost + coEquipmentCost;
 
   // ─── RFIs ───
