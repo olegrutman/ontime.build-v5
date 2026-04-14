@@ -181,7 +181,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   // For T&M: only count mat/equip in TC cost when TC is the responsible party per WO
   const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
   const coMaterialsCost = approvedCOs.reduce((s, co) => {
-    const matResp = (co as any).materials_responsible ?? materialResp ?? 'TC';
+    const matResp = (co as any).materials_responsible ?? 'TC';
     return s + (matResp === 'TC' ? (co.wo_materials_total || 0) : 0);
   }, 0);
   const coEquipmentCost = approvedCOs.reduce((s, co) => {
