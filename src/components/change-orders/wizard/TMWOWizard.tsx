@@ -287,6 +287,10 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
           invited_by_user_id: user.id,
           status: 'invited',
         });
+        await supabase.rpc('request_fc_change_order_input', {
+          _co_id: preGeneratedId,
+          _fc_org_id: data.fcOrgId,
+        });
       }
 
       // Activity log
