@@ -13,6 +13,7 @@ import {
   Settings,
   ShieldCheck,
   BarChart3,
+  FlaskConical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +25,7 @@ const NAV_ITEMS = [
   { to: '/platform/plans', icon: CreditCard, label: 'Plans & Features' },
   { to: '/platform/rules', icon: ShieldCheck, label: 'Role Rules' },
   { to: '/platform/kpis', icon: BarChart3, label: 'KPI Cards' },
-  
+  { to: '/platform/qa', icon: FlaskConical, label: 'QA Test' },
   { to: '/platform/setup', icon: Settings, label: 'Setup' },
   { to: '/platform/logs', icon: ScrollText, label: 'Support Logs' },
 ];

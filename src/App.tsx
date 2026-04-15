@@ -71,6 +71,7 @@ const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
 const PlatformSetup = lazy(() => import("./pages/platform/PlatformSetup"));
 const PlatformRoles = lazy(() => import("./pages/platform/PlatformRoles"));
 const PlatformKPIs = lazy(() => import("./pages/platform/PlatformKPIs"));
+const PlatformQA = lazy(() => import("./pages/platform/PlatformQA"));
 
 
 
@@ -211,6 +212,7 @@ function AppRoutes() {
             <Route path="/platform/rules" element={<RequirePlatformRole><PlatformRoles /></RequirePlatformRole>} />
             <Route path="/platform/kpis" element={<RequirePlatformRole><PlatformKPIs /></RequirePlatformRole>} />
             <Route path="/platform/setup" element={<RequirePlatformRole><PlatformSetup /></RequirePlatformRole>} />
+            <Route path="/platform/qa" element={<RequirePlatformRole><PlatformQA /></RequirePlatformRole>} />
             
 
             {/* Demo V2 — standalone prototype */}
