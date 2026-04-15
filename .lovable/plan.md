@@ -1,45 +1,58 @@
 
 
-# Fix: AI Scope Description — Read Actual Location & Scope Items
+# Smart Location Picker — Project-Aware with Real-World Logic
 
-## Problem
-The AI description generator ignores location and scope items selected by the user:
-1. **Location hardcoded** to `{ inside_outside: 'inside' }` in both wizards — the actual `data.locationTag` (e.g., "2nd Floor, Unit 3B, Bathroom") is never sent
-2. **Scope items buried** under `structural_element` field — the AI doesn't know these are the selected work items
-3. **Reason not passed** in CO wizard (only sent for `fixing` work type)
-4. **Prompt too loose** — 150 words, 4 open-ended bullets → model fills space with invented details
+## What Changes
 
-## Changes
+Rebuild `VisualLocationPicker` to dynamically generate room/area options from actual project scope data and apply construction logic constraints.
 
-### 1. Edge function: `supabase/functions/generate-work-order-description/index.ts`
-- Add `selected_items: string[]` and `reason_code: string` to `GenerateRequest` interface
-- Include `selected_items` and `reason_code` in `contextParts` when provided
-- Pass `data.locationTag` as a new `location_tag` string field (alongside existing `location` object for backward compat)
-- Use `location_tag` preferentially in context: `Location: ${body.location_tag || buildLocationDescription(body.location)}`
-- **Rewrite the system prompt** to be strict and concise:
-  ```
-  You are a construction scope writer. Output ONLY a 1-3 sentence description.
-  State the selected scope items, the exact location provided, and the reason if given.
-  Do NOT add details, assumptions, or recommendations not present in the input.
-  Do NOT mention pricing, scheduling, or general construction advice.
-  ```
-- **Simplify the user prompt** — just dump the context, no "Write a professional description that clearly communicates…" bullets
-- Lower `temperature` from `0.7` to `0.3` and `max_tokens` from `500` to `200`
+## Key Logic Rules
 
-### 2. `src/components/change-orders/wizard/COWizard.tsx` — `generateAIDescription()`
-- Send `location_tag: data.locationTag` instead of `location: { inside_outside: 'inside' }`
-- Send `selected_items: data.selectedItems.map(i => i.item_name)` as a proper array
-- Send `reason_code: data.reason` (always, not just for fixing)
-- Keep `structural_element` for backward compat but de-prioritize
+1. **Bedroom/Bathroom counts**: If project has 3 bedrooms, show "Bedroom 1", "Bedroom 2", "Bedroom 3" instead of generic "Bedroom". Same for bathrooms (including half-baths from decimal counts like 2.5).
+2. **Level-aware area filtering**: Basement level only shows basement-appropriate rooms (Utility, Storage, Laundry, Bedroom if finished basement). Garage only appears on Ground level (or Basement if scope says so). No "Kitchen" on attic level.
+3. **Garage awareness**: Only show Garage if `garage_type` is not "None"/null. Label includes type: "Garage (Attached)" or "Garage (Detached)".
+4. **Elevator/Stairwell**: Only show "Elevator shaft" if `has_elevator` is true. Stairwell shown for multi-story buildings.
+5. **Multifamily unit counts**: If `num_units` is set, show unit number input with a hint like "1–24 units". If `stories_per_unit` > 1 (e.g., townhomes), show sub-level within unit.
+6. **Exterior constraints**: Balcony options only if `has_balconies`. Porch only if `has_covered_porches`. Deck only if `decking_included`. Already partially done — extend to the elevation picker in the VisualLocationPicker (currently it uses hardcoded SINGLE_FAMILY_ELEVATIONS ignoring scope).
+7. **Update `ProjectScopeDetails` interface**: Add `bedrooms`, `bathrooms`, `garage_cars`, `total_sqft`, `lot_size_acres`, `framing_method` fields that exist in DB but aren't in the TS interface.
 
-### 3. `src/components/change-orders/wizard/TMWOWizard.tsx` — `generateAIDescription()`
-- Same fixes: send `location_tag: data.locationTag`, `selected_items`, and `reason_code: data.workType`
+## Files to Modify
 
-### 4. Memory: save rule about AI description generation style
-- "AI scope descriptions must be 1-3 sentences, strictly derived from selected items and location. No invented details."
+### 1. `src/hooks/useProjectScope.ts`
+- Add missing fields to `ProjectScopeDetails` interface: `bedrooms`, `bathrooms`, `garage_cars`, `total_sqft`, `lot_size_acres`, `framing_method`
+- New export: `getAreaOptionsForLevel(scope, level, isMultifamily)` — returns filtered room/area options based on level + scope data
+- Logic: Basement → [Utility, Storage, Laundry, Bedroom (if finished), Other]. Ground → full list with garage. Upper floors → no garage. Attic → [Storage, Other].
 
-## Result
-Before: "Perform re-framing work at the interior location. This includes header installation, partition wall framing, and associated structural modifications to accommodate the new layout. Coordinate with the general contractor regarding material procurement…" (hallucinated)
+### 2. `src/components/change-orders/VisualLocationPicker.tsx`
+- Replace hardcoded `SINGLE_FAMILY_AREAS` / `MULTIFAMILY_AREAS` with dynamic `areaOptions` derived from `getAreaOptionsForLevel(scope, selectedLevel, isMultifamily)`
+- When `scope.bedrooms > 1`: expand "Bedroom" into "Bedroom 1", "Bedroom 2", etc.
+- When `scope.bathrooms > 1`: expand into "Bathroom 1", "Bathroom 2" (+ "Half Bath" if fractional)
+- Replace hardcoded elevation options with scope-driven exterior using existing `getExteriorOptions(scope)` for both single and multifamily
+- Add hint text showing project context: e.g., "3-story custom home with basement" under the level selector
+- Stairwell option only shown for multi-story (floors > 1)
+- Elevator option only if `has_elevator`
 
-After: "Reframe existing wall and install header at 2nd Floor, Unit 3B, Bathroom. Addition — new partition wall framing included." (factual)
+### 3. `src/types/location.ts`
+- No structural changes needed, but ensure `ROOM_AREA_OPTIONS` (used by RFI) stays untouched
+
+## Technical Details
+
+**Level → Area mapping logic:**
+```text
+Basement (any)     → Utility Room, Storage, Laundry, Bedroom* (if finished), Mechanical, Other
+Ground / Floor 1   → Kitchen, Living Room, Dining Room, Bedroom*, Bathroom*, Laundry, Closet, Garage*, Mudroom, Pantry, Other
+Floor 2+           → Bedroom*, Bathroom*, Living Room, Closet, Laundry, Other
+Attic              → Storage, Mechanical, Other
+Mezzanine          → Open area, Storage, Other
+
+* = expanded by count from scope
+```
+
+**Bedroom expansion example (3 bedrooms):**
+```text
+Bedroom 1 🛏️ | Bedroom 2 🛏️ | Bedroom 3 🛏️ | Primary Suite 🛏️
+```
+Primary Suite always shown for single-family homes (separate from numbered bedrooms).
+
+**No changes to**: submission logic, tag assembly format, RFI location step, database schema.
 
