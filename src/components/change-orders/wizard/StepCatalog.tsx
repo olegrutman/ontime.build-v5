@@ -92,6 +92,30 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
     return [...inDiv, ...rest];
   }, [query, search, mappedDivision]);
 
+  // ── Smart suggestions (must be before early returns) ──
+  const smartSuggestionItems = useMemo(() => {
+    if (!data.reason || !workType) return [];
+    const names = SMART_SUGGESTIONS[data.reason]?.[workType] ?? [];
+    if (names.length === 0) return [];
+    return SCOPE_CATALOG
+      .filter(item => names.includes(item.name))
+      .map(item => ({
+        id: item.id,
+        item_name: item.name,
+        unit: item.unit,
+        division: item.workType,
+        category_name: item.tag ?? item.workType,
+        category_id: item.workType,
+        group_id: item.workType,
+        group_label: item.workType,
+        category_color: '',
+        category_bg: '',
+        category_icon: '',
+        sort_order: 0,
+        org_id: null,
+      } as ScopeCatalogItem));
+  }, [data.reason, workType]);
+
   // Saved location from localStorage for shortcut
   const savedLocationKey = `co_wizard_last_location_${projectId}`;
   const savedLocation = typeof window !== 'undefined' ? localStorage.getItem(savedLocationKey) : null;
