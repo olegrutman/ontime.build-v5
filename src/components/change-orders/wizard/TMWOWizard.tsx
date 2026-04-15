@@ -298,7 +298,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
           sort_order: idx,
           location_tag: data.locationTag || null,
           reason: data.workType as string,
-          catalog_item_id: item.id,
+          catalog_item_id: /^[0-9a-f]{8}-/.test(item.id) ? item.id : null,
           division: item.division,
           category_name: item.category_name,
           description: data.aiDescription,

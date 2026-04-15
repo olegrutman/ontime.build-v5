@@ -326,7 +326,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           co_id: preGeneratedId,
           org_id: orgId,
           created_by_role: role,
-          catalog_item_id: item.id,
+          catalog_item_id: /^[0-9a-f]{8}-/.test(item.id) ? item.id : null,
           item_name: item.item_name,
           division: item.division,
           category_name: item.category_name,
