@@ -1,58 +1,47 @@
 
 
-# Smart Location Picker — Project-Aware with Real-World Logic
+# Fix: Location Picker Not Reflecting Project Data
 
-## What Changes
+## Problem
+The smart location picker code is deployed and working, but the project's `project_scope_details` row has `bedrooms: null` and `bathrooms: null`. When these are null, the expansion logic falls back to generic "Bedroom" / "Bathroom" — identical to the old behavior. The user sees no difference.
 
-Rebuild `VisualLocationPicker` to dynamically generate room/area options from actual project scope data and apply construction logic constraints.
+## Root Cause
+The project setup wizard collects structural info (foundation, garage, siding) but never populates `bedrooms` or `bathrooms` counts into `project_scope_details`. These fields exist in the DB but are never written.
 
-## Key Logic Rules
+## Changes
 
-1. **Bedroom/Bathroom counts**: If project has 3 bedrooms, show "Bedroom 1", "Bedroom 2", "Bedroom 3" instead of generic "Bedroom". Same for bathrooms (including half-baths from decimal counts like 2.5).
-2. **Level-aware area filtering**: Basement level only shows basement-appropriate rooms (Utility, Storage, Laundry, Bedroom if finished basement). Garage only appears on Ground level (or Basement if scope says so). No "Kitchen" on attic level.
-3. **Garage awareness**: Only show Garage if `garage_type` is not "None"/null. Label includes type: "Garage (Attached)" or "Garage (Detached)".
-4. **Elevator/Stairwell**: Only show "Elevator shaft" if `has_elevator` is true. Stairwell shown for multi-story buildings.
-5. **Multifamily unit counts**: If `num_units` is set, show unit number input with a hint like "1–24 units". If `stories_per_unit` > 1 (e.g., townhomes), show sub-level within unit.
-6. **Exterior constraints**: Balcony options only if `has_balconies`. Porch only if `has_covered_porches`. Deck only if `decking_included`. Already partially done — extend to the elevation picker in the VisualLocationPicker (currently it uses hardcoded SINGLE_FAMILY_ELEVATIONS ignoring scope).
-7. **Update `ProjectScopeDetails` interface**: Add `bedrooms`, `bathrooms`, `garage_cars`, `total_sqft`, `lot_size_acres`, `framing_method` fields that exist in DB but aren't in the TS interface.
+### 1. Fallback defaults when counts are null — `src/hooks/useProjectScope.ts`
+- In `expandBedrooms()`: when `scope.bedrooms` is null, default to **3** for custom homes and **2** for others (typical residential). This ensures the picker always shows numbered bedrooms.
+- In `expandBathrooms()`: when `scope.bathrooms` is null, default to **2** for custom homes, **1** for others.
+- Update `garageOption()`: currently checks `garage_type !== 'garage'` for the label — fix to show "Garage (Attached)" / "Garage (Detached)" based on actual value (the test project has `garage_type: 'Attached'` so it should show that).
 
-## Files to Modify
+### 2. Populate bedrooms/bathrooms in project setup — `src/hooks/useSetupWizardV2.ts` (or equivalent setup hook)
+- When saving scope details, include the bedroom and bathroom counts from the wizard questions so future projects have real data.
+- Find where `project_scope_details` is inserted/updated and ensure `bedrooms` and `bathrooms` fields are included.
 
-### 1. `src/hooks/useProjectScope.ts`
-- Add missing fields to `ProjectScopeDetails` interface: `bedrooms`, `bathrooms`, `garage_cars`, `total_sqft`, `lot_size_acres`, `framing_method`
-- New export: `getAreaOptionsForLevel(scope, level, isMultifamily)` — returns filtered room/area options based on level + scope data
-- Logic: Basement → [Utility, Storage, Laundry, Bedroom (if finished), Other]. Ground → full list with garage. Upper floors → no garage. Attic → [Storage, Other].
-
-### 2. `src/components/change-orders/VisualLocationPicker.tsx`
-- Replace hardcoded `SINGLE_FAMILY_AREAS` / `MULTIFAMILY_AREAS` with dynamic `areaOptions` derived from `getAreaOptionsForLevel(scope, selectedLevel, isMultifamily)`
-- When `scope.bedrooms > 1`: expand "Bedroom" into "Bedroom 1", "Bedroom 2", etc.
-- When `scope.bathrooms > 1`: expand into "Bathroom 1", "Bathroom 2" (+ "Half Bath" if fractional)
-- Replace hardcoded elevation options with scope-driven exterior using existing `getExteriorOptions(scope)` for both single and multifamily
-- Add hint text showing project context: e.g., "3-story custom home with basement" under the level selector
-- Stairwell option only shown for multi-story (floors > 1)
-- Elevator option only if `has_elevator`
-
-### 3. `src/types/location.ts`
-- No structural changes needed, but ensure `ROOM_AREA_OPTIONS` (used by RFI) stays untouched
+### 3. Add missing rooms for ground floor — `src/hooks/useProjectScope.ts`
+- Ground floor currently missing: **Hallway**, **Office/Study**, **Powder Room** (common in custom homes).
+- Add Hallway and Office for custom homes on ground/upper floors.
 
 ## Technical Details
 
-**Level → Area mapping logic:**
+**Fallback logic in `expandBedrooms`:**
 ```text
-Basement (any)     → Utility Room, Storage, Laundry, Bedroom* (if finished), Mechanical, Other
-Ground / Floor 1   → Kitchen, Living Room, Dining Room, Bedroom*, Bathroom*, Laundry, Closet, Garage*, Mudroom, Pantry, Other
-Floor 2+           → Bedroom*, Bathroom*, Living Room, Closet, Laundry, Other
-Attic              → Storage, Mechanical, Other
-Mezzanine          → Open area, Storage, Other
-
-* = expanded by count from scope
+count = scope.bedrooms ?? (isCustomHome ? 3 : 2)
 ```
 
-**Bedroom expansion example (3 bedrooms):**
+**Fallback logic in `expandBathrooms`:**
 ```text
-Bedroom 1 🛏️ | Bedroom 2 🛏️ | Bedroom 3 🛏️ | Primary Suite 🛏️
+count = scope.bathrooms ?? (isCustomHome ? 2.5 : 1)
+→ Bathroom 1, Bathroom 2, Half Bath
 ```
-Primary Suite always shown for single-family homes (separate from numbered bedrooms).
 
-**No changes to**: submission logic, tag assembly format, RFI location step, database schema.
+**Garage label fix:**
+```text
+"Attached" → "Garage (Attached)"
+"Detached" → "Garage (Detached)"  
+"basement" → "Garage (Basement)"
+```
+
+**No changes to**: submission logic, tag assembly, RFI location, database schema, exterior options.
 
