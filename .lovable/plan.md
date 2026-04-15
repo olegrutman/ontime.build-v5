@@ -1,47 +1,28 @@
 
 
-# Fix: Location Picker Not Reflecting Project Data
+# Fix: Platform Owner — See and Delete Work Orders
 
 ## Problem
-The smart location picker code is deployed and working, but the project's `project_scope_details` row has `bedrooms: null` and `bathrooms: null`. When these are null, the expansion logic falls back to generic "Bedroom" / "Bathroom" — identical to the old behavior. The user sees no difference.
+The platform project detail page has a legacy "Change Orders" card (line 682) that renders from `workOrders` state, which is always set to `[]` (line 276). Work orders are stored in the `change_orders` table and already fetched into the `changeOrders` array — but the display table doesn't show the `title` column, making WOs hard to identify.
 
-## Root Cause
-The project setup wizard collects structural info (foundation, garage, siding) but never populates `bedrooms` or `bathrooms` counts into `project_scope_details`. These fields exist in the DB but are never written.
+## Changes — Single file: `src/pages/platform/PlatformProjectDetail.tsx`
 
-## Changes
+### 1. Remove the dead legacy section
+Delete the first "Change Orders" card (lines 682-734) that renders `workOrders` (always empty). Also remove the `workOrders` state, `WorkOrderRow` interface, `deleteWOOpen`/`deleteWOTarget` state, and the corresponding delete dialog (lines 975-995) — all dead code.
 
-### 1. Fallback defaults when counts are null — `src/hooks/useProjectScope.ts`
-- In `expandBedrooms()`: when `scope.bedrooms` is null, default to **3** for custom homes and **2** for others (typical residential). This ensures the picker always shows numbered bedrooms.
-- In `expandBathrooms()`: when `scope.bathrooms` is null, default to **2** for custom homes, **1** for others.
-- Update `garageOption()`: currently checks `garage_type !== 'garage'` for the label — fix to show "Garage (Attached)" / "Garage (Detached)" based on actual value (the test project has `garage_type: 'Attached'` so it should show that).
+### 2. Enhance the existing Change Orders table
+Update the second CO table (line 736) to show `title` alongside `co_number`, so WOs are identifiable. Add the `title` field to the `CORow` interface and include it in the fetch query.
 
-### 2. Populate bedrooms/bathrooms in project setup — `src/hooks/useSetupWizardV2.ts` (or equivalent setup hook)
-- When saving scope details, include the bedroom and bathroom counts from the wizard questions so future projects have real data.
-- Find where `project_scope_details` is inserted/updated and ensure `bedrooms` and `bathrooms` fields are included.
+Updated table columns:
+- **CO #** — `co_number`
+- **Title** — `co.title` (new column)
+- **Status** — badge
+- **Pricing Type** — badge
+- **Created** — date
+- **Delete** — trash icon (PLATFORM_OWNER only, already works)
 
-### 3. Add missing rooms for ground floor — `src/hooks/useProjectScope.ts`
-- Ground floor currently missing: **Hallway**, **Office/Study**, **Powder Room** (common in custom homes).
-- Add Hallway and Office for custom homes on ground/upper floors.
+### 3. Delete action already works
+The delete button on the CO table already calls `DELETE_CHANGE_ORDER` with `co_id`, which the edge function handles correctly — it deletes from `change_orders` and cascades all child data. No backend changes needed.
 
-## Technical Details
-
-**Fallback logic in `expandBedrooms`:**
-```text
-count = scope.bedrooms ?? (isCustomHome ? 3 : 2)
-```
-
-**Fallback logic in `expandBathrooms`:**
-```text
-count = scope.bathrooms ?? (isCustomHome ? 2.5 : 1)
-→ Bathroom 1, Bathroom 2, Half Bath
-```
-
-**Garage label fix:**
-```text
-"Attached" → "Garage (Attached)"
-"Detached" → "Garage (Detached)"  
-"basement" → "Garage (Basement)"
-```
-
-**No changes to**: submission logic, tag assembly, RFI location, database schema, exterior options.
-
+## Summary
+Remove dead code, add `title` to the CO table display. No new backend work required.
