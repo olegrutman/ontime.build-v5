@@ -1,9 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Home, Trees, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useProjectProfile } from '@/hooks/useProjectProfile';
-import { useProjectScope, getLevelOptions } from '@/hooks/useProjectScope';
+import {
+  useProjectScope,
+  getLevelOptions,
+  getAreaOptionsForLevel,
+  getUnitRoomOptions,
+  getElevationOptions,
+  getProjectContextHint,
+} from '@/hooks/useProjectScope';
 
 interface VisualLocationPickerProps {
   projectId: string;
@@ -13,56 +20,6 @@ interface VisualLocationPickerProps {
 }
 
 type InsideOutside = 'inside' | 'outside' | null;
-
-// Multifamily area options (units, corridors)
-const MULTIFAMILY_AREAS = [
-  { label: 'Unit interior', icon: '🏠' },
-  { label: 'Corridor', icon: '🚶' },
-  { label: 'Stairwell', icon: '🪜' },
-  { label: 'Other', icon: '📍' },
-];
-
-// Single family area options (rooms directly)
-const SINGLE_FAMILY_AREAS = [
-  { label: 'Kitchen', icon: '🍳' },
-  { label: 'Bathroom', icon: '🚿' },
-  { label: 'Living Room', icon: '🛋️' },
-  { label: 'Bedroom', icon: '🛏️' },
-  { label: 'Laundry', icon: '🧺' },
-  { label: 'Closet', icon: '🚪' },
-  { label: 'Other', icon: '📍' },
-];
-
-// Room options shown after "Unit interior" is selected (multifamily)
-const UNIT_ROOM_OPTIONS = [
-  { label: 'Kitchen', icon: '🍳' },
-  { label: 'Bathroom', icon: '🚿' },
-  { label: 'Living Room', icon: '🛋️' },
-  { label: 'Bedroom', icon: '🛏️' },
-  { label: 'Laundry', icon: '🧺' },
-  { label: 'Closet', icon: '🚪' },
-  { label: 'Other', icon: '📍' },
-];
-
-// Multifamily elevation options
-const MULTIFAMILY_ELEVATIONS = [
-  { label: 'South elevation', icon: '🧭' },
-  { label: 'North elevation', icon: '🧭' },
-  { label: 'East elevation', icon: '🧭' },
-  { label: 'West elevation', icon: '🧭' },
-  { label: 'Roof', icon: '🏗️' },
-  { label: 'Other', icon: '📍' },
-];
-
-// Single family elevation options
-const SINGLE_FAMILY_ELEVATIONS = [
-  { label: 'Front', icon: '🏠' },
-  { label: 'Rear', icon: '🏡' },
-  { label: 'Left side', icon: '◀️' },
-  { label: 'Right side', icon: '▶️' },
-  { label: 'Roof', icon: '🏗️' },
-  { label: 'Other', icon: '📍' },
-];
 
 export function VisualLocationPicker({
   projectId,
@@ -83,19 +40,15 @@ export function VisualLocationPicker({
   const [selectedElevation, setSelectedElevation] = useState<string | null>(null);
   const [customElevation, setCustomElevation] = useState('');
 
-  // Derive building characteristics from scope
+  // Derive building characteristics
   const homeType = scope?.home_type ?? null;
   const isMultifamily = useMemo(() => {
     return ['apartments_mf', 'townhomes', 'hotel_hospitality', 'senior_living'].includes(homeType ?? '');
-  }, [homeType]);
-  const isSingleFamily = useMemo(() => {
-    return ['custom_home', 'track_home'].includes(homeType ?? '');
   }, [homeType]);
 
   // Level options from project scope
   const levelOptions = useMemo(() => {
     if (scope) return getLevelOptions(scope);
-    // Fallback from profile
     const stories = profile?.stories ?? 2;
     const levels: string[] = [];
     if (profile?.has_basement) levels.push('Basement');
@@ -105,19 +58,30 @@ export function VisualLocationPicker({
     return levels;
   }, [scope, profile]);
 
-  // Build area options based on building type
+  // Dynamic area options based on selected level + scope
   const areaOptions = useMemo(() => {
-    const base = isSingleFamily ? [...SINGLE_FAMILY_AREAS] : [...MULTIFAMILY_AREAS];
-    // Add garage for single family if scope says so
-    if (isSingleFamily && scope?.garage_type && scope.garage_type.toLowerCase() !== 'none') {
-      // Insert before "Other"
-      const otherIdx = base.findIndex(a => a.label === 'Other');
-      base.splice(otherIdx >= 0 ? otherIdx : base.length, 0, { label: 'Garage', icon: '🚗' });
-    }
-    return base;
-  }, [isSingleFamily, scope]);
+    if (!selectedLevel) return [];
+    return getAreaOptionsForLevel(scope ?? null, selectedLevel, isMultifamily);
+  }, [scope, selectedLevel, isMultifamily]);
 
-  const elevationOptions = isMultifamily ? MULTIFAMILY_ELEVATIONS : SINGLE_FAMILY_ELEVATIONS;
+  // Unit room options (multifamily)
+  const unitRoomOptions = useMemo(() => {
+    return getUnitRoomOptions(scope ?? null);
+  }, [scope]);
+
+  // Scope-driven elevation options
+  const elevationOptions = useMemo(() => {
+    return getElevationOptions(scope ?? null, isMultifamily);
+  }, [scope, isMultifamily]);
+
+  // Context hint
+  const contextHint = useMemo(() => getProjectContextHint(scope ?? null), [scope]);
+
+  // Unit hint for multifamily
+  const unitHint = useMemo(() => {
+    if (!isMultifamily || !scope?.num_units) return '';
+    return `1–${scope.num_units} units`;
+  }, [isMultifamily, scope]);
 
   // Build the tag live
   const assembledTag = useMemo(() => {
@@ -152,7 +116,7 @@ export function VisualLocationPicker({
     return '';
   }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
-  // Auto-confirm when complete
+  // Completion check
   const isComplete = useMemo(() => {
     if (insideOutside === 'inside') {
       if (!selectedLevel) return false;
@@ -173,14 +137,6 @@ export function VisualLocationPicker({
     return false;
   }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
-  // Shortcut banner handler
-  function handleUseShortcut() {
-    if (savedLocation) {
-      onConfirm(savedLocation);
-    }
-  }
-
-  // Tap target button component
   function TapCard({
     label,
     icon,
@@ -217,7 +173,7 @@ export function VisualLocationPicker({
       {savedLocation && (
         <button
           type="button"
-          onClick={handleUseShortcut}
+          onClick={() => onConfirm(savedLocation)}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-primary/40 bg-primary/5 text-left transition-colors hover:bg-primary/10"
         >
           <span className="text-primary text-lg">📍</span>
@@ -231,8 +187,8 @@ export function VisualLocationPicker({
         </button>
       )}
 
-      {/* Inside / Outside selection */}
-      <div className={cn('grid gap-3', compact ? 'grid-cols-2' : 'grid-cols-2')}>
+      {/* Inside / Outside */}
+      <div className="grid grid-cols-2 gap-3">
         <TapCard
           label="Interior"
           icon={<Home className="h-5 w-5" />}
@@ -259,7 +215,12 @@ export function VisualLocationPicker({
       {/* INSIDE PATH */}
       {insideOutside === 'inside' && (
         <div className="space-y-4 animate-fade-in">
-          {/* Level — horizontal pill strip */}
+          {/* Context hint */}
+          {contextHint && (
+            <p className="text-xs text-muted-foreground italic">{contextHint}</p>
+          )}
+
+          {/* Level pills */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Level</p>
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -267,7 +228,14 @@ export function VisualLocationPicker({
                 <button
                   key={level}
                   type="button"
-                  onClick={() => setSelectedLevel(level)}
+                  onClick={() => {
+                    setSelectedLevel(level);
+                    setSelectedArea(null);
+                    setCustomArea('');
+                    setUnitNumber('');
+                    setRoomInUnit(null);
+                    setCustomRoom('');
+                  }}
                   className={cn(
                     'shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors min-h-[40px]',
                     selectedLevel === level
@@ -281,7 +249,7 @@ export function VisualLocationPicker({
             </div>
           </div>
 
-          {/* Area — 2x2 grid */}
+          {/* Area grid */}
           {selectedLevel && (
             <div className="animate-fade-in">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Area</p>
@@ -321,7 +289,7 @@ export function VisualLocationPicker({
                     <Input
                       value={unitNumber}
                       onChange={e => setUnitNumber(e.target.value)}
-                      placeholder="e.g. 304, A12"
+                      placeholder={unitHint ? `e.g. 304 (${unitHint})` : 'e.g. 304, A12'}
                       className="h-11"
                       autoFocus
                     />
@@ -330,7 +298,7 @@ export function VisualLocationPicker({
                     <div className="animate-fade-in">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Room / Area</p>
                       <div className="grid grid-cols-2 gap-3">
-                        {UNIT_ROOM_OPTIONS.map(r => (
+                        {unitRoomOptions.map(r => (
                           <TapCard
                             key={r.label}
                             label={r.label}
@@ -363,6 +331,9 @@ export function VisualLocationPicker({
       {/* OUTSIDE PATH */}
       {insideOutside === 'outside' && (
         <div className="space-y-4 animate-fade-in">
+          {contextHint && (
+            <p className="text-xs text-muted-foreground italic">{contextHint}</p>
+          )}
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Elevation</p>
           <div className="grid grid-cols-2 gap-3">
             {elevationOptions.map(e => (
@@ -397,7 +368,7 @@ export function VisualLocationPicker({
         </div>
       )}
 
-      {/* Confirm button when complete (non-compact mode) */}
+      {/* Confirm button */}
       {!compact && isComplete && (
         <button
           type="button"
@@ -407,8 +378,6 @@ export function VisualLocationPicker({
           Confirm location
         </button>
       )}
-
-      {/* Auto-confirm for compact mode */}
       {compact && isComplete && (
         <button
           type="button"
