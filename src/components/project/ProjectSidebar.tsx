@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useAuth } from '@/hooks/useAuth';
+import { useSidebarAttention } from '@/hooks/useSidebarAttention';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface NavItem {
@@ -65,14 +66,25 @@ const UTILITY_ITEMS = [
   { key: 'reminders', label: 'Reminders', icon: Bell, path: '/reminders' },
 ];
 
+function AttentionBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="bg-amber-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0">
+      {count}
+    </span>
+  );
+}
+
 function FeatureNavItem({
   item,
   active,
   projectId,
+  attentionCount,
 }: {
   item: NavItem;
   active: boolean;
   projectId: string;
+  attentionCount?: number;
 }) {
   const navigate = useNavigate();
   const enabled = useFeatureEnabled(item.featureKey as any);
@@ -91,6 +103,7 @@ function FeatureNavItem({
     >
       <Icon className="w-4 h-4 shrink-0" strokeWidth={1.8} />
       <span className="truncate flex-1">{item.label}</span>
+      {attentionCount && attentionCount > 0 ? <AttentionBadge count={attentionCount} /> : null}
       {item.premium && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
     </button>
   );
@@ -106,6 +119,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { profile, signOut } = useAuth();
+  const attentionCounts = useSidebarAttention(id);
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -151,6 +165,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
                       item={item}
                       active={active}
                       projectId={id}
+                      attentionCount={attentionCounts[item.route]}
                     />
                   );
                 }
@@ -168,6 +183,8 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
                   >
                     <Icon className="w-4 h-4 shrink-0" strokeWidth={1.8} />
                     <span className="truncate flex-1">{item.label}</span>
+                    {attentionCounts[item.route] > 0 && <AttentionBadge count={attentionCounts[item.route]} />}
+                    {item.premium && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
                     {item.premium && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
                   </button>
                 );
