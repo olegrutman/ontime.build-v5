@@ -1,37 +1,51 @@
 
 
-# Add New User & Assign to Organization — from Platform Users Page
+# Sidebar Attention Notifications for Work Orders
 
-## What Already Exists
-- The backend edge function `platform-support-action` already has a `CREATE_USER_AND_ADD` action that creates an auth user, profile, and optionally assigns to an org with a role.
-- The `useSupportAction` hook can invoke it.
-- The `AssignToOrgDialog` pattern (org search, role picker, reason dialog) can be reused.
+## What We're Building
+Add orange notification badges to the **Project Sidebar** next to nav items (Work Orders, Invoices, Purchase Orders) when there are items needing attention (e.g., submitted invoices to review, POs awaiting pricing).
 
-## What Needs to Be Built
+## Approach
 
-### 1. New `CreateUserDialog` component
-**File**: `src/components/platform/CreateUserDialog.tsx`
+### 1. Create `useSidebarAttention` hook
+**File**: `src/hooks/useSidebarAttention.ts`
 
-A dialog with:
-- **Email** (required)
-- **First Name** / **Last Name** fields
-- **Password** (required, auto-generate option or manual entry)
-- **Organization assignment** (optional) — reuse the same org search + role picker pattern from `AssignToOrgDialog`
-- **Reason** step via `SupportActionDialog` before confirming
+A hook that takes `projectId`, `isSupplier`, `supplierOrgId` and returns a map of `{ [navKey: string]: number }` — counts of attention items per section. Reuses the same query logic from `UrgentTasksCard`:
+- **change-orders**: Count WOs with status requiring attention (e.g., `SUBMITTED`)
+- **invoices**: Count invoices with `status = 'SUBMITTED'`
+- **purchase-orders**: Count POs with `status = 'SUBMITTED'`
 
-Calls `useSupportAction` with `action_type: 'CREATE_USER_AND_ADD'` and params: `email`, `password`, `first_name`, `last_name`, `full_name`, `organization_id`, `role`.
+### 2. Update `ProjectSidebar.tsx`
+- Import and call `useSidebarAttention(id, isSupplier)`
+- For each nav item, if `attentionCounts[item.key] > 0`, render a small orange dot/badge next to the label
+- Badge styling: `bg-amber-500 text-white text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center`
+- Pass attention counts into `FeatureNavItem` as well
 
-### 2. Add "Create User" button to `PlatformUsers.tsx`
-Add a button next to the search bar (e.g., `+ Add User`) that opens `CreateUserDialog`. On success, refresh the user list.
+### 3. Update `FeatureNavItem`
+Accept an optional `attentionCount` prop and render the orange badge when > 0.
 
-### 3. Update `SupportActionType` in `src/types/platform.ts`
-Add `'CREATE_USER_AND_ADD'` to the `SupportActionType` union and `ACTION_TYPE_LABELS` map so audit logs display correctly.
+## Visual Result
+```text
+┌──────────────────────┐
+│  ← Dashboard         │
+│  ─────────────────   │
+│  Overview             │
+│  Project Info         │
+│  ─────────────────   │
+│  Work Orders    ● 3  │  ← orange badge
+│  RFIs                 │
+│  Estimates            │
+│  ─────────────────   │
+│  Invoices       ● 2  │  ← orange badge
+│  Purchase Orders ● 1 │  ← orange badge
+│  Returns              │
+└──────────────────────┘
+```
 
-## Summary
+## Files Changed
 
 | File | Change |
 |---|---|
-| `src/components/platform/CreateUserDialog.tsx` | New dialog: user creation form + optional org assignment + reason |
-| `src/pages/platform/PlatformUsers.tsx` | Add "Add User" button, wire to dialog |
-| `src/types/platform.ts` | Add `CREATE_USER_AND_ADD` to type union and labels |
+| `src/hooks/useSidebarAttention.ts` | New hook — queries attention counts per section |
+| `src/components/project/ProjectSidebar.tsx` | Consume hook, render orange badges on nav items |
 
