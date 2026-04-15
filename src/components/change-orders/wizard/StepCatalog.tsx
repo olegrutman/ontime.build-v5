@@ -234,29 +234,6 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
     );
   }
 
-  // ── Smart suggestions ──
-  const smartSuggestionItems = useMemo(() => {
-    if (!data.reason || !workType) return [];
-    const names = SMART_SUGGESTIONS[data.reason]?.[workType] ?? [];
-    if (names.length === 0) return [];
-    return SCOPE_CATALOG
-      .filter(item => names.includes(item.name))
-      .map(item => ({
-        id: item.id,
-        item_name: item.name,
-        unit: item.unit,
-        division: item.workType,
-        category_name: item.tag ?? item.workType,
-        category_id: item.workType,
-        group_id: item.workType,
-        group_label: item.workType,
-        category_color: '',
-        category_bg: '',
-        category_icon: '',
-        sort_order: 0,
-        org_id: null,
-      } as ScopeCatalogItem));
-  }, [data.reason, workType]);
 
   // ── PHASE 3: ITEMS (CATALOG BROWSER) ──
   return (
