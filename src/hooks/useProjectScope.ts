@@ -86,14 +86,13 @@ export function getLevelOptions(scope: ProjectScopeDetails | null): string[] {
 
 // ── Smart area options based on level + scope ─────────────────
 function expandBedrooms(scope: ProjectScopeDetails | null): AreaOption[] {
-  const count = scope?.bedrooms ?? 0;
+  const isSF = ['custom_home', 'track_home'].includes(scope?.home_type ?? '');
+  const count = scope?.bedrooms ?? (isSF ? 3 : 2);
   const items: AreaOption[] = [];
   if (count > 1) {
     for (let i = 1; i <= count; i++) {
       items.push({ label: `Bedroom ${i}`, icon: '🛏️' });
     }
-    // Always add Primary Suite for single-family
-    const isSF = ['custom_home', 'track_home'].includes(scope?.home_type ?? '');
     if (isSF) {
       items.push({ label: 'Primary Suite', icon: '🛏️' });
     }
@@ -104,7 +103,8 @@ function expandBedrooms(scope: ProjectScopeDetails | null): AreaOption[] {
 }
 
 function expandBathrooms(scope: ProjectScopeDetails | null): AreaOption[] {
-  const count = scope?.bathrooms ?? 0;
+  const isSF = ['custom_home', 'track_home'].includes(scope?.home_type ?? '');
+  const count = scope?.bathrooms ?? (isSF ? 2.5 : 1);
   const items: AreaOption[] = [];
   const fullCount = Math.floor(count);
   const hasHalf = count % 1 !== 0;
@@ -124,9 +124,10 @@ function expandBathrooms(scope: ProjectScopeDetails | null): AreaOption[] {
 
 function garageOption(scope: ProjectScopeDetails | null): AreaOption | null {
   if (!scope?.garage_type || scope.garage_type.toLowerCase() === 'none') return null;
-  const label = scope.garage_type !== 'garage'
-    ? `Garage (${scope.garage_type})`
-    : 'Garage';
+  const gt = scope.garage_type.toLowerCase();
+  const label = (gt === 'garage' || gt === 'yes')
+    ? 'Garage'
+    : `Garage (${scope.garage_type})`;
   return { label, icon: '🚗' };
 }
 
@@ -200,8 +201,14 @@ export function getAreaOptionsForLevel(
 
     options.push(...expandBedrooms(scope));
     options.push(...expandBathrooms(scope));
+    options.push({ label: 'Hallway', icon: '🚶' });
+    options.push({ label: 'Office / Study', icon: '📚' });
     options.push({ label: 'Closet', icon: '🚪' });
     options.push({ label: 'Laundry', icon: '🧺' });
+
+    if (isGround) {
+      options.push({ label: 'Powder Room', icon: '🚿' });
+    }
 
     // Garage on ground only
     if (isGround) {
