@@ -1143,6 +1143,36 @@ export function useSetupWizardV2(
       updated_at: new Date().toISOString(),
     } as any, { onConflict: 'project_id,field_key' });
 
+    // ── Upsert project_scope_details so location picker has real data ──
+    let storyNum = 1;
+    if (typeof answers.stories === 'number') storyNum = Math.max(1, answers.stories);
+    else if (answers.stories === '2-story' || answers.stories === '2') storyNum = 2;
+    else if (answers.stories === '3') storyNum = 3;
+    else if (answers.stories === 'Mix of both') storyNum = 2;
+
+    const scopeRow: Record<string, unknown> = {
+      project_id: pid,
+      home_type: buildingType,
+      floors: storyNum,
+      stories: storyNum,
+      foundation_type: answers.has_basement === 'yes' ? 'Basement' : null,
+      basement_type: answers.has_basement === 'yes' ? (answers.basement_type as string || null) : null,
+      basement_finish: answers.has_basement === 'yes' ? (answers.basement_type as string || null) : null,
+      garage_type: typeof answers.garage_type === 'string' ? answers.garage_type : null,
+      has_elevator: answers.has_elevator === 'yes' || answers.has_elevator === true,
+      has_balconies: answers.has_balconies === 'yes' || answers.has_balconies === true,
+      has_covered_porches: answers.has_covered_porches === 'yes' || answers.has_covered_porches === true,
+      decking_included: answers.decking === 'yes' || answers.decking === true,
+      siding_included: answers.siding === 'yes' || answers.siding === true,
+      fascia_included: answers.fascia === 'yes' || answers.fascia === true,
+      soffit_included: answers.soffit === 'yes' || answers.soffit === true,
+      has_roof_deck: answers.roof_deck === 'yes' || answers.roof_deck === true,
+      bedrooms: typeof answers.bedrooms === 'number' ? answers.bedrooms : null,
+      bathrooms: typeof answers.bathrooms === 'number' ? answers.bathrooms : null,
+    };
+
+    await supabase.from('project_scope_details').upsert(scopeRow as any, { onConflict: 'project_id' });
+
     // ── Create contract(s) + SOV(s) ──
     const isGC = creatorOrgType === 'GC';
 
