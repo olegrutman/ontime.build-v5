@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useAuth } from '@/hooks/useAuth';
+import { useSidebarAttention } from '@/hooks/useSidebarAttention';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface NavItem {
@@ -65,14 +66,25 @@ const UTILITY_ITEMS = [
   { key: 'reminders', label: 'Reminders', icon: Bell, path: '/reminders' },
 ];
 
+function AttentionBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="bg-amber-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0">
+      {count}
+    </span>
+  );
+}
+
 function FeatureNavItem({
   item,
   active,
   projectId,
+  attentionCount,
 }: {
   item: NavItem;
   active: boolean;
   projectId: string;
+  attentionCount?: number;
 }) {
   const navigate = useNavigate();
   const enabled = useFeatureEnabled(item.featureKey as any);
