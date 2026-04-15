@@ -40,6 +40,8 @@ const WORK_TYPE_DESCRIPTIONS: Record<string, string> = {
   addition: "additional framing work",
   adjust: "adjustment work",
   fixing: "repair/fix work",
+  structural: "structural framing and hardware installation",
+  wrb: "weather resistant barrier and building envelope work",
 };
 
 const REASON_DESCRIPTIONS: Record<string, string> = {
@@ -141,6 +143,13 @@ serve(async (req) => {
     }
     if (existing_conditions) {
       contextParts.push(`Existing Conditions: ${existing_conditions}`);
+    }
+
+    if (work_type === 'structural') {
+      contextParts.push('Note: Structural work may require engineer review and special inspection sign-off.');
+    }
+    if (work_type === 'wrb') {
+      contextParts.push('Note: WRB and envelope work should reference manufacturer installation specs and local code for flashing details.');
     }
 
     if (rfi_context) {
