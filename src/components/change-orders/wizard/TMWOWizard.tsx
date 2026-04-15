@@ -24,7 +24,7 @@ import type { SelectedScopeItem, COWizardData } from './COWizard';
 import { PricingTypeSelector, ToggleWithSelector, ShareToggle } from './SharedWizardComponents';
 
 // ── Work Type definitions ─────────────────────────────
-type WorkTypeKey = 'demolition' | 'framing' | 'reframing' | 'sheathing' | 'blocking' | 'backout' | 'exterior' | 'stairs' | 'other';
+type WorkTypeKey = 'demolition' | 'framing' | 'structural' | 'wrb' | 'reframing' | 'sheathing' | 'blocking' | 'backout' | 'exterior' | 'stairs' | 'other';
 
 interface WorkTypeDef {
   key: WorkTypeKey;
@@ -36,6 +36,8 @@ interface WorkTypeDef {
 const WORK_TYPES: WorkTypeDef[] = [
   { key: 'demolition', label: 'Demolition', icon: '🔨', subtypes: ['Selective demo', 'Full gut', 'Wall removal', 'Ceiling demo', 'Floor demo', 'Cabinet removal', 'Fixture removal'] },
   { key: 'framing', label: 'Framing', icon: '🏗️', subtypes: ['New wall', 'Partition wall', 'Header install', 'Soffit framing', 'Bulkhead', 'Closet build-out', 'Niche framing'] },
+  { key: 'structural', label: 'Structural', icon: '⚙️', subtypes: ['Beam installation', 'Column install', 'Column relocation', 'Hardware install', 'Shear wall', 'Hold-down anchors', 'Transfer beam', 'Structural repair'] },
+  { key: 'wrb', label: 'WRB & Envelope', icon: '🛡️', subtypes: ['Housewrap install', 'Flashing', 'Window install', 'Window removal', 'Door install', 'Door removal', 'Self-adhered membrane', 'WRB inspection'] },
   { key: 'reframing', label: 'Reframing', icon: '🔄', subtypes: ['Wall modification', 'Opening added', 'Header replacement', 'Structural repair', 'Load-bearing change', 'Window rough-in change', 'Door rough-in change'] },
   { key: 'sheathing', label: 'Sheathing', icon: '📋', subtypes: ['Wall sheathing', 'Roof sheathing', 'Subfloor', 'Backer board', 'Shear panel'] },
   { key: 'blocking', label: 'Blocking', icon: '🧱', subtypes: ['TV mount blocking', 'Grab bar blocking', 'Cabinet blocking', 'Handrail blocking', 'Shelf blocking', 'General blocking'] },

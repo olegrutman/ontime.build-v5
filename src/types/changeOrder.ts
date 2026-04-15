@@ -237,6 +237,18 @@ export interface ScopeCatalogItem {
 /** @deprecated Use ScopeCatalogItem instead */
 export type WorkOrderCatalogItem = ScopeCatalogItem;
 
+export type COWorkType =
+  | 'framing'
+  | 'structural'
+  | 'wrb'
+  | 'demo'
+  | 'sheathing'
+  | 'blocking'
+  | 'exterior'
+  | 'backout'
+  | 'stairs'
+  | 'other';
+
 export interface NewCOLineItem {
   co_id: string;
   org_id: string;

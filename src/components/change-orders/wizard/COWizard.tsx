@@ -91,13 +91,14 @@ interface WorkTypeDef {
 
 const CO_WORK_TYPES: WorkTypeDef[] = [
   { key: 'framing', label: 'Framing', icon: '🏗️' },
+  { key: 'structural', label: 'Structural', icon: '⚙️' },
+  { key: 'wrb', label: 'WRB & Envelope', icon: '🛡️' },
   { key: 'electrical', label: 'Electrical', icon: '⚡' },
   { key: 'plumbing', label: 'Plumbing', icon: '🔧' },
   { key: 'hvac', label: 'HVAC', icon: '❄️' },
   { key: 'exterior', label: 'Exterior', icon: '🏠' },
   { key: 'finish', label: 'Finish Work', icon: '🎨' },
   { key: 'demolition', label: 'Demolition', icon: '🔨' },
-  { key: 'structural', label: 'Structural', icon: '🧱' },
   { key: 'other', label: 'Other', icon: '📝' },
 ];
 
