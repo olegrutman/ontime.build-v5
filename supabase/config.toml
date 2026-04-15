@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.generate-framing-scope-summary]
 verify_jwt = false
+
+[functions.seed-qa-environment]
+verify_jwt = false
