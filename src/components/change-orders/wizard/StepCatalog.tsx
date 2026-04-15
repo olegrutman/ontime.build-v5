@@ -2,13 +2,14 @@ import { useState, useMemo, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Search, X, ChevronRight, MapPin, Plus, ArrowLeft } from 'lucide-react';
+import { Search, X, ChevronRight, MapPin, Plus, ArrowLeft, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
 import { VisualLocationPicker } from '../VisualLocationPicker';
+import { SCOPE_CATALOG, SMART_SUGGESTIONS } from '@/lib/scopeCatalog';
 
 interface StepCatalogProps {
   data: COWizardData;
@@ -25,6 +26,8 @@ const WORK_TYPE_DIVISION_MAP: Record<string, string> = {
   blocking: 'framing',
   exterior: 'exterior',
   stairs: 'framing',
+  structural: 'structural',
+  wrb: 'wrb',
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -34,6 +37,8 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   blocking: 'Blocking',
   exterior: 'Exterior Scope',
   stairs: 'Stairs',
+  structural: 'Structural',
+  wrb: 'WRB & Envelope',
 };
 
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
@@ -205,6 +210,30 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
     );
   }
 
+  // ── Smart suggestions ──
+  const smartSuggestionItems = useMemo(() => {
+    if (!data.reason || !workType) return [];
+    const names = SMART_SUGGESTIONS[data.reason]?.[workType] ?? [];
+    if (names.length === 0) return [];
+    return SCOPE_CATALOG
+      .filter(item => names.includes(item.name))
+      .map(item => ({
+        id: item.id,
+        item_name: item.name,
+        unit: item.unit,
+        division: item.workType,
+        category_name: item.tag ?? item.workType,
+        category_id: item.workType,
+        group_id: item.workType,
+        group_label: item.workType,
+        category_color: '',
+        category_bg: '',
+        category_icon: '',
+        sort_order: 0,
+        org_id: null,
+      } as ScopeCatalogItem));
+  }, [data.reason, workType]);
+
   // ── PHASE 3: ITEMS (CATALOG BROWSER) ──
   return (
     <div className="space-y-4">
@@ -243,6 +272,39 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
           >
             Browse all trades →
           </button>
+        </div>
+      )}
+
+      {/* Smart picks section */}
+      {smartSuggestionItems.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <p className="text-sm font-semibold text-foreground">Smart picks for this job</p>
+          </div>
+          <div className="border rounded-lg overflow-hidden divide-y">
+            {smartSuggestionItems.map(item => {
+              const sel = selectedIds.has(item.id);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => selectItem(item)}
+                  className={cn('w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40', sel && 'bg-amber-50 dark:bg-amber-950/20')}
+                >
+                  <Checkbox selected={sel} />
+                  <span className="text-sm flex-1">{item.item_name}</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">Suggested</span>
+                  {(item as any).division === 'structural' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">Structural</span>
+                  )}
+                  {(item as any).division === 'wrb' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">WRB</span>
+                  )}
+                  <span className="text-xs text-muted-foreground shrink-0">{item.unit}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -347,6 +409,7 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
           <div className="divide-y">
             {currentGrp.items.map(item => {
               const sel = selectedIds.has(item.id);
+              const localItem = SCOPE_CATALOG.find(s => s.name === item.item_name);
               return (
                 <button
                   key={item.id}
@@ -355,6 +418,12 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
                 >
                   <Checkbox selected={sel} />
                   <span className="text-sm flex-1">{item.item_name}</span>
+                  {localItem?.tag === 'structural' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">Structural</span>
+                  )}
+                  {localItem?.tag === 'wrb' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">WRB</span>
+                  )}
                   <span className="text-xs text-muted-foreground">{item.unit}</span>
                 </button>
               );

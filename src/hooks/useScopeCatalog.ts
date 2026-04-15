@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ScopeCatalogItem } from '@/types/changeOrder';
+import { SCOPE_CATALOG } from '@/lib/scopeCatalog';
 
 export interface CatalogGroup {
   group_id: string;
@@ -59,7 +60,29 @@ export function useScopeCatalog() {
         .order('sort_order');
 
       if (error) throw error;
-      return (data ?? []) as ScopeCatalogItem[]; // ✓ verified
+      const dbItems = (data ?? []) as ScopeCatalogItem[];
+
+      // Merge in local catalog items not already in DB
+      const dbItemNames = new Set(dbItems.map(i => i.item_name));
+      const localItems: ScopeCatalogItem[] = SCOPE_CATALOG
+        .filter(i => !dbItemNames.has(i.name))
+        .map(i => ({
+          id: i.id,
+          item_name: i.name,
+          unit: i.unit,
+          division: i.workType,
+          category_id: i.workType,
+          category_name: i.tag ?? i.workType,
+          group_id: i.workType,
+          group_label: i.workType.charAt(0).toUpperCase() + i.workType.slice(1),
+          category_color: '',
+          category_bg: '',
+          category_icon: i.workType === 'structural' ? '⚙️' : i.workType === 'wrb' ? '🛡️' : '',
+          sort_order: i.id.charCodeAt(1) ?? 0,
+          org_id: null,
+        }));
+
+      return [...dbItems, ...localItems];
     },
     staleTime: 1000 * 60 * 60, // ✓ verified
   });
