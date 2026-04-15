@@ -18,9 +18,12 @@ interface LocationData {
 
 interface GenerateRequest {
   work_type: string;
-  location: LocationData;
+  location?: LocationData;
+  location_tag?: string;
   project_name: string;
   reason?: string;
+  reason_code?: string;
+  selected_items?: string[];
   fixing_trade_notes?: string;
   requires_materials: boolean;
   requires_equipment: boolean;
@@ -34,27 +37,8 @@ interface GenerateRequest {
   rfi_context?: string;
 }
 
-const WORK_TYPE_DESCRIPTIONS: Record<string, string> = {
-  reframe: "re-framing work",
-  reinstall: "reinstallation work",
-  addition: "additional framing work",
-  adjust: "adjustment work",
-  fixing: "repair/fix work",
-  structural: "structural framing and hardware installation",
-  wrb: "weather resistant barrier and building envelope work",
-};
-
-const REASON_DESCRIPTIONS: Record<string, string> = {
-  other_trade: "damage caused by another trade",
-  design_error: "a design error",
-  material_defect: "a material defect",
-  weather_damage: "weather-related damage",
-  owner_damage: "damage by owner/tenant",
-  code_requirement: "code compliance requirements",
-  other: "other issues",
-};
-
-function buildLocationDescription(location: LocationData): string {
+function buildLocationDescription(location?: LocationData): string {
+  if (!location) return "";
   if (location.inside_outside === "inside") {
     const parts = [];
     if (location.level) parts.push(location.level.toLowerCase());
@@ -64,7 +48,7 @@ function buildLocationDescription(location: LocationData): string {
     } else if (location.room_area) {
       parts.push(location.room_area.toLowerCase());
     }
-    return parts.length > 0 ? parts.join(", ") : "interior location";
+    return parts.length > 0 ? parts.join(", ") : "interior";
   } else if (location.inside_outside === "outside") {
     if (location.exterior_feature === "other" && location.custom_exterior) {
       return location.custom_exterior.toLowerCase();
@@ -76,9 +60,9 @@ function buildLocationDescription(location: LocationData): string {
         .join(" ")
         .toLowerCase();
     }
-    return "exterior location";
+    return "exterior";
   }
-  return "specified location";
+  return "";
 }
 
 serve(async (req) => {
@@ -93,101 +77,42 @@ serve(async (req) => {
     }
 
     const body: GenerateRequest = await req.json();
-    const {
-      work_type,
-      location,
-      project_name,
-      reason,
-      fixing_trade_notes,
-      requires_materials,
-      requires_equipment,
-      material_responsibility,
-      equipment_responsibility,
-      structural_element,
-      scope_size,
-      urgency,
-      access_conditions,
-      existing_conditions,
-      rfi_context,
-    } = body;
 
-    const workTypeDesc = WORK_TYPE_DESCRIPTIONS[work_type] || work_type;
-    const locationDesc = buildLocationDescription(location);
+    // Resolve location: prefer location_tag, fall back to structured location
+    const locationDesc = body.location_tag || buildLocationDescription(body.location) || "unspecified location";
 
-    // Build context for the AI
-    let contextParts = [
-      `Project: ${project_name}`,
-      `Work Type: ${workTypeDesc}`,
+    // Resolve scope items: prefer selected_items array, fall back to structural_element
+    const scopeItems = body.selected_items?.length
+      ? body.selected_items.join(", ")
+      : body.structural_element || "";
+
+    // Resolve reason
+    const reason = body.reason_code || body.reason || "";
+
+    // Build concise context
+    const contextParts = [
+      `Project: ${body.project_name}`,
+      `Work type: ${body.work_type}`,
       `Location: ${locationDesc}`,
     ];
 
-    if (work_type === "fixing" && reason) {
-      const reasonDesc = REASON_DESCRIPTIONS[reason] || reason;
-      contextParts.push(`Reason for fix: ${reasonDesc}`);
-      if (fixing_trade_notes) {
-        contextParts.push(`Trade issue details: ${fixing_trade_notes}`);
-      }
+    if (scopeItems) contextParts.push(`Scope items: ${scopeItems}`);
+    if (reason) contextParts.push(`Reason: ${reason}`);
+    if (body.existing_conditions) contextParts.push(`Conditions: ${body.existing_conditions}`);
+    if (body.rfi_context) contextParts.push(`RFI context: ${body.rfi_context}`);
+    if (body.requires_materials && body.material_responsibility) {
+      contextParts.push(`Materials: ${body.material_responsibility} responsible`);
+    }
+    if (body.requires_equipment && body.equipment_responsibility) {
+      contextParts.push(`Equipment: ${body.equipment_responsibility} responsible`);
     }
 
-    if (structural_element) {
-      contextParts.push(`Structural Element: ${structural_element}`);
-    }
-    if (scope_size) {
-      contextParts.push(`Scope Size: ${scope_size}`);
-    }
-    if (urgency && urgency !== "Standard") {
-      contextParts.push(`Urgency: ${urgency}`);
-    }
-    if (access_conditions && access_conditions !== "Clear Access") {
-      contextParts.push(`Access Conditions: ${access_conditions}`);
-    }
-    if (existing_conditions) {
-      contextParts.push(`Existing Conditions: ${existing_conditions}`);
-    }
+    const systemPrompt = `You are a construction scope writer. Output ONLY a 1-3 sentence description.
+State the selected scope items, the exact location provided, and the reason if given.
+Do NOT add details, assumptions, or recommendations not present in the input.
+Do NOT mention pricing, scheduling, or general construction advice.`;
 
-    if (work_type === 'structural') {
-      contextParts.push('Note: Structural work may require engineer review and special inspection sign-off.');
-    }
-    if (work_type === 'wrb') {
-      contextParts.push('Note: WRB and envelope work should reference manufacturer installation specs and local code for flashing details.');
-    }
-
-    if (rfi_context) {
-      contextParts.push(`RFI Context (question & answer):\n${rfi_context}`);
-    }
-
-    if (material_responsibility) {
-      contextParts.push(
-        `Materials: ${material_responsibility} responsible${requires_materials ? " (additional materials needed)" : ""}`
-      );
-    }
-
-    if (equipment_responsibility) {
-      contextParts.push(
-        `Equipment: ${equipment_responsibility} responsible${requires_equipment ? " (equipment needed)" : ""}`
-      );
-    }
-
-    const systemPrompt = `You are a construction project manager writing work order descriptions for a framing contractor. 
-Write clear, professional, and concise scope of work descriptions.
-Use industry-standard terminology.
-Focus on what needs to be done, where, and any special considerations.
-Keep descriptions under 150 words.
-Do not include pricing or scheduling information.
-Write in a professional but direct tone.
-If RFI context is provided, combine the question and answer into a clear, actionable scope of work description.`;
-
-    const userPrompt = `Generate a scope of work description for the following work order:
-
-${contextParts.join("\n")}
-
-Write a professional description that clearly communicates:
-1. What work needs to be performed
-2. Where the work is located
-3. Any relevant context (like why this work is needed)
-4. Materials or equipment considerations if applicable
-
-Keep it concise but complete.`;
+    const userPrompt = `Write a scope description from this data:\n\n${contextParts.join("\n")}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -203,8 +128,8 @@ Keep it concise but complete.`;
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          max_tokens: 500,
-          temperature: 0.7,
+          max_tokens: 200,
+          temperature: 0.3,
         }),
       }
     );
@@ -212,27 +137,16 @@ Keep it concise but complete.`;
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({
-            error: "Rate limit exceeded. Please try again later.",
-          }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({
-            error: "AI credits exhausted. Please add credits to continue.",
-          }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
       throw new Error("Failed to generate description");
@@ -249,13 +163,8 @@ Keep it concise but complete.`;
   } catch (error) {
     console.error("Error generating work order description:", error);
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

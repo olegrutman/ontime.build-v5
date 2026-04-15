@@ -178,18 +178,17 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   async function generateAIDescription() {
     setGeneratingAI(true);
     try {
-      const itemNames = data.selectedItems.map(i => i.item_name).join(', ');
       const { data: resp, error } = await supabase.functions.invoke('generate-work-order-description', {
         body: {
           work_type: data.workType || data.reason,
-          location: { inside_outside: 'inside' },
+          location_tag: data.locationTag || '',
           project_name: project?.name ?? 'Project',
+          selected_items: data.selectedItems.map(i => i.item_name),
+          reason_code: data.reason || '',
           requires_materials: data.materialsNeeded,
           requires_equipment: data.equipmentNeeded,
           material_responsibility: data.materialsResponsible,
           equipment_responsibility: data.equipmentResponsible,
-          structural_element: itemNames,
-          existing_conditions: '',
         },
       });
       if (error) throw error;
