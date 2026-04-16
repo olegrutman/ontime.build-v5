@@ -29,10 +29,10 @@ function TabItem({ tab, active, onClick }: { tab: Tab; active: boolean; onClick:
       <button
         onClick={onClick}
         className={cn(
-          'whitespace-nowrap px-1 pb-2.5 text-sm font-medium border-b-2 transition-colors',
-          active
-            ? 'border-primary text-foreground'
-            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+        'whitespace-nowrap px-1 pb-2.5 pt-2.5 text-sm font-medium border-b-2 transition-colors min-h-[44px]',
+        active
+          ? 'border-primary text-foreground'
+          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
         )}
       >
         {tab.label}
@@ -50,7 +50,7 @@ function FeatureTabItem({ tab, active, onClick }: { tab: Tab; active: boolean; o
     <button
       onClick={onClick}
       className={cn(
-        'whitespace-nowrap px-1 pb-2.5 text-sm font-medium border-b-2 transition-colors',
+        'whitespace-nowrap px-1 pb-2.5 pt-2.5 text-sm font-medium border-b-2 transition-colors min-h-[44px]',
         active
           ? 'border-primary text-foreground'
           : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
@@ -63,8 +63,10 @@ function FeatureTabItem({ tab, active, onClick }: { tab: Tab; active: boolean; o
 
 export function ProjectTabBar({ activeTab, onTabChange, isSupplier }: ProjectTabBarProps) {
   return (
-    <div className="lg:hidden bg-background border-b border-border px-3 sm:px-6">
-      <nav className="flex gap-6 overflow-x-auto scrollbar-hide">
+    <div className="lg:hidden bg-background border-b border-border px-3 sm:px-6 relative">
+      {/* Scroll fade indicators */}
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10" />
+      <nav className="flex gap-5 overflow-x-auto scrollbar-hide">
         {TABS.map((tab) => (
           <TabItem
             key={tab.key}
