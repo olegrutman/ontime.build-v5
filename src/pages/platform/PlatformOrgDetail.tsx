@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlatformLayout } from '@/components/platform/PlatformLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,8 +18,9 @@ import { ORG_TYPE_LABELS, ROLE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type Organizat
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { UserPlus, RefreshCw, UserRoundPlus, Trash2 } from 'lucide-react';
+import { UserPlus, RefreshCw, UserRoundPlus, Trash2, Pencil } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { formatPhone } from '@/lib/formatPhone';
 
 interface MemberRow {
   id: string;
@@ -34,6 +35,19 @@ interface ProjectRow {
   name: string;
   status: string;
   created_at: string;
+}
+
+interface OrgAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
+function formatAddress(addr: any): string {
+  if (!addr || typeof addr !== 'object') return '—';
+  const parts = [addr.street, addr.city, addr.state, addr.zip].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : '—';
 }
 
 export default function PlatformOrgDetail() {
@@ -69,51 +83,65 @@ export default function PlatformOrgDetail() {
   // Delete Org dialog
   const [deleteOrgOpen, setDeleteOrgOpen] = useState(false);
 
-  useEffect(() => {
+  // Edit Org dialog
+  const [editOrgOpen, setEditOrgOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editStreet, setEditStreet] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editState, setEditState] = useState('');
+  const [editZip, setEditZip] = useState('');
+  const [editTrade, setEditTrade] = useState('');
+  const [editLicense, setEditLicense] = useState('');
+  const [editInsurance, setEditInsurance] = useState('');
+  const [editReasonOpen, setEditReasonOpen] = useState(false);
+
+  const fetchOrg = useCallback(async () => {
     if (!orgId) return;
-    async function fetch() {
-      const orgRes = await supabase.from('organizations').select('*').eq('id', orgId!).single();
-      const membersRes = await supabase
-        .from('user_org_roles')
-        .select('id, user_id, role, is_admin')
-        .eq('organization_id', orgId!);
-      const projectsRes: { data: any[] | null } = await (supabase
-        .from('project_team') as any)
-        .select('project_id')
-        .eq('org_id', orgId!)
-        .limit(50);
+    const orgRes = await supabase.from('organizations').select('*').eq('id', orgId).single();
+    const membersRes = await supabase
+      .from('user_org_roles')
+      .select('id, user_id, role, is_admin')
+      .eq('organization_id', orgId);
+    const projectsRes: { data: any[] | null } = await (supabase
+      .from('project_team') as any)
+      .select('project_id')
+      .eq('org_id', orgId)
+      .limit(50);
 
-      setOrg(orgRes.data as unknown as Organization);
+    setOrg(orgRes.data as unknown as Organization);
 
-      const memberRows = (membersRes.data || []) as unknown as MemberRow[];
-      if (memberRows.length > 0) {
-        const userIds = memberRows.map((m) => m.user_id);
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('user_id, email, full_name')
-          .in('user_id', userIds);
-        const profileMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
-        memberRows.forEach((m) => {
-          m.profile = (profileMap.get(m.user_id) as any) || null;
-        });
-      }
-      setMembers(memberRows);
-
-      const projectIds = (projectsRes.data || []).map((pt: any) => pt.project_id).filter(Boolean);
-      const uniqueProjectIds = [...new Set(projectIds)] as string[];
-      if (uniqueProjectIds.length > 0) {
-        const { data: projData } = await supabase
-          .from('projects')
-          .select('id, name, status, created_at')
-          .in('id', uniqueProjectIds);
-        setProjects((projData || []) as ProjectRow[]);
-      } else {
-        setProjects([]);
-      }
-      setLoading(false);
+    const memberRows = (membersRes.data || []) as unknown as MemberRow[];
+    if (memberRows.length > 0) {
+      const userIds = memberRows.map((m) => m.user_id);
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, email, full_name')
+        .in('user_id', userIds);
+      const profileMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
+      memberRows.forEach((m) => {
+        m.profile = (profileMap.get(m.user_id) as any) || null;
+      });
     }
-    fetch();
+    setMembers(memberRows);
+
+    const projectIds = (projectsRes.data || []).map((pt: any) => pt.project_id).filter(Boolean);
+    const uniqueProjectIds = [...new Set(projectIds)] as string[];
+    if (uniqueProjectIds.length > 0) {
+      const { data: projData } = await supabase
+        .from('projects')
+        .select('id, name, status, created_at')
+        .in('id', uniqueProjectIds);
+      setProjects((projData || []) as ProjectRow[]);
+    } else {
+      setProjects([]);
+    }
+    setLoading(false);
   }, [orgId]);
+
+  useEffect(() => {
+    fetchOrg();
+  }, [fetchOrg]);
 
   const handleAddMember = async (reason: string) => {
     const ok = await execute({
@@ -128,8 +156,7 @@ export default function PlatformOrgDetail() {
       setAddMemberOpen(false);
       setMemberEmail('');
       setMemberRole('');
-      // Refresh members
-      window.location.reload();
+      fetchOrg();
     }
   };
 
@@ -165,11 +192,59 @@ export default function PlatformOrgDetail() {
       toast({ title: 'User created & added', description: data?.message });
       setCreateUserOpen(false);
       setNewUserEmail(''); setNewUserFirst(''); setNewUserLast(''); setNewUserPassword(''); setNewUserRole(''); setNewUserReason('');
-      window.location.reload();
+      fetchOrg();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  // Open edit dialog pre-filled with current org data
+  const openEditDialog = () => {
+    if (!org) return;
+    setEditName(org.name || '');
+    setEditPhone((org as any).phone || '');
+    const addr = (org as any).address as OrgAddress | null;
+    setEditStreet(addr?.street || '');
+    setEditCity(addr?.city || '');
+    setEditState(addr?.state || '');
+    setEditZip(addr?.zip || '');
+    setEditTrade((org as any).trade || '');
+    setEditLicense((org as any).license_number || '');
+    setEditInsurance((org as any).insurance_expiration_date || '');
+    setEditOrgOpen(true);
+  };
+
+  const handleEditOrg = async (reason: string) => {
+    const address: OrgAddress = {};
+    if (editStreet) address.street = editStreet;
+    if (editCity) address.city = editCity;
+    if (editState) address.state = editState;
+    if (editZip) address.zip = editZip;
+
+    const fields: Record<string, any> = {};
+    if (editName) fields.name = editName;
+    if (editPhone !== ((org as any)?.phone || '')) fields.phone = editPhone || null;
+    if (Object.keys(address).length > 0 || ((org as any)?.address)) fields.address = Object.keys(address).length > 0 ? address : null;
+    if (editTrade !== ((org as any)?.trade || '')) fields.trade = editTrade || null;
+    if (editLicense !== ((org as any)?.license_number || '')) fields.license_number = editLicense || null;
+    if (editInsurance !== ((org as any)?.insurance_expiration_date || '')) fields.insurance_expiration_date = editInsurance || null;
+
+    // Always send at minimum name + address so the update is meaningful
+    if (!fields.name) fields.name = editName || org?.name;
+    fields.address = Object.keys(address).length > 0 ? address : null;
+
+    const ok = await execute({
+      action_type: 'EDIT_ORGANIZATION',
+      reason,
+      organization_id: orgId,
+      fields,
+    });
+    if (ok) {
+      setEditReasonOpen(false);
+      setEditOrgOpen(false);
+      fetchOrg();
     }
   };
 
@@ -191,6 +266,7 @@ export default function PlatformOrgDetail() {
 
   const canRebuild = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
   const canDelete = platformRole === 'PLATFORM_OWNER';
+  const canEdit = platformRole === 'PLATFORM_OWNER';
   const allowedRoles = ALLOWED_ROLES_BY_ORG_TYPE[org.type] || [];
 
   const handleDeleteOrg = async (reason: string) => {
@@ -205,6 +281,12 @@ export default function PlatformOrgDetail() {
     }
   };
 
+  const orgAddr = (org as any).address;
+  const orgPhone = (org as any).phone;
+  const orgTrade = (org as any).trade || (org as any).trade_custom;
+  const orgLicense = (org as any).license_number;
+  const orgInsurance = (org as any).insurance_expiration_date;
+
   return (
     <PlatformLayout
       title={org.name}
@@ -216,6 +298,11 @@ export default function PlatformOrgDetail() {
     >
       {/* Action buttons */}
       <div className="flex flex-nowrap gap-2 mb-6 overflow-x-auto pb-2">
+        {canEdit && (
+          <Button variant="outline" size="sm" onClick={openEditDialog}>
+            <Pencil className="h-4 w-4 mr-1" /> Edit Organization
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => setAddMemberOpen(true)}>
           <UserPlus className="h-4 w-4 mr-1" /> Add Member (No Verification)
         </Button>
@@ -253,6 +340,28 @@ export default function PlatformOrgDetail() {
             <p className="text-xs text-muted-foreground">Created</p>
             <p className="font-medium">{format(new Date(org.created_at), 'MMM d, yyyy')}</p>
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Phone</p>
+            <p className="font-medium">{orgPhone ? formatPhone(orgPhone) : '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Address</p>
+            <p className="font-medium">{formatAddress(orgAddr)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Trade</p>
+            <p className="font-medium">{orgTrade || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">License #</p>
+            <p className="font-medium">{orgLicense || '—'}</p>
+          </div>
+          {orgInsurance && (
+            <div>
+              <p className="text-xs text-muted-foreground">Insurance Exp.</p>
+              <p className="font-medium">{format(new Date(orgInsurance), 'MMM d, yyyy')}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -460,6 +569,79 @@ export default function PlatformOrgDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Organization */}
+      <Dialog open={editOrgOpen} onOpenChange={setEditOrgOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Organization</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+            <div>
+              <Label>Organization Name *</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Phone</Label>
+              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="(555)123-4567" />
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <Label>Street Address</Label>
+                <Input value={editStreet} onChange={(e) => setEditStreet(e.target.value)} placeholder="123 Main St" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label>City</Label>
+                  <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} />
+                </div>
+                <div>
+                  <Label>State</Label>
+                  <Input value={editState} onChange={(e) => setEditState(e.target.value)} maxLength={2} />
+                </div>
+                <div>
+                  <Label>ZIP</Label>
+                  <Input value={editZip} onChange={(e) => setEditZip(e.target.value)} maxLength={10} />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Trade</Label>
+              <Input value={editTrade} onChange={(e) => setEditTrade(e.target.value)} placeholder="e.g. Framing, Electrical" />
+            </div>
+            <div>
+              <Label>License Number</Label>
+              <Input value={editLicense} onChange={(e) => setEditLicense(e.target.value)} />
+            </div>
+            <div>
+              <Label>Insurance Expiration</Label>
+              <Input type="date" value={editInsurance} onChange={(e) => setEditInsurance(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOrgOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setEditOrgOpen(false);
+                setEditReasonOpen(true);
+              }}
+              disabled={!editName}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Org - reason step */}
+      <SupportActionDialog
+        open={editReasonOpen}
+        onOpenChange={setEditReasonOpen}
+        title="Edit Organization"
+        description={`Update profile info for "${org.name}". This action will be logged.`}
+        onConfirm={handleEditOrg}
+        loading={actionLoading}
+      />
 
       {/* Delete Organization */}
       <SupportActionDialog
