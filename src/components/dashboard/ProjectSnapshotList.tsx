@@ -145,9 +145,9 @@ export function ProjectSnapshotList({
               <button
                 key={project.id}
                 onClick={() => navigate(`/project/${project.id}/overview`)}
-                className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-accent/40 transition-colors text-left group"
+                className="w-full flex items-start sm:items-center gap-3 px-4 sm:px-5 py-3.5 hover:bg-accent/40 transition-colors text-left group"
               >
-                <div className={cn('w-2 h-2 rounded-full shrink-0', STATUS_DOT[project.status] || 'bg-muted-foreground')} />
+                <div className={cn('w-2 h-2 rounded-full shrink-0 mt-1.5 sm:mt-0', STATUS_DOT[project.status] || 'bg-muted-foreground')} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[0.85rem] font-semibold truncate group-hover:text-primary transition-colors">
                     {project.name}
@@ -162,14 +162,23 @@ export function ProjectSnapshotList({
                         · {project.pendingActions} pending
                       </span>
                     )}
+                  </p>
+                  {/* Mobile: show value + attention inline below */}
+                  <div className="flex items-center gap-2 mt-1 sm:hidden">
                     {attention && (
-                      <span className="ml-2 text-muted-foreground">
-                        · {attention.issues[0]}
+                      <StatusPill variant={attention.tag}>
+                        {attention.tag === 'at_risk' ? 'At Risk' : 'Watch'}
+                      </StatusPill>
+                    )}
+                    {project.contractValue != null && project.contractValue > 0 && (
+                      <span className="text-[0.8rem] font-semibold text-foreground tabular-nums">
+                        {formatCurrency(project.contractValue)}
                       </span>
                     )}
-                  </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                {/* Desktop: show value + attention on right */}
+                <div className="hidden sm:flex items-center gap-2 shrink-0">
                   {attention && (
                     <StatusPill variant={attention.tag}>
                       {attention.tag === 'at_risk' ? 'At Risk' : 'Watch'}
@@ -181,7 +190,7 @@ export function ProjectSnapshotList({
                     </span>
                   )}
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
               </button>
             );
           })}
