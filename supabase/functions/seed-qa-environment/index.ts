@@ -298,7 +298,23 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // Auth temporarily disabled for QA seeding — re-enable PLATFORM_OWNER check after seed
+    // Auth: require PLATFORM_OWNER
+    const authHeader = req.headers.get('Authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '')
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      })
+      const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token)
+      if (claimsError || !claimsData?.claims) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+      }
+      const callerId = claimsData.claims.sub as string
+      const { data: roleData } = await db.rpc('get_platform_role', { _user_id: callerId })
+      if (roleData !== 'PLATFORM_OWNER') {
+        return new Response(JSON.stringify({ error: 'Forbidden — PLATFORM_OWNER required' }), { status: 403, headers: corsHeaders })
+      }
+    }
 
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'seed'
