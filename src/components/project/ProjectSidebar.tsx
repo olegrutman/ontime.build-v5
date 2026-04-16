@@ -118,8 +118,9 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, userOrgRoles } = useAuth();
   const attentionCounts = useSidebarAttention(id);
+  const currentOrg = userOrgRoles[0]?.organization;
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -216,8 +217,17 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
         })}
       </nav>
 
-      {/* Bottom pinned — Settings, Profile, Sign out */}
+      {/* Bottom pinned — Logo, Settings, Profile, Sign out */}
       <div className="border-t border-white/10 p-3 space-y-0.5">
+        {currentOrg?.logo_url && (
+          <div className="px-3 pb-2">
+            <img
+              src={currentOrg.logo_url}
+              alt={currentOrg.name || 'Company'}
+              className="max-h-9 max-w-[140px] object-contain rounded"
+            />
+          </div>
+        )}
         <button
           onClick={() => navigate('/settings')}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left w-full text-slate-400 hover:text-white hover:bg-white/10"
