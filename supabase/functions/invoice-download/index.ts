@@ -31,6 +31,14 @@ function orgAddr(org: any): string {
   return parts.join(' · ');
 }
 
+function projectAddr(project: any): string {
+  const a = project?.address;
+  if (a && typeof a === 'object') {
+    return [a.street, a.city, a.state, a.zip].filter(Boolean).join(', ');
+  }
+  return [project?.city, project?.state].filter(Boolean).join(', ');
+}
+
 const V3_CSS = `
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -115,7 +123,7 @@ body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background
 .ac-arrow{display:flex;align-items:center;color:var(--border2);font-size:.75rem;flex-shrink:0;}
 .notes-box{padding:8px 12px;background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--radius-xs);font-size:.7rem;color:var(--muted);line-height:1.5;}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media print{body{padding:0;}.page{box-shadow:none;border-radius:0;}}
+@media print{@page{margin:0.5in;}body{padding:0;}.page{box-shadow:none;border-radius:0;}}
 </style>`;
 
 function buildFooter(docTag: string, secondTag: string, dateStr: string): string {
@@ -156,7 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("invoices")
       .select(`
         *,
-        project:projects(name, city, state),
+        project:projects(name, address, city, state),
         contract:project_contracts(
           from_role, to_role, contract_sum, retainage_percent,
           from_org:organizations!project_contracts_from_org_id_fkey(name, address, phone, logo_url),
@@ -181,18 +189,9 @@ const handler = async (req: Request): Promise<Response> => {
     const toOrg = invoice.contract?.to_org;
     const logoUrl = fromOrg?.logo_url || null;
     const projectName = invoice.project?.name || 'Unknown Project';
-    const projectLocation = [invoice.project?.city, invoice.project?.state].filter(Boolean).join(', ');
+    const projectLocation = projectAddr(invoice.project);
     const now = fmtDate(new Date().toISOString());
 
-    // Approval workflow steps
-    const steps = ['Submitted', 'GC Review', 'Approved', 'Paid'];
-    const statusIdx: Record<string, number> = { DRAFT: -1, SUBMITTED: 0, APPROVED: 2, REJECTED: -1, PAID: 3 };
-    const currentIdx = statusIdx[invoice.status] ?? -1;
-
-    const approvalHtml = steps.map((step, i) => {
-      const cls = i < currentIdx ? 'done' : i === currentIdx ? 'current' : '';
-      return `${i > 0 ? '<div class="ac-arrow">→</div>' : ''}<div class="ac-step ${cls}"><div class="ac-num">${i + 1}</div><div class="ac-label">${step}</div></div>`;
-    }).join('');
 
     const itemRows = items.map((item: any, i: number) => {
       const pct = item.scheduled_value > 0 ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1) : '0.0';
@@ -265,10 +264,6 @@ ${V3_CSS}
 
     ${invoice.status === 'REJECTED' && invoice.rejection_reason ? `<div class="notes-box" style="border-color:var(--red);background:var(--red-bg);"><strong style="color:var(--red);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Rejection Reason:</strong><br/><span style="color:var(--red);">${invoice.rejection_reason}</span></div>` : ''}
 
-    <div class="section">
-      <div class="sec-title"><div class="dot" style="background:var(--green)"></div>Approval Workflow</div>
-      <div class="sec-content"><div class="approval-chain">${approvalHtml}</div></div>
-    </div>
 
     <div class="sig-row">
       <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Trade Contractor Signature</div><div class="sig-meta">${fromOrg?.name || ''}</div></div>

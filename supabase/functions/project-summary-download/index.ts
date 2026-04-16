@@ -82,7 +82,7 @@ body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background
 .ff-right{display:flex;gap:6px;}
 .ff-tag{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);color:var(--muted);}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media print{body{padding:0;}.page{box-shadow:none;}}
+@media print{@page{margin:0.5in;}body{padding:0;}.page{box-shadow:none;}}
 </style>`;
 
 const handler = async (req: Request): Promise<Response> => {

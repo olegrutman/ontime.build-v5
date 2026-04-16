@@ -21,7 +21,7 @@ const PO_SELECT = `
   *,
   organization:organizations!purchase_orders_organization_id_fkey(name, org_code, logo_url, address, phone),
   supplier:suppliers(name, supplier_code, contact_info),
-  project:projects(name, city, state),
+  project:projects(name, address, city, state),
   work_item:work_items(title)
 `;
 
@@ -34,6 +34,14 @@ function orgAddr(org: any): string {
   if (!org?.address) return '';
   const a = org.address;
   return [a.street, [a.city, a.state].filter(Boolean).join(', '), a.zip].filter(Boolean).join(' · ');
+}
+
+function projectAddr(project: any): string {
+  const a = project?.address;
+  if (a && typeof a === 'object') {
+    return [a.street, a.city, a.state, a.zip].filter(Boolean).join(', ');
+  }
+  return [project?.city, project?.state].filter(Boolean).join(', ');
 }
 
 const V3_CSS = `
@@ -101,12 +109,12 @@ body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background
 .ff-tag{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);color:var(--muted);}
 .notes-box{padding:8px 12px;background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--radius-xs);font-size:.7rem;color:var(--muted);line-height:1.5;}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media print{body{padding:0;}.page{box-shadow:none;}}
+@media print{@page{margin:0.5in;}body{padding:0;}.page{box-shadow:none;}}
 </style>`;
 
 function buildHtml(po: any, items: any[]): string {
   const projectName = po.project?.name || po.work_item?.title || "";
-  const projectLocation = [po.project?.city, po.project?.state].filter(Boolean).join(', ');
+  const projectLocation = projectAddr(po.project);
   const org = po.organization;
   const supplier = po.supplier;
   const now = fmtDate(new Date().toISOString());

@@ -27,6 +27,14 @@ function orgAddr(org: any): string {
   return [a.street, [a.city, a.state].filter(Boolean).join(', '), a.zip].filter(Boolean).join(' · ');
 }
 
+function projectAddr(project: any): string {
+  const a = project?.address;
+  if (a && typeof a === 'object') {
+    return [a.street, a.city, a.state, a.zip].filter(Boolean).join(', ');
+  }
+  return [project?.city, project?.state].filter(Boolean).join(', ');
+}
+
 const V3_CSS = `
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -94,7 +102,7 @@ body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background
 .ff-tag{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);color:var(--muted);}
 .notes-box{padding:8px 12px;background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--radius-xs);font-size:.7rem;color:var(--muted);line-height:1.5;}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media print{body{padding:0;}.page{box-shadow:none;}}
+@media print{@page{margin:0.5in;}body{padding:0;}.page{box-shadow:none;}}
 </style>`;
 
 const ITEM_TYPE_LABELS: Record<string, string> = {
@@ -121,7 +129,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: workItem, error: wiError } = await supabase
       .from("work_items")
-      .select(`*, project:projects(name, city, state), organization:organizations(name, org_code, logo_url, address)`)
+      .select(`*, project:projects(name, address, city, state), organization:organizations(name, org_code, logo_url, address)`)
       .eq("id", workItemId).single();
 
     if (wiError || !workItem) return new Response(JSON.stringify({ error: "Work item not found" }), { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } });
@@ -138,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const typeLabel = ITEM_TYPE_LABELS[workItem.item_type] || workItem.item_type;
     const projectName = workItem.project?.name || '';
-    const projectLocation = [workItem.project?.city, workItem.project?.state].filter(Boolean).join(', ');
+    const projectLocation = projectAddr(workItem.project);
     const org = workItem.organization;
     const now = fmtDate(new Date().toISOString());
 
