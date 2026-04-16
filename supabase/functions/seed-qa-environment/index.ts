@@ -325,11 +325,11 @@ Deno.serve(async (req) => {
       await db.from('project_scope_details').insert({ id: uuid(), project_id: projectId, ...def.scopeDetails })
 
       // 3. Participants
-      const fcStatus = (!def.healthy && projectIndex % 3 === 0) ? 'pending' : 'accepted'
+      const fcStatus = (!def.healthy && projectIndex % 3 === 0) ? 'PENDING' : 'ACCEPTED'
       await db.from('project_participants').insert([
-        { id: uuid(), project_id: projectId, organization_id: GC_ORG_ID, role: 'GC', invited_by: GC_USER_ID, invite_status: 'accepted', accepted_at: sixtyDaysAgo, material_responsibility: 'gc' },
-        { id: uuid(), project_id: projectId, organization_id: TC_ORG_ID, role: 'TC', invited_by: GC_USER_ID, invite_status: 'accepted', accepted_at: sixtyDaysAgo },
-        { id: uuid(), project_id: projectId, organization_id: FC_ORG_ID, role: 'FC', invited_by: TC_USER_ID, invite_status: fcStatus, accepted_at: fcStatus === 'accepted' ? thirtyDaysAgo : null },
+        { id: uuid(), project_id: projectId, organization_id: GC_ORG_ID, role: 'GC', invited_by: GC_USER_ID, invite_status: 'ACCEPTED', accepted_at: sixtyDaysAgo, material_responsibility: 'gc' },
+        { id: uuid(), project_id: projectId, organization_id: TC_ORG_ID, role: 'TC', invited_by: GC_USER_ID, invite_status: 'ACCEPTED', accepted_at: sixtyDaysAgo },
+        { id: uuid(), project_id: projectId, organization_id: FC_ORG_ID, role: 'FC', invited_by: TC_USER_ID, invite_status: fcStatus, accepted_at: fcStatus === 'ACCEPTED' ? thirtyDaysAgo : null },
       ])
 
       // 4. Team members
@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
       await db.from('project_team').insert([
         { id: gcTeamId, project_id: projectId, org_id: GC_ORG_ID, user_id: GC_USER_ID, role: 'GC_PM', trade: 'General', status: 'Accepted', invited_by_user_id: GC_USER_ID, invited_email: 'gc@test.com', invited_name: 'John Smith' },
         { id: tcTeamId, project_id: projectId, org_id: TC_ORG_ID, user_id: TC_USER_ID, role: 'TC_PM', trade: 'Framing', status: 'Accepted', invited_by_user_id: GC_USER_ID, invited_email: 'tc@test.com', invited_name: 'Mike Gold' },
-        { id: fcTeamId, project_id: projectId, org_id: FC_ORG_ID, user_id: FC_USER_ID, role: 'FC_PM', trade: 'Framing', status: fcStatus === 'accepted' ? 'Accepted' : 'Pending', invited_by_user_id: TC_USER_ID, invited_email: 'fc@test.com', invited_name: 'Tim Cook' },
+        { id: fcTeamId, project_id: projectId, org_id: FC_ORG_ID, user_id: FC_USER_ID, role: 'FC_PM', trade: 'Framing', status: fcStatus === 'ACCEPTED' ? 'Accepted' : 'Pending', invited_by_user_id: TC_USER_ID, invited_email: 'fc@test.com', invited_name: 'Tim Cook' },
       ])
 
       // 5. Contracts
@@ -363,10 +363,10 @@ Deno.serve(async (req) => {
           contract_sum: def.tcContract, retainage_percent: def.retainage,
           labor_budget: Math.round(def.tcContract * 0.85),
           material_responsibility: 'tc',
-          status: fcStatus === 'accepted' ? 'accepted' : 'draft',
+          status: fcStatus === 'ACCEPTED' ? 'accepted' : 'draft',
           created_by_user_id: TC_USER_ID,
-          sent_at: fcStatus === 'accepted' ? thirtyDaysAgo : null,
-          accepted_at: fcStatus === 'accepted' ? thirtyDaysAgo : null,
+          sent_at: fcStatus === 'ACCEPTED' ? thirtyDaysAgo : null,
+          accepted_at: fcStatus === 'ACCEPTED' ? thirtyDaysAgo : null,
         },
       ])
 
