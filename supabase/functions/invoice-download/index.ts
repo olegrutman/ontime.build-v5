@@ -9,33 +9,123 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount);
+function fmt(n: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
+}
+function fmtDate(d: string): string {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function fmtDateLong(d: string): string {
+  return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+function statusClass(s: string): string {
+  const map: Record<string, string> = { DRAFT: 'st-draft', SUBMITTED: 'st-submitted', APPROVED: 'st-approved', REJECTED: 'st-rejected', PAID: 'st-paid' };
+  return map[s] || 'st-draft';
 }
 
-function formatOrgAddress(org: any): string {
-  if (!org) return '';
-  const lines: string[] = [];
-  const addr = org.address;
-  if (addr) {
-    if (addr.street) lines.push(`<p>${addr.street}</p>`);
-    const cityStateZip = [addr.city, addr.state].filter(Boolean).join(', ');
-    if (cityStateZip || addr.zip) lines.push(`<p>${[cityStateZip, addr.zip].filter(Boolean).join(' ')}</p>`);
-  }
-  if (org.phone) lines.push(`<p>${org.phone}</p>`);
-  return lines.join('\n');
+function orgAddr(org: any): string {
+  if (!org?.address) return '';
+  const a = org.address;
+  const parts = [a.street, [a.city, a.state].filter(Boolean).join(', '), a.zip].filter(Boolean);
+  return parts.join(' · ');
+}
+
+const V3_CSS = `
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --amber:#F5A623;--amber-d:#C8850A;--amber-pale:#FFF7E6;
+  --navy:#0D1F3C;--imis-navy:#1a3b6e;
+  --surface:#FFFFFF;--surface2:#F7F9FC;
+  --border:#E4E8F0;--border2:#C9D0DC;
+  --ink:#0F1923;--ink2:#253347;--muted:#5A6A7E;--faint:#9AAABB;
+  --green:#059669;--green-bg:#ECFDF5;--red:#DC2626;--red-bg:#FEF2F2;
+  --blue:#2563EB;--blue-bg:#EFF6FF;--yellow:#D97706;--yellow-bg:#FFFBEB;
+  --teal:#0D9488;--teal-bg:#F0FDFA;--purple:#7C3AED;
+  --radius-xs:4px;--radius-sm:8px;--radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:#fff;padding:0;line-height:1.45;}
+.page{width:8.5in;min-height:11in;margin:0 auto;background:#fff;display:flex;flex-direction:column;position:relative;}
+.form-header{background:var(--surface);padding:20px 32px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid var(--imis-navy);}
+.fh-left{display:flex;align-items:center;gap:14px;}
+.fh-logo-img{width:64px;height:64px;border-radius:6px;object-fit:contain;background:#fff;}
+.fh-company{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.3rem;color:var(--imis-navy);line-height:1.1;}
+.fh-company-addr{font-size:.7rem;color:var(--muted);margin-top:2px;line-height:1.4;}
+.fh-right{text-align:right;}
+.fh-doc-type{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--imis-navy);line-height:1;}
+.fh-id{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:1rem;color:var(--ink);margin-top:4px;}
+.fh-status{display:inline-block;margin-top:4px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 10px;border-radius:20px;}
+.st-draft{background:rgba(0,0,0,.06);color:var(--muted);}
+.st-pending{background:var(--yellow-bg);color:var(--yellow);}
+.st-approved{background:var(--green-bg);color:var(--green);}
+.st-submitted{background:var(--teal-bg);color:var(--teal);}
+.st-rejected{background:var(--red-bg);color:var(--red);}
+.st-paid{background:#F5F3FF;color:var(--purple);}
+.fh-date{font-size:.68rem;color:var(--faint);margin-top:4px;line-height:1.4;}
+.form-body{flex:1;padding:16px 32px 12px;display:flex;flex-direction:column;gap:12px;}
+.section{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+.sec-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);background:var(--surface2);padding:7px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.sec-title .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.sec-content{padding:10px 14px;}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;}
+.field{display:flex;flex-direction:column;gap:2px;}
+.field label{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);}
+.field .val{font-size:.8rem;font-weight:500;color:var(--ink);padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);min-height:28px;display:flex;align-items:center;}
+.field .val.mono{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+.line-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+.line-table th{font-size:.55rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);text-align:left;padding:6px 6px;background:var(--surface2);border-bottom:1.5px solid var(--border);white-space:nowrap;}
+.line-table th.r,.line-table td.r{text-align:right;}
+.line-table td{padding:6px 6px;border-bottom:1px solid var(--border);color:var(--ink2);}
+.line-table tr:last-child td{border-bottom:none;}
+.line-table .mono{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);}
+.line-table .item-num{font-family:'IBM Plex Mono',monospace;font-size:.62rem;font-weight:600;color:var(--faint);width:20px;}
+.line-table .this-period{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--teal);}
+.line-table .pct-col{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--green);font-size:.68rem;}
+.totals-box{margin-left:auto;width:270px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+.tot-row{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;font-size:.73rem;color:var(--muted);}
+.tot-row .tot-val{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink2);}
+.tot-row.grand{background:var(--imis-navy);padding:8px 12px;}
+.tot-row.grand span{color:rgba(255,255,255,.55);font-weight:600;}
+.tot-row.grand .tot-val{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1.15rem;color:#fff;letter-spacing:-.3px;}
+.sig-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:auto;padding-top:4px;}
+.sig-block{display:flex;flex-direction:column;gap:2px;}
+.sig-line{height:26px;border-bottom:1.5px solid var(--border2);margin-bottom:2px;}
+.sig-label{font-size:.56rem;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.8px;}
+.sig-meta{font-size:.6rem;color:var(--faint);font-style:italic;}
+.form-footer{background:var(--surface2);border-top:1px solid var(--border);padding:8px 32px;display:flex;justify-content:space-between;align-items:center;}
+.ff-left{display:flex;align-items:center;gap:8px;}
+.ff-powered{display:flex;align-items:center;gap:5px;font-size:.6rem;color:var(--faint);}
+.ff-powered-label{font-size:.52rem;text-transform:uppercase;letter-spacing:1px;color:var(--faint);}
+.ff-ot-brand{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.72rem;color:var(--muted);}
+.ff-ot-brand em{color:var(--amber);font-style:normal;}
+.ff-meta{font-size:.58rem;color:var(--faint);margin-left:12px;}
+.ff-right{display:flex;gap:6px;}
+.ff-tag{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);color:var(--muted);}
+.approval-chain{display:flex;gap:8px;}
+.ac-step{flex:1;padding:6px 8px;border-radius:var(--radius-xs);border:1px solid var(--border);text-align:center;}
+.ac-step.done{background:var(--green-bg);border-color:rgba(5,150,105,.2);}
+.ac-step.current{background:var(--amber-pale);border-color:rgba(245,166,35,.3);}
+.ac-num{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:1rem;color:var(--faint);line-height:1;}
+.ac-step.done .ac-num{color:var(--green);}
+.ac-step.current .ac-num{color:var(--amber-d);}
+.ac-label{font-size:.56rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:1px;}
+.ac-who{font-size:.58rem;color:var(--faint);margin-top:1px;}
+.ac-arrow{display:flex;align-items:center;color:var(--border2);font-size:.75rem;flex-shrink:0;}
+.notes-box{padding:8px 12px;background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--radius-xs);font-size:.7rem;color:var(--muted);line-height:1.5;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media print{body{padding:0;}.page{box-shadow:none;border-radius:0;}}
+</style>`;
+
+function buildFooter(docTag: string, secondTag: string, dateStr: string): string {
+  return `<div class="form-footer">
+    <div class="ff-left">
+      <div class="ff-powered"><span class="ff-powered-label">Powered by</span><span class="ff-ot-brand">Ontime<em>.build</em></span></div>
+      <span class="ff-meta">Generated ${dateStr} · Page 1 of 1</span>
+    </div>
+    <div class="ff-right"><div class="ff-tag">${docTag}</div>${secondTag ? `<div class="ff-tag">${secondTag}</div>` : ''}</div>
+  </div>`;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -48,15 +138,9 @@ const handler = async (req: Request): Promise<Response> => {
     const invoiceId = url.searchParams.get("invoice_id");
     const authHeader = req.headers.get("Authorization");
 
-    if (!invoiceId) {
-      return new Response("Missing invoice_id", { status: 400, headers: corsHeaders });
-    }
-
+    if (!invoiceId) return new Response("Missing invoice_id", { status: 400, headers: corsHeaders });
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -65,393 +149,141 @@ const handler = async (req: Request): Promise<Response> => {
     });
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
-    // Fetch invoice with related data
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select(`
         *,
         project:projects(name, city, state),
         contract:project_contracts(
-          from_role,
-          to_role,
-          contract_sum,
-          retainage_percent,
-      from_org:organizations!project_contracts_from_org_id_fkey(name, address, phone, logo_url),
-      to_org:organizations!project_contracts_to_org_id_fkey(name, address, phone, logo_url)
+          from_role, to_role, contract_sum, retainage_percent,
+          from_org:organizations!project_contracts_from_org_id_fkey(name, address, phone, logo_url),
+          to_org:organizations!project_contracts_to_org_id_fkey(name, address, phone, logo_url)
         )
       `)
       .eq("id", invoiceId)
       .single();
 
     if (invoiceError || !invoice) {
-      console.error("Invoice fetch error:", invoiceError);
-      return new Response(
-        JSON.stringify({ error: "Invoice not found" }),
-        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return new Response(JSON.stringify({ error: "Invoice not found" }), { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
-    const logoUrl = invoice.contract?.from_org?.logo_url || null;
-
-    // Fetch line items
-    const { data: lineItems, error: lineItemsError } = await supabase
+    const { data: lineItems } = await supabase
       .from("invoice_line_items")
       .select("*")
       .eq("invoice_id", invoiceId)
       .order("sort_order");
 
-    if (lineItemsError) {
-      console.error("Line items fetch error:", lineItemsError);
-    }
-
     const items = lineItems || [];
-
-    // Calculate totals
-    const scheduledTotal = items.reduce((sum, item) => sum + (item.scheduled_value || 0), 0);
-    const previousTotal = items.reduce((sum, item) => sum + (item.previous_billed || 0), 0);
-    const currentTotal = items.reduce((sum, item) => sum + (item.current_billed || 0), 0);
-    const totalBilledSum = items.reduce((sum, item) => sum + (item.total_billed || 0), 0);
-    const retainageTotal = items.reduce((sum, item) => sum + (item.retainage_amount || 0), 0);
-
-    // Generate line items HTML
-    const itemsHtml = items.map((item, index) => {
-      const percentComplete = item.scheduled_value > 0
-        ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1)
-        : '0.0';
-      const remaining = item.scheduled_value - item.total_billed;
-      const isOverbilled = remaining < 0;
-
-      return `
-        <tr${isOverbilled ? ' class="overbilled"' : ''}>
-          <td>${index + 1}</td>
-          <td>${item.description}</td>
-          <td class="amount">${formatCurrency(item.scheduled_value)}</td>
-          <td class="amount">${formatCurrency(item.previous_billed)}</td>
-          <td class="amount current">${formatCurrency(item.current_billed)}</td>
-          <td class="amount">${formatCurrency(item.total_billed)}</td>
-          <td class="amount${isOverbilled ? ' overbilled-text' : ''}">${formatCurrency(remaining)}</td>
-          <td class="amount${parseFloat(percentComplete) > 100 ? ' overbilled-text' : ''}">${percentComplete}%</td>
-        </tr>
-      `;
-    }).join("");
-
-    // Status badge color
-    const statusColors: Record<string, string> = {
-      DRAFT: '#6b7280',
-      SUBMITTED: '#3b82f6',
-      APPROVED: '#22c55e',
-      REJECTED: '#ef4444',
-      PAID: '#a855f7',
-    };
-    const statusColor = statusColors[invoice.status] || '#6b7280';
-
-    // Build project and party info
-    const projectName = invoice.project?.name || 'Unknown Project';
-    const projectLocation = [invoice.project?.city, invoice.project?.state].filter(Boolean).join(', ');
     const fromOrg = invoice.contract?.from_org;
     const toOrg = invoice.contract?.to_org;
-    const fromParty = fromOrg?.name || invoice.contract?.from_role || 'N/A';
-    const toParty = toOrg?.name || invoice.contract?.to_role || 'N/A';
-    const fromAddressHtml = formatOrgAddress(fromOrg);
-    const toAddressHtml = formatOrgAddress(toOrg);
+    const logoUrl = fromOrg?.logo_url || null;
+    const projectName = invoice.project?.name || 'Unknown Project';
+    const projectLocation = [invoice.project?.city, invoice.project?.state].filter(Boolean).join(', ');
+    const now = fmtDate(new Date().toISOString());
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Invoice ${invoice.invoice_number}</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { 
-      font-family: 'Segoe UI', Arial, sans-serif; 
-      margin: 0; 
-      padding: 40px;
-      color: #1f2937;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: flex-start;
-      margin-bottom: 30px; 
-      padding-bottom: 20px;
-      border-bottom: 2px solid #e5e7eb;
-    }
-    .header-left h1 { 
-      margin: 0 0 5px 0; 
-      font-size: 28px;
-      color: #111827;
-    }
-    .header-left .invoice-number { 
-      font-size: 18px; 
-      color: #6b7280;
-      font-weight: 500;
-    }
-    .status-badge {
-      display: inline-block;
-      padding: 6px 16px;
-      border-radius: 20px;
-      color: white;
-      font-weight: 600;
-      font-size: 12px;
-      text-transform: uppercase;
-      background-color: ${statusColor};
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-    .info-box {
-      background: #f9fafb;
-      padding: 16px;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
-    .info-box h3 {
-      margin: 0 0 10px 0;
-      font-size: 11px;
-      text-transform: uppercase;
-      color: #6b7280;
-      letter-spacing: 0.5px;
-    }
-    .info-box p {
-      margin: 4px 0;
-      font-size: 13px;
-    }
-    .info-box .value {
-      font-weight: 600;
-      color: #111827;
-    }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin-bottom: 20px;
-      font-size: 11px;
-    }
-    th { 
-      background: #1f2937; 
-      color: white; 
-      padding: 10px 8px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    th.amount { text-align: right; }
-    td { 
-      border-bottom: 1px solid #e5e7eb; 
-      padding: 10px 8px;
-    }
-    td.amount { text-align: right; font-family: 'Courier New', monospace; }
-    td.current { font-weight: 600; color: #059669; }
-    tr:nth-child(even) { background: #f9fafb; }
-    tr.overbilled { background: #fef2f2; }
-    .overbilled-text { color: #dc2626; font-weight: 600; }
-    
-    .totals-section {
-      margin-top: 30px;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .totals-box {
-      width: 350px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    .totals-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 16px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .totals-row:last-child { border-bottom: none; }
-    .totals-row.highlight {
-      background: #1f2937;
-      color: white;
-    }
-    .totals-row .label { font-weight: 500; }
-    .totals-row .value { 
-      font-family: 'Courier New', monospace; 
-      font-weight: 600;
-    }
-    .totals-row.retainage .value { color: #d97706; }
-    .totals-row.highlight .value { font-size: 16px; }
+    // Approval workflow steps
+    const steps = ['Submitted', 'GC Review', 'Approved', 'Paid'];
+    const statusIdx: Record<string, number> = { DRAFT: -1, SUBMITTED: 0, APPROVED: 2, REJECTED: -1, PAID: 3 };
+    const currentIdx = statusIdx[invoice.status] ?? -1;
 
-    .notes-section {
-      margin-top: 30px;
-      padding: 16px;
-      background: #fffbeb;
-      border: 1px solid #fcd34d;
-      border-radius: 8px;
-    }
-    .notes-section h3 {
-      margin: 0 0 8px 0;
-      font-size: 12px;
-      color: #92400e;
-    }
-    .notes-section p {
-      margin: 0;
-      color: #78350f;
-    }
+    const approvalHtml = steps.map((step, i) => {
+      const cls = i < currentIdx ? 'done' : i === currentIdx ? 'current' : '';
+      return `${i > 0 ? '<div class="ac-arrow">→</div>' : ''}<div class="ac-step ${cls}"><div class="ac-num">${i + 1}</div><div class="ac-label">${step}</div></div>`;
+    }).join('');
 
-    .rejection-section {
-      margin-top: 30px;
-      padding: 16px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-    }
-    .rejection-section h3 {
-      margin: 0 0 8px 0;
-      font-size: 12px;
-      color: #991b1b;
-    }
-    .rejection-section p {
-      margin: 0;
-      color: #7f1d1d;
-    }
-    
-    .footer { 
-      margin-top: 40px; 
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      font-size: 10px; 
-      color: #9ca3af;
-      text-align: center;
-    }
-    
-    @media print { 
-      body { margin: 20px; padding: 20px; }
-      .header { page-break-after: avoid; }
-      table { page-break-inside: auto; }
-      tr { page-break-inside: avoid; }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="header-left">
-      ${logoUrl ? `<img src="${logoUrl}" style="max-height:60px;max-width:200px;margin-bottom:12px;" alt="Company Logo" />` : ''}
-      <h1>Invoice</h1>
-      <div class="invoice-number">${invoice.invoice_number}</div>
+    const itemRows = items.map((item: any, i: number) => {
+      const pct = item.scheduled_value > 0 ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1) : '0.0';
+      const remaining = item.scheduled_value - item.total_billed;
+      return `<tr>
+        <td class="item-num">${i + 1}</td>
+        <td>${item.description}</td>
+        <td class="r mono">${fmt(item.scheduled_value)}</td>
+        <td class="r mono">${fmt(item.previous_billed)}</td>
+        <td class="r this-period">${fmt(item.current_billed)}</td>
+        <td class="r mono">${fmt(item.total_billed)}</td>
+        <td class="r mono">${fmt(remaining)}</td>
+        <td class="r pct-col">${pct}%</td>
+      </tr>`;
+    }).join('');
+
+    const scheduledTotal = items.reduce((s: number, i: any) => s + (i.scheduled_value || 0), 0);
+    const previousTotal = items.reduce((s: number, i: any) => s + (i.previous_billed || 0), 0);
+
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<title>Invoice ${invoice.invoice_number}</title>
+${V3_CSS}
+</head><body>
+<div class="page">
+  <div class="form-header">
+    <div class="fh-left">
+      ${logoUrl ? `<img class="fh-logo-img" src="${logoUrl}" alt="Logo"/>` : ''}
+      <div>
+        <div class="fh-company">${fromOrg?.name || ''}</div>
+        <div class="fh-company-addr">${orgAddr(fromOrg)}</div>
+      </div>
     </div>
-    <div class="status-badge">${invoice.status}</div>
-  </div>
-  
-  <div class="info-grid">
-    <div class="info-box">
-      <h3>Project Details</h3>
-      <p><span class="value">${projectName}</span></p>
-      ${projectLocation ? `<p>${projectLocation}</p>` : ''}
-    </div>
-    <div class="info-box">
-      <h3>Billing Period</h3>
-      <p><span class="value">${formatDate(invoice.billing_period_start)} – ${formatDate(invoice.billing_period_end)}</span></p>
-      <p>Created: ${formatDate(invoice.created_at)}</p>
-    </div>
-    <div class="info-box">
-      <h3>From</h3>
-      <p><span class="value">${fromParty}</span></p>
-      ${fromAddressHtml}
-    </div>
-    <div class="info-box">
-      <h3>To</h3>
-      <p><span class="value">${toParty}</span></p>
-      ${toAddressHtml}
+    <div class="fh-right">
+      <div class="fh-doc-type">Invoice</div>
+      <div class="fh-id">${invoice.invoice_number}</div>
+      <div class="fh-status ${statusClass(invoice.status)}">${invoice.status}</div>
+      <div class="fh-date">Created: ${fmtDate(invoice.created_at)}</div>
     </div>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 40px;">#</th>
-        <th>Description</th>
-        <th class="amount">Scheduled Value</th>
-        <th class="amount">Previous Billed</th>
-        <th class="amount">This Period</th>
-        <th class="amount">Total Billed</th>
-        <th class="amount">Remaining</th>
-        <th class="amount">% Complete</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${itemsHtml}
-    </tbody>
-  </table>
+  <div class="form-body">
+    <div class="two-col">
+      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--blue)"></div>Project Details</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${projectName}</div>${projectLocation ? `<div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${projectLocation}</div>` : ''}</div></div>
+      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Billing Period</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${fmtDateLong(invoice.billing_period_start)} – ${fmtDateLong(invoice.billing_period_end)}</div><div style="font-size:.72rem;color:var(--muted);margin-top:2px;">Created: ${fmtDate(invoice.created_at)}</div></div></div>
+    </div>
+    <div class="two-col">
+      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--amber)"></div>From</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${fromOrg?.name || 'N/A'}</div><div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${orgAddr(fromOrg)}</div></div></div>
+      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--green)"></div>To</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${toOrg?.name || 'N/A'}</div><div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${orgAddr(toOrg)}${toOrg?.phone ? '<br/>' + toOrg.phone : ''}</div></div></div>
+    </div>
 
-  <div class="totals-section">
+    <div class="section" style="flex:1;">
+      <div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Schedule of Values</div>
+      <div class="sec-content" style="padding:0;">
+        <table class="line-table">
+          <thead><tr><th style="width:22px;">#</th><th>Description</th><th class="r">Scheduled Value</th><th class="r">Previous Billed</th><th class="r">This Period</th><th class="r">Total Billed</th><th class="r">Remaining</th><th class="r">% Complete</th></tr></thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="totals-box">
-      <div class="totals-row">
-        <span class="label">Scheduled Value Total</span>
-        <span class="value">${formatCurrency(scheduledTotal)}</span>
-      </div>
-      <div class="totals-row">
-        <span class="label">Previously Billed</span>
-        <span class="value">${formatCurrency(previousTotal)}</span>
-      </div>
-      <div class="totals-row">
-        <span class="label">Current Period Subtotal</span>
-        <span class="value">${formatCurrency(invoice.subtotal)}</span>
-      </div>
-      ${(invoice.contract?.retainage_percent ?? 0) > 0 ? `<div class="totals-row retainage">
-        <span class="label">Retainage Withheld</span>
-        <span class="value">-${formatCurrency(invoice.retainage_amount)}</span>
-      </div>` : ''}
-      <div class="totals-row highlight">
-        <span class="label">Total Due This Period</span>
-        <span class="value">${formatCurrency(invoice.total_amount)}</span>
-      </div>
+      <div class="tot-row"><span>Scheduled Value Total</span><span class="tot-val">${fmt(scheduledTotal)}</span></div>
+      <div class="tot-row"><span>Previously Billed</span><span class="tot-val">${fmt(previousTotal)}</span></div>
+      <div class="tot-row"><span>Current Period Subtotal</span><span class="tot-val">${fmt(invoice.subtotal)}</span></div>
+      ${(invoice.contract?.retainage_percent ?? 0) > 0 ? `<div class="tot-row"><span>Retainage Withheld</span><span class="tot-val" style="color:var(--yellow);">-${fmt(invoice.retainage_amount)}</span></div>` : ''}
+      <div class="tot-row grand"><span>Total Due This Period</span><span class="tot-val">${fmt(invoice.total_amount)}</span></div>
+    </div>
+
+    ${invoice.notes ? `<div class="notes-box"><strong style="color:var(--ink2);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Notes:</strong><br/>${invoice.notes}</div>` : ''}
+
+    ${invoice.status === 'REJECTED' && invoice.rejection_reason ? `<div class="notes-box" style="border-color:var(--red);background:var(--red-bg);"><strong style="color:var(--red);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Rejection Reason:</strong><br/><span style="color:var(--red);">${invoice.rejection_reason}</span></div>` : ''}
+
+    <div class="section">
+      <div class="sec-title"><div class="dot" style="background:var(--green)"></div>Approval Workflow</div>
+      <div class="sec-content"><div class="approval-chain">${approvalHtml}</div></div>
+    </div>
+
+    <div class="sig-row">
+      <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Trade Contractor Signature</div><div class="sig-meta">${fromOrg?.name || ''}</div></div>
+      <div class="sig-block"><div class="sig-line"></div><div class="sig-label">GC Authorization</div><div class="sig-meta">${toOrg?.name || ''}</div></div>
     </div>
   </div>
 
-  ${invoice.notes ? `
-  <div class="notes-section">
-    <h3>Notes</h3>
-    <p>${invoice.notes}</p>
-  </div>
-  ` : ''}
+  ${buildFooter(invoice.invoice_number, projectName, now)}
+</div>
+</body></html>`;
 
-  ${invoice.status === 'REJECTED' && invoice.rejection_reason ? `
-  <div class="rejection-section">
-    <h3>Rejection Reason</h3>
-    <p>${invoice.rejection_reason}</p>
-  </div>
-  ` : ''}
-  
-  <div class="footer">
-    <p>Generated by Ontime.Build on ${new Date().toLocaleString()}</p>
-    <p>To save as PDF: Press Ctrl+P (or Cmd+P) and select "Save as PDF"</p>
-  </div>
-</body>
-</html>
-    `;
-
-    return new Response(htmlContent, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/html",
-      },
-    });
+    return new Response(html, { status: 200, headers: { ...corsHeaders, "Content-Type": "text/html" } });
   } catch (error: any) {
     console.error("Error generating invoice download:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
   }
 };
 
