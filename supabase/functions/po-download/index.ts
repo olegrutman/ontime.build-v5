@@ -12,7 +12,7 @@ const corsHeaders = {
 
 const PO_SELECT = `
   *,
-  organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
+  organization:organizations!purchase_orders_organization_id_fkey(name, org_code, logo_url),
   supplier:suppliers(name, supplier_code),
   project:projects(name),
   work_item:work_items(title)
@@ -82,6 +82,7 @@ function buildHtml(po: any, items: any[]): string {
 </head>
 <body>
   <div class="header">
+    ${po.organization?.logo_url ? `<img src="${po.organization.logo_url}" style="max-height:60px;max-width:200px;margin-bottom:12px;" alt="Company Logo" />` : ''}
     <h1>Purchase Order</h1>
     <h2>${po.po_number}</h2>
   </div>

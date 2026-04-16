@@ -81,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select(`
         *,
         project:projects(name, city, state),
-        organization:organizations(name, org_code)
+        organization:organizations(name, org_code, logo_url)
       `)
       .eq("id", workItemId)
       .single();
@@ -279,6 +279,7 @@ const handler = async (req: Request): Promise<Response> => {
 <body>
   <div class="header">
     <div class="header-left">
+      ${workItem.organization?.logo_url ? `<img src="${workItem.organization.logo_url}" style="max-height:60px;max-width:200px;margin-bottom:12px;" alt="Company Logo" />` : ''}
       <h1>${workItem.title}</h1>
       <div class="subtitle">
         <span class="type-badge">${typeLabel}</span>

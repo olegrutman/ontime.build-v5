@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (pErr || !project) return new Response("Project not found", { status: 404, headers: corsHeaders });
 
     // Fetch org name
-    const { data: org } = await supabase.from("organizations").select("name, type").eq("id", project.organization_id).single();
+    const { data: org } = await supabase.from("organizations").select("name, type, logo_url").eq("id", project.organization_id).single();
 
     // Fetch contracts
     const { data: contracts } = await supabase
@@ -153,6 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
   @media print { body { margin: 20px; padding: 20px; } }
 </style></head>
 <body>
+  ${org?.logo_url ? `<img src="${org.logo_url}" style="max-height:60px;max-width:200px;margin-bottom:12px;" alt="Company Logo" />` : ''}
   <h1>${project.name}</h1>
   <p class="subtitle">${org?.name || ''} · ${org?.type || ''} · ${location}</p>
   <p class="subtitle">Status: <span class="badge badge-${project.status}">${project.status}</span> · Generated ${fmtDate(new Date().toISOString())}</p>
