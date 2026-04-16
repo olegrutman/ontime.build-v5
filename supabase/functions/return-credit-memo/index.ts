@@ -40,8 +40,8 @@ Deno.serve(async (req) => {
       .select(`
         *,
         return_items(*),
-        supplier_org:supplier_org_id(name),
-        created_by_org:created_by_org_id(name),
+        supplier_org:supplier_org_id(name, logo_url),
+        created_by_org:created_by_org_id(name, logo_url),
         pricing_owner:pricing_owner_org_id(name)
       `)
       .eq("id", returnId)
@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
   </style>
 </head>
 <body>
+  ${(ret as any).created_by_org?.logo_url ? `<img src="${(ret as any).created_by_org.logo_url}" style="max-height:60px;max-width:200px;margin-bottom:12px;" alt="Company Logo" />` : ''}
   <h1>Credit Memo</h1>
   <p class="subtitle">${ret.return_number} • ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
 
