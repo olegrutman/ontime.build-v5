@@ -1,58 +1,36 @@
 
 
-# Update Document Downloads: Full Address, Remove Approval Workflow, Remove URL
+# Allow Platform Owner to Edit Organization Profile
 
-## What's Changing
+## Summary
+Add an "Edit Organization" capability to the platform org detail page (`PlatformOrgDetail.tsx`), allowing platform owners to update org profile fields (name, phone, address, trade, license number, insurance expiration, logo URL) via a new `EDIT_ORGANIZATION` action in the `platform-support-action` edge function.
 
-1. **Full project address** on all documents — show street, city, state, zip instead of just city/state
-2. **Remove Approval Workflow section** from invoice download (lines 268-271)
-3. **Remove the URL that prints at the bottom** — this is the browser's automatic page URL when printing. We hide it with a `@media print` CSS rule that suppresses browser-generated headers/footers. The "Powered by Ontime.build" footer stays.
+## Changes
 
-## Technical Details
+### 1. Edge Function: `supabase/functions/platform-support-action/index.ts`
+- Add `EDIT_ORGANIZATION: "PLATFORM_OWNER"` to `ACTION_MIN_ROLE`
+- Add a new `case "EDIT_ORGANIZATION"` handler that:
+  - Accepts `organization_id` and `fields` (object)
+  - Allowlist: `name`, `phone`, `address`, `trade`, `trade_custom`, `license_number`, `insurance_expiration_date`, `logo_url`
+  - Snapshots before/after for audit log
+  - Updates via `adminClient.from("organizations").update(...).eq("id", organization_id)`
 
-### All 5 Edge Functions
+### 2. Frontend: `src/pages/platform/PlatformOrgDetail.tsx`
+- Add an "Edit Organization" button (visible to `PLATFORM_OWNER`)
+- Add an edit dialog with fields:
+  - **Name** (text input)
+  - **Phone** (text input)
+  - **Address** (street, city, state, zip — 4 inputs)
+  - **Trade** (text input)
+  - **License Number** (text input)
+  - **Insurance Expiration** (date input)
+- On save, call `platform-support-action` with `action_type: "EDIT_ORGANIZATION"` (requires a reason for the audit log)
+- On success, reload the org data to reflect changes
 
-**Add `projectAddr` helper** to parse full address:
-```ts
-function projectAddr(project: any): string {
-  const a = project?.address;
-  if (a && typeof a === 'object') {
-    return [a.street, a.city, a.state, a.zip].filter(Boolean).join(', ');
-  }
-  return [project?.city, project?.state].filter(Boolean).join(', ');
-}
-```
-
-**Update project select queries** to include `address` field (where not already included).
-
-**Add print CSS** to hide browser URL:
-```css
-@media print {
-  @page { margin: 0.5in; }
-  body { padding: 0; }
-  .page { box-shadow: none; border-radius: 0; }
-}
-```
-The `@page { margin: 0.5in }` combined with the existing page setup prevents browsers from inserting their default header/footer (which includes the URL).
-
-### Invoice-specific
-- Remove the Approval Workflow section (lines 268-271) and related variables (`steps`, `statusIdx`, `currentIdx`, `approvalHtml`)
-- Update project select: `projects(name, city, state)` → `projects(name, address, city, state)`
-- Use `projectAddr(invoice.project)` for location display
-
-### PO-specific
-- Update: `projects(name, city, state)` → `projects(name, address, city, state)`
-- Use `projectAddr()` for project location
-
-### Work Order, Credit Memo, Project Summary
-- Same pattern: add `address` to project select, use `projectAddr()` helper
+### 3. Summary Card Enhancement
+- Display additional org fields in the summary card: phone, address, trade, license number, insurance expiration — so the platform owner can see current values before editing
 
 ## Files Modified
-1. `supabase/functions/invoice-download/index.ts`
-2. `supabase/functions/po-download/index.ts`
-3. `supabase/functions/work-order-download/index.ts`
-4. `supabase/functions/return-credit-memo/index.ts`
-5. `supabase/functions/project-summary-download/index.ts`
-
-No database changes needed.
+1. `supabase/functions/platform-support-action/index.ts` — new action handler
+2. `src/pages/platform/PlatformOrgDetail.tsx` — edit button, dialog, and enhanced summary card
 
