@@ -336,8 +336,7 @@ export default function Dashboard() {
       newButtonLabel="New Project"
     >
       <div className="flex gap-0">
-        <DashboardSidebar />
-        <div className="flex-1 min-w-0 space-y-4 px-4 lg:px-5">
+        <div className="flex-1 min-w-0 space-y-4 px-0 sm:px-1 lg:px-5">
 
         {/* Greeting */}
         <DashboardWelcome
