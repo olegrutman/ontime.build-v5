@@ -424,7 +424,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     }
 
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {currentInvoices.map((invoice) => {
           const { canSubmit, canApprove } = getInvoicePermissions(invoice);
           return (
