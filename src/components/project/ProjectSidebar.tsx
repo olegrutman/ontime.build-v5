@@ -118,8 +118,9 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, userOrgRoles } = useAuth();
   const attentionCounts = useSidebarAttention(id);
+  const currentOrg = userOrgRoles[0]?.organization;
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)

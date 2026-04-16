@@ -84,6 +84,13 @@ export function DashboardSidebar() {
 
       {/* Company section */}
       <div className="px-4 py-3 border-t border-white/10">
+        {currentOrg?.logo_url && (
+          <img
+            src={currentOrg.logo_url}
+            alt={orgName}
+            className="max-h-9 max-w-[140px] object-contain rounded mb-2"
+          />
+        )}
         <p className="text-[0.8rem] font-semibold text-white truncate leading-tight">{orgName}</p>
         {orgType && (
           <span className="inline-block mt-1 text-[0.65rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-slate-300">
