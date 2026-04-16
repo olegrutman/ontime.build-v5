@@ -2314,6 +2314,7 @@ export type Database = {
           id: string
           insurance_expiration_date: string | null
           license_number: string | null
+          logo_url: string | null
           name: string
           org_code: string
           phone: string | null
@@ -2333,6 +2334,7 @@ export type Database = {
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
+          logo_url?: string | null
           name: string
           org_code: string
           phone?: string | null
@@ -2352,6 +2354,7 @@ export type Database = {
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
+          logo_url?: string | null
           name?: string
           org_code?: string
           phone?: string | null
