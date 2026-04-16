@@ -44,6 +44,96 @@ const CONTACT_METHODS = [
 ];
 
 
+function CompanyLogoCard({ organizationId, logoUrl, onUpdated }: { organizationId?: string; logoUrl?: string | null; onUpdated: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState<string | null>(logoUrl || null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setCurrentUrl(logoUrl || null); }, [logoUrl]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !organizationId) return;
+    if (!['image/png', 'image/jpeg', 'image/svg+xml'].includes(file.type)) {
+      toast.error('Only PNG, JPEG, or SVG files are allowed'); return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File must be under 2 MB'); return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `${organizationId}/logo.${ext}`;
+      const { error: upErr } = await supabase.storage.from('org-logos').upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from('org-logos').getPublicUrl(path);
+      const timestampedUrl = `${publicUrl}?t=${Date.now()}`;
+      await supabase.from('organizations').update({ logo_url: timestampedUrl } as any).eq('id', organizationId);
+      setCurrentUrl(timestampedUrl);
+      toast.success('Logo uploaded');
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!organizationId) return;
+    setDeleting(true);
+    try {
+      // list files in the org folder and remove them
+      const { data: files } = await supabase.storage.from('org-logos').list(organizationId);
+      if (files?.length) {
+        await supabase.storage.from('org-logos').remove(files.map(f => `${organizationId}/${f.name}`));
+      }
+      await supabase.from('organizations').update({ logo_url: null } as any).eq('id', organizationId);
+      setCurrentUrl(null);
+      toast.success('Logo removed');
+    } catch (err: any) {
+      toast.error(err.message || 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+          <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Company Logo</p>
+        </div>
+        <p className="text-xs text-muted-foreground ml-6">Appears on invoices, purchase orders, and other downloadable documents</p>
+      </div>
+      <div className="flex items-center gap-4">
+        {currentUrl ? (
+          <img src={currentUrl} alt="Company logo" className="h-14 max-w-[200px] object-contain rounded border border-border bg-muted p-1" />
+        ) : (
+          <div className="h-14 w-[120px] rounded border border-dashed border-border flex items-center justify-center text-muted-foreground text-xs">
+            No logo
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+            {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+            {currentUrl ? 'Replace' : 'Upload'}
+          </Button>
+          {currentUrl && (
+            <Button variant="ghost" size="sm" disabled={deleting} onClick={handleDelete}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/svg+xml" className="hidden" onChange={handleUpload} />
+      </div>
+      <p className="text-xs text-muted-foreground mt-2">PNG, JPEG, or SVG · Max 2 MB</p>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { userOrgRoles, refreshUserData } = useAuth();
   const {

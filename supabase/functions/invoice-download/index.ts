@@ -82,8 +82,8 @@ const handler = async (req: Request): Promise<Response> => {
           to_role,
           contract_sum,
           retainage_percent,
-      from_org:organizations!project_contracts_from_org_id_fkey(name, address, phone),
-      to_org:organizations!project_contracts_to_org_id_fkey(name, address, phone)
+      from_org:organizations!project_contracts_from_org_id_fkey(name, address, phone, logo_url),
+      to_org:organizations!project_contracts_to_org_id_fkey(name, address, phone, logo_url)
         )
       `)
       .eq("id", invoiceId)
@@ -96,6 +96,8 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    const logoUrl = invoice.contract?.from_org?.logo_url || null;
 
     // Fetch line items
     const { data: lineItems, error: lineItemsError } = await supabase
@@ -342,6 +344,7 @@ const handler = async (req: Request): Promise<Response> => {
 <body>
   <div class="header">
     <div class="header-left">
+      ${logoUrl ? `<img src="${logoUrl}" style="max-height:60px;max-width:200px;margin-bottom:12px;" alt="Company Logo" />` : ''}
       <h1>Invoice</h1>
       <div class="invoice-number">${invoice.invoice_number}</div>
     </div>
