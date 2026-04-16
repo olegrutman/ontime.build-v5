@@ -331,7 +331,12 @@ export function useProjectSOV(projectId: string | undefined) {
     }
     
     if (itemsResult.data) {
-      setSOVItems(itemsResult.data as ProjectSOVItem[]);
+      // Normalize: use value_amount as fallback when scheduled_value is 0/null
+      const normalized = (itemsResult.data as any[]).map(item => ({
+        ...item,
+        scheduled_value: (item.scheduled_value || 0) > 0 ? item.scheduled_value : (item.value_amount || 0),
+      })) as ProjectSOVItem[];
+      setSOVItems(normalized);
     } else {
       setSOVItems([]);
     }
