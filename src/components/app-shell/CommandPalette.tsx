@@ -181,4 +181,5 @@ export const CommandPalette = React.forwardRef<HTMLDivElement, CommandPalettePro
       </div>
     </div>
   );
-}
+});
+CommandPalette.displayName = 'CommandPalette';
