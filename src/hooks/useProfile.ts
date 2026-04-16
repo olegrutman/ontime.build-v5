@@ -33,6 +33,7 @@ export interface OrganizationData {
   trade_custom: string | null;
   license_number: string | null;
   insurance_expiration_date: string | null;
+  logo_url: string | null;
 }
 
 export interface OrgSettings {

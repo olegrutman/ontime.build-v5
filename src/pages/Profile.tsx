@@ -44,7 +44,7 @@ const CONTACT_METHODS = [
 ];
 
 
-function CompanyLogoCard({ organizationId, logoUrl, onUpdated }: { organizationId?: string; logoUrl?: string | null; onUpdated: () => void }) {
+function CompanyLogoCard({ organizationId, logoUrl, onUpdated }: { organizationId?: string; logoUrl?: string | null; onUpdated: () => Promise<void> | void }) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [currentUrl, setCurrentUrl] = useState<string | null>(logoUrl || null);
@@ -67,10 +67,23 @@ function CompanyLogoCard({ organizationId, logoUrl, onUpdated }: { organizationI
       const path = `${organizationId}/logo.${ext}`;
       const { error: upErr } = await supabase.storage.from('org-logos').upload(path, file, { upsert: true });
       if (upErr) throw upErr;
+
       const { data: { publicUrl } } = supabase.storage.from('org-logos').getPublicUrl(path);
       const timestampedUrl = `${publicUrl}?t=${Date.now()}`;
-      await supabase.from('organizations').update({ logo_url: timestampedUrl } as any).eq('id', organizationId);
-      setCurrentUrl(timestampedUrl);
+      const { data: updatedOrg, error: updateErr } = await supabase
+        .from('organizations')
+        .update({ logo_url: timestampedUrl } as any)
+        .eq('id', organizationId)
+        .select('id, logo_url')
+        .maybeSingle();
+
+      if (updateErr) throw updateErr;
+      if (!updatedOrg) {
+        throw new Error('Logo uploaded, but your organization record could not be updated.');
+      }
+
+      setCurrentUrl(updatedOrg.logo_url || timestampedUrl);
+      await onUpdated();
       toast.success('Logo uploaded');
     } catch (err: any) {
       toast.error(err.message || 'Upload failed');
@@ -84,13 +97,25 @@ function CompanyLogoCard({ organizationId, logoUrl, onUpdated }: { organizationI
     if (!organizationId) return;
     setDeleting(true);
     try {
-      // list files in the org folder and remove them
       const { data: files } = await supabase.storage.from('org-logos').list(organizationId);
       if (files?.length) {
         await supabase.storage.from('org-logos').remove(files.map(f => `${organizationId}/${f.name}`));
       }
-      await supabase.from('organizations').update({ logo_url: null } as any).eq('id', organizationId);
+
+      const { data: updatedOrg, error: updateErr } = await supabase
+        .from('organizations')
+        .update({ logo_url: null } as any)
+        .eq('id', organizationId)
+        .select('id, logo_url')
+        .maybeSingle();
+
+      if (updateErr) throw updateErr;
+      if (!updatedOrg) {
+        throw new Error('Logo removed from storage, but your organization record could not be updated.');
+      }
+
       setCurrentUrl(null);
+      await onUpdated();
       toast.success('Logo removed');
     } catch (err: any) {
       toast.error(err.message || 'Delete failed');
@@ -576,7 +601,13 @@ export default function Profile() {
         </div>
 
         {/* Company Logo */}
-        <CompanyLogoCard organizationId={organization?.id} logoUrl={(organization as any)?.logo_url} onUpdated={async () => { /* profile refetch handled by useProfile */ }} />
+        <CompanyLogoCard
+          organizationId={organization?.id}
+          logoUrl={organization?.logo_url || userOrgRoles[0]?.organization?.logo_url || null}
+          onUpdated={async () => {
+            await refreshUserData();
+          }}
+        />
 
         {/* Section 3: Pricing Defaults (hidden for GC users) */}
         {organization?.type !== 'GC' && <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
