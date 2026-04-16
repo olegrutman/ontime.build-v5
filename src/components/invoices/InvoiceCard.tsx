@@ -136,18 +136,18 @@ export function InvoiceCard({
         {(showSubmitButton || showEditButton || showApproveButton) && (
           <div className="flex items-center gap-2 mt-4 pt-3 border-t">
             {showEditButton && (
-              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onEdit!(invoice); }}>
+              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onEdit!(invoice); }} className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none">
                 <Edit className="h-3.5 w-3.5 mr-1.5" />Edit
               </Button>
             )}
             {showSubmitButton && (
-              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
+              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700 min-h-[44px] sm:min-h-0 flex-1 sm:flex-none">
                 {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                 Submit
               </Button>
             )}
             {showApproveButton && (
-              <Button size="sm" onClick={handleApprove} disabled={approving} className="bg-green-600 hover:bg-green-700">
+              <Button size="sm" onClick={handleApprove} disabled={approving} className="bg-green-600 hover:bg-green-700 min-h-[44px] sm:min-h-0 flex-1 sm:flex-none">
                 {approving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                 Approve
               </Button>
