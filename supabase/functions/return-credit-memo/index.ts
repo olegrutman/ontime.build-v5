@@ -19,6 +19,14 @@ function orgAddr(org: any): string {
   return [a.street, [a.city, a.state].filter(Boolean).join(', '), a.zip].filter(Boolean).join(' · ');
 }
 
+function projectAddr(project: any): string {
+  const a = project?.address;
+  if (a && typeof a === 'object') {
+    return [a.street, a.city, a.state, a.zip].filter(Boolean).join(', ');
+  }
+  return [project?.city, project?.state].filter(Boolean).join(', ');
+}
+
 const V3_CSS = `
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -78,7 +86,7 @@ body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background
 .ff-right{display:flex;gap:6px;}
 .ff-tag{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);color:var(--muted);}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media print{body{padding:0;}.page{box-shadow:none;}}
+@media print{@page{margin:0.5in;}body{padding:0;}.page{box-shadow:none;}}
 </style>`;
 
 Deno.serve(async (req) => {
@@ -121,7 +129,7 @@ Deno.serve(async (req) => {
 
     if (retErr || !ret) return new Response("Return not found", { status: 404, headers: corsHeaders });
 
-    const { data: project } = await supabase.from("projects").select("name").eq("id", ret.project_id).single();
+    const { data: project } = await supabase.from("projects").select("name, address, city, state").eq("id", ret.project_id).single();
 
     const returnableItems = (ret.return_items || []).filter((i: any) => i.returnable_flag === "Yes");
     const createdByOrg = (ret as any).created_by_org;
@@ -165,7 +173,7 @@ ${V3_CSS}
 
   <div class="form-body">
     <div class="two-col">
-      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--blue)"></div>Project</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${project?.name || '—'}</div></div></div>
+      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--blue)"></div>Project</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${project?.name || '—'}</div>${projectAddr(project) ? `<div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${projectAddr(project)}</div>` : ''}</div></div>
       <div class="section"><div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Return Reason</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${ret.reason}${ret.wrong_type ? ' – ' + ret.wrong_type : ''}</div></div></div>
     </div>
     <div class="two-col">
