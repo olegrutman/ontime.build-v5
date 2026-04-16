@@ -411,7 +411,7 @@ Deno.serve(async (req) => {
       await db.from('project_scope_details').insert({ id: uuid(), project_id: projectId, ...def.scopeDetails })
 
       // 3. Participants — ALL ACCEPTED for visibility
-      const fcStatus = def.healthy ? 'ACCEPTED' : (projectIndex === 2 ? 'PENDING' : 'ACCEPTED')
+      const fcStatus = 'ACCEPTED' // all ACCEPTED for QA visibility
       await db.from('project_participants').insert([
         { id: uuid(), project_id: projectId, organization_id: GC_ORG_ID, role: 'GC', invited_by: GC_USER_ID, invite_status: 'ACCEPTED', accepted_at: sixtyDaysAgo, material_responsibility: 'gc' },
         { id: uuid(), project_id: projectId, organization_id: TC_ORG_ID, role: 'TC', invited_by: GC_USER_ID, invite_status: 'ACCEPTED', accepted_at: sixtyDaysAgo },
