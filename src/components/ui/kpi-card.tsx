@@ -23,11 +23,11 @@ export function KPICard({ label, value, subtitle, delay = 0, suffix, isText, tex
   const animated = useCountUp(value, 900, delay);
 
   return (
-    <div className={cn('rounded-2xl border border-border/60 bg-card p-4', className)}>
-      <p className="text-[0.75rem] text-muted-foreground leading-tight">{label}</p>
-      <div className="mt-2 flex items-baseline gap-1.5">
+    <div className={cn('rounded-2xl border border-border/60 bg-card p-3 sm:p-4', className)}>
+      <p className="text-[0.7rem] sm:text-[0.75rem] text-muted-foreground leading-tight">{label}</p>
+      <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1.5">
         <span
-          className="text-xl font-semibold tracking-tight text-foreground leading-none tabular-nums font-mono"
+          className="text-lg sm:text-xl font-semibold tracking-tight text-foreground leading-none tabular-nums font-mono"
         >
           {isText ? textValue : formatCurrency(animated)}
         </span>
