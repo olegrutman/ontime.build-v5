@@ -1,68 +1,32 @@
 
 
-# Add Organization Logo Upload for Document Downloads
+# Show Company Logo on Sidebar + Verify Document Downloads
 
-## Summary
-Add a `logo_url` column to the `organizations` table, create a storage bucket for logos, add a logo upload UI to the Profile/Settings page, and inject the logo into all downloadable document templates (invoices, POs, work orders, credit memos, project summaries).
+## Problem
+1. **Sidebar**: Neither `DashboardSidebar` nor `ProjectSidebar` displays the organization's logo — they only show text/icons
+2. **Documents**: The edge functions already have `logo_url` support in all 5 download functions (invoice, PO, WO, credit memo, project summary). The logo not showing on the invoice screenshot is because the organization doesn't have a `logo_url` set yet (user needs to upload one via Profile page)
 
-## Database Changes (1 migration)
+## Changes
 
-1. **Add `logo_url` column** to `organizations`:
-   ```sql
-   ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS logo_url TEXT;
-   ```
+### 1. `src/components/app-shell/DashboardSidebar.tsx` — Add org logo
+- Access `currentOrg?.logo_url` from `userOrgRoles[0]?.organization`
+- In the company section (lines 85-93), render the logo if available:
+  - Show `<img>` with the logo URL above the org name, max-height 36px, rounded
+  - Fall back to current text-only display if no logo
 
-2. **Create `org-logos` storage bucket** (public, so edge functions can render `<img>` tags pointing to it):
-   ```sql
-   INSERT INTO storage.buckets (id, name, public) VALUES ('org-logos', 'org-logos', true);
-   ```
+### 2. `src/components/project/ProjectSidebar.tsx` — Add org logo  
+- Fetch the current user's org logo via `useAuth()` (already available as `userOrgRoles`)
+- Add a company section at the bottom (before Settings) or top showing the org logo
+- Same pattern: `<img>` if logo exists, skip if not
 
-3. **RLS on `storage.objects`** for the bucket:
-   - Authenticated users can upload/update/delete files in their own org's folder (`org-logos/{org_id}/...`)
-   - Public read access (bucket is public)
+### 3. `src/hooks/useAuth.ts` — Verify `logo_url` is fetched
+- Check that the organization select query includes `logo_url` in the response. If the `userOrgRoles` query doesn't select `logo_url`, add it.
 
-## Frontend Changes
-
-### `src/pages/Profile.tsx` — Add Logo Upload Section
-- Add a "Company Logo" card in the Company section with:
-  - Preview of current logo (or placeholder)
-  - File input (accept `image/png, image/jpeg, image/svg+xml`)
-  - Upload button that stores to `org-logos/{org_id}/logo.{ext}`
-  - Updates `organizations.logo_url` with the public URL
-  - Delete button to remove logo
-
-### `src/hooks/useProfile.ts` — Expose `organization.logo_url`
-- Already fetches full organization row; no change needed once the column exists.
-
-## Edge Function Changes (5 functions)
-
-Each download function will fetch the issuing organization's `logo_url` and render it in the HTML header:
-
-1. **`invoice-download`** — Add logo above "Application for Payment" header, sourced from `from_org`
-2. **`po-download`** — Add logo above "Purchase Order" header, sourced from `po.organization`
-3. **`work-order-download`** — Add logo in header area, sourced from the creating org
-4. **`return-credit-memo`** — Add logo above "Credit Memo" header
-5. **`project-summary-download`** — Add logo above project summary header
-
-Logo rendering pattern (shared across all functions):
-```html
-${logoUrl ? `<img src="${logoUrl}" style="max-height:60px;max-width:200px;margin-bottom:12px;" alt="Company Logo" />` : ''}
-```
-
-## Technical Details
-
-- Storage path convention: `org-logos/{organization_id}/logo.png`
-- On upload, old file is replaced (upsert)
-- Public bucket means the URL works in downloaded HTML files without auth
-- Image validation: client-side check for type and max size (2MB)
-- No changes to `types.ts` needed (auto-generated)
+## No Edge Function Changes
+All 5 download functions already have logo support. The user just needs to upload a logo via Profile → Company Logo.
 
 ## Files Modified
-1. **1 migration** — `logo_url` column + storage bucket + RLS policies
-2. **`src/pages/Profile.tsx`** — Logo upload UI
-3. **`supabase/functions/invoice-download/index.ts`** — Logo in header
-4. **`supabase/functions/po-download/index.ts`** — Logo in header
-5. **`supabase/functions/work-order-download/index.ts`** — Logo in header
-6. **`supabase/functions/return-credit-memo/index.ts`** — Logo in header
-7. **`supabase/functions/project-summary-download/index.ts`** — Logo in header
+1. `src/components/app-shell/DashboardSidebar.tsx`
+2. `src/components/project/ProjectSidebar.tsx`
+3. Possibly `src/hooks/useAuth.ts` if `logo_url` isn't in the org select
 
