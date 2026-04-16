@@ -298,23 +298,25 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // Auth: allow unauthenticated calls (service-level), or require PLATFORM_OWNER if token present
-    const authHeader = req.headers.get('Authorization')
-    if (authHeader?.startsWith('Bearer ')) {
+    // Auth: skip role check if x-seed-key matches service role key, otherwise require PLATFORM_OWNER
+    const seedKey = req.headers.get('x-seed-key')
+    if (seedKey !== serviceRoleKey) {
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+      }
       const token = authHeader.replace('Bearer ', '')
-      // Check if the token is the anon key (from direct invocation) — skip role check
-      if (token !== anonKey) {
-        const userClient = createClient(supabaseUrl, anonKey, {
-          global: { headers: { Authorization: `Bearer ${token}` } },
-        })
-        const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token)
-        if (!claimsError && claimsData?.claims) {
-          const callerId = claimsData.claims.sub as string
-          const { data: roleData } = await db.rpc('get_platform_role', { _user_id: callerId })
-          if (roleData !== 'PLATFORM_OWNER') {
-            return new Response(JSON.stringify({ error: 'Forbidden — PLATFORM_OWNER required' }), { status: 403, headers: corsHeaders })
-          }
-        }
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      })
+      const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token)
+      if (claimsError || !claimsData?.claims) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+      }
+      const callerId = claimsData.claims.sub as string
+      const { data: roleData } = await db.rpc('get_platform_role', { _user_id: callerId })
+      if (roleData !== 'PLATFORM_OWNER') {
+        return new Response(JSON.stringify({ error: 'Forbidden — PLATFORM_OWNER required' }), { status: 403, headers: corsHeaders })
       }
     }
 
