@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { HourlyRateSetting } from '@/components/change-orders/HourlyRateSetting';
 import { formatPhone } from '@/lib/formatPhone';
@@ -18,12 +18,14 @@ import {
 } from '@/components/ui/select';
 import { 
   User, Building2, DollarSign, ShieldCheck, 
-  Loader2, Save, Phone, MapPin, Wrench
+  Loader2, Save, Phone, MapPin, Wrench, Upload, Trash2, ImageIcon
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { ORG_TYPE_LABELS, getJobTitlesForOrgType } from '@/types/organization';
 import { TRADES, Trade } from '@/types/projectWizard';
+import { toast } from 'sonner';
 
 const TIMEZONES = [
   'America/New_York',
@@ -482,6 +484,9 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        {/* Company Logo */}
+        <CompanyLogoCard organizationId={organization?.id} logoUrl={(organization as any)?.logo_url} onUpdated={async () => { /* profile refetch handled by useProfile */ }} />
 
         {/* Section 3: Pricing Defaults (hidden for GC users) */}
         {organization?.type !== 'GC' && <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
