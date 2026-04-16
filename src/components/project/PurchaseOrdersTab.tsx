@@ -710,7 +710,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       );
     }
 
-    if (viewMode === 'table') {
+    // Force card view on mobile (<640px) regardless of viewMode setting
+    const isDesktopTable = viewMode === 'table' && typeof window !== 'undefined' && window.innerWidth >= 640;
+    if (isDesktopTable) {
       return (
         <POTableView
           purchaseOrders={filtered}
@@ -725,7 +727,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-3">
         {filtered.map((po) => {
           const packKey = po.source_estimate_id && po.source_pack_name
             ? `${po.source_estimate_id}|${po.source_pack_name}`
