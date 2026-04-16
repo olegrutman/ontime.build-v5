@@ -453,7 +453,11 @@ export function useContractSOV(projectId: string | undefined) {
           .order('sort_order');
         
         const itemsBySov: Record<string, ContractSOVItem[]> = {};
-        for (const item of (itemsResult.data || []) as ContractSOVItem[]) {
+        for (const raw of (itemsResult.data || []) as any[]) {
+          const item: ContractSOVItem = {
+            ...raw,
+            scheduled_value: (raw.scheduled_value || 0) > 0 ? raw.scheduled_value : (raw.value_amount || 0),
+          };
           if (!itemsBySov[item.sov_id]) {
             itemsBySov[item.sov_id] = [];
           }

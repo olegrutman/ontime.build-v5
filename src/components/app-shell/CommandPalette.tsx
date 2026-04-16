@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Folder, FileText, Handshake, Bell, MessageSquareMore, Home, Settings, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,7 +27,7 @@ const STATIC_ROUTES: SearchItem[] = [
   { id: 'nav-profile', label: 'Profile', group: 'Navigation', icon: Settings, path: '/profile' },
 ];
 
-export function CommandPalette({ open, onClose }: CommandPaletteProps) {
+export const CommandPalette = React.forwardRef<HTMLDivElement, CommandPaletteProps>(function CommandPalette({ open, onClose }, ref) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
@@ -181,4 +181,5 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       </div>
     </div>
   );
-}
+});
+CommandPalette.displayName = 'CommandPalette';
