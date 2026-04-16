@@ -32,6 +32,7 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   DELETE_PURCHASE_ORDER: "PLATFORM_OWNER",
   DELETE_WORK_ORDER: "PLATFORM_OWNER",
   DELETE_CHANGE_ORDER: "PLATFORM_OWNER",
+  EDIT_ORGANIZATION: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -1044,6 +1045,62 @@ Deno.serve(async (req) => {
 
         logMeta = { p_target_project_id: coData.project_id, p_action_summary: `Deleted change order "${coData.co_number}" (${coData.status}, ${coData.pricing_type})` };
         result = { success: true, message: "Change order deleted" };
+        break;
+      }
+
+      case "EDIT_ORGANIZATION": {
+        const { organization_id, fields } = params;
+        if (!organization_id || !fields || typeof fields !== "object") {
+          return new Response(JSON.stringify({ error: "organization_id and fields are required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+
+        const ALLOWED_FIELDS = ["name", "phone", "address", "trade", "trade_custom", "license_number", "insurance_expiration_date", "logo_url"];
+        const updatePayload: Record<string, any> = {};
+        for (const key of Object.keys(fields)) {
+          if (ALLOWED_FIELDS.includes(key)) {
+            updatePayload[key] = fields[key];
+          }
+        }
+        if (Object.keys(updatePayload).length === 0) {
+          return new Response(JSON.stringify({ error: "No valid fields to update" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+
+        targetId = organization_id;
+
+        // Snapshot before
+        const { data: orgBefore, error: orgFetchErr } = await adminClient
+          .from("organizations")
+          .select("*")
+          .eq("id", organization_id)
+          .single();
+        if (orgFetchErr || !orgBefore) {
+          return new Response(JSON.stringify({ error: "Organization not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = {};
+        for (const key of Object.keys(updatePayload)) {
+          snapshotBefore[key] = (orgBefore as any)[key];
+        }
+
+        const { error: updateErr } = await adminClient
+          .from("organizations")
+          .update(updatePayload)
+          .eq("id", organization_id);
+        if (updateErr) {
+          return new Response(JSON.stringify({ error: updateErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        snapshotAfter = updatePayload;
+        const changedFields = Object.keys(updatePayload).join(", ");
+        logMeta = { p_target_org_id: organization_id, p_target_org_name: orgBefore.name, p_action_summary: `Edited org "${orgBefore.name}" fields: ${changedFields}` };
+        result = { success: true, message: "Organization updated" };
         break;
       }
 
