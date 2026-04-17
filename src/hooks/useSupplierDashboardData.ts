@@ -109,6 +109,14 @@ export interface ReturnRow {
   urgency: string | null;
 }
 
+export interface PackOverDetail {
+  packName: string;
+  estimate: number;
+  ordered: number;
+  overBy: number;
+  overPct: number;
+}
+
 export interface SupplierProjectFinancial {
   projectId: string;
   projectName: string;
@@ -118,8 +126,13 @@ export interface SupplierProjectFinancial {
   ordered: number;         // sum of purchase_orders.po_total where status != ACTIVE/DRAFT
   billed: number;          // sum of invoices.total_amount where status in SUBMITTED/APPROVED/PAID
   received: number;        // sum of invoices.total_amount where status = PAID
-  overBy: number;          // max(0, ordered - estimate)
+  overBy: number;          // max(0, ordered - estimate) at PROJECT level
   daysSinceLastPayment: number | null;
+  // Pack-level variance (per source_pack_name within an APPROVED estimate)
+  packsOverCount: number;       // # packs where ordered > estimate
+  packOverBy: number;           // sum of overage across over-budget packs (tax-inclusive)
+  worstPackPct: number;         // largest overage % across packs (0 if none over)
+  packOverDetails: PackOverDetail[]; // per-pack breakdown (only over-budget packs)
 }
 
 export interface UpcomingDelivery {
