@@ -109,6 +109,29 @@ export interface ReturnRow {
   urgency: string | null;
 }
 
+export interface SupplierProjectFinancial {
+  projectId: string;
+  projectName: string;
+  projectType: string | null;
+  status: string | null;
+  estimate: number;        // sum of APPROVED supplier_estimates.total_amount
+  ordered: number;         // sum of purchase_orders.po_total where status != ACTIVE/DRAFT
+  billed: number;          // sum of invoices.total_amount where status in SUBMITTED/APPROVED/PAID
+  received: number;        // sum of invoices.total_amount where status = PAID
+  overBy: number;          // max(0, ordered - estimate)
+  daysSinceLastPayment: number | null;
+}
+
+export interface UpcomingDelivery {
+  id: string;
+  poNumber: string;
+  projectId: string;
+  projectName: string;
+  deliveryDate: string;
+  status: string;
+  total: number | null;
+}
+
 export interface SupplierDashboardData {
   kpis: SupplierKPIs;
   actionItems: ActionItem[];
@@ -122,6 +145,8 @@ export interface SupplierDashboardData {
   acceptedProjects: AcceptedProject[];
   openPOs: OpenPO[];
   returns: ReturnRow[];
+  projectFinancials: SupplierProjectFinancial[];
+  upcomingDeliveries: UpcomingDelivery[];
   loading: boolean;
   refetch: () => Promise<void>;
 }
@@ -145,6 +170,8 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   const [openPOs, setOpenPOs] = useState<OpenPO[]>([]);
   const [returns, setReturns] = useState<ReturnRow[]>([]);
   const [acceptedProjects, setAcceptedProjects] = useState<AcceptedProject[]>([]);
+  const [projectFinancials, setProjectFinancials] = useState<SupplierProjectFinancial[]>([]);
+  const [upcomingDeliveries, setUpcomingDeliveries] = useState<UpcomingDelivery[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!orgId || !user) { setLoading(false); return; }
