@@ -129,14 +129,14 @@ export function SupplierDashboardView({
   const totalOrdered = dp.reduce((s, p) => s + p.ordered, 0);
   const totalBilled = dp.reduce((s, p) => s + p.billed, 0);
   const totalReceived = dp.reduce((s, p) => s + p.received, 0);
-  const totalOver = dp.reduce((s, p) => s + p.overBy, 0);
+  const totalOver = dp.reduce((s, p) => s + Math.max(p.overBy, p.packOverBy), 0);
   const totalOutstanding = totalBilled - totalReceived;
   const totalNotBilled = Math.max(0, totalOrdered - totalBilled);
   const orderedPct = totalEstimate > 0 ? Math.round((totalOrdered / totalEstimate) * 100) : 0;
   const billedPct = totalOrdered > 0 ? Math.round((totalBilled / totalOrdered) * 100) : 0;
   const receivedPct = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0;
-  const overCount = dp.filter(p => p.overBy > 0).length;
-  const onTrackCount = dp.filter(p => p.overBy === 0 && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
+  const overCount = dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).length;
+  const onTrackCount = dp.filter(p => p.risk === 'On Track' && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
 
   // Active = any supplier activity OR not archived/completed
   const projectsWithActivity = dp.filter(p =>
