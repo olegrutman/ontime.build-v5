@@ -230,15 +230,23 @@ export function SupplierDashboardView({
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <THead cols={['Project', 'Estimated', 'Ordered', 'Over By', 'Risk']} />
                     <tbody>
-                      {dp.filter(p => p.overBy > 0).map((p, i) => (
-                        <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
-                          <TdN>{p.name}</TdN>,
-                          <TdM>{fmt(p.estimate)}</TdM>,
-                          <TdM>{fmt(p.ordered)}</TdM>,
-                          <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(p.overBy)}</span>,
-                          <Pill type="pr">{p.risk}</Pill>,
-                        ]} />
-                      ))}
+                      {dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).map((p, i) => {
+                        const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
+                        const tip = p.packOverDetails.length > 0
+                          ? p.packOverDetails.slice(0, 4).map(d => `${d.packName} +${Math.round(d.overPct)}%`).join(', ')
+                          : '';
+                        return (
+                          <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
+                            <TdN>{p.name}</TdN>,
+                            <TdM>{fmt(p.estimate)}</TdM>,
+                            <TdM>{fmt(p.ordered)}</TdM>,
+                            <span style={{ color: C.red, fontWeight: 700 }} title={tip}>
+                              +{fmt(overAmt)}{p.packsOverCount > 0 ? ` (${p.packsOverCount} pack${p.packsOverCount > 1 ? 's' : ''})` : ''}
+                            </span>,
+                            <span title={tip}><Pill type="pr">{p.risk}</Pill></span>,
+                          ]} />
+                        );
+                      })}
                     </tbody>
                   </table>
                 </>
