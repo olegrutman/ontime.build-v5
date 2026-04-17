@@ -15,12 +15,16 @@ type SortKey = 'po_number' | 'supplier' | 'items' | 'status' | 'total' | 'create
 type SortDir = 'asc' | 'desc';
 
 const STATUS_PRIORITY: Record<POStatus, number> = {
+  DRAFT: 0,
   ACTIVE: 0,
   PENDING_APPROVAL: 1,
   SUBMITTED: 2,
   PRICED: 3,
   ORDERED: 4,
-  DELIVERED: 5,
+  READY_FOR_DELIVERY: 5,
+  DELIVERED: 6,
+  FINALIZED: 7,
+  SENT: 8,
 };
 
 interface POTableViewProps {

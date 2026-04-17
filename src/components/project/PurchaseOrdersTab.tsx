@@ -24,12 +24,16 @@ import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { POWizardV2Data, POWizardV2LineItem } from '@/types/poWizardV2';
 
 const STATUS_PRIORITY: Record<POStatus, number> = {
+  DRAFT: 0,
   ACTIVE: 0,
   PENDING_APPROVAL: 1,
   SUBMITTED: 2,
   PRICED: 3,
   ORDERED: 4,
-  DELIVERED: 5,
+  READY_FOR_DELIVERY: 5,
+  DELIVERED: 6,
+  FINALIZED: 7,
+  SENT: 8,
 };
 
 interface PurchaseOrdersTabProps {
