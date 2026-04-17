@@ -1129,6 +1129,15 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         }}
         isLoading={emailSending}
       />
+
+      <ScheduleDeliveryDialog
+        open={scheduleDeliveryOpen}
+        onOpenChange={setScheduleDeliveryOpen}
+        poNumber={po.po_number}
+        initialDate={po.ready_for_delivery_at}
+        saving={actionLoading}
+        onConfirm={handleScheduleDelivery}
+      />
     </div>
   );
 }
