@@ -15,7 +15,9 @@ import {
   Lock,
   Receipt,
   Bell,
+  CalendarClock,
 } from 'lucide-react';
+import { ScheduleDeliveryDialog } from './ScheduleDeliveryDialog';
 import { useNudge } from '@/hooks/useNudge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -109,6 +111,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const [alreadyInvoiced, setAlreadyInvoiced] = useState(false);
   const [emailPromptOpen, setEmailPromptOpen] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
+  const [scheduleDeliveryOpen, setScheduleDeliveryOpen] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -427,6 +430,13 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
 
   const handleMarkDelivered = () => {
     updatePOStatus('DELIVERED', { delivered_at: new Date().toISOString() });
+  };
+
+  const handleScheduleDelivery = async (date: Date) => {
+    await updatePOStatus('READY_FOR_DELIVERY', {
+      ready_for_delivery_at: date.toISOString(),
+    });
+    setScheduleDeliveryOpen(false);
   };
 
   const [exportLoading, setExportLoading] = useState(false);
