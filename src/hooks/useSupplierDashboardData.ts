@@ -463,7 +463,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       if (estimateIds.length > 0) {
         const { data } = await supabase
           .from('supplier_estimate_items')
-          .select('estimate_id, pack_name')
+          .select('estimate_id, pack_name, line_total')
           .in('estimate_id', estimateIds);
         estimateItemsData = data || [];
       }
