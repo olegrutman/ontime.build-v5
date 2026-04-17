@@ -28,7 +28,7 @@ interface RailItem {
 const GROUP_1: RailItem[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
   { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
-  { key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts' },
+  { key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true },
 ];
 
 const GROUP_2: RailItem[] = [
@@ -44,8 +44,8 @@ const GROUP_3: RailItem[] = [
 ];
 
 const GROUP_4: RailItem[] = [
-  { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt' },
-  { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs' },
+  { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', hideForSupplier: true },
+  { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', hideForSupplier: true },
 ];
 
 const ALL_GROUPS = [GROUP_1, GROUP_2, GROUP_3, GROUP_4];
