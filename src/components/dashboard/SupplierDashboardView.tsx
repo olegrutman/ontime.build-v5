@@ -81,6 +81,10 @@ export function SupplierDashboardView({
   const dp = useMemo(() => projectFinancials.map(pf => {
     const proj = projects.find(p => p.id === pf.projectId);
     const phaseRaw = pf.projectType || proj?.project_type || null;
+    // 3-band risk: ≤0 On Track, 0–5% over Watch, >5% over Over Budget
+    const overPct = pf.estimate > 0 ? (pf.overBy / pf.estimate) * 100 : (pf.overBy > 0 ? 100 : 0);
+    const risk: 'On Track' | 'Watch' | 'Over Budget' =
+      pf.overBy <= 0 ? 'On Track' : overPct <= 5 ? 'Watch' : 'Over Budget';
     return {
       projectId: pf.projectId,
       name: pf.projectName,
@@ -92,9 +96,15 @@ export function SupplierDashboardView({
       received: pf.received,
       overBy: pf.overBy,
       daysSinceLastPayment: pf.daysSinceLastPayment,
-      risk: pf.overBy > 0 ? 'Over Budget' as const : 'On Track' as const,
+      risk,
     };
   }), [projectFinancials, projects]);
+
+  // Forecast table excludes archived/completed projects (consistent with other sections)
+  const forecastRows = useMemo(
+    () => dp.filter(p => !['archived', 'completed'].includes(p.status)),
+    [dp]
+  );
 
   const totalEstimate = dp.reduce((s, p) => s + p.estimate, 0);
   const totalOrdered = dp.reduce((s, p) => s + p.ordered, 0);
@@ -332,31 +342,56 @@ export function SupplierDashboardView({
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
             <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>⚠️ Project Budget Forecast</span>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
-              <THead cols={['Project', 'Estimate', 'Total Ordered', 'Extra / Over', 'Billed', 'Received', 'Outstanding', 'Risk']} />
-              <tbody>
-                {dp.map((p, i) => {
-                  const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
-                  const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
-                  const outBal = Math.max(0, p.billed - p.received);
-                  const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : 'pg';
-                  return (
-                    <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
-                      <TdN>{p.name}</TdN>,
-                      <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
-                      <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
-                      p.overBy > 0 ? <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(p.overBy)}</span> : <span>—</span>,
-                      p.billed > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={bPct} color={C.blue} /><TdM>{fmt(p.billed)}</TdM></div> : <span>—</span>,
-                      p.received > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={rPct} color={C.green} /><TdM>{fmt(p.received)}</TdM></div> : <span>—</span>,
-                      <TdM>{outBal > 0 ? fmt(outBal) : '—'}</TdM>,
-                      <Pill type={riskPill}>{p.risk}</Pill>,
-                    ]} />
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {forecastRows.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>
+              No active projects with supplier activity yet
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+                <THead cols={['Project', 'Estimate', 'Total Ordered', 'Extra / Over', 'Billed', 'Received', 'AR Outstanding', 'Risk']} />
+                <tbody>
+                  {(() => {
+                    let fEst = 0, fOrd = 0, fBilled = 0, fRec = 0, fOver = 0, fOut = 0;
+                    const rows = forecastRows.map((p, i) => {
+                      const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
+                      const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
+                      const outBal = Math.max(0, p.billed - p.received);
+                      fEst += p.estimate; fOrd += p.ordered; fBilled += p.billed;
+                      fRec += p.received; fOver += p.overBy; fOut += outBal;
+                      const riskPill: PillType =
+                        p.risk === 'Over Budget' ? 'pr' : p.risk === 'Watch' ? 'pa' : 'pg';
+                      return (
+                        <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
+                          <TdN>{p.name}</TdN>,
+                          <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
+                          <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
+                          p.overBy > 0 ? <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(p.overBy)}</span> : <span>—</span>,
+                          p.billed > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={bPct} color={C.blue} /><TdM>{fmt(p.billed)}</TdM></div> : <span>—</span>,
+                          p.received > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={rPct} color={C.green} /><TdM>{fmt(p.received)}</TdM></div> : <span>—</span>,
+                          <TdM>{outBal > 0 ? fmt(outBal) : '—'}</TdM>,
+                          <Pill type={riskPill}>{p.risk}</Pill>,
+                        ]} />
+                      );
+                    });
+                    rows.push(
+                      <TRow key="total" isTotal cells={[
+                        '—',
+                        <TdM>{fmt(fEst)}</TdM>,
+                        <TdM>{fmt(fOrd)}</TdM>,
+                        fOver > 0 ? <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(fOver)}</span> : <span>—</span>,
+                        <TdM>{fmt(fBilled)}</TdM>,
+                        <TdM>{fmt(fRec)}</TdM>,
+                        <TdM>{fmt(fOut)}</TdM>,
+                        '—',
+                      ]} />
+                    );
+                    return rows;
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* ─── Active Projects Grid ─── */}

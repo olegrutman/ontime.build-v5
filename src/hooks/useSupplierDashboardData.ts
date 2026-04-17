@@ -208,7 +208,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         supplierIds.length > 0
           ? supabase
               .from('purchase_orders')
-              .select('id, po_number, po_name, status, po_total, project_id, created_at, delivered_at, ordered_at, ready_for_delivery_at, source_estimate_id, source_pack_name, projects:project_id(name, organization_id, organizations:organization_id(name))')
+              .select('id, po_number, po_name, status, po_total, sales_tax_percent, project_id, created_at, delivered_at, ordered_at, ready_for_delivery_at, source_estimate_id, source_pack_name, projects:project_id(name, organization_id, organizations:organization_id(name))')
               .in('supplier_id', supplierIds)
           : Promise.resolve({ data: [] }),
         // Supplier estimates
@@ -586,12 +586,14 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         row.estimate += est.total_amount || 0;
       });
 
-      // POs → ordered (exclude DRAFT/ACTIVE pre-submission states)
-      const orderedExcludeStatuses = new Set(['ACTIVE', 'DRAFT', 'CANCELLED']);
+      // POs → ordered (exclude pre-submission/in-negotiation states; only count committed POs)
+      // Apply sales tax to po_total so we compare apples-to-apples with tax-inclusive estimates.
+      const orderedExcludeStatuses = new Set(['ACTIVE', 'DRAFT', 'CANCELLED', 'SUBMITTED', 'PRICED']);
       allPOs.forEach((po: any) => {
         if (!po.project_id || orderedExcludeStatuses.has(po.status)) return;
         const row = ensure(po.project_id, po.projects?.name || 'Unknown');
-        row.ordered += po.po_total || 0;
+        const taxMultiplier = 1 + ((po.sales_tax_percent || 0) / 100);
+        row.ordered += (po.po_total || 0) * taxMultiplier;
       });
 
       // Invoices → billed + received + lastPaymentDate
