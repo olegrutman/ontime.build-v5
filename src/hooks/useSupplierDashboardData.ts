@@ -359,9 +359,9 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         id: po.id,
         poNumber: po.po_number,
         projectName: po.projects?.name || 'Unknown',
-        itemCount: 0, // Would need line items count
+        itemCount: 0,
         deliveryDate: po.ready_for_delivery_at,
-        confirmed: !!po.ready_for_delivery_at,
+        confirmed: po.status === 'READY_FOR_DELIVERY' || po.status === 'DELIVERED',
         poTotal: po.po_total,
       })));
 
