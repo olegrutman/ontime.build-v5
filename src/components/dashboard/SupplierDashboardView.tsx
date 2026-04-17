@@ -81,6 +81,10 @@ export function SupplierDashboardView({
   const dp = useMemo(() => projectFinancials.map(pf => {
     const proj = projects.find(p => p.id === pf.projectId);
     const phaseRaw = pf.projectType || proj?.project_type || null;
+    // 3-band risk: ≤0 On Track, 0–5% over Watch, >5% over Over Budget
+    const overPct = pf.estimate > 0 ? (pf.overBy / pf.estimate) * 100 : (pf.overBy > 0 ? 100 : 0);
+    const risk: 'On Track' | 'Watch' | 'Over Budget' =
+      pf.overBy <= 0 ? 'On Track' : overPct <= 5 ? 'Watch' : 'Over Budget';
     return {
       projectId: pf.projectId,
       name: pf.projectName,
@@ -92,9 +96,15 @@ export function SupplierDashboardView({
       received: pf.received,
       overBy: pf.overBy,
       daysSinceLastPayment: pf.daysSinceLastPayment,
-      risk: pf.overBy > 0 ? 'Over Budget' as const : 'On Track' as const,
+      risk,
     };
   }), [projectFinancials, projects]);
+
+  // Forecast table excludes archived/completed projects (consistent with other sections)
+  const forecastRows = useMemo(
+    () => dp.filter(p => !['archived', 'completed'].includes(p.status)),
+    [dp]
+  );
 
   const totalEstimate = dp.reduce((s, p) => s + p.estimate, 0);
   const totalOrdered = dp.reduce((s, p) => s + p.ordered, 0);
