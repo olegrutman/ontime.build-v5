@@ -188,12 +188,8 @@ export default function Dashboard() {
       <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
         <SupplierDashboardView
           projects={projects}
-          financials={financials}
-          projectFinancials={projectFinancials}
-          billing={billing}
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}
-          recentDocs={recentDocs}
           statusCounts={statusCounts}
           profile={profile}
           organization={organization}
