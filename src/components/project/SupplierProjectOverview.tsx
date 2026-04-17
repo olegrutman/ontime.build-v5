@@ -343,12 +343,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             <THead cols={['PO #', 'Pack / Description', 'Status', 'Amount']} />
             <tbody>
               {pos.slice(0, 10).map(po => (
-                <TRow key={po.id} cells={[
-                  <TdN>{po.po_number || '—'}</TdN>,
-                  po.po_name || po.source_pack_name || '—',
-                  <Pill type={PO_STATUS_PILL[po.status] || 'pm'}>{po.status}</Pill>,
-                  <TdM>{fmt(po.po_total || 0)}</TdM>,
-                ]} />
+                <TRow
+                  key={po.id}
+                  onClick={() => onNavigate(`purchase-orders?po=${po.id}`)}
+                  cells={[
+                    <TdN>{po.po_number || '—'}</TdN>,
+                    po.po_name || po.source_pack_name || '—',
+                    <Pill type={PO_STATUS_PILL[po.status] || 'pm'}>{po.status}</Pill>,
+                    <TdM>{fmt(po.po_total || 0)}</TdM>,
+                  ]}
+                />
               ))}
             </tbody>
           </table>
