@@ -629,11 +629,75 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         }
       });
 
-      const projectFinancialsList = Object.values(pfMap).map(p => ({
-        ...p,
-        overBy: Math.max(0, p.ordered - p.estimate),
-        daysSinceLastPayment: lastPaidByProject[p.projectId] ? differenceInDays(now, lastPaidByProject[p.projectId]) : null,
-      }));
+      // ── Pack-Level Variance ──
+      // packEstimate[projectId][packName] = Σ line_total of APPROVED estimate items for that pack
+      // packOrdered[projectId][packName]  = Σ po_total × (1 + tax) for committed POs sourced from that pack
+      const approvedEstIds = new Set(
+        allEstimates.filter((e: any) => e.status === 'APPROVED' && e.project_id).map((e: any) => e.id)
+      );
+      const estProjectMap: Record<string, string> = {};
+      allEstimates.forEach((e: any) => { if (e.id && e.project_id) estProjectMap[e.id] = e.project_id; });
+
+      const packEstimate: Record<string, Record<string, number>> = {};
+      const packOrdered: Record<string, Record<string, number>> = {};
+
+      estimateItemsData.forEach((it: any) => {
+        if (!it.estimate_id || !it.pack_name) return;
+        if (!approvedEstIds.has(it.estimate_id)) return;
+        const pid = estProjectMap[it.estimate_id];
+        if (!pid) return;
+        if (!packEstimate[pid]) packEstimate[pid] = {};
+        packEstimate[pid][it.pack_name] = (packEstimate[pid][it.pack_name] || 0) + (Number(it.line_total) || 0);
+      });
+
+      allPOs.forEach((po: any) => {
+        if (!po.project_id || !po.source_pack_name) return;
+        if (orderedExcludeStatuses.has(po.status)) return;
+        // Only count POs whose source estimate is APPROVED to keep apples-to-apples with packEstimate
+        if (po.source_estimate_id && !approvedEstIds.has(po.source_estimate_id)) return;
+        const pid = po.project_id;
+        if (!packOrdered[pid]) packOrdered[pid] = {};
+        const taxMultiplier = 1 + ((po.sales_tax_percent || 0) / 100);
+        packOrdered[pid][po.source_pack_name] =
+          (packOrdered[pid][po.source_pack_name] || 0) + (po.po_total || 0) * taxMultiplier;
+      });
+
+      const packStatsByProject: Record<string, { count: number; overBy: number; worstPct: number; details: PackOverDetail[] }> = {};
+      const allProjectIds = new Set([...Object.keys(packEstimate), ...Object.keys(packOrdered)]);
+      allProjectIds.forEach(pid => {
+        const ests = packEstimate[pid] || {};
+        const ords = packOrdered[pid] || {};
+        const allPacks = new Set([...Object.keys(ests), ...Object.keys(ords)]);
+        let count = 0, overBy = 0, worstPct = 0;
+        const details: PackOverDetail[] = [];
+        allPacks.forEach(packName => {
+          const e = ests[packName] || 0;
+          const o = ords[packName] || 0;
+          if (o > e) {
+            const ob = o - e;
+            const pct = e > 0 ? (ob / e) * 100 : 100;
+            count++;
+            overBy += ob;
+            if (pct > worstPct) worstPct = pct;
+            details.push({ packName, estimate: e, ordered: o, overBy: ob, overPct: pct });
+          }
+        });
+        details.sort((a, b) => b.overPct - a.overPct);
+        packStatsByProject[pid] = { count, overBy, worstPct, details };
+      });
+
+      const projectFinancialsList = Object.values(pfMap).map(p => {
+        const pack = packStatsByProject[p.projectId] || { count: 0, overBy: 0, worstPct: 0, details: [] };
+        return {
+          ...p,
+          overBy: Math.max(0, p.ordered - p.estimate),
+          daysSinceLastPayment: lastPaidByProject[p.projectId] ? differenceInDays(now, lastPaidByProject[p.projectId]) : null,
+          packsOverCount: pack.count,
+          packOverBy: pack.overBy,
+          worstPackPct: pack.worstPct,
+          packOverDetails: pack.details,
+        };
+      });
       setProjectFinancials(projectFinancialsList);
 
       // ── Upcoming Deliveries (POs with ready_for_delivery_at in future, not yet delivered) ──
