@@ -1,4 +1,4 @@
-export type POStatus = 'ACTIVE' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED';
+export type POStatus = 'DRAFT' | 'SENT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'READY_FOR_DELIVERY' | 'DELIVERED' | 'FINALIZED';
 
 export interface PurchaseOrder {
   id: string;
@@ -76,19 +76,27 @@ export interface POLineItem {
 }
 
 export const PO_STATUS_LABELS: Record<POStatus, string> = {
+  DRAFT: 'Draft',
+  SENT: 'Sent',
   ACTIVE: 'Active',
   PENDING_APPROVAL: 'Pending Approval',
   SUBMITTED: 'Submitted',
   PRICED: 'Priced',
   ORDERED: 'Ordered',
+  READY_FOR_DELIVERY: 'Ready for Delivery',
   DELIVERED: 'Delivered',
+  FINALIZED: 'Finalized',
 };
 
 export const PO_STATUS_COLORS: Record<POStatus, string> = {
+  DRAFT: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  SENT: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
   ACTIVE: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
   PENDING_APPROVAL: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
   SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   PRICED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   ORDERED: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
   DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  FINALIZED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
 };

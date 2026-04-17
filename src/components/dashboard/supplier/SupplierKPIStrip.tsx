@@ -70,11 +70,17 @@ function KPICard({ label, value, tag, tagColor, subText, delay }: KPICardProps) 
 interface Props { kpis: SupplierKPIs; }
 
 export function SupplierKPIStrip({ kpis }: Props) {
-  const momTrend = kpis.paidLastMonth > 0
+  // MoM% trend — only meaningful when previous month has data
+  const hasPriorData = kpis.paidLastMonth > 0;
+  const momTrend = hasPriorData
     ? Math.round(((kpis.paidThisMonth - kpis.paidLastMonth) / kpis.paidLastMonth) * 100)
     : 0;
-  const momTag = momTrend > 0 ? `↑ ${momTrend}%` : momTrend < 0 ? `↓ ${Math.abs(momTrend)}%` : '—';
-  const momColor = momTrend > 0 ? 'green' : momTrend < 0 ? 'red' : 'neutral';
+  const momTag = !hasPriorData
+    ? (kpis.paidThisMonth > 0 ? 'New' : '—')
+    : momTrend > 0 ? `↑ ${momTrend}%` : momTrend < 0 ? `↓ ${Math.abs(momTrend)}%` : 'Flat';
+  const momColor = !hasPriorData
+    ? (kpis.paidThisMonth > 0 ? 'green' : 'neutral')
+    : momTrend > 0 ? 'green' : momTrend < 0 ? 'red' : 'neutral';
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
