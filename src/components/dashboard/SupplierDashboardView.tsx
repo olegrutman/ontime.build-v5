@@ -81,10 +81,25 @@ export function SupplierDashboardView({
   const dp = useMemo(() => projectFinancials.map(pf => {
     const proj = projects.find(p => p.id === pf.projectId);
     const phaseRaw = pf.projectType || proj?.project_type || null;
-    // 3-band risk: ≤0 On Track, 0–5% over Watch, >5% over Over Budget
+
+    // Project-level risk: ≤0 On Track, 0–5% over Watch, >5% over Over Budget
     const overPct = pf.estimate > 0 ? (pf.overBy / pf.estimate) * 100 : (pf.overBy > 0 ? 100 : 0);
-    const risk: 'On Track' | 'Watch' | 'Over Budget' =
+    const projectRisk: 'On Track' | 'Watch' | 'Over Budget' =
       pf.overBy <= 0 ? 'On Track' : overPct <= 5 ? 'Watch' : 'Over Budget';
+
+    // Pack-level risk: any pack overrun escalates risk
+    const packRisk: 'On Track' | 'Watch' | 'Over Budget' =
+      pf.packsOverCount === 0 ? 'On Track'
+        : pf.worstPackPct <= 5 ? 'Watch'
+        : 'Over Budget';
+
+    // Combined = worse of the two
+    const rank = { 'On Track': 0, 'Watch': 1, 'Over Budget': 2 } as const;
+    const risk = rank[packRisk] >= rank[projectRisk] ? packRisk : projectRisk;
+
+    // Display "over" amount: prefer pack overage when project rollup is $0 but packs are over
+    const displayOverBy = pf.overBy > 0 ? pf.overBy : pf.packOverBy;
+
     return {
       projectId: pf.projectId,
       name: pf.projectName,
@@ -95,6 +110,10 @@ export function SupplierDashboardView({
       billed: pf.billed,
       received: pf.received,
       overBy: pf.overBy,
+      packsOverCount: pf.packsOverCount,
+      packOverBy: pf.packOverBy,
+      packOverDetails: pf.packOverDetails,
+      displayOverBy,
       daysSinceLastPayment: pf.daysSinceLastPayment,
       risk,
     };
@@ -110,14 +129,14 @@ export function SupplierDashboardView({
   const totalOrdered = dp.reduce((s, p) => s + p.ordered, 0);
   const totalBilled = dp.reduce((s, p) => s + p.billed, 0);
   const totalReceived = dp.reduce((s, p) => s + p.received, 0);
-  const totalOver = dp.reduce((s, p) => s + p.overBy, 0);
+  const totalOver = dp.reduce((s, p) => s + Math.max(p.overBy, p.packOverBy), 0);
   const totalOutstanding = totalBilled - totalReceived;
   const totalNotBilled = Math.max(0, totalOrdered - totalBilled);
   const orderedPct = totalEstimate > 0 ? Math.round((totalOrdered / totalEstimate) * 100) : 0;
   const billedPct = totalOrdered > 0 ? Math.round((totalBilled / totalOrdered) * 100) : 0;
   const receivedPct = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0;
-  const overCount = dp.filter(p => p.overBy > 0).length;
-  const onTrackCount = dp.filter(p => p.overBy === 0 && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
+  const overCount = dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).length;
+  const onTrackCount = dp.filter(p => p.risk === 'On Track' && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
 
   // Active = any supplier activity OR not archived/completed
   const projectsWithActivity = dp.filter(p =>
@@ -211,15 +230,23 @@ export function SupplierDashboardView({
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <THead cols={['Project', 'Estimated', 'Ordered', 'Over By', 'Risk']} />
                     <tbody>
-                      {dp.filter(p => p.overBy > 0).map((p, i) => (
-                        <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
-                          <TdN>{p.name}</TdN>,
-                          <TdM>{fmt(p.estimate)}</TdM>,
-                          <TdM>{fmt(p.ordered)}</TdM>,
-                          <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(p.overBy)}</span>,
-                          <Pill type="pr">{p.risk}</Pill>,
-                        ]} />
-                      ))}
+                      {dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).map((p, i) => {
+                        const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
+                        const tip = p.packOverDetails.length > 0
+                          ? p.packOverDetails.slice(0, 4).map(d => `${d.packName} +${Math.round(d.overPct)}%`).join(', ')
+                          : '';
+                        return (
+                          <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
+                            <TdN>{p.name}</TdN>,
+                            <TdM>{fmt(p.estimate)}</TdM>,
+                            <TdM>{fmt(p.ordered)}</TdM>,
+                            <span style={{ color: C.red, fontWeight: 700 }} title={tip}>
+                              +{fmt(overAmt)}{p.packsOverCount > 0 ? ` (${p.packsOverCount} pack${p.packsOverCount > 1 ? 's' : ''})` : ''}
+                            </span>,
+                            <span title={tip}><Pill type="pr">{p.risk}</Pill></span>,
+                          ]} />
+                        );
+                      })}
                     </tbody>
                   </table>
                 </>
@@ -357,20 +384,28 @@ export function SupplierDashboardView({
                       const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
                       const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
                       const outBal = Math.max(0, p.billed - p.received);
+                      const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
                       fEst += p.estimate; fOrd += p.ordered; fBilled += p.billed;
-                      fRec += p.received; fOver += p.overBy; fOut += outBal;
+                      fRec += p.received; fOver += overAmt; fOut += outBal;
                       const riskPill: PillType =
                         p.risk === 'Over Budget' ? 'pr' : p.risk === 'Watch' ? 'pa' : 'pg';
+                      const tip = p.packOverDetails.length > 0
+                        ? `Packs over budget: ${p.packOverDetails.slice(0, 4).map(d => `${d.packName} +${Math.round(d.overPct)}%`).join(', ')}`
+                        : '';
                       return (
                         <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                           <TdN>{p.name}</TdN>,
                           <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
                           <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
-                          p.overBy > 0 ? <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(p.overBy)}</span> : <span>—</span>,
+                          overAmt > 0
+                            ? <span style={{ color: C.red, fontWeight: 700 }} title={tip}>
+                                +{fmt(overAmt)}{p.packsOverCount > 0 ? ` (${p.packsOverCount} pack${p.packsOverCount > 1 ? 's' : ''})` : ''}
+                              </span>
+                            : <span>—</span>,
                           p.billed > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={bPct} color={C.blue} /><TdM>{fmt(p.billed)}</TdM></div> : <span>—</span>,
                           p.received > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={rPct} color={C.green} /><TdM>{fmt(p.received)}</TdM></div> : <span>—</span>,
                           <TdM>{outBal > 0 ? fmt(outBal) : '—'}</TdM>,
-                          <Pill type={riskPill}>{p.risk}</Pill>,
+                          <span title={tip}><Pill type={riskPill}>{p.risk}</Pill></span>,
                         ]} />
                       );
                     });
