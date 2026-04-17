@@ -578,6 +578,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           pfMap[pid] = {
             projectId: pid, projectName: name, projectType, status,
             estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, daysSinceLastPayment: null,
+            packsOverCount: 0, packOverBy: 0, worstPackPct: 0, packOverDetails: [],
           };
         } else {
           if (projectType && !pfMap[pid].projectType) pfMap[pid].projectType = projectType;
