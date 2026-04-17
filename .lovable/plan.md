@@ -1,77 +1,44 @@
 
 
-## What I learned
-
-I pulled live data for **Main Street Apartments** and verified the math end-to-end:
-
-### Project-level (what the card shows)
-| Field | Value |
-|---|---|
-| Estimate (tax-inc) | $116,607.76 |
-| Ordered (tax-inc, sum of 2 POs) | $11,113.28 |
-| Used | 9.5% |
-| Risk pill | **On Track** ✅ |
-
-The card's math is **technically correct** at the project-rollup level. With only 2 POs out of 15 packs ordered, the project total is nowhere near the estimate.
-
-### Pack-level (what's actually happening)
-| Pack | Estimate | Ordered (tax-inc) | Variance |
-|---|---|---|---|
-| Basement Framing | $4,684.01 | $5,998.64 | **+28% 🔴** |
-| Walkout | $2,172.16 | $4,967.70 | **+128% 🔴** |
-
-Both ordered POs are **dramatically over their respective pack estimates**, but the Project Budget Forecast aggregates everything to project totals — so two over-budget packs hidden inside a 90% un-ordered project look "On Track."
+## Bug: PO rows on Supplier Project Overview don't open the PO
 
 ### Root cause
-The card uses **project-level totals** (`Σ estimate vs Σ ordered`). It does not compare ordered POs against the **pack budgets they were actually drawn from**. The data exists (`source_pack_name` on every PO, `pack_name` on every estimate item — both linked to `source_estimate_id`) — `MaterialsCommandCenter.tsx` already does this calc per-project. The dashboard hook simply doesn't carry it forward.
+In `src/components/project/SupplierProjectOverview.tsx` (lines 345–352), the PO register table renders each row as `<TRow cells={[...]} />` without an `onClick` handler. The `TRow` primitive in `KpiCard.tsx` already supports `onClick` and even renders `cursor: pointer` + hover style, but no callback is wired in — so clicks do nothing.
 
-### Why the existing risk logic misses it
-Current logic in `useSupplierDashboardData.ts` L590–597 + `SupplierDashboardView.tsx` L85–87:
+### Fix (one line in one file)
+
+In `SupplierProjectOverview.tsx`, line ~346, wire the row click to `onNavigate` with the PO query param:
+
+```tsx
+{pos.slice(0, 10).map(po => (
+  <TRow
+    key={po.id}
+    onClick={() => onNavigate(`purchase-orders?po=${po.id}`)}
+    cells={[
+      <TdN>{po.po_number || '—'}</TdN>,
+      po.po_name || po.source_pack_name || '—',
+      <Pill type={PO_STATUS_PILL[po.status] || 'pm'}>{po.status}</Pill>,
+      <TdM>{fmt(po.po_total || 0)}</TdM>,
+    ]}
+  />
+))}
 ```
-overBy = max(0, projectOrdered − projectEstimate)
-risk = overBy ≤ 0 → 'On Track' | overPct ≤ 5 → 'Watch' | else 'Over Budget'
-```
-A project can have any number of overspent packs and still report `overBy = 0` until the project's *cumulative* ordered crosses the *full* estimate.
 
----
+### Why this works (already plumbed end-to-end)
+- `TRow` (`KpiCard.tsx` L148) already accepts an optional `onClick`.
+- `ProjectHome.handleTabChange` (L131-133) already splits `tab?query`, switches to the tab, and forwards the query string to the URL.
+- `PurchaseOrdersTab` (L91-99, L192-200) already reads `?po=<id>` from `searchParams`, sets `selectedPOId`, and opens the PO detail panel.
 
-## Fix (minimal, two files)
-
-### 1. Compute pack-level variance in the hook
-In `useSupplierDashboardData.ts`, after the existing per-PO loop:
-- Fetch `supplier_estimate_items` (estimate_id, pack_name, line_total) for the supplier's APPROVED estimates (already partially done elsewhere — reuse the query).
-- Build `packEstimate[projectId][packName] = Σ line_total`.
-- Build `packOrdered[projectId][packName] = Σ po_total × (1+tax)` from the POs already iterated.
-- Per project, compute:
-  - `packsOverCount` = # packs where `ordered > estimate`
-  - `packOverBy` = Σ `max(0, ordered − estimate)` across over-budget packs
-- Add three fields to `SupplierProjectFinancial`: `packsOverCount`, `packOverBy`, `worstPackPct`.
-
-### 2. Upgrade risk logic in `SupplierDashboardView.tsx`
-Make risk the **worse of project-level OR pack-level**:
-```
-risk = max(projectRisk, packRisk)
-  packRisk = packsOverCount === 0 → On Track
-           | worstPackPct ≤ 5      → Watch
-           | else                  → Over Budget
-```
-Display tweaks in the table:
-- "Extra / Over" column shows `+$packOverBy (N pack(s))` when project rollup is $0 but packs are over.
-- Tooltip on the Risk pill: `"2 packs over: Basement Framing +28%, Walkout +128%"`.
-
-### Result for Main Street Apartments
-Pill flips from `On Track` → `Over Budget`, "Extra / Over" shows `+$3,210.17 (2 packs)`, matching what `MaterialsCommandCenter` already shows on the project page.
+Same pattern is used by the archived `ProjectOverviewV2.tsx` (`onNavigate('purchase-orders?po=' + item.id)`) — this just brings the supplier overview in line.
 
 ### Files modified
-- `src/hooks/useSupplierDashboardData.ts` — add pack aggregation (~25 lines)
-- `src/components/dashboard/SupplierDashboardView.tsx` — combined risk + display (~15 lines)
+- `src/components/project/SupplierProjectOverview.tsx` — add `onClick` to the PO register row (~3 lines)
 
 ### Files NOT touched
-- DB schema, RLS, types — all data already exists
-- `MaterialsCommandCenter.tsx` — already correct, used as reference
+- `KpiCard.tsx`, `ProjectHome.tsx`, `PurchaseOrdersTab.tsx` — already correct
 
 ### Verification
-- Main Street Apartments forecast row → Risk = `Over Budget`, Extra/Over shows `+$3,210` with "2 packs" hint.
-- Projects with no over-budget packs continue to show `On Track`.
-- Totals row sums `packOverBy` consistently with row values.
+- On Supplier Project Overview → Purchase Orders card → click any PO row → navigates to the Purchase Orders tab with that PO's detail panel open.
+- "View All →" continues to work as before.
+- Hover state on rows already shows the amber tint (already styled by `TRow`).
 
