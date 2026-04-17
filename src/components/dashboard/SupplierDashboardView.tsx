@@ -81,10 +81,25 @@ export function SupplierDashboardView({
   const dp = useMemo(() => projectFinancials.map(pf => {
     const proj = projects.find(p => p.id === pf.projectId);
     const phaseRaw = pf.projectType || proj?.project_type || null;
-    // 3-band risk: ≤0 On Track, 0–5% over Watch, >5% over Over Budget
+
+    // Project-level risk: ≤0 On Track, 0–5% over Watch, >5% over Over Budget
     const overPct = pf.estimate > 0 ? (pf.overBy / pf.estimate) * 100 : (pf.overBy > 0 ? 100 : 0);
-    const risk: 'On Track' | 'Watch' | 'Over Budget' =
+    const projectRisk: 'On Track' | 'Watch' | 'Over Budget' =
       pf.overBy <= 0 ? 'On Track' : overPct <= 5 ? 'Watch' : 'Over Budget';
+
+    // Pack-level risk: any pack overrun escalates risk
+    const packRisk: 'On Track' | 'Watch' | 'Over Budget' =
+      pf.packsOverCount === 0 ? 'On Track'
+        : pf.worstPackPct <= 5 ? 'Watch'
+        : 'Over Budget';
+
+    // Combined = worse of the two
+    const rank = { 'On Track': 0, 'Watch': 1, 'Over Budget': 2 } as const;
+    const risk = rank[packRisk] >= rank[projectRisk] ? packRisk : projectRisk;
+
+    // Display "over" amount: prefer pack overage when project rollup is $0 but packs are over
+    const displayOverBy = pf.overBy > 0 ? pf.overBy : pf.packOverBy;
+
     return {
       projectId: pf.projectId,
       name: pf.projectName,
@@ -95,6 +110,10 @@ export function SupplierDashboardView({
       billed: pf.billed,
       received: pf.received,
       overBy: pf.overBy,
+      packsOverCount: pf.packsOverCount,
+      packOverBy: pf.packOverBy,
+      packOverDetails: pf.packOverDetails,
+      displayOverBy,
       daysSinceLastPayment: pf.daysSinceLastPayment,
       risk,
     };
