@@ -277,6 +277,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         source_pack_name: data.source_pack_name || null,
         pack_modified: data.pack_modified || false,
         sales_tax_percent: salesTaxPercent,
+        ready_for_delivery_at: data.requested_delivery_date
+          ? data.requested_delivery_date.toISOString()
+          : null,
       })
       .select()
       .single();
@@ -633,6 +636,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           source_estimate_id: data.source_estimate_id || null,
           source_pack_name: data.source_pack_name || null,
           pack_modified: data.pack_modified || false,
+          ready_for_delivery_at: data.requested_delivery_date
+            ? data.requested_delivery_date.toISOString()
+            : null,
         })
         .eq('id', editingPO.id);
 
