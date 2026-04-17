@@ -556,6 +556,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         notes: po.notes || '',
         sales_tax_percent: po.sales_tax_percent ?? 0,
         line_items: wizardItems,
+        requested_delivery_date: (po as PurchaseOrder & { ready_for_delivery_at?: string | null }).ready_for_delivery_at
+          ? new Date((po as PurchaseOrder & { ready_for_delivery_at?: string | null }).ready_for_delivery_at as string)
+          : null,
       });
       setEditWizardOpen(true);
     } catch (err) {
