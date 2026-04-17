@@ -41,7 +41,7 @@ function getNavGroups(isTM: boolean): NavItem[][] {
     [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
       { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
-      ...(!isTM ? [{ key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts' } as NavItem] : []),
+      ...(!isTM ? [{ key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true } as NavItem] : []),
     ],
     [
       { key: 'change-orders', label: isTM ? 'Work Orders' : 'Change Orders', icon: AlertTriangle, route: 'change-orders', featureKey: 'change_orders' },
@@ -54,8 +54,8 @@ function getNavGroups(isTM: boolean): NavItem[][] {
       { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
     ],
     [
-      { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true },
-      { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', premium: true },
+      { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true, hideForSupplier: true },
+      { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', premium: true, hideForSupplier: true },
     ],
   ];
 }

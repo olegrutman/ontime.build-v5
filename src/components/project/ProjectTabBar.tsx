@@ -5,6 +5,7 @@ interface Tab {
   key: string;
   label: string;
   featureKey?: string;
+  hideForSupplier?: boolean;
 }
 
 const TABS: Tab[] = [
@@ -13,8 +14,8 @@ const TABS: Tab[] = [
   { key: 'invoices', label: 'Invoices', featureKey: 'invoicing' },
   { key: 'purchase-orders', label: 'Purchase Orders', featureKey: 'purchase_orders' },
   { key: 'returns', label: 'Returns', featureKey: 'returns_tracking' },
-  { key: 'schedule', label: 'Schedule', featureKey: 'schedule_gantt' },
-  { key: 'daily-log', label: 'Daily Log', featureKey: 'daily_logs' },
+  { key: 'schedule', label: 'Schedule', featureKey: 'schedule_gantt', hideForSupplier: true },
+  { key: 'daily-log', label: 'Daily Log', featureKey: 'daily_logs', hideForSupplier: true },
 ];
 
 interface ProjectTabBarProps {
@@ -62,12 +63,13 @@ function FeatureTabItem({ tab, active, onClick }: { tab: Tab; active: boolean; o
 }
 
 export function ProjectTabBar({ activeTab, onTabChange, isSupplier }: ProjectTabBarProps) {
+  const visibleTabs = TABS.filter(t => !(t.hideForSupplier && isSupplier));
   return (
     <div className="lg:hidden bg-background border-b border-border px-3 sm:px-6 relative">
       {/* Scroll fade indicators */}
       <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10" />
       <nav className="flex gap-5 overflow-x-auto scrollbar-hide">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <TabItem
             key={tab.key}
             tab={tab}
