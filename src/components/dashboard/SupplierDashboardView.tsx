@@ -384,20 +384,28 @@ export function SupplierDashboardView({
                       const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
                       const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
                       const outBal = Math.max(0, p.billed - p.received);
+                      const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
                       fEst += p.estimate; fOrd += p.ordered; fBilled += p.billed;
-                      fRec += p.received; fOver += p.overBy; fOut += outBal;
+                      fRec += p.received; fOver += overAmt; fOut += outBal;
                       const riskPill: PillType =
                         p.risk === 'Over Budget' ? 'pr' : p.risk === 'Watch' ? 'pa' : 'pg';
+                      const tip = p.packOverDetails.length > 0
+                        ? `Packs over budget: ${p.packOverDetails.slice(0, 4).map(d => `${d.packName} +${Math.round(d.overPct)}%`).join(', ')}`
+                        : '';
                       return (
                         <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                           <TdN>{p.name}</TdN>,
                           <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
                           <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
-                          p.overBy > 0 ? <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(p.overBy)}</span> : <span>—</span>,
+                          overAmt > 0
+                            ? <span style={{ color: C.red, fontWeight: 700 }} title={tip}>
+                                +{fmt(overAmt)}{p.packsOverCount > 0 ? ` (${p.packsOverCount} pack${p.packsOverCount > 1 ? 's' : ''})` : ''}
+                              </span>
+                            : <span>—</span>,
                           p.billed > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={bPct} color={C.blue} /><TdM>{fmt(p.billed)}</TdM></div> : <span>—</span>,
                           p.received > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={rPct} color={C.green} /><TdM>{fmt(p.received)}</TdM></div> : <span>—</span>,
                           <TdM>{outBal > 0 ? fmt(outBal) : '—'}</TdM>,
-                          <Pill type={riskPill}>{p.risk}</Pill>,
+                          <span title={tip}><Pill type={riskPill}>{p.risk}</Pill></span>,
                         ]} />
                       );
                     });
