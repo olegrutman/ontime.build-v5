@@ -241,7 +241,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         // Accepted projects for this org
         supabase
           .from('project_participants')
-          .select('project_id, role, projects:project_id(name, organization_id, organizations:organization_id(name))')
+          .select('project_id, role, projects:project_id(name, project_type, status, organization_id, organizations:organization_id(name))')
           .eq('organization_id', orgId)
           .eq('invite_status', 'ACCEPTED'),
       ]);
