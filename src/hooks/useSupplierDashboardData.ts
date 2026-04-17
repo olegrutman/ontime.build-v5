@@ -557,6 +557,85 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         urgency: r.urgency,
       })));
 
+      // ── Per-Project Financial Aggregation (supplier-side) ──
+      const pfMap: Record<string, SupplierProjectFinancial> = {};
+
+      const ensure = (pid: string, name: string, projectType: string | null = null, status: string | null = null) => {
+        if (!pfMap[pid]) {
+          pfMap[pid] = {
+            projectId: pid, projectName: name, projectType, status,
+            estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, daysSinceLastPayment: null,
+          };
+        } else {
+          if (projectType && !pfMap[pid].projectType) pfMap[pid].projectType = projectType;
+          if (status && !pfMap[pid].status) pfMap[pid].status = status;
+        }
+        return pfMap[pid];
+      };
+
+      // Seed from accepted projects so projects with no activity still appear
+      allAcceptedProjects.forEach((p: any) => {
+        if (!p.project_id) return;
+        ensure(p.project_id, p.projects?.name || 'Unknown', p.projects?.project_type ?? null, p.projects?.status ?? null);
+      });
+
+      // Estimates → estimate (APPROVED only)
+      allEstimates.forEach((est: any) => {
+        if (!est.project_id || est.status !== 'APPROVED') return;
+        const row = ensure(est.project_id, est.projects?.name || 'Unknown');
+        row.estimate += est.total_amount || 0;
+      });
+
+      // POs → ordered (exclude DRAFT/ACTIVE pre-submission states)
+      const orderedExcludeStatuses = new Set(['ACTIVE', 'DRAFT', 'CANCELLED']);
+      allPOs.forEach((po: any) => {
+        if (!po.project_id || orderedExcludeStatuses.has(po.status)) return;
+        const row = ensure(po.project_id, po.projects?.name || 'Unknown');
+        row.ordered += po.po_total || 0;
+      });
+
+      // Invoices → billed + received + lastPaymentDate
+      const lastPaidByProject: Record<string, Date> = {};
+      allInvoices.forEach((inv: any) => {
+        if (!inv.project_id) return;
+        const row = ensure(inv.project_id, '');
+        if (['SUBMITTED', 'APPROVED', 'PAID'].includes(inv.status)) {
+          row.billed += inv.total_amount || 0;
+        }
+        if (inv.status === 'PAID') {
+          row.received += inv.total_amount || 0;
+          if (inv.paid_at) {
+            const d = new Date(inv.paid_at);
+            if (!lastPaidByProject[inv.project_id] || d > lastPaidByProject[inv.project_id]) {
+              lastPaidByProject[inv.project_id] = d;
+            }
+          }
+        }
+      });
+
+      const projectFinancialsList = Object.values(pfMap).map(p => ({
+        ...p,
+        overBy: Math.max(0, p.ordered - p.estimate),
+        daysSinceLastPayment: lastPaidByProject[p.projectId] ? differenceInDays(now, lastPaidByProject[p.projectId]) : null,
+      }));
+      setProjectFinancials(projectFinancialsList);
+
+      // ── Upcoming Deliveries (POs with ready_for_delivery_at in future, not yet delivered) ──
+      const upcoming: UpcomingDelivery[] = allPOs
+        .filter((po: any) => po.ready_for_delivery_at && po.status !== 'DELIVERED' && po.status !== 'CANCELLED' && new Date(po.ready_for_delivery_at) >= now)
+        .sort((a: any, b: any) => new Date(a.ready_for_delivery_at).getTime() - new Date(b.ready_for_delivery_at).getTime())
+        .slice(0, 10)
+        .map((po: any) => ({
+          id: po.id,
+          poNumber: po.po_number,
+          projectId: po.project_id || '',
+          projectName: po.projects?.name || 'Unknown',
+          deliveryDate: po.ready_for_delivery_at,
+          status: po.status,
+          total: po.po_total,
+        }));
+      setUpcomingDeliveries(upcoming);
+
     } catch (err) {
       console.error('Supplier dashboard fetch error:', err);
     } finally {
@@ -569,6 +648,8 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   return {
     kpis, actionItems, deliveryDays, deliveryRows, agingBuckets,
     velocityTrend, oldestInvoiceDays, estimates, projectHealth,
-    acceptedProjects, openPOs, returns, loading, refetch: fetchData,
+    acceptedProjects, openPOs, returns,
+    projectFinancials, upcomingDeliveries,
+    loading, refetch: fetchData,
   };
 }
