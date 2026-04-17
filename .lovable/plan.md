@@ -1,60 +1,61 @@
 
-## Audit: "Scheduled for Delivery" on Purchase Orders
+## Root cause: Missing RLS policy for `READY_FOR_DELIVERY` transition
 
-### What's already built ✅
-1. **DB column exists**: `purchase_orders.ready_for_delivery_at` (timestamptz) — already in schema and types.
-2. **Status enum exists**: `READY_FOR_DELIVERY` is in the `po_status` enum and labeled "Ready for Delivery".
-3. **Wizard collects a date**: `requested_delivery_date` is captured in the PO Wizard (HeaderScreen + ReviewScreen).
-4. **Supplier dashboard reads it**: `useSupplierDashboardData` builds `upcomingDeliveries` and the 5-day strip from `ready_for_delivery_at`. The Scheduled Deliveries panel renders correctly when data is present.
-
-### What's broken / missing ❌
-1. **Wizard date is never persisted.** `requested_delivery_date` from the wizard is collected but **not written to any column** on `purchase_orders`. There is no `requested_delivery_date` column in the DB and no mapping to `ready_for_delivery_at`.
-2. **No UI to set/edit `ready_for_delivery_at`.** Supplier action buttons in `PODetail.tsx` go straight `SUBMITTED/PRICED → ORDERED → DELIVERED`. The `READY_FOR_DELIVERY` status is **never set by any code path**.
-3. **Confirmed by data**: All 10 most recent POs in DB have `ready_for_delivery_at = NULL` — explaining why the supplier's Scheduled Deliveries panel is empty.
-4. **Action queue gap**: `useSupplierDashboardData` already flags "ORDERED but no delivery date" as an action item, but there is no destination UI to resolve it.
-
-### Root cause
-A scheduling date field was scaffolded end-to-end (DB column, status, dashboard reader, wizard input) but the **write path was never wired** — neither at PO creation nor as a post-order supplier action.
-
----
-
-## Proposed fix (3 small additions)
-
-### 1. Persist wizard delivery date at PO creation
-In the PO creation handler (where the wizard payload becomes a `purchase_orders` insert), map `data.requested_delivery_date` → `ready_for_delivery_at` (ISO string). One-line change.
-
-### 2. Add a "Schedule Delivery" supplier action on PODetail
-For `status === 'ORDERED'` (supplier-side), add a button **"Schedule Delivery"** next to "Mark Delivered":
-- Opens a small date picker dialog
-- On save: `UPDATE purchase_orders SET ready_for_delivery_at = <date>, status = 'READY_FOR_DELIVERY'`
-- After scheduling, a new "Mark Delivered" button on `READY_FOR_DELIVERY` completes the flow.
-
-New status flow becomes:
-```
-SUBMITTED → PRICED → ORDERED → READY_FOR_DELIVERY → DELIVERED
-                            ↘ (or skip directly) ↗
+### The bug
+The supplier clicks "Schedule Delivery" on an `ORDERED` PO. The handler (`PODetail.tsx` L435-440) runs:
+```ts
+UPDATE purchase_orders SET status='READY_FOR_DELIVERY', ready_for_delivery_at=<date> WHERE id=<po_id>
 ```
 
-### 3. Show the scheduled date on PO detail header + table
-- `PODetail.tsx` info card: add a "Scheduled Delivery" row showing `ready_for_delivery_at` (or "Not scheduled").
-- `POTableView.tsx`: add an optional small "Delivery" column or include the date in the existing Date cell when present.
+But the existing supplier RLS policies on `purchase_orders` are:
 
----
+| Policy | USING (current row) | WITH CHECK (new row) |
+|---|---|---|
+| Supplier can update submitted POs | `status='SUBMITTED'` | new status ∈ {SUBMITTED, PRICED, ORDERED} |
+| Supplier can update priced POs | `status='PRICED'` | new status ∈ {PRICED, ORDERED} |
+| Supplier can mark PO as delivered | `status='ORDERED'` | new status = `'DELIVERED'` |
 
-## Files modified
-- `src/components/po-wizard-v2/usePOCreation.ts` (or wherever the wizard insert lives — locate it during implementation)
-- `src/components/purchase-orders/PODetail.tsx` (add Schedule Delivery button + dialog + display row)
-- `src/components/purchase-orders/POTableView.tsx` (display scheduled date)
-- New: `src/components/purchase-orders/ScheduleDeliveryDialog.tsx` (small date-picker dialog)
+**There is NO policy that allows a supplier to update a PO whose current status is `ORDERED` to a new status of `READY_FOR_DELIVERY`.** The "Mark Delivered" policy is the only one that matches the USING clause (`status='ORDERED'`) but its WITH CHECK only permits `DELIVERED` — not `READY_FOR_DELIVERY`. So the UPDATE is blocked → "You do not have permission to update this purchase order".
 
-## Files NOT touched
-- DB schema (column already exists)
-- `useSupplierDashboardData.ts` (already reads correctly)
-- `SupplierDashboardView.tsx` / `SupplierDeliverySchedule.tsx` (already render correctly once data flows)
-- RLS / permissions (existing PO update permissions cover this)
+Same problem for "Reschedule" on a `READY_FOR_DELIVERY` PO — no policy permits supplier updates from that state at all.
 
-## Verification after implementation
-- Create a PO with a delivery date in the wizard → confirm `ready_for_delivery_at` is set in DB.
-- As supplier, on an ORDERED PO, click "Schedule Delivery" → set date → status becomes `READY_FOR_DELIVERY` and date persists.
-- Supplier dashboard "Scheduled Deliveries" panel shows the PO; 5-day strip highlights the day.
-- PO table shows the scheduled date.
+### The fix
+Add **one RLS policy** allowing the supplier-of-record to manage the delivery scheduling lifecycle:
+
+```sql
+CREATE POLICY "Supplier can schedule delivery"
+ON public.purchase_orders FOR UPDATE
+USING (
+  is_supplier_for_purchase_order(id)
+  AND status = ANY (ARRAY['ORDERED'::po_status, 'READY_FOR_DELIVERY'::po_status])
+)
+WITH CHECK (
+  is_supplier_for_purchase_order(id)
+  AND status = ANY (ARRAY['ORDERED'::po_status, 'READY_FOR_DELIVERY'::po_status, 'DELIVERED'::po_status])
+);
+```
+
+This single policy covers:
+- `ORDERED` → `READY_FOR_DELIVERY` (initial schedule)
+- `READY_FOR_DELIVERY` → `READY_FOR_DELIVERY` (reschedule / change date)
+- `READY_FOR_DELIVERY` → `DELIVERED` (mark delivered after scheduling)
+- Stays consistent with existing policy style (uses `is_supplier_for_purchase_order` SECURITY DEFINER helper, no recursion risk).
+
+The existing "Supplier can mark PO as delivered" policy still covers the direct `ORDERED → DELIVERED` shortcut.
+
+### Why the client code is already correct
+- `PODetail.tsx` `handleScheduleDelivery` correctly sends both fields in one update — RLS WITH CHECK only validates row state, not which columns changed, so no client change needed.
+- The "Mark Delivered" button after scheduling will continue to work via the new combined policy.
+
+### Files modified
+- **Migration** (one new RLS policy on `public.purchase_orders`)
+
+### Files NOT touched
+- `PODetail.tsx`, `ScheduleDeliveryDialog.tsx`, hooks — already correct
+- No other RLS policies altered
+
+### Verification after implementation
+- As supplier on an `ORDERED` PO → click Schedule Delivery → save → no error, status flips to `READY_FOR_DELIVERY`, date persists.
+- Click Reschedule → change date → no error, date updates.
+- Click Mark Delivered on a `READY_FOR_DELIVERY` PO → status flips to `DELIVERED`.
+- Non-supplier users still cannot update through this policy (helper enforces supplier-of-record).
