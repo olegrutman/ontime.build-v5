@@ -1,12 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
-import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
-import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
+import { useSupplierDashboardData } from '@/hooks/useSupplierDashboardData';
+import { C, fontVal, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
 
 /* ─── Types ─── */
@@ -14,24 +14,14 @@ interface ProjectWithDetails {
   id: string; name: string; status: string; contractValue: number | null;
   pendingActions: number; build_type: string; project_type: string; updated_at: string;
 }
-
-interface FinancialSummary {
-  totalContracts: number; totalRevenue: number; totalCosts: number; profitMargin: number;
-  totalBilled: number; paidByYou: number; paidToYou: number; outstandingBilling: number; potentialProfit: number;
-}
-
-interface AttentionItem { id: string; type: 'invoice' | 'invite' | 'sent_invite'; title: string; projectName: string; projectId: string; }
+interface AttentionItem { id: string; type: string; title: string; projectName: string; projectId: string; }
 interface PendingInvite { id: string; projectId: string; projectName: string; invitedByOrgName: string; role: string; }
 interface StatusCounts { setup: number; active: number; on_hold: number; completed: number; archived: number; }
 
 export interface SupplierDashboardViewProps {
   projects: ProjectWithDetails[];
-  financials: FinancialSummary;
-  projectFinancials: ProjectFinancialDetail[];
-  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
-  recentDocs: RecentDoc[];
   statusCounts: StatusCounts;
   profile: { first_name?: string | null; phone?: string | null } | null;
   organization: any;
@@ -48,13 +38,36 @@ export interface SupplierDashboardViewProps {
   loading: boolean;
 }
 
+// Human-readable phase/project_type labels
+const PROJECT_TYPE_LABEL: Record<string, string> = {
+  residential: 'Residential',
+  commercial: 'Commercial',
+  mixed_use: 'Mixed Use',
+  apartments_mf: 'Apartments / Multi-Family',
+  single_family: 'Single Family',
+  multi_family: 'Multi-Family',
+  industrial: 'Industrial',
+  retail: 'Retail',
+  office: 'Office',
+  healthcare: 'Healthcare',
+  education: 'Education',
+  hospitality: 'Hospitality',
+};
+const formatPhase = (raw: string | null | undefined): string => {
+  if (!raw) return '—';
+  if (PROJECT_TYPE_LABEL[raw]) return PROJECT_TYPE_LABEL[raw];
+  return raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
 export function SupplierDashboardView({
-  projects, financials, projectFinancials, billing, attentionItems, pendingInvites, recentDocs,
+  projects, attentionItems, pendingInvites,
   statusCounts, profile, organization, userSettings, updateUserSettings,
   isOrgAdmin, userOrgRolesLength, orgType, orgId, soleMember,
-  onSetSoleMember, onSetPartOfTeam, onRefresh, loading,
+  onSetSoleMember, onSetPartOfTeam, onRefresh,
 }: SupplierDashboardViewProps) {
   const navigate = useNavigate();
+  const { projectFinancials, upcomingDeliveries, refetch: refetchSupplier } = useSupplierDashboardData();
+
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
   const orgComplete = !!(organization?.address?.street);
@@ -62,20 +75,26 @@ export function SupplierDashboardView({
   const projectCreated = projects.length > 0;
   const activeProjects = projects.filter(p => !['archived', 'completed'].includes(p.status));
 
-  // Use real data only — no demo fallback
-  const pf = projectFinancials;
+  const handleRefresh = async () => { await Promise.all([onRefresh(), refetchSupplier()]); };
 
-  const dp = pf.map((p) => ({
-    projectId: p.projectId,
-    name: p.projectName,
-    phase: projects.find(pr => pr.id === p.projectId)?.project_type || '',
-    estimate: p.revenue,
-    ordered: p.costs,
-    billed: p.paidToYou + p.pendingToCollect,
-    received: p.paidToYou,
-    overBy: Math.max(0, p.costs - p.revenue),
-    risk: p.costs > p.revenue ? 'Over Budget' as const : 'On Track' as const,
-  }));
+  // Build display rows from supplier-side financials, joining with projects table for type/status
+  const dp = useMemo(() => projectFinancials.map(pf => {
+    const proj = projects.find(p => p.id === pf.projectId);
+    const phaseRaw = pf.projectType || proj?.project_type || null;
+    return {
+      projectId: pf.projectId,
+      name: pf.projectName,
+      status: pf.status || proj?.status || 'active',
+      phase: formatPhase(phaseRaw),
+      estimate: pf.estimate,
+      ordered: pf.ordered,
+      billed: pf.billed,
+      received: pf.received,
+      overBy: pf.overBy,
+      daysSinceLastPayment: pf.daysSinceLastPayment,
+      risk: pf.overBy > 0 ? 'Over Budget' as const : 'On Track' as const,
+    };
+  }), [projectFinancials, projects]);
 
   const totalEstimate = dp.reduce((s, p) => s + p.estimate, 0);
   const totalOrdered = dp.reduce((s, p) => s + p.ordered, 0);
@@ -83,14 +102,20 @@ export function SupplierDashboardView({
   const totalReceived = dp.reduce((s, p) => s + p.received, 0);
   const totalOver = dp.reduce((s, p) => s + p.overBy, 0);
   const totalOutstanding = totalBilled - totalReceived;
-  const totalNotBilled = totalOrdered - totalBilled;
+  const totalNotBilled = Math.max(0, totalOrdered - totalBilled);
   const orderedPct = totalEstimate > 0 ? Math.round((totalOrdered / totalEstimate) * 100) : 0;
   const billedPct = totalOrdered > 0 ? Math.round((totalBilled / totalOrdered) * 100) : 0;
   const receivedPct = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0;
   const overCount = dp.filter(p => p.overBy > 0).length;
-  const onTrackCount = dp.filter(p => p.overBy === 0 && p.estimate > 0).length;
+  const onTrackCount = dp.filter(p => p.overBy === 0 && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
 
-  const getProjectColor = (idx: number) => BAR_COLORS[idx % BAR_COLORS.length];
+  // Active = any supplier activity OR not archived/completed
+  const projectsWithActivity = dp.filter(p =>
+    (p.estimate > 0 || p.ordered > 0 || p.billed > 0) &&
+    !['archived', 'completed'].includes(p.status)
+  );
+
+  const goToProject = (pid: string) => navigate(`/project/${pid}`);
 
   return (
     <div className="flex gap-0">
@@ -113,7 +138,7 @@ export function SupplierDashboardView({
         )}
 
         <OrgInviteBanner />
-        {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
+        {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={handleRefresh} />}
 
         {/* ─── 6 KPI Cards: 3-col grid × 2 rows ─── */}
         <KpiGrid>
@@ -125,7 +150,7 @@ export function SupplierDashboardView({
               <THead cols={['Project', 'Phase', 'Estimate', 'Notes']} />
               <tbody>
                 {dp.map((p, i) => (
-                  <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
+                  <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                     <TdN>{p.name}</TdN>,
                     <span>{p.phase}</span>,
                     <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
@@ -149,7 +174,7 @@ export function SupplierDashboardView({
                   const vColor = variance > 0 ? C.yellow : C.green;
                   const barCol = variance > 0 ? C.yellow : C.green;
                   return (
-                    <TRow key={i} cells={[
+                    <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
                       <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
@@ -170,14 +195,14 @@ export function SupplierDashboardView({
               { type: 'pg' as PillType, text: `${onTrackCount} on track` },
             ]} idx={2}>
             <div style={{ padding: '12px' }}>
-              {overCount > 0 && (
+              {overCount > 0 ? (
                 <>
                   <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, fontWeight: 600, padding: '4px 0 8px', ...fontLabel }}>Projects With Variance</div>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <THead cols={['Project', 'Estimated', 'Ordered', 'Over By', 'Risk']} />
                     <tbody>
                       {dp.filter(p => p.overBy > 0).map((p, i) => (
-                        <TRow key={i} cells={[
+                        <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                           <TdN>{p.name}</TdN>,
                           <TdM>{fmt(p.estimate)}</TdM>,
                           <TdM>{fmt(p.ordered)}</TdM>,
@@ -188,8 +213,7 @@ export function SupplierDashboardView({
                     </tbody>
                   </table>
                 </>
-              )}
-              {overCount === 0 && (
+              ) : (
                 <div style={{ textAlign: 'center', padding: 20, color: C.muted, fontSize: '0.78rem' }}>
                   ✅ No projects over budget
                 </div>
@@ -208,7 +232,7 @@ export function SupplierDashboardView({
                   const outToBill = Math.max(0, p.ordered - p.billed);
                   const barCol = pctBilled >= 100 ? C.green : C.blue;
                   return (
-                    <TRow key={i} cells={[
+                    <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
                       <TdM>{p.billed > 0 ? fmt(p.billed) : '—'}</TdM>,
@@ -233,7 +257,7 @@ export function SupplierDashboardView({
                   const outBal = Math.max(0, p.billed - p.received);
                   const barCol = pctCollected >= 90 ? C.green : C.amber;
                   return (
-                    <TRow key={i} cells={[
+                    <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{p.billed > 0 ? fmt(p.billed) : '—'}</TdM>,
                       <TdM>{p.received > 0 ? fmt(p.received) : '—'}</TdM>,
@@ -255,13 +279,15 @@ export function SupplierDashboardView({
               <tbody>
                 {dp.filter(p => p.billed - p.received > 0).map((p, i) => {
                   const outBal = p.billed - p.received;
+                  const daysVal = p.daysSinceLastPayment;
+                  const daysColor = daysVal === null ? C.muted : daysVal > 30 ? C.red : daysVal > 14 ? C.yellow : C.muted;
                   return (
-                    <TRow key={i} cells={[
+                    <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{fmt(p.billed)}</TdM>,
                       <TdM>{fmt(p.received)}</TdM>,
                       <TdM>{fmt(outBal)}</TdM>,
-                      <span style={{ color: C.muted }}>—</span>,
+                      <span style={{ color: daysColor, fontWeight: daysVal !== null && daysVal > 14 ? 600 : 400, fontSize: '0.74rem' }}>{daysVal === null ? 'No payments yet' : `${daysVal}d`}</span>,
                     ]} />
                   );
                 })}
@@ -275,11 +301,30 @@ export function SupplierDashboardView({
         <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
             <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>🚚 Scheduled Deliveries</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: C.amber, cursor: 'pointer' }}>Full Schedule →</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: C.amber }}>{upcomingDeliveries.length} upcoming</span>
           </div>
-          <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-            <span style={{ fontSize: '0.78rem', color: C.muted }}>No scheduled deliveries</span>
-          </div>
+          {upcomingDeliveries.length === 0 ? (
+            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.78rem', color: C.muted }}>No scheduled deliveries</span>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+                <THead cols={['PO #', 'Project', 'Delivery Date', 'Status', 'Total']} />
+                <tbody>
+                  {upcomingDeliveries.map((d, i) => (
+                    <TRow key={i} onClick={() => goToProject(d.projectId)} cells={[
+                      <TdN>{d.poNumber}</TdN>,
+                      <span>{d.projectName}</span>,
+                      <span style={{ fontSize: '0.74rem' }}>{format(new Date(d.deliveryDate), 'MMM d, yyyy')}</span>,
+                      <Pill type="pa">{d.status}</Pill>,
+                      <TdM>{d.total !== null ? fmt(d.total) : '—'}</TdM>,
+                    ]} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* ─── Project Budget Forecast ─── */}
@@ -297,7 +342,7 @@ export function SupplierDashboardView({
                   const outBal = Math.max(0, p.billed - p.received);
                   const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : 'pg';
                   return (
-                    <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
+                    <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
                       <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
@@ -318,12 +363,14 @@ export function SupplierDashboardView({
         <div>
           <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, fontWeight: 600, marginBottom: 10, ...fontLabel }}>Active Projects</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
-            {dp.filter(p => p.estimate > 0).map((p, i) => {
-              const proj = projects.find(pr => pr.id === p.projectId);
-              return (
-                <ProjectCard key={i} name={p.name} status={proj?.status || 'active'} budget={p.estimate} costs={p.ordered} onClick={() => navigate(`/project/${p.projectId}`)} />
-              );
-            })}
+            {projectsWithActivity.map((p, i) => (
+              <ProjectCard key={i} name={p.name} status={p.status} budget={p.estimate} costs={p.ordered} onClick={() => goToProject(p.projectId)} />
+            ))}
+            {projectsWithActivity.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px', color: C.muted, fontSize: '0.78rem' }}>
+                No active projects with supplier activity yet
+              </div>
+            )}
           </div>
         </div>
 
