@@ -586,12 +586,14 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         row.estimate += est.total_amount || 0;
       });
 
-      // POs → ordered (exclude DRAFT/ACTIVE pre-submission states)
-      const orderedExcludeStatuses = new Set(['ACTIVE', 'DRAFT', 'CANCELLED']);
+      // POs → ordered (exclude pre-submission/in-negotiation states; only count committed POs)
+      // Apply sales tax to po_total so we compare apples-to-apples with tax-inclusive estimates.
+      const orderedExcludeStatuses = new Set(['ACTIVE', 'DRAFT', 'CANCELLED', 'SUBMITTED', 'PRICED']);
       allPOs.forEach((po: any) => {
         if (!po.project_id || orderedExcludeStatuses.has(po.status)) return;
         const row = ensure(po.project_id, po.projects?.name || 'Unknown');
-        row.ordered += po.po_total || 0;
+        const taxMultiplier = 1 + ((po.sales_tax_percent || 0) / 100);
+        row.ordered += (po.po_total || 0) * taxMultiplier;
       });
 
       // Invoices → billed + received + lastPaymentDate
