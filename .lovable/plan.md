@@ -1,228 +1,79 @@
 
 
-# Mobile-First Responsive Optimization for Ontime.Build
-
-## Overview
-Systematic responsive refactoring across the entire app, executed in phases. No changes to business logic, database, permissions, or desktop layouts. All work is CSS/layout-level refactoring with reusable mobile patterns.
-
----
-
-## Phase 1: Global Foundation (do first — everything else depends on this)
-
-### 1a. Fix `App.css` root constraint
-The `#root` block sets `max-width: 1280px`, `margin: 0 auto`, `padding: 2rem`, and `text-align: center`. This fights against the app's own layout system. **Remove these rules entirely** — the app shell already handles layout.
-
-### 1b. Create reusable mobile utility components
-
-**`src/components/ui/responsive-table.tsx`** — A wrapper that renders a `<Table>` on `md+` and a stacked card list on mobile. Used by Invoice, PO, and SOV table views.
-
-**`src/components/ui/sticky-action-bar.tsx`** — A fixed-bottom action bar (above bottom nav) for primary actions like Save, Submit, Approve. 44px min-height buttons, safe-area padding.
-
-**`src/components/ui/mobile-section.tsx`** — Collapsible accordion section for grouping secondary details on mobile.
-
-### 1c. Standardize global spacing
-- Add a global `overflow-x: hidden` on `body` and `#root` in `index.css`
-- Ensure `AppShell` main content uses `px-3` on mobile (already close, verify)
-- Ensure `ProjectShell` content area has consistent mobile padding
-
----
-
-## Phase 2: App Shell & Navigation
-
-### 2a. `ContextBar` — already mostly good
-- Verify header doesn't overflow on 320px
-- Ensure logo + actions don't wrap
-
-### 2b. `ProjectShell` header
-- On mobile, show project name truncated in the header bar (currently missing)
-- Compact the status badge + download + avatar to fit 320px
-
-### 2c. `ProjectTabBar` — already mobile-only with horizontal scroll
-- Increase tap target height from ~36px to 44px
-- Add scroll fade indicators (left/right gradient) so users know there's more
-
-### 2d. `ProjectBottomNav` — already exists
-- Verify all tap targets are 44×44 minimum
-- Already handles safe area — good
-
-### 2e. `MobileBottomNav` (dashboard) — already exists
-- Same tap target audit
-
----
-
-## Phase 3: Dashboard
-
-### 3a. `DashboardKPIs` / `DashboardKPIRow`
-- Ensure 2-col grid on mobile (currently `grid-cols-2 lg:grid-cols-4` — verify)
-- Make KPI values larger and more readable
-
-### 3b. `ProjectSnapshotList` / `ProjectRow`
-- Ensure project cards are single-column on mobile with clear status, value, and next action
-- Surface pending actions prominently
-
-### 3c. `DashboardBusinessSnapshot`, `DashboardActionQueue`, `DashboardMaterialsHealth`
-- Already in a `grid-cols-1 md:grid-cols-2` pattern — verify spacing
-- Ensure cards don't overflow horizontally
-
-### 3d. Role-specific dashboard views (GC/TC/FC/Supplier)
-- Audit each for mobile card layouts — they use the same KPI expandable cards
-- Ensure no horizontal overflow
-
----
-
-## Phase 4: Project Overview
-
-### 4a. Role-specific overviews (`GCProjectOverviewContent`, `TCProjectOverview`, `FCProjectOverview`, `SupplierProjectOverview`)
-- Convert any side-by-side desktop card grids to single-column on mobile
-- Make financial KPI cards full-width and expandable
-- Ensure contract values, WO totals, invoice totals are scannable
-
-### 4b. `ProjectFinancialCommand`, `MaterialsCommandCenter`, `COImpactCard`
-- These are dense desktop components — wrap in collapsible sections on mobile
-- Ensure monetary values use large `font-mono` text
-
----
-
-## Phase 5: Invoices
-
-### 5a. `InvoicesTab`
-- Auto-switch to card view (`InvoiceCard`) on mobile instead of table view
-- Hide the view switcher on mobile (force card view)
-- Make filter selects full-width on mobile
-- Sticky create button at bottom
-
-### 5b. `InvoiceTableView` → hidden on mobile (card view only)
-- No changes to table itself — just hide below `md` breakpoint
-
-### 5c. `InvoiceCard`
-- Already card-based — audit for 320px fit
-- Ensure action buttons have 44px tap targets
-- Make amount and status more prominent
-
-### 5d. `InvoiceDetail`
-- Audit for mobile scrolling and section stacking
-- Ensure approve/reject actions are sticky at bottom
-
----
-
-## Phase 6: Change Orders / Work Orders
-
-### 6a. `COListPage`
-- Already uses `useIsMobile` — good foundation
-- Force card/list view on mobile, hide board view
-- Make filter chips horizontally scrollable
-- Stats strip: 2-col grid on mobile
-
-### 6b. `COBoardCard`
-- Already card-based — audit sizing
-- Ensure status, amount, location are visible without truncation on 320px
-
-### 6c. `CODetailLayout` / `COHeaderStrip` / `COKPIStrip`
-- Stack KPI strip vertically or 2-col on mobile
-- Make scope items, hour entries, and material panels single-column
-- Sticky submit/approve footer
-
-### 6d. CO/WO Wizard (`COWizard`, `TMWOWizard`)
-- Already step-based — verify each step fits on mobile
-- Ensure scope selectors, location pickers use large tap targets
-- Sticky next/back buttons
-
----
-
-## Phase 7: Purchase Orders
-
-### 7a. `PurchaseOrdersTab`
-- Same pattern as Invoices: force card view on mobile
-- Hide table below `md`
-
-### 7b. `POCard`
-- Audit for 320px fit
-- Ensure line item count, total, status, and supplier name are visible
-
-### 7c. `PODetail`
-- Stack line items vertically on mobile
-- Sticky action bar for approve/order/price actions
-
-### 7d. PO Wizard (`POWizardV2`)
-- Verify step-by-step flow works on mobile
-- Ensure item search/add is usable on phone
-
----
-
-## Phase 8: SOV
-
-### 8a. `ContractSOVEditor` / `ProjectSOVEditor`
-- This is the hardest table — multi-column with editable fields
-- On mobile: render as accordion groups (by phase/section)
-- Each item shows description, amount, % complete in a stacked card
-- Inline edit via bottom sheet instead of inline inputs
-- Preserve 100% total logic — no calculation changes
-
----
-
-## Phase 9: Project Setup / Wizards
-
-### 9a. `SetupWizardV2`
-- Already step-based with progress bar
-- Ensure questions panel is full-width on mobile (hide SOV preview on mobile, show as separate step)
-- Stack inputs vertically
-- Sticky continue/back buttons
-
-### 9b. `ProjectSetupFlow`
-- Audit form sections for mobile stacking
-- Ensure address, building type, and scope selectors work on phone
-
----
-
-## Phase 10: Team / Documents / Other Pages
-
-### 10a. `OrgTeam` page
-- Audit member list for mobile card layout
-- Ensure invite dialog fits mobile viewport
-
-### 10b. `PartnerDirectory`
-- Card list on mobile
-
-### 10c. `RFIsTab`, `ReturnsTab`, `DailyLogPanel`, `ScheduleTab`
-- Audit each for horizontal overflow
-- Convert any tables to cards on mobile
-
-### 10d. Profile / Settings pages
-- Stack form fields vertically
-- Ensure save buttons are accessible
-
----
-
-## Technical Details
-
-**Files modified** (estimated 40-60 files):
-- `src/App.css` — remove `#root` constraints
-- `src/index.css` — add `overflow-x: hidden` on body
-- 3 new shared components in `src/components/ui/`
-- ~15 tab/list pages (Invoices, POs, COs, SOV, etc.) — add mobile view switching
-- ~20 card components — tap target and sizing audit
-- ~10 detail/form pages — add sticky actions, stack layouts
-- ~5 shell/layout components — padding and header tweaks
-
-**No files archived** — all changes are additive responsive CSS. Existing desktop layouts preserved via breakpoint guards (`md:`, `lg:`).
-
-**No database, API, auth, or permission changes.**
-
-**Breakpoints used**: Default Tailwind (`sm: 640px`, `md: 768px`, `lg: 1024px`, `xl: 1280px`). Mobile-first means base styles target 320-430px, then scale up.
-
----
-
-## Execution Order
-1. Global foundation (App.css fix, shared components, spacing)
-2. App shell & navigation
-3. Dashboard
-4. Project Overview
-5. Invoices
-6. Change Orders / Work Orders
-7. Purchase Orders
-8. SOV
-9. Project Setup / Wizards
-10. Team / Documents / Other pages
-
-This is a large effort. I recommend executing phases 1-3 first, then 4-7, then 8-10 in subsequent rounds to keep changes reviewable.
+# Supplier Dashboard — Full Test, Analysis & Bug Report
+
+## Goal
+Read-only audit of the Supplier dashboard end-to-end: every KPI formula, every hook, every data link, every role rule, and every navigation path. Report findings with concrete fixes — no code changes in this mode.
+
+## Scope of audit
+
+**Entry points & routing**
+- `src/pages/Dashboard.tsx` → which dashboard renders for `SUPPLIER` org type
+- `src/components/dashboard/SupplierDashboard.tsx` (top-level shell)
+- Permission gates (`useAuth`, `permissions`, org-type routing)
+
+**Data hooks**
+- `src/hooks/useSupplierDashboardData.ts` — every KPI, bucket, trend, action item
+- `src/hooks/useProjectEstimateRows.ts` — estimate→PO conversion math
+- Any related hooks: `useFinancialTrends`, `useDashboardData` if cross-referenced
+
+**Section components (each gets a formula + render audit)**
+1. `SupplierKPIStrip` — Total Receivable, Paid This Month (+ MoM%), Open Orders, Credit Exposure
+2. `SupplierActionQueue` — action item generation rules
+3. `SupplierProjectList` — accepted projects
+4. `SupplierDeliverySchedule` — delivery days/rows
+5. `SupplierReceivables` — aging buckets (0-30, 31-60, 60+), velocity trend, oldest invoice
+6. `SupplierEstimateCatalog` — estimates with ordered % calculation
+7. `SupplierProjectHealth` — per-project health rows
+8. `SupplierOpenOrders` — open POs
+9. `SupplierReturnsQueue` — returns
+
+**What I'll verify per metric**
+- Source query (table, filters, status enum values used)
+- Date math (timezone, month boundaries, "last 30 days")
+- Currency math (null handling, division-by-zero, % rounding)
+- Status enum correctness (e.g., `ACTIVE`, `ORDERED`, `DELIVERED`, `APPROVED`, `SUBMITTED`, `PAID`)
+- Role-based filtering (supplier_org_id scoping, RLS expectations)
+- Edge cases: empty data, single data point, very large values, negative MoM
+- Navigation links from each card (do they route to the right page?)
+- Realtime/refresh behavior
+
+**Cross-checks**
+- Compare hook outputs vs schema (`supplier_estimates`, `supplier_estimate_items`, `purchase_orders`, `invoices`, `po_line_items`, `returns`)
+- Compare metric definitions to project memory rules:
+  - `mem://features/supplier/materials-health-dashboard` (Estimated → Ordered → Billed lifecycle)
+  - `mem://features/dashboard/profit-margin-and-cash-flow` (paid by you vs paid to you)
+  - `mem://features/purchase-orders/lifecycle-and-status-logic` (6-state PO lifecycle)
+  - `mem://features/invoicing/billing-and-reporting-logic` (Construction Gross formula)
+  - `mem://security/material-pricing-privacy` (pricing visibility)
+
+## Method
+
+1. Read the supplier dashboard entry routing in `Dashboard.tsx`
+2. Deep-read `useSupplierDashboardData.ts` — line by line, formula by formula
+3. Deep-read each of the 9 section components for render bugs and prop mismatches
+4. Read `useProjectEstimateRows.ts` (already partially shown — verify ordered logic)
+5. Run a few read-only DB checks via `supabase--read_query` to validate enum values actually exist (e.g., do invoices use `PAID` or `paid`? are there POs with NULL `po_total`?)
+6. Check supplier-specific memory files for documented rules and confirm code matches
+7. Cross-reference Supplier role permissions in `useAuth` / permission system
+8. Compile findings into a structured bug report
+
+## Deliverable (after I run the audit in default mode)
+
+A single structured report with:
+
+1. **Critical bugs** — wrong math, broken links, missing role gates, RLS leaks
+2. **Logic issues** — incorrect formulas, wrong status filters, edge cases unhandled
+3. **UI/UX issues** — broken navigation, missing empty states, mobile breakage
+4. **Performance** — N+1 queries, missing indexes signals, unnecessary refetches
+5. **Inconsistencies** — code vs memory rules vs schema
+6. **Recommended fixes** — exact file + line + suggested change for each finding
+
+After the report, you can approve fixes one-by-one or in batches.
+
+## What this plan does NOT do
+- No code changes (read-only mode)
+- No schema changes
+- No permission changes
+- No UI redesign — purely correctness audit
 
