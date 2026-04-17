@@ -195,12 +195,21 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           .select('id, return_number, project_id, status, credit_subtotal, reason, urgency, projects:project_id(name)')
           .eq('supplier_org_id', orgId)
           .neq('status', 'CLOSED'),
-        // Invoices linked to our POs (supplier invoices)
+        // Invoices linked to our POs (supplier invoices) — server-side scoped via po_id IN (...)
+        // We do this via a sub-fetch of PO ids to keep the query bounded
         supplierIds.length > 0
           ? supabase
-              .from('invoices')
-              .select('id, invoice_number, status, total_amount, submitted_at, approved_at, paid_at, created_at, project_id, po_id')
-              .not('po_id', 'is', null)
+              .from('purchase_orders')
+              .select('id')
+              .in('supplier_id', supplierIds)
+              .then(async (poRes) => {
+                const poIds = (poRes.data || []).map((r: any) => r.id);
+                if (poIds.length === 0) return { data: [] };
+                return supabase
+                  .from('invoices')
+                  .select('id, invoice_number, status, total_amount, submitted_at, approved_at, paid_at, created_at, project_id, po_id')
+                  .in('po_id', poIds);
+              })
           : Promise.resolve({ data: [] }),
         // Accepted projects for this org
         supabase
@@ -364,11 +373,11 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       });
       const dueSoon = outstandingInvoices.filter((inv: any) => {
         const days = differenceInDays(now, new Date(inv.submitted_at || inv.created_at));
-        return days > 30 && days <= 45;
+        return days > 30 && days <= 60;
       });
       const overdue = outstandingInvoices.filter((inv: any) => {
         const days = differenceInDays(now, new Date(inv.submitted_at || inv.created_at));
-        return days > 45;
+        return days > 60;
       });
 
       const currentAmt = current.reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
@@ -377,8 +386,8 @@ export function useSupplierDashboardData(): SupplierDashboardData {
 
       setAgingBuckets([
         { label: 'Current', range: '0–30 days', amount: currentAmt, count: current.length, percent: totalOutstanding > 0 ? (currentAmt / totalOutstanding) * 100 : 0 },
-        { label: 'Due Soon', range: '31–45 days', amount: dueSoonAmt, count: dueSoon.length, percent: totalOutstanding > 0 ? (dueSoonAmt / totalOutstanding) * 100 : 0 },
-        { label: 'Overdue', range: '45+ days', amount: overdueAmt, count: overdue.length, percent: totalOutstanding > 0 ? (overdueAmt / totalOutstanding) * 100 : 0 },
+        { label: 'Due Soon', range: '31–60 days', amount: dueSoonAmt, count: dueSoon.length, percent: totalOutstanding > 0 ? (dueSoonAmt / totalOutstanding) * 100 : 0 },
+        { label: 'Overdue', range: '60+ days', amount: overdueAmt, count: overdue.length, percent: totalOutstanding > 0 ? (overdueAmt / totalOutstanding) * 100 : 0 },
       ]);
 
       // Oldest invoice

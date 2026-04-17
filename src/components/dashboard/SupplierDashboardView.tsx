@@ -255,14 +255,13 @@ export function SupplierDashboardView({
               <tbody>
                 {dp.filter(p => p.billed - p.received > 0).map((p, i) => {
                   const outBal = p.billed - p.received;
-                  const daysSince = [8, 3, 12][i % 3]; // placeholder
                   return (
                     <TRow key={i} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{fmt(p.billed)}</TdM>,
                       <TdM>{fmt(p.received)}</TdM>,
                       <TdM>{fmt(outBal)}</TdM>,
-                      <span>{daysSince} days</span>,
+                      <span style={{ color: C.muted }}>—</span>,
                     ]} />
                   );
                 })}
