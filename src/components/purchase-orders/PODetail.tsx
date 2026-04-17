@@ -15,7 +15,9 @@ import {
   Lock,
   Receipt,
   Bell,
+  CalendarClock,
 } from 'lucide-react';
+import { ScheduleDeliveryDialog } from './ScheduleDeliveryDialog';
 import { useNudge } from '@/hooks/useNudge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -109,6 +111,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const [alreadyInvoiced, setAlreadyInvoiced] = useState(false);
   const [emailPromptOpen, setEmailPromptOpen] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
+  const [scheduleDeliveryOpen, setScheduleDeliveryOpen] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -429,6 +432,13 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
     updatePOStatus('DELIVERED', { delivered_at: new Date().toISOString() });
   };
 
+  const handleScheduleDelivery = async (date: Date) => {
+    await updatePOStatus('READY_FOR_DELIVERY', {
+      ready_for_delivery_at: date.toISOString(),
+    });
+    setScheduleDeliveryOpen(false);
+  };
+
   const [exportLoading, setExportLoading] = useState(false);
   const [estimateItemsMap, setEstimateItemsMap] = useState<Map<string, { description: string; supplier_sku: string | null; quantity: number; uom: string; unit_price: number }> | null>(null);
 
@@ -608,16 +618,48 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
             </Button>
           )}
 
-          {/* ORDERED: Supplier can mark delivered */}
+          {/* ORDERED: Supplier can schedule delivery or mark delivered directly */}
           {status === 'ORDERED' && effectiveIsSupplier && (
-            <Button onClick={handleMarkDelivered} disabled={actionLoading}>
-              {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Truck className="h-4 w-4 mr-2" />
-              )}
-              Mark Delivered
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setScheduleDeliveryOpen(true)}
+                disabled={actionLoading}
+              >
+                <CalendarClock className="h-4 w-4 mr-2" />
+                Schedule Delivery
+              </Button>
+              <Button onClick={handleMarkDelivered} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Truck className="h-4 w-4 mr-2" />
+                )}
+                Mark Delivered
+              </Button>
+            </>
+          )}
+
+          {/* READY_FOR_DELIVERY: Supplier can update date or mark delivered */}
+          {status === 'READY_FOR_DELIVERY' && effectiveIsSupplier && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setScheduleDeliveryOpen(true)}
+                disabled={actionLoading}
+              >
+                <CalendarClock className="h-4 w-4 mr-2" />
+                Reschedule
+              </Button>
+              <Button onClick={handleMarkDelivered} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Truck className="h-4 w-4 mr-2" />
+                )}
+                Mark Delivered
+              </Button>
+            </>
           )}
 
           {/* DELIVERED: Supplier can create invoice */}
@@ -669,6 +711,15 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
               <p className="text-sm text-muted-foreground">Created</p>
               <p className="font-medium">{format(new Date(po.created_at), 'MMM d, yyyy')}</p>
             </div>
+            {po.ready_for_delivery_at && (
+              <div>
+                <p className="text-sm text-muted-foreground">Scheduled Delivery</p>
+                <p className="font-medium flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                  <CalendarClock className="h-4 w-4" />
+                  {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
+                </p>
+              </div>
+            )}
             {po.delivered_at && (
               <div>
                 <p className="text-sm text-muted-foreground">Delivered</p>
@@ -1077,6 +1128,15 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
           }
         }}
         isLoading={emailSending}
+      />
+
+      <ScheduleDeliveryDialog
+        open={scheduleDeliveryOpen}
+        onOpenChange={setScheduleDeliveryOpen}
+        poNumber={po.po_number}
+        initialDate={po.ready_for_delivery_at}
+        saving={actionLoading}
+        onConfirm={handleScheduleDelivery}
       />
     </div>
   );

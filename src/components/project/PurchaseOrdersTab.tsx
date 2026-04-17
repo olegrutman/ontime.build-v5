@@ -277,6 +277,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         source_pack_name: data.source_pack_name || null,
         pack_modified: data.pack_modified || false,
         sales_tax_percent: salesTaxPercent,
+        ready_for_delivery_at: data.requested_delivery_date
+          ? data.requested_delivery_date.toISOString()
+          : null,
       })
       .select()
       .single();
@@ -553,6 +556,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         notes: po.notes || '',
         sales_tax_percent: po.sales_tax_percent ?? 0,
         line_items: wizardItems,
+        requested_delivery_date: (po as PurchaseOrder & { ready_for_delivery_at?: string | null }).ready_for_delivery_at
+          ? new Date((po as PurchaseOrder & { ready_for_delivery_at?: string | null }).ready_for_delivery_at as string)
+          : null,
       });
       setEditWizardOpen(true);
     } catch (err) {
@@ -633,6 +639,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           source_estimate_id: data.source_estimate_id || null,
           source_pack_name: data.source_pack_name || null,
           pack_modified: data.pack_modified || false,
+          ready_for_delivery_at: data.requested_delivery_date
+            ? data.requested_delivery_date.toISOString()
+            : null,
         })
         .eq('id', editingPO.id);
 
