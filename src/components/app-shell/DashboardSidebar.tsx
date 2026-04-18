@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   Receipt,
-  Package,
   RotateCcw,
   FileText,
   Settings,
