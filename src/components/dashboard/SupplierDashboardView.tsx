@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
-import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
+import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import { useSupplierDashboardData } from '@/hooks/useSupplierDashboardData';
 import { C, fontVal, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
@@ -147,18 +147,14 @@ export function SupplierDashboardView({
   const goToProject = (pid: string) => navigate(`/project/${pid}`);
 
   return (
-    <div className="flex gap-0">
-      <DashboardSidebar />
-      <div className="flex-1 min-w-0 space-y-4 px-4 lg:px-5">
-        {/* Greeting */}
-        <div style={{ ...fontLabel }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: C.ink, ...fontVal }}>
-            {profile?.first_name ? `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, ${profile.first_name}` : 'Dashboard'}
-          </h1>
-          <p style={{ fontSize: '0.75rem', color: C.muted }}>
-            {activeProjects.length} active project{activeProjects.length !== 1 ? 's' : ''} · {attentionItems.length + pendingInvites.length} item{(attentionItems.length + pendingInvites.length) !== 1 ? 's' : ''} need attention
-          </p>
-        </div>
+    <div className="space-y-4">
+        <DashboardHero
+          firstName={profile?.first_name || null}
+          orgName={organization?.name || null}
+          orgTypeLabel={orgType}
+          statusCounts={statusCounts}
+          attentionCount={attentionItems.length + pendingInvites.length}
+        />
 
         {showOnboarding && (
           <OnboardingChecklist profileComplete={profileComplete} orgComplete={orgComplete} teamInvited={teamInvited} projectCreated={projectCreated}
@@ -445,7 +441,6 @@ export function SupplierDashboardView({
         </div>
 
         <div style={{ height: 24 }} />
-      </div>
     </div>
   );
 }

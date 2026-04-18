@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
-import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
+import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
@@ -109,18 +109,14 @@ export function FCDashboardView({
   })();
 
   return (
-    <div className="flex gap-0">
-      <DashboardSidebar />
-      <div className="flex-1 min-w-0 space-y-4 px-4 lg:px-5">
-        {/* Greeting */}
-        <div style={{ ...fontLabel }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: C.ink, ...fontVal }}>{greeting}</h1>
-          <p style={{ fontSize: '0.78rem', color: C.muted, marginTop: 2 }}>
-            {projects.length > 0
-              ? `${projects.length} project${projects.length > 1 ? 's' : ''} · ${attentionItems.length + pendingInvites.length} action${(attentionItems.length + pendingInvites.length) !== 1 ? 's' : ''} needed`
-              : 'No active projects yet'}
-          </p>
-        </div>
+    <div className="space-y-4">
+        <DashboardHero
+          firstName={profile?.first_name || null}
+          orgName={organization?.name || null}
+          orgTypeLabel={orgType}
+          statusCounts={statusCounts}
+          attentionCount={attentionItems.length + pendingInvites.length}
+        />
 
         {showOnboarding && (
           <OnboardingChecklist
@@ -378,7 +374,6 @@ export function FCDashboardView({
 
         {/* Bottom spacer */}
         <div style={{ height: 32 }} />
-      </div>
     </div>
   );
 }

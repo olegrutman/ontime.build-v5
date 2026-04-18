@@ -185,7 +185,7 @@ export default function Dashboard() {
   // Supplier gets the expandable KPI card dashboard
   if (orgType === 'SUPPLIER') {
     return (
-      <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
+      <AppLayout title="Dashboard" showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
         <SupplierDashboardView
           projects={projects}
           attentionItems={attentionItems}
@@ -215,7 +215,7 @@ export default function Dashboard() {
   // GC gets the expandable KPI card dashboard
   if (orgType === 'GC') {
     return (
-      <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
+      <AppLayout title="Dashboard" showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
         <GCDashboardView
           projects={projects}
           financials={financials}
@@ -249,7 +249,7 @@ export default function Dashboard() {
   // TC gets a dedicated KPI card dashboard
   if (orgType === 'TC') {
     return (
-      <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
+      <AppLayout title="Dashboard" showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
         <TCDashboardView
           projects={projects}
           financials={financials}
@@ -283,7 +283,7 @@ export default function Dashboard() {
   // FC gets a dedicated KPI card dashboard
   if (orgType === 'FC') {
     return (
-      <AppLayout title="Dashboard" fullWidth>
+    <AppLayout title="Dashboard">
         <FCDashboardView
           projects={projects}
           financials={financials}
