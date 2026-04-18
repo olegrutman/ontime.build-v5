@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   Receipt,
-  Package,
   RotateCcw,
   FileText,
   Settings,
@@ -20,7 +19,6 @@ import { Badge } from '@/components/ui/badge';
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Partners', icon: Handshake, path: '/partners' },
-  { label: 'Purchase Orders', icon: Package, path: '/purchase-orders' },
   { label: 'Reminders', icon: FileText, path: '/reminders' },
   { label: 'My Team', icon: Users, path: '/org/team' },
   { label: 'Settings', icon: Settings, path: '/settings' },
