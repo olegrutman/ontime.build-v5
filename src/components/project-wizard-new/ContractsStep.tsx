@@ -3,9 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { BuildingType, Answers, SOVLine, WizardQuestion } from '@/hooks/useSetupWizardV2';
-import type { TeamMember } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
-import { DollarSign, ArrowUp, ArrowDown, ShieldCheck, Info } from 'lucide-react';
+import { DollarSign, ArrowUp, ArrowDown, ShieldCheck } from 'lucide-react';
 
 interface ContractsStepProps {
   buildingType: BuildingType | null;
@@ -14,8 +13,6 @@ interface ContractsStepProps {
   sovLines: SOVLine[];
   visibleQuestions: WizardQuestion[];
   creatorOrgType?: OrgType;
-  creatorOrgName?: string;
-  team?: TeamMember[];
 }
 
 const MATERIAL_OPTIONS = [
@@ -24,39 +21,15 @@ const MATERIAL_OPTIONS = [
   { value: 'SPLIT', label: 'Split responsibility' },
 ] as const;
 
-function findCompanyName(team: TeamMember[] | undefined, role: TeamMember['role']): string | null {
-  const m = team?.find((t) => t.role === role);
-  return m?.companyName?.trim() ? m.companyName.trim() : null;
-}
-
 export function ContractsStep({
   answers,
   setAnswer,
   creatorOrgType,
-  creatorOrgName,
-  team,
 }: ContractsStepProps) {
   const isTC = creatorOrgType === 'TC';
-  const isFC = creatorOrgType === 'FC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
   const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
   const materialResp = answers.material_responsibility ? String(answers.material_responsibility) : '';
-
-  const myName = creatorOrgName?.trim() || 'Your company';
-  const gcName = findCompanyName(team, 'General Contractor');
-  const tcName = findCompanyName(team, 'Trade Contractor');
-  const fcName = findCompanyName(team, 'Field Crew');
-
-  // Resolve upstream party (who is paying me)
-  const upstreamName = isTC ? gcName : isFC ? tcName : null;
-  const upstreamRoleLabel = isTC ? 'General Contractor' : isFC ? 'Trade Contractor' : 'Owner / Client';
-  const upstreamDisplay = upstreamName || upstreamRoleLabel;
-
-  // Downstream party (only relevant for TC creator)
-  const downstreamName = isTC ? fcName : null;
-  const downstreamDisplay = downstreamName || 'Field Crew';
-
-  const showDualCards = isTC;
 
   return (
     <div className="space-y-6">
@@ -70,12 +43,12 @@ export function ContractsStep({
         </div>
         <p className="text-sm text-muted-foreground">
           {isTC
-            ? 'These become the official upstream and downstream contracts for this project.'
+            ? 'These become the official upstream (GC) and downstream (FC) contracts for this project.'
             : 'This becomes the official contract record for this project.'}
         </p>
       </div>
 
-      {/* Material Responsibility — always visible */}
+      {/* Material Responsibility — always visible, not dependent on buildingType */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Material Responsibility</CardTitle>
@@ -97,19 +70,18 @@ export function ContractsStep({
         </CardContent>
       </Card>
 
-      <div className={showDualCards ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
-        {/* Upstream (incoming) contract */}
+      <div className={isTC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              {isTC || isFC ? (
+              {isTC ? (
                 <>
-                  <ArrowDown className="h-4 w-4 text-primary shrink-0" />
-                  <span className="truncate">{upstreamDisplay} → {myName}</span>
+                   <ArrowDown className="h-4 w-4 text-primary" />
+                  General Contractor → You (Upstream)
                 </>
               ) : (
                 <>
-                  <DollarSign className="h-4 w-4 text-primary shrink-0" />
+                  <DollarSign className="h-4 w-4 text-primary" />
                   Contract Value
                 </>
               )}
@@ -117,9 +89,7 @@ export function ContractsStep({
           </CardHeader>
           <CardContent>
             <Label htmlFor="contract_value" className="text-sm text-muted-foreground">
-              {isTC || isFC
-                ? `What is ${upstreamDisplay} paying ${myName}?`
-                : `Total contract value for ${myName}`}
+              {isTC ? 'What is the GC paying you?' : 'Total contract value'}
             </Label>
             <div className="relative mt-1.5">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -133,27 +103,20 @@ export function ContractsStep({
                 onChange={(e) => setAnswer('contract_value', e.target.value ? Number(e.target.value) : 0)}
               />
             </div>
-            {(isTC || isFC) && !upstreamName && (
-              <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
-                <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                <span>Tip: Add a {upstreamRoleLabel} in Step 1 to name this contract.</span>
-              </p>
-            )}
           </CardContent>
         </Card>
 
-        {/* Downstream (outgoing) contract — TC only */}
-        {showDualCards && (
+        {isTC && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <ArrowUp className="h-4 w-4 text-accent-foreground shrink-0" />
-                <span className="truncate">{myName} → {downstreamDisplay}</span>
+                <ArrowUp className="h-4 w-4 text-accent-foreground" />
+                You → Field Crew (Downstream)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Label htmlFor="fc_contract_value" className="text-sm text-muted-foreground">
-                What is {myName} paying {downstreamDisplay}?
+                What are you paying your field crew?
               </Label>
               <div className="relative mt-1.5">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -167,12 +130,6 @@ export function ContractsStep({
                   onChange={(e) => setAnswer('fc_contract_value', e.target.value ? Number(e.target.value) : 0)}
                 />
               </div>
-              {!downstreamName && (
-                <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
-                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span>Tip: Add a Field Crew in Step 1 to name this contract.</span>
-                </p>
-              )}
             </CardContent>
           </Card>
         )}

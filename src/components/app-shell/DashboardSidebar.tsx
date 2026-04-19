@@ -1,6 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
+  FolderKanban,
+  Receipt,
+  RotateCcw,
   FileText,
   Settings,
   Users,
@@ -9,7 +12,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -41,8 +46,19 @@ export function DashboardSidebar() {
 
   return (
     <aside className="hidden lg:flex flex-col w-[200px] xl:w-[220px] shrink-0 bg-[hsl(var(--foreground))] text-white fixed top-0 left-0 bottom-0 z-40">
+      {/* Top — Logo */}
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="flex items-center gap-2.5 px-4 pt-4 pb-3 hover:opacity-80 transition-opacity"
+      >
+        <OntimeLogo className="w-7 h-7" />
+        <span className="font-heading text-[1.05rem] font-extrabold tracking-[-0.3px] text-white leading-none">
+          Ontime<span className="text-primary">.build</span>
+        </span>
+      </button>
+
       {/* Nav items */}
-      <nav className="flex flex-col gap-0.5 p-3 pt-5 flex-1">
+      <nav className="flex flex-col gap-0.5 p-3 pt-2 flex-1">
         {NAV_ITEMS.map((item) => {
           const active = location.pathname === item.path;
           const Icon = item.icon;
@@ -66,22 +82,13 @@ export function DashboardSidebar() {
 
       {/* Company section */}
       <div className="px-4 py-3 border-t border-white/10">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
-          Company
-        </p>
-        <div className="bg-white rounded-lg p-3 mb-2 shadow-sm flex items-center justify-center min-h-[64px]">
-          {currentOrg?.logo_url ? (
-            <img
-              src={currentOrg.logo_url}
-              alt={orgName}
-              className="max-h-12 max-w-full object-contain"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-[hsl(var(--foreground))] text-white flex items-center justify-center text-sm font-bold">
-              {orgName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
-            </div>
-          )}
-        </div>
+        {currentOrg?.logo_url && (
+          <img
+            src={currentOrg.logo_url}
+            alt={orgName}
+            className="max-h-9 max-w-[140px] object-contain rounded mb-2"
+          />
+        )}
         <p className="text-[0.8rem] font-semibold text-white truncate leading-tight">{orgName}</p>
         {orgType && (
           <span className="inline-block mt-1 text-[0.65rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-slate-300">

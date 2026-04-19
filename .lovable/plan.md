@@ -1,58 +1,48 @@
 
 
-You want the **IMIS company logo** (currently invisible in the dark sidebar footer) to be clearly visible, and you want to **remove the Ontime.build logo from the sidebar** since it already lives in the top `ContextBar`.
+Yes — I understand. You want the **Project Overview** header to match the **Dashboard** header style (the new `DashboardHero` look from screenshot 2).
 
-## What I see now
+## What's different right now
 
-In `DashboardSidebar.tsx`:
-- **Top of sidebar (lines 47–58)**: Ontime.build logo + wordmark — **redundant** with the one in the top `ContextBar`.
-- **Company section (lines 78–93)**: IMIS logo rendered as `<img class="max-h-9 max-w-[140px] object-contain rounded">` directly on the dark navy `bg-[hsl(var(--foreground))]` background. If the logo PNG has dark colors or a transparent background with dark marks, it disappears. There's no contrasting backdrop behind it.
+**Dashboard header (the one you like)** — `DashboardHero.tsx`:
+- Solid dark navy fill (`bg-[hsl(var(--foreground))]`), white text
+- Eyebrow: `DASHBOARD` in `text-slate-500`, 0.7rem, uppercase, wide tracking
+- H1: `Good evening, John` — `text-2xl font-semibold tracking-tight`
+- Sub line: `GC_Test · General Contractor` in muted slate
+- Inline status row: `Active 2   Setup 0   On Hold 0   Needs Attention 0` — labels in slate, values in white (or amber when > 0)
+- `rounded-2xl`, compact `px-5 py-4`
+
+**Overview header (current)** — rendered inline in `ProjectHome.tsx` ~line 350:
+- Same dark navy treatment but uses different markup, eyebrow color, h1 weight, and a `Status / Health / Type` row with colored chips instead of clean inline counters
+- Notification bell sits inside the banner (top-right)
 
 ## Plan
 
-### 1. Remove the Ontime.build brand band from the sidebar
-Delete the top logo button (lines 47–58). Replace with a small spacer (`pt-3`) so nav items don't slam into the top edge.
-
-### 2. Build a proper "Company" panel with a light backdrop
-Restructure the company section (lines 78–93) into a clearly delineated card with:
-- **Light surface** behind the logo so any logo (light, dark, or color) reads cleanly:
-  - `bg-white rounded-lg p-3 mb-2` — pure white tile, the logo always pops
-- **Larger logo zone**: `max-h-12` (48px) instead of `max-h-9` (36px), centered
-- **Fallback when no logo**: show org initials in a circle (40px) on the same white tile — keeps consistent visual rhythm
-- **Below the tile**: company name + org-type chip stay on the dark navy with current styling
-- Section gets a top `border-t border-white/10` and a small `text-[0.65rem] uppercase tracking-wider text-slate-500` eyebrow label `"Company"` so the zone is identifiable
-
-Result:
-```
-┌────────────────────┐
-│ [Dashboard]        │  ← nav
-│ [Partners]         │
-│ ...                │
-├────────────────────┤
-│ COMPANY            │  ← eyebrow
-│ ┌────────────────┐ │
-│ │   [IMIS LOGO]  │ │  ← white tile, logo always visible
-│ └────────────────┘ │
-│ IMIS, LLC          │
-│ TRADE CONTRACTOR   │
-└────────────────────┘
-```
-
-### 3. Optional polish
-- Add subtle `shadow-sm` on the white tile to lift it off the dark surface.
-- If `logo_url` is missing, show a `bg-white` tile with org initials in dark navy text (`text-[hsl(var(--foreground))]`) — same footprint, never empty.
+1. **Locate exact Overview header markup** in `src/pages/project/ProjectHome.tsx` (need to confirm the surrounding container + the bell button placement before swapping).
+2. **Create `ProjectOverviewHero`** at `src/components/project/ProjectOverviewHero.tsx` — same visual recipe as `DashboardHero`:
+   - Container: `bg-[hsl(var(--foreground))] text-white rounded-2xl px-4 sm:px-5 py-4`
+   - Eyebrow: `PROJECT OVERVIEW` (`text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1`)
+   - H1: `{project.name}` (`text-2xl font-semibold tracking-tight truncate`)
+   - Sub: `{address}` in `text-[0.8rem] text-slate-400 mt-0.5 truncate`
+   - Inline row (replace chips with the same label/value pattern):
+     `Status <Active>   Health <Healthy>   Type <apartments_mf>`
+     - Labels: `text-slate-500`
+     - Values: `text-white font-medium`
+     - Health value gets amber/emerald color tint based on state (matches `Needs Attention` color logic in DashboardHero)
+   - Right slot: keep the existing notification bell button (passed in via prop or rendered as a child) — top-right, same position as today
+3. **Swap in `ProjectHome.tsx`**: replace the current header markup with `<ProjectOverviewHero project={...} health={...} bell={<NotificationBell ... />} />`. Don't touch anything below the header.
 
 ## Files to modify
-- `src/components/app-shell/DashboardSidebar.tsx` — remove Ontime brand band (top), restructure company section (bottom). ~25 lines changed.
+- **Create**: `src/components/project/ProjectOverviewHero.tsx`
+- **Edit**: `src/pages/project/ProjectHome.tsx` — swap header block only (~15 lines)
 
 ## Files NOT touched
-- `ContextBar.tsx` — already has Ontime.build lockup, stays as-is.
-- `OntimeLogo.tsx`, profile/sign-out section — unchanged.
+- `DashboardHero.tsx` — it's the reference
+- KPI grid, sub-header (status dot row + action buttons), everything below the banner
 
 ## Verification
-- Top of sidebar shows nav directly (no Ontime.build lockup duplicating the header).
-- IMIS logo appears clearly on a white tile, ~48px tall, centered.
-- If a logo is missing, a clean initials tile appears in its place — never a blank empty space.
-- "COMPANY" eyebrow + name + type chip remain readable below the tile.
-- No layout shift; sidebar still 200/220px wide; profile + sign-out untouched.
+- Side-by-side: Dashboard `/dashboard` and Overview `/project/:id/overview` headers use identical typography, spacing, eyebrow color, h1 size/weight, and inline label/value row pattern.
+- Notification bell remains in the same spot on Overview.
+- Mobile (390px): banner reflows cleanly, inline row wraps with `flex-wrap`.
+- No regression in the action buttons row beneath the banner.
 
