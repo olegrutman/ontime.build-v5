@@ -1,88 +1,61 @@
 
 
-## Goal
+## Issue
 
-Two improvements on `/create-project`:
+Looking at your screenshot: the dashboard sidebar logo lockup is **28×28px** with `text-[1.05rem]` wordmark — visually it disappears against the dark navy. The "Ontime.build" wordmark is barely 17px tall, the icon is the same size as the nav item icons below it (so it reads as just another menu row), and the whole header has only `pt-4 pb-3` of padding so there's no visual weight distinguishing brand from navigation.
 
-1. **Contracts step** — show **full company names** for each contract value (instead of "GC", "TC", "Field Crew" labels), so the user knows exactly *who* the contract is with.
-2. **Scope step** — break the long question list into **collapsible accordion sections** (Structure / Roof / Envelope / Backout / Exterior) so the SOV preview stays visible and the user doesn't have to scroll a tall page.
+Compare to `LandingHeader.tsx` and `AuthPage.tsx` — those use a larger logo and more breathing room. The dashboard sidebar is the most under-sized treatment in the app.
 
----
+## Recommendation — pick one
 
-## Change 1 — Contracts step: real company names
+### Option A (recommended): **Bold sidebar header band**
+Give the logo its own elevated zone at the top of the sidebar.
+- Logo icon: `w-7 h-7` → **`w-10 h-10`** (40px, ~40% larger)
+- Wordmark: `text-[1.05rem]` → **`text-[1.35rem]`** (matches LandingHeader)
+- Padding: `px-4 pt-4 pb-3` → **`px-4 pt-5 pb-4`** + subtle `border-b border-white/10` so the band visually anchors
+- Optional: add a faint amber accent dot or thin amber underline on `.build` to mirror brand
+- File: `src/components/app-shell/DashboardSidebar.tsx` lines 50–58
 
-In `ContractsStep.tsx`:
-- Accept new props: `creatorOrgName?: string` and `team?: TeamMember[]`.
-- Resolve names from the team list collected in Step 1 (Basics):
-  - **Upstream party** (the org paying the creator):
-    - GC creator → "Owner / Client" (no upstream in team) → just label `Contract Value` with creator's full org name as the receiving party.
-    - TC creator → find first team member with `role === 'General Contractor'` → use their `companyName`. Fallback `"General Contractor"` if none added yet.
-    - FC creator → find first `'Trade Contractor'` member.
-  - **Downstream party** (only relevant for TC creator on the FC card):
-    - Find first `role === 'Field Crew'` team member → use `companyName`. Fallback `"Field Crew"`.
-- Update card titles/labels to interpolate the resolved names:
-  - GC card title: `Contract Value` + subline `{creatorOrgName} (Project Owner) — receiving payment`
-  - TC upstream card title: `{gcCompanyName} → {creatorOrgName}` with sublabel `What is {gcCompanyName} paying you?`
-  - TC downstream card title: `{creatorOrgName} → {fcCompanyName}` with sublabel `What are you paying {fcCompanyName}?`
-- Wire props from `CreateProjectNew.tsx` (`creatorOrgName={currentOrg?.name}`, `team={team}`).
-- Add a small helper inside `ContractsStep.tsx` (or a new `src/lib/wizardCounterparty.ts`) to centralize the resolution.
+### Option B: **Icon-only, oversized**
+For a more iconic, less verbose header:
+- Drop the wordmark entirely, scale icon to **`w-12 h-12`** (48px), centered
+- Cleaner, but loses the "Ontime.build" reinforcement
 
-Edge case: if no matching team member exists, fall back to generic role label and show a tiny inline hint: `Tip: Add a {Role} in Step 1 to name this contract.`
+### Option C: **Move brand to ContextBar (top strip)**
+Put the logo lockup in the fixed top bar (`ContextBar.tsx`) at full size (`w-9 h-9` + `text-[1.25rem]` wordmark), and use the sidebar's top zone purely for primary nav. Most balanced if you want the brand visible across **every** page (not just dashboard pages with the sidebar). Requires editing both `DashboardSidebar.tsx` and `src/components/app-shell/ContextBar.tsx`.
 
----
+## My pick: **Option A**
 
-## Change 2 — Scope step: keep both questions and SOV on one screen
+Lowest risk, biggest visibility win, no layout reshuffling, no new component. It matches the treatment already used on the public-facing `LandingHeader` (which feels right) and keeps the sidebar self-contained.
 
-Currently `ScopeQuestionsPanel.tsx` renders **all sections stacked vertically** in the left column (Structure → Roof → Envelope → Backout → Exterior). Long enough that user must scroll; SOV preview stays put but the question column dwarfs it visually.
+## Change (Option A)
 
-**Proposed layout** — convert the section list into a `shadcn/ui` `Accordion` (type="single", collapsible, defaultValue first non-empty section):
+In `src/components/app-shell/DashboardSidebar.tsx` lines 50–58, replace the logo button with:
 
-```
-┌──────────────────────────────────────────────┬──────────────────┐
-│ Scope                                        │ SOV Preview      │
-│ Answer questions… SOV updates live.          │ (sticky, scroll) │
-│                                              │                  │
-│ ▼ Structure  (3/5 answered)                  │  $500,000 100%   │
-│   • Number of stories per unit               │  1. Mobilization │
-│   • Has basement?                            │  2. Per Floor    │
-│   • Mobilization as separate item?           │  …               │
-│                                              │                  │
-│ ▶ Roof  (2 questions)                        │                  │
-│ ▶ Envelope (1 question)                      │                  │
-│ ▶ Backout (4 questions)                      │                  │
-│ ▶ Exterior (3 questions)                     │                  │
-└──────────────────────────────────────────────┴──────────────────┘
+```tsx
+<button
+  onClick={() => navigate('/dashboard')}
+  className="flex items-center gap-2.5 px-4 pt-5 pb-4 border-b border-white/10 hover:opacity-80 transition-opacity"
+>
+  <OntimeLogo className="w-10 h-10" />
+  <span className="font-heading text-[1.35rem] font-extrabold tracking-[-0.3px] text-white leading-none">
+    Ontime<span className="text-primary">.build</span>
+  </span>
+</button>
 ```
 
-Details:
-- Use `Accordion` from `@/components/ui/accordion` with `type="single"` `collapsible`.
-- **Default open**: first section that has at least one unanswered visible question; fallback to first non-empty.
-- **Auto-advance**: when all questions in the open section are answered (non-null), auto-open the next section with questions. Keeps user moving forward without hunting.
-- **Section header shows progress**: `Structure (3 of 5)` — small muted counter on the right side of the trigger.
-- Skip rendering empty sections entirely (same as today).
-- The SOV preview column already uses `h-[calc(100vh-280px)]` + `overflow-y-auto`, so it naturally stays in view as the left column collapses sections. No change needed there.
-- Drop the outer `overflow-y-auto pr-2` on the question column (no longer needed once content is collapsed); keep `space-y-3`.
+Then on the nav (`<nav>` line 61), bump top padding to clear the new border: `pt-3` → keep as is, the `border-b` already separates them.
 
-Mobile: `lg:grid-cols-2` → on `<lg`, single column. Accordion still works; SOV stacks below — that's fine and matches existing behavior.
-
----
-
-## Files to modify
-
-- `src/components/project-wizard-new/ContractsStep.tsx` — add `creatorOrgName` + `team` props, resolve counterparty names, update card titles and labels.
-- `src/pages/CreateProjectNew.tsx` — pass `creatorOrgName` and `team` to `<ContractsStep …/>` (one-line change).
-- `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` — wrap section loop in `Accordion`, add per-section progress counters, add auto-advance effect.
+## Files modified
+- `src/components/app-shell/DashboardSidebar.tsx` — header band only (~9 lines).
 
 ## Files NOT touched
-
-- `SOVLivePreview.tsx`, `WizardQuestion.tsx`, `useSetupWizardV2.ts` — no logic change.
-- Building Type, Basics, Review steps — unaffected.
+- `OntimeLogo.tsx`, `ContextBar.tsx`, `ProjectShell.tsx`, all auth/landing logos.
 
 ## Verification
-
-- **Contracts (TC creator)** — both cards show the actual GC and FC company names from Step 1; if a role wasn't added in Basics, show generic label + tip.
-- **Contracts (GC creator)** — single card shows "Contract Value" with creator org name as the receiving party.
-- **Scope** — only one section open at a time; collapsed sections show counters; SOV preview always visible at viewport size 1366×768; completing a section auto-opens next.
-- **Mobile (390px)** — accordion works, SOV stacks below scope, no overflow.
-- **Draft persistence** — existing sessionStorage flow unaffected (we only touch presentation).
+- Sidebar logo icon visibly larger than nav row icons (40px vs 16px).
+- Wordmark legible at standard reading distance.
+- Subtle border separates brand zone from nav list.
+- No layout shift in nav items or company section below.
+- 1366×768 and 1920×1080 — sidebar still 200/220px wide, no overflow.
 
