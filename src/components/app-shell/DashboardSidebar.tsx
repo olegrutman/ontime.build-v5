@@ -49,10 +49,10 @@ export function DashboardSidebar() {
       {/* Top — Logo */}
       <button
         onClick={() => navigate('/dashboard')}
-        className="flex items-center gap-2.5 px-4 pt-4 pb-3 hover:opacity-80 transition-opacity"
+        className="flex items-center gap-2.5 px-4 pt-5 pb-4 border-b border-white/10 hover:opacity-80 transition-opacity"
       >
-        <OntimeLogo className="w-7 h-7" />
-        <span className="font-heading text-[1.05rem] font-extrabold tracking-[-0.3px] text-white leading-none">
+        <OntimeLogo className="w-10 h-10" />
+        <span className="font-heading text-[1.35rem] font-extrabold tracking-[-0.3px] text-white leading-none">
           Ontime<span className="text-primary">.build</span>
         </span>
       </button>
