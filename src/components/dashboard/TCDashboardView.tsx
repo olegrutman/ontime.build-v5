@@ -163,20 +163,20 @@ export function TCDashboardView({
             sub={gcRevenue > 0 ? `${marginPct}% margin across all projects` : 'No contract data yet'}
             pills={gcRevenue > 0 ? [{ type: 'pg', text: `↑ ${marginPct}%` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'General Contractor Contract', 'Field Crew Contract', 'Gross Margin', 'Margin %']} />
+              <THead cols={['Project', 'Gross Margin', 'Margin %']} />
               <tbody>
-                {pf.length > 0 ? pf.map((p, i) => {
+                {pf.length > 0 ? pf.map((p) => {
                   const m = p.revenue - p.costs;
                   const mPct = p.revenue > 0 ? Math.round((m / p.revenue) * 100) : 0;
                   return (
                     <TRow key={p.projectId} cells={[
-                      <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.revenue)}</TdM>,
-                      <TdM>{fmt(p.costs)}</TdM>, <TdM>{fmt(m)}</TdM>,
+                      <TdN>{p.projectName}</TdN>,
+                      <TdM>{fmt(m)}</TdM>,
                       <span style={{ fontWeight: 700, color: mPct > 0 ? C.green : C.red }}>{mPct}%</span>,
                     ]} />
                   );
-                }) : <TRow cells={[<span style={{ color: C.faint }}>No data yet</span>, '', '', '', '']} />}
-                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(grossMargin)}</TdM>, <span style={{ fontWeight: 700 }}>{marginPct}%</span>]} />}
+                }) : <TRow cells={[<span style={{ color: C.faint }}>No data yet</span>, '', '']} />}
+                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(grossMargin)}</TdM>, <span style={{ fontWeight: 700 }}>{marginPct}%</span>]} />}
               </tbody>
             </table>
           </KpiCard>
