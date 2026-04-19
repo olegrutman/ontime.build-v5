@@ -1,56 +1,47 @@
 
 
-## Diagnosis (from screenshot)
+## Plan — strip cards down to only what they're about
 
-On the TC dashboard, three different KPI cards expand to show **the same** revenue + cost + margin table:
-- **Revenue card** → shows GC Contract, FC Cost, Margin, Margin %  ← off-topic columns
-- **Cost card** → shows FC Contract, GC Contract, Margin  ← off-topic columns
-- **Gross Margin card** → shows GC Contract, FC Contract, Margin, Margin %  ← (this one is fine, margin needs both sides)
+### Card 1 — General Contractor Revenue (TC dashboard)
+- 2 columns: **Project | Contract Value**
+- Drop Collected, % Collected, and totals beyond contract sum.
+- Total row: total contract value only.
 
-User wants each card's expanded table to show **only what that card is actually about**.
+### Card 2 — Field Crew / Labor Cost
+- 2 columns: **Project | Contract Cost**
+- Drop Paid to Date, Pending.
+- Total row: total FC cost only.
 
-## Scope
+### Card 3 — Gross Margin
+- 3 columns: **Project | Gross Margin | Margin %**
+- Drop the GC Contract and FC Contract breakdown columns (still computed internally for the math).
+- Total row: total margin + overall %.
 
-Only `src/components/dashboard/TCDashboardView.tsx` needs the focused fix. GC/FC/Supplier expansions are already topic-scoped (verified). The "Gross Margin" card is allowed to keep both columns since margin = revenue − cost by definition.
+### Cards 4–8 — stack doc# + project in one cell, drop the Project column
 
-## Changes — `TCDashboardView.tsx`
-
-**Card 1 — GENERAL CONTRACTOR CONTRACTS (REVENUE)** (lines 122–144)
-Drop FC Cost / Margin / Margin % columns. Keep revenue-only context.
+Use a small helper rendering:
 ```
-Columns: Project | General Contractor | Contract Value | % Collected
-Rows: per project — name, GC org name, p.revenue, paid/revenue %
-Total row: total contracted revenue
-```
-
-**Card 2 — FIELD CREW / LABOR CONTRACTS (COST)** (lines 146–163)
-Drop GC Contract / Margin columns. Keep cost-only context.
-```
-Columns: Project | Field Crew | Contract Cost | Paid to Date
-Rows: per project — name, FC org name, p.costs, p.paidByYou (or whatever paid-to-FC value exists)
-Total row: total FC cost
+<TdN>
+  <div>{co.title}</div>
+  <div style={{ fontSize:'0.68rem', color:C.muted, marginTop:2 }}>{co.projectName}</div>
+</TdN>
 ```
 
-**Card 3 — GROSS MARGIN** (lines 165–187)
-Leave as-is. Margin legitimately requires both revenue and cost columns.
+Per card:
+- **Card 4 Change Orders:** `CO | Status | View →` (3 cols). CO# on top, project under.
+- **Card 5 Received from GC:** `Project (with collected $ under name) | Contract | Paid | % | Pending` — actually here keep Project as primary; just remove the redundant "GC Contract" if user wants tighter. Keeping as-is unless you say otherwise — this card *is* about per-project collection so all columns are relevant. Will tighten to: `Project | Paid | % | Pending` (drop Contract column since it's already in Card 1).
+- **Card 6 Pending from GC:** `Invoice | Amount | Status` (3 cols). Invoice# on top, project under.
+- **Card 7 Materials POs:** Already groups by project in headers. Inside each group: `PO | Amount | Status` — already correct, no change.
+- **Card 8 Needs Attention:** `Item | Type | View →` (3 cols). Item title on top, project under.
 
-**Cards 4–8** — Already topic-scoped (Change Orders, Received, Pending, Materials, Attention). No change.
+### Files
+- `src/components/dashboard/TCDashboardView.tsx` — only file changed.
 
-## Data needed
-
-`pf` (per-project financials) already provides `projectName`, `revenue`, `costs`, `paidToYou`, `pendingToCollect`. I'll need to also surface the GC org name (Card 1) and FC org name (Card 2). I'll check the existing `pf` shape during implementation; if those names aren't on `pf`, I'll fall back to the project name or pull from the same source the project cards use. No new queries.
-
-## Files modified
-- `src/components/dashboard/TCDashboardView.tsx` — only the JSX inside Card 1 and Card 2 (~40 lines total).
-
-## Files NOT touched
-- `GCDashboardView.tsx`, `FCDashboardView.tsx`, `SupplierDashboardView.tsx` — already focused.
-- `KpiCard.tsx` shared component — no API change needed.
-
-## Verification
-- Click "Expand for detail" on Revenue → table shows ONLY revenue/collection info, no FC cost columns.
-- Click on Cost → table shows ONLY FC cost/payment info, no GC revenue columns.
-- Click on Gross Margin → still shows the both-sides comparison (intentional).
-- Cards 4–8 unchanged.
-- Empty-state rows still render correctly.
+### Verification
+- Cards 1, 2 show 2 columns; Card 3 shows 3.
+- Cards 4, 6, 8 show 3 columns with doc# on top of project name in the first cell.
+- Card 5 trimmed to 4 columns (Contract column removed).
+- Card 7 unchanged (already grouped by project).
+- Empty states still render.
+- Totals update correctly.
 
