@@ -120,13 +120,15 @@ export function GCDashboardView({
 
   return (
     <div className="flex flex-col gap-4">
-        <DashboardHero
-          firstName={profile?.first_name || null}
-          orgName={organization?.name || null}
-          orgTypeLabel={orgType}
-          statusCounts={statusCounts}
-          attentionCount={attentionItems.length + pendingInvites.length}
-        />
+        <div className="-order-2 md:contents">
+          <DashboardHero
+            firstName={profile?.first_name || null}
+            orgName={organization?.name || null}
+            orgTypeLabel={orgType}
+            statusCounts={statusCounts}
+            attentionCount={attentionItems.length + pendingInvites.length}
+          />
+        </div>
 
         {showOnboarding && (
           <OnboardingChecklist
@@ -373,7 +375,7 @@ export function GCDashboardView({
 
         {/* All Projects Grid */}
         {activeProjects.length > 0 && (
-          <div className="order-2 md:order-last" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          <div className="-order-1 md:order-last" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
               <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 All Projects</span>
             </div>
