@@ -1,9 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
-  FolderKanban,
-  Receipt,
-  RotateCcw,
   FileText,
   Settings,
   Users,
@@ -12,9 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
