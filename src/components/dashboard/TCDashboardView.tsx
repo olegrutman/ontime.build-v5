@@ -233,16 +233,16 @@ export function TCDashboardView({
             sub={pendingInvoiceDocs.length > 0 ? `${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length !== 1 ? 's' : ''} awaiting General Contractor approval` : 'No pending invoices'}
             pills={pendingFromGC > 0 ? [{ type: 'pw', text: 'Chasing General Contractor' }] : [{ type: 'pg', text: 'All clear' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Invoice', 'Project', 'Amount', 'Status']} />
+              <THead cols={['Invoice', 'Amount', 'Status']} />
               <tbody>
                 {pendingInvoiceDocs.length > 0 ? pendingInvoiceDocs.slice(0, 8).map(inv => (
                   <TRow key={inv.id} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} cells={[
-                    <TdN>{inv.title}</TdN>, <>{inv.projectName}</>,
+                    <TdN><div>{inv.title}</div><div style={{ fontSize:'0.68rem', color:C.muted, marginTop:2 }}>{inv.projectName}</div></TdN>,
                     <TdM>{inv.amount ? fmt(inv.amount) : '—'}</TdM>,
                     <Pill type={inv.status === 'SUBMITTED' ? 'pw' : 'pb'}>{inv.status}</Pill>,
                   ]} />
-                )) : <TRow cells={[<span style={{ color: C.faint }}>No pending invoices</span>, '', '', '']} />}
-                {pendingFromGC > 0 && <TRow isTotal cells={['', '', <TdM>{fmt(pendingFromGC)}</TdM>, '']} />}
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No pending invoices</span>, '', '']} />}
+                {pendingFromGC > 0 && <TRow isTotal cells={['', <TdM>{fmt(pendingFromGC)}</TdM>, '']} />}
               </tbody>
             </table>
           </KpiCard>
