@@ -96,7 +96,7 @@ export function TCDashboardView({
   });
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
         <DashboardHero
           firstName={profile?.first_name || null}
           orgName={organization?.name || null}
@@ -317,7 +317,7 @@ export function TCDashboardView({
 
         {/* My Projects Grid */}
         {activeProjects.length > 0 && (
-          <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          <div className="order-2 md:order-last" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
               <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 My Projects ({activeProjects.length})</span>
             </div>
