@@ -125,20 +125,20 @@ export function TCDashboardView({
             sub={`${projects.length} active project${projects.length !== 1 ? 's' : ''} with General Contractor`}
             pills={[{ type: 'pa', text: 'Revenue' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'General Contractor Contract', 'Field Crew Cost', 'Margin', 'Margin %']} />
+              <THead cols={['Project', 'Contract Value', 'Collected', '% Collected']} />
               <tbody>
-                {pf.length > 0 ? pf.map((p, i) => {
-                  const m = p.revenue - p.costs;
-                  const mPct = p.revenue > 0 ? Math.round((m / p.revenue) * 100) : 0;
+                {pf.length > 0 ? pf.map((p) => {
+                  const pct = p.revenue > 0 ? Math.round((p.paidToYou / p.revenue) * 100) : 0;
                   return (
                     <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
-                      <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.revenue)}</TdM>,
-                      <TdM>{fmt(p.costs)}</TdM>, <TdM>{fmt(m)}</TdM>,
-                      <span style={{ fontWeight: 700, color: mPct > 0 ? C.green : C.red }}>{mPct}%</span>,
+                      <TdN>{p.projectName}</TdN>,
+                      <TdM>{fmt(p.revenue)}</TdM>,
+                      <TdM>{fmt(p.paidToYou)}</TdM>,
+                      <span style={{ fontWeight: 700, color: pct >= 80 ? C.green : pct >= 40 ? C.amber : C.red }}>{pct}%</span>,
                     ]} />
                   );
-                }) : <TRow cells={[<span style={{ color: C.faint }}>No contracts yet</span>, '', '', '', '']} />}
-                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(grossMargin)}</TdM>, <span style={{ fontWeight: 700 }}>{marginPct}%</span>]} />}
+                }) : <TRow cells={[<span style={{ color: C.faint }}>No contracts yet</span>, '', '', '']} />}
+                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(receivedFromGC)}</TdM>, <span style={{ fontWeight: 700 }}>{Math.round((receivedFromGC / gcRevenue) * 100)}%</span>]} />}
               </tbody>
             </table>
           </KpiCard>
@@ -149,15 +149,17 @@ export function TCDashboardView({
             sub="Field crew and sub-contractor costs"
             pills={[{ type: 'pm', text: 'Cost' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'Field Crew Contract', 'General Contractor Contract', 'Margin']} />
+              <THead cols={['Project', 'Contract Cost', 'Paid to Date', 'Pending']} />
               <tbody>
-                {pf.length > 0 ? pf.map((p, i) => (
+                {pf.length > 0 ? pf.map((p) => (
                   <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
-                    <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.costs)}</TdM>,
-                    <TdM>{fmt(p.revenue)}</TdM>, <TdM>{fmt(p.revenue - p.costs)}</TdM>,
+                    <TdN>{p.projectName}</TdN>,
+                    <TdM>{fmt(p.costs)}</TdM>,
+                    <TdM>{fmt(p.paidByYou)}</TdM>,
+                    <TdM>{fmt(p.pendingToPay)}</TdM>,
                   ]} />
                 )) : <TRow cells={[<span style={{ color: C.faint }}>No Field Crew contracts yet</span>, '', '', '']} />}
-                {fcCost > 0 && <TRow isTotal cells={['', <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(grossMargin)}</TdM>]} />}
+                {fcCost > 0 && <TRow isTotal cells={['', <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(pf.reduce((s, p) => s + p.paidByYou, 0))}</TdM>, <TdM>{fmt(pf.reduce((s, p) => s + p.pendingToPay, 0))}</TdM>]} />}
               </tbody>
             </table>
           </KpiCard>
