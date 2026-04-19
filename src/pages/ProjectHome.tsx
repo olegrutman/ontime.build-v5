@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useProjectProfile } from '@/hooks/useProjectProfile';
 import { useScopeSelections } from '@/hooks/useScopeWizard';
-import { ChevronDown, ChevronLeft, ClipboardList } from 'lucide-react';
+import { ChevronDown, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -32,6 +32,7 @@ import { CompactAlertBar } from '@/components/project/CompactAlertBar';
 import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
 import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
+import { ProjectOverviewHero } from '@/components/project/ProjectOverviewHero';
 
 import { BillingCashCard } from '@/components/project/BillingCashCard';
 import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
@@ -295,45 +296,16 @@ export default function ProjectHome() {
       <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
         <ProjectSidebar isSupplier={isSupplier} isTM={isTM} />
         <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
-          {/* Dark Header + Sticky Tab Bar — always visible */}
+          {/* Dark Header — matches DashboardHero style */}
           <div className="sticky top-0 z-30">
-            <div className="bg-[hsl(var(--foreground))] text-white rounded-t-2xl px-4 sm:px-5 py-4">
-              <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1 flex items-start gap-2">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="md:hidden mt-0.5 shrink-0 p-1 -ml-1 rounded-md hover:bg-white/10 transition-colors"
-                  aria-label="Back to dashboard"
-                >
-                  <ChevronLeft className="w-5 h-5 text-slate-400" />
-                </button>
-                <div className="min-w-0 flex-1">
-                <p className="text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1">Project Overview</p>
-                  <h1 className="text-2xl font-semibold tracking-tight truncate">{project.name}</h1>
-                  {formattedAddress && (
-                    <p className="text-[0.8rem] text-slate-400 mt-0.5 truncate">{formattedAddress}</p>
-                  )}
-                  {/* Stat row — matches Business Snapshot style */}
-                  <div className="flex items-center gap-4 mt-2 text-[0.85rem]">
-                    <span className="text-slate-500">Status <span className="text-white font-medium">{projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).replace('_', ' ')}</span></span>
-                    {projectStatus === 'active' && healthLabel && (
-                      <span className="text-slate-500">Health <span className={cn(
-                        'font-medium',
-                        healthLabel === 'healthy' ? 'text-emerald-400' : healthLabel === 'watch' ? 'text-amber-400' : 'text-red-400'
-                      )}>{healthLabel === 'healthy' ? 'Healthy' : healthLabel === 'watch' ? 'Watch' : 'At Risk'}</span></span>
-                    )}
-                    {project.project_type && (
-                      <span className="text-slate-500">Type <span className="text-white font-medium">{project.project_type}</span></span>
-                    )}
-                  </div>
-                </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <NotificationSheet />
-                </div>
-              </div>
-            </div>
-            
+            <ProjectOverviewHero
+              projectName={project.name}
+              address={formattedAddress}
+              status={projectStatus}
+              projectType={project.project_type}
+              health={projectStatus === 'active' ? healthLabel : null}
+              rightSlot={<NotificationSheet />}
+            />
           </div>
 
           <div className={cn(
