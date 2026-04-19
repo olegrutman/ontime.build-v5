@@ -1,64 +1,48 @@
 
 
-## What I see — the difference
+Yes — I understand. You want the **Project Overview** header to match the **Dashboard** header style (the new `DashboardHero` look from screenshot 2).
 
-I compared both pages live (TC user, Fuller Residence). They use the **same** `KpiCard` and `KpiGrid` primitives (4-col, `gap-2.5`), so the cards themselves are identical building blocks. The visual difference is **purely from the page wrappers**.
+## What's different right now
 
-### Dashboard (`/dashboard`) — looks cramped
-1. **Double-rendered sidebar bug**. `AppLayout → AppShell` already mounts `<DashboardSidebar />` on the left (`fixed`, with `lg:ml-[200px]` offset on the content). Then `TCDashboardView`, `GCDashboardView`, and `FCDashboardView` **render it again** (`<DashboardSidebar />` inside `<div className="flex gap-0">`). The second one takes a slot in the flex row, eating ~200px of horizontal space → KPI cards squeeze into a narrower column.
-2. **Inconsistent padding**: TC view wraps content in `px-4 lg:px-5 space-y-4`, no `max-w-7xl`, no `mx-auto`. Combined with `fullWidth` on `AppLayout`, content stretches edge-to-edge with thin side gutters.
-3. **Plain greeting** ("Good morning, Oleg" + 1-line subtitle) — no card, no eyebrow label, no status pill. Feels lightweight next to overview.
+**Dashboard header (the one you like)** — `DashboardHero.tsx`:
+- Solid dark navy fill (`bg-[hsl(var(--foreground))]`), white text
+- Eyebrow: `DASHBOARD` in `text-slate-500`, 0.7rem, uppercase, wide tracking
+- H1: `Good evening, John` — `text-2xl font-semibold tracking-tight`
+- Sub line: `GC_Test · General Contractor` in muted slate
+- Inline status row: `Active 2   Setup 0   On Hold 0   Needs Attention 0` — labels in slate, values in white (or amber when > 0)
+- `rounded-2xl`, compact `px-5 py-4`
 
-### Project Overview (`/project/:id/overview`) — what you like
-1. Single sidebar (`ProjectSidebar`) handled by `ProjectShell`.
-2. Content wrapped in `max-w-7xl mx-auto px-3 sm:px-6 py-3` (from `ProjectHome.tsx:340`) — generous, balanced gutters.
-3. **Rich header card** above KPIs: dark navy banner with "PROJECT OVERVIEW" eyebrow, big project name, address, `Status / Health / Type` row.
-4. Sub-header strip with status dot + role line + action buttons ("Submit Invoice", "View Contract").
-5. KPI grid breathes naturally inside the wider container.
+**Overview header (current)** — rendered inline in `ProjectHome.tsx` ~line 350:
+- Same dark navy treatment but uses different markup, eyebrow color, h1 weight, and a `Status / Health / Type` row with colored chips instead of clean inline counters
+- Notification bell sits inside the banner (top-right)
 
-## What I'd change (apply Overview's polish to the Dashboard)
+## Plan
 
-### Fix 1 — Remove the duplicate sidebar (the actual bug)
-In `TCDashboardView.tsx`, `GCDashboardView.tsx`, `FCDashboardView.tsx`:
-- Delete the `import { DashboardSidebar }` and the inline `<DashboardSidebar />` render.
-- Replace `<div className="flex gap-0"> ... <div className="flex-1 min-w-0 space-y-4 px-4 lg:px-5">` with a single `<div className="space-y-4">`.
+1. **Locate exact Overview header markup** in `src/pages/project/ProjectHome.tsx` (need to confirm the surrounding container + the bell button placement before swapping).
+2. **Create `ProjectOverviewHero`** at `src/components/project/ProjectOverviewHero.tsx` — same visual recipe as `DashboardHero`:
+   - Container: `bg-[hsl(var(--foreground))] text-white rounded-2xl px-4 sm:px-5 py-4`
+   - Eyebrow: `PROJECT OVERVIEW` (`text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1`)
+   - H1: `{project.name}` (`text-2xl font-semibold tracking-tight truncate`)
+   - Sub: `{address}` in `text-[0.8rem] text-slate-400 mt-0.5 truncate`
+   - Inline row (replace chips with the same label/value pattern):
+     `Status <Active>   Health <Healthy>   Type <apartments_mf>`
+     - Labels: `text-slate-500`
+     - Values: `text-white font-medium`
+     - Health value gets amber/emerald color tint based on state (matches `Needs Attention` color logic in DashboardHero)
+   - Right slot: keep the existing notification bell button (passed in via prop or rendered as a child) — top-right, same position as today
+3. **Swap in `ProjectHome.tsx`**: replace the current header markup with `<ProjectOverviewHero project={...} health={...} bell={<NotificationBell ... />} />`. Don't touch anything below the header.
 
-### Fix 2 — Match Overview's container
-In `Dashboard.tsx`, drop `fullWidth` from the `AppLayout` calls for GC/TC/FC (keep for Supplier if intentional). `AppShell` then wraps content in `max-w-7xl mx-auto px-3 sm:px-5 md:px-6` — same rhythm as Overview.
-
-### Fix 3 — Add a "Dashboard Hero" card matching Overview's header
-Replace the plain greeting with a card styled like the Project Overview banner:
-
-```text
-┌─────────────────────────────────────────────────┐
-│ DASHBOARD                                       │  ← eyebrow
-│ Good morning, Oleg                              │  ← h1 name
-│ IMIS, LLC · Trade Contractor                    │  ← sub
-│ Active 3   Setup 0   On Hold 0   Needs 0        │  ← inline stats
-└─────────────────────────────────────────────────┘
-```
-
-Same dark/tinted background, same `font-heading` h1, same eyebrow style. Below it: an action row with primary CTA (`+ New Project`) + secondary (`View Reminders`), mirroring Overview's "Submit Invoice / View Contract" row.
-
-### Fix 4 — Tighten KPI grid spacing to match Overview rhythm
-Keep `KpiGrid`'s `gap-2.5 lg:grid-cols-4` (already correct). The cards will naturally space out once the duplicate sidebar is removed and the `max-w-7xl` container is applied.
-
-## Files to change
-- `src/components/dashboard/TCDashboardView.tsx` — remove inline sidebar + flex wrapper, add hero card.
-- `src/components/dashboard/GCDashboardView.tsx` — same.
-- `src/components/dashboard/FCDashboardView.tsx` — same.
-- `src/pages/Dashboard.tsx` — drop `fullWidth` from `AppLayout` for GC/TC/FC branches.
-- (Optional) `src/components/dashboard/SupplierDashboardView.tsx` — verify it doesn't have the same double-sidebar issue.
+## Files to modify
+- **Create**: `src/components/project/ProjectOverviewHero.tsx`
+- **Edit**: `src/pages/project/ProjectHome.tsx` — swap header block only (~15 lines)
 
 ## Files NOT touched
-- `KpiCard.tsx`, `KpiGrid.tsx` — already correct, used by both pages.
-- `ProjectShell.tsx`, `TCProjectOverview.tsx` — Overview is the reference, leave alone.
-- `DashboardSidebar.tsx` — keep as-is, just stop double-mounting it.
+- `DashboardHero.tsx` — it's the reference
+- KPI grid, sub-header (status dot row + action buttons), everything below the banner
 
 ## Verification
-- `/dashboard` no longer shows two stacked sidebars (no duplicated nav, no narrowed content column).
-- KPI cards have the same gutters and gap rhythm as `/project/:id/overview`.
-- New dashboard hero card visually matches the Project Overview banner (eyebrow + h1 + sub + status row).
-- Sidebar nav still works (Dashboard / Partners / Reminders / My Team / Settings).
-- Test at 1366×768, 1536×864, and 390×844 — no layout overflow.
+- Side-by-side: Dashboard `/dashboard` and Overview `/project/:id/overview` headers use identical typography, spacing, eyebrow color, h1 size/weight, and inline label/value row pattern.
+- Notification bell remains in the same spot on Overview.
+- Mobile (390px): banner reflows cleanly, inline row wraps with `flex-wrap`.
+- No regression in the action buttons row beneath the banner.
 
