@@ -206,13 +206,14 @@ export function TCDashboardView({
             sub={gcRevenue > 0 ? `${Math.round((receivedFromGC / gcRevenue) * 100)}% of total contracted value` : 'No payments received yet'}
             pills={receivedFromGC > 0 ? [{ type: 'pg', text: `${gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 0}% collected` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'General Contractor Contract', 'Paid by General Contractor', '% Collected', 'Pending']} />
+              <THead cols={['Project', 'Paid', '% Collected', 'Pending']} />
               <tbody>
-                {pf.length > 0 ? pf.map((p, i) => {
+                {pf.length > 0 ? pf.map((p) => {
                   const pct = p.revenue > 0 ? Math.round((p.paidToYou / p.revenue) * 100) : 0;
                   return (
                     <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}?tab=invoices`)} cells={[
-                      <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.revenue)}</TdM>, <TdM>{fmt(p.paidToYou)}</TdM>,
+                      <TdN>{p.projectName}</TdN>,
+                      <TdM>{fmt(p.paidToYou)}</TdM>,
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Bar pct={pct} color={pct >= 80 ? C.green : pct >= 40 ? C.amber : C.red} />
                         <span style={{ fontSize: '0.7rem', fontWeight: 600, color: C.muted }}>{pct}%</span>
@@ -220,8 +221,8 @@ export function TCDashboardView({
                       <TdM>{fmt(p.pendingToCollect)}</TdM>,
                     ]} />
                   );
-                }) : <TRow cells={[<span style={{ color: C.faint }}>No data yet</span>, '', '', '', '']} />}
-                {receivedFromGC > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(receivedFromGC)}</TdM>, <span style={{ fontWeight: 700 }}>{gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 0}%</span>, <TdM>{fmt(pendingFromGC)}</TdM>]} />}
+                }) : <TRow cells={[<span style={{ color: C.faint }}>No data yet</span>, '', '', '']} />}
+                {receivedFromGC > 0 && <TRow isTotal cells={['', <TdM>{fmt(receivedFromGC)}</TdM>, <span style={{ fontWeight: 700 }}>{gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 0}%</span>, <TdM>{fmt(pendingFromGC)}</TdM>]} />}
               </tbody>
             </table>
           </KpiCard>
