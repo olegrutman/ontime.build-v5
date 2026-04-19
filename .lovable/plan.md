@@ -1,48 +1,63 @@
 
 
-Yes — I understand. You want the **Project Overview** header to match the **Dashboard** header style (the new `DashboardHero` look from screenshot 2).
+## Goal
 
-## What's different right now
+Make the IMIS company logo visible in the dashboard sidebar by giving its section a **lighter blue background** (so dark logos pop against it) and **enlarging the logo** itself.
 
-**Dashboard header (the one you like)** — `DashboardHero.tsx`:
-- Solid dark navy fill (`bg-[hsl(var(--foreground))]`), white text
-- Eyebrow: `DASHBOARD` in `text-slate-500`, 0.7rem, uppercase, wide tracking
-- H1: `Good evening, John` — `text-2xl font-semibold tracking-tight`
-- Sub line: `GC_Test · General Contractor` in muted slate
-- Inline status row: `Active 2   Setup 0   On Hold 0   Needs Attention 0` — labels in slate, values in white (or amber when > 0)
-- `rounded-2xl`, compact `px-5 py-4`
+## Changes — `src/components/app-shell/DashboardSidebar.tsx` (Company section, lines 83–98)
 
-**Overview header (current)** — rendered inline in `ProjectHome.tsx` ~line 350:
-- Same dark navy treatment but uses different markup, eyebrow color, h1 weight, and a `Status / Health / Type` row with colored chips instead of clean inline counters
-- Notification bell sits inside the banner (top-right)
+1. **Lighter background** for just the company section (not the whole sidebar):
+   - Wrap the section in a softly tinted "card" inside the dark sidebar.
+   - Use a translucent light-blue tint that reads as a separate panel: `bg-slate-100/95` (near-white with very slight cool tint) — this makes any dark or color logo readable.
+   - Add `mx-3 mb-2 rounded-xl px-3 py-3` so it looks like an inset card, not a full-width band.
+   - Keep the existing `border-t border-white/10` removed since it's now a card, not a divider.
 
-## Plan
+2. **Larger logo**:
+   - Bump from `max-h-9 max-w-[140px]` → `max-h-14 max-w-[170px]` (≈56px tall vs 36px).
+   - Drop `rounded` (most logos aren't square — rounding clips edges).
+   - Center it: `mx-auto block mb-2`.
 
-1. **Locate exact Overview header markup** in `src/pages/project/ProjectHome.tsx` (need to confirm the surrounding container + the bell button placement before swapping).
-2. **Create `ProjectOverviewHero`** at `src/components/project/ProjectOverviewHero.tsx` — same visual recipe as `DashboardHero`:
-   - Container: `bg-[hsl(var(--foreground))] text-white rounded-2xl px-4 sm:px-5 py-4`
-   - Eyebrow: `PROJECT OVERVIEW` (`text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1`)
-   - H1: `{project.name}` (`text-2xl font-semibold tracking-tight truncate`)
-   - Sub: `{address}` in `text-[0.8rem] text-slate-400 mt-0.5 truncate`
-   - Inline row (replace chips with the same label/value pattern):
-     `Status <Active>   Health <Healthy>   Type <apartments_mf>`
-     - Labels: `text-slate-500`
-     - Values: `text-white font-medium`
-     - Health value gets amber/emerald color tint based on state (matches `Needs Attention` color logic in DashboardHero)
-   - Right slot: keep the existing notification bell button (passed in via prop or rendered as a child) — top-right, same position as today
-3. **Swap in `ProjectHome.tsx`**: replace the current header markup with `<ProjectOverviewHero project={...} health={...} bell={<NotificationBell ... />} />`. Don't touch anything below the header.
+3. **Adjust text colors** for the new light background:
+   - Org name: `text-white` → `text-slate-900`.
+   - Org type pill: `bg-white/10 text-slate-300` → `bg-slate-900/10 text-slate-700`.
 
-## Files to modify
-- **Create**: `src/components/project/ProjectOverviewHero.tsx`
-- **Edit**: `src/pages/project/ProjectHome.tsx` — swap header block only (~15 lines)
+4. **Fallback when no logo**: keep org name + pill rendering as today, just on the new light card so the visual rhythm stays consistent.
+
+### Resulting markup (sketch)
+
+```tsx
+{/* Company section - light card so logos stand out */}
+<div className="mx-3 mb-2 rounded-xl bg-slate-100/95 px-3 py-3">
+  {currentOrg?.logo_url && (
+    <img
+      src={currentOrg.logo_url}
+      alt={orgName}
+      className="max-h-14 max-w-[170px] object-contain mx-auto block mb-2"
+    />
+  )}
+  <p className="text-[0.8rem] font-semibold text-slate-900 truncate leading-tight">
+    {orgName}
+  </p>
+  {orgType && (
+    <span className="inline-block mt-1 text-[0.65rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-900/10 text-slate-700">
+      {ORG_TYPE_LABELS[orgType] || orgType}
+    </span>
+  )}
+</div>
+```
+
+## Files modified
+- `src/components/app-shell/DashboardSidebar.tsx` — only the "Company section" block (~15 lines).
 
 ## Files NOT touched
-- `DashboardHero.tsx` — it's the reference
-- KPI grid, sub-header (status dot row + action buttons), everything below the banner
+- Nav items, Profile/Sign Out section, top logo lockup — unchanged.
+- `PlatformSidebar.tsx`, `ProjectSidebar` — different surface, not in scope.
 
 ## Verification
-- Side-by-side: Dashboard `/dashboard` and Overview `/project/:id/overview` headers use identical typography, spacing, eyebrow color, h1 size/weight, and inline label/value row pattern.
-- Notification bell remains in the same spot on Overview.
-- Mobile (390px): banner reflows cleanly, inline row wraps with `flex-wrap`.
-- No regression in the action buttons row beneath the banner.
+- IMIS dark logo is clearly visible on the new light card.
+- Logo is noticeably larger (≈56px tall vs ~36px today).
+- Org name "IMIS, LLC" reads as dark text on light card.
+- "TRADE CONTRACTOR" pill remains legible.
+- Test with: a wide logo, a tall logo, and an org with no logo (text-only fallback still looks intentional).
+- No layout shift in the sidebar; Profile/Sign Out section unchanged below.
 
