@@ -1,61 +1,58 @@
 
 
-## Issue
+You want the **IMIS company logo** (currently invisible in the dark sidebar footer) to be clearly visible, and you want to **remove the Ontime.build logo from the sidebar** since it already lives in the top `ContextBar`.
 
-Looking at your screenshot: the dashboard sidebar logo lockup is **28×28px** with `text-[1.05rem]` wordmark — visually it disappears against the dark navy. The "Ontime.build" wordmark is barely 17px tall, the icon is the same size as the nav item icons below it (so it reads as just another menu row), and the whole header has only `pt-4 pb-3` of padding so there's no visual weight distinguishing brand from navigation.
+## What I see now
 
-Compare to `LandingHeader.tsx` and `AuthPage.tsx` — those use a larger logo and more breathing room. The dashboard sidebar is the most under-sized treatment in the app.
+In `DashboardSidebar.tsx`:
+- **Top of sidebar (lines 47–58)**: Ontime.build logo + wordmark — **redundant** with the one in the top `ContextBar`.
+- **Company section (lines 78–93)**: IMIS logo rendered as `<img class="max-h-9 max-w-[140px] object-contain rounded">` directly on the dark navy `bg-[hsl(var(--foreground))]` background. If the logo PNG has dark colors or a transparent background with dark marks, it disappears. There's no contrasting backdrop behind it.
 
-## Recommendation — pick one
+## Plan
 
-### Option A (recommended): **Bold sidebar header band**
-Give the logo its own elevated zone at the top of the sidebar.
-- Logo icon: `w-7 h-7` → **`w-10 h-10`** (40px, ~40% larger)
-- Wordmark: `text-[1.05rem]` → **`text-[1.35rem]`** (matches LandingHeader)
-- Padding: `px-4 pt-4 pb-3` → **`px-4 pt-5 pb-4`** + subtle `border-b border-white/10` so the band visually anchors
-- Optional: add a faint amber accent dot or thin amber underline on `.build` to mirror brand
-- File: `src/components/app-shell/DashboardSidebar.tsx` lines 50–58
+### 1. Remove the Ontime.build brand band from the sidebar
+Delete the top logo button (lines 47–58). Replace with a small spacer (`pt-3`) so nav items don't slam into the top edge.
 
-### Option B: **Icon-only, oversized**
-For a more iconic, less verbose header:
-- Drop the wordmark entirely, scale icon to **`w-12 h-12`** (48px), centered
-- Cleaner, but loses the "Ontime.build" reinforcement
+### 2. Build a proper "Company" panel with a light backdrop
+Restructure the company section (lines 78–93) into a clearly delineated card with:
+- **Light surface** behind the logo so any logo (light, dark, or color) reads cleanly:
+  - `bg-white rounded-lg p-3 mb-2` — pure white tile, the logo always pops
+- **Larger logo zone**: `max-h-12` (48px) instead of `max-h-9` (36px), centered
+- **Fallback when no logo**: show org initials in a circle (40px) on the same white tile — keeps consistent visual rhythm
+- **Below the tile**: company name + org-type chip stay on the dark navy with current styling
+- Section gets a top `border-t border-white/10` and a small `text-[0.65rem] uppercase tracking-wider text-slate-500` eyebrow label `"Company"` so the zone is identifiable
 
-### Option C: **Move brand to ContextBar (top strip)**
-Put the logo lockup in the fixed top bar (`ContextBar.tsx`) at full size (`w-9 h-9` + `text-[1.25rem]` wordmark), and use the sidebar's top zone purely for primary nav. Most balanced if you want the brand visible across **every** page (not just dashboard pages with the sidebar). Requires editing both `DashboardSidebar.tsx` and `src/components/app-shell/ContextBar.tsx`.
-
-## My pick: **Option A**
-
-Lowest risk, biggest visibility win, no layout reshuffling, no new component. It matches the treatment already used on the public-facing `LandingHeader` (which feels right) and keeps the sidebar self-contained.
-
-## Change (Option A)
-
-In `src/components/app-shell/DashboardSidebar.tsx` lines 50–58, replace the logo button with:
-
-```tsx
-<button
-  onClick={() => navigate('/dashboard')}
-  className="flex items-center gap-2.5 px-4 pt-5 pb-4 border-b border-white/10 hover:opacity-80 transition-opacity"
->
-  <OntimeLogo className="w-10 h-10" />
-  <span className="font-heading text-[1.35rem] font-extrabold tracking-[-0.3px] text-white leading-none">
-    Ontime<span className="text-primary">.build</span>
-  </span>
-</button>
+Result:
+```
+┌────────────────────┐
+│ [Dashboard]        │  ← nav
+│ [Partners]         │
+│ ...                │
+├────────────────────┤
+│ COMPANY            │  ← eyebrow
+│ ┌────────────────┐ │
+│ │   [IMIS LOGO]  │ │  ← white tile, logo always visible
+│ └────────────────┘ │
+│ IMIS, LLC          │
+│ TRADE CONTRACTOR   │
+└────────────────────┘
 ```
 
-Then on the nav (`<nav>` line 61), bump top padding to clear the new border: `pt-3` → keep as is, the `border-b` already separates them.
+### 3. Optional polish
+- Add subtle `shadow-sm` on the white tile to lift it off the dark surface.
+- If `logo_url` is missing, show a `bg-white` tile with org initials in dark navy text (`text-[hsl(var(--foreground))]`) — same footprint, never empty.
 
-## Files modified
-- `src/components/app-shell/DashboardSidebar.tsx` — header band only (~9 lines).
+## Files to modify
+- `src/components/app-shell/DashboardSidebar.tsx` — remove Ontime brand band (top), restructure company section (bottom). ~25 lines changed.
 
 ## Files NOT touched
-- `OntimeLogo.tsx`, `ContextBar.tsx`, `ProjectShell.tsx`, all auth/landing logos.
+- `ContextBar.tsx` — already has Ontime.build lockup, stays as-is.
+- `OntimeLogo.tsx`, profile/sign-out section — unchanged.
 
 ## Verification
-- Sidebar logo icon visibly larger than nav row icons (40px vs 16px).
-- Wordmark legible at standard reading distance.
-- Subtle border separates brand zone from nav list.
-- No layout shift in nav items or company section below.
-- 1366×768 and 1920×1080 — sidebar still 200/220px wide, no overflow.
+- Top of sidebar shows nav directly (no Ontime.build lockup duplicating the header).
+- IMIS logo appears clearly on a white tile, ~48px tall, centered.
+- If a logo is missing, a clean initials tile appears in its place — never a blank empty space.
+- "COMPANY" eyebrow + name + type chip remain readable below the tile.
+- No layout shift; sidebar still 200/220px wide; profile + sign-out untouched.
 
