@@ -144,17 +144,15 @@ export function TCDashboardView({
             sub="Field crew and sub-contractor costs"
             pills={[{ type: 'pm', text: 'Cost' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'Contract Cost', 'Paid to Date', 'Pending']} />
+              <THead cols={['Project', 'Contract Cost']} />
               <tbody>
                 {pf.length > 0 ? pf.map((p) => (
                   <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                     <TdN>{p.projectName}</TdN>,
                     <TdM>{fmt(p.costs)}</TdM>,
-                    <TdM>{fmt(p.paidByYou)}</TdM>,
-                    <TdM>{fmt(p.pendingToPay)}</TdM>,
                   ]} />
-                )) : <TRow cells={[<span style={{ color: C.faint }}>No Field Crew contracts yet</span>, '', '', '']} />}
-                {fcCost > 0 && <TRow isTotal cells={['', <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(pf.reduce((s, p) => s + p.paidByYou, 0))}</TdM>, <TdM>{fmt(pf.reduce((s, p) => s + p.pendingToPay, 0))}</TdM>]} />}
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No Field Crew contracts yet</span>, '']} />}
+                {fcCost > 0 && <TRow isTotal cells={['', <TdM>{fmt(fcCost)}</TdM>]} />}
               </tbody>
             </table>
           </KpiCard>
