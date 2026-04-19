@@ -283,15 +283,15 @@ export function TCDashboardView({
             sub={`${attentionItems.filter(a => a.type === 'invoice').length} invoices · ${attentionItems.filter(a => a.type === 'sent_invite').length} invites`}
             pills={attentionItems.length > 0 ? [{ type: 'pr', text: `${attentionItems.length} need response` }] : [{ type: 'pg', text: 'All clear' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Item', 'Project', 'Type', '']} />
+              <THead cols={['Item', 'Type', '']} />
               <tbody>
                 {attentionItems.length > 0 ? attentionItems.slice(0, 8).map(a => (
                   <TRow key={a.id} onClick={() => navigate(`/project/${a.projectId}`)} cells={[
-                    <TdN>{a.title}</TdN>, <>{a.projectName}</>,
+                    <TdN><div>{a.title}</div><div style={{ fontSize:'0.68rem', color:C.muted, marginTop:2 }}>{a.projectName}</div></TdN>,
                     <Pill type={a.type === 'invoice' ? 'pr' : 'pw'}>{a.type === 'invoice' ? 'Invoice' : 'Invite'}</Pill>,
                     <span style={{ color: C.blue, fontSize: '0.7rem', fontWeight: 600 }}>View →</span>,
                   ]} />
-                )) : <TRow cells={[<span style={{ color: C.faint }}>No attention items</span>, '', '', '']} />}
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No attention items</span>, '', '']} />}
               </tbody>
             </table>
           </KpiCard>
