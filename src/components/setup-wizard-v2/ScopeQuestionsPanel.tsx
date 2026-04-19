@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { WizardQuestion as WizardQuestionComponent } from './WizardQuestion';
 import { SOVLivePreview } from './SOVLivePreview';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import type { WizardQuestion, SOVPhase, BuildingType, Answers, SOVLine } from '@/hooks/useSetupWizardV2';
 import { generateSOVLines } from '@/hooks/useSetupWizardV2';
 import { OrgType } from '@/types/organization';
