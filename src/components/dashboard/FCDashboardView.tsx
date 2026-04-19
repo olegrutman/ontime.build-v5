@@ -109,7 +109,7 @@ export function FCDashboardView({
   })();
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
         <DashboardHero
           firstName={profile?.first_name || null}
           orgName={organization?.name || null}
@@ -348,7 +348,7 @@ export function FCDashboardView({
 
         {/* ═══ My Projects ═══ */}
         {projects.length > 0 && (
-          <div style={{ ...fontLabel }}>
+          <div className="order-2 md:order-last" style={{ ...fontLabel }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink }}>📂 My Projects</span>
             </div>
