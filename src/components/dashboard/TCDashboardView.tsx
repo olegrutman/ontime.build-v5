@@ -187,15 +187,15 @@ export function TCDashboardView({
             sub={coCount > 0 ? `${coList.filter(c => ['submitted', 'shared'].includes(c.status)).length} pending review` : 'No change orders yet'}
             pills={coCount > 0 ? [{ type: 'pb', text: `${coCount} total` }] : [{ type: 'pm', text: 'None' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['CO', 'Project', 'Status', '']} />
+              <THead cols={['CO', 'Status', '']} />
               <tbody>
                 {coList.length > 0 ? coList.slice(0, 10).map(co => (
                   <TRow key={co.id} onClick={() => navigate(`/project/${co.projectId}/change-orders`)} cells={[
-                    <TdN>{co.title}</TdN>, <>{co.projectName}</>,
+                    <TdN><div>{co.title}</div><div style={{ fontSize:'0.68rem', color:C.muted, marginTop:2 }}>{co.projectName}</div></TdN>,
                     <Pill type={['submitted', 'shared'].includes(co.status) ? 'pw' : co.status === 'approved' ? 'pg' : co.status === 'contracted' ? 'pg' : 'pm'}>{co.status}</Pill>,
                     <span style={{ color: C.blue, fontSize: '0.7rem', fontWeight: 600 }}>View →</span>,
                   ]} />
-                )) : <TRow cells={[<span style={{ color: C.faint }}>No change orders yet</span>, '', '', '']} />}
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No change orders yet</span>, '', '']} />}
               </tbody>
             </table>
           </KpiCard>
