@@ -319,6 +319,8 @@ export default function CreateProjectNew() {
             sovLines={wizard.sovLines}
             visibleQuestions={wizard.visibleQuestions}
             creatorOrgType={creatorOrgType}
+            creatorOrgName={currentOrg?.name}
+            team={team}
           />
         );
       case 'building_type':
