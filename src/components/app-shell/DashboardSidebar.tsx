@@ -80,18 +80,18 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      {/* Company section */}
-      <div className="px-4 py-3 border-t border-white/10">
+      {/* Company section — light card so logos stand out */}
+      <div className="mx-3 mb-2 mt-2 rounded-xl bg-slate-100/95 px-3 py-3">
         {currentOrg?.logo_url && (
           <img
             src={currentOrg.logo_url}
             alt={orgName}
-            className="max-h-9 max-w-[140px] object-contain rounded mb-2"
+            className="max-h-14 max-w-[170px] object-contain mx-auto block mb-2"
           />
         )}
-        <p className="text-[0.8rem] font-semibold text-white truncate leading-tight">{orgName}</p>
+        <p className="text-[0.8rem] font-semibold text-slate-900 truncate leading-tight">{orgName}</p>
         {orgType && (
-          <span className="inline-block mt-1 text-[0.65rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-slate-300">
+          <span className="inline-block mt-1 text-[0.65rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-900/10 text-slate-700">
             {ORG_TYPE_LABELS[orgType] || orgType}
           </span>
         )}
