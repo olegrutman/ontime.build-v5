@@ -296,22 +296,35 @@ export default function ProjectHome() {
       <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
         <ProjectSidebar isSupplier={isSupplier} isTM={isTM} />
         <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
-          {/* Dark Header — matches DashboardHero style */}
-          <div className="sticky top-0 z-30">
-            <ProjectOverviewHero
-              projectName={project.name}
-              address={formattedAddress}
-              status={projectStatus}
-              projectType={project.project_type}
-              health={projectStatus === 'active' ? healthLabel : null}
-              rightSlot={<NotificationSheet />}
-            />
-          </div>
-
           <div className={cn(
             "max-w-7xl mx-auto w-full pb-36 lg:pb-6",
             activeTab === 'overview' ? 'px-3 sm:px-6 py-3 sm:py-4' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
           )}>
+            {/* Dark Header — matches DashboardHero style */}
+            {activeTab === 'overview' && (
+              <div className="mb-3">
+                <ProjectOverviewHero
+                  projectName={project.name}
+                  address={formattedAddress}
+                  status={projectStatus}
+                  projectType={project.project_type}
+                  health={projectStatus === 'active' ? healthLabel : null}
+                  rightSlot={<NotificationSheet />}
+                />
+              </div>
+            )}
+            {activeTab !== 'overview' && (
+              <div className="mb-4">
+                <ProjectOverviewHero
+                  projectName={project.name}
+                  address={formattedAddress}
+                  status={projectStatus}
+                  projectType={project.project_type}
+                  health={projectStatus === 'active' ? healthLabel : null}
+                  rightSlot={<NotificationSheet />}
+                />
+              </div>
+            )}
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
