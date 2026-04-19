@@ -1,58 +1,56 @@
 
 
-## Diagnosis
+## Diagnosis (from screenshot)
 
-The order classes ARE in the code, but Tailwind flex `order` is numeric. Items without an `order` class default to `order-0`. Projects has `order-2`, which is GREATER than 0, so it sits AFTER its un-ordered siblings on mobile too — exactly what the screenshot shows.
+On the TC dashboard, three different KPI cards expand to show **the same** revenue + cost + margin table:
+- **Revenue card** → shows GC Contract, FC Cost, Margin, Margin %  ← off-topic columns
+- **Cost card** → shows FC Contract, GC Contract, Margin  ← off-topic columns
+- **Gross Margin card** → shows GC Contract, FC Contract, Margin, Margin %  ← (this one is fine, margin needs both sides)
 
-The previous plan said to add `order-3 md:order-2` to the KPI/attention blocks, but that step was never applied — only the Projects div got classes.
+User wants each card's expanded table to show **only what that card is actually about**.
 
-## Fix
+## Scope
 
-Two options, going with the simpler one:
+Only `src/components/dashboard/TCDashboardView.tsx` needs the focused fix. GC/FC/Supplier expansions are already topic-scoped (verified). The "Gross Margin" card is allowed to keep both columns since margin = revenue − cost by definition.
 
-**Make Projects negative-order on mobile so it floats up past default-0 siblings, but stays last on desktop.**
+## Changes — `TCDashboardView.tsx`
 
-Change in all three views:
-
-```diff
-- <div className="order-2 md:order-last" ...>
-+ <div className="-order-1 md:order-last" ...>
+**Card 1 — GENERAL CONTRACTOR CONTRACTS (REVENUE)** (lines 122–144)
+Drop FC Cost / Margin / Margin % columns. Keep revenue-only context.
+```
+Columns: Project | General Contractor | Contract Value | % Collected
+Rows: per project — name, GC org name, p.revenue, paid/revenue %
+Total row: total contracted revenue
 ```
 
-Then add `order-first` (or just `-order-2`) to the Hero so it stays above Projects on mobile:
-
-```diff
-- <DashboardHero ... />
-+ <div className="contents -order-2 md:order-none">
-+   <DashboardHero ... />
-+ </div>
+**Card 2 — FIELD CREW / LABOR CONTRACTS (COST)** (lines 146–163)
+Drop GC Contract / Margin columns. Keep cost-only context.
+```
+Columns: Project | Field Crew | Contract Cost | Paid to Date
+Rows: per project — name, FC org name, p.costs, p.paidByYou (or whatever paid-to-FC value exists)
+Total row: total FC cost
 ```
 
-Actually cleaner: wrap Hero in a div with order classes (DashboardHero is a component, can't take className directly without checking). Simplest path:
+**Card 3 — GROSS MARGIN** (lines 165–187)
+Leave as-is. Margin legitimately requires both revenue and cost columns.
 
-- Hero block (and onboarding/banners that should stay with it): wrap each in `<div className="-order-2 md:order-none">` or leave them and just push Projects above default-0 with `-order-1`.
+**Cards 4–8** — Already topic-scoped (Change Orders, Received, Pending, Materials, Attention). No change.
 
-**Final approach (minimal):** 
-- Projects: `-order-1 md:order-last` (negative beats default 0 on mobile; `order-last` puts it at end on desktop)
-- Hero: needs to be above Projects on mobile, so wrap with `<div className="-order-2 md:contents">` OR add `order-[-2] md:order-none` directly.
+## Data needed
 
-Since `DashboardHero` is rendered as a JSX component, wrap it in a div:
+`pf` (per-project financials) already provides `projectName`, `revenue`, `costs`, `paidToYou`, `pendingToCollect`. I'll need to also surface the GC org name (Card 1) and FC org name (Card 2). I'll check the existing `pf` shape during implementation; if those names aren't on `pf`, I'll fall back to the project name or pull from the same source the project cards use. No new queries.
 
-```tsx
-<div className="-order-2 md:contents">
-  <DashboardHero ... />
-</div>
-```
+## Files modified
+- `src/components/dashboard/TCDashboardView.tsx` — only the JSX inside Card 1 and Card 2 (~40 lines total).
 
-`md:contents` makes the wrapper disappear at desktop so it doesn't break flex layout there.
-
-## Files to edit
-- `src/components/dashboard/TCDashboardView.tsx` (lines ~100, ~320)
-- `src/components/dashboard/GCDashboardView.tsx` (lines ~123, ~376)
-- `src/components/dashboard/FCDashboardView.tsx` (lines ~113, ~351)
+## Files NOT touched
+- `GCDashboardView.tsx`, `FCDashboardView.tsx`, `SupplierDashboardView.tsx` — already focused.
+- `KpiCard.tsx` shared component — no API change needed.
 
 ## Verification
-- 390px: Hero → Projects → KPIs/rest
-- ≥768px: Hero → KPIs → … → Projects (unchanged)
-- Empty projects: block doesn't render, Hero still on top
+- Click "Expand for detail" on Revenue → table shows ONLY revenue/collection info, no FC cost columns.
+- Click on Cost → table shows ONLY FC cost/payment info, no GC revenue columns.
+- Click on Gross Margin → still shows the both-sides comparison (intentional).
+- Cards 4–8 unchanged.
+- Empty-state rows still render correctly.
 
