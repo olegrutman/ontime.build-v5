@@ -125,20 +125,15 @@ export function TCDashboardView({
             sub={`${projects.length} active project${projects.length !== 1 ? 's' : ''} with General Contractor`}
             pills={[{ type: 'pa', text: 'Revenue' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'Contract Value', 'Collected', '% Collected']} />
+              <THead cols={['Project', 'Contract Value']} />
               <tbody>
-                {pf.length > 0 ? pf.map((p) => {
-                  const pct = p.revenue > 0 ? Math.round((p.paidToYou / p.revenue) * 100) : 0;
-                  return (
-                    <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
-                      <TdN>{p.projectName}</TdN>,
-                      <TdM>{fmt(p.revenue)}</TdM>,
-                      <TdM>{fmt(p.paidToYou)}</TdM>,
-                      <span style={{ fontWeight: 700, color: pct >= 80 ? C.green : pct >= 40 ? C.amber : C.red }}>{pct}%</span>,
-                    ]} />
-                  );
-                }) : <TRow cells={[<span style={{ color: C.faint }}>No contracts yet</span>, '', '', '']} />}
-                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(receivedFromGC)}</TdM>, <span style={{ fontWeight: 700 }}>{Math.round((receivedFromGC / gcRevenue) * 100)}%</span>]} />}
+                {pf.length > 0 ? pf.map((p) => (
+                  <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
+                    <TdN>{p.projectName}</TdN>,
+                    <TdM>{fmt(p.revenue)}</TdM>,
+                  ]} />
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No contracts yet</span>, '']} />}
+                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>]} />}
               </tbody>
             </table>
           </KpiCard>
