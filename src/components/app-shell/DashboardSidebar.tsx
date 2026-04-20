@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { label: 'Projects', icon: FolderKanban, path: '/projects/archive' },
   { label: 'Partners', icon: Handshake, path: '/partners' },
   { label: 'Reminders', icon: FileText, path: '/reminders' },
   { label: 'My Team', icon: Users, path: '/org/team' },
