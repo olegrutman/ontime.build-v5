@@ -86,7 +86,7 @@ export function DashboardSidebar() {
           <img
             src={currentOrg.logo_url}
             alt={orgName}
-            className="max-h-[60px] max-w-[170px] object-contain mx-auto block mb-2"
+            className="max-h-[80px] max-w-[170px] object-contain mx-auto block mb-2"
           />
         )}
         <p className="text-[0.8rem] font-semibold text-slate-900 truncate leading-tight">{orgName}</p>
