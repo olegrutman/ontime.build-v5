@@ -6,7 +6,7 @@ export function BrandPanel() {
       {/* Logo */}
       <div className="bp-logo">
         <div className="bp-logo-icon">
-          <OntimeLogo className="w-10 h-10" />
+          <OntimeLogo className="w-[60px] h-[60px]" />
         </div>
         <div>
           <div className="bp-wordmark">
