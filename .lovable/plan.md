@@ -1,25 +1,39 @@
 
-The user has two logos:
-- **Ontime.build logo** (in `ContextBar.tsx`) — currently `w-20 h-20` (80px). Change to `w-10 h-10` (40px).
-- **"IMIS" logo** — I need to find this. It's likely in `BrandPanel.tsx` (auth page) where I saw `OntimeLogo` at `w-10 h-10`. But user calls it "imis" — possibly a different component or an image. Let me check.
+## Plan — "Projects Archive" page
 
-Looking at `BrandPanel.tsx`, the logo there uses `OntimeLogo` too. The user may be referring to that brand panel logo as "imis" (perhaps a brand they're rebranding to). Without confirmation, I'll assume "imis logo" = the auth page brand panel logo and size it to `w-[60px] h-[60px]`.
+A dedicated page where the user can browse all their non-active projects (Completed, On Hold, Archived) in one place, separate from the dashboard's active-focused view.
 
-Actually, safer to ask — "imis" is unclear and could be a separate asset I haven't seen.
+### Route
+- New route: `/projects/archive` (renders `ProjectsArchive.tsx`)
+- Add a "Projects" entry to the desktop sidebar (`DashboardSidebar.tsx`) using the `FolderKanban` icon, pointing to `/projects/archive`.
 
-## Plan
+### Page layout (`src/pages/ProjectsArchive.tsx`)
+Wrapped in `AppLayout` so it sits inside the standard shell with sidebar.
 
-### Change 1 — Ontime.build logo (header)
-- File: `src/components/app-shell/ContextBar.tsx`
-- Change `<OntimeLogo className="w-20 h-20" />` → `<OntimeLogo className="w-10 h-10" />` (40px)
+- **Header**: title "Projects" + subtitle "Completed, on hold, and archived projects". Search input (filter by name).
+- **Status tabs**: `Completed`, `On Hold`, `Archived`, `All` — each with a count badge. Default tab = `Completed`. Uses the same dot-color system as the dashboard (`STATUS_DOT_COLORS`).
+- **Project list**: reuse the existing `DashboardProjectList` accordion cards for visual consistency. Each card shows name, type, contract value, status, and the same expand-to-show-actions behavior. From the actions menu the user can:
+  - Set Active (returns project to active list)
+  - Put On Hold / Mark Completed (move between non-active statuses)
+  - Archive / Unarchive
+  - View Project (navigates to `/project/:id`)
+- **Empty state** per tab (e.g. "No archived projects").
 
-### Change 2 — "IMIS" logo (60px)
-- Need clarification: is "imis" a separate logo asset (uploaded image) or a name for the auth-page `BrandPanel` logo?
-- If it's the `BrandPanel` logo: `src/components/auth/BrandPanel.tsx`, change `<OntimeLogo className="w-10 h-10" />` → `w-[60px] h-[60px]`
-- If it's a new image asset, the user needs to upload it.
-
-I'll proceed assuming it's the `BrandPanel` auth-page logo (the only other `OntimeLogo` instance with sizing). If wrong, user can correct.
+### Data
+Reuse `useDashboardData()` — it already returns all projects across statuses + `statusCounts`, plus `refetch`. We just filter to `completed | on_hold | archived` and feed into `DashboardProjectList`. The same archive/unarchive/status handlers from `Dashboard.tsx` are duplicated minimally (or extracted into a small hook `useProjectStatusActions` shared by both pages — preferred).
 
 ### Files
-- `src/components/app-shell/ContextBar.tsx` — header logo to 40px
-- `src/components/auth/BrandPanel.tsx` — auth brand logo to 60px
+1. **New** `src/pages/ProjectsArchive.tsx` — page component
+2. **New** `src/hooks/useProjectStatusActions.ts` — extract the archive/unarchive/status-change handlers currently inline in `Dashboard.tsx` so both pages stay in sync
+3. **Edit** `src/pages/Dashboard.tsx` — swap inline handlers for the new hook (no behavior change)
+4. **Edit** `src/App.tsx` — add `<Route path="/projects/archive" …>`
+5. **Edit** `src/components/app-shell/DashboardSidebar.tsx` — add "Projects" nav item
+6. **Edit** `src/components/app-shell/MobileBottomNav.tsx` — optional: not changed (keep nav slim); accessible via sidebar/command palette
+
+### Verification
+- Navigate to /projects/archive from sidebar.
+- Tabs show correct counts; switching tabs filters list.
+- Clicking a project opens its overview.
+- Archive/unarchive/status changes update both this page and dashboard counts after refetch.
+- Search filters by name.
+- Empty states render when a tab has 0 items.
