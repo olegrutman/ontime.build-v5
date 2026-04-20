@@ -36,6 +36,7 @@ const ProjectHome = lazy(() => import("./pages/ProjectHome"));
 const EditProjectScope = lazy(() => import("./pages/EditProjectScope"));
 const EditProject = lazy(() => import("./pages/EditProject"));
 const PartnerDirectory = lazy(() => import("./pages/PartnerDirectory"));
+const ProjectsArchive = lazy(() => import("./pages/ProjectsArchive"));
 const OrgTeam = lazy(() => import("./pages/OrgTeam"));
 
 const CatalogPage = lazy(() => import("./pages/CatalogPage"));
@@ -185,6 +186,7 @@ function AppRoutes() {
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/:section" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
+            <Route path="/projects/archive" element={<RequireAuth><ProjectsArchive /></RequireAuth>} />
             
             <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
             <Route path="/catalog" element={<RequireAuth><CatalogPage /></RequireAuth>} />
