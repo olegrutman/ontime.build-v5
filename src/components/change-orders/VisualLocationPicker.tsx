@@ -11,6 +11,7 @@ import {
   getElevationOptions,
   getProjectContextHint,
 } from '@/hooks/useProjectScope';
+import { getComponentGroups } from '@/lib/buildingComponents';
 
 interface VisualLocationPickerProps {
   projectId: string;
@@ -39,6 +40,9 @@ export function VisualLocationPicker({
   const [customRoom, setCustomRoom] = useState('');
   const [selectedElevation, setSelectedElevation] = useState<string | null>(null);
   const [customElevation, setCustomElevation] = useState('');
+  const [selectedComponentGroup, setSelectedComponentGroup] = useState<string | null>(null);
+  const [selectedSubComponent, setSelectedSubComponent] = useState<string | null>(null);
+  const [customComponent, setCustomComponent] = useState('');
 
   // Derive building characteristics
   const homeType = scope?.home_type ?? null;
