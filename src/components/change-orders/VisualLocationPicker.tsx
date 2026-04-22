@@ -87,6 +87,41 @@ export function VisualLocationPicker({
     return `1–${scope.num_units} units`;
   }, [isMultifamily, scope]);
 
+  // Component groups based on scope + selected context
+  const componentGroups = useMemo(() => {
+    if (insideOutside === 'inside') {
+      if (!selectedArea) return [];
+      return getComponentGroups(scope ?? null, selectedLevel, false);
+    }
+    if (insideOutside === 'outside') {
+      if (!selectedElevation) return [];
+      return getComponentGroups(scope ?? null, null, true);
+    }
+    return [];
+  }, [scope, selectedLevel, selectedArea, selectedElevation, insideOutside]);
+
+  const subComponentOptions = useMemo(() => {
+    if (!selectedComponentGroup) return [];
+    return componentGroups.find(g => g.label === selectedComponentGroup)?.options ?? [];
+  }, [componentGroups, selectedComponentGroup]);
+
+  // Resolve final component string for the tag
+  const componentTagPart = useMemo(() => {
+    if (!selectedComponentGroup) return '';
+    if (selectedComponentGroup === 'Other') {
+      return customComponent.trim();
+    }
+    if (selectedSubComponent === 'Other') {
+      return customComponent.trim()
+        ? `${selectedComponentGroup} / ${customComponent.trim()}`
+        : selectedComponentGroup;
+    }
+    if (selectedSubComponent) {
+      return `${selectedComponentGroup} / ${selectedSubComponent}`;
+    }
+    return selectedComponentGroup;
+  }, [selectedComponentGroup, selectedSubComponent, customComponent]);
+
   // Build the tag live
   const assembledTag = useMemo(() => {
     if (insideOutside === 'inside') {
@@ -106,6 +141,7 @@ export function VisualLocationPicker({
           parts.push(selectedArea);
         }
       }
+      if (componentTagPart) parts.push(componentTagPart);
       return parts.join(' · ');
     }
     if (insideOutside === 'outside') {
@@ -115,10 +151,11 @@ export function VisualLocationPicker({
       } else if (selectedElevation && selectedElevation !== 'Other') {
         parts.push(selectedElevation);
       }
+      if (componentTagPart) parts.push(componentTagPart);
       return parts.join(' · ');
     }
     return '';
-  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
+  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation, componentTagPart]);
 
   // Completion check
   const isComplete = useMemo(() => {
