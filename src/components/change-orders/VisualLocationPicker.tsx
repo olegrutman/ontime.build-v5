@@ -418,6 +418,105 @@ export function VisualLocationPicker({
         </div>
       )}
 
+      {/* Building Component picker (optional) */}
+      {componentGroups.length > 0 && (
+        <div className="space-y-3 animate-fade-in pt-1 border-t border-border">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Component <span className="font-normal normal-case">(optional)</span>
+            </p>
+            {selectedComponentGroup && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedComponentGroup(null);
+                  setSelectedSubComponent(null);
+                  setCustomComponent('');
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Skip component
+              </button>
+            )}
+          </div>
+
+          {/* Top-level component group pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {componentGroups.map(g => (
+              <button
+                key={g.label}
+                type="button"
+                onClick={() => {
+                  setSelectedComponentGroup(g.label);
+                  setSelectedSubComponent(null);
+                  setCustomComponent('');
+                }}
+                className={cn(
+                  'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors min-h-[36px] flex items-center gap-1.5',
+                  selectedComponentGroup === g.label
+                    ? 'bg-secondary text-secondary-foreground border-secondary'
+                    : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+                )}
+              >
+                <span>{g.icon}</span>
+                <span>{g.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Sub-component pills */}
+          {selectedComponentGroup && selectedComponentGroup !== 'Other' && subComponentOptions.length > 0 && (
+            <div className="animate-fade-in">
+              <div className="flex items-center flex-wrap gap-2">
+                {subComponentOptions.map(sub => (
+                  <button
+                    key={sub.label}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSubComponent(sub.label);
+                      if (sub.label !== 'Other') setCustomComponent('');
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
+                      selectedSubComponent === sub.label
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+                    )}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSelectedSubComponent('Other')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
+                    selectedSubComponent === 'Other'
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+                  )}
+                >
+                  Other
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Custom component input */}
+          {(selectedComponentGroup === 'Other' || selectedSubComponent === 'Other') && (
+            <div className="animate-fade-in">
+              <Input
+                value={customComponent}
+                onChange={e => setCustomComponent(e.target.value)}
+                placeholder="Describe the component…"
+                className="h-10"
+                autoFocus
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Live preview pill */}
       {assembledTag && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground animate-fade-in">
