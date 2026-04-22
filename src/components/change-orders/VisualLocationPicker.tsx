@@ -282,6 +282,9 @@ export function VisualLocationPicker({
                     setUnitNumber('');
                     setRoomInUnit(null);
                     setCustomRoom('');
+                    setSelectedComponentGroup(null);
+                    setSelectedSubComponent(null);
+                    setCustomComponent('');
                   }}
                   className={cn(
                     'shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors min-h-[40px]',
@@ -314,6 +317,9 @@ export function VisualLocationPicker({
                         setRoomInUnit(null);
                         setCustomRoom('');
                       }
+                      setSelectedComponentGroup(null);
+                      setSelectedSubComponent(null);
+                      setCustomComponent('');
                     }}
                   />
                 ))}
