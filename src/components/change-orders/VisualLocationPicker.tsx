@@ -252,6 +252,9 @@ export function VisualLocationPicker({
             setSelectedLevel(null);
             setSelectedArea(null);
             setCustomArea('');
+            setSelectedComponentGroup(null);
+            setSelectedSubComponent(null);
+            setCustomComponent('');
           }}
         />
       </div>
