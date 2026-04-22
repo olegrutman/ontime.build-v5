@@ -395,7 +395,12 @@ export function VisualLocationPicker({
                 label={e.label}
                 icon={e.icon}
                 selected={selectedElevation === e.label}
-                onClick={() => setSelectedElevation(e.label)}
+                onClick={() => {
+                  setSelectedElevation(e.label);
+                  setSelectedComponentGroup(null);
+                  setSelectedSubComponent(null);
+                  setCustomComponent('');
+                }}
               />
             ))}
           </div>
