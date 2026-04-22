@@ -1,39 +1,78 @@
 
-## Plan — "Projects Archive" page
 
-A dedicated page where the user can browse all their non-active projects (Completed, On Hold, Archived) in one place, separate from the dashboard's active-focused view.
+## Plan — Add "Building Component" to the Where step
 
-### Route
-- New route: `/projects/archive` (renders `ProjectsArchive.tsx`)
-- Add a "Projects" entry to the desktop sidebar (`DashboardSidebar.tsx`) using the `FolderKanban` icon, pointing to `/projects/archive`.
+Right now the **Where** step in the CO/WO wizard captures only *spatial* location:
 
-### Page layout (`src/pages/ProjectsArchive.tsx`)
-Wrapped in `AppLayout` so it sits inside the standard shell with sidebar.
+- **Interior** → Level (Floor 1, Floor 2…) → Area (Kitchen, Bedroom, Corridor…)
+- **Exterior** → Elevation (Front, Rear, North, South…)
 
-- **Header**: title "Projects" + subtitle "Completed, on hold, and archived projects". Search input (filter by name).
-- **Status tabs**: `Completed`, `On Hold`, `Archived`, `All` — each with a count badge. Default tab = `Completed`. Uses the same dot-color system as the dashboard (`STATUS_DOT_COLORS`).
-- **Project list**: reuse the existing `DashboardProjectList` accordion cards for visual consistency. Each card shows name, type, contract value, status, and the same expand-to-show-actions behavior. From the actions menu the user can:
-  - Set Active (returns project to active list)
-  - Put On Hold / Mark Completed (move between non-active statuses)
-  - Archive / Unarchive
-  - View Project (navigates to `/project/:id`)
-- **Empty state** per tab (e.g. "No archived projects").
+That tells us *where in the building* the work happens, but not *what physical assembly* the work touches. A change order for "patch drywall on wall in Bedroom 2" is very different from "sister joists in floor system above Bedroom 2" — same room, completely different scope. Today the user has to type that into the description.
 
-### Data
-Reuse `useDashboardData()` — it already returns all projects across statuses + `statusCounts`, plus `refetch`. We just filter to `completed | on_hold | archived` and feed into `DashboardProjectList`. The same archive/unarchive/status handlers from `Dashboard.tsx` are duplicated minimally (or extracted into a small hook `useProjectStatusActions` shared by both pages — preferred).
+### What we'll add
 
-### Files
-1. **New** `src/pages/ProjectsArchive.tsx` — page component
-2. **New** `src/hooks/useProjectStatusActions.ts` — extract the archive/unarchive/status-change handlers currently inline in `Dashboard.tsx` so both pages stay in sync
-3. **Edit** `src/pages/Dashboard.tsx` — swap inline handlers for the new hook (no behavior change)
-4. **Edit** `src/App.tsx` — add `<Route path="/projects/archive" …>`
-5. **Edit** `src/components/app-shell/DashboardSidebar.tsx` — add "Projects" nav item
-6. **Edit** `src/components/app-shell/MobileBottomNav.tsx` — optional: not changed (keep nav slim); accessible via sidebar/command palette
+A new optional sub-selector after Area / Elevation called **Building Component** — the actual real-world assembly being worked on. The suggestions change based on the building type from project scope.
 
-### Verification
-- Navigate to /projects/archive from sidebar.
-- Tabs show correct counts; switching tabs filters list.
-- Clicking a project opens its overview.
-- Archive/unarchive/status changes update both this page and dashboard counts after refetch.
-- Search filters by name.
-- Empty states render when a tab has 0 items.
+**Component groups (universal):**
+
+- **Wall systems** — Interior partition · Demising wall (between units) · Shear wall · Exterior wall (interior face) · Plumbing wall · Soffit / bulkhead
+- **Floor system** — Floor sheathing · Floor joists / I-joists · Floor trusses · Subfloor · Concrete slab · Floor underlayment
+- **Ceiling system** — Ceiling drywall · Ceiling joists · Suspended / drop ceiling · Bulkhead · Coffer
+- **Roof system** — Roof sheathing · Rafters · Roof trusses · Ridge / valleys · Eaves
+- **Vertical circulation** — Stair stringers · Stair treads · Landing · Railing
+- **Openings** — Window opening · Door opening · Header
+- **MEP rough-in zones** — Mechanical chase · Plumbing chase · Electrical chase
+
+**Building-type-aware suggestions** (driven by `home_type`, `framing_method`, `construction_type`, `has_shared_walls`, `floors`, `roof_type` from `project_scope_details`):
+
+| Building type | Component suggestions emphasized |
+|---|---|
+| Custom / Track home (single-family) | Interior partition, Floor joists, Ceiling drywall, Rafters/Trusses, Stair stringers |
+| Townhomes (`has_shared_walls`) | **Demising wall** promoted, Shear wall, Floor system between units (acoustic) |
+| Apartments / Hotel / Senior living (multifamily) | **Demising wall**, Corridor wall, Shaft wall, Floor/ceiling assembly (1-hr rated), Elevator shaft wall |
+| Commercial / mid-rise (`construction_type` = steel/concrete) | Metal stud partition, Concrete slab, Steel deck, Curtain wall back-up |
+| Exterior context | Sheathing, WRB, Siding back-up, Fascia, Soffit, Roof deck |
+
+If `framing_method` is `steel` we swap "joists" for "steel joists / bar joists"; if `metal_stud` we change wall labels to "metal stud partition." If a level is **Basement** with foundation = concrete, we surface **Concrete slab, Foundation wall, Sill plate**. If level is **Attic**, we surface **Rafters, Ceiling joists, Roof sheathing** only.
+
+### How the UI changes
+
+In `VisualLocationPicker.tsx`, after the user picks an Area (interior) or Elevation (exterior), a new optional pill row appears:
+
+```text
+COMPONENT (optional)
+[ Wall ] [ Floor system ] [ Ceiling ] [ Roof ] [ Stairs ] [ Opening ] [ MEP chase ] [ Other ]
+```
+
+Picking a top-level component reveals a second small pill row with the specific sub-component (e.g. "Wall" → `Interior partition · Demising wall · Shear wall · Exterior wall (interior face) · Plumbing wall`). The sub-list is filtered by building type per the table above.
+
+The assembled location tag then becomes:
+
+```text
+Interior · Floor 2 · Bedroom 2 · Floor system / Floor joists
+```
+
+Component is **optional** — users can skip it entirely and the existing flow keeps working. We add a small "Skip component" link.
+
+### Where it shows up later
+
+- The component string is appended to `location_tag` (no schema change needed) so it flows into line items, AI scope descriptions, PDF exports, and the "Same as last time?" shortcut for free.
+- AI scope descriptions automatically get richer ("Repair floor joists at Bedroom 2, Floor 2" instead of "Repair at Bedroom 2").
+
+### Files to modify
+
+1. **New** `src/lib/buildingComponents.ts` — pure helper exporting `getComponentGroups(scope, level, isExterior)` returning the building-type-aware list. Keeps logic out of the React component, mirrors the pattern of `useProjectScope.ts` helpers.
+2. **Edit** `src/components/change-orders/VisualLocationPicker.tsx` — add `selectedComponent` + `selectedSubComponent` state, render the two new pill rows after Area / Elevation, append to `assembledTag`, update `isComplete` (component remains optional so completion logic unchanged unless we want to require it).
+3. **Edit** `src/hooks/useProjectScope.ts` — re-export the helper for convenience (optional).
+
+No database migration. No new types in `changeOrder.ts` (lives inside the existing `location_tag` string). Backward-compatible with every existing CO/WO.
+
+### Open question for you
+
+Should the component selector be:
+
+- **(A) Optional** — user can skip; tag includes component only when chosen. *(recommended — keeps quick-flow fast)*
+- **(B) Required** — every CO must specify a component. *(more structured data, slower UX)*
+
+Default in plan is **(A)**. Tell me "make it required" if you want (B).
+
