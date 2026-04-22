@@ -238,6 +238,9 @@ export function VisualLocationPicker({
             setInsideOutside('inside');
             setSelectedElevation(null);
             setCustomElevation('');
+            setSelectedComponentGroup(null);
+            setSelectedSubComponent(null);
+            setCustomComponent('');
           }}
         />
         <TapCard
