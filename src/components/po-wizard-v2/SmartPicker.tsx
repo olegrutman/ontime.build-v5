@@ -403,10 +403,10 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     ? CATEGORY_FUNNELS[selectedCategoryKey]?.funnelFields
     : undefined;
 
-  const quickAdd = useCallback((product: CatalogProduct) => {
-    setSelectedProduct(product);
-    setStep('quantity');
-  }, []);
+  // Recent items: hydrate full row before opening QuantityPanel (Bug 1).
+  const handleRecentSelect = useCallback((item: RecentItem) => {
+    void openQuantityForId(item.id);
+  }, [openQuantityForId]);
 
   const showSearchBar = step !== 'quantity';
 
@@ -421,6 +421,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               placeholder="Search SKU, name, or dimensions (e.g. 2x4x8)"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               className="pl-10 pr-10 h-10"
             />
             {searchQuery && (
@@ -451,7 +452,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                 recent={recent}
                 categories={categoryCards}
                 hasApprovedEstimate={hasApprovedEstimate}
-                onRecentSelect={quickAdd}
+                onRecentSelect={handleRecentSelect}
                 onCategorySelect={enterCategory}
                 onOpenEstimate={() => setStep('estimate')}
               />
@@ -498,7 +499,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
             {step === 'secondary' && selectedCategoryKey && (
               <SecondaryCategoryList
                 categories={secondaryList}
-                loading={landingLoading}
+                loading={false}
                 onSelect={handleSecondary}
               />
             )}
@@ -550,7 +551,7 @@ interface LandingViewProps {
   recent: RecentItem[];
   categories: { key: string; cfg: typeof CATEGORY_FUNNELS[string]; count: number }[];
   hasApprovedEstimate: boolean;
-  onRecentSelect: (p: CatalogProduct) => void;
+  onRecentSelect: (item: RecentItem) => void;
   onCategorySelect: (key: string) => void;
   onOpenEstimate: () => void;
 }
