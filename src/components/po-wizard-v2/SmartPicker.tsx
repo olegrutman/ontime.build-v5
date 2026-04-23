@@ -600,7 +600,7 @@ function LandingView({
               <button
                 key={item.id}
                 className="wz-ans text-left"
-                onClick={() => onRecentSelect(item as unknown as CatalogProduct)}
+                onClick={() => onRecentSelect(item)}
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">
