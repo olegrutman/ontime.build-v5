@@ -88,6 +88,7 @@ export function POWizardV2({
   const pickerRef = useRef<ProductPickerHandle>(null);
   const [screen, setScreen] = useState<Screen>('header');
   const [pickerInitialStep, setPickerInitialStep] = useState<PickerInitialStep>(undefined);
+  const [pickerTitle, setPickerTitle] = useState<string>('Add Materials');
   const [editingItem, setEditingItem] = useState<POWizardV2LineItem | null>(null);
   const [suppliers, setSuppliers] = useState<ProjectSupplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
@@ -402,14 +403,14 @@ export function POWizardV2({
 
   // Dynamic header title for picker/editor screens
   const getHeaderTitle = useCallback(() => {
-    if (screen === 'picker' && pickerRef.current) {
-      return pickerRef.current.getTitle();
+    if (screen === 'picker') {
+      return pickerTitle;
     }
     if (screen === 'unmatched-editor') {
       return 'Edit Unmatched Item';
     }
     return null; // header/items/review have their own titles
-  }, [screen]);
+  }, [screen, pickerTitle]);
 
   const showInternalHeader = screen === 'picker' || screen === 'unmatched-editor';
 
@@ -513,6 +514,7 @@ export function POWizardV2({
             onClose={handleClose}
             onExitPicker={handleExitPicker}
             initialStep={pickerInitialStep}
+            onStateChange={(_step, title) => setPickerTitle(title)}
           />
         )}
         {screen === 'unmatched-editor' && editingItem && (

@@ -101,6 +101,12 @@ export const CATEGORY_FUNNELS: Record<string, CategoryFunnel> = {
     icon: '🏗️',
     pattern: 'search',
   },
+  OTHER: {
+    dbCategory: 'Other',
+    displayName: 'Other Lumber',
+    icon: '📦',
+    pattern: 'search',
+  },
 };
 
 /**

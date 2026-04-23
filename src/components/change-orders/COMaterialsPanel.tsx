@@ -176,6 +176,7 @@ export function COMaterialsPanel({
   const [supplierLoading, setSupplierLoading] = useState(false);
   const [poRequiresApproval, setPORequiresApproval] = useState(false);
   const pickerRef = useRef<ProductPickerHandle>(null);
+  const [pickerTitle, setPickerTitle] = useState<string>('Add Material');
   const [supplierPriceMap, setSupplierPriceMap] = useState<Map<string, SupplierPriceEntry>>(new Map());
   const [applyingPricing, setApplyingPricing] = useState(false);
   const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
@@ -689,7 +690,7 @@ export function COMaterialsPanel({
     }
   }
 
-  const pickerTitle = pickerRef.current?.getTitle() ?? 'Add Material';
+  // pickerTitle is kept in state and updated by SmartPicker via onStateChange (Bug 2 fix).
 
   return (
     <div className="co-light-shell">
@@ -1079,6 +1080,7 @@ export function COMaterialsPanel({
                 hidePricing={!showPricingColumns}
                 onClose={() => setPickerOpen(false)}
                 onExitPicker={() => setPickerOpen(false)}
+                onStateChange={(_step, title) => setPickerTitle(title)}
               />
             )}
           </div>
