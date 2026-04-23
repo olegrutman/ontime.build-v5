@@ -165,6 +165,12 @@ export function CreateInvoiceFromPO({
     return name.replace(/^(the\s+)/i, '').trim().substring(0, 2).toUpperCase();
   };
 
+  // Helper to get 3-letter project code
+  const getProjectCode = (name: string | undefined): string => {
+    if (!name) return 'XXX';
+    return name.replace(/^(the\s+)/i, '').trim().substring(0, 3).toUpperCase();
+  };
+
   // Generate invoice number when contract is selected
   useEffect(() => {
     if (!selectedContract) {
@@ -173,9 +179,16 @@ export function CreateInvoiceFromPO({
     }
 
     const generate = async () => {
+      const { data: project } = await supabase
+        .from('projects')
+        .select('name')
+        .eq('id', projectId)
+        .single();
+
+      const projectCode = getProjectCode(project?.name);
       const fromInitials = getOrgInitials(selectedContract.from_org_name);
       const toInitials = getOrgInitials(selectedContract.to_org_name);
-      const prefix = `INV-${fromInitials}-${toInitials}`;
+      const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}`;
 
       const { data } = await supabase
         .from('invoices')
