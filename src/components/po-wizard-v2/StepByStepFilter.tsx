@@ -106,6 +106,24 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     if (fixedSequence && fixedSequence.length > 0) {
       setFilterSequence(fixedSequence);
       setDiscoveryComplete(true);
+
+      // Preload total category product count for the "Skip — View All N" footer
+      // (Bug 9: without this, count reflects only the first filter step).
+      const matchObj: Record<string, string> = {
+        supplier_id: supplierId,
+        category: category,
+      };
+      if (secondaryCategory) matchObj.secondary_category = secondaryCategory;
+      let countQuery = supabase
+        .from('catalog_items')
+        .select('id', { count: 'exact', head: true })
+        .match(matchObj);
+      if (estimateCatalogIds && estimateCatalogIds.length > 0) {
+        countQuery = countQuery.in('id', estimateCatalogIds);
+      }
+      countQuery.then(({ count }) => {
+        if (typeof count === 'number') setProductCount(count);
+      });
       return;
     }
 
