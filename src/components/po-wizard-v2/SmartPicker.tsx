@@ -151,12 +151,13 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   }, [editingItem, supplierId]);
 
   // -------------------------------------------------------------------------
-  // Landing screen: fetch facets + recent items in parallel
+  // Landing screen: fetch facets + recent items independently (Promise.allSettled
+  // so a slow/failed facets call doesn't kill the recent strip — Bug 7).
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (!supplierId || editingItem || step !== 'landing') return;
     setLandingLoading(true);
-    Promise.all([
+    Promise.allSettled([
       supabase.rpc('catalog_facets', { p_supplier_id: supplierId }),
       supabase.rpc('recent_catalog_items', {
         p_supplier_id: supplierId,
@@ -166,18 +167,35 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       }),
     ])
       .then(([facetsRes, recentRes]) => {
-        const fdata = facetsRes.data as { categories?: CategoryFacet[]; secondaries?: SecondaryFacet[] } | null;
-        if (fdata?.categories) setFacets(fdata.categories);
-        if (fdata?.secondaries) setSecondaries(fdata.secondaries);
-        if (recentRes.data) setRecent(recentRes.data as RecentItem[]);
+        if (facetsRes.status === 'fulfilled') {
+          const fdata = facetsRes.value.data as
+            | { categories?: CategoryFacet[]; secondaries?: SecondaryFacet[] }
+            | null;
+          if (fdata?.categories) setFacets(fdata.categories);
+          if (fdata?.secondaries) setSecondaries(fdata.secondaries);
+        } else {
+          console.error('catalog_facets failed:', facetsRes.reason);
+        }
+        if (recentRes.status === 'fulfilled') {
+          if (recentRes.value.data) setRecent(recentRes.value.data as RecentItem[]);
+        } else {
+          console.error('recent_catalog_items failed:', recentRes.reason);
+        }
       })
-      .catch(err => console.error('Landing load failed:', err))
       .finally(() => setLandingLoading(false));
   }, [supplierId, projectId, editingItem, step]);
 
   // -------------------------------------------------------------------------
-  // Global search: debounced, via search_catalog_v3
+  // Global search: debounced, scoped to current category context (Bug 4).
+  // No mid-typing short-circuit (Bug 3) — exact-match jump only fires on Enter.
   // -------------------------------------------------------------------------
+  const dbCategoryForSearch =
+    selectedCategoryKey ? CATEGORY_FUNNELS[selectedCategoryKey]?.dbCategory ?? null : null;
+  const secondaryForSearch =
+    step === 'funnel' || step === 'secondary' || step === 'products'
+      ? selectedSecondary
+      : null;
+
   useEffect(() => {
     if (!searchActive || !supplierId) {
       setSearchResults([]);
@@ -189,23 +207,48 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         const { data } = await supabase.rpc('search_catalog_v3', {
           p_query: searchQuery,
           p_supplier_id: supplierId,
-          p_category: null,
-          p_secondary: null,
+          p_category: (step === 'funnel' || step === 'secondary' || step === 'products')
+            ? dbCategoryForSearch
+            : null,
+          p_secondary: secondaryForSearch,
           p_limit: 50,
         });
         const results = (data ?? []) as unknown as (CatalogProduct & { score: number })[];
         setSearchResults(results);
-        // Exact-SKU short circuit: top result with score >= 1000 is an exact match.
-        if (results.length >= 1 && results[0].score >= 1000) {
-          setSelectedProduct(results[0]);
-          setStep('quantity');
-        }
       } finally {
         setSearching(false);
       }
     }, 250);
     return () => clearTimeout(t);
-  }, [searchQuery, searchActive, supplierId]);
+  }, [searchQuery, searchActive, supplierId, step, dbCategoryForSearch, secondaryForSearch]);
+
+  // Pressing Enter on a single exact-SKU match jumps to quantity.
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    const top = searchResults[0] as (CatalogProduct & { score?: number }) | undefined;
+    if (top && (top as any).score >= 1000) {
+      setSelectedProduct(top);
+      setStep('quantity');
+    }
+  }, [searchResults]);
+
+  // -------------------------------------------------------------------------
+  // Helper: hydrate a partial recent-item row into a full CatalogProduct
+  // before opening the QuantityPanel (Bug 1: bundle_type/qty must be present).
+  // -------------------------------------------------------------------------
+  const openQuantityForId = useCallback(async (catalogItemId: string) => {
+    const { data, error } = await supabase
+      .from('catalog_items')
+      .select('*')
+      .eq('id', catalogItemId)
+      .single();
+    if (error || !data) {
+      console.error('Failed to hydrate catalog item:', error);
+      return;
+    }
+    setSelectedProduct(data as unknown as CatalogProduct);
+    setStep('quantity');
+  }, []);
 
   // -------------------------------------------------------------------------
   // Navigation handlers
@@ -264,6 +307,14 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     setStep('quantity');
   }, []);
 
+  // Reset to landing and clear category/secondary state (Bug 5).
+  const goToLanding = useCallback(() => {
+    setStep('landing');
+    setSelectedCategoryKey(null);
+    setSelectedSecondary(null);
+    setProducts([]);
+  }, []);
+
   const handleBack = useCallback(() => {
     // If search is active, clear it first rather than navigating.
     if (searchActive) { setSearchQuery(''); return; }
@@ -273,7 +324,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       case 'estimate':
         setStep('landing'); break;
       case 'secondary':
-        setStep('landing'); setSelectedCategoryKey(null); break;
+        goToLanding(); break;
       case 'funnel':
         // Let StepByStepFilter handle internal step-back; if it's at step 0
         // it will call onBack which we wired to land/secondary.
@@ -281,18 +332,19 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       case 'products':
         if (selectedSecondary) {
           setStep('funnel');
+          setProducts([]);
         } else if (selectedCategoryKey && CATEGORY_FUNNELS[selectedCategoryKey]?.pattern === 'search') {
-          setStep('landing'); setSelectedCategoryKey(null);
+          goToLanding();
         } else {
           setStep('funnel');
+          setProducts([]);
         }
-        setProducts([]);
         break;
       case 'quantity':
         if (editingItem) { onClearEdit(); onExitPicker(); return; }
         setStep('products'); setSelectedProduct(null); break;
     }
-  }, [searchActive, step, selectedSecondary, selectedCategoryKey, editingItem, onExitPicker, onClearEdit]);
+  }, [searchActive, step, selectedSecondary, selectedCategoryKey, editingItem, onExitPicker, onClearEdit, goToLanding]);
 
   const getTitle = useCallback(() => {
     if (searchActive) return `Search "${searchQuery}"`;
@@ -302,10 +354,15 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       case 'estimate': return 'From Estimate';
       case 'secondary':return config?.displayName ?? 'Select Type';
       case 'funnel':   return selectedSecondary ?? config?.displayName ?? 'Filter';
-      case 'products': return config?.displayName ?? 'Products';
+      case 'products': return selectedSecondary ?? config?.displayName ?? 'Products';
       case 'quantity': return editingItem ? 'Edit Item' : 'Add to PO';
     }
   }, [step, searchActive, searchQuery, selectedCategoryKey, selectedSecondary, editingItem]);
+
+  // Notify parent of step/title changes so the outer header re-renders (Bug 2).
+  useEffect(() => {
+    onStateChange?.(step, getTitle());
+  }, [step, getTitle, onStateChange]);
 
   useImperativeHandle(ref, () => ({
     goBack: handleBack,
