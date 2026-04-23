@@ -193,7 +193,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
           p_secondary: null,
           p_limit: 50,
         });
-        const results = (data ?? []) as (CatalogProduct & { score: number })[];
+        const results = (data ?? []) as unknown as (CatalogProduct & { score: number })[];
         setSearchResults(results);
         // Exact-SKU short circuit: top result with score >= 1000 is an exact match.
         if (results.length >= 1 && results[0].score >= 1000) {
@@ -402,24 +402,27 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                   supplierId={supplierId}
                   onSelectPack={(pack, estimateId) => {
                     if (!onLoadPack) return;
-                    const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => ({
-                      id: `pack-${idx}-${Date.now()}`,
-                      catalog_item_id: item.catalog_item_id || '',
-                      supplier_sku: item.supplier_sku || '',
-                      name: item.description,
-                      specs: item.supplier_sku || '',
-                      quantity: item.quantity,
-                      unit_mode: 'EACH' as const,
-                      uom: item.uom,
-                      item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
-                      unit_price: hidePricing ? null : item.unit_price,
-                      line_total: !hidePricing && item.unit_price != null
-                        ? item.quantity * item.unit_price : null,
-                      source_estimate_item_id: item.id,
-                      source_pack_name: item.pack_name,
-                      price_source: !hidePricing && item.unit_price != null ? 'FROM_ESTIMATE' : null,
-                      original_unit_price: hidePricing ? null : item.unit_price,
-                    }));
+                    const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => {
+                      const itemAny = item as typeof item & { unit_price?: number | null };
+                      const price = hidePricing ? null : (itemAny.unit_price ?? null);
+                      return {
+                        id: `pack-${idx}-${Date.now()}`,
+                        catalog_item_id: item.catalog_item_id || '',
+                        supplier_sku: item.supplier_sku || '',
+                        name: item.description,
+                        specs: item.supplier_sku || '',
+                        quantity: item.quantity,
+                        unit_mode: 'EACH' as const,
+                        uom: item.uom,
+                        item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
+                        unit_price: price,
+                        line_total: price != null ? item.quantity * price : null,
+                        source_estimate_item_id: item.id,
+                        source_pack_name: item.pack_name,
+                        price_source: price != null ? ('FROM_ESTIMATE' as const) : null,
+                        original_unit_price: price,
+                      };
+                    });
                     onLoadPack(lineItems, estimateId, pack.name);
                     onExitPicker();
                   }}
