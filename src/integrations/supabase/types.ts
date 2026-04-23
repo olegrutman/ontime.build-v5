@@ -99,6 +99,7 @@ export type Database = {
           max_length: number | null
           min_length: number | null
           name: string | null
+          normalized_search: string | null
           product_type: string | null
           search_keywords: string[] | null
           search_vector: unknown
@@ -134,6 +135,7 @@ export type Database = {
           max_length?: number | null
           min_length?: number | null
           name?: string | null
+          normalized_search?: string | null
           product_type?: string | null
           search_keywords?: string[] | null
           search_vector?: unknown
@@ -169,6 +171,7 @@ export type Database = {
           max_length?: number | null
           min_length?: number | null
           name?: string | null
+          normalized_search?: string | null
           product_type?: string | null
           search_keywords?: string[] | null
           search_vector?: unknown
@@ -5650,6 +5653,7 @@ export type Database = {
         Returns: boolean
       }
       can_view_po_pricing: { Args: { po_id: string }; Returns: boolean }
+      catalog_facets: { Args: { p_supplier_id: string }; Returns: Json }
       change_org_member_role: {
         Args: { p_member_role_id: string; p_new_role: string }
         Returns: undefined
@@ -5706,6 +5710,10 @@ export type Database = {
             }
             Returns: Json
           }
+      compute_catalog_normalized_search: {
+        Args: { item_row: Database["public"]["Tables"]["catalog_items"]["Row"] }
+        Returns: string
+      }
       create_organization_and_set_admin:
         | {
             Args: {
@@ -5936,6 +5944,27 @@ export type Database = {
         Args: { _org_id: string }
         Returns: boolean
       }
+      recent_catalog_items: {
+        Args: {
+          p_days?: number
+          p_limit?: number
+          p_project_id?: string
+          p_supplier_id: string
+        }
+        Returns: {
+          category: string
+          description: string
+          dimension: string
+          id: string
+          last_ordered: string
+          length: string
+          name: string
+          secondary_category: string
+          supplier_sku: string
+          times_ordered: number
+          uom_default: string
+        }[]
+      }
       reject_join_request: { Args: { _request_id: string }; Returns: undefined }
       reject_tm_period: {
         Args: { notes?: string; period_id: string }
@@ -6018,6 +6047,34 @@ export type Database = {
           wood_species: string
         }[]
       }
+      search_catalog_v3: {
+        Args: {
+          p_category?: string
+          p_limit?: number
+          p_query?: string
+          p_secondary?: string
+          p_supplier_id?: string
+        }
+        Returns: {
+          bundle_qty: number
+          bundle_type: string
+          category: string
+          color: string
+          description: string
+          dimension: string
+          id: string
+          length: string
+          manufacturer: string
+          name: string
+          score: number
+          secondary_category: string
+          supplier_id: string
+          supplier_sku: string
+          thickness: string
+          uom_default: string
+          wood_species: string
+        }[]
+      }
       search_existing_team_targets: {
         Args: { _limit?: number; _project_id: string; _query: string }
         Returns: {
@@ -6086,6 +6143,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       transfer_admin: { Args: { _target_role_id: string }; Returns: undefined }
       update_member_job_title: {
         Args: { _job_title: string; _target_user_id: string }

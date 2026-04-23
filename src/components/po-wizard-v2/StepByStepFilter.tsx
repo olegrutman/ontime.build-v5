@@ -13,6 +13,12 @@ interface StepByStepFilterProps {
   onBack: () => void;
   onClose: () => void;
   estimateCatalogIds?: string[];
+  /**
+   * Optional pre-baked field sequence. When provided, skips the
+   * client-side discovery scan and uses these fields directly.
+   * Used by SmartPicker via CATEGORY_FUNNELS.funnelFields.
+   */
+  fixedSequence?: string[];
 }
 
 async function discoverFilterSequence(
@@ -74,6 +80,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   onBack,
   onClose,
   estimateCatalogIds,
+  fixedSequence,
 }, ref) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
@@ -88,13 +95,20 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
 
   useEffect(() => {
     if (!supplierId || !category) return;
-    
+
     setDiscoveryComplete(false);
     setCurrentStepIndex(0);
     setAppliedFilters({});
     setFilterSequence([]);
     setLoading(true);
-    
+
+    // Fast path: caller supplied a fixed sequence (e.g. from CATEGORY_FUNNELS).
+    if (fixedSequence && fixedSequence.length > 0) {
+      setFilterSequence(fixedSequence);
+      setDiscoveryComplete(true);
+      return;
+    }
+
     discoverFilterSequence(supplierId, category, secondaryCategory, estimateCatalogIds)
       .then(sequence => {
         if (sequence.length === 0) {
@@ -107,7 +121,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
       .catch(() => {
         onComplete({});
       });
-  }, [supplierId, category, secondaryCategory, onComplete, estimateCatalogIds]);
+  }, [supplierId, category, secondaryCategory, onComplete, estimateCatalogIds, fixedSequence]);
 
   const fetchFilterValues = useCallback(async () => {
     if (!discoveryComplete || !supplierId || !category || !currentField) return;
