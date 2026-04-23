@@ -89,6 +89,11 @@ interface SmartPickerProps {
   onExitPicker: () => void;
   /** Optional initial step (e.g. 'estimate' to open straight on packs) */
   initialStep?: 'source' | 'estimate' | 'landing';
+  /**
+   * Notifies the parent of the current internal step + computed header title.
+   * Use this to keep an outer header in sync (Bug 2 fix).
+   */
+  onStateChange?: (step: PickerStep, title: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +104,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   {
     supplierId, projectId, editingItem, hasApprovedEstimate = false, hidePricing = false,
     onAddItem, onUpdateItem, onLoadPack, onAddPSMItem, onClearEdit, onClose, onExitPicker,
-    initialStep,
+    initialStep, onStateChange,
   },
   ref,
 ) {
