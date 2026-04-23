@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import type { COMaterialItem } from '@/types/changeOrder';
 import { PO_STATUS_LABELS } from '@/types/purchaseOrder';
 import type { POWizardV2LineItem } from '@/types/poWizardV2';
-import { ProductPickerContent, ProductPickerHandle } from '@/components/po-wizard-v2/ProductPicker';
+import { SmartPicker as ProductPickerContent, SmartPickerHandle as ProductPickerHandle } from '@/components/po-wizard-v2/SmartPicker';
 
 const UOM_OPTIONS = ['ea', 'LF', 'SF', 'SQ', 'bag', 'box', 'sheet', 'roll', 'gal', 'lb', 'ton', 'hr'];
 
@@ -1052,7 +1052,7 @@ export function COMaterialsPanel({
               onClick={() => {
                 if (pickerRef.current) {
                   const step = pickerRef.current.getStep();
-                  if (step === 'category' || step === 'source') {
+                  if (step === 'landing') {
                     setPickerOpen(false);
                   } else {
                     pickerRef.current.goBack();

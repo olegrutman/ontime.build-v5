@@ -16,7 +16,7 @@ import {
 import { HeaderScreen } from './HeaderScreen';
 import { ItemsScreen } from './ItemsScreen';
 import { ReviewScreen } from './ReviewScreen';
-import { ProductPickerContent, ProductPickerHandle } from './ProductPicker';
+import { SmartPicker as ProductPickerContent, SmartPickerHandle as ProductPickerHandle } from './SmartPicker';
 import { UnmatchedItemPanel } from './UnmatchedItemEditor';
 import { StepIndicator } from './StepIndicator';
 
