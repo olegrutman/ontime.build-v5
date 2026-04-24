@@ -97,12 +97,22 @@ export function StepCatalogQA({
       setPicks(result.picks.map((p) => ({ ...p })));
       setExtracted(result.extracted ?? null);
       setRefinementDismissed(false);
+      // Auto-pre-check Strong matches (≥0.75 confidence) for one-tap continue
+      const strong = new Set(result.picks.filter(p => p.confidence >= 0.75).map(p => p.catalog_id));
+      setSelected(strong);
     } catch (err) {
       console.error('Suggest failed:', err);
       setPicks([]);
       setExtracted(null);
     }
   }, [flowState, flow, ctx, suggestMutation, projectId, locationTag, zone, reason, workType, buildingType, scope]);
+
+  // Confidence tier helper
+  function tierOf(conf: number): 'strong' | 'likely' | 'maybe' {
+    if (conf >= 0.75) return 'strong';
+    if (conf >= 0.5) return 'likely';
+    return 'maybe';
+  }
 
   function togglePick(p: PickState) {
     setSelected(prev => {
