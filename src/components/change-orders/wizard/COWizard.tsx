@@ -135,6 +135,60 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   const [generatingAI, setGeneratingAI] = useState(false);
   const { shareCO } = useChangeOrders(projectId);
 
+  // ── Draft autosave (sessionStorage) ──────────────────
+  const draftKey = `co_wizard_draft_${projectId}_${isTM ? 'wo' : 'co'}`;
+  const [draftMeta, setDraftMeta] = useState<{ ts: number; step: number } | null>(null);
+  const hydratedRef = useRef(false);
+
+  // Detect existing draft when wizard opens
+  useEffect(() => {
+    if (!open || hydratedRef.current) return;
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.ts && parsed?.data) {
+          setDraftMeta({ ts: parsed.ts, step: parsed.step ?? 0 });
+        }
+      }
+    } catch {/* ignore */}
+  }, [open, draftKey]);
+
+  // Persist on every change (only after first user interaction past step 0)
+  useEffect(() => {
+    if (!open) return;
+    const isPristine =
+      step === 0 &&
+      !data.reason &&
+      !data.locationTag &&
+      data.selectedItems.length === 0 &&
+      !data.aiDescription;
+    if (isPristine) return;
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({ ts: Date.now(), step, data }));
+    } catch {/* quota / private mode */}
+  }, [open, step, data, draftKey]);
+
+  function resumeDraft() {
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.data) {
+        setData({ ...INITIAL_DATA, ...parsed.data });
+        setStep(parsed.step ?? 0);
+      }
+    } catch {/* ignore */}
+    setDraftMeta(null);
+    hydratedRef.current = true;
+  }
+
+  function discardDraft() {
+    try { sessionStorage.removeItem(draftKey); } catch {/* ignore */}
+    setDraftMeta(null);
+    hydratedRef.current = true;
+  }
+
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' : currentRole === 'TC_PM' ? 'TC' : 'FC';
