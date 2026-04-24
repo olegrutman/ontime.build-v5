@@ -48,6 +48,8 @@ export interface COWizardData {
   shareDraftNow: boolean;
   quickHours: number | null;
   aiDescription: string;
+  /** Phase 3 — structured answers from the QA flow, persisted as evidence */
+  qaAnswers?: Record<string, string | string[]>;
 }
 
 const INITIAL_DATA: COWizardData = {
