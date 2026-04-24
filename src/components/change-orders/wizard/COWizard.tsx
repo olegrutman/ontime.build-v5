@@ -495,7 +495,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
 // ── Step 1: Why + Work Type ──────────────────────────
 function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
-  const hintedTypes = data.reason ? (REASON_WORKTYPE_HINTS[data.reason] ?? []) : [];
+  const hintedTypes: string[] = []; // hardcoded hints retired in Phase 1; QA flow now drives suggestions
   const suggestedWorkTypes = CO_WORK_TYPES.filter(wt => hintedTypes.includes(wt.key));
   const otherWorkTypes = CO_WORK_TYPES.filter(wt => !hintedTypes.includes(wt.key));
 
