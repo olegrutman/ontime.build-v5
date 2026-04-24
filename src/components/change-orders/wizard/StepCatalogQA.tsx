@@ -220,15 +220,21 @@ export function StepCatalogQA({
           {flow.questions.slice(0, flowState.currentIdx).map(q => {
             const val = flowState.answers[q.id];
             if (!val) return null;
+            const isSkip = val === '__skip__';
             const ans = q.answers.find(a => a.id === val);
+            const label = isSkip ? 'Skipped' : (ans?.label ?? String(val));
             return (
               <button
                 key={q.id}
                 onClick={() => flowState.editAnswer(q.id)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs hover:bg-muted/70"
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs max-w-[160px] hover:bg-muted/70',
+                  isSkip ? 'bg-muted/40 text-muted-foreground italic' : 'bg-muted text-foreground'
+                )}
+                title={label}
               >
-                {ans?.label ?? String(val)}
-                <Pencil className="h-2.5 w-2.5 opacity-60" />
+                <span className="truncate">{label}</span>
+                <Pencil className="h-2.5 w-2.5 opacity-60 shrink-0" />
               </button>
             );
           })}
