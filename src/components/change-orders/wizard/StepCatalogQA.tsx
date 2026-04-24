@@ -312,6 +312,7 @@ export function StepCatalogQA({
             <LocationRefinementBanner
               currentTag={locationTag}
               refinement={extracted.zone_refinement}
+              willReRun={selected.size === 0}
               onUpdate={handleAcceptRefinement}
               onDismiss={() => setRefinementDismissed(true)}
             />
