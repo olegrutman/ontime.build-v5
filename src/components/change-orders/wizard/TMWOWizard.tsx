@@ -68,6 +68,8 @@ interface TMWOData {
   shareDraftNow: boolean;
   fcInputNeeded: boolean;
   fcOrgId: string;
+  /** Phase 3 — structured QA answers, persisted as evidence */
+  qaAnswers?: Record<string, string | string[]>;
 }
 
 const INITIAL_DATA: TMWOData = {
@@ -286,7 +288,7 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
         });
       if (insertError) throw insertError;
 
-      // Insert line items from selected scope catalog items
+      // Insert line items from selected scope catalog items (Phase 4: AI provenance)
       if (data.selectedItems.length > 0) {
         const lineRows = data.selectedItems.map((item, idx) => ({
           co_id: preGeneratedId,
@@ -294,7 +296,10 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
           created_by_role: role,
           item_name: item.item_name,
           unit: item.unit,
-          qty: 1,
+          qty: item.qty ?? 1,
+          quantity_source: item.quantity_source ?? null,
+          ai_confidence: item.ai_confidence ?? null,
+          ai_reasoning: item.ai_reasoning ?? null,
           sort_order: idx,
           location_tag: data.locationTag || null,
           reason: data.workType as string,
@@ -303,8 +308,25 @@ export function TMWOWizard({ open, onOpenChange, projectId }: TMWOWizardProps) {
           category_name: item.category_name,
           description: data.aiDescription,
         }));
-        const { error: lineError } = await supabase.from('co_line_items').insert(lineRows);
+        const { data: insertedRows, error: lineError } = await supabase
+          .from('co_line_items')
+          .insert(lineRows)
+          .select('id');
         if (lineError) throw lineError;
+
+        if (data.qaAnswers && Object.keys(data.qaAnswers).length > 0 && insertedRows?.length) {
+          const caption = data.aiDescription || JSON.stringify(data.qaAnswers);
+          const evidenceRows = insertedRows.map((r) => ({
+            co_line_item_id: r.id,
+            co_id: preGeneratedId,
+            kind: 'qa_answer',
+            caption,
+            ai_model: 'google/gemini-2.5-flash',
+            confidence: null,
+            created_by: user.id,
+          }));
+          await supabase.from('co_scope_evidence').insert(evidenceRows);
+        }
       }
 
       // FC collaborator
