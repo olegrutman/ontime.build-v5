@@ -614,6 +614,7 @@ function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChang
               <span className="text-lg">{card.icon}</span>
               <span className="text-sm font-semibold text-foreground">{card.label}</span>
               <span className="text-[11px] text-muted-foreground leading-tight">{card.description}</span>
+              {card.example && <span className="text-[10px] text-muted-foreground/70 italic leading-tight">{card.example}</span>}
             </button>
           ))}
         </div>
