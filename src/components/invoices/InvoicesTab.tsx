@@ -151,9 +151,11 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     return base;
   }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices, statusFilter, isApproverView]);
 
-  useEffect(() => {
-    const fetchContracts = async () => {
-      const { data } = await supabase
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      // 1. Load contracts FIRST so downstream sent/received splits have data
+      const { data: contractData } = await supabase
         .from('project_contracts')
         .select(`
           id, from_org_id, to_org_id, from_role, to_role,
@@ -161,8 +163,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `)
         .eq('project_id', projectId);
-      
-      const mappedContracts: Contract[] = (data || []).map((c: any) => ({
+
+      const mappedContracts: Contract[] = (contractData || []).map((c: any) => ({
         id: c.id,
         from_org_id: c.from_org_id,
         to_org_id: c.to_org_id,
@@ -171,44 +173,37 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         from_org_name: c.from_org?.name || null,
         to_org_name: c.to_org?.name || null,
       }));
-      
       setContracts(mappedContracts);
-    };
-    fetchContracts();
-  }, [projectId]);
 
-  useEffect(() => {
-    fetchInvoices();
-  }, [projectId, statusFilter, contractsWhereUserIsParty]);
+      // 2. Load invoices (RLS already restricts visibility — no need to re-filter by contract)
+      let query = supabase
+        .from('invoices')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
 
-  const fetchInvoices = async () => {
-    setLoading(true);
-    let query = supabase
-      .from('invoices')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false });
+      if (statusFilter !== 'ALL' && statusFilter !== 'NEEDS_ACTION') {
+        query = query.eq('status', statusFilter);
+      }
 
-    if (statusFilter !== 'ALL' && statusFilter !== 'NEEDS_ACTION') {
-      query = query.eq('status', statusFilter);
-    }
+      const { data: invoiceData, error: invoiceError } = await query;
 
-    const { data, error } = await query;
+      if (invoiceError) {
+        console.error('Error fetching invoices:', invoiceError);
+        setInvoices([]);
+        return;
+      }
 
-    if (error) {
-      console.error('Error fetching invoices:', error);
-      setInvoices([]);
-    } else {
-      const allInvoices = (data || []) as Invoice[];
-      
-      // Fetch PO ownership info for PO-linked invoices
+      const allInvoices = (invoiceData || []) as Invoice[];
+
+      // 3. Load PO ownership info for PO-linked invoices (used for supplier vs received split)
       const poIds = [...new Set(allInvoices.filter(i => i.po_id).map(i => i.po_id!))];
       if (poIds.length > 0) {
         const { data: poData } = await supabase
           .from('purchase_orders')
           .select('id, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
           .in('id', poIds);
-        
+
         const map: Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }> = {};
         (poData || []).forEach((po: any) => {
           map[po.id] = {
@@ -217,18 +212,23 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           };
         });
         setPoOwnerMap(map);
+      } else {
+        setPoOwnerMap({});
       }
 
-      const contractIds = contractsWhereUserIsParty.map(c => c.id);
-      const visibleInvoices = currentOrgId
-        ? allInvoices.filter(inv => 
-            !inv.contract_id || contractIds.includes(inv.contract_id)
-          )
-        : [];
-      setInvoices(visibleInvoices);
+      // RLS handles visibility — show every invoice the database returned
+      setInvoices(allInvoices);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+  useEffect(() => {
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, statusFilter]);
+
+  const fetchInvoices = fetchAll;
 
   const handleCreateSuccess = () => {
     fetchInvoices();

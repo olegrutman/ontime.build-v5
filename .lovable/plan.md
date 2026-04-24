@@ -1,62 +1,43 @@
+# Why Emily can't see invoices on Fuller Residence
 
+## What I found
 
-## Plan — Bugs found in the new Smart Picker
+Emily (emily@haleycustomhomes.com) is a GC_PM at Haley Custom Homes. She's viewing `/project/f21a4a24.../invoices` (Fuller Residence).
 
-I tested the picker code path end-to-end (read SmartPicker, StepByStepFilter, both call sites, the three RPC signatures, and the live catalog data). Here's what's broken or wrong, in order of severity.
+Database is correct:
+- 2 SUBMITTED invoices exist on contract `d3038da0` (TC IMIS to GC Haley): `INV-FUL-IM-HA-0001` and `INV-FUL-IM-HA-0002`.
+- Emily's GC org is the `to_org_id` on that contract.
+- RLS allows her to read them, and the network logs confirm the API returns both invoices to her.
 
-### 🔴 Bug 1 — Recent Items strip uses raw catalog rows, missing required fields
-`SmartPicker.tsx:540` casts a `RecentItem` straight into a `CatalogProduct` and hands it to the `QuantityPanel`:
-```ts
-onClick={() => onRecentSelect(item as unknown as CatalogProduct)}
-```
-But `recent_catalog_items` RPC returns only 11 columns (no `manufacturer`, `bundle_type`, `bundle_qty`, `wood_species`, `thickness`, `finish`, `color`). `QuantityPanel` reads `product.bundle_type` and `product.bundle_qty` to decide bundle vs each mode (line 33-34). Result: every recent-item quick-add silently treats bundled SKUs (most lumber) as singles → wrong quantity, wrong UOM mode.
-**Fix**: After the user taps a recent item, fetch the full catalog row by `id` (mirror the edit-mode effect at line 137-151) before pushing to `quantity` step.
+The bug is front-end. In `src/components/invoices/InvoicesTab.tsx`:
+1. The component fires two parallel effects: one fetches contracts, one fetches invoices.
+2. `fetchInvoices` filters returned invoices client-side using `contractsWhereUserIsParty.map(c => c.id)`.
+3. `contractsWhereUserIsParty` is a `useMemo` derived from `contracts`, which starts as `[]`.
+4. The first run of `fetchInvoices` executes with an empty contractIds list, so every contract-linked invoice is filtered out and `setInvoices([])` is called.
+5. The dependency-driven re-run after contracts arrive is racy and inconsistent. In Emily's session the screen ends up empty even though the API returned 2 invoices.
 
-### 🔴 Bug 2 — Header title doesn't refresh while inside picker
-`POWizardV2.tsx:404-412` calls `pickerRef.current.getTitle()` inside `getHeaderTitle`, but the `useCallback` dependency array is `[screen]` only. Same in `COMaterialsPanel.tsx:692` (`pickerRef.current?.getTitle() ?? 'Add Material'` is computed once per render of the parent, which doesn't re-render on inner step change). Tapping a category, drilling into a funnel, switching to search → header keeps saying "Add Materials" the whole time.
-**Fix**: Lift current step + title into local state in the parent, and have SmartPicker push changes via a new `onStateChange?: (step, title) => void` prop instead of imperative pull.
+Net effect: the front-end is dropping invoices the database happily returned, because it's double-checking contract membership against a not-yet-loaded contracts list.
 
-### 🔴 Bug 3 — Exact-SKU short-circuit fires while user is still typing
-`SmartPicker.tsx:198-202` jumps to `quantity` whenever `results[0].score >= 1000` after the 250ms debounce. If a user types a SKU partially that prefix-matches one row exactly along the way (e.g. typing "12345" and "12345" exists as a SKU on its own), the picker yanks them into the quantity panel mid-keystroke. Worse: clearing the search no longer brings them back, because we already mutated `step`.
-**Fix**: Only short-circuit on Enter key OR when results are length===1 AND score≥1000 AND the user has stopped typing for ≥600ms; preserve `searchQuery` so back-navigation restores the search.
+## Fix
 
-### 🟡 Bug 4 — Search ignores active category context
-The search RPC is called with `p_category: null, p_secondary: null` (line 192-193) regardless of where the user is. If they're already inside "Hardware → Anchors" and type "1/2", they get global results across all categories instead of filtered ones.
-**Fix**: Pass `dbCategory` and `selectedSecondary` into the RPC when `step` is `funnel`, `secondary`, or `products`.
+Refactor `InvoicesTab.tsx` to remove the brittle dual-fetch race:
 
-### 🟡 Bug 5 — Back from `funnel` at step 0 lands wrong for `structured` categories
-In `handleBack` (line 277-280), `funnel` always delegates to `filterRef.current?.goBack()`, which (in StepByStepFilter line 209-219) calls `onBack()` at step 0. `onBack` is wired to `setStep(selectedSecondary ? 'secondary' : 'landing')` (line 451). For a `structured` category like FramingLumber there's no `selectedSecondary`, so it correctly returns to landing — but `selectedCategoryKey` is never cleared, leaving stale state if the user immediately re-opens search.
-**Fix**: Clear `selectedCategoryKey` and `selectedSecondary` when returning to landing.
+1. Single sequenced fetch. Replace the two effects with one effect that:
+   - Awaits the contracts query first so `contracts` state is populated before any invoice is filtered.
+   - Then awaits invoices and PO ownership info in parallel.
+   - Computes filtered/sent/received invoices once and updates state in one pass.
+2. Drop the redundant contract-id filter for contract-linked invoices. RLS already restricts the rows the user can see; that local filter is what's eating Emily's invoices.
+3. Keep PO ownership filtering (recSuppliers vs sent vs excluded), since that uses pricing-owner logic not enforced by RLS.
+4. Re-fetch on `statusFilter`, `projectId`, and realtime changes via a single re-run path, not via memo identity changes.
+5. Add a small loading guard so the GC sub-tab counters don't flash 0 before contracts load.
 
-### 🟡 Bug 6 — `Other` category (142 items in DB) is invisible
-Live data shows the `Other` DB category has 142 items for the system supplier — second-largest after Hardware. `CATEGORY_FUNNELS` has no `OTHER` entry, so `categoryCards` (filter `count > 0`) silently drops it. Users can't browse to cedar/hemlock.
-**Fix**: Add an `OTHER` entry to `categoryFunnels.ts` (`pattern: 'search'`, displayName "Other Lumber", icon 📦) — matches what the legacy picker exposes.
+## Technical notes
 
-### 🟡 Bug 7 — Recent strip is hidden whenever facets fail to load
-The combined `Promise.all` (line 159-167) means a slow / failing `catalog_facets` call also throws away the `recent` data inside the same `.then`. The `.catch` clears nothing but `recent` never gets set if `facetsRes` errors first inside the destructuring.
-**Fix**: Settle them independently (`Promise.allSettled`) so a recent-items hit still renders even when the facets call fails.
+- File: `src/components/invoices/InvoicesTab.tsx`, lines 154 to 231 (the two `useEffect`s plus `fetchInvoices`).
+- The `contractsWhereUserIsParty` / `contractsWhereUserCanInvoice` / `contractsWhereUserReceivesInvoices` memos can stay for the sent/received/sub-tab splits, but must not be used to gate the network fetch.
+- After the change: any invoice whose `contract_id` is null OR whose `contract_id` is in the contracts list will display. Anything not visible to the user is already filtered out by Postgres RLS, matching the behavior the database is enforcing.
+- No database changes, no migrations.
 
-### 🟢 Minor 8 — Loading state for secondary list is wrong
-`SecondaryCategoryList` at line 439 receives `loading={landingLoading}`, but landing has long since finished by the time the user enters a hybrid category. It should be `false` (data is already in `secondaryList` memo) — or better, show "No subcategories" only after we know facets loaded.
+## Verification
 
-### 🟢 Minor 9 — `productCount` in StepByStepFilter footer doesn't account for `fixedSequence`
-When `fixedSequence` is supplied, the discovery scan (which set `productCount` as a side-effect through `availableValues`) is skipped, so the "Skip — View All N Products" button shows whatever count the first filter step calculates rather than the unfiltered category total. Cosmetic but misleading.
-
-### Files to change
-
-| Action | File | Why |
-|---|---|---|
-| Edit | `src/components/po-wizard-v2/SmartPicker.tsx` | Fixes 1, 3, 4, 5, 7, 8 |
-| Edit | `src/components/po-wizard-v2/POWizardV2.tsx` | Fix 2 (lift picker title to state) |
-| Edit | `src/components/change-orders/COMaterialsPanel.tsx` | Fix 2 (same lift) |
-| Edit | `src/lib/categoryFunnels.ts` | Fix 6 (add OTHER) |
-| Edit | `src/components/po-wizard-v2/StepByStepFilter.tsx` | Fix 9 (preload count when `fixedSequence` is set) |
-
-### Verification after fixes
-- Tap a recently-ordered bundled SKU → quantity panel opens in **Bundle** mode with correct bundle qty.
-- Drill into Hardware, type "1/2" — results stay scoped to Hardware.
-- Type a real SKU character-by-character — picker waits for you to finish or press Enter before jumping.
-- Header title updates as you move from "Add Materials" → "Hardware" → "Anchors" → "Add to PO".
-- "Other Lumber" (cedar/hemlock) appears on the landing grid.
-- Back button from a `structured` funnel returns to landing with category selection cleared.
-
+After the fix, Emily lands on `/project/f21a4a24.../invoices` and sees both `INV-FUL-IM-HA-0001` and `INV-FUL-IM-HA-0002` under "From Trade Contractors", with the tab counter showing 2.
