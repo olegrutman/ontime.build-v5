@@ -30,19 +30,32 @@ export function QuantityEditPopover({ value, unit, source, onChange }: QuantityE
       <PopoverTrigger asChild>
         <button
           type="button"
+          aria-label={value != null ? `Edit quantity (${value} ${unit})` : `Set quantity in ${unit}`}
           className={cn(
-            'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors',
+            'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border-2 text-xs font-semibold transition-colors min-h-[32px]',
             isAi
-              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 hover:bg-amber-200'
-              : 'bg-muted text-foreground hover:bg-muted/70'
+              ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 hover:bg-amber-100'
+              : value != null
+                ? 'border-border bg-card text-foreground hover:bg-muted'
+                : 'border-dashed border-muted-foreground/40 bg-card text-muted-foreground hover:border-primary hover:text-foreground'
           )}
         >
-          {isAi && <Sparkles className="h-2.5 w-2.5" />}
-          {!isAi && value != null && <Pencil className="h-2.5 w-2.5" />}
-          {value != null ? `${value} ${unit}` : `Set ${unit}`}
+          {isAi && <Sparkles className="h-3 w-3" />}
+          {value != null ? (
+            <>
+              <span className="tabular-nums">{value}</span>
+              <span className="opacity-70">{unit}</span>
+              <Pencil className="h-3 w-3 opacity-60" />
+            </>
+          ) : (
+            <>
+              <Pencil className="h-3 w-3" />
+              <span>Set qty ({unit})</span>
+            </>
+          )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-56 p-3 space-y-2">
+      <PopoverContent align="start" className="w-60 p-3 space-y-2">
         <div>
           <p className="text-xs font-semibold text-foreground">Quantity ({unit})</p>
           {isAi && (
