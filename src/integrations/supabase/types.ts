@@ -776,6 +776,8 @@ export type Database = {
       }
       co_line_items: {
         Row: {
+          ai_confidence: number | null
+          ai_reasoning: string | null
           catalog_item_id: string | null
           category_name: string | null
           co_id: string
@@ -788,11 +790,14 @@ export type Database = {
           location_tag: string | null
           org_id: string
           qty: number | null
+          quantity_source: string | null
           reason: string | null
           sort_order: number | null
           unit: string
         }
         Insert: {
+          ai_confidence?: number | null
+          ai_reasoning?: string | null
           catalog_item_id?: string | null
           category_name?: string | null
           co_id: string
@@ -805,11 +810,14 @@ export type Database = {
           location_tag?: string | null
           org_id: string
           qty?: number | null
+          quantity_source?: string | null
           reason?: string | null
           sort_order?: number | null
           unit: string
         }
         Update: {
+          ai_confidence?: number | null
+          ai_reasoning?: string | null
           catalog_item_id?: string | null
           category_name?: string | null
           co_id?: string
@@ -822,6 +830,7 @@ export type Database = {
           location_tag?: string | null
           org_id?: string
           qty?: number | null
+          quantity_source?: string | null
           reason?: string | null
           sort_order?: number | null
           unit?: string
@@ -989,6 +998,60 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      co_scope_evidence: {
+        Row: {
+          ai_model: string | null
+          caption: string | null
+          co_id: string
+          co_line_item_id: string
+          confidence: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          photo_path: string | null
+        }
+        Insert: {
+          ai_model?: string | null
+          caption?: string | null
+          co_id: string
+          co_line_item_id: string
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          photo_path?: string | null
+        }
+        Update: {
+          ai_model?: string | null
+          caption?: string | null
+          co_id?: string
+          co_line_item_id?: string
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          photo_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_scope_evidence_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_scope_evidence_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
           },
         ]
       }

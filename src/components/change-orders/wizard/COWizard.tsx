@@ -21,7 +21,6 @@ import { VisualLocationPicker } from '../VisualLocationPicker';
 import { StepCatalog } from './StepCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COCreatedByRole, COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
-import { SCOPE_CATALOG, SMART_SUGGESTIONS, REASON_WORKTYPE_HINTS } from '@/lib/scopeCatalog';
 
 // ── Types ──────────────────────────────────────────────
 export interface SelectedScopeItem extends ScopeCatalogItem {
@@ -49,6 +48,8 @@ export interface COWizardData {
   shareDraftNow: boolean;
   quickHours: number | null;
   aiDescription: string;
+  /** Phase 3 — structured answers from the QA flow, persisted as evidence */
+  qaAnswers?: Record<string, string | string[]>;
 }
 
 const INITIAL_DATA: COWizardData = {
@@ -211,33 +212,6 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   function handleNext() {
     if (step < STEPS.length - 1) {
       const nextStep = step + 1;
-      // Auto-populate smart suggestions when entering scope step
-      if (STEPS[nextStep].key === 'scope' && data.selectedItems.length === 0 && data.reason && data.workType) {
-        const suggestions = SMART_SUGGESTIONS[data.reason]?.[data.workType] ?? [];
-        if (suggestions.length > 0) {
-          const preSelected = SCOPE_CATALOG
-            .filter(item => suggestions.includes(item.name))
-            .map(item => ({
-              id: item.id,
-              item_name: item.name,
-              unit: item.unit,
-              division: item.workType,
-              category_id: item.workType,
-              category_name: item.tag ?? item.workType,
-              group_id: item.workType,
-              group_label: item.workType,
-              category_color: '',
-              category_bg: '',
-              category_icon: '',
-              sort_order: 0,
-              org_id: null,
-              locationTag: data.locationTag,
-              reason: data.reason!,
-              reasonDescription: '',
-            } as SelectedScopeItem));
-          update({ selectedItems: preSelected });
-        }
-      }
       setStep(nextStep);
       // Auto-generate AI description when entering review step
       if (STEPS[nextStep].key === 'review' && !data.aiDescription) {
@@ -319,7 +293,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         });
       if (insertError) throw insertError;
 
-      // Insert scope items
+      // Insert scope items (Phase 4: persist AI quantity/confidence/reasoning)
       if (data.selectedItems.length > 0) {
         const rows = data.selectedItems.map((item, idx) => ({
           co_id: preGeneratedId,
@@ -330,15 +304,38 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           division: item.division,
           category_name: item.category_name,
           unit: item.unit,
+          qty: item.qty ?? null,
+          quantity_source: item.quantity_source ?? null,
+          ai_confidence: item.ai_confidence ?? null,
+          ai_reasoning: item.ai_reasoning ?? null,
           sort_order: idx,
           location_tag: data.locationTag || null,
           reason: (data.reason || null) as string | null,
           description: item.reasonDescription || null,
         }));
-        const { error: lineError } = await supabase.from('co_line_items').insert(rows);
+        const { data: insertedRows, error: lineError } = await supabase
+          .from('co_line_items')
+          .insert(rows)
+          .select('id');
         if (lineError) {
           await supabase.from('change_orders').delete().eq('id', preGeneratedId);
           throw new Error(`Failed to save scope items: ${lineError.message}`);
+        }
+
+        // Phase 4b: write a qa_answer evidence row per line item when QA was used
+        if (data.qaAnswers && Object.keys(data.qaAnswers).length > 0 && insertedRows?.length) {
+          const caption = data.aiDescription || JSON.stringify(data.qaAnswers);
+          const evidenceRows = insertedRows.map((r) => ({
+            co_line_item_id: r.id,
+            co_id: preGeneratedId,
+            kind: 'qa_answer',
+            caption,
+            ai_model: 'google/gemini-2.5-flash',
+            confidence: null,
+            created_by: user.id,
+          }));
+          // Best-effort; don't fail CO creation if evidence write hiccups
+          await supabase.from('co_scope_evidence').insert(evidenceRows);
         }
       }
 
@@ -523,7 +520,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
 // ── Step 1: Why + Work Type ──────────────────────────
 function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
-  const hintedTypes = data.reason ? (REASON_WORKTYPE_HINTS[data.reason] ?? []) : [];
+  const hintedTypes: string[] = []; // hardcoded hints retired in Phase 1; QA flow now drives suggestions
   const suggestedWorkTypes = CO_WORK_TYPES.filter(wt => hintedTypes.includes(wt.key));
   const otherWorkTypes = CO_WORK_TYPES.filter(wt => !hintedTypes.includes(wt.key));
 
