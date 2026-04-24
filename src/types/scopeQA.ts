@@ -1,4 +1,4 @@
-import type { Zone } from '@/lib/resolveZone';
+import type { Zone } from '@/types/catalog';
 
 export type BuildingType =
   | 'custom_home' | 'track_home'
