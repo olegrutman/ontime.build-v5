@@ -52,10 +52,11 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
 
   const workTypeLabel = workType ? WORK_TYPE_LABELS[workType] ?? workType : null;
 
-  // When location & reason are pre-set by the wizard, lock them (read-only pills)
-  const [lockedFromWizard] = useState(() => !!(data.locationTag && data.reason));
+  // When location & reason are pre-set by the wizard, lock them (read-only pills).
+  // Inside the wizard both are guaranteed by canAdvance(), so phases collapse to 'items'.
+  const lockedFromWizard = !!(data.locationTag && data.reason);
 
-  // Internal phase: location → reason → items
+  // Internal phase: location → reason → items (legacy non-wizard usage only)
   const [phase, setPhase] = useState<Phase>(() => {
     if (data.locationTag && data.reason) return 'items';
     if (data.locationTag) return 'reason';
@@ -301,6 +302,9 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 text-xs font-semibold">
             {workTypeLabel}
           </div>
+        )}
+        {lockedFromWizard && (
+          <span className="text-[10px] text-muted-foreground ml-auto">Edit in earlier steps</span>
         )}
       </div>
 

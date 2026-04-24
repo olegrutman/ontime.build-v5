@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -134,6 +134,60 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   const [submitting, setSubmitting] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const { shareCO } = useChangeOrders(projectId);
+
+  // ── Draft autosave (sessionStorage) ──────────────────
+  const draftKey = `co_wizard_draft_${projectId}_${isTM ? 'wo' : 'co'}`;
+  const [draftMeta, setDraftMeta] = useState<{ ts: number; step: number } | null>(null);
+  const hydratedRef = useRef(false);
+
+  // Detect existing draft when wizard opens
+  useEffect(() => {
+    if (!open || hydratedRef.current) return;
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.ts && parsed?.data) {
+          setDraftMeta({ ts: parsed.ts, step: parsed.step ?? 0 });
+        }
+      }
+    } catch {/* ignore */}
+  }, [open, draftKey]);
+
+  // Persist on every change (only after first user interaction past step 0)
+  useEffect(() => {
+    if (!open) return;
+    const isPristine =
+      step === 0 &&
+      !data.reason &&
+      !data.locationTag &&
+      data.selectedItems.length === 0 &&
+      !data.aiDescription;
+    if (isPristine) return;
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({ ts: Date.now(), step, data }));
+    } catch {/* quota / private mode */}
+  }, [open, step, data, draftKey]);
+
+  function resumeDraft() {
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.data) {
+        setData({ ...INITIAL_DATA, ...parsed.data });
+        setStep(parsed.step ?? 0);
+      }
+    } catch {/* ignore */}
+    setDraftMeta(null);
+    hydratedRef.current = true;
+  }
+
+  function discardDraft() {
+    try { sessionStorage.removeItem(draftKey); } catch {/* ignore */}
+    setDraftMeta(null);
+    hydratedRef.current = true;
+  }
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
   const role: COCreatedByRole =
@@ -366,6 +420,9 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
       queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
       toast.success(isTM ? 'Work order created' : 'Change order created');
+      // Clear any saved draft after successful submit
+      try { sessionStorage.removeItem(draftKey); } catch {/* ignore */}
+      hydratedRef.current = true;
       handleClose();
     } catch (err: any) {
       toast.error(err?.message ?? (isTM ? 'Failed to create work order' : 'Failed to create change order'));
@@ -377,6 +434,8 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   function handleClose() {
     setStep(0);
     setData({ ...INITIAL_DATA, reason: preSelectedReason ?? null });
+    setDraftMeta(null);
+    hydratedRef.current = false;
     onOpenChange(false);
   }
 
@@ -385,6 +444,23 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   const body = (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
+      {/* Resume-draft banner */}
+      {draftMeta && (
+        <div className="border-b bg-amber-50 dark:bg-amber-950/30 px-4 py-2 flex items-center gap-2 text-xs">
+          <span className="text-amber-800 dark:text-amber-300 font-medium">
+            Draft from {formatDraftAge(draftMeta.ts)} (Step {draftMeta.step + 1})
+          </span>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={discardDraft}>
+              Start fresh
+            </Button>
+            <Button size="sm" className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700 text-white" onClick={resumeDraft}>
+              Resume
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile step indicator */}
       {isMobile && (
         <div className="px-4 pt-4 pb-3 border-b border-border">
@@ -924,3 +1000,14 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 // PricingTypeSelector, ToggleWithSelector, ShareToggle moved to SharedWizardComponents.tsx
+
+// ── Draft helpers ───────────────────────────────────────
+function formatDraftAge(ts: number): string {
+  const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (diffSec < 60) return 'just now';
+  const min = Math.floor(diffSec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  return `${Math.floor(hr / 24)}d ago`;
+}

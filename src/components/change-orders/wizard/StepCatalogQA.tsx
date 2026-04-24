@@ -449,13 +449,14 @@ function PickCard({
   return (
     <div
       className={cn(
-        'w-full rounded-lg border-2 p-3 transition-all',
+        'w-full rounded-lg border-2 transition-all',
         selected
           ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20'
           : 'border-border hover:border-amber-300'
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 p-3">
+        {/* Confidence ring — also toggles selection */}
         <button onClick={onToggle} className="relative h-10 w-10 shrink-0" aria-label="Toggle pick">
           <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
             <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
@@ -470,6 +471,8 @@ function PickCard({
             {ringPct}
           </span>
         </button>
+
+        {/* Name + reasoning — toggles selection */}
         <button onClick={onToggle} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-foreground">{pick.name}</p>
@@ -477,16 +480,23 @@ function PickCard({
           {pick.reasoning && (
             <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{pick.reasoning}</p>
           )}
-          <div className="mt-1.5">
-            <QuantityEditPopover
-              value={currentQty ?? null}
-              unit={pick.unit}
-              source={currentSource}
-              onChange={onQtyChange}
-            />
-          </div>
         </button>
+
         {selected && <Check className="h-4 w-4 text-amber-600 shrink-0 mt-1" />}
+      </div>
+
+      {/* Quantity row — sibling, NOT nested inside a button */}
+      <div className="px-3 pb-3 -mt-1 flex items-center gap-2">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Qty</span>
+        <QuantityEditPopover
+          value={currentQty ?? null}
+          unit={pick.unit}
+          source={currentSource}
+          onChange={onQtyChange}
+        />
+        {currentSource === 'ai' && (
+          <span className="text-[10px] text-amber-700 dark:text-amber-400">Sasha's estimate · tap to edit</span>
+        )}
       </div>
     </div>
   );
