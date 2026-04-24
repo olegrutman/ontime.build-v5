@@ -70,6 +70,22 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
+  // ── Phase 3: scope picker mode (qa | type | browse) ──
+  const modeKey = `co_wizard_scope_mode_${projectId}`;
+  const [mode, setMode] = useState<ScopePickerMode>(() => {
+    if (typeof window === 'undefined') return 'qa';
+    const saved = window.localStorage.getItem(modeKey);
+    return (saved === 'browse' || saved === 'type' || saved === 'qa') ? saved : 'qa';
+  });
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.localStorage.setItem(modeKey, mode);
+  }, [mode, modeKey]);
+
+  // Phase 4 / type-mode: AI-suggested picks fed to a lightweight selector
+  const [typeResults, setTypeResults] = useState<{ description: string; resp: SuggestResponse } | null>(null);
+  const [typeSelected, setTypeSelected] = useState<Set<string>>(new Set());
+  const [typeDraft, setTypeDraft] = useState('');
+
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
   const searchResults = useMemo(() => search(query), [query, search]);
 
