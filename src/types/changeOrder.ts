@@ -232,6 +232,11 @@ export interface ScopeCatalogItem {
   category_icon: string;
   sort_order: number;
   org_id: string | null;
+  /** Phase 4 — optional AI provenance, populated when item is suggested via QA */
+  qty?: number | null;
+  quantity_source?: 'ai' | 'manual' | 'photo' | null;
+  ai_confidence?: number | null;
+  ai_reasoning?: string | null;
 }
 
 /** @deprecated Use ScopeCatalogItem instead */
