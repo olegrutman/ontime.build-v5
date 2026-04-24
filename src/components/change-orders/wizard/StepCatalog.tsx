@@ -538,6 +538,8 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
           </CollapsibleTier>
         </>
       )}
+      </>
+      )}
 
       {/* Selected items */}
       {data.selectedItems.length > 0 && (
