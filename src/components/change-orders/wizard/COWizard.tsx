@@ -594,15 +594,10 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   );
 }
 
-// ── Step 1: Why + Work Type ──────────────────────────
+// ── Step 1: Why ──────────────────────────────────────
 function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
-  const hintedTypes: string[] = []; // hardcoded hints retired in Phase 1; QA flow now drives suggestions
-  const suggestedWorkTypes = CO_WORK_TYPES.filter(wt => hintedTypes.includes(wt.key));
-  const otherWorkTypes = CO_WORK_TYPES.filter(wt => !hintedTypes.includes(wt.key));
-
   return (
-    <div className="space-y-6">
-      {/* Reason */}
+    <div className="space-y-4">
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">What triggered this {isTM ? 'work order' : 'change order'}?</p>
         <div className="grid grid-cols-2 gap-3">
@@ -612,7 +607,7 @@ function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChang
               type="button"
               onClick={() => onChange({ reason: card.reason })}
               className={cn(
-                'flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all text-left min-h-[80px]',
+                'flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all text-left min-h-[88px]',
                 data.reason === card.reason ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
               )}
             >
@@ -623,72 +618,10 @@ function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChang
           ))}
         </div>
       </div>
-
-      {/* Work Type sub-step — shown after reason is selected */}
       {data.reason && (
-        <div className="space-y-3 pt-4 border-t border-border">
-          <div>
-            <p className="text-sm font-medium text-foreground">What area of work? <span className="text-muted-foreground font-normal">(optional)</span></p>
-            <p className="text-xs text-muted-foreground">Helps auto-filter the scope catalog in the next step</p>
-          </div>
-
-          {/* Suggested work types */}
-          {suggestedWorkTypes.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Suggested for {CO_REASON_LABELS[data.reason]}</p>
-              <div className="grid grid-cols-3 gap-2">
-                {suggestedWorkTypes.map(wt => (
-                  <button
-                    key={wt.key}
-                    type="button"
-                    onClick={() => onChange({ workType: data.workType === wt.key ? null : wt.key })}
-                    className={cn(
-                      'relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
-                      data.workType === wt.key ? 'border-primary bg-primary/10' : 'border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 hover:border-primary/40',
-                    )}
-                  >
-                    {(wt.key === 'structural' || wt.key === 'wrb') && (
-                      <span className={cn(
-                        'absolute top-1 right-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold',
-                        wt.key === 'structural' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-                      )}>
-                        {wt.key === 'structural' ? 'Structural' : 'WRB'}
-                      </span>
-                    )}
-                    <span className="text-xl">{wt.icon}</span>
-                    <span className="text-xs font-semibold text-foreground">{wt.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* All work types */}
-          <div className="grid grid-cols-3 gap-2">
-            {(suggestedWorkTypes.length > 0 ? otherWorkTypes : CO_WORK_TYPES).map(wt => (
-              <button
-                key={wt.key}
-                type="button"
-                onClick={() => onChange({ workType: data.workType === wt.key ? null : wt.key })}
-                className={cn(
-                  'relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
-                  data.workType === wt.key ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
-                )}
-              >
-                {(wt.key === 'structural' || wt.key === 'wrb') && (
-                  <span className={cn(
-                    'absolute top-1 right-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold',
-                    wt.key === 'structural' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-                  )}>
-                    {wt.key === 'structural' ? 'Structural' : 'WRB'}
-                  </span>
-                )}
-                <span className="text-xl">{wt.icon}</span>
-                <span className="text-xs font-semibold text-foreground">{wt.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="text-[11px] text-muted-foreground italic">
+          Sasha will figure out the trade and work type when you describe what's needed in Step 3.
+        </p>
       )}
     </div>
   );
