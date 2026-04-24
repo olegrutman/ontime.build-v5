@@ -78,6 +78,7 @@ export function StepCatalogQA({
   const [extracted, setExtracted] = useState<SuggestResponse['extracted']>(null);
   const [refinementDismissed, setRefinementDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showMaybe, setShowMaybe] = useState(false);
 
   const runMatch = useCallback(async () => {
     if (!flowState.isComplete) flowState.finish();
