@@ -542,7 +542,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t bg-card px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between border-t bg-card px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <Button variant="ghost" size="sm" disabled={submitting} onClick={step === 0 ? handleClose : handleBack}>
               {step === 0 ? 'Cancel' : <><ChevronLeft className="h-4 w-4 mr-1" />Back</>}
             </Button>
