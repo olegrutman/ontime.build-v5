@@ -293,7 +293,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         });
       if (insertError) throw insertError;
 
-      // Insert scope items
+      // Insert scope items (Phase 4: persist AI quantity/confidence/reasoning)
       if (data.selectedItems.length > 0) {
         const rows = data.selectedItems.map((item, idx) => ({
           co_id: preGeneratedId,
@@ -304,15 +304,38 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           division: item.division,
           category_name: item.category_name,
           unit: item.unit,
+          qty: item.qty ?? null,
+          quantity_source: item.quantity_source ?? null,
+          ai_confidence: item.ai_confidence ?? null,
+          ai_reasoning: item.ai_reasoning ?? null,
           sort_order: idx,
           location_tag: data.locationTag || null,
           reason: (data.reason || null) as string | null,
           description: item.reasonDescription || null,
         }));
-        const { error: lineError } = await supabase.from('co_line_items').insert(rows);
+        const { data: insertedRows, error: lineError } = await supabase
+          .from('co_line_items')
+          .insert(rows)
+          .select('id');
         if (lineError) {
           await supabase.from('change_orders').delete().eq('id', preGeneratedId);
           throw new Error(`Failed to save scope items: ${lineError.message}`);
+        }
+
+        // Phase 4b: write a qa_answer evidence row per line item when QA was used
+        if (data.qaAnswers && Object.keys(data.qaAnswers).length > 0 && insertedRows?.length) {
+          const caption = data.aiDescription || JSON.stringify(data.qaAnswers);
+          const evidenceRows = insertedRows.map((r) => ({
+            co_line_item_id: r.id,
+            co_id: preGeneratedId,
+            kind: 'qa_answer',
+            caption,
+            ai_model: 'google/gemini-2.5-flash',
+            confidence: null,
+            created_by: user.id,
+          }));
+          // Best-effort; don't fail CO creation if evidence write hiccups
+          await supabase.from('co_scope_evidence').insert(evidenceRows);
         }
       }
 
