@@ -43,7 +43,7 @@ interface Contract {
 }
 
 export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM = false }: InvoicesTabProps) {
-  const { userOrgRoles, permissions } = useAuth();
+  const { userOrgRoles, permissions, loading: authLoading } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [poOwnerMap, setPoOwnerMap] = useState<Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }>>({});
@@ -59,8 +59,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
-  const canViewInvoices = permissions?.canViewInvoices ?? false;
-
   const sovReadiness = useSOVReadiness(projectId, currentOrgId);
 
   const hasDualView = currentOrgType === 'TC' || currentOrgType === 'GC';
@@ -357,10 +355,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
   const roleContext = getRoleContext();
 
-  if (!canViewInvoices) {
+  if (authLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-        <p className="text-sm text-muted-foreground">You do not have permission to view invoices.</p>
+        <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-36" />
+          ))}
+        </div>
       </div>
     );
   }
