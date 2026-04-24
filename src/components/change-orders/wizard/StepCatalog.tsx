@@ -214,7 +214,67 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
     );
   }
 
-  // ── PHASE 3: ITEMS (3-TIER PICKER) ──
+  // ── Phase 3 helpers: complete from QA / type results ──
+  function completeFromItems(items: SelectedScopeItem[], aiDescription: string, qaAnswers?: Record<string, string | string[]>) {
+    const merged: Partial<COWizardData> = {
+      selectedItems: items,
+      aiDescription,
+    };
+    if (qaAnswers) (merged as any).qaAnswers = qaAnswers;
+    onChange(merged);
+  }
+
+  function handleLocationRefine(newTag: string) {
+    onChange({ locationTag: newTag });
+  }
+
+  function toggleTypePick(catalogId: string) {
+    setTypeSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(catalogId)) next.delete(catalogId);
+      else next.add(catalogId);
+      return next;
+    });
+  }
+
+  function confirmTypePicks() {
+    if (!typeResults) return;
+    const items: SelectedScopeItem[] = typeResults.resp.picks
+      .filter(p => typeSelected.has(p.catalog_id))
+      .map(p => {
+        const cat = (window as any).__scopeCatalogCache?.find?.((i: ScopeCatalogItem) => i.id === p.catalog_id);
+        // Fallback to building a minimal SelectedScopeItem if cache miss — use suggestion fields
+        const base: ScopeCatalogItem = cat ?? {
+          id: p.catalog_id,
+          division: '',
+          category_id: '',
+          category_name: '',
+          group_id: '',
+          group_label: '',
+          item_name: p.name,
+          unit: p.unit,
+          category_color: '',
+          category_bg: '',
+          category_icon: '',
+          sort_order: 0,
+          org_id: null,
+        };
+        return {
+          ...base,
+          qty: p.suggested_quantity,
+          quantity_source: p.suggested_quantity != null ? 'ai' : null,
+          ai_confidence: p.suggested_quantity != null ? p.confidence : null,
+          ai_reasoning: p.suggested_quantity != null ? p.reasoning : null,
+          locationTag: data.locationTag,
+          reason: data.reason!,
+          reasonDescription: '',
+        } as SelectedScopeItem;
+      });
+    completeFromItems(items, typeResults.description);
+    toast.success(`Added ${items.length} item${items.length === 1 ? '' : 's'}`);
+  }
+
+  // ── PHASE 3: ITEMS (mode switch + tabs) ──
   return (
     <div className="space-y-4">
       {/* Locked context: location + reason + workType chips */}
@@ -243,6 +303,100 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
           </div>
         )}
       </div>
+
+      {/* Mode switch */}
+      <StepCatalogModeSwitch value={mode} onChange={(m) => { setMode(m); setTypeResults(null); setTypeSelected(new Set()); }} />
+
+      {/* QA mode */}
+      {mode === 'qa' && data.locationTag && data.reason && (
+        <StepCatalogQA
+          projectId={projectId}
+          locationTag={data.locationTag}
+          reason={data.reason}
+          workType={workType ?? null}
+          onComplete={({ description, answers, selectedItems }) => {
+            if (selectedItems.length === 0) {
+              toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });
+              setMode('browse');
+              return;
+            }
+            completeFromItems(selectedItems, description, answers);
+            toast.success(`Added ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'}`);
+          }}
+          onFallbackToType={(draft) => { setTypeDraft(draft); setMode('type'); }}
+          onFallbackToBrowse={() => setMode('browse')}
+          onLocationRefine={handleLocationRefine}
+        />
+      )}
+
+      {/* Type mode */}
+      {mode === 'type' && data.locationTag && data.reason && !typeResults && (
+        <StepCatalogTypeFallback
+          projectId={projectId}
+          locationTag={data.locationTag}
+          reason={data.reason}
+          workType={workType ?? null}
+          initialDraft={typeDraft}
+          onResults={(description, resp) => {
+            setTypeResults({ description, resp });
+            setTypeSelected(new Set(resp.picks.slice(0, 1).map(p => p.catalog_id)));
+          }}
+          onCancel={() => setMode('qa')}
+        />
+      )}
+
+      {mode === 'type' && typeResults && (
+        <div className="space-y-3">
+          <div className="rounded-lg border-2 border-amber-200 bg-amber-50/40 dark:bg-amber-950/10 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Sasha's read</p>
+            <p className="mt-1 text-sm text-foreground leading-relaxed">{typeResults.description}</p>
+          </div>
+          {typeResults.resp.picks.length === 0 ? (
+            <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
+              No automatic matches. Try Browse mode.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {typeResults.resp.picks.map(p => {
+                const sel = typeSelected.has(p.catalog_id);
+                return (
+                  <button
+                    key={p.catalog_id}
+                    onClick={() => toggleTypePick(p.catalog_id)}
+                    className={cn(
+                      'w-full text-left rounded-lg border-2 p-3 transition-all',
+                      sel ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20' : 'border-border hover:border-amber-300'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 min-w-[2.25rem] px-1.5 items-center justify-center rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
+                        {Math.round(p.confidence * 100)}
+                      </span>
+                      <span className="text-sm font-semibold flex-1">{p.name}</span>
+                      <span className="text-xs text-muted-foreground">{p.unit}</span>
+                    </div>
+                    {p.reasoning && <p className="mt-1 text-xs text-muted-foreground">{p.reasoning}</p>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={confirmTypePicks} disabled={typeSelected.size === 0} className="bg-amber-600 hover:bg-amber-700 text-white">
+              Add {typeSelected.size} item{typeSelected.size === 1 ? '' : 's'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setTypeResults(null); setTypeSelected(new Set()); }}>
+              Edit description
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setMode('browse')}>Browse instead</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Browse mode (legacy 3-tier picker) */}
+      {mode === 'browse' && (
+      <>
+      
 
       {/* Search bar (spans all tiers) */}
       <div className="relative">
