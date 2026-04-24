@@ -169,11 +169,14 @@ export function StepCatalogQA({
   function handleAcceptRefinement() {
     if (!extracted?.zone_refinement || !onLocationRefine) return;
     const newTag = extracted.zone_refinement;
+    const hasUserSelections = selected.size > 0;
     setRefinementDismissed(true);
     onLocationRefine(newTag);
-    // Re-run match against new location once parent has updated.
-    // We rely on a microtask: parent props flip locationTag → next runMatch uses it.
-    setTimeout(() => { void runMatch(); }, 50);
+    // Only re-run match (which clears picks) if user hasn't started picking yet.
+    // Otherwise just update the location for next CO and don't disturb their work.
+    if (!hasUserSelections) {
+      setTimeout(() => { void runMatch(); }, 50);
+    }
   }
 
   // ── HEADER ──
