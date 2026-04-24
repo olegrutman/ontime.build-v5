@@ -303,6 +303,9 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
             {workTypeLabel}
           </div>
         )}
+        {lockedFromWizard && (
+          <span className="text-[10px] text-muted-foreground ml-auto">Edit in earlier steps</span>
+        )}
       </div>
 
       {/* Mode switch */}
