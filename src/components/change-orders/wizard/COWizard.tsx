@@ -420,6 +420,9 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
       queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
       toast.success(isTM ? 'Work order created' : 'Change order created');
+      // Clear any saved draft after successful submit
+      try { sessionStorage.removeItem(draftKey); } catch {/* ignore */}
+      hydratedRef.current = true;
       handleClose();
     } catch (err: any) {
       toast.error(err?.message ?? (isTM ? 'Failed to create work order' : 'Failed to create change order'));
@@ -431,6 +434,8 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   function handleClose() {
     setStep(0);
     setData({ ...INITIAL_DATA, reason: preSelectedReason ?? null });
+    setDraftMeta(null);
+    hydratedRef.current = false;
     onOpenChange(false);
   }
 
