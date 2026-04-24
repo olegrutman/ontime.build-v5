@@ -419,6 +419,17 @@ function QuestionCard({
         ))}
       </div>
 
+      {/* Universal escape: "Not sure" — records '__skip__' and continues */}
+      <div className="flex justify-center pt-1">
+        <button
+          type="button"
+          onClick={() => onAnswer('__skip__')}
+          className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+        >
+          Not sure / Skip this
+        </button>
+      </div>
+
       {question.annotation && (
         <div
           className="rounded-md border-l-2 border-purple-500 bg-purple-50/50 dark:bg-purple-950/10 p-2.5 text-xs text-foreground/80"
