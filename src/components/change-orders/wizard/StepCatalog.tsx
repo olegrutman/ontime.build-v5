@@ -52,10 +52,11 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
 
   const workTypeLabel = workType ? WORK_TYPE_LABELS[workType] ?? workType : null;
 
-  // When location & reason are pre-set by the wizard, lock them (read-only pills)
-  const [lockedFromWizard] = useState(() => !!(data.locationTag && data.reason));
+  // When location & reason are pre-set by the wizard, lock them (read-only pills).
+  // Inside the wizard both are guaranteed by canAdvance(), so phases collapse to 'items'.
+  const lockedFromWizard = !!(data.locationTag && data.reason);
 
-  // Internal phase: location → reason → items
+  // Internal phase: location → reason → items (legacy non-wizard usage only)
   const [phase, setPhase] = useState<Phase>(() => {
     if (data.locationTag && data.reason) return 'items';
     if (data.locationTag) return 'reason';
