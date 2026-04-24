@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Keyboard, Sparkles, Check, Pencil, MapPin } from 'lucide-react';
+import { Loader2, ArrowLeft, Keyboard, Sparkles, Check, Pencil, MapPin, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectScope } from '@/hooks/useProjectScope';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
