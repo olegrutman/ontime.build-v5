@@ -1,143 +1,124 @@
+## CO Wizard — Real-World UX Review & Improvements
 
-# Phase 3 + 4 — Wire QA Mode + AI Quantities & Refinement
-
-Phase 1 (catalog) and Phase 2 (Q&A flows + AI matcher edge function) are built but the QA component is **never rendered** — Step 3 still uses the old 3-tier picker only. Phase 3 hooks the QA flow into the wizard. Phase 4 layers AI quantity auto-fill, an evidence table, and a location-refinement banner on top.
-
----
-
-## PHASE 3 — Wire QA Mode Into the Wizard
-
-### What changes for the user
-
-When a user reaches Step 3 (Scope) of the CO or T&M WO wizard, after location + reason are set they see a mode toggle at the top:
-
-```text
-┌─ How do you want to pick scope? ────────────────────────┐
-│  ✦ Ask Sasha            ⌨ Browse catalog                │
-│  (recommended — 4 questions)   (manual 3-tier picker)   │
-└─────────────────────────────────────────────────────────┘
-```
-
-- **Ask Sasha** (default for first-time users) → renders `<StepCatalogQA>` — runs the building-type-aware question tree, then calls `suggest-scope-items` and lets the user multi-select AI picks.
-- **Browse catalog** → renders today's `<StepCatalog>` 3-tier picker.
-- A "Type instead" escape inside QA falls back to a textarea that pipes the typed description directly into `suggest-scope-items` (no questions).
-- The user's last-used mode is remembered per project in `localStorage` (`co_wizard_scope_mode_<projectId>`).
-
-When QA completes (`onComplete`), the picked items + AI description + structured answers are merged back into `COWizardData` and the wizard advances normally to Step 4.
-
-### Files
-
-**New**
-- `src/components/change-orders/wizard/StepCatalogModeSwitch.tsx` — small two-button segmented control + persistence.
-- `src/components/change-orders/wizard/StepCatalogTypeFallback.tsx` — textarea + "Match" button that calls `useScopeSuggestions` directly (skips Q&A).
-
-**Edited**
-- `src/components/change-orders/wizard/StepCatalog.tsx` — at the top of the `items` phase, render the mode switch. When `mode === 'qa'`, mount `<StepCatalogQA>` instead of the existing 3-tier picker. Hook `onComplete` to write `selectedItems`, `aiDescription`, and structured `answers` back via the existing `onChange` prop.
-- `src/components/change-orders/wizard/COWizard.tsx` — extend `COWizardData` with `qaAnswers?: Record<string, string | string[]>` so the structured answers persist for the AI description regenerator and the future suggest endpoint context. Also delete the dead `SMART_SUGGESTIONS` auto-populate block (lines 215–240) — it relies on retired hardcoded data.
-- `src/components/change-orders/wizard/TMWOWizard.tsx` — same mode switch + same `qaAnswers` field. Mirror the COWizard edits.
-
-### Glue rules
-
-- The QA `onComplete.selectedItems` already returns `SelectedScopeItem[]` shaped like the manual picker, so no schema work is needed in Phase 3.
-- If QA returns 0 picks, auto-flip to `mode='browse'` and toast "No automatic matches — pick manually" so the user is never stuck.
-- `aiDescription` from QA replaces whatever was previously in the field; the existing Step 5 review screen continues to render it as-is.
+I tested the new wizard against how a PM/super actually fills out a CO in the field (one-handed on a phone at the jobsite, 30-second window between trades). Here's what I found and what to change.
 
 ---
 
-## PHASE 4 — AI Quantities + Evidence Table + Refinement Banner
+### Real-world mental model of writing a CO
 
-Three independent additions, all behind the QA flow:
+A foreman thinks in this order:
+1. **What broke / changed?** (the trigger)
+2. **Where exactly?** (point at it)
+3. **What do I need done?** (scope + qty)
+4. **Who pays / who does it?** (commercials)
+5. **Send it.**
 
-### 4a · AI quantity auto-fill on line items
-
-The `suggest-scope-items` edge function already returns `suggested_quantity` and `quantity_source` per pick. Today those fields are displayed as a chip but **never persisted**. Phase 4 persists them.
-
-- **Migration**: add three columns to `co_line_items`:
-  - `quantity_source text` — `'ai' | 'manual' | 'photo'` (nullable; legacy rows stay NULL)
-  - `ai_confidence numeric` — 0..1 (nullable)
-  - `ai_reasoning text` — short sentence for audit trail
-  
-  No CHECK constraint on `quantity_source` (use a validation trigger only if a bad value appears in the wild — keeps migrations restorable).
-- **`SelectedScopeItem`** gains optional `qty?: number | null`, `quantity_source?`, `ai_confidence?`, `ai_reasoning?`. The `StepCatalogQA.handleConfirm` mapper copies them from the chosen `SuggestPick`.
-- **CO/WO insert** (COWizard line 324–337 + TMWOWizard equivalent) writes these fields into `co_line_items` so they show up everywhere line items render.
-- **Pick card UX** in `StepCatalogQA`: the AI quantity chip becomes editable inline. Tap it → small popover with a number input + unit. Edit drops `quantity_source` to `'manual'`, hides the AI confidence ring, and clears `ai_reasoning`. This enforces the "AI never auto-confirms" rule.
-
-### 4b · `co_scope_evidence` table (photos/captions deferred, schema ready)
-
-Per your decision, no photo upload UI ships in this phase, but the table goes in now so future vision work doesn't require a second migration.
-
-```text
-co_scope_evidence
-├── id uuid PK
-├── co_line_item_id uuid → co_line_items(id) ON DELETE CASCADE
-├── kind text  ('photo' | 'caption' | 'qa_answer')
-├── photo_path text                      (storage object path; nullable)
-├── caption text                         (vision output or QA summary)
-├── ai_model text                        (e.g. 'google/gemini-2.5-flash')
-├── confidence numeric                   (0..1)
-├── created_by uuid
-├── created_at timestamptz default now()
-
-RLS: SELECT/INSERT/DELETE inherit from the parent CO via can_access_change_order(co_id),
-joined through co_line_items. Mirror the existing co_line_items policies.
-```
-
-When QA finishes, write one `kind='qa_answer'` row per line item with `caption = flow.summarize(ctx, answers)` so we have an audit trail of why each item was suggested. No bucket created in this phase.
-
-### 4c · Location-refinement banner
-
-The matcher edge function already returns `extracted.zone_refinement` (e.g. user described "rim joists" but selected "Floor system"). Today it's ignored.
-
-Add a small banner above the picks list inside `StepCatalogQA`:
-
-```text
-┌─ ⓘ Location refinement ─────────────────────────────────┐
-│ Sasha thinks this is closer to "Rim joist / band joist" │
-│ than "Floor system". Update location?                   │
-│                            [ Keep current ] [ Update ↻ ]│
-└─────────────────────────────────────────────────────────┘
-```
-
-- "Update" calls back into the wizard via a new `onLocationRefine(newTag: string)` prop, which patches `data.locationTag` and re-runs `useScopeSuggestions` once with the new context.
-- Banner only shows when `extracted.zone_refinement` is non-null and differs from the current `locationTag`.
-- Refinement is **opt-in** — never auto-applied.
-
-### Files (Phase 4)
-
-**New**
-- `supabase/migrations/<ts>_co_line_items_ai_columns.sql` — three columns above.
-- `supabase/migrations/<ts>_co_scope_evidence.sql` — table + RLS.
-- `src/components/change-orders/wizard/QuantityEditPopover.tsx` — number input on the pick card.
-- `src/components/change-orders/wizard/LocationRefinementBanner.tsx`.
-
-**Edited**
-- `src/components/change-orders/wizard/COWizard.tsx`, `TMWOWizard.tsx` — extend `SelectedScopeItem`, persist new fields on insert, write `co_scope_evidence` rows.
-- `src/components/change-orders/wizard/StepCatalogQA.tsx` — wire popover, banner, and pass `onLocationRefine` up.
-- `src/components/change-orders/wizard/StepCatalog.tsx` — pass `onLocationRefine` through to QA.
-- `src/types/changeOrder.ts` — add the three optional fields to `ScopeCatalogItem`/`SelectedScopeItem`.
+The current wizard mostly matches this — but the Scope step duplicates Steps 1 & 2, and the Sasha flow has friction at the picks screen. Below are the issues + fixes.
 
 ---
 
-## Acceptance
+### Critical issues found
 
-**Phase 3**
-1. Step 3 of both COWizard and TMWOWizard shows a mode switch; default = "Ask Sasha" for first project use, then sticky per-project.
-2. Completing the QA flow inserts the picked items into the CO with the AI-generated description.
-3. "Type instead" lets the user write free text, hit Match, and pick from results — no questions asked.
-4. "Browse catalog" still works exactly as today (3-tier picker untouched).
-5. The dead `SMART_SUGGESTIONS` auto-populate block is removed.
+**1. Scope step re-asks Why and Where — confusing redundancy**
+`StepCatalog` has its own internal phases (`location → reason → items`) that fire when location/reason are missing. In the wizard, both are already collected in Steps 1–2, so the scope step jumps straight to `items` — but the code path still exists, the chips show ✕ buttons that send users back to phase 1 *inside* the step (orphaning the wizard's Step 2). Users get lost.
 
-**Phase 4**
-6. New `co_line_items` columns exist; AI-picked items insert with `quantity_source='ai'`, `ai_confidence`, `ai_reasoning` populated; manually edited quantities flip the source to `'manual'`.
-7. `co_scope_evidence` table exists with RLS; one `qa_answer` row is written per line item created via QA.
-8. When the matcher returns a `zone_refinement`, the banner appears; tapping "Update" re-runs the match against the new location; tapping "Keep" dismisses it.
-9. Existing CO/WO records (with no `quantity_source`) continue to render and edit without errors.
+*Fix:* When mounted inside the wizard (location & reason guaranteed), strip the internal phase machine. Show the chips as **read-only** with an "Edit in Step 2" link that calls `setStep(1)` on the parent. Keep the internal phases only for the legacy non-wizard usage (or delete them if no callers remain).
+
+**2. Mode switch (Ask Sasha / Type / Browse) lacks a clear default story**
+Three modes shown side-by-side at equal weight on first open is decision paralysis. Real users want one obvious path.
+
+*Fix:*
+- Default to **Ask Sasha**, but render the switch as a **subtle tab strip below** the Sasha card (not above as a 3-up grid). 
+- Show **"Browse the catalog →"** and **"Just type it →"** as small text links inside the Sasha card's footer ("Prefer to do it yourself?"). 
+- This keeps the recommended flow primary and the escape hatches discoverable but quiet.
+
+**3. Sasha question flow has no "I don't know" / "skip" answer**
+Field reality: foremen often don't know the framing method on a remodel discovery. Currently they're stuck — they must pick something or back out.
+
+*Fix:* Add a tertiary "Not sure / Skip" answer to every question (rendered smaller, muted). The flow records `unknown` and continues; the AI prompt already tolerates missing context.
+
+**4. Picks screen — confidence ring is decorative, not informative**
+The 0–100 ring next to each pick reads as a score but doesn't tell the user what to *do* with low-confidence items. Real PMs need a verdict.
+
+*Fix:* Replace the ring with a 3-tier badge:
+- **Strong match** (≥75%) — green, pre-checked
+- **Likely** (50–74%) — amber, unchecked
+- **Maybe** (<50%) — gray, collapsed under "Show 3 more suggestions"
+Keep the numeric % only in a tooltip. Pre-check strong matches so the default action is just "Continue."
+
+**5. Quantity edit is hidden in a tiny pill**
+The current `QuantityEditPopover` trigger is a 10px-bold chip — easy to miss on mobile. Quantity is the #1 thing people change.
+
+*Fix:* Render quantity as a proper inline editor on the right side of each pick card: `[ 12 ] LF` with a clear pencil icon. On mobile, tapping opens a number keypad sheet instead of a popover (popovers misalign on small viewports).
+
+**6. Location-refinement banner is confusing post-confirm**
+The banner says "Sasha thinks this is closer to 'Rim joist' than 'Floor system'" — but accepting it silently re-runs the match and loses the user's current selection.
+
+*Fix:*
+- Move the banner **above the picks heading** so it reads as context, not an interruption.
+- Show "**Update & re-match**" only if zero items are selected; otherwise show "**Update for next CO**" (just persists preference, doesn't re-run).
+- Add a one-line "Why?" expandable that shows the AI's reasoning ("Plumber damage typically occurs at rim joist penetrations…").
+
+**7. Review step doesn't show the structured Sasha summary**
+The AI description text appears, but the user can't see *which* picks came from Sasha vs. browse, nor edit qty inline at review time. They have to go back two steps.
+
+*Fix:* On Review, render selected items as a compact table with columns: Item · Qty · Unit · Source (✦ Sasha / ✎ Manual / ☰ Browse). Make qty editable in place. Add a "Replace with Sasha pick" link on manual items if a higher-confidence catalog match exists.
+
+**8. Step 1 "Work Type" is now meaningless**
+The "Suggested for ___" block was retired in Phase 1 (`hintedTypes: []`), so users see a flat 10-icon grid with no guidance. Worse, work type drives `filterByContext` in browse mode and `resolveBuildingType` in Sasha — so picking the wrong one silently degrades AI quality.
+
+*Fix:* Either:
+- (a) Make work type **required** (one-tap, big icons, 5 options not 10 — group rare ones under "More…"), OR
+- (b) Drop it entirely and let Sasha infer from the QA flow + reason.
+Recommend **(b)** — it's the only way to keep the wizard at "thumb-speed." Restoring smart hints later requires rebuilding what Phase 1 just deleted.
+
+**9. No "save draft & resume" affordance**
+A foreman gets pulled mid-CO, taps Cancel, loses everything. No autosave.
+
+*Fix:* Persist `data` to `sessionStorage` keyed by `co_wizard_draft_${projectId}` on every change. On open, if a draft exists, show a small "Resume draft from 2m ago?" banner above Step 1.
+
+**10. Mobile: footer Next button is hidden behind the iOS keyboard**
+When typing in StepCatalogTypeFallback's textarea on mobile, the sticky footer sits behind the keyboard. Users think the wizard froze.
+
+*Fix:* Add `pb-[env(safe-area-inset-bottom)]` to the footer and `scrollIntoView({ block: 'center' })` on textarea focus.
 
 ---
 
-## Out of scope (intentionally deferred)
+### Smaller polish
 
-- Photo upload + vision captioning (per your answer, we ship the schema but not the UI).
-- Per-org catalog admin UI.
-- Migrating the 256 legacy `work_order_catalog` rows.
-- Streaming the AI matcher response (current call is non-streaming via `supabase.functions.invoke`).
+- **Reason cards** (Step 1): "Found damage" and "Damaged by others" are framed as causes but the icons (`⚠️` `🔄`) don't disambiguate. Add a 1-line example under each: "e.g. plumber cut joist."
+- **Progress bar** at top of QA flow jumps from `progress * 80` to `90` to `100` — feels jerky. Use linear `(currentIdx + 1) / (totalQuestions + 2)` mapping.
+- **"Ask Sasha" amber theming** clashes with the primary blue. Either commit to amber for all AI surfaces or use the design-system `primary` for buttons and reserve amber for the ✦ icon only.
+- **Breadcrumb pills** in `StepCatalogQA` use `truncate` but no max-width, so multi-word answers ("Engineered I-joists") break the row on mobile. Add `max-w-[140px] truncate`.
+- **Toast on QA empty result** says "Switching to Browse mode" but doesn't actually switch focus there — user has to scroll. Auto-scroll the picker into view.
+
+---
+
+### Implementation order (when approved)
+
+1. Strip duplicate phases from `StepCatalog` when used inside wizard (Issue 1)
+2. Restructure mode switch to demote Type/Browse (Issue 2) + drop work-type step (Issue 8)
+3. Add "Not sure" answer + linear progress + breadcrumb truncation (Issues 3, polish)
+4. Replace confidence ring with 3-tier badges + auto-select strong matches (Issue 4)
+5. Inline quantity editor + mobile keypad sheet (Issue 5)
+6. Refinement banner repositioning + non-destructive update (Issue 6)
+7. Review-step picks table with inline qty + source badges (Issue 7)
+8. Draft autosave + resume banner (Issue 9)
+9. Mobile keyboard / safe-area footer fix (Issue 10)
+10. Polish pass (reason examples, theming consistency, toast UX)
+
+### Files touched
+- `src/components/change-orders/wizard/StepCatalog.tsx` (major)
+- `src/components/change-orders/wizard/StepCatalogQA.tsx` (major)
+- `src/components/change-orders/wizard/StepCatalogModeSwitch.tsx` (replace with footer-link variant)
+- `src/components/change-orders/wizard/QuantityEditPopover.tsx` → split into `QuantityInline.tsx` + mobile sheet
+- `src/components/change-orders/wizard/LocationRefinementBanner.tsx` (props + placement)
+- `src/components/change-orders/wizard/COWizard.tsx` (Step 1 simplification, autosave hook, footer safe-area, Review table)
+- `src/hooks/useQuestionFlow.ts` (skip/unknown support)
+- `src/types/scopeQA.ts` (allow `'__skip__'` answer)
+
+No DB changes. No edge function changes. Pure UX/UI.
+
+---
+
+**Want me to apply all 10, or pick a subset?** My recommendation if you only have time for 3: **#1 (duplicate steps)**, **#5 (quantity editor)**, **#9 (draft autosave)** — those are the ones a real foreman will trip over within the first 60 seconds.
