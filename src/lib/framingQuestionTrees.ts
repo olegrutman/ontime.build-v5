@@ -1091,7 +1091,7 @@ function memberLabel(id: string, framingMethod: string | null): string {
   return base[id] ?? id;
 }
 
-import type { BuildingType, FlowScenario } from '@/types/scopeQA';
+
 
 export function resolveBuildingType(
   homeType: string | null,
