@@ -210,33 +210,6 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   function handleNext() {
     if (step < STEPS.length - 1) {
       const nextStep = step + 1;
-      // Auto-populate smart suggestions when entering scope step
-      if (STEPS[nextStep].key === 'scope' && data.selectedItems.length === 0 && data.reason && data.workType) {
-        const suggestions = SMART_SUGGESTIONS[data.reason]?.[data.workType] ?? [];
-        if (suggestions.length > 0) {
-          const preSelected = SCOPE_CATALOG
-            .filter(item => suggestions.includes(item.name))
-            .map(item => ({
-              id: item.id,
-              item_name: item.name,
-              unit: item.unit,
-              division: item.workType,
-              category_id: item.workType,
-              category_name: item.tag ?? item.workType,
-              group_id: item.workType,
-              group_label: item.workType,
-              category_color: '',
-              category_bg: '',
-              category_icon: '',
-              sort_order: 0,
-              org_id: null,
-              locationTag: data.locationTag,
-              reason: data.reason!,
-              reasonDescription: '',
-            } as SelectedScopeItem));
-          update({ selectedItems: preSelected });
-        }
-      }
       setStep(nextStep);
       // Auto-generate AI description when entering review step
       if (STEPS[nextStep].key === 'review' && !data.aiDescription) {
