@@ -73,14 +73,14 @@ const INITIAL_DATA: COWizardData = {
   aiDescription: '',
 };
 
-const REASON_CARDS: { reason: COReasonCode; label: string; description: string; icon: string }[] = [
-  { reason: 'addition', label: 'Extra scope', description: 'Work not in original plan', icon: '➕' },
-  { reason: 'design_change', label: 'Plan changed', description: 'Drawings revised', icon: '📐' },
-  { reason: 'damaged_by_others', label: 'Found damage', description: 'Another trade caused it', icon: '⚠️' },
-  { reason: 'rework', label: 'Redo work', description: 'Something built wrong', icon: '🔄' },
-  { reason: 'owner_request', label: 'Owner request', description: 'Owner asked for change', icon: '👤' },
-  { reason: 'gc_request', label: 'GC request', description: 'GC directed the change', icon: '🏗️' },
-  { reason: 'other', label: 'Other', description: 'Something else', icon: '📝' },
+const REASON_CARDS: { reason: COReasonCode; label: string; description: string; icon: string; example: string }[] = [
+  { reason: 'addition',          label: 'Extra scope',     description: 'Work not in original plan', icon: '➕', example: 'e.g. owner added a deck' },
+  { reason: 'design_change',     label: 'Plan changed',    description: 'Drawings revised',           icon: '📐', example: 'e.g. new window opening' },
+  { reason: 'damaged_by_others', label: 'Found damage',    description: 'Another trade caused it',    icon: '⚠️', example: 'e.g. plumber cut a joist' },
+  { reason: 'rework',            label: 'Redo work',       description: 'Something built wrong',       icon: '🔄', example: 'e.g. wall framed crooked' },
+  { reason: 'owner_request',     label: 'Owner request',   description: 'Owner asked for change',      icon: '👤', example: 'e.g. upgrade finishes' },
+  { reason: 'gc_request',        label: 'GC request',      description: 'GC directed the change',      icon: '🏗️', example: 'e.g. add fire blocking' },
+  { reason: 'other',             label: 'Other',           description: 'Something else',              icon: '📝', example: '' },
 ];
 
 // Work type definitions (matching TMWOWizard pattern)

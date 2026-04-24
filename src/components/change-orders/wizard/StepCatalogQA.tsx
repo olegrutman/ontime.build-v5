@@ -212,7 +212,7 @@ export function StepCatalogQA({
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar — linear */}
       <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all"
@@ -220,9 +220,7 @@ export function StepCatalogQA({
             width: `${
               picks
                 ? 100
-                : flowState.isComplete
-                ? 90
-                : Math.max(8, flowState.progress * 80)
+                : Math.round(((flowState.currentIdx + (flowState.isComplete ? 1 : 0)) / (flowState.totalQuestions + 1)) * 100)
             }%`,
           }}
         />
