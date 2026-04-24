@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Keyboard, Sparkles, Check, Pencil, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectScope } from '@/hooks/useProjectScope';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
-import { useScopeSuggestions, type SuggestPick } from '@/hooks/useScopeSuggestions';
+import { useScopeSuggestions, type SuggestPick, type SuggestResponse } from '@/hooks/useScopeSuggestions';
 import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { FLOWS, resolveBuildingType, resolveScenario } from '@/lib/framingQuestionTrees';
@@ -12,6 +12,8 @@ import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './COWizard';
 import type { FlowContext } from '@/types/scopeQA';
+import { QuantityEditPopover } from './QuantityEditPopover';
+import { LocationRefinementBanner } from './LocationRefinementBanner';
 
 interface StepCatalogQAProps {
   projectId: string;
@@ -26,6 +28,13 @@ interface StepCatalogQAProps {
   }) => void;
   onFallbackToType: (draftText: string) => void;
   onFallbackToBrowse: () => void;
+  /** Phase 4: when user accepts a refinement, parent updates locationTag */
+  onLocationRefine?: (newTag: string) => void;
+}
+
+interface PickState extends SuggestPick {
+  edited_qty?: number | null;
+  edited_source?: 'ai' | 'manual';
 }
 
 export function StepCatalogQA({
@@ -37,6 +46,7 @@ export function StepCatalogQA({
   onComplete,
   onFallbackToType,
   onFallbackToBrowse,
+  onLocationRefine,
 }: StepCatalogQAProps) {
   const { data: scope } = useProjectScope(projectId);
   const { allItems } = useScopeCatalog();
@@ -64,11 +74,13 @@ export function StepCatalogQA({
   }), [buildingType, scope, locationTag, zone, reason, workType, projectName]);
 
   const flowState = useQuestionFlow(flow, ctx);
-  const [picks, setPicks] = useState<SuggestPick[] | null>(null);
+  const [picks, setPicks] = useState<PickState[] | null>(null);
+  const [extracted, setExtracted] = useState<SuggestResponse['extracted']>(null);
+  const [refinementDismissed, setRefinementDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  async function runMatch() {
-    flowState.finish();
+  const runMatch = useCallback(async () => {
+    if (!flowState.isComplete) flowState.finish();
     const description = flow.summarize(ctx, flowState.answers);
     try {
       const result = await suggestMutation.mutateAsync({
@@ -82,20 +94,27 @@ export function StepCatalogQA({
         framing_method: scope?.framing_method ?? null,
         answers: flowState.answers,
       });
-      setPicks(result.picks);
+      setPicks(result.picks.map((p) => ({ ...p })));
+      setExtracted(result.extracted ?? null);
+      setRefinementDismissed(false);
     } catch (err) {
       console.error('Suggest failed:', err);
       setPicks([]);
+      setExtracted(null);
     }
-  }
+  }, [flowState, flow, ctx, suggestMutation, projectId, locationTag, zone, reason, workType, buildingType, scope]);
 
-  function togglePick(p: SuggestPick) {
+  function togglePick(p: PickState) {
     setSelected(prev => {
       const next = new Set(prev);
       if (next.has(p.catalog_id)) next.delete(p.catalog_id);
       else next.add(p.catalog_id);
       return next;
     });
+  }
+
+  function updatePickQty(catalogId: string, qty: number | null, source: 'ai' | 'manual') {
+    setPicks(prev => prev?.map(p => p.catalog_id === catalogId ? { ...p, edited_qty: qty, edited_source: source } : p) ?? null);
   }
 
   function handleConfirm() {
@@ -105,8 +124,16 @@ export function StepCatalogQA({
       .map(p => {
         const cat = allItems.find(i => i.id === p.catalog_id);
         if (!cat) return null;
+        const qty = p.edited_qty !== undefined ? p.edited_qty : p.suggested_quantity;
+        const source: 'ai' | 'manual' | null = p.edited_source
+          ? p.edited_source
+          : qty != null ? 'ai' : null;
         return {
           ...cat,
+          qty,
+          quantity_source: source,
+          ai_confidence: source === 'ai' ? p.confidence : null,
+          ai_reasoning: source === 'ai' ? p.reasoning : null,
           locationTag,
           reason: reason as COReasonCode,
           reasonDescription: '',
@@ -128,8 +155,23 @@ export function StepCatalogQA({
     onFallbackToType(draft);
   }
 
+  function handleAcceptRefinement() {
+    if (!extracted?.zone_refinement || !onLocationRefine) return;
+    const newTag = extracted.zone_refinement;
+    setRefinementDismissed(true);
+    onLocationRefine(newTag);
+    // Re-run match against new location once parent has updated.
+    // We rely on a microtask: parent props flip locationTag → next runMatch uses it.
+    setTimeout(() => { void runMatch(); }, 50);
+  }
+
   // ── HEADER ──
   const reasonColors = CO_REASON_COLORS[reason as COReasonCode];
+  const showRefinementBanner =
+    !!picks &&
+    !!extracted?.zone_refinement &&
+    !refinementDismissed &&
+    extracted.zone_refinement.toLowerCase() !== (locationTag || '').toLowerCase();
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
@@ -244,8 +286,17 @@ export function StepCatalogQA({
       )}
 
       {/* PICKS RESULT */}
-      {picks && (
+      {picks && !suggestMutation.isPending && (
         <div className="space-y-3">
+          {showRefinementBanner && extracted?.zone_refinement && (
+            <LocationRefinementBanner
+              currentTag={locationTag}
+              refinement={extracted.zone_refinement}
+              onUpdate={handleAcceptRefinement}
+              onDismiss={() => setRefinementDismissed(true)}
+            />
+          )}
+
           {picks.length === 0 ? (
             <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
               No automatic matches. Use the manual catalog or type a description.
@@ -257,6 +308,7 @@ export function StepCatalogQA({
                 pick={p}
                 selected={selected.has(p.catalog_id)}
                 onToggle={() => togglePick(p)}
+                onQtyChange={(qty, src) => updatePickQty(p.catalog_id, qty, src)}
               />
             ))
           )}
@@ -381,24 +433,30 @@ function PickCard({
   pick,
   selected,
   onToggle,
+  onQtyChange,
 }: {
-  pick: SuggestPick;
+  pick: PickState;
   selected: boolean;
   onToggle: () => void;
+  onQtyChange: (qty: number | null, source: 'ai' | 'manual') => void;
 }) {
   const ringPct = Math.round(pick.confidence * 100);
+  const currentQty = pick.edited_qty !== undefined ? pick.edited_qty : pick.suggested_quantity;
+  const currentSource: 'ai' | 'manual' | null = pick.edited_source
+    ? pick.edited_source
+    : currentQty != null ? 'ai' : null;
+
   return (
-    <button
-      onClick={onToggle}
+    <div
       className={cn(
-        'w-full text-left rounded-lg border-2 p-3 transition-all',
+        'w-full rounded-lg border-2 p-3 transition-all',
         selected
           ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20'
           : 'border-border hover:border-amber-300'
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="relative h-10 w-10 shrink-0">
+        <button onClick={onToggle} className="relative h-10 w-10 shrink-0" aria-label="Toggle pick">
           <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
             <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
             <circle
@@ -411,22 +469,25 @@ function PickCard({
           <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
             {ringPct}
           </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+        </button>
+        <button onClick={onToggle} className="flex-1 min-w-0 text-left">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-foreground">{pick.name}</p>
-            {pick.suggested_quantity != null && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                AI · {pick.suggested_quantity} {pick.unit}
-              </span>
-            )}
           </div>
           {pick.reasoning && (
             <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{pick.reasoning}</p>
           )}
-        </div>
+          <div className="mt-1.5">
+            <QuantityEditPopover
+              value={currentQty ?? null}
+              unit={pick.unit}
+              source={currentSource}
+              onChange={onQtyChange}
+            />
+          </div>
+        </button>
         {selected && <Check className="h-4 w-4 text-amber-600 shrink-0 mt-1" />}
       </div>
-    </button>
+    </div>
   );
 }
