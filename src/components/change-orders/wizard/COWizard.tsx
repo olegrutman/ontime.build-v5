@@ -444,6 +444,23 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   const body = (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
+      {/* Resume-draft banner */}
+      {draftMeta && (
+        <div className="border-b bg-amber-50 dark:bg-amber-950/30 px-4 py-2 flex items-center gap-2 text-xs">
+          <span className="text-amber-800 dark:text-amber-300 font-medium">
+            Draft from {formatDraftAge(draftMeta.ts)} (Step {draftMeta.step + 1})
+          </span>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={discardDraft}>
+              Start fresh
+            </Button>
+            <Button size="sm" className="h-7 px-2 text-xs bg-amber-600 hover:bg-amber-700 text-white" onClick={resumeDraft}>
+              Resume
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile step indicator */}
       {isMobile && (
         <div className="px-4 pt-4 pb-3 border-b border-border">
