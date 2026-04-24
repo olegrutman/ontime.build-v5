@@ -73,14 +73,14 @@ const INITIAL_DATA: COWizardData = {
   aiDescription: '',
 };
 
-const REASON_CARDS: { reason: COReasonCode; label: string; description: string; icon: string }[] = [
-  { reason: 'addition', label: 'Extra scope', description: 'Work not in original plan', icon: '➕' },
-  { reason: 'design_change', label: 'Plan changed', description: 'Drawings revised', icon: '📐' },
-  { reason: 'damaged_by_others', label: 'Found damage', description: 'Another trade caused it', icon: '⚠️' },
-  { reason: 'rework', label: 'Redo work', description: 'Something built wrong', icon: '🔄' },
-  { reason: 'owner_request', label: 'Owner request', description: 'Owner asked for change', icon: '👤' },
-  { reason: 'gc_request', label: 'GC request', description: 'GC directed the change', icon: '🏗️' },
-  { reason: 'other', label: 'Other', description: 'Something else', icon: '📝' },
+const REASON_CARDS: { reason: COReasonCode; label: string; description: string; icon: string; example: string }[] = [
+  { reason: 'addition',          label: 'Extra scope',     description: 'Work not in original plan', icon: '➕', example: 'e.g. owner added a deck' },
+  { reason: 'design_change',     label: 'Plan changed',    description: 'Drawings revised',           icon: '📐', example: 'e.g. new window opening' },
+  { reason: 'damaged_by_others', label: 'Found damage',    description: 'Another trade caused it',    icon: '⚠️', example: 'e.g. plumber cut a joist' },
+  { reason: 'rework',            label: 'Redo work',       description: 'Something built wrong',       icon: '🔄', example: 'e.g. wall framed crooked' },
+  { reason: 'owner_request',     label: 'Owner request',   description: 'Owner asked for change',      icon: '👤', example: 'e.g. upgrade finishes' },
+  { reason: 'gc_request',        label: 'GC request',      description: 'GC directed the change',      icon: '🏗️', example: 'e.g. add fire blocking' },
+  { reason: 'other',             label: 'Other',           description: 'Something else',              icon: '📝', example: '' },
 ];
 
 // Work type definitions (matching TMWOWizard pattern)
@@ -542,7 +542,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t bg-card px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between border-t bg-card px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <Button variant="ghost" size="sm" disabled={submitting} onClick={step === 0 ? handleClose : handleBack}>
               {step === 0 ? 'Cancel' : <><ChevronLeft className="h-4 w-4 mr-1" />Back</>}
             </Button>
@@ -594,15 +594,10 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   );
 }
 
-// ── Step 1: Why + Work Type ──────────────────────────
+// ── Step 1: Why ──────────────────────────────────────
 function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
-  const hintedTypes: string[] = []; // hardcoded hints retired in Phase 1; QA flow now drives suggestions
-  const suggestedWorkTypes = CO_WORK_TYPES.filter(wt => hintedTypes.includes(wt.key));
-  const otherWorkTypes = CO_WORK_TYPES.filter(wt => !hintedTypes.includes(wt.key));
-
   return (
-    <div className="space-y-6">
-      {/* Reason */}
+    <div className="space-y-4">
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">What triggered this {isTM ? 'work order' : 'change order'}?</p>
         <div className="grid grid-cols-2 gap-3">
@@ -612,83 +607,22 @@ function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChang
               type="button"
               onClick={() => onChange({ reason: card.reason })}
               className={cn(
-                'flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all text-left min-h-[80px]',
+                'flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all text-left min-h-[88px]',
                 data.reason === card.reason ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
               )}
             >
               <span className="text-lg">{card.icon}</span>
               <span className="text-sm font-semibold text-foreground">{card.label}</span>
               <span className="text-[11px] text-muted-foreground leading-tight">{card.description}</span>
+              {card.example && <span className="text-[10px] text-muted-foreground/70 italic leading-tight">{card.example}</span>}
             </button>
           ))}
         </div>
       </div>
-
-      {/* Work Type sub-step — shown after reason is selected */}
       {data.reason && (
-        <div className="space-y-3 pt-4 border-t border-border">
-          <div>
-            <p className="text-sm font-medium text-foreground">What area of work? <span className="text-muted-foreground font-normal">(optional)</span></p>
-            <p className="text-xs text-muted-foreground">Helps auto-filter the scope catalog in the next step</p>
-          </div>
-
-          {/* Suggested work types */}
-          {suggestedWorkTypes.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Suggested for {CO_REASON_LABELS[data.reason]}</p>
-              <div className="grid grid-cols-3 gap-2">
-                {suggestedWorkTypes.map(wt => (
-                  <button
-                    key={wt.key}
-                    type="button"
-                    onClick={() => onChange({ workType: data.workType === wt.key ? null : wt.key })}
-                    className={cn(
-                      'relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
-                      data.workType === wt.key ? 'border-primary bg-primary/10' : 'border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 hover:border-primary/40',
-                    )}
-                  >
-                    {(wt.key === 'structural' || wt.key === 'wrb') && (
-                      <span className={cn(
-                        'absolute top-1 right-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold',
-                        wt.key === 'structural' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-                      )}>
-                        {wt.key === 'structural' ? 'Structural' : 'WRB'}
-                      </span>
-                    )}
-                    <span className="text-xl">{wt.icon}</span>
-                    <span className="text-xs font-semibold text-foreground">{wt.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* All work types */}
-          <div className="grid grid-cols-3 gap-2">
-            {(suggestedWorkTypes.length > 0 ? otherWorkTypes : CO_WORK_TYPES).map(wt => (
-              <button
-                key={wt.key}
-                type="button"
-                onClick={() => onChange({ workType: data.workType === wt.key ? null : wt.key })}
-                className={cn(
-                  'relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
-                  data.workType === wt.key ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
-                )}
-              >
-                {(wt.key === 'structural' || wt.key === 'wrb') && (
-                  <span className={cn(
-                    'absolute top-1 right-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold',
-                    wt.key === 'structural' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-                  )}>
-                    {wt.key === 'structural' ? 'Structural' : 'WRB'}
-                  </span>
-                )}
-                <span className="text-xl">{wt.icon}</span>
-                <span className="text-xs font-semibold text-foreground">{wt.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="text-[11px] text-muted-foreground italic">
+          Sasha will figure out the trade and work type when you describe what's needed in Step 3.
+        </p>
       )}
     </div>
   );
@@ -948,6 +882,66 @@ function StepReview({
         )}
         <p className="text-[11px] text-muted-foreground">AI-drafted — edit freely before creating.</p>
       </div>
+
+      {/* Scope items — editable */}
+      {data.selectedItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Scope items <span className="font-normal text-muted-foreground/70">· {data.selectedItems.length}</span>
+          </p>
+          <div className="rounded-lg border border-border bg-card overflow-hidden divide-y">
+            {data.selectedItems.map((item, idx) => {
+              const sourceBadge = item.quantity_source === 'ai'
+                ? { label: '✦ Sasha', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' }
+                : item.quantity_source === 'manual'
+                ? { label: '✎ Manual', cls: 'bg-muted text-foreground' }
+                : { label: '☰ Browse', cls: 'bg-secondary text-secondary-foreground' };
+              return (
+                <div key={item.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{item.item_name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{item.category_name}</p>
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    aria-label={`Quantity for ${item.item_name}`}
+                    value={item.qty ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const num = raw === '' ? null : Number(raw);
+                      if (num != null && Number.isNaN(num)) return;
+                      const next = [...data.selectedItems];
+                      next[idx] = { ...item, qty: num, quantity_source: num != null ? 'manual' : null };
+                      onChange({ selectedItems: next });
+                    }}
+                    placeholder="—"
+                    className="w-16 text-right rounded border border-border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                  <span className="text-[10px] text-muted-foreground w-8 shrink-0">{item.unit}</span>
+                  <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0', sourceBadge.cls)}>
+                    {sourceBadge.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange({ selectedItems: data.selectedItems.filter((_, i) => i !== idx) });
+                    }}
+                    className="text-muted-foreground hover:text-destructive shrink-0"
+                    aria-label={`Remove ${item.item_name}`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 opacity-0" />
+                    <span className="text-base leading-none">×</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Tap a quantity to override Sasha's estimate. Source badge will flip to <span className="font-semibold">Manual</span>.
+          </p>
+        </div>
+      )}
 
       {/* Team */}
       <div className="space-y-2">

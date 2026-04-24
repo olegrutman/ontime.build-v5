@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Keyboard, Sparkles, Check, Pencil, MapPin } from 'lucide-react';
+import { Loader2, ArrowLeft, Keyboard, Sparkles, Check, Pencil, MapPin, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectScope } from '@/hooks/useProjectScope';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
@@ -78,6 +78,7 @@ export function StepCatalogQA({
   const [extracted, setExtracted] = useState<SuggestResponse['extracted']>(null);
   const [refinementDismissed, setRefinementDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showMaybe, setShowMaybe] = useState(false);
 
   const runMatch = useCallback(async () => {
     if (!flowState.isComplete) flowState.finish();
@@ -97,12 +98,22 @@ export function StepCatalogQA({
       setPicks(result.picks.map((p) => ({ ...p })));
       setExtracted(result.extracted ?? null);
       setRefinementDismissed(false);
+      // Auto-pre-check Strong matches (≥0.75 confidence) for one-tap continue
+      const strong = new Set(result.picks.filter(p => p.confidence >= 0.75).map(p => p.catalog_id));
+      setSelected(strong);
     } catch (err) {
       console.error('Suggest failed:', err);
       setPicks([]);
       setExtracted(null);
     }
   }, [flowState, flow, ctx, suggestMutation, projectId, locationTag, zone, reason, workType, buildingType, scope]);
+
+  // Confidence tier helper
+  function tierOf(conf: number): 'strong' | 'likely' | 'maybe' {
+    if (conf >= 0.75) return 'strong';
+    if (conf >= 0.5) return 'likely';
+    return 'maybe';
+  }
 
   function togglePick(p: PickState) {
     setSelected(prev => {
@@ -158,11 +169,14 @@ export function StepCatalogQA({
   function handleAcceptRefinement() {
     if (!extracted?.zone_refinement || !onLocationRefine) return;
     const newTag = extracted.zone_refinement;
+    const hasUserSelections = selected.size > 0;
     setRefinementDismissed(true);
     onLocationRefine(newTag);
-    // Re-run match against new location once parent has updated.
-    // We rely on a microtask: parent props flip locationTag → next runMatch uses it.
-    setTimeout(() => { void runMatch(); }, 50);
+    // Only re-run match (which clears picks) if user hasn't started picking yet.
+    // Otherwise just update the location for next CO and don't disturb their work.
+    if (!hasUserSelections) {
+      setTimeout(() => { void runMatch(); }, 50);
+    }
   }
 
   // ── HEADER ──
@@ -198,7 +212,7 @@ export function StepCatalogQA({
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar — linear */}
       <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all"
@@ -206,9 +220,7 @@ export function StepCatalogQA({
             width: `${
               picks
                 ? 100
-                : flowState.isComplete
-                ? 90
-                : Math.max(8, flowState.progress * 80)
+                : Math.round(((flowState.currentIdx + (flowState.isComplete ? 1 : 0)) / (flowState.totalQuestions + 1)) * 100)
             }%`,
           }}
         />
@@ -220,15 +232,21 @@ export function StepCatalogQA({
           {flow.questions.slice(0, flowState.currentIdx).map(q => {
             const val = flowState.answers[q.id];
             if (!val) return null;
+            const isSkip = val === '__skip__';
             const ans = q.answers.find(a => a.id === val);
+            const label = isSkip ? 'Skipped' : (ans?.label ?? String(val));
             return (
               <button
                 key={q.id}
                 onClick={() => flowState.editAnswer(q.id)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs hover:bg-muted/70"
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs max-w-[160px] hover:bg-muted/70',
+                  isSkip ? 'bg-muted/40 text-muted-foreground italic' : 'bg-muted text-foreground'
+                )}
+                title={label}
               >
-                {ans?.label ?? String(val)}
-                <Pencil className="h-2.5 w-2.5 opacity-60" />
+                <span className="truncate">{label}</span>
+                <Pencil className="h-2.5 w-2.5 opacity-60 shrink-0" />
               </button>
             );
           })}
@@ -292,6 +310,7 @@ export function StepCatalogQA({
             <LocationRefinementBanner
               currentTag={locationTag}
               refinement={extracted.zone_refinement}
+              willReRun={selected.size === 0}
               onUpdate={handleAcceptRefinement}
               onDismiss={() => setRefinementDismissed(true)}
             />
@@ -301,17 +320,64 @@ export function StepCatalogQA({
             <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
               No automatic matches. Use the manual catalog or type a description.
             </div>
-          ) : (
-            picks.map(p => (
-              <PickCard
-                key={p.catalog_id}
-                pick={p}
-                selected={selected.has(p.catalog_id)}
-                onToggle={() => togglePick(p)}
-                onQtyChange={(qty, src) => updatePickQty(p.catalog_id, qty, src)}
-              />
-            ))
-          )}
+          ) : (() => {
+            const strong = picks.filter(p => tierOf(p.confidence) === 'strong');
+            const likely = picks.filter(p => tierOf(p.confidence) === 'likely');
+            const maybe  = picks.filter(p => tierOf(p.confidence) === 'maybe');
+            const renderGroup = (label: string, color: string, items: PickState[]) => (
+              items.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className={cn('text-[10px] font-bold uppercase tracking-wide', color)}>
+                    {label} <span className="opacity-60 font-medium">· {items.length}</span>
+                  </p>
+                  <div className="space-y-2">
+                    {items.map(p => (
+                      <PickCard
+                        key={p.catalog_id}
+                        pick={p}
+                        tier={tierOf(p.confidence)}
+                        selected={selected.has(p.catalog_id)}
+                        onToggle={() => togglePick(p)}
+                        onQtyChange={(qty, src) => updatePickQty(p.catalog_id, qty, src)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            );
+            return (
+              <div className="space-y-4">
+                {renderGroup('Strong match', 'text-emerald-700 dark:text-emerald-400', strong)}
+                {renderGroup('Likely match', 'text-amber-700 dark:text-amber-400', likely)}
+                {maybe.length > 0 && (
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowMaybe(v => !v)}
+                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronDown className={cn('h-3 w-3 transition-transform', !showMaybe && '-rotate-90')} />
+                      {showMaybe ? 'Hide' : 'Show'} {maybe.length} more suggestion{maybe.length === 1 ? '' : 's'}
+                    </button>
+                    {showMaybe && (
+                      <div className="space-y-2">
+                        {maybe.map(p => (
+                          <PickCard
+                            key={p.catalog_id}
+                            pick={p}
+                            tier="maybe"
+                            selected={selected.has(p.catalog_id)}
+                            onToggle={() => togglePick(p)}
+                            onQtyChange={(qty, src) => updatePickQty(p.catalog_id, qty, src)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="flex flex-wrap gap-2 pt-2">
             <Button
@@ -419,6 +485,17 @@ function QuestionCard({
         ))}
       </div>
 
+      {/* Universal escape: "Not sure" — records '__skip__' and continues */}
+      <div className="flex justify-center pt-1">
+        <button
+          type="button"
+          onClick={() => onAnswer('__skip__')}
+          className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+        >
+          Not sure / Skip this
+        </button>
+      </div>
+
       {question.annotation && (
         <div
           className="rounded-md border-l-2 border-purple-500 bg-purple-50/50 dark:bg-purple-950/10 p-2.5 text-xs text-foreground/80"
@@ -431,11 +508,13 @@ function QuestionCard({
 
 function PickCard({
   pick,
+  tier,
   selected,
   onToggle,
   onQtyChange,
 }: {
   pick: PickState;
+  tier: 'strong' | 'likely' | 'maybe';
   selected: boolean;
   onToggle: () => void;
   onQtyChange: (qty: number | null, source: 'ai' | 'manual') => void;
@@ -446,30 +525,39 @@ function PickCard({
     ? pick.edited_source
     : currentQty != null ? 'ai' : null;
 
+  const tierStyles =
+    tier === 'strong'
+      ? {
+          badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+          ring: selected ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/20' : 'border-emerald-200 hover:border-emerald-400',
+          check: 'text-emerald-600',
+        }
+      : tier === 'likely'
+      ? {
+          badge: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
+          ring: selected ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20' : 'border-border hover:border-amber-300',
+          check: 'text-amber-600',
+        }
+      : {
+          badge: 'bg-muted text-muted-foreground',
+          ring: selected ? 'border-foreground/40 bg-muted/40' : 'border-border hover:border-muted-foreground/40',
+          check: 'text-foreground',
+        };
+
   return (
-    <div
-      className={cn(
-        'w-full rounded-lg border-2 transition-all',
-        selected
-          ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20'
-          : 'border-border hover:border-amber-300'
-      )}
-    >
+    <div className={cn('w-full rounded-lg border-2 transition-all', tierStyles.ring)}>
       <div className="flex items-start gap-3 p-3">
-        {/* Confidence ring — also toggles selection */}
-        <button onClick={onToggle} className="relative h-10 w-10 shrink-0" aria-label="Toggle pick">
-          <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
-            <circle
-              cx="18" cy="18" r="15"
-              fill="none" stroke="currentColor" strokeWidth="3"
-              strokeDasharray={`${(ringPct / 100) * 94.25} 94.25`}
-              className="text-amber-500"
-            />
-          </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
-            {ringPct}
-          </span>
+        {/* Tier badge — also toggles selection */}
+        <button
+          onClick={onToggle}
+          className={cn(
+            'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide tabular-nums',
+            tierStyles.badge
+          )}
+          title={`Confidence ${ringPct}%`}
+          aria-label={`Toggle pick — confidence ${ringPct}%`}
+        >
+          {tier === 'strong' ? '✓ Strong' : tier === 'likely' ? '~ Likely' : '? Maybe'}
         </button>
 
         {/* Name + reasoning — toggles selection */}
@@ -482,7 +570,7 @@ function PickCard({
           )}
         </button>
 
-        {selected && <Check className="h-4 w-4 text-amber-600 shrink-0 mt-1" />}
+        {selected && <Check className={cn('h-4 w-4 shrink-0 mt-1', tierStyles.check)} />}
       </div>
 
       {/* Quantity row — sibling, NOT nested inside a button */}

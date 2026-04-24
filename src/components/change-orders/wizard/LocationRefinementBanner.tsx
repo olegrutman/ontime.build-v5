@@ -1,9 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { Info, RefreshCw, X } from 'lucide-react';
+import { Info, RefreshCw, Check, X } from 'lucide-react';
 
 interface LocationRefinementBannerProps {
   currentTag: string;
   refinement: string;
+  /** When true, accepting will re-run the match (destroys current picks). When false, just updates and keeps picks. */
+  willReRun?: boolean;
   onUpdate: () => void;
   onDismiss: () => void;
 }
@@ -11,6 +13,7 @@ interface LocationRefinementBannerProps {
 export function LocationRefinementBanner({
   currentTag,
   refinement,
+  willReRun = false,
   onUpdate,
   onDismiss,
 }: LocationRefinementBannerProps) {
@@ -29,7 +32,15 @@ export function LocationRefinementBanner({
             className="h-7 text-xs border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/30"
             onClick={onUpdate}
           >
-            <RefreshCw className="h-3 w-3 mr-1" /> Update & re-match
+            {willReRun ? (
+              <>
+                <RefreshCw className="h-3 w-3 mr-1" /> Update & re-match
+              </>
+            ) : (
+              <>
+                <Check className="h-3 w-3 mr-1" /> Update location (keep picks)
+              </>
+            )}
           </Button>
           <Button
             size="sm"
