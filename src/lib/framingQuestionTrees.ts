@@ -376,3 +376,35 @@ export const FLOWS: Record<BuildingType, Record<FlowScenario, ScopeFlow>> = {
   },
 
   // ═══════════════ MULTIFAMILY (rated assemblies) ═══════════════
+  // TODO(Part 3): apartments_mf, hotel_hospitality, senior_living
+  apartments_mf: undefined as any,
+  hotel_hospitality: undefined as any,
+  senior_living: undefined as any,
+  // TODO(Part 3): commercial
+  commercial: undefined as any,
+  // TODO(Part 4): exterior (envelope-only virtual flow)
+  exterior: undefined as any,
+};
+
+// track_home shares custom_home flows
+(FLOWS as any).track_home = FLOWS.custom_home;
+
+// ─── Temporary helper stubs (replaced in Parts 3/4) ─────────────────────────
+const TRADE_LABELS: Record<string, string> = {};
+const ACTION_VERBS: Record<string, string> = {};
+const ADDITION_LABELS: Record<string, string> = {};
+const STUD_LABELS: Record<string, string> = {};
+const REWORK_LABELS: Record<string, string> = {};
+
+function parseScale(id: string): string {
+  if (!id) return '';
+  return id.replace(/_/g, '–');
+}
+
+function memberLabel(id: string, _framingMethod: string | null): string {
+  return id?.replace(/_/g, ' ') ?? 'member';
+}
+
+function locationShort(tag: string): string {
+  return tag || 'work area';
+}
