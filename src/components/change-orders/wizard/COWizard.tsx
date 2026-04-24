@@ -882,6 +882,66 @@ function StepReview({
         <p className="text-[11px] text-muted-foreground">AI-drafted — edit freely before creating.</p>
       </div>
 
+      {/* Scope items — editable */}
+      {data.selectedItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Scope items <span className="font-normal text-muted-foreground/70">· {data.selectedItems.length}</span>
+          </p>
+          <div className="rounded-lg border border-border bg-card overflow-hidden divide-y">
+            {data.selectedItems.map((item, idx) => {
+              const sourceBadge = item.quantity_source === 'ai'
+                ? { label: '✦ Sasha', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' }
+                : item.quantity_source === 'manual'
+                ? { label: '✎ Manual', cls: 'bg-muted text-foreground' }
+                : { label: '☰ Browse', cls: 'bg-secondary text-secondary-foreground' };
+              return (
+                <div key={item.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{item.item_name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{item.category_name}</p>
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    aria-label={`Quantity for ${item.item_name}`}
+                    value={item.qty ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const num = raw === '' ? null : Number(raw);
+                      if (num != null && Number.isNaN(num)) return;
+                      const next = [...data.selectedItems];
+                      next[idx] = { ...item, qty: num, quantity_source: num != null ? 'manual' : null };
+                      onChange({ selectedItems: next });
+                    }}
+                    placeholder="—"
+                    className="w-16 text-right rounded border border-border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                  <span className="text-[10px] text-muted-foreground w-8 shrink-0">{item.unit}</span>
+                  <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0', sourceBadge.cls)}>
+                    {sourceBadge.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange({ selectedItems: data.selectedItems.filter((_, i) => i !== idx) });
+                    }}
+                    className="text-muted-foreground hover:text-destructive shrink-0"
+                    aria-label={`Remove ${item.item_name}`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 opacity-0" />
+                    <span className="text-base leading-none">×</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Tap a quantity to override Sasha's estimate. Source badge will flip to <span className="font-semibold">Manual</span>.
+          </p>
+        </div>
+      )}
+
       {/* Team */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Team</p>
