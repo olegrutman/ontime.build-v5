@@ -1,4 +1,4 @@
-import { Sparkles, Keyboard } from 'lucide-react';
+import { Keyboard, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type ScopePickerMode = 'qa' | 'browse' | 'type';
@@ -8,68 +8,47 @@ interface StepCatalogModeSwitchProps {
   onChange: (mode: ScopePickerMode) => void;
 }
 
+/**
+ * Quiet inline switch: "Prefer to do it yourself? Type it · Browse catalog"
+ * Renders below the Sasha card so QA stays the visible default action.
+ */
 export function StepCatalogModeSwitch({ value, onChange }: StepCatalogModeSwitchProps) {
   return (
-    <div className="rounded-lg border bg-card p-1 grid grid-cols-3 gap-1">
-      <ModeButton
-        active={value === 'qa'}
-        onClick={() => onChange('qa')}
-        icon={<Sparkles className="h-4 w-4" />}
-        label="Ask Sasha"
-        sub="Recommended"
-        accent="amber"
-      />
-      <ModeButton
-        active={value === 'type'}
-        onClick={() => onChange('type')}
-        icon={<Keyboard className="h-4 w-4" />}
-        label="Type it"
-        sub="Free text → AI"
-      />
-      <ModeButton
-        active={value === 'browse'}
-        onClick={() => onChange('browse')}
-        icon={<span className="text-base leading-none">☰</span>}
-        label="Browse"
-        sub="Manual catalog"
-      />
-    </div>
-  );
-}
-
-function ModeButton({
-  active,
-  onClick,
-  icon,
-  label,
-  sub,
-  accent,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  sub: string;
-  accent?: 'amber';
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex flex-col items-center justify-center gap-0.5 px-2 py-2 rounded-md text-center transition-all min-h-[56px]',
-        active
-          ? accent === 'amber'
-            ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 shadow-sm'
-            : 'bg-secondary text-secondary-foreground shadow-sm'
-          : 'text-muted-foreground hover:bg-muted/40'
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground py-1">
+      {value !== 'qa' && (
+        <>
+          <button
+            type="button"
+            onClick={() => onChange('qa')}
+            className="font-semibold text-amber-700 dark:text-amber-400 hover:underline"
+          >
+            ← Back to Ask Sasha
+          </button>
+          <span aria-hidden className="opacity-40">·</span>
+        </>
       )}
-    >
-      <div className="flex items-center gap-1.5">
-        {icon}
-        <span className="text-sm font-semibold">{label}</span>
-      </div>
-      <span className="text-[10px] leading-tight opacity-70">{sub}</span>
-    </button>
+      <span>Prefer to do it yourself?</span>
+      <button
+        type="button"
+        onClick={() => onChange('type')}
+        className={cn(
+          'inline-flex items-center gap-1 hover:text-foreground hover:underline transition-colors',
+          value === 'type' && 'text-foreground font-semibold underline'
+        )}
+      >
+        <Keyboard className="h-3 w-3" /> Type it
+      </button>
+      <span aria-hidden className="opacity-40">·</span>
+      <button
+        type="button"
+        onClick={() => onChange('browse')}
+        className={cn(
+          'inline-flex items-center gap-1 hover:text-foreground hover:underline transition-colors',
+          value === 'browse' && 'text-foreground font-semibold underline'
+        )}
+      >
+        <LayoutGrid className="h-3 w-3" /> Browse catalog
+      </button>
+    </div>
   );
 }
