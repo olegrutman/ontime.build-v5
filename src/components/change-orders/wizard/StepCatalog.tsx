@@ -1,15 +1,14 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Search, X, ChevronRight, MapPin, Plus, ArrowLeft, Sparkles } from 'lucide-react';
+import { Search, X, ChevronRight, ChevronDown, MapPin, ArrowLeft, Sparkles, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
 import { VisualLocationPicker } from '../VisualLocationPicker';
-import { SCOPE_CATALOG, SMART_SUGGESTIONS } from '@/lib/scopeCatalog';
+import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 
 interface StepCatalogProps {
   data: COWizardData;
@@ -17,18 +16,6 @@ interface StepCatalogProps {
   projectId: string;
   workType?: string;
 }
-
-// Maps work-type keys to catalog division slugs
-const WORK_TYPE_DIVISION_MAP: Record<string, string> = {
-  framing: 'framing',
-  reframing: 'framing',
-  sheathing: 'framing',
-  blocking: 'framing',
-  exterior: 'exterior',
-  stairs: 'framing',
-  structural: 'structural',
-  wrb: 'wrb',
-};
 
 const WORK_TYPE_LABELS: Record<string, string> = {
   framing: 'Framing',
@@ -39,6 +26,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   stairs: 'Stairs',
   structural: 'Structural',
   wrb: 'WRB & Envelope',
+  demo: 'Demo',
 };
 
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
@@ -55,10 +43,8 @@ const REASONS: { code: COReasonCode; description: string }[] = [
 ];
 
 export function StepCatalog({ data, onChange, projectId, workType }: StepCatalogProps) {
-  const { divisions, search, isLoading } = useScopeCatalog();
+  const { divisions, search, filterByContext, isLoading } = useScopeCatalog();
 
-  // Resolve work type → division auto-filter
-  const mappedDivision = workType ? WORK_TYPE_DIVISION_MAP[workType] ?? null : null;
   const workTypeLabel = workType ? WORK_TYPE_LABELS[workType] ?? workType : null;
 
   // When location & reason are pre-set by the wizard, lock them (read-only pills)
@@ -72,49 +58,22 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
   });
 
   const [query, setQuery] = useState('');
-  const [level, setLevel] = useState<DrillLevel>(() => mappedDivision ? 'category' : 'division');
-  const [activeDivision, setActiveDivision] = useState<string | null>(mappedDivision);
+  const [showSecondary, setShowSecondary] = useState(false);
+  const [showEverything, setShowEverything] = useState(false);
+  const [level, setLevel] = useState<DrillLevel>('division');
+  const [activeDivision, setActiveDivision] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
-  const [isFiltered, setIsFiltered] = useState(!!mappedDivision);
 
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
-  // Prioritize search results: matching division first, then others
-  const searchResults = useMemo(() => {
-    const results = search(query);
-    if (!mappedDivision || !query) return results;
-    const inDiv: typeof results = [];
-    const rest: typeof results = [];
-    for (const r of results) {
-      if (r.division?.toLowerCase() === mappedDivision) inDiv.push(r);
-      else rest.push(r);
-    }
-    return [...inDiv, ...rest];
-  }, [query, search, mappedDivision]);
+  const searchResults = useMemo(() => search(query), [query, search]);
 
-  // ── Smart suggestions (must be before early returns) ──
-  const smartSuggestionItems = useMemo(() => {
-    if (!data.reason || !workType) return [];
-    const names = SMART_SUGGESTIONS[data.reason]?.[workType] ?? [];
-    if (names.length === 0) return [];
-    return SCOPE_CATALOG
-      .filter(item => names.includes(item.name))
-      .map(item => ({
-        id: item.id,
-        item_name: item.name,
-        unit: item.unit,
-        division: item.workType,
-        category_name: item.tag ?? item.workType,
-        category_id: item.workType,
-        group_id: item.workType,
-        group_label: item.workType,
-        category_color: '',
-        category_bg: '',
-        category_icon: '',
-        sort_order: 0,
-        org_id: null,
-      } as ScopeCatalogItem));
-  }, [data.reason, workType]);
+  // ── Phase 1 context-aware filtering ──
+  const zone = useMemo(() => resolveZoneFromLocationTag(data.locationTag), [data.locationTag]);
+  const filtered = useMemo(
+    () => filterByContext({ zone, reason: data.reason ?? null, workType: workType ?? null }),
+    [filterByContext, zone, data.reason, workType]
+  );
 
   // Saved location from localStorage for shortcut
   const savedLocationKey = `co_wizard_last_location_${projectId}`;
@@ -234,11 +193,10 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
     );
   }
 
-
-  // ── PHASE 3: ITEMS (CATALOG BROWSER) ──
+  // ── PHASE 3: ITEMS (3-TIER PICKER) ──
   return (
     <div className="space-y-4">
-      {/* CO-level location + reason summary */}
+      {/* Locked context: location + reason + workType chips */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
           <MapPin className="h-3 w-3" />
@@ -258,57 +216,14 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
             )}
           </div>
         )}
+        {workTypeLabel && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 text-xs font-semibold">
+            {workTypeLabel}
+          </div>
+        )}
       </div>
 
-      {/* Smart filter banner */}
-      {isFiltered && workTypeLabel && (
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-accent text-accent-foreground text-sm">
-          <span>Showing scope for <strong>{workTypeLabel}</strong></span>
-          <button
-            onClick={() => {
-              setIsFiltered(false);
-              navTo('division');
-            }}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            Browse all trades →
-          </button>
-        </div>
-      )}
-
-      {/* Smart picks section */}
-      {smartSuggestionItems.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-amber-500" />
-            <p className="text-sm font-semibold text-foreground">Smart picks for this job</p>
-          </div>
-          <div className="border rounded-lg overflow-hidden divide-y">
-            {smartSuggestionItems.map(item => {
-              const sel = selectedIds.has(item.id);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => selectItem(item)}
-                  className={cn('w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40', sel && 'bg-amber-50 dark:bg-amber-950/20')}
-                >
-                  <Checkbox selected={sel} />
-                  <span className="text-sm flex-1">{item.item_name}</span>
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">Suggested</span>
-                  {(item as any).division === 'structural' && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">Structural</span>
-                  )}
-                  {(item as any).division === 'wrb' && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">WRB</span>
-                  )}
-                  <span className="text-xs text-muted-foreground shrink-0">{item.unit}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
+      {/* Search bar (spans all tiers) */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -324,114 +239,130 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
         )}
       </div>
 
-      {!query && level !== 'division' && (
-        <Breadcrumb
-          activeDivision={activeDivision}
-          activeCategory={activeCategory}
-          activeGroup={activeGroup}
-          currentDiv={currentDiv}
-          currentCat={currentCat}
-          currentGrp={currentGrp}
-          navTo={navTo}
-        />
-      )}
+      {/* Search results override tier display */}
+      {query ? (
+        <div className="border rounded-lg overflow-hidden divide-y">
+          {searchResults.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground text-center">No results</p>
+          ) : searchResults.slice(0, 50).map(item => (
+            <ItemRow key={item.id} item={item} selected={selectedIds.has(item.id)} onSelect={selectItem} subPath={item.path} />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Tier 1: Primary picks */}
+          <TierSection
+            icon={<Sparkles className="h-4 w-4 text-amber-500" />}
+            title="For this work"
+            count={filtered.primary.length}
+            defaultExpanded
+          >
+            {filtered.primary.length === 0 ? (
+              <p className="px-3 py-4 text-xs text-muted-foreground text-center">
+                No exact matches. Try the related items below or search.
+              </p>
+            ) : (
+              filtered.primary.map(item => (
+                <ItemRow key={item.id} item={item} selected={selectedIds.has(item.id)} onSelect={selectItem} highlight />
+              ))
+            )}
+          </TierSection>
 
-      <div className="border rounded-lg overflow-hidden">
-        {query ? (
-          <div className="divide-y">
-            {searchResults.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground text-center">No results</p>
-            ) : searchResults.slice(0, 50).map(item => {
-              const sel = selectedIds.has(item.id);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => selectItem(item)}
-                  className={cn('w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40', sel && 'bg-amber-50 dark:bg-amber-950/20')}
-                >
-                  <Checkbox selected={sel} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.item_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{item.path}</p>
+          {/* Tier 2: Related to this zone */}
+          {filtered.secondary.length > 0 && (
+            <CollapsibleTier
+              title={`Related to this zone`}
+              count={filtered.secondary.length}
+              expanded={showSecondary}
+              onToggle={() => setShowSecondary(v => !v)}
+            >
+              {filtered.secondary.map(item => (
+                <ItemRow key={item.id} item={item} selected={selectedIds.has(item.id)} onSelect={selectItem} />
+              ))}
+            </CollapsibleTier>
+          )}
+
+          {/* Tier 3: Show everything (full drill-down) */}
+          <CollapsibleTier
+            title="Show everything"
+            count={filtered.hidden.length}
+            icon={<LayoutGrid className="h-4 w-4" />}
+            expanded={showEverything}
+            onToggle={() => setShowEverything(v => !v)}
+          >
+            {!showEverything ? null : (
+              <div className="px-1 pb-1">
+                {level !== 'division' && (
+                  <Breadcrumb
+                    activeDivision={activeDivision}
+                    activeCategory={activeCategory}
+                    activeGroup={activeGroup}
+                    currentDiv={currentDiv}
+                    currentCat={currentCat}
+                    currentGrp={currentGrp}
+                    navTo={navTo}
+                  />
+                )}
+
+                {level === 'division' ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3">
+                    {divisions.map(div => (
+                      <button
+                        key={div.division}
+                        onClick={() => navTo('category', div.division)}
+                        className="flex flex-col items-center gap-2 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/40 transition-colors"
+                      >
+                        <span className="text-2xl">{div.icon}</span>
+                        <span className="text-sm font-medium text-foreground">{div.label}</span>
+                        <span className="text-xs text-muted-foreground">{div.itemCount} items</span>
+                      </button>
+                    ))}
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">{item.unit}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : level === 'division' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3">
-            {divisions.map(div => (
-              <button
-                key={div.division}
-                onClick={() => navTo('category', div.division)}
-                className="flex flex-col items-center gap-2 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/40 transition-colors"
-              >
-                <span className="text-2xl">{div.categories[0]?.category_icon ?? '•'}</span>
-                <span className="text-sm font-medium text-foreground">{div.label}</span>
-                <span className="text-xs text-muted-foreground">{div.itemCount} items</span>
-              </button>
-            ))}
-          </div>
-        ) : level === 'category' && currentDiv ? (
-          <div className="divide-y">
-            {currentDiv.categories.map(cat => (
-              <button
-                key={cat.category_id}
-                onClick={() => navTo('group', activeDivision!, cat.category_id)}
-                className="w-full flex items-center gap-3 px-3 py-3 hover:bg-muted/40 transition-colors"
-              >
-                <span className="text-lg shrink-0">{cat.category_icon}</span>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium">{cat.category_name}</p>
-                  <p className="text-xs text-muted-foreground">{cat.groups.length} groups · {cat.itemCount} items</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            ))}
-          </div>
-        ) : level === 'group' && currentCat ? (
-          <div className="grid grid-cols-2 gap-2 p-3">
-            {currentCat.groups.map(grp => (
-              <button
-                key={grp.group_id}
-                onClick={() => navTo('item', activeDivision!, activeCategory!, grp.group_id)}
-                className="flex items-start gap-2 p-3 rounded-lg border text-left transition-colors hover:bg-muted/40"
-              >
-                <ChevronRight className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">{grp.group_label}</p>
-                  <p className="text-xs text-muted-foreground">{grp.items.length} items</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : level === 'item' && currentGrp ? (
-          <div className="divide-y">
-            {currentGrp.items.map(item => {
-              const sel = selectedIds.has(item.id);
-              const localItem = SCOPE_CATALOG.find(s => s.name === item.item_name);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => selectItem(item)}
-                  className={cn('w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40', sel && 'bg-amber-50 dark:bg-amber-950/20')}
-                >
-                  <Checkbox selected={sel} />
-                  <span className="text-sm flex-1">{item.item_name}</span>
-                  {localItem?.tag === 'structural' && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">Structural</span>
-                  )}
-                  {localItem?.tag === 'wrb' && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">WRB</span>
-                  )}
-                  <span className="text-xs text-muted-foreground">{item.unit}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
+                ) : level === 'category' && currentDiv ? (
+                  <div className="divide-y">
+                    {currentDiv.categories.map(cat => (
+                      <button
+                        key={cat.category_id}
+                        onClick={() => navTo('group', activeDivision!, cat.category_id)}
+                        className="w-full flex items-center gap-3 px-3 py-3 hover:bg-muted/40 transition-colors"
+                      >
+                        <span className="text-lg shrink-0">{cat.category_icon}</span>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-sm font-medium">{cat.category_name}</p>
+                          <p className="text-xs text-muted-foreground">{cat.itemCount} items</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                ) : level === 'group' && currentCat ? (
+                  <div className="grid grid-cols-2 gap-2 p-3">
+                    {currentCat.groups.map(grp => (
+                      <button
+                        key={grp.group_id}
+                        onClick={() => navTo('item', activeDivision!, activeCategory!, grp.group_id)}
+                        className="flex items-start gap-2 p-3 rounded-lg border text-left transition-colors hover:bg-muted/40"
+                      >
+                        <ChevronRight className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium">{grp.group_label}</p>
+                          <p className="text-xs text-muted-foreground">{grp.items.length} items</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : level === 'item' && currentGrp ? (
+                  <div className="divide-y">
+                    {currentGrp.items.map(item => (
+                      <ItemRow key={item.id} item={item} selected={selectedIds.has(item.id)} onSelect={selectItem} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </CollapsibleTier>
+        </>
+      )}
 
       {/* Selected items */}
       {data.selectedItems.length > 0 && (
@@ -450,6 +381,114 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
             ))}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────────
+
+function ItemRow({
+  item,
+  selected,
+  onSelect,
+  highlight,
+  subPath,
+}: {
+  item: ScopeCatalogItem;
+  selected: boolean;
+  onSelect: (item: ScopeCatalogItem) => void;
+  highlight?: boolean;
+  subPath?: string;
+}) {
+  return (
+    <button
+      onClick={() => onSelect(item)}
+      className={cn(
+        'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40',
+        selected && 'bg-amber-50 dark:bg-amber-950/20'
+      )}
+    >
+      <Checkbox selected={selected} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{item.item_name}</p>
+        {subPath && <p className="text-xs text-muted-foreground truncate">{subPath}</p>}
+      </div>
+      {item.division === 'structural' && (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+          Structural
+        </span>
+      )}
+      {item.division === 'envelope_wrb' && (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+          WRB
+        </span>
+      )}
+      {highlight && (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          Suggested
+        </span>
+      )}
+      <span className="text-xs text-muted-foreground shrink-0">{item.unit}</span>
+    </button>
+  );
+}
+
+function TierSection({
+  icon,
+  title,
+  count,
+  children,
+  defaultExpanded = true,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  count: number;
+  children: React.ReactNode;
+  defaultExpanded?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        {icon}
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <span className="text-xs text-muted-foreground">— {count} {count === 1 ? 'item' : 'items'}</span>
+      </div>
+      {defaultExpanded && (
+        <div className="border rounded-lg overflow-hidden divide-y">{children}</div>
+      )}
+    </div>
+  );
+}
+
+function CollapsibleTier({
+  title,
+  count,
+  icon,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  count: number;
+  icon?: React.ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted/40 transition-colors text-left"
+      >
+        {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        {icon}
+        <span className="text-sm font-medium text-foreground">{title}</span>
+        <span className="text-xs text-muted-foreground ml-auto">+{count} more</span>
+      </button>
+      {expanded && (
+        <div className="border rounded-lg overflow-hidden divide-y">{children}</div>
       )}
     </div>
   );
@@ -478,7 +517,7 @@ function Breadcrumb({ activeDivision, activeCategory, activeGroup, currentDiv, c
   if (activeGroup) crumbs.push({ label: currentGrp?.group_label ?? activeGroup, onClick: () => {} });
   if (crumbs.length <= 1) return null;
   return (
-    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2 px-2">
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1">
           {i > 0 && <span>›</span>}

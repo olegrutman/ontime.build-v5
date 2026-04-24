@@ -77,6 +77,87 @@ export type Database = {
           },
         ]
       }
+      catalog_definitions: {
+        Row: {
+          aliases: string[]
+          applicable_reasons: string[]
+          applicable_work_types: string[]
+          applicable_zone: string | null
+          canonical_name: string
+          category: string
+          created_at: string
+          deprecated_at: string | null
+          division: string
+          id: string
+          is_platform: boolean
+          kind: string
+          org_id: string | null
+          search_text: string | null
+          slug: string
+          sort_order: number | null
+          superseded_by: string | null
+          tag: string | null
+          unit: string
+        }
+        Insert: {
+          aliases?: string[]
+          applicable_reasons?: string[]
+          applicable_work_types?: string[]
+          applicable_zone?: string | null
+          canonical_name: string
+          category: string
+          created_at?: string
+          deprecated_at?: string | null
+          division: string
+          id?: string
+          is_platform?: boolean
+          kind?: string
+          org_id?: string | null
+          search_text?: string | null
+          slug: string
+          sort_order?: number | null
+          superseded_by?: string | null
+          tag?: string | null
+          unit: string
+        }
+        Update: {
+          aliases?: string[]
+          applicable_reasons?: string[]
+          applicable_work_types?: string[]
+          applicable_zone?: string | null
+          canonical_name?: string
+          category?: string
+          created_at?: string
+          deprecated_at?: string | null
+          division?: string
+          id?: string
+          is_platform?: boolean
+          kind?: string
+          org_id?: string | null
+          search_text?: string | null
+          slug?: string
+          sort_order?: number | null
+          superseded_by?: string | null
+          tag?: string | null
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_definitions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_definitions_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "catalog_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_items: {
         Row: {
           attributes: Json | null
