@@ -318,17 +318,64 @@ export function StepCatalogQA({
             <div className="rounded-lg border p-4 text-center text-sm text-muted-foreground">
               No automatic matches. Use the manual catalog or type a description.
             </div>
-          ) : (
-            picks.map(p => (
-              <PickCard
-                key={p.catalog_id}
-                pick={p}
-                selected={selected.has(p.catalog_id)}
-                onToggle={() => togglePick(p)}
-                onQtyChange={(qty, src) => updatePickQty(p.catalog_id, qty, src)}
-              />
-            ))
-          )}
+          ) : (() => {
+            const strong = picks.filter(p => tierOf(p.confidence) === 'strong');
+            const likely = picks.filter(p => tierOf(p.confidence) === 'likely');
+            const maybe  = picks.filter(p => tierOf(p.confidence) === 'maybe');
+            const renderGroup = (label: string, color: string, items: PickState[]) => (
+              items.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className={cn('text-[10px] font-bold uppercase tracking-wide', color)}>
+                    {label} <span className="opacity-60 font-medium">· {items.length}</span>
+                  </p>
+                  <div className="space-y-2">
+                    {items.map(p => (
+                      <PickCard
+                        key={p.catalog_id}
+                        pick={p}
+                        tier={tierOf(p.confidence)}
+                        selected={selected.has(p.catalog_id)}
+                        onToggle={() => togglePick(p)}
+                        onQtyChange={(qty, src) => updatePickQty(p.catalog_id, qty, src)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            );
+            return (
+              <div className="space-y-4">
+                {renderGroup('Strong match', 'text-emerald-700 dark:text-emerald-400', strong)}
+                {renderGroup('Likely match', 'text-amber-700 dark:text-amber-400', likely)}
+                {maybe.length > 0 && (
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowMaybe(v => !v)}
+                      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronDown className={cn('h-3 w-3 transition-transform', !showMaybe && '-rotate-90')} />
+                      {showMaybe ? 'Hide' : 'Show'} {maybe.length} more suggestion{maybe.length === 1 ? '' : 's'}
+                    </button>
+                    {showMaybe && (
+                      <div className="space-y-2">
+                        {maybe.map(p => (
+                          <PickCard
+                            key={p.catalog_id}
+                            pick={p}
+                            tier="maybe"
+                            selected={selected.has(p.catalog_id)}
+                            onToggle={() => togglePick(p)}
+                            onQtyChange={(qty, src) => updatePickQty(p.catalog_id, qty, src)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="flex flex-wrap gap-2 pt-2">
             <Button
