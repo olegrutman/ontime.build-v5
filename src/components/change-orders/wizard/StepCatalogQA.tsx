@@ -506,11 +506,13 @@ function QuestionCard({
 
 function PickCard({
   pick,
+  tier,
   selected,
   onToggle,
   onQtyChange,
 }: {
   pick: PickState;
+  tier: 'strong' | 'likely' | 'maybe';
   selected: boolean;
   onToggle: () => void;
   onQtyChange: (qty: number | null, source: 'ai' | 'manual') => void;
@@ -521,30 +523,39 @@ function PickCard({
     ? pick.edited_source
     : currentQty != null ? 'ai' : null;
 
+  const tierStyles =
+    tier === 'strong'
+      ? {
+          badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+          ring: selected ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/20' : 'border-emerald-200 hover:border-emerald-400',
+          check: 'text-emerald-600',
+        }
+      : tier === 'likely'
+      ? {
+          badge: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
+          ring: selected ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20' : 'border-border hover:border-amber-300',
+          check: 'text-amber-600',
+        }
+      : {
+          badge: 'bg-muted text-muted-foreground',
+          ring: selected ? 'border-foreground/40 bg-muted/40' : 'border-border hover:border-muted-foreground/40',
+          check: 'text-foreground',
+        };
+
   return (
-    <div
-      className={cn(
-        'w-full rounded-lg border-2 transition-all',
-        selected
-          ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20'
-          : 'border-border hover:border-amber-300'
-      )}
-    >
+    <div className={cn('w-full rounded-lg border-2 transition-all', tierStyles.ring)}>
       <div className="flex items-start gap-3 p-3">
-        {/* Confidence ring — also toggles selection */}
-        <button onClick={onToggle} className="relative h-10 w-10 shrink-0" aria-label="Toggle pick">
-          <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
-            <circle
-              cx="18" cy="18" r="15"
-              fill="none" stroke="currentColor" strokeWidth="3"
-              strokeDasharray={`${(ringPct / 100) * 94.25} 94.25`}
-              className="text-amber-500"
-            />
-          </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
-            {ringPct}
-          </span>
+        {/* Tier badge — also toggles selection */}
+        <button
+          onClick={onToggle}
+          className={cn(
+            'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide tabular-nums',
+            tierStyles.badge
+          )}
+          title={`Confidence ${ringPct}%`}
+          aria-label={`Toggle pick — confidence ${ringPct}%`}
+        >
+          {tier === 'strong' ? '✓ Strong' : tier === 'likely' ? '~ Likely' : '? Maybe'}
         </button>
 
         {/* Name + reasoning — toggles selection */}
@@ -557,7 +568,7 @@ function PickCard({
           )}
         </button>
 
-        {selected && <Check className="h-4 w-4 text-amber-600 shrink-0 mt-1" />}
+        {selected && <Check className={cn('h-4 w-4 shrink-0 mt-1', tierStyles.check)} />}
       </div>
 
       {/* Quantity row — sibling, NOT nested inside a button */}
