@@ -38,7 +38,7 @@ export function StepCatalogQA({
   onFallbackToType,
   onFallbackToBrowse,
 }: StepCatalogQAProps) {
-  const { scope } = useProjectScope(projectId);
+  const { data: scope } = useProjectScope(projectId);
   const { allItems } = useScopeCatalog();
   const suggestMutation = useScopeSuggestions();
 
