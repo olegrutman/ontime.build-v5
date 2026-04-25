@@ -1,124 +1,196 @@
-## CO Wizard — Real-World UX Review & Improvements
+# CO/WO Wizard — Master UX Rebuild Plan
 
-I tested the new wizard against how a PM/super actually fills out a CO in the field (one-handed on a phone at the jobsite, 30-second window between trades). Here's what I found and what to change.
+## What the screenshots prove
 
----
+Your two screenshots are the smoking gun:
 
-### Real-world mental model of writing a CO
+1. **Step 1** — User picks **Work Type = "Structural"** (a Work Order context, no `reason` chosen).
+2. **Step 2 — Scope Details** — Sasha asks **"What are you adding?"** with answers `Partition wall · Closet build-out · New opening · Soffit · Niche · Blocking · Trim carpentry · Other`.
 
-A foreman thinks in this order:
-1. **What broke / changed?** (the trigger)
-2. **Where exactly?** (point at it)
-3. **What do I need done?** (scope + qty)
-4. **Who pays / who does it?** (commercials)
-5. **Send it.**
+Nobody picks "Structural" because they want to build a closet. The scope question is from the **`addition` flow**, not a structural-work flow. This is the **wizard's #1 credibility killer** — it makes Sasha look broken on the second screen.
 
-The current wizard mostly matches this — but the Scope step duplicates Steps 1 & 2, and the Sasha flow has friction at the picks screen. Below are the issues + fixes.
+## The architectural bug, in one paragraph
 
----
+`resolveScenario(reason)` in `framingQuestionTrees.ts` only knows three scenarios — `damage`, `rework`, `addition` — and **defaults everything else to `addition`**. The TM Work Order wizard (`TMWOWizard.tsx`) doesn't collect a `reason` at all; it passes `reason: 'other'` into `StepCatalog`, which gets bucketed into `addition`. So **every Work Order — Demolition, Structural, Reframing, Sheathing, Blocking, Backout — runs the same "What are you adding? Partition wall…" question tree.** The Work Type is captured but **never used to pick a flow**, only to pick a building type when it's `wrb`/`exterior`/`sheathing`.
 
-### Critical issues found
-
-**1. Scope step re-asks Why and Where — confusing redundancy**
-`StepCatalog` has its own internal phases (`location → reason → items`) that fire when location/reason are missing. In the wizard, both are already collected in Steps 1–2, so the scope step jumps straight to `items` — but the code path still exists, the chips show ✕ buttons that send users back to phase 1 *inside* the step (orphaning the wizard's Step 2). Users get lost.
-
-*Fix:* When mounted inside the wizard (location & reason guaranteed), strip the internal phase machine. Show the chips as **read-only** with an "Edit in Step 2" link that calls `setStep(1)` on the parent. Keep the internal phases only for the legacy non-wizard usage (or delete them if no callers remain).
-
-**2. Mode switch (Ask Sasha / Type / Browse) lacks a clear default story**
-Three modes shown side-by-side at equal weight on first open is decision paralysis. Real users want one obvious path.
-
-*Fix:*
-- Default to **Ask Sasha**, but render the switch as a **subtle tab strip below** the Sasha card (not above as a 3-up grid). 
-- Show **"Browse the catalog →"** and **"Just type it →"** as small text links inside the Sasha card's footer ("Prefer to do it yourself?"). 
-- This keeps the recommended flow primary and the escape hatches discoverable but quiet.
-
-**3. Sasha question flow has no "I don't know" / "skip" answer**
-Field reality: foremen often don't know the framing method on a remodel discovery. Currently they're stuck — they must pick something or back out.
-
-*Fix:* Add a tertiary "Not sure / Skip" answer to every question (rendered smaller, muted). The flow records `unknown` and continues; the AI prompt already tolerates missing context.
-
-**4. Picks screen — confidence ring is decorative, not informative**
-The 0–100 ring next to each pick reads as a score but doesn't tell the user what to *do* with low-confidence items. Real PMs need a verdict.
-
-*Fix:* Replace the ring with a 3-tier badge:
-- **Strong match** (≥75%) — green, pre-checked
-- **Likely** (50–74%) — amber, unchecked
-- **Maybe** (<50%) — gray, collapsed under "Show 3 more suggestions"
-Keep the numeric % only in a tooltip. Pre-check strong matches so the default action is just "Continue."
-
-**5. Quantity edit is hidden in a tiny pill**
-The current `QuantityEditPopover` trigger is a 10px-bold chip — easy to miss on mobile. Quantity is the #1 thing people change.
-
-*Fix:* Render quantity as a proper inline editor on the right side of each pick card: `[ 12 ] LF` with a clear pencil icon. On mobile, tapping opens a number keypad sheet instead of a popover (popovers misalign on small viewports).
-
-**6. Location-refinement banner is confusing post-confirm**
-The banner says "Sasha thinks this is closer to 'Rim joist' than 'Floor system'" — but accepting it silently re-runs the match and loses the user's current selection.
-
-*Fix:*
-- Move the banner **above the picks heading** so it reads as context, not an interruption.
-- Show "**Update & re-match**" only if zero items are selected; otherwise show "**Update for next CO**" (just persists preference, doesn't re-run).
-- Add a one-line "Why?" expandable that shows the AI's reasoning ("Plumber damage typically occurs at rim joist penetrations…").
-
-**7. Review step doesn't show the structured Sasha summary**
-The AI description text appears, but the user can't see *which* picks came from Sasha vs. browse, nor edit qty inline at review time. They have to go back two steps.
-
-*Fix:* On Review, render selected items as a compact table with columns: Item · Qty · Unit · Source (✦ Sasha / ✎ Manual / ☰ Browse). Make qty editable in place. Add a "Replace with Sasha pick" link on manual items if a higher-confidence catalog match exists.
-
-**8. Step 1 "Work Type" is now meaningless**
-The "Suggested for ___" block was retired in Phase 1 (`hintedTypes: []`), so users see a flat 10-icon grid with no guidance. Worse, work type drives `filterByContext` in browse mode and `resolveBuildingType` in Sasha — so picking the wrong one silently degrades AI quality.
-
-*Fix:* Either:
-- (a) Make work type **required** (one-tap, big icons, 5 options not 10 — group rare ones under "More…"), OR
-- (b) Drop it entirely and let Sasha infer from the QA flow + reason.
-Recommend **(b)** — it's the only way to keep the wizard at "thumb-speed." Restoring smart hints later requires rebuilding what Phase 1 just deleted.
-
-**9. No "save draft & resume" affordance**
-A foreman gets pulled mid-CO, taps Cancel, loses everything. No autosave.
-
-*Fix:* Persist `data` to `sessionStorage` keyed by `co_wizard_draft_${projectId}` on every change. On open, if a draft exists, show a small "Resume draft from 2m ago?" banner above Step 1.
-
-**10. Mobile: footer Next button is hidden behind the iOS keyboard**
-When typing in StepCatalogTypeFallback's textarea on mobile, the sticky footer sits behind the keyboard. Users think the wizard froze.
-
-*Fix:* Add `pb-[env(safe-area-inset-bottom)]` to the footer and `scrollIntoView({ block: 'center' })` on textarea focus.
+Combined with all the other small confusions (duplicate Where/Why prompts, `TBD` chips, three competing modes, no clear "what changes if I pick this") it adds up to a wizard that looks polished but produces nonsense answers.
 
 ---
 
-### Smaller polish
+## The right mental model (real-world contractor flow)
 
-- **Reason cards** (Step 1): "Found damage" and "Damaged by others" are framed as causes but the icons (`⚠️` `🔄`) don't disambiguate. Add a 1-line example under each: "e.g. plumber cut joist."
-- **Progress bar** at top of QA flow jumps from `progress * 80` to `90` to `100` — feels jerky. Use linear `(currentIdx + 1) / (totalQuestions + 2)` mapping.
-- **"Ask Sasha" amber theming** clashes with the primary blue. Either commit to amber for all AI surfaces or use the design-system `primary` for buttons and reserve amber for the ✦ icon only.
-- **Breadcrumb pills** in `StepCatalogQA` use `truncate` but no max-width, so multi-word answers ("Engineered I-joists") break the row on mobile. Add `max-w-[140px] truncate`.
-- **Toast on QA empty result** says "Switching to Browse mode" but doesn't actually switch focus there — user has to scroll. Auto-scroll the picker into view.
+A foreman thinks in this exact sequence — **proven by every analog change-order pad on every jobsite**:
 
----
+```
+TRIGGER ──▶ POINT ──▶ PROBLEM ──▶ FIX ──▶ COMMERCIALS ──▶ SEND
+(why)     (where)    (what's wrong)  (what we'll do)  (how/who pays)
+```
 
-### Implementation order (when approved)
+Today's wizard collapses TRIGGER + PROBLEM into "Why" and tries to derive PROBLEM from `reason + workType` — but those two inputs alone can't disambiguate "fix damaged joist" from "frame a new closet" from "tear out a soffit." That's why Sasha asks the wrong question on screen 2.
 
-1. Strip duplicate phases from `StepCatalog` when used inside wizard (Issue 1)
-2. Restructure mode switch to demote Type/Browse (Issue 2) + drop work-type step (Issue 8)
-3. Add "Not sure" answer + linear progress + breadcrumb truncation (Issues 3, polish)
-4. Replace confidence ring with 3-tier badges + auto-select strong matches (Issue 4)
-5. Inline quantity editor + mobile keypad sheet (Issue 5)
-6. Refinement banner repositioning + non-destructive update (Issue 6)
-7. Review-step picks table with inline qty + source badges (Issue 7)
-8. Draft autosave + resume banner (Issue 9)
-9. Mobile keyboard / safe-area footer fix (Issue 10)
-10. Polish pass (reason examples, theming consistency, toast UX)
-
-### Files touched
-- `src/components/change-orders/wizard/StepCatalog.tsx` (major)
-- `src/components/change-orders/wizard/StepCatalogQA.tsx` (major)
-- `src/components/change-orders/wizard/StepCatalogModeSwitch.tsx` (replace with footer-link variant)
-- `src/components/change-orders/wizard/QuantityEditPopover.tsx` → split into `QuantityInline.tsx` + mobile sheet
-- `src/components/change-orders/wizard/LocationRefinementBanner.tsx` (props + placement)
-- `src/components/change-orders/wizard/COWizard.tsx` (Step 1 simplification, autosave hook, footer safe-area, Review table)
-- `src/hooks/useQuestionFlow.ts` (skip/unknown support)
-- `src/types/scopeQA.ts` (allow `'__skip__'` answer)
-
-No DB changes. No edge function changes. Pure UX/UI.
+The fix is to **stop treating `reason` and `workType` as the only flow keys** and instead introduce a single **Work Intent** concept that drives Sasha's entire question tree.
 
 ---
 
-**Want me to apply all 10, or pick a subset?** My recommendation if you only have time for 3: **#1 (duplicate steps)**, **#5 (quantity editor)**, **#9 (draft autosave)** — those are the ones a real foreman will trip over within the first 60 seconds.
+## The new model: **Work Intent** (one decision, one flow)
+
+Replace today's two separate inputs (Reason **AND** Work Type) with **one Work Intent picker** that makes the next question deterministic. Every intent maps 1:1 to a Sasha question flow:
+
+| Intent | Plain-language label | Example trigger | Sasha asks about… |
+|---|---|---|---|
+| `repair_damage` | **Fix something that got damaged** | Plumber cut a joist | What member, what action, how much |
+| `add_new` | **Add new framing/scope** | Build a closet, add a wall | What you're adding, dimensions |
+| `modify_existing` | **Change something already built** | Move a window, enlarge an opening | Existing → new state, why |
+| `redo_work` | **Redo work that was wrong** | Wall framed crooked | What was built, what needs to change |
+| `tear_out` | **Demolish / remove** | Selective demo, cabinet pull | What's coming out, disposal needs |
+| `envelope_work` | **Exterior / WRB / sheathing** | Housewrap, flashing, siding prep | Substrate, exposure, fastener spec |
+| `structural_install` | **Install structural element** | Beam, post, hold-down, shear wall | Member type, load path, hardware |
+| `mep_blocking` | **Blocking / backing for other trades** | TV mount blocking, grab bar | Backing type, location, fastener pattern |
+| `inspection_fix` | **Backout / inspector callback / punch** | Code correction, missing nail | What inspector flagged, fix scope |
+| `other` | **Something else — let me describe it** | Anything off-script | Free text → Type fallback |
+
+This collapses the current 7 reason cards × 10 work-type cards = **70 ambiguous combinations** into **10 clean, mutually exclusive intents** where each one has a purpose-built question tree.
+
+---
+
+## Step-by-step proposed wizard (CO + WO unified)
+
+The CO and WO wizards become **the same 4-step flow** with the only difference being the pricing defaults (TM vs Fixed) and the title prefix (WO- vs CO-).
+
+### Step 1 · **What's the work?** (one-tap intent + reason + reason note)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  What kind of work is this?                              │
+│  ┌────────┬────────┬────────┬────────┐                  │
+│  │  🔧    │  ➕    │  🔄    │  🔨    │                  │
+│  │ Repair │  Add   │ Modify │ Demo   │                  │
+│  │ damage │  new   │ existing│ remove │                  │
+│  └────────┴────────┴────────┴────────┘                  │
+│  ┌────────┬────────┬────────┬────────┐                  │
+│  │  🛡️    │  ⚙️    │  🧱    │  ✅    │                  │
+│  │ Envelope│Structural│Blocking│ Fix    │                  │
+│  │ /WRB   │ install │ /backing│ inspect│                  │
+│  └────────┴────────┴────────┴────────┘                  │
+│  ┌────────┬────────┐                                    │
+│  │  📐    │  📝    │                                    │
+│  │ Redo  │ Other  │                                    │
+│  │ work  │       │                                    │
+│  └────────┴────────┘                                    │
+│                                                          │
+│  Who triggered this? (small radio strip, not cards)     │
+│   ○ Owner   ○ GC   ○ Damage by others   ○ Field find   │
+│                                                          │
+│  One-line note (optional, helps Sasha):                 │
+│   [ "Plumber cut joist behind shower" __________________ ]│
+└──────────────────────────────────────────────────────────┘
+```
+
+**Why this works:**
+- One **intent** = one flow tree (no more "Structural → What are you adding?" mismatch).
+- The `reason` (who triggered) is collected but **does not change the question flow** — it only changes the legal/billing implications shown in Step 4.
+- The free-text note seeds Sasha's first question and improves AI matching even before the QA flow runs.
+
+**Code changes:**
+- New `WorkIntent` type in `src/types/scopeQA.ts`.
+- New `INTENT_FLOWS: Record<WorkIntent, ScopeFlow>` in a new `src/lib/intentFlows.ts` (replaces the building-type × scenario matrix as the primary lookup; building type stays but only adjusts question copy/answers, not which questions to ask).
+- `resolveScenario()` becomes `resolveIntentFromLegacy(reason, workType)` for back-compat with already-saved drafts.
+- Reason becomes a small radio strip with 4 options instead of 7 big cards.
+
+### Step 2 · **Where exactly?** (unchanged — VisualLocationPicker works)
+
+Keep `VisualLocationPicker`. Add a "Recent locations on this project" chip row above it (top 3 from `co_line_items.location_tag` for this project) — saves 4 taps for common spots.
+
+### Step 3 · **What needs to happen?** (Sasha QA, deterministic per intent)
+
+This is the step that's broken today. The new flow:
+
+1. Header shows the intent + reason as **read-only chips** (no more `TBD` placeholders, no more accidental phase backtracking).
+2. Sasha runs the **intent-specific question tree** (3–5 questions max, see flows below).
+3. Each question has a **"Not sure / Skip"** answer and a **"Type it instead"** escape hatch in the footer (already built).
+4. After QA, picks render with **Strong / Likely / Maybe** tiers (already built).
+5. **Quantity is asked inside the QA flow**, not as an after-thought on the picks screen — most intents already ask "how much / how big," and that answer pre-fills `qty` directly.
+
+**Intent → question tree summary** (full trees in `intentFlows.ts`):
+
+| Intent | Q1 | Q2 | Q3 | Q4 |
+|---|---|---|---|---|
+| `repair_damage` | What member? | What was done to it? | How much affected? | Bearing? |
+| `add_new` | What are you adding? | Stud type / spec? | Length / size? | Special features? |
+| `modify_existing` | What's there now? | What's the change? | Touches load path? | Drawings or field decision? |
+| `redo_work` | What was built wrong? | What's the corrected version? | Reuse materials? | — |
+| `tear_out` | What's coming out? | Selective or full? | Disposal included? | — |
+| `envelope_work` | What layer? | Substrate? | Exposure / weather? | Fastener spec? |
+| `structural_install` | What member? | Connection / hardware? | Engineered drawing? | Inspection needed? |
+| `mep_blocking` | What for? | Backing material? | Fastener pattern? | Coordinated trade? |
+| `inspection_fix` | Inspector / authority? | What was flagged? | Scope of fix? | — |
+| `other` | (skip QA → Type fallback) | | | |
+
+### Step 4 · **How & who?** (commercials — unchanged structure, smarter defaults)
+
+Same fields as today (pricing type, NTE cap, GC budget, materials/equipment toggles, FC input, share now). Two improvements:
+
+- **Smart defaults from intent**: `repair_damage` and `inspection_fix` default to **T&M** with `materialsNeeded=true`. `add_new`/`tear_out` default to **fixed** with material/equipment prompts. `mep_blocking` defaults to **fixed lump sum, no materials** (it's labor-only blocking 90% of the time).
+- **Inline price preview**: small sub-line under pricing type — "Most blocking jobs run $150–$400" — pulled from a tiny `co_pricing_hints` table or hardcoded for v1.
+
+### Step 5 · **Review & send** (the editable summary table, already built)
+
+Keep the table. Add a **"Why these picks?"** expand-to-explain section that shows the QA answers as a labeled list — this is what makes the GC trust the AI when reviewing.
+
+---
+
+## Smaller fixes rolled in (from the prior plan, status updated)
+
+| # | Fix | Status |
+|---|---|---|
+| 1 | Strip duplicate Location/Reason phases from `StepCatalog` when in wizard | ✅ done |
+| 2 | Demote Type/Browse to subtle footer links | ✅ done |
+| 3 | Add "Not sure / Skip" answer to every QA question | ✅ done |
+| 4 | Tiered confidence badges + auto-pre-check Strong | ✅ done |
+| 5 | Quantity inline editor outside of toggle area | ✅ done |
+| 6 | Non-destructive location refinement banner | ✅ done |
+| 7 | Editable Review picks table with source badges | ✅ done |
+| 8 | Drop redundant "Work Type" sub-step (now Intent) | ⏳ part of new plan |
+| 9 | Draft autosave + resume banner | ✅ done |
+| 10 | Mobile keyboard / safe-area footer | ✅ done |
+| **11** | **Replace `reason+workType → addition default` with Intent → flow lookup** | 🆕 **the missing piece** |
+| **12** | **Unify `COWizard` and `TMWOWizard` into one component with a `mode='co'\|'wo'` prop** | 🆕 |
+| **13** | **Recent-locations chip row on Step 2** | 🆕 |
+| **14** | **Intent-aware pricing defaults on Step 4** | 🆕 |
+| **15** | **"Why these picks?" expandable on Review** | 🆕 |
+
+---
+
+## Implementation order (when approved)
+
+**Phase A — fix the structural bug (highest leverage, lowest risk):**
+1. Add `WorkIntent` type + `INTENT_FLOWS` map (port the existing 3 trees + author 7 new ones).
+2. Refactor `StepCatalogQA.tsx` to look up flow by `intent` instead of `(buildingType, scenario)` — building type still adjusts answer labels.
+3. Add `resolveIntentFromLegacy(reason, workType)` for any saved draft / inbound CO that doesn't have an intent yet.
+
+**Phase B — wizard restructure:**
+4. Build new Step 1 (intent picker + reason radio + note).
+5. Add Recent-locations chip row to Step 2.
+6. Wire intent-aware pricing defaults into Step 4.
+7. Add "Why these picks?" expandable to Review.
+
+**Phase C — unify CO + WO:**
+8. Merge `TMWOWizard.tsx` → `COWizard.tsx` with a `mode` prop. Delete `TMWOWizard.tsx`. Update both call sites.
+
+**Phase D — polish:**
+9. Author the 7 new intent question trees with building-type variants.
+10. Tighten `suggest-scope-items` edge function prompt to consume `intent` as a primary signal.
+
+No DB schema changes. Edge function gets a new optional `intent` field. All existing CO/WO records keep working via the legacy resolver.
+
+---
+
+## What I need from you
+
+Three quick decisions:
+
+1. **Intent labels** — are the 10 intents above the right vocabulary for your foremen, or do you want to merge any (e.g., combine `inspection_fix` into `redo_work`)?
+2. **Reason field** — keep it at all (current 7 cards), demote to a 4-option radio as proposed, or drop entirely (since intent now does the heavy lifting)?
+3. **CO+WO unification** — go all the way and merge into one wizard, or keep them separate and just sync the flow logic?
+
+Once you answer, I'll start with **Phase A** — that alone fixes the screenshot you sent.
