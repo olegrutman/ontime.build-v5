@@ -226,7 +226,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   function canAdvance(): boolean {
     const s = STEPS[step];
-    if (s.key === 'why') return !!data.reason;
+    if (s.key === 'why') return !!data.intent && !!data.reason;
     if (s.key === 'where') return !!data.locationTag;
     if (s.key === 'scope') return data.selectedItems.length > 0;
     if (s.key === 'how') {
@@ -535,7 +535,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
                 userId={user?.id}
               />
             )}
-            {currentStep.key === 'scope' && <StepCatalog data={data} onChange={update} projectId={projectId} />}
+            {currentStep.key === 'scope' && <StepCatalog data={data} onChange={update} projectId={projectId} intent={data.intent ?? null} />}
             {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
             {currentStep.key === 'review' && (
               <StepReview
