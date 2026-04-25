@@ -7,11 +7,13 @@ import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { useScopeSuggestions, type SuggestPick, type SuggestResponse } from '@/hooks/useScopeSuggestions';
 import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
-import { FLOWS, resolveBuildingType, resolveScenario } from '@/lib/framingQuestionTrees';
+import { resolveBuildingType } from '@/lib/framingQuestionTrees';
+import { getIntentFlow, resolveIntentFromLegacy } from '@/lib/intentFlows';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './COWizard';
-import type { FlowContext } from '@/types/scopeQA';
+import type { FlowContext, WorkIntent } from '@/types/scopeQA';
+import { WORK_INTENT_LABELS } from '@/types/scopeQA';
 import { QuantityEditPopover } from './QuantityEditPopover';
 import { LocationRefinementBanner } from './LocationRefinementBanner';
 
@@ -20,6 +22,9 @@ interface StepCatalogQAProps {
   locationTag: string;
   reason: string;
   workType: string | null;
+  /** Phase A: explicit work intent — drives the question tree.
+   *  When omitted, falls back to legacy (reason × workType) resolution. */
+  intent?: WorkIntent;
   projectName?: string;
   onComplete: (result: {
     description: string;
@@ -42,6 +47,7 @@ export function StepCatalogQA({
   locationTag,
   reason,
   workType,
+  intent,
   projectName,
   onComplete,
   onFallbackToType,
@@ -56,8 +62,16 @@ export function StepCatalogQA({
     () => resolveBuildingType(scope?.home_type ?? null, workType),
     [scope?.home_type, workType]
   );
-  const scenario = useMemo(() => resolveScenario(reason), [reason]);
-  const flow = FLOWS[buildingType]?.[scenario] ?? FLOWS.custom_home[scenario];
+  // Resolve which intent drives the flow. Explicit prop wins; otherwise
+  // derive from legacy (reason, workType) so old entry points keep working.
+  const resolvedIntent: WorkIntent = useMemo(
+    () => intent ?? resolveIntentFromLegacy(reason, workType),
+    [intent, reason, workType]
+  );
+  const flow = useMemo(
+    () => getIntentFlow(resolvedIntent, buildingType),
+    [resolvedIntent, buildingType]
+  );
   const zone = useMemo(() => resolveZoneFromLocationTag(locationTag), [locationTag]);
 
   const ctx: FlowContext = useMemo(() => ({
