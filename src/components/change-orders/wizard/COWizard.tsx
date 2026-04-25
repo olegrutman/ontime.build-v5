@@ -36,6 +36,8 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
 }
 
 export interface COWizardData {
+  /** Phase B — primary work-intent driver for Sasha's question flow */
+  intent: WorkIntent | null;
   reason: COReasonCode | null;
   workType: string | null;
   locationTag: string;
@@ -59,6 +61,7 @@ export interface COWizardData {
 }
 
 const INITIAL_DATA: COWizardData = {
+  intent: null,
   reason: null,
   workType: null,
   locationTag: '',
