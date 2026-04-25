@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import { WORK_INTENT_LABELS, WORK_INTENT_ICONS } from '@/types/scopeQA';
 import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
 import { VisualLocationPicker } from '../VisualLocationPicker';
@@ -20,6 +21,8 @@ interface StepCatalogProps {
   onChange: (patch: Partial<COWizardData>) => void;
   projectId: string;
   workType?: string;
+  /** Phase B — explicit intent from Step 1 picker. Drives Sasha's Q-flow. */
+  intent?: import('@/types/scopeQA').WorkIntent | null;
 }
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -47,7 +50,7 @@ const REASONS: { code: COReasonCode; description: string }[] = [
   { code: 'other',             description: 'Anything else' },
 ];
 
-export function StepCatalog({ data, onChange, projectId, workType }: StepCatalogProps) {
+export function StepCatalog({ data, onChange, projectId, workType, intent }: StepCatalogProps) {
   const { divisions, search, filterByContext, isLoading } = useScopeCatalog();
 
   const workTypeLabel = workType ? WORK_TYPE_LABELS[workType] ?? workType : null;
@@ -298,6 +301,12 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
             )}
           </div>
         )}
+        {intent && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+            <span aria-hidden>{WORK_INTENT_ICONS[intent]}</span>
+            {WORK_INTENT_LABELS[intent]}
+          </div>
+        )}
         {workTypeLabel && (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 text-xs font-semibold">
             {workTypeLabel}
@@ -318,6 +327,7 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
           locationTag={data.locationTag}
           reason={data.reason}
           workType={workType ?? null}
+          intent={intent ?? undefined}
           onComplete={({ description, answers, selectedItems }) => {
             if (selectedItems.length === 0) {
               toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });

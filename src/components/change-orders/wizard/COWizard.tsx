@@ -21,6 +21,12 @@ import { VisualLocationPicker } from '../VisualLocationPicker';
 import { StepCatalog } from './StepCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COCreatedByRole, COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
+import {
+  WORK_INTENT_LABELS,
+  WORK_INTENT_DESCRIPTIONS,
+  WORK_INTENT_ICONS,
+  type WorkIntent,
+} from '@/types/scopeQA';
 
 // ── Types ──────────────────────────────────────────────
 export interface SelectedScopeItem extends ScopeCatalogItem {
@@ -30,6 +36,8 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
 }
 
 export interface COWizardData {
+  /** Phase B — primary work-intent driver for Sasha's question flow */
+  intent?: WorkIntent | null;
   reason: COReasonCode | null;
   workType: string | null;
   locationTag: string;
@@ -53,6 +61,7 @@ export interface COWizardData {
 }
 
 const INITIAL_DATA: COWizardData = {
+  intent: null,
   reason: null,
   workType: null,
   locationTag: '',
@@ -217,7 +226,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   function canAdvance(): boolean {
     const s = STEPS[step];
-    if (s.key === 'why') return !!data.reason;
+    if (s.key === 'why') return !!data.intent && !!data.reason;
     if (s.key === 'where') return !!data.locationTag;
     if (s.key === 'scope') return data.selectedItems.length > 0;
     if (s.key === 'how') {
@@ -526,7 +535,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
                 userId={user?.id}
               />
             )}
-            {currentStep.key === 'scope' && <StepCatalog data={data} onChange={update} projectId={projectId} />}
+            {currentStep.key === 'scope' && <StepCatalog data={data} onChange={update} projectId={projectId} intent={data.intent ?? null} />}
             {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
             {currentStep.key === 'review' && (
               <StepReview
@@ -594,34 +603,115 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   );
 }
 
+// Order shown in the picker. Top row = most common, bottom row = specialty.
+const INTENT_ORDER: WorkIntent[] = [
+  'repair_damage',
+  'add_new',
+  'modify_existing',
+  'redo_work',
+  'tear_out',
+  'envelope_work',
+  'structural_install',
+  'mep_blocking',
+  'inspection_fix',
+  'other',
+];
+
+// Soft suggestion: when a reason is picked first, surface the intent that
+// usually goes with it. The user can still override.
+const REASON_TO_INTENT_HINT: Partial<Record<COReasonCode, WorkIntent>> = {
+  damaged_by_others: 'repair_damage',
+  rework: 'redo_work',
+  design_change: 'modify_existing',
+  addition: 'add_new',
+  owner_request: 'add_new',
+  gc_request: 'add_new',
+  other: 'other',
+};
+
 // ── Step 1: Why ──────────────────────────────────────
 function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
+  function pickReason(reason: COReasonCode) {
+    // If no intent yet, pre-select the typical intent for this reason as a hint
+    const hint = REASON_TO_INTENT_HINT[reason];
+    onChange({ reason, intent: data.intent ?? hint ?? null });
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* ── Primary: Work intent picker ─────────────────── */}
       <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">What triggered this {isTM ? 'work order' : 'change order'}?</p>
-        <div className="grid grid-cols-2 gap-3">
-          {REASON_CARDS.map(card => (
-            <button
-              key={card.reason}
-              type="button"
-              onClick={() => onChange({ reason: card.reason })}
-              className={cn(
-                'flex flex-col items-start gap-1 p-4 rounded-xl border-2 transition-all text-left min-h-[88px]',
-                data.reason === card.reason ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
-              )}
-            >
-              <span className="text-lg">{card.icon}</span>
-              <span className="text-sm font-semibold text-foreground">{card.label}</span>
-              <span className="text-[11px] text-muted-foreground leading-tight">{card.description}</span>
-              {card.example && <span className="text-[10px] text-muted-foreground/70 italic leading-tight">{card.example}</span>}
-            </button>
-          ))}
+        <div className="flex items-baseline justify-between">
+          <p className="text-sm font-semibold text-foreground">
+            What kind of work is this?
+          </p>
+          <span className="text-[11px] text-muted-foreground">Drives Sasha's questions</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {INTENT_ORDER.map(key => {
+            const active = data.intent === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onChange({ intent: key })}
+                className={cn(
+                  'flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-all text-left min-h-[78px]',
+                  active
+                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                    : 'border-border bg-card hover:border-primary/40',
+                )}
+                aria-pressed={active}
+              >
+                <span className="text-base leading-none">{WORK_INTENT_ICONS[key]}</span>
+                <span className="text-[13px] font-semibold text-foreground leading-tight">
+                  {WORK_INTENT_LABELS[key]}
+                </span>
+                <span className="text-[10px] text-muted-foreground leading-snug">
+                  {WORK_INTENT_DESCRIPTIONS[key]}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
-      {data.reason && (
+
+      {/* ── Secondary: Reason (kept for filing / reporting) ─ */}
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <p className="text-sm font-semibold text-foreground">
+            Why is this {isTM ? 'work order' : 'change order'} happening?
+          </p>
+          <span className="text-[11px] text-muted-foreground">For tracking & approvals</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {REASON_CARDS.map(card => {
+            const active = data.reason === card.reason;
+            return (
+              <button
+                key={card.reason}
+                type="button"
+                onClick={() => pickReason(card.reason)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all text-left',
+                  active ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
+                )}
+                aria-pressed={active}
+              >
+                <span className="text-base leading-none">{card.icon}</span>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-semibold text-foreground leading-tight truncate">{card.label}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight truncate">{card.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {data.intent && data.reason && (
         <p className="text-[11px] text-muted-foreground italic">
-          Sasha will figure out the trade and work type when you describe what's needed in Step 3.
+          ✦ Sasha will use <span className="font-medium not-italic">{WORK_INTENT_LABELS[data.intent]}</span> to ask the right questions in Step 3.
         </p>
       )}
     </div>
@@ -629,6 +719,28 @@ function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChang
 }
 
 // ── Step 2: Where ────────────────────────────────────
+const RECENT_LOCATIONS_KEY = (uid: string, pid: string) => `${uid}_${pid}_recent_locations`;
+const MAX_RECENT_LOCATIONS = 6;
+
+function readRecentLocations(userId: string | undefined, projectId: string): string[] {
+  if (!userId) return [];
+  try {
+    const raw = localStorage.getItem(RECENT_LOCATIONS_KEY(userId, projectId));
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((s): s is string => typeof s === 'string') : [];
+  } catch { return []; }
+}
+
+function pushRecentLocation(userId: string | undefined, projectId: string, tag: string) {
+  if (!userId || !tag) return;
+  try {
+    const existing = readRecentLocations(userId, projectId);
+    const next = [tag, ...existing.filter(x => x !== tag)].slice(0, MAX_RECENT_LOCATIONS);
+    localStorage.setItem(RECENT_LOCATIONS_KEY(userId, projectId), JSON.stringify(next));
+  } catch {/* quota */}
+}
+
 function StepWhere({
   projectId, data, onChange, savedLocation, userId,
 }: {
@@ -638,32 +750,59 @@ function StepWhere({
   savedLocation: string | null;
   userId?: string;
 }) {
+  const recent = useMemo(() => readRecentLocations(userId, projectId), [userId, projectId]);
+
   function handleConfirm(tag: string) {
     onChange({ locationTag: tag });
     try {
       if (userId) localStorage.setItem(`${userId}_${projectId}_last_location`, tag);
     } catch {}
+    pushRecentLocation(userId, projectId, tag);
+  }
+
+  if (data.locationTag) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
+          <span>📍</span>
+          <span className="text-sm font-medium text-foreground">{data.locationTag}</span>
+          <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={() => onChange({ locationTag: '' })}>
+            Change
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      {data.locationTag ? (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
-            <span>📍</span>
-            <span className="text-sm font-medium text-foreground">{data.locationTag}</span>
-            <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={() => onChange({ locationTag: '' })}>
-              Change
-            </Button>
+      {recent.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Recent locations
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {recent.map(tag => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => handleConfirm(tag)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-border bg-card hover:border-primary hover:bg-primary/5 text-xs text-foreground transition-colors max-w-[280px]"
+                title={tag}
+              >
+                <span aria-hidden>📍</span>
+                <span className="truncate">{tag}</span>
+              </button>
+            ))}
           </div>
+          <p className="text-[10px] text-muted-foreground">Tap to reuse, or pick a new spot below.</p>
         </div>
-      ) : (
-        <VisualLocationPicker
-          projectId={projectId}
-          onConfirm={handleConfirm}
-          savedLocation={savedLocation}
-        />
       )}
+      <VisualLocationPicker
+        projectId={projectId}
+        onConfirm={handleConfirm}
+        savedLocation={savedLocation}
+      />
     </div>
   );
 }
