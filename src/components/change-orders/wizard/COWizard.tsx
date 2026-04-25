@@ -21,6 +21,12 @@ import { VisualLocationPicker } from '../VisualLocationPicker';
 import { StepCatalog } from './StepCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COCreatedByRole, COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
+import {
+  WORK_INTENT_LABELS,
+  WORK_INTENT_DESCRIPTIONS,
+  WORK_INTENT_ICONS,
+  type WorkIntent,
+} from '@/types/scopeQA';
 
 // ── Types ──────────────────────────────────────────────
 export interface SelectedScopeItem extends ScopeCatalogItem {
