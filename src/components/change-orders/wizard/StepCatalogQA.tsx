@@ -208,20 +208,19 @@ export function StepCatalogQA({
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 text-xs font-medium">
           <MapPin className="h-3 w-3" /> {locationTag || 'Location'}
         </div>
-        {reasonColors && (
+        {/* Intent pill — the single source of truth for which flow Sasha is running */}
+        <div className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
+          ✦ {WORK_INTENT_LABELS[resolvedIntent]}
+        </div>
+        {reasonColors && reason && reason !== resolvedIntent && (
           <div
-            className="px-2.5 py-1 rounded-full text-xs font-semibold"
+            className="px-2.5 py-1 rounded-full text-[10px] font-medium opacity-80"
             style={{ backgroundColor: reasonColors.bg, color: reasonColors.text }}
           >
             {CO_REASON_LABELS[reason as COReasonCode] ?? reason}
           </div>
         )}
-        {workType && (
-          <div className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 text-xs font-semibold">
-            {workType}
-          </div>
-        )}
-        <div className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 text-xs font-semibold">
+        <div className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 text-[10px] font-medium">
           {buildingType.replace('_', ' ')}
         </div>
       </div>
