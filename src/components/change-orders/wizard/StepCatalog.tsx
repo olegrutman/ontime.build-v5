@@ -320,6 +320,7 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
           locationTag={data.locationTag}
           reason={data.reason}
           workType={workType ?? null}
+          intent={intent ?? undefined}
           onComplete={({ description, answers, selectedItems }) => {
             if (selectedItems.length === 0) {
               toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });
