@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import { WORK_INTENT_LABELS, WORK_INTENT_ICONS } from '@/types/scopeQA';
 import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
 import { VisualLocationPicker } from '../VisualLocationPicker';
@@ -298,6 +299,12 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
             {!lockedFromWizard && (
               <button onClick={() => setPhase('reason')} className="ml-1 opacity-60 hover:opacity-100">✕</button>
             )}
+          </div>
+        )}
+        {intent && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+            <span aria-hidden>{WORK_INTENT_ICONS[intent]}</span>
+            {WORK_INTENT_LABELS[intent]}
           </div>
         )}
         {workTypeLabel && (
