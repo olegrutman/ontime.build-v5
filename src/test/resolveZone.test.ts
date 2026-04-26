@@ -48,6 +48,14 @@ describe('resolveZoneFromLocationTag', () => {
     expect(resolveZoneFromLocationTag('Interior · L1 · Living · Ceiling')).toBe('interior_ceiling');
   });
 
+  it('resolves component-first interior tags (new picker order)', () => {
+    // Component appears before area in the new VisualLocationPicker output
+    expect(resolveZoneFromLocationTag('Interior · L1 · Floor / Floor joists')).toBe('structural');
+    expect(resolveZoneFromLocationTag('Interior · L1 · Floor / Floor sheathing')).toBe('interior_floor');
+    expect(resolveZoneFromLocationTag('Interior · L2 · Wall / Demising wall')).toBe('interior_wall');
+    expect(resolveZoneFromLocationTag('Interior · L1 · Ceiling / Ceiling drywall · Kitchen')).toBe('interior_ceiling');
+  });
+
   it('falls back to interior_wall', () => {
     expect(resolveZoneFromLocationTag('Interior · L1 · Living')).toBe('interior_wall');
     expect(resolveZoneFromLocationTag('Interior · Hallway')).toBe('interior_wall');
