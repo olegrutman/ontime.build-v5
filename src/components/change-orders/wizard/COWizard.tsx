@@ -299,8 +299,16 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           work_type: data.workType || data.reason,
           location_tag: data.locationTag || '',
           project_name: project?.name ?? 'Project',
-          selected_items: data.selectedItems.map(i => i.item_name),
+          project_context: projectScope ?? undefined,
+          selected_items: data.selectedItems.map(i => ({
+            name: i.item_name,
+            qty: i.qty ?? null,
+            unit: i.unit ?? null,
+            category: i.category_name ?? null,
+          })),
           reason_code: data.reason || '',
+          trigger_code: data.triggerCode ?? undefined,
+          assembly_state: data.assemblyState ?? undefined,
           requires_materials: data.materialsNeeded,
           requires_equipment: data.equipmentNeeded,
           material_responsibility: data.materialsResponsible,
@@ -313,11 +321,21 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       }
     } catch (err) {
       console.error('AI generation failed:', err);
-      // Fallback: manual description
+      // Fallback: manual description grouped by category
+      const grouped = new Map<string, string[]>();
+      for (const i of data.selectedItems) {
+        const cat = i.category_name || 'General';
+        if (!grouped.has(cat)) grouped.set(cat, []);
+        const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
+        grouped.get(cat)!.push(`${i.item_name}${qtyStr}`);
+      }
+      const itemPhrases = Array.from(grouped.entries())
+        .map(([c, names]) => `${c}: ${names.join(', ')}`)
+        .join('; ');
       const parts = [
-        selectedWorkType?.label ?? data.reason,
-        data.selectedItems.length > 0 ? `— ${data.selectedItems.map(i => i.item_name).join(', ')}` : '',
-        data.locationTag ? `at ${data.locationTag}` : '',
+        `Scope at ${data.locationTag || 'TBD'} for ${project?.name ?? 'the project'}.`,
+        itemPhrases ? `Includes ${itemPhrases}.` : '',
+        data.reason ? `Reason: ${CO_REASON_LABELS[data.reason] ?? data.reason}.` : '',
       ].filter(Boolean);
       update({ aiDescription: parts.join(' ') });
     } finally {
