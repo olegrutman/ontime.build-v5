@@ -87,18 +87,19 @@ export function VisualLocationPicker({
     return `1–${scope.num_units} units`;
   }, [isMultifamily, scope]);
 
-  // Component groups based on scope + selected context
+  // Component groups based on scope + selected context.
+  // Component is now the primary axis: shown as soon as Level (interior) or
+  // Inside/Outside (exterior) is chosen, regardless of Area / Elevation.
   const componentGroups = useMemo(() => {
     if (insideOutside === 'inside') {
-      if (!selectedArea) return [];
+      if (!selectedLevel) return [];
       return getComponentGroups(scope ?? null, selectedLevel, false);
     }
     if (insideOutside === 'outside') {
-      if (!selectedElevation) return [];
       return getComponentGroups(scope ?? null, null, true);
     }
     return [];
-  }, [scope, selectedLevel, selectedArea, selectedElevation, insideOutside]);
+  }, [scope, selectedLevel, insideOutside]);
 
   const subComponentOptions = useMemo(() => {
     if (!selectedComponentGroup) return [];
