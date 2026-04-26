@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { COWizard } from './wizard/COWizard';
-import { TMWOWizard } from './wizard/TMWOWizard';
+
 import { COBoardCard } from './COBoardCard';
 import { FCHomeScreen } from './FCHomeScreen';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
