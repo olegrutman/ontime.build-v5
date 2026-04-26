@@ -8,7 +8,7 @@ import { useScopeSuggestions, type SuggestPick, type SuggestResponse } from '@/h
 import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { resolveBuildingType } from '@/lib/framingQuestionTrees';
-import { getIntentFlow, resolveIntentFromLegacy } from '@/lib/intentFlows';
+import { getIntentFlow, resolveIntentFromLegacy, resolveComponent, suggestIntentForComponent } from '@/lib/intentFlows';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './COWizard';
 import type { FlowContext, WorkIntent } from '@/types/scopeQA';
