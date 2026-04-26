@@ -6,7 +6,7 @@ import type { Zone } from '@/types/catalog';
 // the location the user already picked, instead of dumping every framing
 // member in every situation.
 
-const MEMBERS_BY_ZONE: Record<Zone | 'default', ScopeAnswer[]> = {
+const MEMBERS_BY_ZONE: Partial<Record<Zone, ScopeAnswer[]>> & { default: ScopeAnswer[] } = {
   roof: [
     { id: 'sheathing_panel', label: 'Sheathing panel', icon: '▦', sub: 'OSB / ply' },
     { id: 'rafter',          label: 'Rafter',          icon: '⟋', sub: 'sloped' },
