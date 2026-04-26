@@ -1,196 +1,133 @@
-# CO/WO Wizard — Master UX Rebuild Plan
+# Change Order Flow — End-to-End Logic + Real-World Readiness Pass
 
-## What the screenshots prove
+## What I tested
 
-Your two screenshots are the smoking gun:
-
-1. **Step 1** — User picks **Work Type = "Structural"** (a Work Order context, no `reason` chosen).
-2. **Step 2 — Scope Details** — Sasha asks **"What are you adding?"** with answers `Partition wall · Closet build-out · New opening · Soffit · Niche · Blocking · Trim carpentry · Other`.
-
-Nobody picks "Structural" because they want to build a closet. The scope question is from the **`addition` flow**, not a structural-work flow. This is the **wizard's #1 credibility killer** — it makes Sasha look broken on the second screen.
-
-## The architectural bug, in one paragraph
-
-`resolveScenario(reason)` in `framingQuestionTrees.ts` only knows three scenarios — `damage`, `rework`, `addition` — and **defaults everything else to `addition`**. The TM Work Order wizard (`TMWOWizard.tsx`) doesn't collect a `reason` at all; it passes `reason: 'other'` into `StepCatalog`, which gets bucketed into `addition`. So **every Work Order — Demolition, Structural, Reframing, Sheathing, Blocking, Backout — runs the same "What are you adding? Partition wall…" question tree.** The Work Type is captured but **never used to pick a flow**, only to pick a building type when it's `wrb`/`exterior`/`sheathing`.
-
-Combined with all the other small confusions (duplicate Where/Why prompts, `TBD` chips, three competing modes, no clear "what changes if I pick this") it adds up to a wizard that looks polished but produces nonsense answers.
+I walked the full CO/WO flow (entry → wizard → submit → CO detail). Here's what's actually broken and what's just visually off — separated so we don't conflate them.
 
 ---
 
-## The right mental model (real-world contractor flow)
+## Findings
 
-A foreman thinks in this exact sequence — **proven by every analog change-order pad on every jobsite**:
+### 🔴 Blocker 1 — The WO wizard in your screenshot is the OLD wizard
 
-```
-TRIGGER ──▶ POINT ──▶ PROBLEM ──▶ FIX ──▶ COMMERCIALS ──▶ SEND
-(why)     (where)    (what's wrong)  (what we'll do)  (how/who pays)
-```
+The dialog you screenshotted ("New Work Order · Step 3 of 5 · Work Type → Scope Details → Location → How → Review") is **`TMWOWizard.tsx`**, not the rebuilt `COWizard.tsx`. It still has every original problem:
 
-Today's wizard collapses TRIGGER + PROBLEM into "Why" and tries to derive PROBLEM from `reason + workType` — but those two inputs alone can't disambiguate "fix damaged joist" from "frame a new closet" from "tear out a soffit." That's why Sasha asks the wrong question on screen 2.
+- No Intent picker — uses 11 `WORK_TYPES` with hardcoded sub-type lists.
+- Step 2 ("Scope Details") asks "What are you adding?" regardless of work type → exactly the "Structural → Partition wall" mismatch we fixed in the CO wizard.
+- Hardcodes `reason: 'other'` when calling `StepCatalog`, so Sasha's QA always falls into the legacy addition tree.
+- Steps are out of order (Scope before Location) — the framing-conflict scenario can't even be entered correctly because the user picks scope before telling Sasha *where* the joist is.
+- No Recent-locations chip strip.
+- No assembly + state refiner (the "joists already sheathed" signal that drives the demo→repair→repair sequence).
 
-The fix is to **stop treating `reason` and `workType` as the only flow keys** and instead introduce a single **Work Intent** concept that drives Sasha's entire question tree.
+`COListPage.tsx` line 200 chooses `<TMWOWizard>` whenever the project's `isTM` flag is true, so on T&M / Remodel projects (your Henderson Remodel) **the new wizard is never shown**. Phase C of the master plan was approved but never implemented — this is the missing merge.
 
----
+### 🔴 Blocker 2 — Real-world framing sequence isn't entered as a sequence
 
-## The new model: **Work Intent** (one decision, one flow)
+Even on the new `COWizard`, a single CO produces a single intent + a flat list of catalog items. The mechanical-conflict scenario (open floor sheets → move joist → repair sheathing → patch finishes) is three or four sequential tasks but the wizard forces one. The trigger model + per-task pricing we agreed on after the framing discussion **has not been built yet** — the only pieces that landed were the 10-intent picker and the 7 new flow trees in `intentFlows.ts`.
 
-Replace today's two separate inputs (Reason **AND** Work Type) with **one Work Intent picker** that makes the next question deterministic. Every intent maps 1:1 to a Sasha question flow:
+Symptoms today:
+- Field crew has to create three separate WOs to capture the demo → reframe → repair sequence.
+- Pricing model can only be set once for the whole CO, but in reality the demo is T&M, the structural move is fixed, and the repair is unit-priced.
+- No way to communicate "this CO has 3 phases, sign off on each" to the GC.
 
-| Intent | Plain-language label | Example trigger | Sasha asks about… |
-|---|---|---|---|
-| `repair_damage` | **Fix something that got damaged** | Plumber cut a joist | What member, what action, how much |
-| `add_new` | **Add new framing/scope** | Build a closet, add a wall | What you're adding, dimensions |
-| `modify_existing` | **Change something already built** | Move a window, enlarge an opening | Existing → new state, why |
-| `redo_work` | **Redo work that was wrong** | Wall framed crooked | What was built, what needs to change |
-| `tear_out` | **Demolish / remove** | Selective demo, cabinet pull | What's coming out, disposal needs |
-| `envelope_work` | **Exterior / WRB / sheathing** | Housewrap, flashing, siding prep | Substrate, exposure, fastener spec |
-| `structural_install` | **Install structural element** | Beam, post, hold-down, shear wall | Member type, load path, hardware |
-| `mep_blocking` | **Blocking / backing for other trades** | TV mount blocking, grab bar | Backing type, location, fastener pattern |
-| `inspection_fix` | **Backout / inspector callback / punch** | Code correction, missing nail | What inspector flagged, fix scope |
-| `other` | **Something else — let me describe it** | Anything off-script | Free text → Type fallback |
+### 🟡 Blocker 3 — Screen fit / responsive issues
 
-This collapses the current 7 reason cards × 10 work-type cards = **70 ambiguous combinations** into **10 clean, mutually exclusive intents** where each one has a purpose-built question tree.
+From your 1918×970 screenshot:
+- Dialog is `max-w-4xl` (≈896 px) but the **left rail eats 224 px** of that for desktop step nav, leaving content squeezed. Cards on the right column clip — your "Living Room" card is half-visible.
+- The wizard dialog isn't using the available 1918 px viewport. On wide desktop it should grow to ≈1100–1200 px, and the rail should be collapsible.
+- Mobile sheet is 94 vh — fine, but the footer pad already accounts for safe area, so we're good there.
+- The "Same as last time?" recent-location banner is rendered inside the location step but its layout breaks the column grid below (orange banner stretches past the grid).
 
----
+### 🟡 Blocker 4 — Inconsistencies between CO and WO
 
-## Step-by-step proposed wizard (CO + WO unified)
+Same project can produce a CO via `COWizard` (Intent first, location chip-strip, intent-aware scope) and a WO via `TMWOWizard` (work-type first, no chip-strip, generic scope). For a foreman these look like two different products.
 
-The CO and WO wizards become **the same 4-step flow** with the only difference being the pricing defaults (TM vs Fixed) and the title prefix (WO- vs CO-).
+### 🟢 What works
 
-### Step 1 · **What's the work?** (one-tap intent + reason + reason note)
-
-```
-┌──────────────────────────────────────────────────────────┐
-│  What kind of work is this?                              │
-│  ┌────────┬────────┬────────┬────────┐                  │
-│  │  🔧    │  ➕    │  🔄    │  🔨    │                  │
-│  │ Repair │  Add   │ Modify │ Demo   │                  │
-│  │ damage │  new   │ existing│ remove │                  │
-│  └────────┴────────┴────────┴────────┘                  │
-│  ┌────────┬────────┬────────┬────────┐                  │
-│  │  🛡️    │  ⚙️    │  🧱    │  ✅    │                  │
-│  │ Envelope│Structural│Blocking│ Fix    │                  │
-│  │ /WRB   │ install │ /backing│ inspect│                  │
-│  └────────┴────────┴────────┴────────┘                  │
-│  ┌────────┬────────┐                                    │
-│  │  📐    │  📝    │                                    │
-│  │ Redo  │ Other  │                                    │
-│  │ work  │       │                                    │
-│  └────────┴────────┘                                    │
-│                                                          │
-│  Who triggered this? (small radio strip, not cards)     │
-│   ○ Owner   ○ GC   ○ Damage by others   ○ Field find   │
-│                                                          │
-│  One-line note (optional, helps Sasha):                 │
-│   [ "Plumber cut joist behind shower" __________________ ]│
-└──────────────────────────────────────────────────────────┘
-```
-
-**Why this works:**
-- One **intent** = one flow tree (no more "Structural → What are you adding?" mismatch).
-- The `reason` (who triggered) is collected but **does not change the question flow** — it only changes the legal/billing implications shown in Step 4.
-- The free-text note seeds Sasha's first question and improves AI matching even before the QA flow runs.
-
-**Code changes:**
-- New `WorkIntent` type in `src/types/scopeQA.ts`.
-- New `INTENT_FLOWS: Record<WorkIntent, ScopeFlow>` in a new `src/lib/intentFlows.ts` (replaces the building-type × scenario matrix as the primary lookup; building type stays but only adjusts question copy/answers, not which questions to ask).
-- `resolveScenario()` becomes `resolveIntentFromLegacy(reason, workType)` for back-compat with already-saved drafts.
-- Reason becomes a small radio strip with 4 options instead of 7 big cards.
-
-### Step 2 · **Where exactly?** (unchanged — VisualLocationPicker works)
-
-Keep `VisualLocationPicker`. Add a "Recent locations on this project" chip row above it (top 3 from `co_line_items.location_tag` for this project) — saves 4 taps for common spots.
-
-### Step 3 · **What needs to happen?** (Sasha QA, deterministic per intent)
-
-This is the step that's broken today. The new flow:
-
-1. Header shows the intent + reason as **read-only chips** (no more `TBD` placeholders, no more accidental phase backtracking).
-2. Sasha runs the **intent-specific question tree** (3–5 questions max, see flows below).
-3. Each question has a **"Not sure / Skip"** answer and a **"Type it instead"** escape hatch in the footer (already built).
-4. After QA, picks render with **Strong / Likely / Maybe** tiers (already built).
-5. **Quantity is asked inside the QA flow**, not as an after-thought on the picks screen — most intents already ask "how much / how big," and that answer pre-fills `qty` directly.
-
-**Intent → question tree summary** (full trees in `intentFlows.ts`):
-
-| Intent | Q1 | Q2 | Q3 | Q4 |
-|---|---|---|---|---|
-| `repair_damage` | What member? | What was done to it? | How much affected? | Bearing? |
-| `add_new` | What are you adding? | Stud type / spec? | Length / size? | Special features? |
-| `modify_existing` | What's there now? | What's the change? | Touches load path? | Drawings or field decision? |
-| `redo_work` | What was built wrong? | What's the corrected version? | Reuse materials? | — |
-| `tear_out` | What's coming out? | Selective or full? | Disposal included? | — |
-| `envelope_work` | What layer? | Substrate? | Exposure / weather? | Fastener spec? |
-| `structural_install` | What member? | Connection / hardware? | Engineered drawing? | Inspection needed? |
-| `mep_blocking` | What for? | Backing material? | Fastener pattern? | Coordinated trade? |
-| `inspection_fix` | Inspector / authority? | What was flagged? | Scope of fix? | — |
-| `other` | (skip QA → Type fallback) | | | |
-
-### Step 4 · **How & who?** (commercials — unchanged structure, smarter defaults)
-
-Same fields as today (pricing type, NTE cap, GC budget, materials/equipment toggles, FC input, share now). Two improvements:
-
-- **Smart defaults from intent**: `repair_damage` and `inspection_fix` default to **T&M** with `materialsNeeded=true`. `add_new`/`tear_out` default to **fixed** with material/equipment prompts. `mep_blocking` defaults to **fixed lump sum, no materials** (it's labor-only blocking 90% of the time).
-- **Inline price preview**: small sub-line under pricing type — "Most blocking jobs run $150–$400" — pulled from a tiny `co_pricing_hints` table or hardcoded for v1.
-
-### Step 5 · **Review & send** (the editable summary table, already built)
-
-Keep the table. Add a **"Why these picks?"** expand-to-explain section that shows the QA answers as a labeled list — this is what makes the GC trust the AI when reviewing.
+- New `COWizard` Step 1 (Intent + Reason) is correct.
+- `intentFlows.ts` + the 10 intent trees are sound — Sasha asks the right questions when reached.
+- `VisualLocationPicker` correctly resolves zones (`structural`, `interior_floor`, etc.) for downstream filtering.
+- `resolveZoneFromLocationTag` + framing-aware AI suggestion edge function are wired and returning correct picks.
+- Pricing math, role-based privacy, and the CO detail page are solid (separate audit, not in scope here).
 
 ---
 
-## Smaller fixes rolled in (from the prior plan, status updated)
+## Plan — Three coordinated fixes
 
-| # | Fix | Status |
-|---|---|---|
-| 1 | Strip duplicate Location/Reason phases from `StepCatalog` when in wizard | ✅ done |
-| 2 | Demote Type/Browse to subtle footer links | ✅ done |
-| 3 | Add "Not sure / Skip" answer to every QA question | ✅ done |
-| 4 | Tiered confidence badges + auto-pre-check Strong | ✅ done |
-| 5 | Quantity inline editor outside of toggle area | ✅ done |
-| 6 | Non-destructive location refinement banner | ✅ done |
-| 7 | Editable Review picks table with source badges | ✅ done |
-| 8 | Drop redundant "Work Type" sub-step (now Intent) | ⏳ part of new plan |
-| 9 | Draft autosave + resume banner | ✅ done |
-| 10 | Mobile keyboard / safe-area footer | ✅ done |
-| **11** | **Replace `reason+workType → addition default` with Intent → flow lookup** | 🆕 **the missing piece** |
-| **12** | **Unify `COWizard` and `TMWOWizard` into one component with a `mode='co'\|'wo'` prop** | 🆕 |
-| **13** | **Recent-locations chip row on Step 2** | 🆕 |
-| **14** | **Intent-aware pricing defaults on Step 4** | 🆕 |
-| **15** | **"Why these picks?" expandable on Review** | 🆕 |
+### Phase 1 — Kill `TMWOWizard`, route everything through `COWizard` (the merge)
+
+1. Add an `isTM?: boolean` mode that already exists on `COWizard` — confirmed working. Remove the `TMWOWizard` branch in `COListPage.tsx` and always render `<COWizard isTM={isTM} … />`.
+2. In `COWizard`, when `isTM` is true:
+   - Default `pricingType` to `'tm'` instead of `'fixed'`.
+   - Default the title prefix to `WO-`.
+   - Skip the GC-only "Assigned to" requirement when the creator is a TC (FC routing already handles it).
+3. Delete `TMWOWizard.tsx` and its export from `index.ts`. One wizard, one flow.
+
+### Phase 2 — Real-world sequencing (the framing scenario)
+
+This is the trigger + task-sequence model you approved. Implementing as a soft, non-required layer.
+
+1. **New optional Step 2.5: "Assembly state"** — only prompts when the resolved zone is `interior_floor`, `interior_wall`, `exterior_wall`, or `roof`. One question, ≤4 chips:
+   - `pre_rough` (open framing)
+   - `roughed` (framed, no sheathing)
+   - `sheathed_decked` (sheathed/decked, not closed)
+   - `dried_in` (insulated/drywalled/finished)
+
+   Persisted as `assembly_state` on the CO. When `sheathed_decked` or `dried_in` is selected, Sasha proposes a multi-task sequence in Step 3.
+
+2. **Trigger picker** added to Step 1 as a small secondary chip strip (optional, non-blocking) with the seven values we agreed on:
+   `trade_conflict_mech`, `trade_conflict_elec`, `trade_conflict_plumb`, `inspector_callback`, `owner_request_change`, `field_discovery`, `design_revision`.
+
+3. **Auto-proposed task sequence in Step 3.** When `intent` × `assembly_state` indicates sequencing risk, Sasha proposes an ordered task list, e.g.:
+
+   ```text
+   Mechanical conflict @ floor system (sheathed_decked)
+     1. Demo  — open floor sheathing            T&M    [edit]
+     2. Structural — relocate joist             Fixed  [edit]
+     3. Repair — re-sheath + screw              Unit   [edit]
+     4. Finish — patch ceiling below (if any)   T&M    [edit]
+   ```
+
+   GC accepts as-is, edits, deletes a row, or adds one from a task palette. Each task gets its own pricing mode; the CO header shows a roll-up total.
+
+4. **Per-task pricing in Step 4.** The current single pricing-type selector becomes a small table, one row per task. `nteCap` and `gcBudget` move down a level.
+
+5. **DB additions (one migration):**
+   - `change_orders.assembly_state text null`
+   - `change_orders.trigger_code text null`
+   - `co_line_items.task_index int null` (orders rows into the sequence)
+   - `co_line_items.pricing_mode text null` (per-task override)
+   - `co_line_items.task_phase text null` ('demo' | 'structural' | 'repair' | 'finish' | 'install')
+
+   No breaking changes — existing COs read `null` and behave exactly as today.
+
+### Phase 3 — Responsive fit + screen polish
+
+1. **Wider dialog on large screens.** Change `DialogContent` from `max-w-4xl` to a responsive ladder: `max-w-4xl lg:max-w-5xl xl:max-w-6xl`. Keeps mobile sheet untouched.
+2. **Collapsible step rail.** On `lg:` and below, hide the desktop nav rail (already collapsed via `!isMobile` — extend the breakpoint logic so the rail only shows ≥1280 px).
+3. **Fix the "Same as last time" banner overflow** in Step 3 (Location). Wrap it in the same container grid so it can't push past the columns.
+4. **Tighten Step 3 area-card grid.** Use `grid-cols-2 md:grid-cols-3 lg:grid-cols-4` so cards don't truncate at the right edge.
+5. **One scrollable region.** Today the dialog has nested scroll containers (outer DialogContent + inner step body). Lock to a single scroll on the step body so the footer stays pinned.
+6. **Header chip cleanup.** Show Intent + Reason + Trigger as compact chips in the dialog header so the user can see the full context without scrolling back.
+
+### Phase 4 — End-to-end QA pass (no code, just a checklist run)
+
+For each of the four canonical scenarios I'll walk the wizard top-to-bottom and verify Sasha asks the right questions, the right items load, the right pricing defaults apply, and the CO detail page reflects everything:
+
+| # | Scenario | Intent | Trigger | Assembly state | Expected sequence |
+|---|---|---|---|---|---|
+| 1 | Plumber cut a joist behind shower | `repair_damage` | `trade_conflict_plumb` | `dried_in` | demo→structural→repair→finish |
+| 2 | Owner adds a closet | `add_new` | `owner_request_change` | `pre_rough` | install only |
+| 3 | Mechanical duct conflict (your scenario) | `modify_existing` | `trade_conflict_mech` | `sheathed_decked` | demo→structural→repair |
+| 4 | Inspector flagged missing hold-down | `inspection_fix` | `inspector_callback` | `roughed` | install + reinspect note |
 
 ---
 
-## Implementation order (when approved)
+## Implementation order
 
-**Phase A — fix the structural bug (highest leverage, lowest risk):**
-1. Add `WorkIntent` type + `INTENT_FLOWS` map (port the existing 3 trees + author 7 new ones).
-2. Refactor `StepCatalogQA.tsx` to look up flow by `intent` instead of `(buildingType, scenario)` — building type still adjusts answer labels.
-3. Add `resolveIntentFromLegacy(reason, workType)` for any saved draft / inbound CO that doesn't have an intent yet.
+1. **Day 1** — Phase 3 (responsive fix). Lowest risk, immediate visual relief on the screens you sent.
+2. **Day 1–2** — Phase 1 (delete TMWOWizard, unify on COWizard). All projects get the new flow.
+3. **Day 2–3** — Phase 2 (assembly state, trigger, task sequence, per-task pricing). The real-world readiness work.
+4. **Day 3** — Phase 4 (the QA matrix above). I run all four scenarios and report results back.
 
-**Phase B — wizard restructure:**
-4. Build new Step 1 (intent picker + reason radio + note).
-5. Add Recent-locations chip row to Step 2.
-6. Wire intent-aware pricing defaults into Step 4.
-7. Add "Why these picks?" expandable to Review.
-
-**Phase C — unify CO + WO:**
-8. Merge `TMWOWizard.tsx` → `COWizard.tsx` with a `mode` prop. Delete `TMWOWizard.tsx`. Update both call sites.
-
-**Phase D — polish:**
-9. Author the 7 new intent question trees with building-type variants.
-10. Tighten `suggest-scope-items` edge function prompt to consume `intent` as a primary signal.
-
-No DB schema changes. Edge function gets a new optional `intent` field. All existing CO/WO records keep working via the legacy resolver.
-
----
-
-## What I need from you
-
-Three quick decisions:
-
-1. **Intent labels** — are the 10 intents above the right vocabulary for your foremen, or do you want to merge any (e.g., combine `inspection_fix` into `redo_work`)?
-2. **Reason field** — keep it at all (current 7 cards), demote to a 4-option radio as proposed, or drop entirely (since intent now does the heavy lifting)?
-3. **CO+WO unification** — go all the way and merge into one wizard, or keep them separate and just sync the flow logic?
-
-Once you answer, I'll start with **Phase A** — that alone fixes the screenshot you sent.
+No external dependencies. One small DB migration. Edge function `suggest-scope-items` gets two new optional inputs (`assembly_state`, `trigger_code`) — already accepts arbitrary `answers`, so the change is additive.
