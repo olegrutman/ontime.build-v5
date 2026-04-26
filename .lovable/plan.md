@@ -1,133 +1,67 @@
-# Change Order Flow — End-to-End Logic + Real-World Readiness Pass
+## Reorder Location Picker: Component first, Area optional
 
-## What I tested
+### The problem
 
-I walked the full CO/WO flow (entry → wizard → submit → CO detail). Here's what's actually broken and what's just visually off — separated so we don't conflate them.
+Today the "Where" step asks (Inside/Outside) → **Level → Area (required) → Component (optional)**.
 
----
+For framers and rough-trade work this is backwards. During rough framing there are no rooms yet — joists and walls don't belong to a "Bedroom". The component (Wall / Floor / Ceiling / Roof / Stairs) is what matters first; the area is helpful context only when the building is far enough along to have rooms.
 
-## Findings
+The screenshot shows exactly this: after Level 2 → Ground, Sasha demands a room before letting the user pick "Floor system / Floor joists" — the actual subject of the change order.
 
-### 🔴 Blocker 1 — The WO wizard in your screenshot is the OLD wizard
+### What changes (Interior path)
 
-The dialog you screenshotted ("New Work Order · Step 3 of 5 · Work Type → Scope Details → Location → How → Review") is **`TMWOWizard.tsx`**, not the rebuilt `COWizard.tsx`. It still has every original problem:
+New order: **Inside → Level → Component (required) → Sub-component (required when group has options) → Area (optional)**.
 
-- No Intent picker — uses 11 `WORK_TYPES` with hardcoded sub-type lists.
-- Step 2 ("Scope Details") asks "What are you adding?" regardless of work type → exactly the "Structural → Partition wall" mismatch we fixed in the CO wizard.
-- Hardcodes `reason: 'other'` when calling `StepCatalog`, so Sasha's QA always falls into the legacy addition tree.
-- Steps are out of order (Scope before Location) — the framing-conflict scenario can't even be entered correctly because the user picks scope before telling Sasha *where* the joist is.
-- No Recent-locations chip strip.
-- No assembly + state refiner (the "joists already sheathed" signal that drives the demo→repair→repair sequence).
+```text
+Interior
+  Level 2 ── pill
+  Component:   [🧱 Wall] [▦ Floor] [☐ Ceiling] [🏠 Roof] [🪜 Stairs] [🪟 Opening] [🔧 MEP chase] [• Other]
+  Sub-component: [Floor joists] [Floor sheathing] [Subfloor] [Floor trusses] …
+  Area (optional): [Kitchen] [Living Room] … [Skip area]
+```
 
-`COListPage.tsx` line 200 chooses `<TMWOWizard>` whenever the project's `isTM` flag is true, so on T&M / Remodel projects (your Henderson Remodel) **the new wizard is never shown**. Phase C of the master plan was approved but never implemented — this is the missing merge.
+- **Component** becomes the first required selection after Level (today it's hidden behind Area).
+- **Area** moves below Component and is **always optional** with an explicit "Skip area" affordance, plus a one-line hint: *"Skip if rough framing or no rooms yet."*
+- **Multifamily Unit interior** stays as a special area choice — when picked, it still asks Unit # + Room. Component remains the primary axis.
+- The completion rule changes to: `level + component` is enough to confirm. Area only required if the user starts entering it (e.g., picks "Other" then must fill text, or picks "Unit interior" then must add unit #).
 
-### 🔴 Blocker 2 — Real-world framing sequence isn't entered as a sequence
+### What changes (Exterior path)
 
-Even on the new `COWizard`, a single CO produces a single intent + a flat list of catalog items. The mechanical-conflict scenario (open floor sheets → move joist → repair sheathing → patch finishes) is three or four sequential tasks but the wizard forces one. The trigger model + per-task pricing we agreed on after the framing discussion **has not been built yet** — the only pieces that landed were the 10-intent picker and the 7 new flow trees in `intentFlows.ts`.
+Already mostly correct (Elevation → Component). Tweak: make Component required and Elevation can be skipped to "Whole exterior" for things like "all four walls — WRB". Add a "Skip elevation" chip.
 
-Symptoms today:
-- Field crew has to create three separate WOs to capture the demo → reframe → repair sequence.
-- Pricing model can only be set once for the whole CO, but in reality the demo is T&M, the structural move is fixed, and the repair is unit-priced.
-- No way to communicate "this CO has 3 phases, sign off on each" to the GC.
+### Tag format
 
-### 🟡 Blocker 3 — Screen fit / responsive issues
+Component moves earlier in the readable tag, area trails:
 
-From your 1918×970 screenshot:
-- Dialog is `max-w-4xl` (≈896 px) but the **left rail eats 224 px** of that for desktop step nav, leaving content squeezed. Cards on the right column clip — your "Living Room" card is half-visible.
-- The wizard dialog isn't using the available 1918 px viewport. On wide desktop it should grow to ≈1100–1200 px, and the rail should be collapsible.
-- Mobile sheet is 94 vh — fine, but the footer pad already accounts for safe area, so we're good there.
-- The "Same as last time?" recent-location banner is rendered inside the location step but its layout breaks the column grid below (orange banner stretches past the grid).
+- Old: `Interior · L2 · Master Bath · Floor / Floor joists`
+- New: `Interior · L2 · Floor / Floor joists · Master Bath` (when area present)
+- New (no area): `Interior · L2 · Floor / Floor joists`
 
-### 🟡 Blocker 4 — Inconsistencies between CO and WO
+`resolveZoneFromLocationTag` in `src/lib/resolveZone.ts` already keys on **structural / floor / wall / roof keywords first**, so reordering the tag does not change zone resolution. Verified by re-reading the rule order — structural members and component keywords win regardless of position.
 
-Same project can produce a CO via `COWizard` (Intent first, location chip-strip, intent-aware scope) and a WO via `TMWOWizard` (work-type first, no chip-strip, generic scope). For a foreman these look like two different products.
+### Recent-locations shortcut
 
-### 🟢 What works
+Stays as-is. The "Same as last time" banner at the top still one-taps the full saved tag.
 
-- New `COWizard` Step 1 (Intent + Reason) is correct.
-- `intentFlows.ts` + the 10 intent trees are sound — Sasha asks the right questions when reached.
-- `VisualLocationPicker` correctly resolves zones (`structural`, `interior_floor`, etc.) for downstream filtering.
-- `resolveZoneFromLocationTag` + framing-aware AI suggestion edge function are wired and returning correct picks.
-- Pricing math, role-based privacy, and the CO detail page are solid (separate audit, not in scope here).
+### Files affected
 
----
+- `src/components/change-orders/VisualLocationPicker.tsx` — reorder JSX blocks (Component before Area), update `isComplete` logic, update `assembledTag` to put component before area, add "Skip area" affordance, add hint copy.
+- `src/lib/buildingComponents.ts` — already returns the right groups based on level + interior/exterior. No change needed; the function is called with `selectedArea` today only as a gate, but it doesn't actually use the area. Confirmed safe.
+- `src/test/resolveZone.test.ts` — add 2 cases for the new tag order to lock the contract: `Interior · L1 · Floor / Floor joists` → `interior_floor`; `Interior · L1 · Wall / Demising wall` → `interior_wall`.
+- No DB changes. No edge function changes.
 
-## Plan — Three coordinated fixes
+### Sasha (downstream) behavior
 
-### Phase 1 — Kill `TMWOWizard`, route everything through `COWizard` (the merge)
+Because the component is now captured every time, Sasha's intent flow gets a stronger signal earlier. The `assembly_state` prompt (Phase D, deferred) will still trigger only when the resolved zone is one of `interior_floor / interior_wall / exterior_wall / roof` — same rule, just fires sooner because the component is no longer optional.
 
-1. Add an `isTM?: boolean` mode that already exists on `COWizard` — confirmed working. Remove the `TMWOWizard` branch in `COListPage.tsx` and always render `<COWizard isTM={isTM} … />`.
-2. In `COWizard`, when `isTM` is true:
-   - Default `pricingType` to `'tm'` instead of `'fixed'`.
-   - Default the title prefix to `WO-`.
-   - Skip the GC-only "Assigned to" requirement when the creator is a TC (FC routing already handles it).
-3. Delete `TMWOWizard.tsx` and its export from `index.ts`. One wizard, one flow.
+### Out of scope for this turn
 
-### Phase 2 — Real-world sequencing (the framing scenario)
+- Phase D UI (trigger chips, assembly-state prompt, auto-sequenced tasks, per-task pricing) — still queued behind this fix.
+- Mobile compact mode follows the same reorder automatically since it shares the same component.
 
-This is the trigger + task-sequence model you approved. Implementing as a soft, non-required layer.
+### Acceptance check
 
-1. **New optional Step 2.5: "Assembly state"** — only prompts when the resolved zone is `interior_floor`, `interior_wall`, `exterior_wall`, or `roof`. One question, ≤4 chips:
-   - `pre_rough` (open framing)
-   - `roughed` (framed, no sheathing)
-   - `sheathed_decked` (sheathed/decked, not closed)
-   - `dried_in` (insulated/drywalled/finished)
-
-   Persisted as `assembly_state` on the CO. When `sheathed_decked` or `dried_in` is selected, Sasha proposes a multi-task sequence in Step 3.
-
-2. **Trigger picker** added to Step 1 as a small secondary chip strip (optional, non-blocking) with the seven values we agreed on:
-   `trade_conflict_mech`, `trade_conflict_elec`, `trade_conflict_plumb`, `inspector_callback`, `owner_request_change`, `field_discovery`, `design_revision`.
-
-3. **Auto-proposed task sequence in Step 3.** When `intent` × `assembly_state` indicates sequencing risk, Sasha proposes an ordered task list, e.g.:
-
-   ```text
-   Mechanical conflict @ floor system (sheathed_decked)
-     1. Demo  — open floor sheathing            T&M    [edit]
-     2. Structural — relocate joist             Fixed  [edit]
-     3. Repair — re-sheath + screw              Unit   [edit]
-     4. Finish — patch ceiling below (if any)   T&M    [edit]
-   ```
-
-   GC accepts as-is, edits, deletes a row, or adds one from a task palette. Each task gets its own pricing mode; the CO header shows a roll-up total.
-
-4. **Per-task pricing in Step 4.** The current single pricing-type selector becomes a small table, one row per task. `nteCap` and `gcBudget` move down a level.
-
-5. **DB additions (one migration):**
-   - `change_orders.assembly_state text null`
-   - `change_orders.trigger_code text null`
-   - `co_line_items.task_index int null` (orders rows into the sequence)
-   - `co_line_items.pricing_mode text null` (per-task override)
-   - `co_line_items.task_phase text null` ('demo' | 'structural' | 'repair' | 'finish' | 'install')
-
-   No breaking changes — existing COs read `null` and behave exactly as today.
-
-### Phase 3 — Responsive fit + screen polish
-
-1. **Wider dialog on large screens.** Change `DialogContent` from `max-w-4xl` to a responsive ladder: `max-w-4xl lg:max-w-5xl xl:max-w-6xl`. Keeps mobile sheet untouched.
-2. **Collapsible step rail.** On `lg:` and below, hide the desktop nav rail (already collapsed via `!isMobile` — extend the breakpoint logic so the rail only shows ≥1280 px).
-3. **Fix the "Same as last time" banner overflow** in Step 3 (Location). Wrap it in the same container grid so it can't push past the columns.
-4. **Tighten Step 3 area-card grid.** Use `grid-cols-2 md:grid-cols-3 lg:grid-cols-4` so cards don't truncate at the right edge.
-5. **One scrollable region.** Today the dialog has nested scroll containers (outer DialogContent + inner step body). Lock to a single scroll on the step body so the footer stays pinned.
-6. **Header chip cleanup.** Show Intent + Reason + Trigger as compact chips in the dialog header so the user can see the full context without scrolling back.
-
-### Phase 4 — End-to-end QA pass (no code, just a checklist run)
-
-For each of the four canonical scenarios I'll walk the wizard top-to-bottom and verify Sasha asks the right questions, the right items load, the right pricing defaults apply, and the CO detail page reflects everything:
-
-| # | Scenario | Intent | Trigger | Assembly state | Expected sequence |
-|---|---|---|---|---|---|
-| 1 | Plumber cut a joist behind shower | `repair_damage` | `trade_conflict_plumb` | `dried_in` | demo→structural→repair→finish |
-| 2 | Owner adds a closet | `add_new` | `owner_request_change` | `pre_rough` | install only |
-| 3 | Mechanical duct conflict (your scenario) | `modify_existing` | `trade_conflict_mech` | `sheathed_decked` | demo→structural→repair |
-| 4 | Inspector flagged missing hold-down | `inspection_fix` | `inspector_callback` | `roughed` | install + reinspect note |
-
----
-
-## Implementation order
-
-1. **Day 1** — Phase 3 (responsive fix). Lowest risk, immediate visual relief on the screens you sent.
-2. **Day 1–2** — Phase 1 (delete TMWOWizard, unify on COWizard). All projects get the new flow.
-3. **Day 2–3** — Phase 2 (assembly state, trigger, task sequence, per-task pricing). The real-world readiness work.
-4. **Day 3** — Phase 4 (the QA matrix above). I run all four scenarios and report results back.
-
-No external dependencies. One small DB migration. Edge function `suggest-scope-items` gets two new optional inputs (`assembly_state`, `trigger_code`) — already accepts arbitrary `answers`, so the change is additive.
+1. New CO → Where → Interior → Level 2 → tap **Floor → Floor joists** → "Confirm location" is enabled with no area selected. Tag reads `Interior · L2 · Floor / Floor joists`.
+2. Same flow + tap **Master Bath** afterwards → tag reads `Interior · L2 · Floor / Floor joists · Master Bath`.
+3. Mechanical-conflict scenario: Interior → Level 1 → **Floor → Floor joists** → confirms cleanly without forcing a room. Sasha's downstream zone resolves to `interior_floor`.
+4. Exterior → tap **Skip elevation** → **Wall (exterior) → WRB / housewrap** → confirms as `Exterior · Wall (exterior) / WRB / housewrap`.
