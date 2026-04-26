@@ -360,18 +360,27 @@ export const FLOWS: Record<BuildingType, Record<FlowScenario, ScopeFlow>> = {
         {
           id: 'member',
           text: 'What framing member was damaged?',
-          hint: 'Townhome list adds demising-wall and party-line members.',
+          hint: 'Options match the location you picked. Demising / party-line members are flagged on walls between units.',
           grid: 'cols-4',
-          answers: [
-            { id: '2x_stud',        label: '2x wall stud',           icon: '▮', sub: 'partition' },
-            { id: 'demising_stud',  label: 'Demising wall stud',     icon: '║', sub: 'between units', spec: true },
-            { id: 'shear_stud',     label: 'Shear wall stud',        icon: '▰', sub: 'lateral', spec: true },
-            { id: 'floor_joist',    label: 'Floor joist',            icon: '═' },
-            { id: 'floor_ceil_asy', label: 'Floor/ceiling assembly', icon: '▦', sub: 'between units', spec: true },
-            { id: 'i_joist',        label: 'I-joist (TJI)',          icon: 'I' },
-            { id: 'rafter',         label: 'Rafter',                 icon: '⟋' },
-            { id: 'header_lvl',     label: 'Header / LVL',           icon: '▭' },
-          ],
+          answersFor: (ctx) => {
+            const base = membersForZone(ctx);
+            if (ctx.zone === 'interior_wall' || ctx.zone === 'exterior_wall') {
+              return [
+                ...base,
+                { id: 'demising_stud', label: 'Demising wall stud', icon: '║', sub: 'between units', spec: true },
+                { id: 'shear_stud',    label: 'Shear wall stud',    icon: '▰', sub: 'lateral',       spec: true },
+              ];
+            }
+            if (ctx.zone === 'interior_floor' || ctx.zone === 'interior_ceiling') {
+              return [
+                ...base,
+                { id: 'floor_ceil_asy', label: 'Floor/ceiling assembly', icon: '▦', sub: 'between units', spec: true },
+              ];
+            }
+            return base;
+          },
+          textFor: memberQuestionTextForZone,
+          answers: MEMBERS_BY_ZONE.default,
         },
         {
           id: 'action',
@@ -379,16 +388,8 @@ export const FLOWS: Record<BuildingType, Record<FlowScenario, ScopeFlow>> = {
           grid: 'cols-4',
           why: 'Townhome',
           annotation: '<b>Townhome-specific:</b> damage to a <b>demising wall</b> or floor/ceiling assembly between units means coordination with the neighboring unit\'s GC — access, sound flanking, fire separation all affected.',
-          answers: [
-            { id: 'cut_through',     label: 'Cut through',         icon: '✂' },
-            { id: 'notched_deep',    label: 'Notched too deep',    icon: '◣' },
-            { id: 'drilled_oversize',label: 'Drilled oversized',   icon: '🕳' },
-            { id: 'cut_demising',    label: 'Cut through demising',icon: '║', spec: true },
-            { id: 'broke_acoustic',  label: 'Broke acoustic seal', icon: '♪', spec: true },
-            { id: 'broke_bearing',   label: 'Broke bearing end',   icon: '◀' },
-            { id: 'broken_split',    label: 'Broken / split',      icon: '💥' },
-            { id: 'unsure',          label: 'Not sure',            icon: '❓' },
-          ],
+          answersFor: actionsForZone,
+          answers: ACTIONS_BY_ZONE.default,
         },
         {
           id: 'scale',
