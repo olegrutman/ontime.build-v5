@@ -266,6 +266,9 @@ export function VisualLocationPicker({
         />
       </div>
 
+      {/* Reusable Component picker block — used in both Interior and Exterior paths */}
+      {(() => null)()}
+
       {/* INSIDE PATH */}
       {insideOutside === 'inside' && (
         <div className="space-y-4 animate-fade-in">
@@ -306,10 +309,53 @@ export function VisualLocationPicker({
             </div>
           </div>
 
-          {/* Area grid */}
-          {selectedLevel && (
+          {/* Component picker (REQUIRED, comes BEFORE area) */}
+          {selectedLevel && componentGroups.length > 0 && (
+            <ComponentPicker
+              groups={componentGroups}
+              subOptions={subComponentOptions}
+              selectedGroup={selectedComponentGroup}
+              selectedSub={selectedSubComponent}
+              customComponent={customComponent}
+              onPickGroup={(label) => {
+                setSelectedComponentGroup(label);
+                setSelectedSubComponent(null);
+                setCustomComponent('');
+              }}
+              onPickSub={(label) => {
+                setSelectedSubComponent(label);
+                if (label !== 'Other') setCustomComponent('');
+              }}
+              onCustom={setCustomComponent}
+            />
+          )}
+
+          {/* Area grid (OPTIONAL — shown after component is chosen) */}
+          {selectedLevel && componentTagPart && (
             <div className="animate-fade-in">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Area</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Area <span className="font-normal normal-case">(optional)</span>
+                </p>
+                {selectedArea && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedArea(null);
+                      setCustomArea('');
+                      setUnitNumber('');
+                      setRoomInUnit(null);
+                      setCustomRoom('');
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Skip area
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground italic mb-2">
+                Skip if rough framing or no rooms yet.
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {areaOptions.map(a => (
                   <TapCard
@@ -324,9 +370,6 @@ export function VisualLocationPicker({
                         setRoomInUnit(null);
                         setCustomRoom('');
                       }
-                      setSelectedComponentGroup(null);
-                      setSelectedSubComponent(null);
-                      setCustomComponent('');
                     }}
                   />
                 ))}
@@ -394,131 +437,73 @@ export function VisualLocationPicker({
           {contextHint && (
             <p className="text-xs text-muted-foreground italic">{contextHint}</p>
           )}
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Elevation</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-            {elevationOptions.map(e => (
-              <TapCard
-                key={e.label}
-                label={e.label}
-                icon={e.icon}
-                selected={selectedElevation === e.label}
-                onClick={() => {
-                  setSelectedElevation(e.label);
-                  setSelectedComponentGroup(null);
-                  setSelectedSubComponent(null);
-                  setCustomComponent('');
-                }}
-              />
-            ))}
-          </div>
-          {selectedElevation === 'Other' && (
-            <div className="mt-3 animate-fade-in">
-              <Input
-                value={customElevation}
-                onChange={e => setCustomElevation(e.target.value)}
-                placeholder="Describe the location…"
-                className="h-11"
-                autoFocus
-              />
-            </div>
+
+          {/* Component picker (REQUIRED, comes BEFORE elevation) */}
+          {componentGroups.length > 0 && (
+            <ComponentPicker
+              groups={componentGroups}
+              subOptions={subComponentOptions}
+              selectedGroup={selectedComponentGroup}
+              selectedSub={selectedSubComponent}
+              customComponent={customComponent}
+              onPickGroup={(label) => {
+                setSelectedComponentGroup(label);
+                setSelectedSubComponent(null);
+                setCustomComponent('');
+              }}
+              onPickSub={(label) => {
+                setSelectedSubComponent(label);
+                if (label !== 'Other') setCustomComponent('');
+              }}
+              onCustom={setCustomComponent}
+            />
           )}
-        </div>
-      )}
 
-      {/* Building Component picker (optional) */}
-      {componentGroups.length > 0 && (
-        <div className="space-y-3 animate-fade-in pt-1 border-t border-border">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Component <span className="font-normal normal-case">(optional)</span>
-            </p>
-            {selectedComponentGroup && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedComponentGroup(null);
-                  setSelectedSubComponent(null);
-                  setCustomComponent('');
-                }}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
-              >
-                Skip component
-              </button>
-            )}
-          </div>
-
-          {/* Top-level component group pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {componentGroups.map(g => (
-              <button
-                key={g.label}
-                type="button"
-                onClick={() => {
-                  setSelectedComponentGroup(g.label);
-                  setSelectedSubComponent(null);
-                  setCustomComponent('');
-                }}
-                className={cn(
-                  'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors min-h-[36px] flex items-center gap-1.5',
-                  selectedComponentGroup === g.label
-                    ? 'bg-secondary text-secondary-foreground border-secondary'
-                    : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
-                )}
-              >
-                <span>{g.icon}</span>
-                <span>{g.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Sub-component pills */}
-          {selectedComponentGroup && selectedComponentGroup !== 'Other' && subComponentOptions.length > 0 && (
+          {/* Elevation (OPTIONAL — shown after component is chosen) */}
+          {componentTagPart && (
             <div className="animate-fade-in">
-              <div className="flex items-center flex-wrap gap-2">
-                {subComponentOptions.map(sub => (
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Elevation <span className="font-normal normal-case">(optional)</span>
+                </p>
+                {selectedElevation && (
                   <button
-                    key={sub.label}
                     type="button"
                     onClick={() => {
-                      setSelectedSubComponent(sub.label);
-                      if (sub.label !== 'Other') setCustomComponent('');
+                      setSelectedElevation(null);
+                      setCustomElevation('');
                     }}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
-                      selectedSubComponent === sub.label
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
-                    )}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
                   >
-                    {sub.label}
+                    Skip elevation
                   </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setSelectedSubComponent('Other')}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
-                    selectedSubComponent === 'Other'
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
-                  )}
-                >
-                  Other
-                </button>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Custom component input */}
-          {(selectedComponentGroup === 'Other' || selectedSubComponent === 'Other') && (
-            <div className="animate-fade-in">
-              <Input
-                value={customComponent}
-                onChange={e => setCustomComponent(e.target.value)}
-                placeholder="Describe the component…"
-                className="h-10"
-                autoFocus
-              />
+              <p className="text-xs text-muted-foreground italic mb-2">
+                Skip for whole-exterior work (e.g., all four walls).
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                {elevationOptions.map(e => (
+                  <TapCard
+                    key={e.label}
+                    label={e.label}
+                    icon={e.icon}
+                    selected={selectedElevation === e.label}
+                    onClick={() => setSelectedElevation(e.label)}
+                  />
+                ))}
+              </div>
+              {selectedElevation === 'Other' && (
+                <div className="mt-3 animate-fade-in">
+                  <Input
+                    value={customElevation}
+                    onChange={e => setCustomElevation(e.target.value)}
+                    placeholder="Describe the location…"
+                    className="h-11"
+                    autoFocus
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
