@@ -9,7 +9,6 @@ import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { resolveBuildingType } from '@/lib/framingQuestionTrees';
 import { getIntentFlow, resolveIntentFromLegacy } from '@/lib/intentFlows';
-import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './COWizard';
 import type { FlowContext, WorkIntent } from '@/types/scopeQA';
