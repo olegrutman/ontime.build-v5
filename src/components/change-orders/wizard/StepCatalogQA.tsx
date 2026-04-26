@@ -383,7 +383,6 @@ export function StepCatalogQA({
             <Button
               onClick={handleConfirm}
               disabled={selected.size === 0}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               Continue with {selected.size} item{selected.size === 1 ? '' : 's'} →
             </Button>
