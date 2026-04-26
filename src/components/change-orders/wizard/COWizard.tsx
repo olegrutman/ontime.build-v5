@@ -138,6 +138,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   const [step, setStep] = useState(0);
   const [data, setData] = useState<COWizardData>({
     ...INITIAL_DATA,
+    pricingType: isTM ? 'tm' : INITIAL_DATA.pricingType,
     reason: preSelectedReason ?? null,
   });
   const [submitting, setSubmitting] = useState(false);
