@@ -570,15 +570,33 @@ function QuestionCard({
         </button>
       </div>
 
-      {question.annotation && (
+      {question.annotation && <AnnotationDetails annotation={question.annotation} />}
+    </div>
+  );
+}
+
+function AnnotationDetails({ annotation }: { annotation: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="pt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+      >
+        <ChevronDown className={cn('h-3 w-3 transition-transform', !open && '-rotate-90')} />
+        {open ? 'Hide' : 'Why we ask'}
+      </button>
+      {open && (
         <div
-          className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 p-2.5 text-xs text-foreground/80"
-          dangerouslySetInnerHTML={{ __html: question.annotation }}
+          className="mt-2 rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 p-2.5 text-xs text-foreground/80"
+          dangerouslySetInnerHTML={{ __html: annotation }}
         />
       )}
     </div>
   );
 }
+
 
 function PickCard({
   pick,
