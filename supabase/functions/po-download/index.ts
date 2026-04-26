@@ -259,8 +259,8 @@ const handler = async (req: Request): Promise<Response> => {
       if (!poId) return new Response(JSON.stringify({ error: "Missing po_id parameter" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
       const userClient = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
       const token = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-      if (claimsError || !claimsData?.claims) {
+      const { data: userData, error: userError } = await userClient.auth.getUser(token);
+      if (userError || !userData?.user) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
       }
       const { data: poData, error: poError } = await userClient.from("purchase_orders").select(PO_SELECT).eq("id", poId).single();
