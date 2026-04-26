@@ -364,8 +364,6 @@ export function VisualLocationPicker({
         />
       </div>
 
-      {/* Reusable Component picker block — used in both Interior and Exterior paths */}
-      {(() => null)()}
 
       {/* INSIDE PATH */}
       {insideOutside === 'inside' && (
