@@ -855,7 +855,7 @@ export type Database = {
             foreignKeyName: "co_line_items_catalog_item_id_fkey"
             columns: ["catalog_item_id"]
             isOneToOne: false
-            referencedRelation: "work_order_catalog"
+            referencedRelation: "catalog_definitions"
             referencedColumns: ["id"]
           },
           {
