@@ -22,6 +22,104 @@ interface VisualLocationPickerProps {
 
 type InsideOutside = 'inside' | 'outside' | null;
 
+interface ComponentPickerProps {
+  groups: ReturnType<typeof getComponentGroups>;
+  subOptions: { label: string; icon: string }[];
+  selectedGroup: string | null;
+  selectedSub: string | null;
+  customComponent: string;
+  onPickGroup: (label: string) => void;
+  onPickSub: (label: string) => void;
+  onCustom: (value: string) => void;
+}
+
+function ComponentPicker({
+  groups,
+  subOptions,
+  selectedGroup,
+  selectedSub,
+  customComponent,
+  onPickGroup,
+  onPickSub,
+  onCustom,
+}: ComponentPickerProps) {
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        Component <span className="font-normal normal-case text-destructive">*</span>
+      </p>
+
+      {/* Top-level component group pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {groups.map(g => (
+          <button
+            key={g.label}
+            type="button"
+            onClick={() => onPickGroup(g.label)}
+            className={cn(
+              'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors min-h-[36px] flex items-center gap-1.5',
+              selectedGroup === g.label
+                ? 'bg-secondary text-secondary-foreground border-secondary'
+                : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+            )}
+          >
+            <span>{g.icon}</span>
+            <span>{g.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Sub-component pills */}
+      {selectedGroup && selectedGroup !== 'Other' && subOptions.length > 0 && (
+        <div className="animate-fade-in">
+          <div className="flex items-center flex-wrap gap-2">
+            {subOptions.map(sub => (
+              <button
+                key={sub.label}
+                type="button"
+                onClick={() => onPickSub(sub.label)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
+                  selectedSub === sub.label
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+                )}
+              >
+                {sub.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => onPickSub('Other')}
+              className={cn(
+                'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
+                selectedSub === 'Other'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+              )}
+            >
+              Other
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom component input */}
+      {(selectedGroup === 'Other' || selectedSub === 'Other') && (
+        <div className="animate-fade-in">
+          <Input
+            value={customComponent}
+            onChange={e => onCustom(e.target.value)}
+            placeholder="Describe the component…"
+            className="h-10"
+            autoFocus
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VisualLocationPicker({
   projectId,
   onConfirm,
@@ -87,18 +185,19 @@ export function VisualLocationPicker({
     return `1–${scope.num_units} units`;
   }, [isMultifamily, scope]);
 
-  // Component groups based on scope + selected context
+  // Component groups based on scope + selected context.
+  // Component is now the primary axis: shown as soon as Level (interior) or
+  // Inside/Outside (exterior) is chosen, regardless of Area / Elevation.
   const componentGroups = useMemo(() => {
     if (insideOutside === 'inside') {
-      if (!selectedArea) return [];
+      if (!selectedLevel) return [];
       return getComponentGroups(scope ?? null, selectedLevel, false);
     }
     if (insideOutside === 'outside') {
-      if (!selectedElevation) return [];
       return getComponentGroups(scope ?? null, null, true);
     }
     return [];
-  }, [scope, selectedLevel, selectedArea, selectedElevation, insideOutside]);
+  }, [scope, selectedLevel, insideOutside]);
 
   const subComponentOptions = useMemo(() => {
     if (!selectedComponentGroup) return [];
@@ -122,11 +221,15 @@ export function VisualLocationPicker({
     return selectedComponentGroup;
   }, [selectedComponentGroup, selectedSubComponent, customComponent]);
 
-  // Build the tag live
+  // Build the tag live.
+  // Order: {Interior|Exterior} · {Level} · {Component / Sub} · {Area / Elevation}
+  // Component leads area so structural intent reads first; resolveZone keys on
+  // keywords, not position, so this is safe.
   const assembledTag = useMemo(() => {
     if (insideOutside === 'inside') {
       const parts = ['Interior'];
       if (selectedLevel) parts.push(selectedLevel);
+      if (componentTagPart) parts.push(componentTagPart);
       if (selectedArea === 'Other' && customArea.trim()) {
         parts.push(customArea.trim());
       } else if (selectedArea && selectedArea !== 'Other') {
@@ -141,27 +244,28 @@ export function VisualLocationPicker({
           parts.push(selectedArea);
         }
       }
-      if (componentTagPart) parts.push(componentTagPart);
       return parts.join(' · ');
     }
     if (insideOutside === 'outside') {
       const parts = ['Exterior'];
+      if (componentTagPart) parts.push(componentTagPart);
       if (selectedElevation === 'Other' && customElevation.trim()) {
         parts.push(customElevation.trim());
       } else if (selectedElevation && selectedElevation !== 'Other') {
         parts.push(selectedElevation);
       }
-      if (componentTagPart) parts.push(componentTagPart);
       return parts.join(' · ');
     }
     return '';
   }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation, componentTagPart]);
 
-  // Completion check
+  // Completion check.
+  // New rule: Level + Component is enough. Area is optional.
+  // If user starts an area path (Other / Unit interior), they must finish it.
   const isComplete = useMemo(() => {
     if (insideOutside === 'inside') {
       if (!selectedLevel) return false;
-      if (!selectedArea) return false;
+      if (!componentTagPart) return false;
       if (selectedArea === 'Other' && !customArea.trim()) return false;
       if (selectedArea === 'Unit interior') {
         if (!unitNumber.trim()) return false;
@@ -171,12 +275,12 @@ export function VisualLocationPicker({
       return true;
     }
     if (insideOutside === 'outside') {
-      if (!selectedElevation) return false;
+      if (!componentTagPart) return false;
       if (selectedElevation === 'Other' && !customElevation.trim()) return false;
       return true;
     }
     return false;
-  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
+  }, [insideOutside, selectedLevel, componentTagPart, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
   function TapCard({
     label,
@@ -260,6 +364,7 @@ export function VisualLocationPicker({
         />
       </div>
 
+
       {/* INSIDE PATH */}
       {insideOutside === 'inside' && (
         <div className="space-y-4 animate-fade-in">
@@ -300,10 +405,53 @@ export function VisualLocationPicker({
             </div>
           </div>
 
-          {/* Area grid */}
-          {selectedLevel && (
+          {/* Component picker (REQUIRED, comes BEFORE area) */}
+          {selectedLevel && componentGroups.length > 0 && (
+            <ComponentPicker
+              groups={componentGroups}
+              subOptions={subComponentOptions}
+              selectedGroup={selectedComponentGroup}
+              selectedSub={selectedSubComponent}
+              customComponent={customComponent}
+              onPickGroup={(label) => {
+                setSelectedComponentGroup(label);
+                setSelectedSubComponent(null);
+                setCustomComponent('');
+              }}
+              onPickSub={(label) => {
+                setSelectedSubComponent(label);
+                if (label !== 'Other') setCustomComponent('');
+              }}
+              onCustom={setCustomComponent}
+            />
+          )}
+
+          {/* Area grid (OPTIONAL — shown after component is chosen) */}
+          {selectedLevel && componentTagPart && (
             <div className="animate-fade-in">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Area</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Area <span className="font-normal normal-case">(optional)</span>
+                </p>
+                {selectedArea && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedArea(null);
+                      setCustomArea('');
+                      setUnitNumber('');
+                      setRoomInUnit(null);
+                      setCustomRoom('');
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Skip area
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground italic mb-2">
+                Skip if rough framing or no rooms yet.
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {areaOptions.map(a => (
                   <TapCard
@@ -318,9 +466,6 @@ export function VisualLocationPicker({
                         setRoomInUnit(null);
                         setCustomRoom('');
                       }
-                      setSelectedComponentGroup(null);
-                      setSelectedSubComponent(null);
-                      setCustomComponent('');
                     }}
                   />
                 ))}
@@ -388,131 +533,73 @@ export function VisualLocationPicker({
           {contextHint && (
             <p className="text-xs text-muted-foreground italic">{contextHint}</p>
           )}
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Elevation</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-            {elevationOptions.map(e => (
-              <TapCard
-                key={e.label}
-                label={e.label}
-                icon={e.icon}
-                selected={selectedElevation === e.label}
-                onClick={() => {
-                  setSelectedElevation(e.label);
-                  setSelectedComponentGroup(null);
-                  setSelectedSubComponent(null);
-                  setCustomComponent('');
-                }}
-              />
-            ))}
-          </div>
-          {selectedElevation === 'Other' && (
-            <div className="mt-3 animate-fade-in">
-              <Input
-                value={customElevation}
-                onChange={e => setCustomElevation(e.target.value)}
-                placeholder="Describe the location…"
-                className="h-11"
-                autoFocus
-              />
-            </div>
+
+          {/* Component picker (REQUIRED, comes BEFORE elevation) */}
+          {componentGroups.length > 0 && (
+            <ComponentPicker
+              groups={componentGroups}
+              subOptions={subComponentOptions}
+              selectedGroup={selectedComponentGroup}
+              selectedSub={selectedSubComponent}
+              customComponent={customComponent}
+              onPickGroup={(label) => {
+                setSelectedComponentGroup(label);
+                setSelectedSubComponent(null);
+                setCustomComponent('');
+              }}
+              onPickSub={(label) => {
+                setSelectedSubComponent(label);
+                if (label !== 'Other') setCustomComponent('');
+              }}
+              onCustom={setCustomComponent}
+            />
           )}
-        </div>
-      )}
 
-      {/* Building Component picker (optional) */}
-      {componentGroups.length > 0 && (
-        <div className="space-y-3 animate-fade-in pt-1 border-t border-border">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Component <span className="font-normal normal-case">(optional)</span>
-            </p>
-            {selectedComponentGroup && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedComponentGroup(null);
-                  setSelectedSubComponent(null);
-                  setCustomComponent('');
-                }}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
-              >
-                Skip component
-              </button>
-            )}
-          </div>
-
-          {/* Top-level component group pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {componentGroups.map(g => (
-              <button
-                key={g.label}
-                type="button"
-                onClick={() => {
-                  setSelectedComponentGroup(g.label);
-                  setSelectedSubComponent(null);
-                  setCustomComponent('');
-                }}
-                className={cn(
-                  'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors min-h-[36px] flex items-center gap-1.5',
-                  selectedComponentGroup === g.label
-                    ? 'bg-secondary text-secondary-foreground border-secondary'
-                    : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
-                )}
-              >
-                <span>{g.icon}</span>
-                <span>{g.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Sub-component pills */}
-          {selectedComponentGroup && selectedComponentGroup !== 'Other' && subComponentOptions.length > 0 && (
+          {/* Elevation (OPTIONAL — shown after component is chosen) */}
+          {componentTagPart && (
             <div className="animate-fade-in">
-              <div className="flex items-center flex-wrap gap-2">
-                {subComponentOptions.map(sub => (
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Elevation <span className="font-normal normal-case">(optional)</span>
+                </p>
+                {selectedElevation && (
                   <button
-                    key={sub.label}
                     type="button"
                     onClick={() => {
-                      setSelectedSubComponent(sub.label);
-                      if (sub.label !== 'Other') setCustomComponent('');
+                      setSelectedElevation(null);
+                      setCustomElevation('');
                     }}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
-                      selectedSubComponent === sub.label
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
-                    )}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
                   >
-                    {sub.label}
+                    Skip elevation
                   </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setSelectedSubComponent('Other')}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
-                    selectedSubComponent === 'Other'
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
-                  )}
-                >
-                  Other
-                </button>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Custom component input */}
-          {(selectedComponentGroup === 'Other' || selectedSubComponent === 'Other') && (
-            <div className="animate-fade-in">
-              <Input
-                value={customComponent}
-                onChange={e => setCustomComponent(e.target.value)}
-                placeholder="Describe the component…"
-                className="h-10"
-                autoFocus
-              />
+              <p className="text-xs text-muted-foreground italic mb-2">
+                Skip for whole-exterior work (e.g., all four walls).
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                {elevationOptions.map(e => (
+                  <TapCard
+                    key={e.label}
+                    label={e.label}
+                    icon={e.icon}
+                    selected={selectedElevation === e.label}
+                    onClick={() => setSelectedElevation(e.label)}
+                  />
+                ))}
+              </div>
+              {selectedElevation === 'Other' && (
+                <div className="mt-3 animate-fade-in">
+                  <Input
+                    value={customElevation}
+                    onChange={e => setCustomElevation(e.target.value)}
+                    placeholder="Describe the location…"
+                    className="h-11"
+                    autoFocus
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
