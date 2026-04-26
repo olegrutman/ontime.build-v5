@@ -519,11 +519,11 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
         {/* Step content */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {!isMobile && (
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">{currentStep.label}</h3>
-                <p className="text-sm text-muted-foreground">{currentStep.description}</p>
+              <div className="mb-3 xl:hidden">
+                <h3 className="text-base font-semibold leading-tight">{currentStep.label}</h3>
+                <p className="text-xs text-muted-foreground">{currentStep.description}</p>
               </div>
             )}
 
