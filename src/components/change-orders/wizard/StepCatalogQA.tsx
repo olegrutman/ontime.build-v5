@@ -61,12 +61,31 @@ export function StepCatalogQA({
     () => resolveBuildingType(scope?.home_type ?? null, workType),
     [scope?.home_type, workType]
   );
+  // Phase 5 — resolve which component the user already picked in Step 2,
+  // and use it to (a) optionally swap the intent flow if they're in the
+  // wrong family, and (b) pre-seed the first question's answer.
+  const componentResolution = useMemo(
+    () => resolveComponent(locationTag),
+    [locationTag]
+  );
+
   // Resolve which intent drives the flow. Explicit prop wins; otherwise
   // derive from legacy (reason, workType) so old entry points keep working.
-  const resolvedIntent: WorkIntent = useMemo(
+  const baseIntent: WorkIntent = useMemo(
     () => intent ?? resolveIntentFromLegacy(reason, workType),
     [intent, reason, workType]
   );
+  // Soft swap: if the picked intent is in a different family than the
+  // component, switch to the component's natural flow. We surface a one-line
+  // note so the user knows what happened and can override.
+  const swappedIntent = useMemo(
+    () => suggestIntentForComponent(baseIntent, componentResolution),
+    [baseIntent, componentResolution]
+  );
+  const [overrideOriginal, setOverrideOriginal] = useState(false);
+  const resolvedIntent: WorkIntent = swappedIntent && !overrideOriginal ? swappedIntent : baseIntent;
+  const intentWasSwapped = !!swappedIntent && !overrideOriginal;
+
   const flow = useMemo(
     () => getIntentFlow(resolvedIntent, buildingType),
     [resolvedIntent, buildingType]
@@ -86,12 +105,33 @@ export function StepCatalogQA({
     projectName: projectName ?? '',
   }), [buildingType, scope, locationTag, zone, reason, workType, projectName]);
 
-  const flowState = useQuestionFlow(flow, ctx);
+  // Build the question-flow seed: only pre-fill if the resolved component
+  // applies to the resolved intent's flow AND the first question id matches.
+  const flowSeed = useMemo(() => {
+    if (!componentResolution) return undefined;
+    const firstQ = flow.questions[0];
+    if (!firstQ || firstQ.id !== componentResolution.flowQuestionId) return undefined;
+    // Verify the answer id actually exists in the question (zone-aware
+    // questions resolve answers via answersFor; check both static + dynamic).
+    const staticAnswers = firstQ.answers ?? [];
+    const dynamicAnswers = firstQ.answersFor ? firstQ.answersFor(ctx) : [];
+    const exists =
+      staticAnswers.some((a) => a.id === componentResolution.answerId) ||
+      dynamicAnswers.some((a) => a.id === componentResolution.answerId);
+    if (!exists) return undefined;
+    return {
+      initialAnswers: { [firstQ.id]: componentResolution.answerId },
+      startIndex: 1,
+    };
+  }, [componentResolution, flow, ctx]);
+
+  const flowState = useQuestionFlow(flow, ctx, flowSeed);
   const [picks, setPicks] = useState<PickState[] | null>(null);
   const [extracted, setExtracted] = useState<SuggestResponse['extracted']>(null);
   const [refinementDismissed, setRefinementDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showMaybe, setShowMaybe] = useState(false);
+
 
   const runMatch = useCallback(async () => {
     if (!flowState.isComplete) flowState.finish();
