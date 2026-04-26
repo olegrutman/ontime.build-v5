@@ -488,29 +488,29 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       )}
 
       <div className="flex flex-1 min-h-0">
-        {/* Desktop nav */}
+        {/* Desktop nav (only on very wide screens — chips in header carry context elsewhere) */}
         {!isMobile && (
-          <nav className="w-56 shrink-0 border-r p-3 space-y-1 bg-accent/30">
+          <nav className="hidden xl:flex xl:flex-col w-48 shrink-0 border-r p-2 gap-0.5 bg-accent/30">
             {STEPS.map((s, i) => (
               <button
                 key={s.key}
                 onClick={() => i <= step && setStep(i)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors w-full',
+                  'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left text-sm transition-colors w-full',
                   i === step && 'bg-primary/10 text-foreground font-medium',
                   i < step && 'text-foreground hover:bg-muted/50 cursor-pointer',
                   i > step && 'text-muted-foreground/40 cursor-not-allowed',
                 )}
               >
                 <span className={cn(
-                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0',
+                  'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium shrink-0',
                   i < step || i === step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
                 )}>
-                  {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  {i < step ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate">{s.label}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{s.description}</p>
+                  <p className="truncate text-[13px]">{s.label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{s.description}</p>
                 </div>
               </button>
             ))}
