@@ -1182,11 +1182,42 @@ function StepReview({
               );
             })}
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Tap a quantity to override Sasha's estimate. Source badge will flip to <span className="font-semibold">Manual</span>.
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] text-muted-foreground flex-1">
+              Tap a quantity to override Sasha's estimate. Source badge will flip to <span className="font-semibold">Manual</span>.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1 shrink-0"
+              onClick={() => setAddItemsOpen(true)}
+            >
+              + Add more items
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Add-more-items dialog */}
+      <Dialog open={addItemsOpen} onOpenChange={setAddItemsOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
+          <div className="px-6 py-4 border-b shrink-0">
+            <DialogTitle className="text-base font-semibold">Add more scope items</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {data.locationTag ? `Location: ${data.locationTag}` : 'Pick additional items for this CO/WO.'}
+            </DialogDescription>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
+            <StepCatalog data={data} onChange={onChange} projectId={projectId} intent={data.intent ?? null} />
+          </div>
+          <div className="flex items-center justify-end border-t px-4 sm:px-6 py-3 shrink-0 bg-card">
+            <Button size="sm" onClick={() => setAddItemsOpen(false)}>
+              Done · {data.selectedItems.length} total
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Team */}
       <div className="space-y-2">
