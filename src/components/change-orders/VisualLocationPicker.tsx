@@ -123,11 +123,15 @@ export function VisualLocationPicker({
     return selectedComponentGroup;
   }, [selectedComponentGroup, selectedSubComponent, customComponent]);
 
-  // Build the tag live
+  // Build the tag live.
+  // Order: {Interior|Exterior} · {Level} · {Component / Sub} · {Area / Elevation}
+  // Component leads area so structural intent reads first; resolveZone keys on
+  // keywords, not position, so this is safe.
   const assembledTag = useMemo(() => {
     if (insideOutside === 'inside') {
       const parts = ['Interior'];
       if (selectedLevel) parts.push(selectedLevel);
+      if (componentTagPart) parts.push(componentTagPart);
       if (selectedArea === 'Other' && customArea.trim()) {
         parts.push(customArea.trim());
       } else if (selectedArea && selectedArea !== 'Other') {
@@ -142,27 +146,28 @@ export function VisualLocationPicker({
           parts.push(selectedArea);
         }
       }
-      if (componentTagPart) parts.push(componentTagPart);
       return parts.join(' · ');
     }
     if (insideOutside === 'outside') {
       const parts = ['Exterior'];
+      if (componentTagPart) parts.push(componentTagPart);
       if (selectedElevation === 'Other' && customElevation.trim()) {
         parts.push(customElevation.trim());
       } else if (selectedElevation && selectedElevation !== 'Other') {
         parts.push(selectedElevation);
       }
-      if (componentTagPart) parts.push(componentTagPart);
       return parts.join(' · ');
     }
     return '';
   }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation, componentTagPart]);
 
-  // Completion check
+  // Completion check.
+  // New rule: Level + Component is enough. Area is optional.
+  // If user starts an area path (Other / Unit interior), they must finish it.
   const isComplete = useMemo(() => {
     if (insideOutside === 'inside') {
       if (!selectedLevel) return false;
-      if (!selectedArea) return false;
+      if (!componentTagPart) return false;
       if (selectedArea === 'Other' && !customArea.trim()) return false;
       if (selectedArea === 'Unit interior') {
         if (!unitNumber.trim()) return false;
@@ -172,12 +177,12 @@ export function VisualLocationPicker({
       return true;
     }
     if (insideOutside === 'outside') {
-      if (!selectedElevation) return false;
+      if (!componentTagPart) return false;
       if (selectedElevation === 'Other' && !customElevation.trim()) return false;
       return true;
     }
     return false;
-  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
+  }, [insideOutside, selectedLevel, componentTagPart, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
   function TapCard({
     label,
