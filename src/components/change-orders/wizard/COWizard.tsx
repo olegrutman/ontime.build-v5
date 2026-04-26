@@ -663,21 +663,28 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
             <h2 className="text-base font-semibold leading-tight">New {isTM ? 'Work Order' : 'Change Order'}</h2>
             <p className="text-[11px] text-muted-foreground truncate">{orgName} · Step {step + 1} of {STEPS.length}{currentStep ? ` · ${currentStep.label}` : ''}</p>
           </div>
-          {/* Context chips: intent + reason + location */}
+          {/* Context chips: intent + reason + location — uniform neutral styling */}
           <div className="hidden md:flex items-center gap-1.5 flex-1 min-w-0 justify-center">
             {data.intent && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold whitespace-nowrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-foreground text-[11px] font-medium whitespace-nowrap">
                 <span aria-hidden>{WORK_INTENT_ICONS[data.intent]}</span>
                 {WORK_INTENT_LABELS[data.intent]}
               </span>
             )}
             {data.reason && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium whitespace-nowrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-foreground text-[11px] font-medium whitespace-nowrap">
+                {CO_REASON_COLORS[data.reason] && (
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: CO_REASON_COLORS[data.reason].text }}
+                    aria-hidden
+                  />
+                )}
                 {CO_REASON_LABELS[data.reason]}
               </span>
             )}
             {data.locationTag && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-[11px] font-medium max-w-[260px]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-foreground text-[11px] font-medium max-w-[260px]">
                 <span aria-hidden>📍</span>
                 <span className="truncate">{data.locationTag}</span>
               </span>
