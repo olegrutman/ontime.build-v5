@@ -244,12 +244,24 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
     currentRole === 'GC_PM' ? 'GC' : currentRole === 'TC_PM' ? 'TC' : 'FC';
   const orgName = (userOrgRoles?.[0] as any)?.organization?.name ?? role;
 
-  // Project name for AI
+  // Project name + scope context for AI
   const { data: project } = useQuery({
     queryKey: ['project-name-co', projectId],
     queryFn: async () => {
       const { data: p } = await supabase.from('projects').select('name').eq('id', projectId).single();
       return p;
+    },
+  });
+
+  const { data: projectScope } = useQuery({
+    queryKey: ['project-scope-co', projectId],
+    queryFn: async () => {
+      const { data: s } = await supabase
+        .from('project_scope_details')
+        .select('home_type, framing_method, floors, total_sqft, construction_type')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      return s;
     },
   });
 
