@@ -281,44 +281,42 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
   // ── PHASE 3: ITEMS (mode switch + tabs) ──
   return (
     <div className="space-y-4">
-      {/* Locked context: location + reason + workType chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
-          <MapPin className="h-3 w-3" />
-          {data.locationTag}
-          {!lockedFromWizard && (
+      {/* When inside the wizard, the dialog header already shows location/reason/intent.
+         When used standalone, surface a quiet chip row so the user can edit them. */}
+      {!lockedFromWizard && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
+            <MapPin className="h-3 w-3" />
+            {data.locationTag}
             <button onClick={() => setPhase('location')} className="ml-1 text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+          {data.reason && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-foreground text-xs font-medium">
+              {data.reason && CO_REASON_COLORS[data.reason] && (
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: CO_REASON_COLORS[data.reason].text }}
+                  aria-hidden
+                />
+              )}
+              {CO_REASON_LABELS[data.reason] ?? data.reason}
+              <button onClick={() => setPhase('reason')} className="ml-1 opacity-60 hover:opacity-100">✕</button>
+            </div>
+          )}
+          {intent && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-foreground text-xs font-medium">
+              <span aria-hidden>{WORK_INTENT_ICONS[intent]}</span>
+              {WORK_INTENT_LABELS[intent]}
+            </div>
           )}
         </div>
-        {data.reason && CO_REASON_COLORS[data.reason] && (
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-            style={{ backgroundColor: CO_REASON_COLORS[data.reason].bg, color: CO_REASON_COLORS[data.reason].text }}
-          >
-            {CO_REASON_LABELS[data.reason] ?? data.reason}
-            {!lockedFromWizard && (
-              <button onClick={() => setPhase('reason')} className="ml-1 opacity-60 hover:opacity-100">✕</button>
-            )}
-          </div>
-        )}
-        {intent && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-            <span aria-hidden>{WORK_INTENT_ICONS[intent]}</span>
-            {WORK_INTENT_LABELS[intent]}
-          </div>
-        )}
-        {workTypeLabel && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 text-xs font-semibold">
-            {workTypeLabel}
-          </div>
-        )}
-        {lockedFromWizard && (
-          <span className="text-[10px] text-muted-foreground ml-auto">Edit in earlier steps</span>
-        )}
-      </div>
+      )}
 
-      {/* Mode switch */}
-      <StepCatalogModeSwitch value={mode} onChange={(m) => { setMode(m); setTypeResults(null); setTypeSelected(new Set()); }} />
+      {/* Mode switch — visible in browse/type modes; in QA mode it sits at the
+          bottom escape row so the question owns the top of the card. */}
+      {mode !== 'qa' && (
+        <StepCatalogModeSwitch value={mode} onChange={(m) => { setMode(m); setTypeResults(null); setTypeSelected(new Set()); }} />
+      )}
 
       {/* QA mode */}
       {mode === 'qa' && data.locationTag && data.reason && (

@@ -79,6 +79,13 @@ export interface ScopeQuestion {
   hint?: string;
   grid?: 'cols-3' | 'cols-4' | 'cols-5' | 'cols-6' | 'scale' | 'multiselect';
   answers: ScopeAnswer[];
+  /** Optional context-aware answer resolver. When present, the renderer should
+   *  use this instead of the static `answers` array. Lets a single question
+   *  ("What member was damaged?") show a roof-specific list when ctx.zone === 'roof',
+   *  a wall-specific list when ctx.zone === 'interior_wall', etc. */
+  answersFor?: (ctx: FlowContext) => ScopeAnswer[];
+  /** Optional context-aware question text. Same idea as `answersFor`. */
+  textFor?: (ctx: FlowContext) => string;
   annotation?: string;
   why?: string;
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Keyboard, Sparkles, Check, Pencil, MapPin, ChevronDown } from 'lucide-react';
+import { Loader2, ArrowLeft, Keyboard, Sparkles, Check, Pencil, MapPin, ChevronDown, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectScope } from '@/hooks/useProjectScope';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
@@ -9,7 +9,6 @@ import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { resolveBuildingType } from '@/lib/framingQuestionTrees';
 import { getIntentFlow, resolveIntentFromLegacy } from '@/lib/intentFlows';
-import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './COWizard';
 import type { FlowContext, WorkIntent } from '@/types/scopeQA';
@@ -193,8 +192,6 @@ export function StepCatalogQA({
     }
   }
 
-  // ── HEADER ──
-  const reasonColors = CO_REASON_COLORS[reason as COReasonCode];
   const showRefinementBanner =
     !!picks &&
     !!extracted?.zone_refinement &&
@@ -203,32 +200,19 @@ export function StepCatalogQA({
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      {/* Context pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 text-xs font-medium">
-          <MapPin className="h-3 w-3" /> {locationTag || 'Location'}
-        </div>
-        {/* Intent pill — the single source of truth for which flow Sasha is running */}
-        <div className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
-          ✦ {WORK_INTENT_LABELS[resolvedIntent]}
-        </div>
-        {reasonColors && reason && reason !== resolvedIntent && (
-          <div
-            className="px-2.5 py-1 rounded-full text-[10px] font-medium opacity-80"
-            style={{ backgroundColor: reasonColors.bg, color: reasonColors.text }}
-          >
-            {CO_REASON_LABELS[reason as COReasonCode] ?? reason}
-          </div>
-        )}
-        <div className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 text-[10px] font-medium">
-          {buildingType.replace('_', ' ')}
-        </div>
+      {/* Quiet context line — single source for "what we're scoping". */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <MapPin className="h-3 w-3 shrink-0" />
+        <span className="truncate">
+          Editing scope for <span className="text-foreground font-medium">{locationTag || 'this location'}</span>
+          <span className="opacity-60"> · {WORK_INTENT_LABELS[resolvedIntent]}</span>
+        </span>
       </div>
 
       {/* Progress bar — linear */}
       <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all"
+          className="h-full bg-primary transition-all"
           style={{
             width: `${
               picks
@@ -246,7 +230,8 @@ export function StepCatalogQA({
             const val = flowState.answers[q.id];
             if (!val) return null;
             const isSkip = val === '__skip__';
-            const ans = q.answers.find(a => a.id === val);
+            const resolvedAnswers = q.answersFor ? q.answersFor(ctx) : q.answers;
+            const ans = resolvedAnswers.find(a => a.id === val);
             const label = isSkip ? 'Skipped' : (ans?.label ?? String(val));
             return (
               <button
@@ -272,19 +257,20 @@ export function StepCatalogQA({
           question={flowState.currentQuestion}
           questionIndex={flowState.currentIdx}
           totalQuestions={flowState.totalQuestions}
+          ctx={ctx}
           onAnswer={(value) => flowState.answer(flowState.currentQuestion.id, value)}
         />
       )}
 
       {/* SUMMARY CARD (between flow finish and AI call) */}
       {flowState.isComplete && !picks && !suggestMutation.isPending && (
-        <div className="rounded-lg border-2 border-amber-200 bg-amber-50/40 dark:bg-amber-950/10 p-4 space-y-3">
+        <div className="rounded-lg border bg-card p-4 space-y-3">
           <div className="flex items-start gap-3">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-sm shrink-0">
+            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm shrink-0">
               ✦
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Sasha's read
               </p>
               <p className="mt-1 text-sm text-foreground leading-relaxed">
@@ -292,8 +278,8 @@ export function StepCatalogQA({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-amber-200/40">
-            <Button onClick={runMatch} className="bg-amber-600 hover:bg-amber-700 text-white">
+          <div className="flex flex-wrap gap-2 pt-2 border-t">
+            <Button onClick={runMatch}>
               <Sparkles className="h-4 w-4 mr-1.5" /> Match catalog items
             </Button>
             <Button variant="outline" size="sm" onClick={() => flowState.back()}>
@@ -307,8 +293,8 @@ export function StepCatalogQA({
       {suggestMutation.isPending && (
         <div className="flex flex-col items-center justify-center py-10 gap-3">
           <div className="relative h-16 w-16">
-            <div className="absolute inset-0 rounded-full bg-amber-400/20 animate-ping" />
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xl">
+            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+            <div className="absolute inset-2 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl">
               ✦
             </div>
           </div>
@@ -396,7 +382,6 @@ export function StepCatalogQA({
             <Button
               onClick={handleConfirm}
               disabled={selected.size === 0}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               Continue with {selected.size} item{selected.size === 1 ? '' : 's'} →
             </Button>
@@ -409,12 +394,15 @@ export function StepCatalogQA({
 
       {/* ESCAPE ROW */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1">
           <Button variant="ghost" size="sm" onClick={() => flowState.back()} disabled={flowState.currentIdx === 0 && !picks}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
           <Button variant="ghost" size="sm" onClick={handleFallbackType}>
             <Keyboard className="h-4 w-4 mr-1" /> Type instead
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onFallbackToBrowse}>
+            <LayoutGrid className="h-4 w-4 mr-1" /> Browse catalog
           </Button>
         </div>
         {!flowState.isComplete && flowState.currentIdx >= 2 && !picks && (
@@ -433,11 +421,13 @@ function QuestionCard({
   question,
   questionIndex,
   totalQuestions,
+  ctx,
   onAnswer,
 }: {
   question: import('@/types/scopeQA').ScopeQuestion;
   questionIndex: number;
   totalQuestions: number;
+  ctx: FlowContext;
   onAnswer: (value: string) => void;
 }) {
   const gridClass = (() => {
@@ -452,12 +442,14 @@ function QuestionCard({
     }
   })();
 
-  return (
-    <div className="relative rounded-lg border bg-card p-4 space-y-3">
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-amber-400 rounded-t-lg" />
+  // Resolve zone-aware text and answers, falling back to static fields.
+  const text = question.textFor ? question.textFor(ctx) : question.text;
+  const answers = question.answersFor ? question.answersFor(ctx) : question.answers;
 
-      <div className="flex items-start gap-3 pt-1">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-sm shrink-0">
+  return (
+    <div className="rounded-lg border bg-card p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm shrink-0">
           ✦
         </div>
         <div className="flex-1 min-w-0">
@@ -465,33 +457,25 @@ function QuestionCard({
             Question {questionIndex + 1} of {totalQuestions}
           </p>
           <h3 className="font-bold text-foreground leading-tight" style={{ fontSize: '1.1rem' }}>
-            {question.text}
+            {text}
           </h3>
           {question.hint && (
             <p className="mt-1 text-xs italic text-muted-foreground">{question.hint}</p>
           )}
         </div>
-        {question.why && (
-          <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 text-[10px] font-semibold">
-            {question.why}
-          </span>
-        )}
       </div>
 
       <div className={cn('grid gap-2', gridClass)}>
-        {question.answers.map(a => (
+        {answers.map(a => (
           <button
             key={a.id}
             onClick={() => onAnswer(a.id)}
             className={cn(
-              'relative flex flex-col items-center text-center gap-1 px-2 py-3 rounded-lg border-2 transition-all',
-              'border-border hover:border-amber-400 hover:bg-amber-50/40 dark:hover:bg-amber-950/10'
+              'relative flex flex-col items-center text-center gap-1 px-2 py-3 rounded-lg border transition-all',
+              'border-border hover:border-primary hover:bg-primary/5'
             )}
           >
-            {a.spec && (
-              <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-purple-500" aria-label="Specific to this building type" />
-            )}
-            {a.icon && <span className="text-lg leading-none">{a.icon}</span>}
+            {a.icon && <span className="text-lg leading-none text-muted-foreground">{a.icon}</span>}
             <span className="text-xs font-semibold text-foreground leading-tight">{a.label}</span>
             {a.sub && <span className="text-[10px] text-muted-foreground leading-tight">{a.sub}</span>}
           </button>
@@ -511,7 +495,7 @@ function QuestionCard({
 
       {question.annotation && (
         <div
-          className="rounded-md border-l-2 border-purple-500 bg-purple-50/50 dark:bg-purple-950/10 p-2.5 text-xs text-foreground/80"
+          className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 p-2.5 text-xs text-foreground/80"
           dangerouslySetInnerHTML={{ __html: question.annotation }}
         />
       )}

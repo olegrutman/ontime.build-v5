@@ -1,4 +1,168 @@
-import type { ScopeFlow, BuildingType, FlowScenario } from '@/types/scopeQA';
+import type { ScopeFlow, BuildingType, FlowScenario, ScopeAnswer, FlowContext } from '@/types/scopeQA';
+import type { Zone } from '@/types/catalog';
+
+// ── Zone-aware answer lists ───────────────────────────────────
+// These let a single "what member?" question render a list that matches
+// the location the user already picked, instead of dumping every framing
+// member in every situation.
+
+const MEMBERS_BY_ZONE: Partial<Record<Zone, ScopeAnswer[]>> & { default: ScopeAnswer[] } = {
+  roof: [
+    { id: 'sheathing_panel', label: 'Sheathing panel', icon: '▦', sub: 'OSB / ply' },
+    { id: 'rafter',          label: 'Rafter',          icon: '⟋', sub: 'sloped' },
+    { id: 'roof_truss',      label: 'Roof truss',      icon: '△', sub: 'engineered' },
+    { id: 'ridge_beam',      label: 'Ridge beam',      icon: '▭' },
+    { id: 'ceiling_joist',   label: 'Ceiling joist',   icon: '─', sub: 'attic / flat' },
+    { id: 'fascia',          label: 'Fascia / sub-fascia', icon: '━' },
+    { id: 'valley',          label: 'Valley framing',  icon: '⌵' },
+    { id: 'collar_tie',      label: 'Collar tie',      icon: '─' },
+  ],
+  interior_wall: [
+    { id: '2x_stud',     label: '2x wall stud',  icon: '▮', sub: '2x4 / 2x6' },
+    { id: 'header_lvl',  label: 'Header / LVL',  icon: '▭', sub: 'over opening' },
+    { id: 'top_plate',   label: 'Top plate',     icon: '═' },
+    { id: 'bottom_plate',label: 'Bottom plate',  icon: '═' },
+    { id: 'blocking',    label: 'Blocking',      icon: '▪' },
+    { id: 'king_jack',   label: 'King / jack stud', icon: '▮', sub: 'at opening' },
+  ],
+  exterior_wall: [
+    { id: '2x_stud',         label: '2x wall stud',     icon: '▮', sub: '2x4 / 2x6' },
+    { id: 'sheathing_panel', label: 'Sheathing panel',  icon: '▦', sub: 'OSB / ply' },
+    { id: 'header_lvl',      label: 'Header / LVL',     icon: '▭' },
+    { id: 'sill_plate',      label: 'Sill plate',       icon: '═', sub: 'PT' },
+    { id: 'top_plate',       label: 'Top plate',        icon: '═' },
+    { id: 'rim_band',        label: 'Rim / band joist', icon: '┃' },
+    { id: 'king_jack',       label: 'King / jack stud', icon: '▮' },
+  ],
+  interior_floor: [
+    { id: 'floor_joist',  label: '2x floor joist', icon: '═', sub: 'dimensional' },
+    { id: 'i_joist',      label: 'I-joist (TJI)',  icon: 'I', sub: 'engineered' },
+    { id: 'rim_band',     label: 'Rim / band joist', icon: '┃' },
+    { id: 'subfloor',     label: 'Subfloor panel', icon: '▦', sub: 'OSB / ply' },
+    { id: 'floor_beam',   label: 'Floor beam / LVL', icon: '▭' },
+    { id: 'blocking',     label: 'Blocking',       icon: '▪' },
+  ],
+  interior_ceiling: [
+    { id: 'ceiling_joist',label: 'Ceiling joist',   icon: '─' },
+    { id: 'i_joist',      label: 'I-joist (TJI)',   icon: 'I' },
+    { id: 'header_lvl',   label: 'Header / LVL',    icon: '▭' },
+    { id: 'blocking',     label: 'Blocking',        icon: '▪' },
+  ],
+  envelope_opening: [
+    { id: 'header_lvl',  label: 'Header / LVL',     icon: '▭', sub: 'over opening' },
+    { id: 'king_jack',   label: 'King / jack stud', icon: '▮' },
+    { id: 'sill',        label: 'Rough sill',       icon: '═' },
+    { id: 'cripple',     label: 'Cripple stud',     icon: '▮', sub: 'short' },
+    { id: 'sheathing_panel', label: 'Sheathing at opening', icon: '▦' },
+  ],
+  stairs: [
+    { id: 'stringer',  label: 'Stair stringer', icon: '⟍' },
+    { id: 'tread',     label: 'Tread',          icon: '═' },
+    { id: 'riser',     label: 'Riser',          icon: '┃' },
+    { id: 'landing',   label: 'Landing framing',icon: '▦' },
+    { id: 'header_lvl',label: 'Header at stair',icon: '▭' },
+  ],
+  structural: [
+    { id: 'beam',       label: 'Beam (LVL/PSL/steel)', icon: '▭', sub: 'engineered' },
+    { id: 'column',     label: 'Column / post',        icon: '┃' },
+    { id: 'shear_panel',label: 'Shear panel',          icon: '▦', sub: 'rated' },
+    { id: 'hold_down',  label: 'Hold-down / strap',    icon: '⊥' },
+    { id: 'header_lvl', label: 'Header / LVL',         icon: '▭' },
+    { id: 'rim_band',   label: 'Rim / band joist',     icon: '┃' },
+  ],
+  basement: [
+    { id: 'floor_joist', label: 'Floor joist (above)', icon: '═' },
+    { id: 'i_joist',     label: 'I-joist (TJI)',       icon: 'I' },
+    { id: 'beam',        label: 'Beam',                icon: '▭' },
+    { id: 'column',      label: 'Column / post',       icon: '┃' },
+    { id: 'sill_plate',  label: 'Sill plate',          icon: '═', sub: 'PT' },
+    { id: 'rim_band',    label: 'Rim / band joist',    icon: '┃' },
+  ],
+  foundation: [
+    { id: 'sill_plate', label: 'Sill plate',     icon: '═', sub: 'PT' },
+    { id: 'rim_band',   label: 'Rim / band joist', icon: '┃' },
+    { id: 'anchor',     label: 'Anchor bolt / strap', icon: '⊥' },
+    { id: 'beam',       label: 'Foundation beam', icon: '▭' },
+  ],
+  deck: [
+    { id: 'deck_joist',  label: 'Deck joist',      icon: '═', sub: 'PT' },
+    { id: 'deck_beam',   label: 'Deck beam',       icon: '▭' },
+    { id: 'deck_post',   label: 'Deck post',       icon: '┃' },
+    { id: 'ledger',      label: 'Ledger board',    icon: '━', sub: 'at house' },
+    { id: 'rail_post',   label: 'Rail post',       icon: '┃' },
+  ],
+  default: [
+    { id: '2x_stud',       label: '2x wall stud',    icon: '▮', sub: '2x4 or 2x6' },
+    { id: 'floor_joist',   label: 'Floor joist',     icon: '═', sub: 'dimensional' },
+    { id: 'i_joist',       label: 'I-joist (TJI)',   icon: 'I', sub: 'engineered' },
+    { id: 'ceiling_joist', label: 'Ceiling joist',   icon: '─', sub: 'attic / flat' },
+    { id: 'rafter',        label: 'Rafter',          icon: '⟋', sub: 'sloped roof' },
+    { id: 'roof_truss',    label: 'Roof truss',      icon: '△', sub: 'engineered' },
+    { id: 'header_lvl',    label: 'Header / LVL',    icon: '▭', sub: 'over opening' },
+    { id: 'stringer',      label: 'Stair stringer',  icon: '⟍' },
+  ],
+};
+
+const ACTIONS_BY_ZONE: Record<'roof' | 'sheet_goods' | 'default', ScopeAnswer[]> = {
+  roof: [
+    { id: 'punctured',     label: 'Punctured / torn',    icon: '🕳' },
+    { id: 'cut_for_pen',   label: 'Cut for penetration', icon: '✂', sub: 'vent / pipe' },
+    { id: 'broken_split',  label: 'Broken / cracked',    icon: '💥' },
+    { id: 'wind_damage',   label: 'Blown off / wind',    icon: '🌬' },
+    { id: 'water_damage',  label: 'Water-damaged',       icon: '💧' },
+    { id: 'fastener_pullout', label: 'Fasteners pulled', icon: '◉' },
+    { id: 'damaged_end',   label: 'Damaged at edge',     icon: '◀' },
+    { id: 'unsure',        label: 'Not sure',            icon: '❓' },
+  ],
+  sheet_goods: [
+    { id: 'punctured',    label: 'Punctured',         icon: '🕳' },
+    { id: 'cut_for_pen',  label: 'Cut for penetration', icon: '✂' },
+    { id: 'broken_split', label: 'Broken / cracked',  icon: '💥' },
+    { id: 'water_damage', label: 'Water-damaged',     icon: '💧' },
+    { id: 'damaged_end',  label: 'Damaged at edge',   icon: '◀' },
+    { id: 'unsure',       label: 'Not sure',          icon: '❓' },
+  ],
+  default: [
+    { id: 'cut_through',      label: 'Cut through',         icon: '✂' },
+    { id: 'notched_deep',     label: 'Notched too deep',    icon: '◣', sub: '> IRC limit' },
+    { id: 'drilled_oversize', label: 'Drilled oversized',   icon: '🕳', sub: '> 1/3 depth' },
+    { id: 'hole_near_end',    label: 'Hole near bearing',   icon: '◉', sub: '< 2" to end' },
+    { id: 'broken_split',     label: 'Broken / split',      icon: '💥' },
+    { id: 'damaged_end',      label: 'Damaged end bearing', icon: '◀' },
+    { id: 'cut_out',          label: 'Cut out entirely',    icon: '✕' },
+    { id: 'unsure',           label: 'Not sure',            icon: '❓' },
+  ],
+};
+
+export function membersForZone(ctx: FlowContext): ScopeAnswer[] {
+  if (!ctx.zone) return MEMBERS_BY_ZONE.default;
+  return MEMBERS_BY_ZONE[ctx.zone] ?? MEMBERS_BY_ZONE.default;
+}
+
+export function actionsForZone(ctx: FlowContext): ScopeAnswer[] {
+  if (ctx.zone === 'roof') return ACTIONS_BY_ZONE.roof;
+  const tag = (ctx.locationTag || '').toLowerCase();
+  if (/(sheathing|subfloor|deck panel)/.test(tag)) return ACTIONS_BY_ZONE.sheet_goods;
+  return ACTIONS_BY_ZONE.default;
+}
+
+export function memberQuestionTextForZone(ctx: FlowContext): string {
+  switch (ctx.zone) {
+    case 'roof':             return 'What part of the roof system was damaged?';
+    case 'interior_wall':    return 'What wall member was damaged?';
+    case 'exterior_wall':    return 'What exterior-wall member was damaged?';
+    case 'interior_floor':   return 'What floor member was damaged?';
+    case 'interior_ceiling': return 'What ceiling member was damaged?';
+    case 'envelope_opening': return 'What at the opening was damaged?';
+    case 'stairs':           return 'What stair member was damaged?';
+    case 'structural':       return 'Which structural member was damaged?';
+    case 'basement':         return 'What basement framing member was damaged?';
+    case 'foundation':       return 'What at the foundation was damaged?';
+    case 'deck':             return 'What deck member was damaged?';
+    default:                 return 'What framing member was damaged?';
+  }
+}
+
 
 export const FLOWS: Record<BuildingType, Record<FlowScenario, ScopeFlow>> = {
   // ═══════════════ CUSTOM HOME (single-family wood) ═══════════════
@@ -10,34 +174,19 @@ export const FLOWS: Record<BuildingType, Record<FlowScenario, ScopeFlow>> = {
         {
           id: 'member',
           text: 'What framing member was damaged?',
-          hint: 'Custom home defaults — walls, floors, roof structure.',
+          hint: 'Options match the location you picked.',
           grid: 'cols-4',
-          answers: [
-            { id: '2x_stud',       label: '2x wall stud',    icon: '▮', sub: '2x4 or 2x6' },
-            { id: 'floor_joist',   label: 'Floor joist',     icon: '═', sub: 'dimensional' },
-            { id: 'i_joist',       label: 'I-joist (TJI)',   icon: 'I', sub: 'engineered' },
-            { id: 'ceiling_joist', label: 'Ceiling joist',   icon: '─', sub: 'attic / flat' },
-            { id: 'rafter',        label: 'Rafter',          icon: '⟋', sub: 'sloped roof' },
-            { id: 'roof_truss',    label: 'Roof truss',      icon: '△', sub: 'engineered' },
-            { id: 'header_lvl',    label: 'Header / LVL',    icon: '▭', sub: 'over opening' },
-            { id: 'stringer',      label: 'Stair stringer',  icon: '⟍', sub: 'stringer' },
-          ],
+          answersFor: membersForZone,
+          textFor: memberQuestionTextForZone,
+          answers: MEMBERS_BY_ZONE.default,
         },
         {
           id: 'action',
           text: 'What did the other trade do to it?',
           hint: 'Common on residential — plumbing, HVAC, electrical rough-ins.',
           grid: 'cols-4',
-          answers: [
-            { id: 'cut_through',      label: 'Cut through',         icon: '✂' },
-            { id: 'notched_deep',     label: 'Notched too deep',    icon: '◣', sub: '> IRC limit' },
-            { id: 'drilled_oversize', label: 'Drilled oversized',   icon: '🕳', sub: '> 1/3 depth' },
-            { id: 'hole_near_end',    label: 'Hole near bearing',   icon: '◉', sub: '< 2" to end' },
-            { id: 'broken_split',     label: 'Broken / split',      icon: '💥' },
-            { id: 'damaged_end',      label: 'Damaged end bearing', icon: '◀' },
-            { id: 'cut_out',          label: 'Cut out entirely',    icon: '✕' },
-            { id: 'unsure',           label: 'Not sure',            icon: '❓' },
-          ],
+          answersFor: actionsForZone,
+          answers: ACTIONS_BY_ZONE.default,
         },
         {
           id: 'scale',
@@ -211,18 +360,27 @@ export const FLOWS: Record<BuildingType, Record<FlowScenario, ScopeFlow>> = {
         {
           id: 'member',
           text: 'What framing member was damaged?',
-          hint: 'Townhome list adds demising-wall and party-line members.',
+          hint: 'Options match the location you picked. Demising / party-line members are flagged on walls between units.',
           grid: 'cols-4',
-          answers: [
-            { id: '2x_stud',        label: '2x wall stud',           icon: '▮', sub: 'partition' },
-            { id: 'demising_stud',  label: 'Demising wall stud',     icon: '║', sub: 'between units', spec: true },
-            { id: 'shear_stud',     label: 'Shear wall stud',        icon: '▰', sub: 'lateral', spec: true },
-            { id: 'floor_joist',    label: 'Floor joist',            icon: '═' },
-            { id: 'floor_ceil_asy', label: 'Floor/ceiling assembly', icon: '▦', sub: 'between units', spec: true },
-            { id: 'i_joist',        label: 'I-joist (TJI)',          icon: 'I' },
-            { id: 'rafter',         label: 'Rafter',                 icon: '⟋' },
-            { id: 'header_lvl',     label: 'Header / LVL',           icon: '▭' },
-          ],
+          answersFor: (ctx) => {
+            const base = membersForZone(ctx);
+            if (ctx.zone === 'interior_wall' || ctx.zone === 'exterior_wall') {
+              return [
+                ...base,
+                { id: 'demising_stud', label: 'Demising wall stud', icon: '║', sub: 'between units', spec: true },
+                { id: 'shear_stud',    label: 'Shear wall stud',    icon: '▰', sub: 'lateral',       spec: true },
+              ];
+            }
+            if (ctx.zone === 'interior_floor' || ctx.zone === 'interior_ceiling') {
+              return [
+                ...base,
+                { id: 'floor_ceil_asy', label: 'Floor/ceiling assembly', icon: '▦', sub: 'between units', spec: true },
+              ];
+            }
+            return base;
+          },
+          textFor: memberQuestionTextForZone,
+          answers: MEMBERS_BY_ZONE.default,
         },
         {
           id: 'action',
@@ -230,16 +388,8 @@ export const FLOWS: Record<BuildingType, Record<FlowScenario, ScopeFlow>> = {
           grid: 'cols-4',
           why: 'Townhome',
           annotation: '<b>Townhome-specific:</b> damage to a <b>demising wall</b> or floor/ceiling assembly between units means coordination with the neighboring unit\'s GC — access, sound flanking, fire separation all affected.',
-          answers: [
-            { id: 'cut_through',     label: 'Cut through',         icon: '✂' },
-            { id: 'notched_deep',    label: 'Notched too deep',    icon: '◣' },
-            { id: 'drilled_oversize',label: 'Drilled oversized',   icon: '🕳' },
-            { id: 'cut_demising',    label: 'Cut through demising',icon: '║', spec: true },
-            { id: 'broke_acoustic',  label: 'Broke acoustic seal', icon: '♪', spec: true },
-            { id: 'broke_bearing',   label: 'Broke bearing end',   icon: '◀' },
-            { id: 'broken_split',    label: 'Broken / split',      icon: '💥' },
-            { id: 'unsure',          label: 'Not sure',            icon: '❓' },
-          ],
+          answersFor: actionsForZone,
+          answers: ACTIONS_BY_ZONE.default,
         },
         {
           id: 'scale',
