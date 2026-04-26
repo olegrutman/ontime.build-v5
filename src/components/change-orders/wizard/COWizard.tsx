@@ -35,11 +35,49 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
   reasonDescription: string;
 }
 
+export type AssemblyState = 'pre_rough' | 'roughed' | 'sheathed_decked' | 'dried_in';
+export type TriggerCode =
+  | 'trade_conflict_mech'
+  | 'trade_conflict_elec'
+  | 'trade_conflict_plumb'
+  | 'inspector_callback'
+  | 'owner_request_change'
+  | 'field_discovery'
+  | 'design_revision';
+
+export const TRIGGER_LABELS: Record<TriggerCode, string> = {
+  trade_conflict_mech:  'Mechanical conflict',
+  trade_conflict_elec:  'Electrical conflict',
+  trade_conflict_plumb: 'Plumbing conflict',
+  inspector_callback:   'Inspector callback',
+  owner_request_change: 'Owner request',
+  field_discovery:      'Field discovery',
+  design_revision:      'Design revision',
+};
+
+export const ASSEMBLY_STATE_LABELS: Record<AssemblyState, string> = {
+  pre_rough:        'Open framing',
+  roughed:          'Framed, no sheathing',
+  sheathed_decked:  'Sheathed / decked',
+  dried_in:         'Dried in / finished',
+};
+
+export const ASSEMBLY_STATE_HINTS: Record<AssemblyState, string> = {
+  pre_rough:        'No demo needed',
+  roughed:          'Light demo only',
+  sheathed_decked:  'Open up + repair sequence',
+  dried_in:         'Demo + repair + finishes',
+};
+
 export interface COWizardData {
   /** Phase B — primary work-intent driver for Sasha's question flow */
   intent?: WorkIntent | null;
   reason: COReasonCode | null;
   workType: string | null;
+  /** Phase 2 — what triggered this CO/WO (optional) */
+  triggerCode?: TriggerCode | null;
+  /** Phase 2 — state of the assembly when issue was found (optional, only relevant for framing zones) */
+  assemblyState?: AssemblyState | null;
   locationTag: string;
   selectedItems: SelectedScopeItem[];
   pricingType: COPricingType;
@@ -64,6 +102,8 @@ const INITIAL_DATA: COWizardData = {
   intent: null,
   reason: null,
   workType: null,
+  triggerCode: null,
+  assemblyState: null,
   locationTag: '',
   selectedItems: [],
   pricingType: 'fixed',
@@ -138,6 +178,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   const [step, setStep] = useState(0);
   const [data, setData] = useState<COWizardData>({
     ...INITIAL_DATA,
+    pricingType: isTM ? 'tm' : INITIAL_DATA.pricingType,
     reason: preSelectedReason ?? null,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -322,8 +363,9 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         }
       }
 
-      const coNumber = await generateCONumber({ projectId, creatorOrgId: orgId, assignedToOrgId: resolvedAssignedToOrgId, isTM: false });
-      const title = `${coNumber} · ${selectedWorkType?.label ? selectedWorkType.label + ' · ' : ''}${format(new Date(), 'MMM d, yyyy')}`;
+      const coNumber = await generateCONumber({ projectId, creatorOrgId: orgId, assignedToOrgId: resolvedAssignedToOrgId, isTM });
+      const intentLabel = data.intent ? WORK_INTENT_LABELS[data.intent] : (selectedWorkType?.label ?? '');
+      const title = `${coNumber} · ${intentLabel ? intentLabel + ' · ' : ''}${format(new Date(), 'MMM d, yyyy')}`;
       const preGeneratedId = crypto.randomUUID();
 
       // resolvedAssignedToOrgId already computed above for CO number generation
@@ -442,7 +484,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   function handleClose() {
     setStep(0);
-    setData({ ...INITIAL_DATA, reason: preSelectedReason ?? null });
+    setData({ ...INITIAL_DATA, pricingType: isTM ? 'tm' : INITIAL_DATA.pricingType, reason: preSelectedReason ?? null });
     setDraftMeta(null);
     hydratedRef.current = false;
     onOpenChange(false);
@@ -486,29 +528,29 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       )}
 
       <div className="flex flex-1 min-h-0">
-        {/* Desktop nav */}
+        {/* Desktop nav (only on very wide screens — chips in header carry context elsewhere) */}
         {!isMobile && (
-          <nav className="w-56 shrink-0 border-r p-3 space-y-1 bg-accent/30">
+          <nav className="hidden xl:flex xl:flex-col w-48 shrink-0 border-r p-2 gap-0.5 bg-accent/30">
             {STEPS.map((s, i) => (
               <button
                 key={s.key}
                 onClick={() => i <= step && setStep(i)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors w-full',
+                  'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left text-sm transition-colors w-full',
                   i === step && 'bg-primary/10 text-foreground font-medium',
                   i < step && 'text-foreground hover:bg-muted/50 cursor-pointer',
                   i > step && 'text-muted-foreground/40 cursor-not-allowed',
                 )}
               >
                 <span className={cn(
-                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0',
+                  'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium shrink-0',
                   i < step || i === step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
                 )}>
-                  {i < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  {i < step ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate">{s.label}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{s.description}</p>
+                  <p className="truncate text-[13px]">{s.label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{s.description}</p>
                 </div>
               </button>
             ))}
@@ -517,11 +559,11 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
         {/* Step content */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {!isMobile && (
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold">{currentStep.label}</h3>
-                <p className="text-sm text-muted-foreground">{currentStep.description}</p>
+              <div className="mb-3 xl:hidden">
+                <h3 className="text-base font-semibold leading-tight">{currentStep.label}</h3>
+                <p className="text-xs text-muted-foreground">{currentStep.description}</p>
               </div>
             )}
 
@@ -583,17 +625,37 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden max-h-[88vh] flex flex-col">
+      <DialogContent className="max-w-4xl lg:max-w-5xl xl:max-w-6xl w-[95vw] p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
         <DialogTitle className="sr-only">New {isTM ? 'Work Order' : 'Change Order'}</DialogTitle>
         <DialogDescription className="sr-only">Create a new {isTM ? 'work order' : 'change order'}</DialogDescription>
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-card">
-          <div>
-            <h2 className="text-lg font-semibold">New {isTM ? 'Work Order' : 'Change Order'}</h2>
-            <p className="text-xs text-muted-foreground">{orgName} · Step {step + 1} of {STEPS.length}</p>
+        <div className="flex items-center justify-between gap-3 px-6 py-3 border-b shrink-0 bg-card">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold leading-tight">New {isTM ? 'Work Order' : 'Change Order'}</h2>
+            <p className="text-[11px] text-muted-foreground truncate">{orgName} · Step {step + 1} of {STEPS.length}{currentStep ? ` · ${currentStep.label}` : ''}</p>
           </div>
-          <div className="flex gap-1.5">
+          {/* Context chips: intent + reason + location */}
+          <div className="hidden md:flex items-center gap-1.5 flex-1 min-w-0 justify-center">
+            {data.intent && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold whitespace-nowrap">
+                <span aria-hidden>{WORK_INTENT_ICONS[data.intent]}</span>
+                {WORK_INTENT_LABELS[data.intent]}
+              </span>
+            )}
+            {data.reason && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium whitespace-nowrap">
+                {CO_REASON_LABELS[data.reason]}
+              </span>
+            )}
+            {data.locationTag && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-[11px] font-medium max-w-[260px]">
+                <span aria-hidden>📍</span>
+                <span className="truncate">{data.locationTag}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex gap-1 shrink-0">
             {STEPS.map((_, i) => (
-              <div key={i} className={cn('w-9 h-1.5 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-muted')} />
+              <div key={i} className={cn('w-7 h-1.5 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-muted')} />
             ))}
           </div>
         </div>

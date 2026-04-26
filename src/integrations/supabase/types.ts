@@ -354,6 +354,7 @@ export type Database = {
       change_orders: {
         Row: {
           approved_at: string | null
+          assembly_state: string | null
           assigned_to_org_id: string | null
           closed_for_pricing_at: string | null
           co_equipment_responsible_override: string | null
@@ -396,11 +397,13 @@ export type Database = {
           tc_snapshot_markup_percent: number | null
           tc_submitted_price: number | null
           title: string | null
+          trigger_code: string | null
           updated_at: string | null
           use_fc_pricing_base: boolean | null
         }
         Insert: {
           approved_at?: string | null
+          assembly_state?: string | null
           assigned_to_org_id?: string | null
           closed_for_pricing_at?: string | null
           co_equipment_responsible_override?: string | null
@@ -443,11 +446,13 @@ export type Database = {
           tc_snapshot_markup_percent?: number | null
           tc_submitted_price?: number | null
           title?: string | null
+          trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
         }
         Update: {
           approved_at?: string | null
+          assembly_state?: string | null
           assigned_to_org_id?: string | null
           closed_for_pricing_at?: string | null
           co_equipment_responsible_override?: string | null
@@ -490,6 +495,7 @@ export type Database = {
           tc_snapshot_markup_percent?: number | null
           tc_submitted_price?: number | null
           title?: string | null
+          trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
         }
@@ -789,10 +795,13 @@ export type Database = {
           item_name: string
           location_tag: string | null
           org_id: string
+          pricing_mode: string | null
           qty: number | null
           quantity_source: string | null
           reason: string | null
           sort_order: number | null
+          task_index: number | null
+          task_phase: string | null
           unit: string
         }
         Insert: {
@@ -809,10 +818,13 @@ export type Database = {
           item_name: string
           location_tag?: string | null
           org_id: string
+          pricing_mode?: string | null
           qty?: number | null
           quantity_source?: string | null
           reason?: string | null
           sort_order?: number | null
+          task_index?: number | null
+          task_phase?: string | null
           unit: string
         }
         Update: {
@@ -829,10 +841,13 @@ export type Database = {
           item_name?: string
           location_tag?: string | null
           org_id?: string
+          pricing_mode?: string | null
           qty?: number | null
           quantity_source?: string | null
           reason?: string | null
           sort_order?: number | null
+          task_index?: number | null
+          task_phase?: string | null
           unit?: string
         }
         Relationships: [
@@ -5906,6 +5921,7 @@ export type Database = {
         Args: { _co_id: string }
         Returns: {
           approved_at: string | null
+          assembly_state: string | null
           assigned_to_org_id: string | null
           closed_for_pricing_at: string | null
           co_equipment_responsible_override: string | null
@@ -5948,6 +5964,7 @@ export type Database = {
           tc_snapshot_markup_percent: number | null
           tc_submitted_price: number | null
           title: string | null
+          trigger_code: string | null
           updated_at: string | null
           use_fc_pricing_base: boolean | null
         }

@@ -229,7 +229,8 @@ export function VisualLocationPicker({
       )}
 
       {/* Inside / Outside */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5 max-w-md">
+      {/* Inside/Outside is binary — keep at 2 cols */}
         <TapCard
           label="Interior"
           icon={<Home className="h-5 w-5" />}
@@ -303,7 +304,7 @@ export function VisualLocationPicker({
           {selectedLevel && (
             <div className="animate-fade-in">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Area</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {areaOptions.map(a => (
                   <TapCard
                     key={a.label}
@@ -350,7 +351,7 @@ export function VisualLocationPicker({
                   {unitNumber.trim() && (
                     <div className="animate-fade-in">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Room / Area</p>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                         {unitRoomOptions.map(r => (
                           <TapCard
                             key={r.label}
@@ -388,7 +389,7 @@ export function VisualLocationPicker({
             <p className="text-xs text-muted-foreground italic">{contextHint}</p>
           )}
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Elevation</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {elevationOptions.map(e => (
               <TapCard
                 key={e.label}
