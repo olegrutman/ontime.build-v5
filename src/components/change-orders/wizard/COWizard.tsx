@@ -35,11 +35,49 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
   reasonDescription: string;
 }
 
+export type AssemblyState = 'pre_rough' | 'roughed' | 'sheathed_decked' | 'dried_in';
+export type TriggerCode =
+  | 'trade_conflict_mech'
+  | 'trade_conflict_elec'
+  | 'trade_conflict_plumb'
+  | 'inspector_callback'
+  | 'owner_request_change'
+  | 'field_discovery'
+  | 'design_revision';
+
+export const TRIGGER_LABELS: Record<TriggerCode, string> = {
+  trade_conflict_mech:  'Mechanical conflict',
+  trade_conflict_elec:  'Electrical conflict',
+  trade_conflict_plumb: 'Plumbing conflict',
+  inspector_callback:   'Inspector callback',
+  owner_request_change: 'Owner request',
+  field_discovery:      'Field discovery',
+  design_revision:      'Design revision',
+};
+
+export const ASSEMBLY_STATE_LABELS: Record<AssemblyState, string> = {
+  pre_rough:        'Open framing',
+  roughed:          'Framed, no sheathing',
+  sheathed_decked:  'Sheathed / decked',
+  dried_in:         'Dried in / finished',
+};
+
+export const ASSEMBLY_STATE_HINTS: Record<AssemblyState, string> = {
+  pre_rough:        'No demo needed',
+  roughed:          'Light demo only',
+  sheathed_decked:  'Open up + repair sequence',
+  dried_in:         'Demo + repair + finishes',
+};
+
 export interface COWizardData {
   /** Phase B — primary work-intent driver for Sasha's question flow */
   intent?: WorkIntent | null;
   reason: COReasonCode | null;
   workType: string | null;
+  /** Phase 2 — what triggered this CO/WO (optional) */
+  triggerCode?: TriggerCode | null;
+  /** Phase 2 — state of the assembly when issue was found (optional, only relevant for framing zones) */
+  assemblyState?: AssemblyState | null;
   locationTag: string;
   selectedItems: SelectedScopeItem[];
   pricingType: COPricingType;
@@ -64,6 +102,8 @@ const INITIAL_DATA: COWizardData = {
   intent: null,
   reason: null,
   workType: null,
+  triggerCode: null,
+  assemblyState: null,
   locationTag: '',
   selectedItems: [],
   pricingType: 'fixed',
