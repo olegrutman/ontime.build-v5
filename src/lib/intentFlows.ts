@@ -582,3 +582,150 @@ export function resolveIntentFromLegacy(
 
   return 'add_new';
 }
+
+// ── Component → first-question pre-seed mapping ────────────────
+//
+// When the user picks a building component in Step 2 (the location picker),
+// we don't want Step 3 to ask them again. This table maps component-name
+// keywords (matched against the trailing segment of the locationTag) to the
+// answer id of the FIRST question in the relevant intent flow.
+//
+// Keys are tested in order; first match wins. Keep keys lowercase and use
+// distinctive substrings so generic words don't collide ("wall" alone is
+// too broad — use "wall sheathing" / "wall stud" instead).
+//
+// `flowQuestionId` is the question whose answer is being pre-seeded.
+// For envelope_work that's "layer"; for damage/addition/rework that's
+// "member"; for structural_install it's "member".
+
+interface ComponentMapEntry {
+  /** Lowercase substring tested against the trailing component of locationTag */
+  match: RegExp;
+  /** Which intent's flow this seeds — used to also reconcile mismatched intents */
+  intent: WorkIntent;
+  /** Question id within that flow that is being answered */
+  flowQuestionId: string;
+  /** Answer id within that question */
+  answerId: string;
+}
+
+const COMPONENT_MAP: ComponentMapEntry[] = [
+  // ── Envelope layers
+  { match: /\bwrb\b|housewrap|house\s*wrap|weather\s*resistive/i, intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'wrb' },
+  { match: /roof\s*sheath/i,                                       intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'roof_sheath' },
+  { match: /wall\s*sheath|exterior\s*sheath/i,                     intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'sheathing' },
+  { match: /window\s*flash/i,                                      intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'window_flash' },
+  { match: /\bflashing\b/i,                                        intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'flashing' },
+  { match: /siding\s*prep/i,                                       intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'siding_prep' },
+  { match: /fascia|sub-?fascia|soffit/i,                           intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'fascia' },
+  { match: /self-?adher|peel.*stick|membrane/i,                    intent: 'envelope_work', flowQuestionId: 'layer', answerId: 'membrane' },
+
+  // ── Structural install
+  { match: /lvl\s*beam/i,           intent: 'structural_install', flowQuestionId: 'member', answerId: 'beam_lvl' },
+  { match: /glulam/i,               intent: 'structural_install', flowQuestionId: 'member', answerId: 'beam_glulam' },
+  { match: /steel\s*beam/i,         intent: 'structural_install', flowQuestionId: 'member', answerId: 'beam_steel' },
+  { match: /shear\s*(wall|panel)/i, intent: 'structural_install', flowQuestionId: 'member', answerId: 'shear_panel' },
+  { match: /hold-?down|holddown/i,  intent: 'structural_install', flowQuestionId: 'member', answerId: 'holddown' },
+  { match: /transfer\s*beam/i,      intent: 'structural_install', flowQuestionId: 'member', answerId: 'transfer' },
+
+  // ── Framing members (damage / add_new / redo / modify share `member` first-q)
+  // These use repair_damage as the canonical intent for resolution; the
+  // pre-seed will still land on the correct first question in any of the
+  // member-based flows because they share the same answer ids.
+  { match: /floor\s*joist|i-?joist|tji/i,    intent: 'repair_damage', flowQuestionId: 'member', answerId: 'floor_joist' },
+  { match: /ceiling\s*joist/i,               intent: 'repair_damage', flowQuestionId: 'member', answerId: 'ceiling_joist' },
+  { match: /\brafter\b/i,                    intent: 'repair_damage', flowQuestionId: 'member', answerId: 'rafter' },
+  { match: /roof\s*truss|\btruss\b/i,        intent: 'repair_damage', flowQuestionId: 'member', answerId: 'roof_truss' },
+  { match: /ridge\s*beam/i,                  intent: 'repair_damage', flowQuestionId: 'member', answerId: 'ridge_beam' },
+  { match: /header|\blvl\b/i,                intent: 'repair_damage', flowQuestionId: 'member', answerId: 'header_lvl' },
+  { match: /sill\s*plate/i,                  intent: 'repair_damage', flowQuestionId: 'member', answerId: 'sill_plate' },
+  { match: /top\s*plate/i,                   intent: 'repair_damage', flowQuestionId: 'member', answerId: 'top_plate' },
+  { match: /bottom\s*plate/i,                intent: 'repair_damage', flowQuestionId: 'member', answerId: 'bottom_plate' },
+  { match: /rim\s*(joist|board)|band\s*joist/i, intent: 'repair_damage', flowQuestionId: 'member', answerId: 'rim_band' },
+  { match: /stair\s*stringer|\bstringer\b/i, intent: 'repair_damage', flowQuestionId: 'member', answerId: 'stringer' },
+  { match: /king|jack\s*stud/i,              intent: 'repair_damage', flowQuestionId: 'member', answerId: 'king_jack' },
+  // "stud" must come AFTER king/jack and after sheathing checks
+  { match: /wall\s*stud|2x\s*stud|\bstud\b/i, intent: 'repair_damage', flowQuestionId: 'member', answerId: '2x_stud' },
+  // generic sheathing panel (after roof/wall variants)
+  { match: /sheathing\s*panel|\bsheathing\b/i, intent: 'repair_damage', flowQuestionId: 'member', answerId: 'sheathing_panel' },
+  { match: /\bblocking\b/i,                  intent: 'repair_damage', flowQuestionId: 'member', answerId: 'blocking' },
+  { match: /subfloor/i,                      intent: 'repair_damage', flowQuestionId: 'member', answerId: 'subfloor' },
+  { match: /\bbeam\b/i,                      intent: 'repair_damage', flowQuestionId: 'member', answerId: 'beam' },
+  { match: /\bcolumn\b|\bpost\b/i,           intent: 'repair_damage', flowQuestionId: 'member', answerId: 'column' },
+];
+
+/** Extract the trailing component of a locationTag (the part after the last "·"). */
+function trailingComponent(locationTag: string | null | undefined): string {
+  if (!locationTag) return '';
+  const parts = locationTag.split('·').map((s) => s.trim()).filter(Boolean);
+  // Skip elevation-only suffix (e.g. "East elevation") so "Wall · East elevation"
+  // still resolves to "Wall" instead of the elevation.
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (!/elevation|^l\d+$|level\s*\d+/i.test(parts[i])) return parts[i];
+  }
+  return parts[parts.length - 1] ?? '';
+}
+
+export interface ComponentResolution {
+  /** The intent the component naturally belongs to */
+  expectedIntent: WorkIntent;
+  /** Question id within the resolved flow that is being pre-answered */
+  flowQuestionId: string;
+  /** Answer id pre-seeded for that question */
+  answerId: string;
+  /** The matched component string, for display in the soft note */
+  componentLabel: string;
+}
+
+/**
+ * Inspect a locationTag and figure out (a) which intent flow naturally fits
+ * the building component the user picked, and (b) which first-question answer
+ * should be pre-seeded so Step 3 doesn't ask them again.
+ *
+ * Returns null when no component match is found — Step 3 then runs as before.
+ */
+export function resolveComponent(
+  locationTag: string | null | undefined
+): ComponentResolution | null {
+  const trailing = trailingComponent(locationTag);
+  if (!trailing) return null;
+  for (const entry of COMPONENT_MAP) {
+    if (entry.match.test(trailing)) {
+      return {
+        expectedIntent: entry.intent,
+        flowQuestionId: entry.flowQuestionId,
+        answerId: entry.answerId,
+        componentLabel: trailing,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Soft-reconciliation helper: returns an alternate intent only when the
+ * picked intent is in a *different family* from the component. We don't
+ * force a switch between damage/add_new/redo/modify since they share the
+ * same first-question (member) — but we DO switch between framing-family
+ * intents and envelope_work / structural_install / tear_out, since those
+ * have entirely different question trees.
+ */
+export function suggestIntentForComponent(
+  pickedIntent: WorkIntent | null | undefined,
+  resolution: ComponentResolution | null
+): WorkIntent | null {
+  if (!resolution || !pickedIntent) return null;
+  const { expectedIntent } = resolution;
+
+  // Same intent — no swap needed.
+  if (pickedIntent === expectedIntent) return null;
+
+  // Member-based framing intents are interchangeable for question routing.
+  const FRAMING_FAMILY: WorkIntent[] = ['repair_damage', 'add_new', 'redo_work', 'modify_existing'];
+  if (FRAMING_FAMILY.includes(pickedIntent) && FRAMING_FAMILY.includes(expectedIntent)) {
+    return null;
+  }
+
+  return expectedIntent;
+}
+

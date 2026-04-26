@@ -8,7 +8,7 @@ import { useScopeSuggestions, type SuggestPick, type SuggestResponse } from '@/h
 import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { resolveBuildingType } from '@/lib/framingQuestionTrees';
-import { getIntentFlow, resolveIntentFromLegacy } from '@/lib/intentFlows';
+import { getIntentFlow, resolveIntentFromLegacy, resolveComponent, suggestIntentForComponent } from '@/lib/intentFlows';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './COWizard';
 import type { FlowContext, WorkIntent } from '@/types/scopeQA';
@@ -61,12 +61,31 @@ export function StepCatalogQA({
     () => resolveBuildingType(scope?.home_type ?? null, workType),
     [scope?.home_type, workType]
   );
+  // Phase 5 — resolve which component the user already picked in Step 2,
+  // and use it to (a) optionally swap the intent flow if they're in the
+  // wrong family, and (b) pre-seed the first question's answer.
+  const componentResolution = useMemo(
+    () => resolveComponent(locationTag),
+    [locationTag]
+  );
+
   // Resolve which intent drives the flow. Explicit prop wins; otherwise
   // derive from legacy (reason, workType) so old entry points keep working.
-  const resolvedIntent: WorkIntent = useMemo(
+  const baseIntent: WorkIntent = useMemo(
     () => intent ?? resolveIntentFromLegacy(reason, workType),
     [intent, reason, workType]
   );
+  // Soft swap: if the picked intent is in a different family than the
+  // component, switch to the component's natural flow. We surface a one-line
+  // note so the user knows what happened and can override.
+  const swappedIntent = useMemo(
+    () => suggestIntentForComponent(baseIntent, componentResolution),
+    [baseIntent, componentResolution]
+  );
+  const [overrideOriginal, setOverrideOriginal] = useState(false);
+  const resolvedIntent: WorkIntent = swappedIntent && !overrideOriginal ? swappedIntent : baseIntent;
+  const intentWasSwapped = !!swappedIntent && !overrideOriginal;
+
   const flow = useMemo(
     () => getIntentFlow(resolvedIntent, buildingType),
     [resolvedIntent, buildingType]
@@ -86,12 +105,33 @@ export function StepCatalogQA({
     projectName: projectName ?? '',
   }), [buildingType, scope, locationTag, zone, reason, workType, projectName]);
 
-  const flowState = useQuestionFlow(flow, ctx);
+  // Build the question-flow seed: only pre-fill if the resolved component
+  // applies to the resolved intent's flow AND the first question id matches.
+  const flowSeed = useMemo(() => {
+    if (!componentResolution) return undefined;
+    const firstQ = flow.questions[0];
+    if (!firstQ || firstQ.id !== componentResolution.flowQuestionId) return undefined;
+    // Verify the answer id actually exists in the question (zone-aware
+    // questions resolve answers via answersFor; check both static + dynamic).
+    const staticAnswers = firstQ.answers ?? [];
+    const dynamicAnswers = firstQ.answersFor ? firstQ.answersFor(ctx) : [];
+    const exists =
+      staticAnswers.some((a) => a.id === componentResolution.answerId) ||
+      dynamicAnswers.some((a) => a.id === componentResolution.answerId);
+    if (!exists) return undefined;
+    return {
+      initialAnswers: { [firstQ.id]: componentResolution.answerId },
+      startIndex: 1,
+    };
+  }, [componentResolution, flow, ctx]);
+
+  const flowState = useQuestionFlow(flow, ctx, flowSeed);
   const [picks, setPicks] = useState<PickState[] | null>(null);
   const [extracted, setExtracted] = useState<SuggestResponse['extracted']>(null);
   const [refinementDismissed, setRefinementDismissed] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showMaybe, setShowMaybe] = useState(false);
+
 
   const runMatch = useCallback(async () => {
     if (!flowState.isComplete) flowState.finish();
@@ -209,6 +249,41 @@ export function StepCatalogQA({
         </span>
       </div>
 
+      {/* Soft note: intent was swapped because the picked component
+          belongs to a different intent family. Lets the user revert. */}
+      {intentWasSwapped && !picks && componentResolution && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground">
+          <Sparkles className="h-3 w-3 text-primary shrink-0" />
+          <span className="flex-1 min-w-0">
+            Switched to <span className="font-semibold">{WORK_INTENT_LABELS[resolvedIntent]}</span>{' '}
+            questions because you picked{' '}
+            <span className="font-medium">"{componentResolution.componentLabel}"</span>.
+          </span>
+          <button
+            type="button"
+            onClick={() => setOverrideOriginal(true)}
+            className="text-[11px] text-muted-foreground hover:text-foreground underline shrink-0"
+          >
+            Use {WORK_INTENT_LABELS[baseIntent]} instead
+          </button>
+        </div>
+      )}
+
+      {/* Pre-seeded note: first answer was filled from Step-2 component. */}
+      {flowSeed && !picks && componentResolution && !intentWasSwapped && flowState.currentIdx > 0 && (
+        <p className="text-[11px] text-muted-foreground italic">
+          Pre-filled from your location: <span className="text-foreground font-medium not-italic">{componentResolution.componentLabel}</span>.
+          {' '}
+          <button
+            type="button"
+            onClick={() => flowState.editAnswer(flow.questions[0].id)}
+            className="underline hover:text-foreground"
+          >
+            Change
+          </button>
+        </p>
+      )}
+
       {/* Progress bar — linear */}
       <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
         <div
@@ -223,8 +298,9 @@ export function StepCatalogQA({
         />
       </div>
 
-      {/* Breadcrumb of past answers */}
-      {Object.keys(flowState.answers).length > 0 && !picks && (
+      {/* Breadcrumb of past answers — only when there's at least one
+          user-answered question (skip on Q1 where it's empty/noise). */}
+      {flowState.currentIdx > 0 && !picks && (
         <div className="flex flex-wrap gap-1.5">
           {flow.questions.slice(0, flowState.currentIdx).map(q => {
             const val = flowState.answers[q.id];
@@ -250,6 +326,7 @@ export function StepCatalogQA({
           })}
         </div>
       )}
+
 
       {/* QUESTION CARD */}
       {!flowState.isComplete && !picks && flowState.currentQuestion && (
@@ -395,9 +472,11 @@ export function StepCatalogQA({
       {/* ESCAPE ROW */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">
         <div className="flex flex-wrap gap-1">
-          <Button variant="ghost" size="sm" onClick={() => flowState.back()} disabled={flowState.currentIdx === 0 && !picks}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back
-          </Button>
+          {(flowState.currentIdx > 0 || picks) && (
+            <Button variant="ghost" size="sm" onClick={() => flowState.back()}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={handleFallbackType}>
             <Keyboard className="h-4 w-4 mr-1" /> Type instead
           </Button>
@@ -493,15 +572,33 @@ function QuestionCard({
         </button>
       </div>
 
-      {question.annotation && (
+      {question.annotation && <AnnotationDetails annotation={question.annotation} />}
+    </div>
+  );
+}
+
+function AnnotationDetails({ annotation }: { annotation: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="pt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+      >
+        <ChevronDown className={cn('h-3 w-3 transition-transform', !open && '-rotate-90')} />
+        {open ? 'Hide' : 'Why we ask'}
+      </button>
+      {open && (
         <div
-          className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 p-2.5 text-xs text-foreground/80"
-          dangerouslySetInnerHTML={{ __html: question.annotation }}
+          className="mt-2 rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 p-2.5 text-xs text-foreground/80"
+          dangerouslySetInnerHTML={{ __html: annotation }}
         />
       )}
     </div>
   );
 }
+
 
 function PickCard({
   pick,

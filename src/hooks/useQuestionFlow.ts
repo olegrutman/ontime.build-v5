@@ -1,9 +1,18 @@
 import { useState, useMemo } from 'react';
 import type { ScopeFlow, FlowContext } from '@/types/scopeQA';
 
-export function useQuestionFlow(flow: ScopeFlow, ctx: FlowContext) {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+export interface QuestionFlowSeed {
+  /** Pre-set answers (e.g. seeded from the location component picked in Step 2) */
+  initialAnswers?: Record<string, string | string[]>;
+  /** Starting question index (defaults to 0). Use to skip pre-answered questions. */
+  startIndex?: number;
+}
+
+export function useQuestionFlow(flow: ScopeFlow, ctx: FlowContext, seed?: QuestionFlowSeed) {
+  const [currentIdx, setCurrentIdx] = useState(seed?.startIndex ?? 0);
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>(
+    seed?.initialAnswers ?? {}
+  );
 
   const currentQuestion = flow.questions[currentIdx];
   const isComplete = currentIdx >= flow.questions.length;

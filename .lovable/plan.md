@@ -1,134 +1,90 @@
-## What's wrong with Step 3 today
+## What I tested
 
-Looking at the screenshot of `Exterior · Roof system / Roof sheathing` + `Fix damage` + `Owner request`, three real problems compound:
+I walked through Step 1 → Step 2 → Step 3 in your replay and read the code that drives Step 3.
 
-### 1. The same context is shown three times, in three color systems
+Your selections in this session:
+- **Why (Step 1)** — you picked an intent + a reason (the wizard requires both before "Next")
+- **Where (Step 2)** — `Exterior · Wall (exterior) / WRB / housewrap · East elevation`
+- **Step 3 (Scope)** — the page mounted, briefly flashed "Loading catalog…", then rendered the question card from Sasha
 
-```text
-Header (top of dialog)        : 🔧 Fix damage   Owner request   📍 Exterior · Roof…
-Scope outer chip row          : 📍 Exterior · Roof…   Fix damage   Owner request   custom home
-QA card inner chip row        : 📍 Exterior · Roof…   ✦ Fix damage   Owner request   custom home
-```
+## What's actually wrong (in plain English)
 
-Plus a 4th amber accent bar above the question card, the amber Sasha avatar, and the amber progress bar. That's 5 amber/orange surfaces, a red/coral reason chip, a purple building-type chip, a blue work-type chip, a gray reason chip — all on one screen.
+The "messy / no clear direction" feeling on Step 3 is real, and it comes from **three concrete problems**, not just styling. The biggest one is that the page asks you to repeat yourself.
 
-Files responsible:
-- `src/components/change-orders/wizard/COWizard.tsx` lines 666-685 (header chips)
-- `src/components/change-orders/wizard/StepCatalog.tsx` lines 285-318 (scope outer chips)
-- `src/components/change-orders/wizard/StepCatalogQA.tsx` lines 207-226 (QA inner chips)
+### 1. Step 3 asks you what you already told it in Step 2 (the worst offender)
 
-### 2. The question is wrong for the location
+In Step 2 you literally picked the building component **"Wall (exterior) / WRB / housewrap"**. Then Step 3 opens and the very first Sasha question is:
 
-Location is **roof sheathing**, but the QA card asks "What framing member was damaged?" and shows 2x wall stud, floor joist, I-joist, ceiling joist, rafter, roof truss, header/LVL, stair stringer.
+> *"Which layer of the envelope?"* — with options: WRB / housewrap, Wall sheathing, Roof sheathing, Flashing, Siding prep, Fascia/soffit, Window flashing, Self-adhered membrane.
 
-Root cause: `src/lib/framingQuestionTrees.ts` line 11-25 — the `member` question has a single static `answers` array that never looks at `ctx.zone` or `ctx.locationTag`. So whether the user picked a kitchen partition or a roof valley, they get the same 8-option grid.
+You already said WRB. Asking again feels dumb and makes the page look noisy because the user thinks "didn't I do this two seconds ago?". This is the #1 cause of "no clear direction".
 
-### 3. The "Type it / Browse catalog" mode switch sits at the very top, competing with the question for attention. Most users only need it as an escape, not the headline.
+**Why it happens in code:** `StepCatalog` passes `intent` (from Step 1) to `StepCatalogQA`. That picks an intent flow from `intentFlows.ts`. The `envelope_work` flow (`ENVELOPE_FLOW`) was authored as a generic envelope wizard with no awareness that the user may have already pinned the layer at the location step. The location component never gets pre-loaded as the answer to question #1.
 
----
+### 2. The intent picked in Step 1 may not match the component picked in Step 2
 
-## What I will change
+Step 1 lets the user pick any intent (Repair damage, Add new, Modify, Tear out, Envelope, Structural, Blocking, Inspection fix, Other). Step 2 lets them pick any component (Wall, WRB, Roof sheathing, Floor joist, Stud, Beam…). Nothing today checks that those two agree.
 
-### A. Single, sticky context header (removes 2 duplicate rows)
+So a user can pick **intent = "Repair damage"** in Step 1 and then **component = "WRB / housewrap"** in Step 2. Step 3 then runs the *generic damage flow* — which still asks "what member was damaged?" with `2x stud / header / sill plate / top plate / rim band / king-jack / sheathing panel` (the `exterior_wall` member list). None of those say "WRB", so the user sees a wall-of-options that doesn't include the thing they already named. That's where the earlier "showing wall studs and floor joist need to tighten up this step" feedback came from.
 
-- **Keep** the dialog header chips (top of `COWizard.tsx`) as the *one* place context lives. Make them a quiet uniform style: same neutral pill background for all three (intent, reason, location), with only an icon to differentiate.
-- **Delete** the chip row inside `StepCatalog.tsx` (lines 285-318) entirely.
-- **Delete** the chip row at the top of `StepCatalogQA.tsx` (lines 207-226). Replace with a single thin "Editing scope for: 📍 {location} · {intent}" line in muted text — no pills.
-- Drop the building-type chip ("custom home") from the visible UI; keep it as data only. It doesn't help the framer in the moment.
+### 3. The question card itself still feels heavy
 
-Result: one place to read context, one click to change it ("Edit in earlier steps" link in the dialog header).
+The card shows: a context line with location + intent, a progress bar, a breadcrumb of past answers (empty on Q1), the question, a 4‑col grid of 8 large icon tiles, an annotation block, AND a footer escape row with "Back / Type instead / Browse catalog". On a question whose answer the system already knows, that whole stack reads as visual chaos.
 
-### B. Unify the color system
+## The fix (3 small surgical changes)
 
-One accent color for the active step (amber/Sasha), neutrals for everything else.
+I'm intentionally NOT proposing a redesign. The page is fine when the right question is being asked. The fix is to ask fewer, smarter questions.
 
-- Reason badge inside the scope step → drop the colored bg, use a small leading dot in the reason color and neutral text. The big colored "Fix damage" pill belongs only in the list/detail views, not inside an active wizard step where it competes with the question.
-- Drop the blue work-type pill in StepCatalog (line 310-314).
-- Keep amber only on: Sasha avatar, primary CTA, and the question card's top accent. Remove the amber bg from the location pill (line 208), the amber bg from the intent pill (line 212), and the amber-tinted border on the summary card or unify it with `bg-card`.
+### Change 1 — Pre-fill the layer/member from the Step-2 component, then skip that question
 
-### C. Make the question tree zone-aware (the real fix)
+In `StepCatalogQA.tsx`, before mounting the question flow, parse the trailing component out of `locationTag` (the part after the last "·") and try to map it to one of the answer ids on the **first** question of the resolved flow. Examples:
 
-In `src/lib/framingQuestionTrees.ts`, the `member` question's answer list must be filtered by `ctx.zone` before render. Two options — I'll go with the smaller surgical one:
+- `WRB / housewrap` → map to `wrb` answer in `ENVELOPE_FLOW.layer`
+- `Wall sheathing` → `sheathing`
+- `Roof sheathing` → `roof_sheath`
+- `Window flashing` → `window_flash`
+- `Floor joist` → `floor_joist` in damage flow's member list
+- `2x stud / wall stud` → `2x_stud`
+- `Rafter` → `rafter`
+- `Beam / LVL` → `beam` (and route to STRUCTURAL_FLOW)
 
-**Approach (small):** turn the static `answers` array into a function the QA renderer can resolve at render time. Add an optional `answersFor?: (ctx: FlowContext) => ScopeAnswer[]` field on `ScopeQuestion`. When present, `StepCatalogQA.tsx`'s `QuestionCard` uses it instead of `question.answers`.
+When a mapping is found, seed `useQuestionFlow` with that answer pre-set and start at question index 1 instead of 0. The breadcrumb pill at the top still shows "WRB / housewrap" (clickable to change), so nothing is hidden — the user just doesn't have to click it twice.
 
-Then for the `member` question (and the `damage` flow generally), authoring becomes:
+Net effect: instead of 4 questions, the WRB user sees 3, and the first thing they read is "*What's the existing condition?*" — a question they actually need to answer.
 
-```text
-zone = roof          → rafter, roof truss, ridge beam, sheathing panel, fascia, valley
-zone = interior_wall → 2x stud, header, top/bottom plate, blocking
-zone = interior_floor→ floor joist, I-joist, rim board, subfloor, blocking
-zone = exterior_wall → 2x stud, header, sheathing panel, sill plate
-zone = stairs        → stringer, tread, riser, landing
-zone = structural    → beam, column, hold-down, shear panel, post
-```
+### Change 2 — Reconcile intent with the picked component (soft, no blocking)
 
-I'll add a small zone→members map in `framingQuestionTrees.ts` and wire `answersFor` for the four flows that ask the "member" question (`custom_home.damage`, plus the equivalents in `track_home`, `townhomes`, `apartments_mf` if they exist — I'll check while implementing).
+After the user picks the component in Step 2 / before Step 3 runs, check whether the chosen intent matches the component family using a small lookup:
 
-Same treatment for the second question ("What did the other trade do to it?") — for `roof` zone, "drilled oversized" and "hole near bearing" don't apply to a sheathing panel; we'd show "torn / punctured", "cut for penetration", "damaged at fastener line", "blown off / wind damage", "broken / cracked", "delaminated".
+- `WRB / housewrap`, `Sheathing` (wall or roof), `Flashing`, `Fascia`, `Siding prep` → expects `envelope_work`
+- `Beam`, `Column`, `Hold-down`, `Shear panel` → expects `structural_install`
+- `Stud`, `Header`, `Plate`, `Rim`, `Joist`, `Rafter`, `Truss` → expects `repair_damage` / `add_new` / `redo_work` / `modify_existing` (any framing intent is OK)
+- `Cabinet`, `Flooring tear-out` → expects `tear_out`
 
-### D. Tighten the question card itself
+If the picked intent doesn't match the component family, do NOT block. Instead, switch the resolved flow for Step 3 to the matching one and surface a tiny one-line note in the Sasha card: *"Switched to **Envelope / WRB** questions because you picked WRB / housewrap. [Use damage questions instead]"*. One click reverts. This is exactly the same soft-suggestion pattern Step 1 already uses when the reason is picked first.
 
-- Remove the amber 3px top accent bar (line 457). The amber Sasha avatar is enough signal.
-- Move the "Type instead" / "Browse catalog" links from the prominent row at the top of StepCatalog (visible in screenshot top-right) into the existing escape row at the bottom of the QA card (`StepCatalogQA.tsx` lines 411-425). One escape row, not two.
-- Keep "Not sure / Skip this" — but place it as a quiet text link below the answer grid, not a centered button (already close, just style adjustment).
+### Change 3 — Quiet the question card on Q1
 
-### E. Step 3 frame
+Three small CSS/markup tweaks in `StepCatalogQA.tsx`:
 
-In `StepCatalog.tsx`, when `lockedFromWizard` is true (which is the wizard case), skip the location/reason re-prompt phases entirely and render only the QA component. Remove the now-redundant top chip row and mode switch — let QA own its own top area.
+- Hide the breadcrumb row entirely when `flowState.currentIdx === 0` (it's empty anyway and just adds a gap)
+- Hide the "Back" button on Q1 (also useless — there's no previous question)
+- Move the `annotation` block from above the answer grid to a small collapsible "Why we ask" link below the grid. Most users skip annotations; for the ones who want them, one click reveals the text.
 
----
+## Files to change
 
-## Visual target (Step 3, after)
+- `src/components/change-orders/wizard/StepCatalogQA.tsx` — Changes 1 & 3 (component → answer mapping, seed `useQuestionFlow`, hide breadcrumb/back on Q1, collapse annotation)
+- `src/lib/intentFlows.ts` — export a small `COMPONENT_TO_ANSWER` map (per-flow lookup table) and an `expectedIntentForComponent()` helper used by Change 2
+- `src/components/change-orders/wizard/COWizard.tsx` — call `expectedIntentForComponent()` after Step 2 confirm; if mismatch, store the suggested intent and show the soft-switch note inside `StepCatalogQA`
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  New Change Order                                            │
-│  IMS, LLC · Step 3 of 5 · Scope                              │
-│  🔧 Fix damage  · 👤 Owner request  · 📍 Exterior · Roof…    │  ← one quiet row
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Editing scope for: Exterior · Roof system / Roof sheathing  │  ← muted line
-│                                                              │
-│  ●━━━━━━━━━━━━━━━━━━━━━━━━━━━ progress                       │
-│                                                              │
-│  ✦  Question 1 of 4                                          │
-│      What part of the roof system is damaged?                │
-│      ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
-│      │Sheathing │ │ Rafter   │ │  Truss   │ │  Fascia  │     │
-│      │  panel   │ │          │ │          │ │          │     │
-│      └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
-│      ┌──────────┐ ┌──────────┐                               │
-│      │  Ridge   │ │  Valley  │                               │
-│      └──────────┘ └──────────┘                               │
-│                                                              │
-│      Not sure / Skip this                                    │
-│                                                              │
-│  ← Back   ⌨ Type instead   📋 Browse catalog                 │
-└──────────────────────────────────────────────────────────────┘
-```
+No changes to: edge functions, database schema, catalog filtering logic, or the location picker.
 
-One accent color (amber for the question), one neutral system for everything else, content matches the location.
+## Acceptance test (the one you cared about)
 
----
-
-## Files I'll touch
-
-| File | Change |
-|---|---|
-| `src/types/scopeQA.ts` | Add optional `answersFor?: (ctx: FlowContext) => ScopeAnswer[]` to `ScopeQuestion`. |
-| `src/lib/framingQuestionTrees.ts` | Add `MEMBERS_BY_ZONE` and `ACTIONS_BY_ZONE` maps; wire `answersFor` on the `member` and `action` questions in the damage flows. |
-| `src/components/change-orders/wizard/StepCatalogQA.tsx` | Remove inner chip row; replace with one muted location line. Pass `ctx` into `QuestionCard`; resolve `answersFor` at render. Remove amber accent bar. Keep one bottom escape row. |
-| `src/components/change-orders/wizard/StepCatalog.tsx` | When `lockedFromWizard` is true, drop the outer chip row and mode switch; render QA directly. Move escape links into QA's footer. |
-| `src/components/change-orders/wizard/COWizard.tsx` | Make the header chip row the single source of context — uniform neutral styling for all three pills, no special colors per reason. |
-
-No DB or edge function changes. No test changes (the existing `resolveZone.test.ts` continues to pass since we're not touching `resolveZone`).
-
----
-
-## What I'm explicitly *not* changing
-
-- Step 1 (Why) and Step 2 (Where) flows — they're working.
-- The catalog suggestion AI call — same payload, same edge function.
-- The "intent" picker model — still drives which flow runs. We're just making each flow's questions zone-aware.
-- The colored reason pills on the CO list/board/detail pages — those *should* be loud there. The change is scoped to inside the wizard.
+1. Open Create CO → Step 1: pick **Repair damage** + reason **Damaged by others** → Next
+2. Step 2: pick **Exterior → Wall (exterior) / WRB / housewrap → East elevation** → Save
+3. Step 3 should now:
+   - Show the soft note: *"Switched to **Envelope / WRB** questions because you picked WRB / housewrap"*
+   - Skip the "Which layer?" question (already known = WRB)
+   - Open directly on *"What's the existing condition?"* with a clean card (no empty breadcrumb, no Back on Q1)
+4. Repeat with component = **Roof sheathing** → Step 3 opens on the condition question with `roof_sheath` already pinned, no studs or floor joists in the option list.
