@@ -229,7 +229,8 @@ export function VisualLocationPicker({
       )}
 
       {/* Inside / Outside */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 gap-2.5 max-w-md">
+      {/* Inside/Outside is binary — keep at 2 cols */}
         <TapCard
           label="Interior"
           icon={<Home className="h-5 w-5" />}
