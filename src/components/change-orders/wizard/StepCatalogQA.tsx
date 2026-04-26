@@ -193,8 +193,6 @@ export function StepCatalogQA({
     }
   }
 
-  // ── HEADER ──
-  const reasonColors = CO_REASON_COLORS[reason as COReasonCode];
   const showRefinementBanner =
     !!picks &&
     !!extracted?.zone_refinement &&
