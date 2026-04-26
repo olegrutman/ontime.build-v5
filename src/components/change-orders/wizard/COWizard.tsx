@@ -244,12 +244,24 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
     currentRole === 'GC_PM' ? 'GC' : currentRole === 'TC_PM' ? 'TC' : 'FC';
   const orgName = (userOrgRoles?.[0] as any)?.organization?.name ?? role;
 
-  // Project name for AI
+  // Project name + scope context for AI
   const { data: project } = useQuery({
     queryKey: ['project-name-co', projectId],
     queryFn: async () => {
       const { data: p } = await supabase.from('projects').select('name').eq('id', projectId).single();
       return p;
+    },
+  });
+
+  const { data: projectScope } = useQuery({
+    queryKey: ['project-scope-co', projectId],
+    queryFn: async () => {
+      const { data: s } = await supabase
+        .from('project_scope_details')
+        .select('home_type, framing_method, floors, total_sqft, construction_type')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      return s;
     },
   });
 
@@ -287,8 +299,16 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           work_type: data.workType || data.reason,
           location_tag: data.locationTag || '',
           project_name: project?.name ?? 'Project',
-          selected_items: data.selectedItems.map(i => i.item_name),
+          project_context: projectScope ?? undefined,
+          selected_items: data.selectedItems.map(i => ({
+            name: i.item_name,
+            qty: i.qty ?? null,
+            unit: i.unit ?? null,
+            category: i.category_name ?? null,
+          })),
           reason_code: data.reason || '',
+          trigger_code: data.triggerCode ?? undefined,
+          assembly_state: data.assemblyState ?? undefined,
           requires_materials: data.materialsNeeded,
           requires_equipment: data.equipmentNeeded,
           material_responsibility: data.materialsResponsible,
@@ -301,11 +321,21 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       }
     } catch (err) {
       console.error('AI generation failed:', err);
-      // Fallback: manual description
+      // Fallback: manual description grouped by category
+      const grouped = new Map<string, string[]>();
+      for (const i of data.selectedItems) {
+        const cat = i.category_name || 'General';
+        if (!grouped.has(cat)) grouped.set(cat, []);
+        const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
+        grouped.get(cat)!.push(`${i.item_name}${qtyStr}`);
+      }
+      const itemPhrases = Array.from(grouped.entries())
+        .map(([c, names]) => `${c}: ${names.join(', ')}`)
+        .join('; ');
       const parts = [
-        selectedWorkType?.label ?? data.reason,
-        data.selectedItems.length > 0 ? `— ${data.selectedItems.map(i => i.item_name).join(', ')}` : '',
-        data.locationTag ? `at ${data.locationTag}` : '',
+        `Scope at ${data.locationTag || 'TBD'} for ${project?.name ?? 'the project'}.`,
+        itemPhrases ? `Includes ${itemPhrases}.` : '',
+        data.reason ? `Reason: ${CO_REASON_LABELS[data.reason] ?? data.reason}.` : '',
       ].filter(Boolean);
       update({ aiDescription: parts.join(' ') });
     } finally {
@@ -1029,6 +1059,20 @@ function StepReview({
   generatingAI: boolean;
   onRegenerate: () => void;
 }) {
+  const [addItemsOpen, setAddItemsOpen] = useState(false);
+  // Snapshot the item IDs at the time the add-dialog opens so we can detect newly added items
+  const itemCountRef = useRef(data.selectedItems.length);
+  // When the item set length changes (after initial render), auto-regenerate description
+  useEffect(() => {
+    if (itemCountRef.current !== data.selectedItems.length) {
+      itemCountRef.current = data.selectedItems.length;
+      // Only auto-regen if not currently generating; respect manual edits by always replacing
+      // (user can still edit afterwards). Debounce a tick so onChange settles.
+      const t = setTimeout(() => onRegenerate(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [data.selectedItems.length, onRegenerate]);
+
   const { data: assignedOrg } = useQuery({
     queryKey: ['org-name', data.assignedToOrgId],
     enabled: !!data.assignedToOrgId,
@@ -1138,11 +1182,42 @@ function StepReview({
               );
             })}
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Tap a quantity to override Sasha's estimate. Source badge will flip to <span className="font-semibold">Manual</span>.
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] text-muted-foreground flex-1">
+              Tap a quantity to override Sasha's estimate. Source badge will flip to <span className="font-semibold">Manual</span>.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1 shrink-0"
+              onClick={() => setAddItemsOpen(true)}
+            >
+              + Add more items
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Add-more-items dialog */}
+      <Dialog open={addItemsOpen} onOpenChange={setAddItemsOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
+          <div className="px-6 py-4 border-b shrink-0">
+            <DialogTitle className="text-base font-semibold">Add more scope items</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {data.locationTag ? `Location: ${data.locationTag}` : 'Pick additional items for this CO/WO.'}
+            </DialogDescription>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
+            <StepCatalog data={data} onChange={onChange} projectId={projectId} intent={data.intent ?? null} />
+          </div>
+          <div className="flex items-center justify-end border-t px-4 sm:px-6 py-3 shrink-0 bg-card">
+            <Button size="sm" onClick={() => setAddItemsOpen(false)}>
+              Done · {data.selectedItems.length} total
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Team */}
       <div className="space-y-2">
