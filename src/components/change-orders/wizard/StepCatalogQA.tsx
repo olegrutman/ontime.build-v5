@@ -203,32 +203,19 @@ export function StepCatalogQA({
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      {/* Context pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 text-xs font-medium">
-          <MapPin className="h-3 w-3" /> {locationTag || 'Location'}
-        </div>
-        {/* Intent pill — the single source of truth for which flow Sasha is running */}
-        <div className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold">
-          ✦ {WORK_INTENT_LABELS[resolvedIntent]}
-        </div>
-        {reasonColors && reason && reason !== resolvedIntent && (
-          <div
-            className="px-2.5 py-1 rounded-full text-[10px] font-medium opacity-80"
-            style={{ backgroundColor: reasonColors.bg, color: reasonColors.text }}
-          >
-            {CO_REASON_LABELS[reason as COReasonCode] ?? reason}
-          </div>
-        )}
-        <div className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 text-[10px] font-medium">
-          {buildingType.replace('_', ' ')}
-        </div>
+      {/* Quiet context line — single source for "what we're scoping". */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <MapPin className="h-3 w-3 shrink-0" />
+        <span className="truncate">
+          Editing scope for <span className="text-foreground font-medium">{locationTag || 'this location'}</span>
+          <span className="opacity-60"> · {WORK_INTENT_LABELS[resolvedIntent]}</span>
+        </span>
       </div>
 
       {/* Progress bar — linear */}
       <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all"
+          className="h-full bg-primary transition-all"
           style={{
             width: `${
               picks
@@ -246,7 +233,8 @@ export function StepCatalogQA({
             const val = flowState.answers[q.id];
             if (!val) return null;
             const isSkip = val === '__skip__';
-            const ans = q.answers.find(a => a.id === val);
+            const resolvedAnswers = q.answersFor ? q.answersFor(ctx) : q.answers;
+            const ans = resolvedAnswers.find(a => a.id === val);
             const label = isSkip ? 'Skipped' : (ans?.label ?? String(val));
             return (
               <button
