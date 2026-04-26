@@ -394,12 +394,15 @@ export function StepCatalogQA({
 
       {/* ESCAPE ROW */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1">
           <Button variant="ghost" size="sm" onClick={() => flowState.back()} disabled={flowState.currentIdx === 0 && !picks}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
           <Button variant="ghost" size="sm" onClick={handleFallbackType}>
             <Keyboard className="h-4 w-4 mr-1" /> Type instead
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onFallbackToBrowse}>
+            <LayoutGrid className="h-4 w-4 mr-1" /> Browse catalog
           </Button>
         </div>
         {!flowState.isComplete && flowState.currentIdx >= 2 && !picks && (
