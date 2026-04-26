@@ -444,7 +444,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   function handleClose() {
     setStep(0);
-    setData({ ...INITIAL_DATA, reason: preSelectedReason ?? null });
+    setData({ ...INITIAL_DATA, pricingType: isTM ? 'tm' : INITIAL_DATA.pricingType, reason: preSelectedReason ?? null });
     setDraftMeta(null);
     hydratedRef.current = false;
     onOpenChange(false);
