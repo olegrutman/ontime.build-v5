@@ -196,11 +196,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         </div>
       )}
 
-      {isTM ? (
-        <TMWOWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} />
-      ) : (
-        <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} isTM={isTM} />
-      )}
+      <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} isTM={isTM} />
 
     </div>
   );
