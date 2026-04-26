@@ -16,14 +16,31 @@ interface LocationData {
   custom_exterior?: string;
 }
 
+interface ScopeItemContext {
+  name: string;
+  qty?: number | null;
+  unit?: string | null;
+  category?: string | null;
+}
+
+interface ProjectContext {
+  home_type?: string | null;
+  framing_method?: string | null;
+  floors?: number | null;
+  total_sqft?: number | null;
+  construction_type?: string | null;
+}
+
 interface GenerateRequest {
   work_type: string;
   location?: LocationData;
   location_tag?: string;
   project_name: string;
+  project_context?: ProjectContext;
   reason?: string;
   reason_code?: string;
-  selected_items?: string[];
+  /** Legacy: array of names. Preferred: array of {name, qty, unit, category} */
+  selected_items?: Array<string | ScopeItemContext>;
   fixing_trade_notes?: string;
   requires_materials: boolean;
   requires_equipment: boolean;
@@ -35,6 +52,8 @@ interface GenerateRequest {
   access_conditions?: string;
   existing_conditions?: string;
   rfi_context?: string;
+  trigger_code?: string;
+  assembly_state?: string;
 }
 
 function buildLocationDescription(location?: LocationData): string {
@@ -65,6 +84,37 @@ function buildLocationDescription(location?: LocationData): string {
   return "";
 }
 
+/** Group items by category and format each as "name (qty unit)" when qty present */
+function formatItemsForPrompt(items: Array<string | ScopeItemContext>): string {
+  if (!items || items.length === 0) return "";
+
+  // Normalize to objects
+  const normalized: ScopeItemContext[] = items.map((it) =>
+    typeof it === "string" ? { name: it } : it
+  );
+
+  // Group by category
+  const groups = new Map<string, ScopeItemContext[]>();
+  for (const item of normalized) {
+    const cat = item.category?.trim() || "General";
+    if (!groups.has(cat)) groups.set(cat, []);
+    groups.get(cat)!.push(item);
+  }
+
+  const lines: string[] = [];
+  for (const [cat, group] of groups) {
+    const formatted = group.map((g) => {
+      const qtyPart =
+        g.qty != null && g.qty > 0
+          ? ` (${g.qty}${g.unit ? ` ${g.unit}` : ""})`
+          : "";
+      return `${g.name}${qtyPart}`;
+    });
+    lines.push(`  - ${cat}: ${formatted.join(", ")}`);
+  }
+  return lines.join("\n");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -78,26 +128,37 @@ serve(async (req) => {
 
     const body: GenerateRequest = await req.json();
 
-    // Resolve location: prefer location_tag, fall back to structured location
-    const locationDesc = body.location_tag || buildLocationDescription(body.location) || "unspecified location";
+    const locationDesc =
+      body.location_tag || buildLocationDescription(body.location) || "unspecified location";
 
-    // Resolve scope items: prefer selected_items array, fall back to structural_element
-    const scopeItems = body.selected_items?.length
-      ? body.selected_items.join(", ")
+    const itemsBlock = body.selected_items?.length
+      ? formatItemsForPrompt(body.selected_items)
       : body.structural_element || "";
 
-    // Resolve reason
     const reason = body.reason_code || body.reason || "";
+    const itemCount = body.selected_items?.length ?? 0;
 
-    // Build concise context
+    // Build project context lines
+    const projParts: string[] = [];
+    const pc = body.project_context;
+    if (pc?.home_type) projParts.push(`home type: ${pc.home_type}`);
+    if (pc?.framing_method) projParts.push(`framing: ${pc.framing_method}`);
+    if (pc?.floors) projParts.push(`${pc.floors} floors`);
+    if (pc?.total_sqft) projParts.push(`${pc.total_sqft} SF`);
+    if (pc?.construction_type) projParts.push(pc.construction_type);
+    const projectContextLine = projParts.length ? projParts.join(", ") : "";
+
     const contextParts = [
       `Project: ${body.project_name}`,
+      projectContextLine ? `Project context: ${projectContextLine}` : "",
       `Work type: ${body.work_type}`,
       `Location: ${locationDesc}`,
-    ];
+    ].filter(Boolean);
 
-    if (scopeItems) contextParts.push(`Scope items: ${scopeItems}`);
+    if (itemsBlock) contextParts.push(`Scope items (${itemCount}):\n${itemsBlock}`);
     if (reason) contextParts.push(`Reason: ${reason}`);
+    if (body.trigger_code) contextParts.push(`Trigger: ${body.trigger_code}`);
+    if (body.assembly_state) contextParts.push(`Assembly state: ${body.assembly_state}`);
     if (body.existing_conditions) contextParts.push(`Conditions: ${body.existing_conditions}`);
     if (body.rfi_context) contextParts.push(`RFI context: ${body.rfi_context}`);
     if (body.requires_materials && body.material_responsibility) {
@@ -107,12 +168,19 @@ serve(async (req) => {
       contextParts.push(`Equipment: ${body.equipment_responsibility} responsible`);
     }
 
-    const systemPrompt = `You are a construction scope writer. Output ONLY a 1-3 sentence description.
-State the selected scope items, the exact location provided, and the reason if given.
-Do NOT add details, assumptions, or recommendations not present in the input.
-Do NOT mention pricing, scheduling, or general construction advice.`;
+    const systemPrompt = `You are a precise construction scope writer. Output ONLY 2-4 sentences of plain prose (no bullets, no headings).
 
-    const userPrompt = `Write a scope description from this data:\n\n${contextParts.join("\n")}`;
+Rules — follow strictly:
+1. Name the project exactly once using the exact project name provided ("the {project_name}"). Do not abbreviate or invent variants.
+2. State the location exactly as provided.
+3. Enumerate EVERY scope item by its exact name. Do NOT collapse multiple items into vague phrases like "siding work" or "various tasks".
+4. When 4+ items are provided, group them by their category in the input ("Framing tasks include X, Y, Z. Sheathing tasks include A, B.").
+5. When a quantity and unit are provided for an item, include them inline (e.g. "120 SF of sheathing replacement").
+6. State the reason in plain language at the end ("...due to {reason}.").
+7. Do NOT invent items, dimensions, materials, methods, sequencing, pricing, or scheduling that are not in the input.
+8. Do NOT add caveats, recommendations, or pleasantries.`;
+
+    const userPrompt = `Write the scope description from this data:\n\n${contextParts.join("\n")}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -128,8 +196,8 @@ Do NOT mention pricing, scheduling, or general construction advice.`;
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          max_tokens: 200,
-          temperature: 0.3,
+          max_tokens: 400,
+          temperature: 0.2,
         }),
       }
     );
