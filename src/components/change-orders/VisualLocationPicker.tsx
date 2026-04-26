@@ -22,6 +22,104 @@ interface VisualLocationPickerProps {
 
 type InsideOutside = 'inside' | 'outside' | null;
 
+interface ComponentPickerProps {
+  groups: ReturnType<typeof getComponentGroups>;
+  subOptions: { label: string; icon: string }[];
+  selectedGroup: string | null;
+  selectedSub: string | null;
+  customComponent: string;
+  onPickGroup: (label: string) => void;
+  onPickSub: (label: string) => void;
+  onCustom: (value: string) => void;
+}
+
+function ComponentPicker({
+  groups,
+  subOptions,
+  selectedGroup,
+  selectedSub,
+  customComponent,
+  onPickGroup,
+  onPickSub,
+  onCustom,
+}: ComponentPickerProps) {
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        Component <span className="font-normal normal-case text-destructive">*</span>
+      </p>
+
+      {/* Top-level component group pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {groups.map(g => (
+          <button
+            key={g.label}
+            type="button"
+            onClick={() => onPickGroup(g.label)}
+            className={cn(
+              'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors min-h-[36px] flex items-center gap-1.5',
+              selectedGroup === g.label
+                ? 'bg-secondary text-secondary-foreground border-secondary'
+                : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+            )}
+          >
+            <span>{g.icon}</span>
+            <span>{g.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Sub-component pills */}
+      {selectedGroup && selectedGroup !== 'Other' && subOptions.length > 0 && (
+        <div className="animate-fade-in">
+          <div className="flex items-center flex-wrap gap-2">
+            {subOptions.map(sub => (
+              <button
+                key={sub.label}
+                type="button"
+                onClick={() => onPickSub(sub.label)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
+                  selectedSub === sub.label
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+                )}
+              >
+                {sub.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => onPickSub('Other')}
+              className={cn(
+                'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px]',
+                selectedSub === 'Other'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
+              )}
+            >
+              Other
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom component input */}
+      {(selectedGroup === 'Other' || selectedSub === 'Other') && (
+        <div className="animate-fade-in">
+          <Input
+            value={customComponent}
+            onChange={e => onCustom(e.target.value)}
+            placeholder="Describe the component…"
+            className="h-10"
+            autoFocus
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VisualLocationPicker({
   projectId,
   onConfirm,
