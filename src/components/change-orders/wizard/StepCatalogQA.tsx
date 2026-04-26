@@ -265,13 +265,13 @@ export function StepCatalogQA({
 
       {/* SUMMARY CARD (between flow finish and AI call) */}
       {flowState.isComplete && !picks && !suggestMutation.isPending && (
-        <div className="rounded-lg border-2 border-amber-200 bg-amber-50/40 dark:bg-amber-950/10 p-4 space-y-3">
+        <div className="rounded-lg border bg-card p-4 space-y-3">
           <div className="flex items-start gap-3">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-sm shrink-0">
+            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm shrink-0">
               ✦
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Sasha's read
               </p>
               <p className="mt-1 text-sm text-foreground leading-relaxed">
@@ -279,8 +279,8 @@ export function StepCatalogQA({
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-amber-200/40">
-            <Button onClick={runMatch} className="bg-amber-600 hover:bg-amber-700 text-white">
+          <div className="flex flex-wrap gap-2 pt-2 border-t">
+            <Button onClick={runMatch}>
               <Sparkles className="h-4 w-4 mr-1.5" /> Match catalog items
             </Button>
             <Button variant="outline" size="sm" onClick={() => flowState.back()}>
@@ -294,8 +294,8 @@ export function StepCatalogQA({
       {suggestMutation.isPending && (
         <div className="flex flex-col items-center justify-center py-10 gap-3">
           <div className="relative h-16 w-16">
-            <div className="absolute inset-0 rounded-full bg-amber-400/20 animate-ping" />
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xl">
+            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+            <div className="absolute inset-2 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl">
               ✦
             </div>
           </div>
