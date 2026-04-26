@@ -260,6 +260,7 @@ export function StepCatalogQA({
           question={flowState.currentQuestion}
           questionIndex={flowState.currentIdx}
           totalQuestions={flowState.totalQuestions}
+          ctx={ctx}
           onAnswer={(value) => flowState.answer(flowState.currentQuestion.id, value)}
         />
       )}
