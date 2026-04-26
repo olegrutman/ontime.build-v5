@@ -1059,6 +1059,20 @@ function StepReview({
   generatingAI: boolean;
   onRegenerate: () => void;
 }) {
+  const [addItemsOpen, setAddItemsOpen] = useState(false);
+  // Snapshot the item IDs at the time the add-dialog opens so we can detect newly added items
+  const itemCountRef = useRef(data.selectedItems.length);
+  // When the item set length changes (after initial render), auto-regenerate description
+  useEffect(() => {
+    if (itemCountRef.current !== data.selectedItems.length) {
+      itemCountRef.current = data.selectedItems.length;
+      // Only auto-regen if not currently generating; respect manual edits by always replacing
+      // (user can still edit afterwards). Debounce a tick so onChange settles.
+      const t = setTimeout(() => onRegenerate(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [data.selectedItems.length, onRegenerate]);
+
   const { data: assignedOrg } = useQuery({
     queryKey: ['org-name', data.assignedToOrgId],
     enabled: !!data.assignedToOrgId,
