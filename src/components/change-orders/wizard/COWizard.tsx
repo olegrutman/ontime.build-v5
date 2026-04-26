@@ -585,17 +585,37 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden max-h-[88vh] flex flex-col">
+      <DialogContent className="max-w-4xl lg:max-w-5xl xl:max-w-6xl w-[95vw] p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
         <DialogTitle className="sr-only">New {isTM ? 'Work Order' : 'Change Order'}</DialogTitle>
         <DialogDescription className="sr-only">Create a new {isTM ? 'work order' : 'change order'}</DialogDescription>
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-card">
-          <div>
-            <h2 className="text-lg font-semibold">New {isTM ? 'Work Order' : 'Change Order'}</h2>
-            <p className="text-xs text-muted-foreground">{orgName} · Step {step + 1} of {STEPS.length}</p>
+        <div className="flex items-center justify-between gap-3 px-6 py-3 border-b shrink-0 bg-card">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold leading-tight">New {isTM ? 'Work Order' : 'Change Order'}</h2>
+            <p className="text-[11px] text-muted-foreground truncate">{orgName} · Step {step + 1} of {STEPS.length}{currentStep ? ` · ${currentStep.label}` : ''}</p>
           </div>
-          <div className="flex gap-1.5">
+          {/* Context chips: intent + reason + location */}
+          <div className="hidden md:flex items-center gap-1.5 flex-1 min-w-0 justify-center">
+            {data.intent && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold whitespace-nowrap">
+                <span aria-hidden>{WORK_INTENT_ICONS[data.intent]}</span>
+                {WORK_INTENT_LABELS[data.intent]}
+              </span>
+            )}
+            {data.reason && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-medium whitespace-nowrap">
+                {CO_REASON_LABELS[data.reason]}
+              </span>
+            )}
+            {data.locationTag && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-[11px] font-medium max-w-[260px]">
+                <span aria-hidden>📍</span>
+                <span className="truncate">{data.locationTag}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex gap-1 shrink-0">
             {STEPS.map((_, i) => (
-              <div key={i} className={cn('w-9 h-1.5 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-muted')} />
+              <div key={i} className={cn('w-7 h-1.5 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-muted')} />
             ))}
           </div>
         </div>
