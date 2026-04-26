@@ -249,6 +249,41 @@ export function StepCatalogQA({
         </span>
       </div>
 
+      {/* Soft note: intent was swapped because the picked component
+          belongs to a different intent family. Lets the user revert. */}
+      {intentWasSwapped && !picks && componentResolution && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground">
+          <Sparkles className="h-3 w-3 text-primary shrink-0" />
+          <span className="flex-1 min-w-0">
+            Switched to <span className="font-semibold">{WORK_INTENT_LABELS[resolvedIntent]}</span>{' '}
+            questions because you picked{' '}
+            <span className="font-medium">"{componentResolution.componentLabel}"</span>.
+          </span>
+          <button
+            type="button"
+            onClick={() => setOverrideOriginal(true)}
+            className="text-[11px] text-muted-foreground hover:text-foreground underline shrink-0"
+          >
+            Use {WORK_INTENT_LABELS[baseIntent]} instead
+          </button>
+        </div>
+      )}
+
+      {/* Pre-seeded note: first answer was filled from Step-2 component. */}
+      {flowSeed && !picks && componentResolution && !intentWasSwapped && flowState.currentIdx > 0 && (
+        <p className="text-[11px] text-muted-foreground italic">
+          Pre-filled from your location: <span className="text-foreground font-medium not-italic">{componentResolution.componentLabel}</span>.
+          {' '}
+          <button
+            type="button"
+            onClick={() => flowState.editAnswer(flow.questions[0].id)}
+            className="underline hover:text-foreground"
+          >
+            Change
+          </button>
+        </p>
+      )}
+
       {/* Progress bar — linear */}
       <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
         <div
@@ -263,8 +298,9 @@ export function StepCatalogQA({
         />
       </div>
 
-      {/* Breadcrumb of past answers */}
-      {Object.keys(flowState.answers).length > 0 && !picks && (
+      {/* Breadcrumb of past answers — only when there's at least one
+          user-answered question (skip on Q1 where it's empty/noise). */}
+      {flowState.currentIdx > 0 && !picks && (
         <div className="flex flex-wrap gap-1.5">
           {flow.questions.slice(0, flowState.currentIdx).map(q => {
             const val = flowState.answers[q.id];
@@ -290,6 +326,7 @@ export function StepCatalogQA({
           })}
         </div>
       )}
+
 
       {/* QUESTION CARD */}
       {!flowState.isComplete && !picks && flowState.currentQuestion && (
