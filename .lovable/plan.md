@@ -1,90 +1,68 @@
-## What I tested
+## What's broken (in plain English)
 
-I walked through Step 1 → Step 2 → Step 3 in your replay and read the code that drives Step 3.
+You picked **Exterior · Roof system · Roof** in Step 2 and **Tear out / demo** in Step 1. Sasha then asked "What are you tearing out?" and offered: **Partition wall, Bearing wall, Soffit/bulkhead, Cabinets, Flooring, Fixtures, Ceiling, Other**.
 
-Your selections in this session:
-- **Why (Step 1)** — you picked an intent + a reason (the wizard requires both before "Next")
-- **Where (Step 2)** — `Exterior · Wall (exterior) / WRB / housewrap · East elevation`
-- **Step 3 (Scope)** — the page mounted, briefly flashed "Loading catalog…", then rendered the question card from Sasha
+None of those belong on a roof. You can't "tear out cabinets" from a roof system. This is the same class of bug as the framing screen — the wizard collected the location and intent, then ignored both when it built the question.
 
-## What's actually wrong (in plain English)
+## Root cause (one sentence)
 
-The "messy / no clear direction" feeling on Step 3 is real, and it comes from **three concrete problems**, not just styling. The biggest one is that the page asks you to repeat yourself.
+`TEAR_OUT_FLOW` in `src/lib/intentFlows.ts` is a **single static interior-demo list**. It does not branch on the location zone (roof vs. interior vs. exterior wall vs. site), and the location-component pre-seed map (`COMPONENT_MAP`) only routes roof/wall components into `envelope_work` and `repair_damage` — it has **no entries that route into `tear_out` at all**. So tear-out always shows interior cabinets/flooring/fixtures regardless of where you said the work is.
 
-### 1. Step 3 asks you what you already told it in Step 2 (the worst offender)
+Two smaller related issues fall out of the same root cause:
+1. `tear_out` skips the smarter component pre-seed entirely (no zone awareness, no skip-the-first-question shortcut that the other flows now have).
+2. The "envelope" intent has roof sheathing, but there is no demo equivalent — so a user wanting "tear off roof sheathing and decking" has no clean path.
 
-In Step 2 you literally picked the building component **"Wall (exterior) / WRB / housewrap"**. Then Step 3 opens and the very first Sasha question is:
+## The fix (3 parts)
 
-> *"Which layer of the envelope?"* — with options: WRB / housewrap, Wall sheathing, Roof sheathing, Flashing, Siding prep, Fascia/soffit, Window flashing, Self-adhered membrane.
+### Part 1 — Make `TEAR_OUT_FLOW` zone-aware
 
-You already said WRB. Asking again feels dumb and makes the page look noisy because the user thinks "didn't I do this two seconds ago?". This is the #1 cause of "no clear direction".
+Use the existing `answersFor(ctx)` and `textFor(ctx)` hooks already supported by `ScopeQuestion` (the same pattern the framing trees use). The first question becomes context-driven:
 
-**Why it happens in code:** `StepCatalog` passes `intent` (from Step 1) to `StepCatalogQA`. That picks an intent flow from `intentFlows.ts`. The `envelope_work` flow (`ENVELOPE_FLOW`) was authored as a generic envelope wizard with no awareness that the user may have already pinned the layer at the location step. The location component never gets pre-loaded as the answer to question #1.
+- **ctx.zone === 'roof'** → "What roof component are you removing?"
+  Roof sheathing/decking, Underlayment / felt, Shingles / membrane (if in scope), Fascia / sub-fascia, Soffit material, Rafter / truss (spec, PE flag), Ridge cap, Other.
+- **ctx.zone === 'exterior_wall'** → "What exterior component are you removing?"
+  Siding, WRB / housewrap, Wall sheathing, Window / door (rough opening), Trim / casing, Flashing, Wall stud (spec, PE flag if bearing), Other.
+- **ctx.zone === 'interior_wall' / 'ceiling' / 'floor' / null** → keep today's interior list (Partition wall, Bearing wall, Soffit/bulkhead, Cabinets, Flooring, Fixtures, Ceiling, Other).
+- **ctx.zone === 'site' / 'foundation'** → site list (Concrete slab section, Footing, Hardscape, Grading, Other).
 
-### 2. The intent picked in Step 1 may not match the component picked in Step 2
+Disposal, extent, and protection questions stay the same (they apply to all demo).
 
-Step 1 lets the user pick any intent (Repair damage, Add new, Modify, Tear out, Envelope, Structural, Blocking, Inspection fix, Other). Step 2 lets them pick any component (Wall, WRB, Roof sheathing, Floor joist, Stud, Beam…). Nothing today checks that those two agree.
+The `summarize()` function gets a small `componentLabelMap` per zone so the AI sentence reads naturally ("Demo of roof sheathing at the Roof…" instead of "Demo of existing work…").
 
-So a user can pick **intent = "Repair damage"** in Step 1 and then **component = "WRB / housewrap"** in Step 2. Step 3 then runs the *generic damage flow* — which still asks "what member was damaged?" with `2x stud / header / sill plate / top plate / rim band / king-jack / sheathing panel` (the `exterior_wall` member list). None of those say "WRB", so the user sees a wall-of-options that doesn't include the thing they already named. That's where the earlier "showing wall studs and floor joist need to tighten up this step" feedback came from.
+### Part 2 — Add tear-out entries to `COMPONENT_MAP` so Step 2 pre-seeds Step 3
 
-### 3. The question card itself still feels heavy
+Right now `resolveComponent("…Roof system · Roof")` returns nothing useful for tear-out. Add tear-out-aware mappings that run **only when the picked intent is `tear_out`** (or extend `suggestIntentForComponent` to keep `tear_out` separate from the framing family).
 
-The card shows: a context line with location + intent, a progress bar, a breadcrumb of past answers (empty on Q1), the question, a 4‑col grid of 8 large icon tiles, an annotation block, AND a footer escape row with "Back / Type instead / Browse catalog". On a question whose answer the system already knows, that whole stack reads as visual chaos.
+Specifically, when the trailing component matches roof / sheathing / siding / WRB / etc. AND intent is `tear_out`, pre-seed the new context-aware first question to the matching answer (e.g., `roof_sheath`, `siding`, `wrb`). This gives the same one-question-skip + "Pre-filled from your location" chip the other flows already have.
 
-## The fix (3 small surgical changes)
+### Part 3 — Reconcile intent ↔ location for obvious mismatches
 
-I'm intentionally NOT proposing a redesign. The page is fine when the right question is being asked. The fix is to ask fewer, smarter questions.
+Today `suggestIntentForComponent` only swaps between framing-family and envelope/structural. Extend it so that when the user says **tear_out** but the location is clearly an envelope layer (roof sheathing, WRB, siding), we either:
+- keep `tear_out` (preferred — demo is its own intent), OR
+- offer a soft-swap suggestion to `envelope_work` if the answer chosen is "remove and reinstall WRB/sheathing" rather than pure demo.
 
-### Change 1 — Pre-fill the layer/member from the Step-2 component, then skip that question
-
-In `StepCatalogQA.tsx`, before mounting the question flow, parse the trailing component out of `locationTag` (the part after the last "·") and try to map it to one of the answer ids on the **first** question of the resolved flow. Examples:
-
-- `WRB / housewrap` → map to `wrb` answer in `ENVELOPE_FLOW.layer`
-- `Wall sheathing` → `sheathing`
-- `Roof sheathing` → `roof_sheath`
-- `Window flashing` → `window_flash`
-- `Floor joist` → `floor_joist` in damage flow's member list
-- `2x stud / wall stud` → `2x_stud`
-- `Rafter` → `rafter`
-- `Beam / LVL` → `beam` (and route to STRUCTURAL_FLOW)
-
-When a mapping is found, seed `useQuestionFlow` with that answer pre-set and start at question index 1 instead of 0. The breadcrumb pill at the top still shows "WRB / housewrap" (clickable to change), so nothing is hidden — the user just doesn't have to click it twice.
-
-Net effect: instead of 4 questions, the WRB user sees 3, and the first thing they read is "*What's the existing condition?*" — a question they actually need to answer.
-
-### Change 2 — Reconcile intent with the picked component (soft, no blocking)
-
-After the user picks the component in Step 2 / before Step 3 runs, check whether the chosen intent matches the component family using a small lookup:
-
-- `WRB / housewrap`, `Sheathing` (wall or roof), `Flashing`, `Fascia`, `Siding prep` → expects `envelope_work`
-- `Beam`, `Column`, `Hold-down`, `Shear panel` → expects `structural_install`
-- `Stud`, `Header`, `Plate`, `Rim`, `Joist`, `Rafter`, `Truss` → expects `repair_damage` / `add_new` / `redo_work` / `modify_existing` (any framing intent is OK)
-- `Cabinet`, `Flooring tear-out` → expects `tear_out`
-
-If the picked intent doesn't match the component family, do NOT block. Instead, switch the resolved flow for Step 3 to the matching one and surface a tiny one-line note in the Sasha card: *"Switched to **Envelope / WRB** questions because you picked WRB / housewrap. [Use damage questions instead]"*. One click reverts. This is exactly the same soft-suggestion pattern Step 1 already uses when the reason is picked first.
-
-### Change 3 — Quiet the question card on Q1
-
-Three small CSS/markup tweaks in `StepCatalogQA.tsx`:
-
-- Hide the breadcrumb row entirely when `flowState.currentIdx === 0` (it's empty anyway and just adds a gap)
-- Hide the "Back" button on Q1 (also useless — there's no previous question)
-- Move the `annotation` block from above the answer grid to a small collapsible "Why we ask" link below the grid. Most users skip annotations; for the ones who want them, one click reveals the text.
+Implementation: keep `tear_out` and just trust Part 1+2 to make the questions correct. No forced swap — that's the right call because "tear out roof sheathing" is genuinely demo, not envelope work.
 
 ## Files to change
 
-- `src/components/change-orders/wizard/StepCatalogQA.tsx` — Changes 1 & 3 (component → answer mapping, seed `useQuestionFlow`, hide breadcrumb/back on Q1, collapse annotation)
-- `src/lib/intentFlows.ts` — export a small `COMPONENT_TO_ANSWER` map (per-flow lookup table) and an `expectedIntentForComponent()` helper used by Change 2
-- `src/components/change-orders/wizard/COWizard.tsx` — call `expectedIntentForComponent()` after Step 2 confirm; if mismatch, store the suggested intent and show the soft-switch note inside `StepCatalogQA`
+| File | Change |
+|---|---|
+| `src/lib/intentFlows.ts` | Rewrite `TEAR_OUT_FLOW.questions[0]` to use `answersFor(ctx)` + `textFor(ctx)` keyed on `ctx.zone`. Update `summarize()` to map labels by zone. Add 8–10 new entries to `COMPONENT_MAP` for tear-out (roof sheath, underlayment, siding, WRB, fascia, soffit, slab, hardscape). Adjust `suggestIntentForComponent` to leave `tear_out` alone (no auto-swap into envelope). |
+| `src/types/scopeQA.ts` | No changes — `answersFor`/`textFor` already exist on `ScopeQuestion`. |
+| `src/hooks/useQuestionFlow.ts` | No changes — already supports seed-from-component. |
+| `src/components/change-orders/wizard/StepCatalogQA.tsx` | Verify the renderer reads `question.answersFor?.(ctx) ?? question.answers` and `question.textFor?.(ctx) ?? question.text`. If it currently only reads the static arrays, add the two fallbacks (one-line each). |
 
-No changes to: edge functions, database schema, catalog filtering logic, or the location picker.
+## Tests
 
-## Acceptance test (the one you cared about)
+- Add a unit test in `src/test/` that constructs `FlowContext` for each zone (roof, exterior_wall, interior_wall, site) with intent `tear_out`, calls `getIntentFlow('tear_out', 'apartments_mf')`, then asserts the first question's `answersFor(ctx)` returns the zone-appropriate list (no "Cabinets" on roof; no "Roof sheathing" on interior wall).
+- Add a `resolveComponent` test for `"Exterior · Roof system · Roof sheathing"` returning the roof-sheath pre-seed.
 
-1. Open Create CO → Step 1: pick **Repair damage** + reason **Damaged by others** → Next
-2. Step 2: pick **Exterior → Wall (exterior) / WRB / housewrap → East elevation** → Save
-3. Step 3 should now:
-   - Show the soft note: *"Switched to **Envelope / WRB** questions because you picked WRB / housewrap"*
-   - Skip the "Which layer?" question (already known = WRB)
-   - Open directly on *"What's the existing condition?"* with a clean card (no empty breadcrumb, no Back on Q1)
-4. Repeat with component = **Roof sheathing** → Step 3 opens on the condition question with `roof_sheath` already pinned, no studs or floor joists in the option list.
+## What you'll see after the fix
+
+Same scenario — Exterior · Roof system · Roof + Tear out:
+- Header: "Editing scope for **Exterior · Roof system · Roof** · Tear out / demo" (unchanged).
+- Question 1 becomes "**What roof component are you removing?**" with roof-only answers. If Step 2 was specific enough (e.g., "Roof sheathing"), Q1 is auto-answered and skipped with a "Pre-filled from your location · Change" chip, matching the framing screen behavior.
+- The remaining demo questions (extent, disposal, protection) stay the same.
+- Sasha's generated description reads like "Demo of roof sheathing at the Roof — medium area (80–400 SF). GC dumpster on site." instead of the generic interior phrasing.
+
+No DB changes, no edge function changes — this is a pure client fix in one file plus a tiny renderer fallback.
