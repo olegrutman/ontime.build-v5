@@ -302,11 +302,16 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
     try {
       const { data: resp, error } = await supabase.functions.invoke('generate-work-order-description', {
         body: {
+          mode: 'per_item',
           work_type: data.workType || data.reason,
           location_tag: data.locationTag || '',
           project_name: project?.name ?? 'Project',
           project_context: projectScope ?? undefined,
+          intent: data.intent ?? null,
+          intent_label: data.intent ? WORK_INTENT_LABELS[data.intent] : null,
+          qa_answers: data.qaAnswers ?? {},
           selected_items: data.selectedItems.map(i => ({
+            id: i.id,
             name: i.item_name,
             qty: i.qty ?? null,
             unit: i.unit ?? null,
@@ -322,28 +327,28 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         },
       });
       if (error) throw error;
-      if (resp?.description) {
+      // New shape: { items: [{ id, description }], summary?: string }
+      if (resp?.items && Array.isArray(resp.items)) {
+        const map: Record<string, string> = {};
+        for (const r of resp.items) {
+          if (r?.id && typeof r.description === 'string') map[r.id] = r.description;
+        }
+        update({ itemDescriptions: map, aiDescription: resp.summary || '' });
+      } else if (resp?.description) {
+        // Legacy fallback (single blob)
         update({ aiDescription: resp.description });
       }
     } catch (err) {
       console.error('AI generation failed:', err);
-      // Fallback: manual description grouped by category
-      const grouped = new Map<string, string[]>();
+      // Fallback: per-item descriptions built locally
+      const map: Record<string, string> = {};
+      const intentLabel = data.intent ? WORK_INTENT_LABELS[data.intent] : '';
+      const where = data.locationTag || 'TBD';
       for (const i of data.selectedItems) {
-        const cat = i.category_name || 'General';
-        if (!grouped.has(cat)) grouped.set(cat, []);
         const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
-        grouped.get(cat)!.push(`${i.item_name}${qtyStr}`);
+        map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
       }
-      const itemPhrases = Array.from(grouped.entries())
-        .map(([c, names]) => `${c}: ${names.join(', ')}`)
-        .join('; ');
-      const parts = [
-        `Scope at ${data.locationTag || 'TBD'} for ${project?.name ?? 'the project'}.`,
-        itemPhrases ? `Includes ${itemPhrases}.` : '',
-        data.reason ? `Reason: ${CO_REASON_LABELS[data.reason] ?? data.reason}.` : '',
-      ].filter(Boolean);
-      update({ aiDescription: parts.join(' ') });
+      update({ itemDescriptions: map, aiDescription: '' });
     } finally {
       setGeneratingAI(false);
     }
