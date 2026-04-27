@@ -350,7 +350,14 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       const where = data.locationTag || 'TBD';
       for (const i of data.selectedItems) {
         const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
-        map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+        if (i.isCombined && i.combinedFrom?.length) {
+          const subList = i.combinedFrom
+            .map(s => `• ${s.item_name}${s.qty ? ` (${s.qty}${s.unit ? ` ${s.unit}` : ''})` : ''}`)
+            .join('\n');
+          map[i.id] = `Combined scope at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}, covering ${i.combinedFrom.length} related items.\n${subList}`;
+        } else {
+          map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+        }
       }
       update({ itemDescriptions: map, aiDescription: '' });
     } finally {
