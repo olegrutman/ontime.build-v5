@@ -147,6 +147,7 @@ export function StepCatalogQA({
         work_type: workType,
         building_type: buildingType,
         framing_method: scope?.framing_method ?? null,
+        intent: resolvedIntent,
         answers: { ...flowState.answers, __intent: resolvedIntent },
       });
       setPicks(result.picks.map((p) => ({ ...p })));
