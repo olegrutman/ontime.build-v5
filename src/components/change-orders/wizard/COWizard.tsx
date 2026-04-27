@@ -173,6 +173,25 @@ const STEPS = [
   { key: 'review', label: 'Review', description: 'Confirm & create' },
 ] as const;
 
+/**
+ * Synthesize a deterministic, human-readable description for a combined item.
+ * Used as a seed before AI runs and as a save-time safety net so combined items
+ * never persist with a null description.
+ */
+function buildCombinedDescription(
+  item: SelectedScopeItem,
+  locationTag: string | null | undefined,
+  intent: WorkIntent | null | undefined,
+): string {
+  const where = locationTag || 'TBD';
+  const intentLabel = intent ? WORK_INTENT_LABELS[intent] : '';
+  const subs = item.combinedFrom ?? [];
+  const subList = subs
+    .map(s => `• ${s.item_name}${s.qty ? ` (${s.qty}${s.unit ? ` ${s.unit}` : ''})` : ''}`)
+    .join('\n');
+  return `Combined scope at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}, covering ${subs.length} related items.\n${subList}`;
+}
+
 interface COWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
