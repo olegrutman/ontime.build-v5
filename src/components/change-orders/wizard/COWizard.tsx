@@ -94,6 +94,10 @@ export interface COWizardData {
   shareDraftNow: boolean;
   quickHours: number | null;
   aiDescription: string;
+  /** Optional user-typed name for the CO/WO. When empty, the title is just `{co_number} · {date}`. */
+  coName?: string;
+  /** Per-line-item descriptions, keyed by selectedItems[i].id. Drives co_line_items.description. */
+  itemDescriptions?: Record<string, string>;
   /** Phase 3 — structured answers from the QA flow, persisted as evidence */
   qaAnswers?: Record<string, string | string[]>;
 }
@@ -120,6 +124,8 @@ const INITIAL_DATA: COWizardData = {
   shareDraftNow: false,
   quickHours: null,
   aiDescription: '',
+  coName: '',
+  itemDescriptions: {},
 };
 
 const REASON_CARDS: { reason: COReasonCode; label: string; description: string; icon: string; example: string }[] = [
@@ -296,11 +302,16 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
     try {
       const { data: resp, error } = await supabase.functions.invoke('generate-work-order-description', {
         body: {
+          mode: 'per_item',
           work_type: data.workType || data.reason,
           location_tag: data.locationTag || '',
           project_name: project?.name ?? 'Project',
           project_context: projectScope ?? undefined,
+          intent: data.intent ?? null,
+          intent_label: data.intent ? WORK_INTENT_LABELS[data.intent] : null,
+          qa_answers: data.qaAnswers ?? {},
           selected_items: data.selectedItems.map(i => ({
+            id: i.id,
             name: i.item_name,
             qty: i.qty ?? null,
             unit: i.unit ?? null,
@@ -316,28 +327,28 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         },
       });
       if (error) throw error;
-      if (resp?.description) {
+      // New shape: { items: [{ id, description }], summary?: string }
+      if (resp?.items && Array.isArray(resp.items)) {
+        const map: Record<string, string> = {};
+        for (const r of resp.items) {
+          if (r?.id && typeof r.description === 'string') map[r.id] = r.description;
+        }
+        update({ itemDescriptions: map, aiDescription: resp.summary || '' });
+      } else if (resp?.description) {
+        // Legacy fallback (single blob)
         update({ aiDescription: resp.description });
       }
     } catch (err) {
       console.error('AI generation failed:', err);
-      // Fallback: manual description grouped by category
-      const grouped = new Map<string, string[]>();
+      // Fallback: per-item descriptions built locally
+      const map: Record<string, string> = {};
+      const intentLabel = data.intent ? WORK_INTENT_LABELS[data.intent] : '';
+      const where = data.locationTag || 'TBD';
       for (const i of data.selectedItems) {
-        const cat = i.category_name || 'General';
-        if (!grouped.has(cat)) grouped.set(cat, []);
         const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
-        grouped.get(cat)!.push(`${i.item_name}${qtyStr}`);
+        map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
       }
-      const itemPhrases = Array.from(grouped.entries())
-        .map(([c, names]) => `${c}: ${names.join(', ')}`)
-        .join('; ');
-      const parts = [
-        `Scope at ${data.locationTag || 'TBD'} for ${project?.name ?? 'the project'}.`,
-        itemPhrases ? `Includes ${itemPhrases}.` : '',
-        data.reason ? `Reason: ${CO_REASON_LABELS[data.reason] ?? data.reason}.` : '',
-      ].filter(Boolean);
-      update({ aiDescription: parts.join(' ') });
+      update({ itemDescriptions: map, aiDescription: '' });
     } finally {
       setGeneratingAI(false);
     }
@@ -394,8 +405,9 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       }
 
       const coNumber = await generateCONumber({ projectId, creatorOrgId: orgId, assignedToOrgId: resolvedAssignedToOrgId, isTM });
-      const intentLabel = data.intent ? WORK_INTENT_LABELS[data.intent] : (selectedWorkType?.label ?? '');
-      const title = `${coNumber} · ${intentLabel ? intentLabel + ' · ' : ''}${format(new Date(), 'MMM d, yyyy')}`;
+      const userName = (data.coName ?? '').trim();
+      const titleSuffix = userName || format(new Date(), 'MMM d, yyyy');
+      const title = `${coNumber} · ${titleSuffix}`;
       const preGeneratedId = crypto.randomUUID();
 
       // resolvedAssignedToOrgId already computed above for CO number generation
@@ -446,7 +458,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           sort_order: idx,
           location_tag: data.locationTag || null,
           reason: (data.reason || null) as string | null,
-          description: item.reasonDescription || null,
+          description: data.itemDescriptions?.[item.id] || item.reasonDescription || null,
         }));
         const { data: insertedRows, error: lineError } = await supabase
           .from('co_line_items')
@@ -1110,32 +1122,57 @@ function StepReview({
 
   return (
     <div className="space-y-5">
-      {/* AI-generated scope description */}
+      {/* Optional CO/WO name */}
+      <div className="space-y-2">
+        <Label>Name this {isTM ? 'work order' : 'change order'} <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Input
+          value={data.coName ?? ''}
+          onChange={e => onChange({ coName: e.target.value })}
+          placeholder="e.g. Roof tear-out + WRB repair"
+          maxLength={80}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Leave blank and we'll use the date. The "why" and "where" live on each scope item below — not on the title.
+        </p>
+      </div>
+
+      {/* Per-item descriptions */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>Scope Description</Label>
+          <Label>Per-item descriptions</Label>
           <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generatingAI} className="gap-1.5 h-7 text-xs">
             <Sparkles className="h-3.5 w-3.5" />
-            {generatingAI ? 'Generating…' : 'Regenerate'}
+            {generatingAI ? 'Generating…' : 'Regenerate all'}
           </Button>
         </div>
         {generatingAI ? (
           <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-muted/30">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">AI is drafting your scope description…</span>
+            <span className="text-sm text-muted-foreground">Sasha is drafting descriptions for each item…</span>
           </div>
         ) : (
-          <Textarea
-            value={data.aiDescription}
-            onChange={e => onChange({ aiDescription: e.target.value })}
-            rows={4}
-            placeholder="Scope description…"
-          />
+          <div className="rounded-lg border border-border bg-card divide-y">
+            {data.selectedItems.map((item) => {
+              const desc = data.itemDescriptions?.[item.id] ?? '';
+              return (
+                <div key={item.id} className="p-3 space-y-1.5">
+                  <p className="text-sm font-semibold text-foreground">{item.item_name}</p>
+                  <Textarea
+                    value={desc}
+                    onChange={e => onChange({
+                      itemDescriptions: { ...(data.itemDescriptions ?? {}), [item.id]: e.target.value },
+                    })}
+                    rows={2}
+                    placeholder="What is this item, where, and why? (1–2 sentences)"
+                    className="text-xs"
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
-        <p className="text-[11px] text-muted-foreground">AI-drafted — edit freely before creating.</p>
+        <p className="text-[11px] text-muted-foreground">AI-drafted per item — edit any line freely.</p>
       </div>
-
-      {/* Scope items — editable */}
       {data.selectedItems.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
