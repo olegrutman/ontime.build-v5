@@ -787,8 +787,12 @@ export function resolveComponent(
  * picked intent is in a *different family* from the component. We don't
  * force a switch between damage/add_new/redo/modify since they share the
  * same first-question (member) — but we DO switch between framing-family
- * intents and envelope_work / structural_install / tear_out, since those
- * have entirely different question trees.
+ * intents and envelope_work / structural_install, since those have
+ * entirely different question trees.
+ *
+ * `tear_out` is intentionally NEVER swapped: demo of a roof, WRB, or
+ * sheathing is genuinely demolition (not envelope install work), and
+ * TEAR_OUT_FLOW is now zone-aware so it shows the right options.
  */
 export function suggestIntentForComponent(
   pickedIntent: WorkIntent | null | undefined,
@@ -799,6 +803,10 @@ export function suggestIntentForComponent(
 
   // Same intent — no swap needed.
   if (pickedIntent === expectedIntent) return null;
+
+  // Tear-out is its own intent regardless of which envelope/framing
+  // component the user picked. The zone-aware TEAR_OUT_FLOW handles it.
+  if (pickedIntent === 'tear_out') return null;
 
   // Member-based framing intents are interchangeable for question routing.
   const FRAMING_FAMILY: WorkIntent[] = ['repair_damage', 'add_new', 'redo_work', 'modify_existing'];
