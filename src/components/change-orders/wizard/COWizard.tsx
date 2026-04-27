@@ -1170,7 +1170,13 @@ function CombineButton({
       isCombined: true,
       combinedFrom: originals,
     };
-    onChange({ selectedItems: [combined], itemDescriptions: {} });
+    // Seed the combined item with a deterministic description so the textarea is
+    // never empty (and so save still has something even if AI regen fails).
+    const seededDesc = buildCombinedDescription(combined, data.locationTag, data.intent);
+    onChange({
+      selectedItems: [combined],
+      itemDescriptions: { [combined.id]: seededDesc },
+    });
     setOpen(false);
     setTimeout(() => onAfterCombine(), 200);
   }
