@@ -124,6 +124,15 @@ export function AddScopeItemButton({
             qty: i.qty ?? null,
             unit: i.unit ?? null,
             category: i.category_name ?? null,
+            combined: !!i.isCombined,
+            sub_items: i.isCombined && i.combinedFrom
+              ? i.combinedFrom.map(s => ({
+                  name: s.item_name,
+                  qty: s.qty ?? null,
+                  unit: s.unit ?? null,
+                  category: s.category_name ?? null,
+                }))
+              : undefined,
           })),
           reason_code: data.reason || '',
           trigger_code: data.triggerCode ?? undefined,
@@ -147,7 +156,14 @@ export function AddScopeItemButton({
       const where = data.locationTag || 'TBD';
       for (const i of data.selectedItems) {
         const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
-        map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+        if (i.isCombined && i.combinedFrom?.length) {
+          const subList = i.combinedFrom
+            .map(s => `• ${s.item_name}${s.qty ? ` (${s.qty}${s.unit ? ` ${s.unit}` : ''})` : ''}`)
+            .join('\n');
+          map[i.id] = `Combined scope at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}, covering ${i.combinedFrom.length} related items.\n${subList}`;
+        } else {
+          map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+        }
       }
       update({ itemDescriptions: map, aiDescription: '' });
     } finally {
