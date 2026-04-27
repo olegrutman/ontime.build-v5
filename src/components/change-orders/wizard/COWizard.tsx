@@ -423,7 +423,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       const nextStep = step + 1;
       setStep(nextStep);
       // Auto-generate AI description when entering review step
-      if (STEPS[nextStep].key === 'review' && !data.aiDescription) {
+      if (STEPS[nextStep].key === 'review') {
         generateAIDescription();
       }
     }
