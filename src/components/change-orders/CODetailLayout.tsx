@@ -266,6 +266,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                       <AddScopeItemButton
                         coId={co.id} orgId={myOrgId} projectId={projectId}
                         role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
+                        isTM={isTM}
                       />
                     )}
                   </div>
@@ -344,6 +345,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                     <AddScopeItemButton
                       coId={co.id} orgId={myOrgId} projectId={projectId}
                       role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
+                      isTM={isTM}
                     />
                   </div>
                 )}
