@@ -1,70 +1,88 @@
-## What I found (in plain English)
+## You're right — and here's how I read it back
 
-You picked **Tear out / demo + Addition** in Step 1, and **Exterior · Roof system · Roof trusses · East elevation** in Step 2. That's enough information for any human to know exactly what's being asked. But Step 3 still asked you "What are you tearing out?" and showed you a list of **interior** options — Partition wall, Bearing wall, Cabinets, Flooring, Fixtures, Ceiling. Then when you typed "sheathing and moving trusses," Sasha handed back generic catalog items ("Scope addition – general," "Temporary bracing," "Layout and layout checks") that have nothing to do with a roof tear-out.
+Today the wizard does two things wrong:
 
-Three real bugs are stacked on top of each other.
+1. **CO title bakes in the "why"** (intent + date), e.g. `CO-MAI-GC-TC-0008 · Tear out / demo · Apr 26, 2026`. That label is wrong the moment the CO contains items that aren't tear-out (look at your screenshot — items 2 and 3 are housewrap/WRB repair, not demo).
+2. **Description is one CO-wide blob** (`reason_note`), generated once at review time. Individual line items either show no description or just a fragment of the QA answer. The user can't read a line and understand "what is this and why is it here."
 
-### Bug 1 — Zone resolver throws away the roof context
+We agree on the model: **a CO is a container; each line item carries its own why / where / what.** The wizard answers are inputs that produce items — they should not name the CO.
 
-`resolveZoneFromLocationTag()` checks for the word "truss" *first*, before it checks whether you're on the roof. As soon as it sees "truss" anywhere in the tag, it returns `'structural'` and stops.
+## The fix
 
-Then `tearOutZoneKey()` in the demo flow only knows four buckets — `roof`, `exterior_wall`, `site`, `interior`. It doesn't know what to do with `'structural'`, so it falls through to **`interior`**. That's why you got cabinets and flooring on a roof job.
+### 1. CO title: neutral + identifying, no intent
 
-### Bug 2 — Pre-seed silently fails, so Q1 isn't skipped
+Format becomes one of:
+- `CO-MAI-GC-TC-0008 · Apr 26, 2026` (default)
+- `CO-MAI-GC-TC-0008 · {user-typed name}` (if they enter one in the wizard)
 
-The Step-2 → Step-3 hand-off was supposed to recognize "Roof trusses" and pre-fill the first question with `rafter_truss`, then skip straight to Q2. But because the question is now showing the **interior** answer set (which doesn't contain `rafter_truss`), the safety check `staticAnswers.some(a => a.id === answerId) || dynamicAnswers.some(a => a.id === answerId)` fails. So instead of auto-skipping, you got asked the question with the wrong options. Same root cause as Bug 1.
+We add an optional **"Name this change order (optional)"** input on the Review step. No "why" string in the title — ever.
 
-### Bug 3 — Demo flow asks logistics questions that don't belong on a roof
+### 2. Each line item gets its own why / where / what
 
-Even if Bugs 1 and 2 are fixed, `TEAR_OUT_FLOW` always asks the same 4 questions: *what / extent / disposal / protection*. "Protection / dust control needed?" with options like "Poly + zip walls" and "Occupied — full negative-air" makes no sense for an exterior roof tear-off. That's the "extra confusing steps" you felt.
+`co_line_items` already has `reason`, `location_tag`, and `description` columns — we're just under-using them. Per item we will persist:
 
-### Bug 4 — AI suggester ignores the demo intent
+- `reason` — the why (already wired, but currently inherits one CO-wide value; will become per-item editable, defaulting to the wizard's "why")
+- `location_tag` — the where (already wired the same way; same treatment)
+- `description` — a 1–2 sentence, item-specific summary built from: item name + intent + component + location + the QA answers that produced *this* item
 
-The "Type instead" path in screenshot 2 returned generic items because the edge function `suggest-scope-items` doesn't know the user's **intent** is `tear_out`. It receives `reason`, `work_type`, `building_type`, but the system prompt and ranking logic don't bias toward demolition catalog items when the intent is demo. Result: a tear-out request gets matched against general-purpose framing items.
+The detail page already renders `item.item_name`, `cleanDescription`, the reason chip, and the location chip on each row (`COLineItemRow.tsx` lines 122–149) — so the UI work is minimal once the data is right.
 
----
+### 3. Per-item AI descriptions (replaces the one big blob)
 
-## The fix (4 small, focused changes)
+Rework `generate-work-order-description` (or add a sibling `generate-line-item-description`) so it returns **an array of `{ item_id, description }` keyed to each selected catalog item**, not one paragraph for the whole CO.
 
-**1. Fix the zone resolver — check location before structural keywords.**
-In `src/lib/resolveZone.ts`, move the exterior/roof check *above* the structural check. If a tag starts with "Exterior" and contains "roof", that's `'roof'`, full stop — even if "truss" appears in it. Structural-member detection should only kick in when no location zone is identifiable.
+Inputs per item: catalog item name + unit, the resolved intent for that item, the resolved zone/component, the QA answers tagged to that item, and the project context. Output: 1–2 sentence description following the existing "AI scope description style" memory (no invented quantities, derived strictly from selections).
 
-**2. Teach the demo flow to recognize structural roof/wall tags.**
-In `src/lib/intentFlows.ts`, update `tearOutZoneKey()` so that when zone is `'structural'`, it inspects the location tag itself to decide between `roof`, `exterior_wall`, `site`, or `interior`. Belt-and-suspenders coverage in case the resolver still returns `'structural'` for edge cases.
+The CO-level `reason_note` becomes optional / removed from the header — replaced by the per-item descriptions.
 
-**3. Trim the demo flow to 2 questions for exterior/roof zones.**
-The "disposal" and "dust protection" questions are interior-renovation questions. For roof and exterior_wall demos, ask only:
-- Q1: What component (already pre-seeded from Step 2 → auto-skip)
-- Q2: How much (extent)
+### 4. Where the wizard answers actually go
 
-That's it. Disposal stays only for interior (where dumpster vs. haul matters more) and site (concrete). Dust protection only for interior. This is done by gating questions in the flow with a `showFor(ctx)` predicate, then teaching `useQuestionFlow` to skip questions whose predicate returns false.
+```text
+Wizard answer            →  Lives on
+─────────────────────────────────────────────
+why (intent/reason)      →  co_line_items.reason       (per item)
+where (location/zone)    →  co_line_items.location_tag (per item)
+what kind (QA answers)   →  co_line_items.description  (per item, AI-summarized)
+optional CO name         →  change_orders.title        (just the name, no intent)
+```
 
-**4. Pass intent to the AI suggester and bias the ranking.**
-In `supabase/functions/suggest-scope-items/index.ts`:
-- Accept a top-level `intent` field in the request body.
-- Add it to the user message ("Work intent: tear_out").
-- Update the system prompt with one rule: *"When intent is `tear_out`, prioritize demolition / removal / tear-off catalog items. Do not suggest 'general scope addition' or generic placeholder items unless no demo item exists."*
-- In `StepCatalogQA.tsx`, pass `intent: resolvedIntent` alongside the existing `__intent` field in `answers` so it's a first-class request parameter, not just a hidden answer.
+The CO header will only show: number, optional name, date, status. No intent string.
 
----
+## Technical changes
 
-## What you will see after the fix
+**`src/components/change-orders/wizard/COWizard.tsx`**
+- Line ~398: drop `intentLabel` from `title`. Use `${coNumber} · ${data.coName || format(...)}`.
+- Add an optional `coName` text input to the Review step (Step 5).
+- Line ~432–450: when inserting `co_line_items`, pull per-item description from the new AI response keyed by item id, not from `data.aiDescription`. Keep `reason` and `location_tag` as defaults from the wizard but allow per-item override (next step).
 
-For your exact scenario (Tear out + Roof trusses on East elevation):
+**`supabase/functions/generate-work-order-description/index.ts`**
+- Change response shape from `{ description: string }` to `{ items: Array<{ item_id, description }>, summary?: string }`.
+- Prompt change: generate one short description per selected item, grounded in that item's resolved component, intent, location, and matching QA answers. Follow `mem://features/ai-scope-description-style` (1–2 sentences, no invented quantities).
 
-1. Step 3 opens, sees "Roof trusses" in the tag, recognizes `rafter_truss`, **skips Q1 entirely**.
-2. Shows a small "Pre-filled from your location: Roof trusses · Change" chip.
-3. Asks **one** question: "How much is coming out? Spot / Small / Medium / Large / Full".
-4. Sasha summary reads: *"Demo of a [extent] of rafter/truss at the Roof system / East elevation. Structural roof member — temporary shoring + engineer review required."*
-5. AI returns demo-specific catalog items (truss removal, roof tear-off, temporary shoring) instead of "Scope addition – general."
+**`src/components/change-orders/wizard/StepReview.tsx` (and the inline review block in COWizard)**
+- Show per-item draft descriptions with inline edit, instead of one big textarea.
+- Add the optional "Name this change order" input above the list.
 
-Total: **1 click in Step 3** instead of 4 questions and a confused AI response.
+**`src/components/change-orders/COLineItemRow.tsx`**
+- Already renders `cleanDescription`, `reason` chip, and `location_tag` chip — no structural change. Verify the new per-item description is what's stored in `co_line_items.description`.
 
-## Files touched
+**Detail page header (`CODetail.tsx` / `COHeroBlock.tsx`)**
+- Remove the "Tear out / demo" subtitle line that mirrors the title. The intent is no longer a CO-level concept.
 
-- `src/lib/resolveZone.ts` — reorder checks (exterior + roof beats structural keyword).
-- `src/lib/intentFlows.ts` — `tearOutZoneKey()` location-aware fallback; add `showFor(ctx)` to disposal/protection questions.
-- `src/hooks/useQuestionFlow.ts` — honor `showFor(ctx)` and auto-skip hidden questions.
-- `src/components/change-orders/wizard/StepCatalogQA.tsx` — pass `intent` to suggester request.
-- `supabase/functions/suggest-scope-items/index.ts` — accept `intent`, add it to prompt + system rule.
-- `src/test/tearOutFlow.test.ts` + `src/test/resolveZone.test.ts` — cover "Exterior · Roof system · Roof trusses · …" → zone `roof`, demo flow seeds `rafter_truss`, only `extent` is asked, summary reads "Demo … at the Roof system".
+**No DB migration needed** — `co_line_items.reason`, `location_tag`, `description` already exist.
+
+## What this looks like after
+
+Header: `CO-MAI-GC-TC-0008 · Apr 26, 2026` (or `· Roof tear-out + WRB repair` if user named it)
+
+Items each show their own line, e.g.:
+- **Selective demolition** — *Tear out roof sheathing over east elevation rafters; haul-off included.* `Addition` `Exterior · Roof system / Roof sheathing · Roof`
+- **Housewrap repair / patch** — *Patch torn WRB on east wall around damaged sheathing; tape all seams per mfr.* `GC request` `Exterior · Wall (exterior) / WRB / housewrap · East elevation`
+- **WRB seam tape** — *Tape WRB laps after patch to restore drainage plane continuity.* `GC request` `Exterior · Wall (exterior) / WRB / housewrap · East elevation`
+
+Three items, three reasons, three locations, three descriptions. One CO.
+
+## Out of scope (call out if you want them in)
+
+- Per-item editing of `reason` and `location_tag` *after* CO creation (in the detail page) — currently only editable through the wizard. Easy follow-up if you want it.
+- Backfilling existing COs' titles/descriptions.
