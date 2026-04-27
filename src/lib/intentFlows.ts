@@ -47,6 +47,18 @@ function tearOutZoneKey(ctx: FlowContext): TearOutZoneKey {
   if (z === 'roof') return 'roof';
   if (z === 'exterior_wall' || z === 'envelope_opening') return 'exterior_wall';
   if (z === 'foundation' || z === 'basement') return 'site';
+  // Belt-and-suspenders: if zone is 'structural' (or anything else),
+  // inspect the location tag itself so a roof-truss demo still gets the
+  // roof option set rather than falling through to interior.
+  if (z !== 'interior_wall' && z !== 'interior_floor' && z !== 'interior_ceiling' && z !== 'stairs') {
+    const tag = (ctx.locationTag ?? '').toLowerCase();
+    const isExterior = tag.startsWith('exterior') || /\bexterior\b/.test(tag);
+    if (isExterior) {
+      if (/(roof|valley|ridge|eave|gable|rake|fascia|soffit|truss|rafter)/.test(tag)) return 'roof';
+      if (/(slab|footing|grade|hardscape|paver)/.test(tag)) return 'site';
+      return 'exterior_wall';
+    }
+  }
   return 'interior';
 }
 
@@ -148,6 +160,13 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       text: 'Who handles disposal?',
       hint: 'Affects price and equipment needs (dumpster, dump runs).',
       grid: 'cols-3',
+      // Disposal logistics matter most for interior renovation and site
+      // (concrete) demos. For roof and exterior-wall tear-offs, debris
+      // handling is implicit in the price; skip the question.
+      showFor: (ctx) => {
+        const k = tearOutZoneKey(ctx);
+        return k === 'interior' || k === 'site';
+      },
       answers: [
         { id: 'us_haul',  label: 'We haul it',     icon: '🚚' },
         { id: 'gc_dump',  label: 'GC has dumpster', icon: '🗑️' },
@@ -158,6 +177,8 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       id: 'protection',
       text: 'Protection / dust control needed?',
       grid: 'cols-3',
+      // Dust containment is an interior-only concern.
+      showFor: (ctx) => tearOutZoneKey(ctx) === 'interior',
       answers: [
         { id: 'none',       label: 'None',                 icon: '◯' },
         { id: 'plastic',    label: 'Poly + zip walls',     icon: '┃' },

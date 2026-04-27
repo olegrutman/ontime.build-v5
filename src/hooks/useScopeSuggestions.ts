@@ -13,6 +13,9 @@ export interface SuggestRequest {
   answers?: Record<string, string | string[]>;
   photo_urls?: string[];
   recent_co_items?: string[];
+  /** Sasha's resolved work intent — biases catalog ranking
+   *  (e.g. tear_out → demolition items, not generic placeholders). */
+  intent?: string | null;
 }
 
 export interface SuggestPick {

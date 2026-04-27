@@ -86,6 +86,9 @@ export interface ScopeQuestion {
   answersFor?: (ctx: FlowContext) => ScopeAnswer[];
   /** Optional context-aware question text. Same idea as `answersFor`. */
   textFor?: (ctx: FlowContext) => string;
+  /** Optional visibility predicate. When false, the question is skipped
+   *  entirely by `useQuestionFlow` (no answer required, not shown). */
+  showFor?: (ctx: FlowContext) => boolean;
   annotation?: string;
   why?: string;
 }

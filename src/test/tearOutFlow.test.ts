@@ -93,4 +93,42 @@ describe('resolveComponent — tear_out intent biasing', () => {
     expect(r!.expectedIntent).toBe('tear_out');
     expect(r!.answerId).toBe('wrb');
   });
+
+  it('routes Roof trusses to tear_out roof rafter_truss (regression)', () => {
+    const r = resolveComponent('Exterior · Roof system · Roof trusses · East elevation', 'tear_out');
+    expect(r).not.toBeNull();
+    expect(r!.expectedIntent).toBe('tear_out');
+    expect(r!.answerId).toBe('rafter_truss');
+  });
+});
+
+describe('TEAR_OUT_FLOW question gating (showFor)', () => {
+  const flow = getIntentFlow('tear_out', 'apartments_mf');
+  const disposalQ = flow.questions.find((q) => q.id === 'disposal')!;
+  const protectionQ = flow.questions.find((q) => q.id === 'protection')!;
+
+  it('hides disposal + protection on roof tear-offs', () => {
+    const ctx = ctxFor('roof', 'Exterior · Roof system · Roof trusses');
+    expect(disposalQ.showFor!(ctx)).toBe(false);
+    expect(protectionQ.showFor!(ctx)).toBe(false);
+  });
+
+  it('hides protection but shows disposal on site (concrete) demo', () => {
+    const ctx = ctxFor('foundation', 'Exterior · Foundation · Slab');
+    expect(disposalQ.showFor!(ctx)).toBe(true);
+    expect(protectionQ.showFor!(ctx)).toBe(false);
+  });
+
+  it('shows both for interior renovation', () => {
+    const ctx = ctxFor('interior_wall', 'Interior · L1 · Kitchen');
+    expect(disposalQ.showFor!(ctx)).toBe(true);
+    expect(protectionQ.showFor!(ctx)).toBe(true);
+  });
+
+  it('falls back to roof options when zone is structural but tag is exterior roof', () => {
+    const ctx = ctxFor('structural', 'Exterior · Roof system · Roof trusses · East elevation');
+    const ids = flow.questions[0].answersFor!(ctx).map((a) => a.id);
+    expect(ids).toContain('rafter_truss');
+    expect(ids).not.toContain('cabinet');
+  });
 });

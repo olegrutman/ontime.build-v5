@@ -16,12 +16,9 @@ export function resolveZoneFromLocationTag(tag: string | null | undefined): Zone
   if (!tag) return null;
   const lower = tag.toLowerCase();
 
-  // 1. Structural members override location entirely
-  if (/(beam|column|joist|rafter|truss|header|lvl|girder|stringer|post|footing)/.test(lower)) {
-    return 'structural';
-  }
-
-  // 2. Exterior + sub-zone
+  // 1. Exterior + sub-zone wins over structural-keyword detection.
+  //    Tags like "Exterior · Roof system · Roof trusses · East elevation"
+  //    must resolve to 'roof' even though "truss" appears in the tag.
   const isExterior = lower.startsWith('exterior') || /\bexterior\b/.test(lower);
   if (isExterior) {
     if (/(roof|valley|ridge|eave|gable|rake|fascia|soffit)/.test(lower)) return 'roof';
@@ -29,6 +26,11 @@ export function resolveZoneFromLocationTag(tag: string | null | undefined): Zone
     if (/(window|door|skylight|opening|penetration)/.test(lower)) return 'envelope_opening';
     if (/(foundation|footing)/.test(lower)) return 'foundation';
     return 'exterior_wall';
+  }
+
+  // 2. Structural members (interior context) — only checked after location.
+  if (/(beam|column|joist|rafter|truss|header|lvl|girder|stringer|post|footing)/.test(lower)) {
+    return 'structural';
   }
 
   // 3. Basement / foundation (interior context)

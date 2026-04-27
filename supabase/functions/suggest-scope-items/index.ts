@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const SYSTEM_PROMPT = `You are a scope-item matcher for framing contractors using Ontime.Build. Your job
-is to read a short description of a construction situation (damage, addition, or
+is to read a short description of a construction situation (damage, addition, demo, or
 rework) and return 3–6 catalog items from the platform catalog that best describe
 the work needed.
 
@@ -15,6 +15,8 @@ You receive:
 - A description of what happened (plain English)
 - Location tag (e.g. "Interior · L2 · Master Bath · Floor joists")
 - Zone slug, reason code, work type, building type, framing method
+- Work intent (one of: repair_damage, add_new, modify_existing, redo_work,
+  tear_out, envelope_work, structural_install, mep_blocking, inspection_fix, other)
 - Optionally: structured answers from a Q&A flow
 - The full platform catalog of ~110 items with slugs, names, zones, and applicable reasons
 
@@ -27,7 +29,17 @@ Rules:
    that matches the catalog item's unit field.
 5. For multifamily/commercial, flag rated-assembly concerns in warnings.
 6. For exterior/water damage, flag WRB investigation in warnings if rot is plausible.
-7. Return valid JSON only. No markdown, no preamble.`;
+7. INTENT-AWARE RANKING (critical):
+   - When intent is "tear_out": prioritize demolition / removal / tear-off /
+     disposal / shoring catalog items. Do NOT suggest generic "scope addition"
+     or placeholder items unless no demolition catalog item exists.
+   - When intent is "envelope_work": prioritize WRB, flashing, sheathing,
+     siding, membrane items.
+   - When intent is "structural_install": prioritize beam, post, hold-down,
+     shear-wall, hardware items.
+   - When intent is "repair_damage" or "redo_work": prioritize like-for-like
+     replacement of the affected member.
+8. Return valid JSON only. No markdown, no preamble.`;
 
 interface SuggestBody {
   project_id: string;
@@ -38,6 +50,7 @@ interface SuggestBody {
   work_type: string | null;
   building_type: string;
   framing_method: string | null;
+  intent?: string | null;
   answers?: Record<string, string | string[]>;
   photo_urls?: string[];
   recent_co_items?: string[];
@@ -87,6 +100,7 @@ Deno.serve(async (req) => {
       `Zone: ${body.zone ?? "unknown"}`,
       `Reason: ${body.reason}`,
       `Work type: ${body.work_type ?? "unspecified"}`,
+      `Work intent: ${body.intent ?? "unspecified"}`,
       `Building type: ${body.building_type}`,
       `Framing method: ${body.framing_method ?? "unspecified"}`,
       body.answers ? `Structured answers: ${JSON.stringify(body.answers)}` : "",
