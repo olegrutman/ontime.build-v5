@@ -1352,26 +1352,34 @@ export function StepReview({
                     <p className="font-medium text-foreground truncate">{item.item_name}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{item.category_name}</p>
                   </div>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    aria-label={`Quantity for ${item.item_name}`}
-                    value={item.qty ?? ''}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      const num = raw === '' ? null : Number(raw);
-                      if (num != null && Number.isNaN(num)) return;
-                      const next = [...data.selectedItems];
-                      next[idx] = { ...item, qty: num, quantity_source: num != null ? 'manual' : null };
-                      onChange({ selectedItems: next });
-                    }}
-                    placeholder="—"
-                    className="w-16 text-right rounded border border-border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  />
-                  <span className="text-[10px] text-muted-foreground w-8 shrink-0">{item.unit}</span>
-                  <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0', sourceBadge.cls)}>
-                    {sourceBadge.label}
-                  </span>
+                  {item.isCombined ? (
+                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 px-2 py-1 rounded bg-primary/10 text-primary font-semibold">
+                      {item.combinedFrom?.length ?? 0} bundled
+                    </span>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        aria-label={`Quantity for ${item.item_name}`}
+                        value={item.qty ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          const num = raw === '' ? null : Number(raw);
+                          if (num != null && Number.isNaN(num)) return;
+                          const next = [...data.selectedItems];
+                          next[idx] = { ...item, qty: num, quantity_source: num != null ? 'manual' : null };
+                          onChange({ selectedItems: next });
+                        }}
+                        placeholder="—"
+                        className="w-16 text-right rounded border border-border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+                      <span className="text-[10px] text-muted-foreground w-8 shrink-0">{item.unit}</span>
+                      <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0', sourceBadge.cls)}>
+                        {sourceBadge.label}
+                      </span>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
