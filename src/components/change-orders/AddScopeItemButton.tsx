@@ -193,7 +193,7 @@ export function AddScopeItemButton({
         co_id: coId,
         org_id: orgId,
         item_name: item.item_name,
-        unit: item.unit,
+        unit: item.unit || 'EA',
         catalog_item_id: item.id,
         division: item.division,
         category_name: item.category_name,

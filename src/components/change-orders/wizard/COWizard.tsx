@@ -470,7 +470,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           item_name: item.item_name,
           division: item.division,
           category_name: item.category_name,
-          unit: item.unit,
+          unit: item.unit || 'EA',
           qty: item.qty ?? null,
           quantity_source: item.quantity_source ?? null,
           ai_confidence: item.ai_confidence ?? null,
