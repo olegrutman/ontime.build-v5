@@ -1,8 +1,7 @@
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { CO_STATUS_LABELS, CO_REASON_LABELS } from '@/types/changeOrder';
-import type { ChangeOrder, COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
-import { Check, MapPin, Calendar, Tag } from 'lucide-react';
+import { CO_STATUS_LABELS } from '@/types/changeOrder';
+import type { ChangeOrder, COStatus, COCreatedByRole } from '@/types/changeOrder';
+import { Check } from 'lucide-react';
 
 interface COHeaderStripProps {
   co: ChangeOrder;
