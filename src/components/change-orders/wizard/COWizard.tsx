@@ -1125,19 +1125,21 @@ export function StepReview({
 
   return (
     <div className="space-y-5">
-      {/* Optional CO/WO name */}
-      <div className="space-y-2">
-        <Label>Name this {isTM ? 'work order' : 'change order'} <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <Input
-          value={data.coName ?? ''}
-          onChange={e => onChange({ coName: e.target.value })}
-          placeholder="e.g. Roof tear-out + WRB repair"
-          maxLength={80}
-        />
-        <p className="text-[11px] text-muted-foreground">
-          Leave blank and we'll use the date. The "why" and "where" live on each scope item below — not on the title.
-        </p>
-      </div>
+      {/* Optional CO/WO name — only when creating a new CO, not when adding items to an existing one */}
+      {!isAddMode && (
+        <div className="space-y-2">
+          <Label>Name this {isTM ? 'work order' : 'change order'} <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <Input
+            value={data.coName ?? ''}
+            onChange={e => onChange({ coName: e.target.value })}
+            placeholder="e.g. Roof tear-out + WRB repair"
+            maxLength={80}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Leave blank and we'll use the date. The "why" and "where" live on each scope item below — not on the title.
+          </p>
+        </div>
+      )}
 
       {/* Per-item descriptions */}
       <div className="space-y-2">
