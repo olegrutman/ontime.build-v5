@@ -741,7 +741,7 @@ const REASON_TO_INTENT_HINT: Partial<Record<COReasonCode, WorkIntent>> = {
 };
 
 // ── Step 1: Why ──────────────────────────────────────
-function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
+export function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
   function pickReason(reason: COReasonCode) {
     // If no intent yet, pre-select the typical intent for this reason as a hint
     const hint = REASON_TO_INTENT_HINT[reason];
@@ -852,7 +852,7 @@ function pushRecentLocation(userId: string | undefined, projectId: string, tag: 
   } catch {/* quota */}
 }
 
-function StepWhere({
+export function StepWhere({
   projectId, data, onChange, savedLocation, userId,
 }: {
   projectId: string;
@@ -1067,8 +1067,8 @@ function StepHow({
 }
 
 // ── Step 5: Review (with AI description) ─────────────
-function StepReview({
-  data, onChange, role, isTM, projectId, generatingAI, onRegenerate,
+export function StepReview({
+  data, onChange, role, isTM, projectId, generatingAI, onRegenerate, mode = 'create',
 }: {
   data: COWizardData;
   onChange: (p: Partial<COWizardData>) => void;
@@ -1077,7 +1077,10 @@ function StepReview({
   projectId: string;
   generatingAI: boolean;
   onRegenerate: () => void;
+  /** 'create' = full review (CO name + team + summary). 'add' = only per-item descriptions for adding to an existing CO. */
+  mode?: 'create' | 'add';
 }) {
+  const isAddMode = mode === 'add';
   const [addItemsOpen, setAddItemsOpen] = useState(false);
   // Snapshot the item IDs at the time the add-dialog opens so we can detect newly added items
   const itemCountRef = useRef(data.selectedItems.length);
@@ -1122,19 +1125,21 @@ function StepReview({
 
   return (
     <div className="space-y-5">
-      {/* Optional CO/WO name */}
-      <div className="space-y-2">
-        <Label>Name this {isTM ? 'work order' : 'change order'} <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <Input
-          value={data.coName ?? ''}
-          onChange={e => onChange({ coName: e.target.value })}
-          placeholder="e.g. Roof tear-out + WRB repair"
-          maxLength={80}
-        />
-        <p className="text-[11px] text-muted-foreground">
-          Leave blank and we'll use the date. The "why" and "where" live on each scope item below — not on the title.
-        </p>
-      </div>
+      {/* Optional CO/WO name — only when creating a new CO, not when adding items to an existing one */}
+      {!isAddMode && (
+        <div className="space-y-2">
+          <Label>Name this {isTM ? 'work order' : 'change order'} <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <Input
+            value={data.coName ?? ''}
+            onChange={e => onChange({ coName: e.target.value })}
+            placeholder="e.g. Roof tear-out + WRB repair"
+            maxLength={80}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Leave blank and we'll use the date. The "why" and "where" live on each scope item below — not on the title.
+          </p>
+        </div>
+      )}
 
       {/* Per-item descriptions */}
       <div className="space-y-2">
@@ -1263,42 +1268,46 @@ function StepReview({
         </DialogContent>
       </Dialog>
 
-      {/* Team */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Team</p>
-        {participants.map((p, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-            <span className={cn('w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white', COLORS[p.role] ?? 'bg-muted')}>
-              {p.role.charAt(0)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-              <p className="text-[11px] text-muted-foreground">{p.role}</p>
+      {/* Team — only when creating a new CO */}
+      {!isAddMode && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Team</p>
+          {participants.map((p, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+              <span className={cn('w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white', COLORS[p.role] ?? 'bg-muted')}>
+                {p.role.charAt(0)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
+                <p className="text-[11px] text-muted-foreground">{p.role}</p>
+              </div>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.status}</span>
             </div>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.status}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Summary */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Summary</p>
-        {data.reason && (
-          <SummaryRow label="Reason" value={CO_REASON_LABELS[data.reason]} />
-        )}
-        {selectedWorkType && (
-          <SummaryRow label="Work Type" value={selectedWorkType.label} />
-        )}
-        {data.locationTag && (
-          <SummaryRow label="Location" value={data.locationTag} />
-        )}
-        <SummaryRow label="Pricing" value={
-          data.pricingType === 'fixed' ? 'Fixed Price' : data.pricingType === 'tm' ? 'Time & Material' : `Not-to-Exceed${data.nteCap ? ` · $${parseFloat(data.nteCap).toLocaleString()}` : ''}`
-        } />
-        {data.selectedItems.length > 0 && (
-          <SummaryRow label="Scope" value={`${data.selectedItems.length} items`} />
-        )}
-      </div>
+      {/* Summary — only when creating a new CO (pricing/team aren't being set in add-item flow) */}
+      {!isAddMode && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Summary</p>
+          {data.reason && (
+            <SummaryRow label="Reason" value={CO_REASON_LABELS[data.reason]} />
+          )}
+          {selectedWorkType && (
+            <SummaryRow label="Work Type" value={selectedWorkType.label} />
+          )}
+          {data.locationTag && (
+            <SummaryRow label="Location" value={data.locationTag} />
+          )}
+          <SummaryRow label="Pricing" value={
+            data.pricingType === 'fixed' ? 'Fixed Price' : data.pricingType === 'tm' ? 'Time & Material' : `Not-to-Exceed${data.nteCap ? ` · $${parseFloat(data.nteCap).toLocaleString()}` : ''}`
+          } />
+          {data.selectedItems.length > 0 && (
+            <SummaryRow label="Scope" value={`${data.selectedItems.length} items`} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
