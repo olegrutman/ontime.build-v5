@@ -64,16 +64,17 @@ export function StepCatalogQA({
   // Phase 5 — resolve which component the user already picked in Step 2,
   // and use it to (a) optionally swap the intent flow if they're in the
   // wrong family, and (b) pre-seed the first question's answer.
-  const componentResolution = useMemo(
-    () => resolveComponent(locationTag),
-    [locationTag]
-  );
-
-  // Resolve which intent drives the flow. Explicit prop wins; otherwise
-  // derive from legacy (reason, workType) so old entry points keep working.
+  //
+  // We resolve the picked intent FIRST so the component lookup can be
+  // intent-aware (e.g. tear_out + Roof should seed the demo flow, not the
+  // envelope flow).
   const baseIntent: WorkIntent = useMemo(
     () => intent ?? resolveIntentFromLegacy(reason, workType),
     [intent, reason, workType]
+  );
+  const componentResolution = useMemo(
+    () => resolveComponent(locationTag, baseIntent),
+    [locationTag, baseIntent]
   );
   // Soft swap: if the picked intent is in a different family than the
   // component, switch to the component's natural flow. We surface a one-line
