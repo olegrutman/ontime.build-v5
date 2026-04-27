@@ -124,6 +124,8 @@ const INITIAL_DATA: COWizardData = {
   shareDraftNow: false,
   quickHours: null,
   aiDescription: '',
+  coName: '',
+  itemDescriptions: {},
 };
 
 const REASON_CARDS: { reason: COReasonCode; label: string; description: string; icon: string; example: string }[] = [
