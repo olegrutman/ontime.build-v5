@@ -17,6 +17,7 @@ interface LocationData {
 }
 
 interface ScopeItemContext {
+  id?: string;
   name: string;
   qty?: number | null;
   unit?: string | null;
@@ -32,14 +33,19 @@ interface ProjectContext {
 }
 
 interface GenerateRequest {
+  /** 'per_item' returns { items: [{id, description}], summary }. Default returns { description }. */
+  mode?: 'per_item' | 'single';
   work_type: string;
   location?: LocationData;
   location_tag?: string;
   project_name: string;
   project_context?: ProjectContext;
+  intent?: string | null;
+  intent_label?: string | null;
+  qa_answers?: Record<string, unknown>;
   reason?: string;
   reason_code?: string;
-  /** Legacy: array of names. Preferred: array of {name, qty, unit, category} */
+  /** Legacy: array of names. Preferred: array of {id, name, qty, unit, category} */
   selected_items?: Array<string | ScopeItemContext>;
   fixing_trade_notes?: string;
   requires_materials: boolean;
