@@ -34,6 +34,88 @@ function lookup(map: Record<string, string>, key: string, fallback = ''): string
 }
 
 // ── New intent flow: tear_out ──────────────────────────────────
+//
+// Zone-aware: the first question ("what are we removing?") branches on
+// ctx.zone so a Roof tear-out shows roof components, an Exterior wall
+// tear-out shows siding/WRB/sheathing, etc. Without this, the picker
+// previously showed Cabinets/Flooring/Fixtures regardless of location.
+
+type TearOutZoneKey = 'roof' | 'exterior_wall' | 'site' | 'interior';
+
+function tearOutZoneKey(ctx: FlowContext): TearOutZoneKey {
+  const z = ctx.zone;
+  if (z === 'roof') return 'roof';
+  if (z === 'exterior_wall' || z === 'envelope_opening') return 'exterior_wall';
+  if (z === 'foundation' || z === 'basement') return 'site';
+  return 'interior';
+}
+
+const TEAR_OUT_ANSWERS: Record<TearOutZoneKey, { id: string; label: string; icon?: string; sub?: string; spec?: boolean }[]> = {
+  roof: [
+    { id: 'roof_sheath',   label: 'Roof sheathing / decking', icon: '⟍' },
+    { id: 'underlayment',  label: 'Underlayment / felt',      icon: '▤' },
+    { id: 'roof_cover',    label: 'Shingles / membrane',      icon: '▦' },
+    { id: 'fascia',        label: 'Fascia / sub-fascia',      icon: '═' },
+    { id: 'soffit',        label: 'Soffit material',          icon: '▤' },
+    { id: 'rafter_truss',  label: 'Rafter / truss',           icon: '╱', spec: true, sub: 'PE may be needed' },
+    { id: 'ridge_cap',     label: 'Ridge cap / vent',         icon: '▲' },
+    { id: 'other',         label: 'Other',                    icon: '•' },
+  ],
+  exterior_wall: [
+    { id: 'siding',        label: 'Siding',                   icon: '┃' },
+    { id: 'wrb',           label: 'WRB / housewrap',          icon: '🛡️' },
+    { id: 'wall_sheath',   label: 'Wall sheathing',           icon: '▦' },
+    { id: 'window_door',   label: 'Window / door (R.O.)',     icon: '🪟' },
+    { id: 'trim',          label: 'Trim / casing',            icon: '─' },
+    { id: 'flashing',      label: 'Flashing',                 icon: '〰' },
+    { id: 'wall_stud',     label: 'Wall stud',                icon: '┃', spec: true, sub: 'PE if bearing' },
+    { id: 'other',         label: 'Other',                    icon: '•' },
+  ],
+  site: [
+    { id: 'slab',          label: 'Concrete slab section',    icon: '▬' },
+    { id: 'footing',       label: 'Footing',                  icon: '▭', spec: true },
+    { id: 'hardscape',     label: 'Hardscape / pavers',       icon: '▦' },
+    { id: 'grading',       label: 'Grading / soil',           icon: '◢' },
+    { id: 'other',         label: 'Other',                    icon: '•' },
+  ],
+  interior: [
+    { id: 'wall_partition', label: 'Partition wall',  icon: '▮' },
+    { id: 'wall_bearing',   label: 'Bearing wall',    icon: '⬛', spec: true, sub: 'PE may be needed' },
+    { id: 'soffit',         label: 'Soffit / bulkhead', icon: '▤' },
+    { id: 'cabinet',        label: 'Cabinets',        icon: '☐' },
+    { id: 'flooring',       label: 'Flooring',        icon: '═' },
+    { id: 'fixture',        label: 'Fixtures',        icon: '🚿' },
+    { id: 'ceiling',        label: 'Ceiling',         icon: '─' },
+    { id: 'other',          label: 'Other',           icon: '•' },
+  ],
+};
+
+const TEAR_OUT_QUESTION_TEXT: Record<TearOutZoneKey, string> = {
+  roof: 'What roof component are you removing?',
+  exterior_wall: 'What exterior component are you removing?',
+  site: 'What site element are you removing?',
+  interior: 'What are you tearing out?',
+};
+
+const TEAR_OUT_LABEL_MAP: Record<string, string> = {
+  // roof
+  roof_sheath: 'roof sheathing/decking', underlayment: 'roof underlayment',
+  roof_cover: 'roof covering', fascia: 'fascia/sub-fascia', soffit: 'soffit',
+  rafter_truss: 'rafter/truss', ridge_cap: 'ridge cap/vent',
+  // exterior wall
+  siding: 'siding', wrb: 'WRB/housewrap', wall_sheath: 'wall sheathing',
+  window_door: 'window/door rough opening', trim: 'trim/casing',
+  flashing: 'flashing', wall_stud: 'wall stud',
+  // site
+  slab: 'concrete slab', footing: 'footing', hardscape: 'hardscape',
+  grading: 'grading/soil',
+  // interior (existing)
+  wall_partition: 'partition wall', wall_bearing: 'bearing wall',
+  cabinet: 'cabinets', flooring: 'flooring', fixture: 'fixtures',
+  ceiling: 'ceiling',
+  // shared
+  other: 'existing work',
+};
 
 const TEAR_OUT_FLOW: ScopeFlow = {
   title: 'What needs to come out?',
@@ -43,16 +125,11 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       id: 'what',
       text: 'What are you tearing out?',
       grid: 'cols-4',
-      answers: [
-        { id: 'wall_partition', label: 'Partition wall',  icon: '▮' },
-        { id: 'wall_bearing',   label: 'Bearing wall',    icon: '⬛', spec: true, sub: 'PE may be needed' },
-        { id: 'soffit',         label: 'Soffit / bulkhead', icon: '▤' },
-        { id: 'cabinet',        label: 'Cabinets',        icon: '☐' },
-        { id: 'flooring',       label: 'Flooring',        icon: '═' },
-        { id: 'fixture',        label: 'Fixtures',        icon: '🚿' },
-        { id: 'ceiling',        label: 'Ceiling',         icon: '─' },
-        { id: 'other',          label: 'Other',           icon: '•' },
-      ],
+      // Static fallback list (used only if ctx is missing). The
+      // renderer prefers `answersFor`/`textFor` when present.
+      answers: TEAR_OUT_ANSWERS.interior,
+      textFor: (ctx) => TEAR_OUT_QUESTION_TEXT[tearOutZoneKey(ctx)],
+      answersFor: (ctx) => TEAR_OUT_ANSWERS[tearOutZoneKey(ctx)],
     },
     {
       id: 'extent',
@@ -89,23 +166,26 @@ const TEAR_OUT_FLOW: ScopeFlow = {
     },
   ],
   summarize: (ctx, a) => {
-    const what = lookup({
-      wall_partition: 'partition wall', wall_bearing: 'bearing wall',
-      soffit: 'soffit/bulkhead', cabinet: 'cabinets', flooring: 'flooring',
-      fixture: 'fixtures', ceiling: 'ceiling', other: 'existing work',
-    }, val(a, 'what'), 'existing work');
+    const whatId = val(a, 'what');
+    const what = lookup(TEAR_OUT_LABEL_MAP, whatId, 'existing work');
     const extent = lookup({
       spot: 'a spot of', small: 'a small section of', medium: 'a medium area of',
-      large: 'a large area of', full: 'the full room of',
+      large: 'a large area of', full: 'the full extent of',
     }, val(a, 'extent'), '');
     const disposal = val(a, 'disposal') === 'us_haul' ? 'We haul debris.' :
                      val(a, 'disposal') === 'gc_dump' ? 'GC dumpster on site.' : '';
     const protect = val(a, 'protection') === 'occupied' ? 'Occupied — full dust containment required.' :
                     val(a, 'protection') === 'plastic' ? 'Poly sheeting and zip walls.' : '';
-    const bearingNote = val(a, 'what') === 'wall_bearing'
+    const bearingNote = whatId === 'wall_bearing'
       ? 'BEARING wall — temporary shoring required, engineer review per IRC R301.1.3.'
+      : whatId === 'rafter_truss'
+      ? 'Structural roof member — temporary shoring + engineer review required.'
+      : whatId === 'wall_stud' && tearOutZoneKey(ctx) === 'exterior_wall'
+      ? 'Verify bearing condition before removal; shore if loaded.'
+      : whatId === 'footing'
+      ? 'Footing removal — confirm load path / underpinning plan.'
       : '';
-    return `Demo ${extent} ${what} in the ${loc(ctx)}. ${bearingNote} ${disposal} ${protect}`.replace(/\s+/g, ' ').trim();
+    return `Demo ${extent} ${what} at the ${loc(ctx)}. ${bearingNote} ${disposal} ${protect}`.replace(/\s+/g, ' ').trim();
   },
 };
 
@@ -678,17 +758,77 @@ export interface ComponentResolution {
 }
 
 /**
+ * Tear-out variant of the component map. Same trailing-component matching
+ * but routes into TEAR_OUT_FLOW's first question (`what`) so Step 3 can
+ * skip the "what are you removing?" question when Step 2 already implied it.
+ *
+ * Answer ids must match the ids in TEAR_OUT_ANSWERS for the relevant zone.
+ */
+const TEAR_OUT_COMPONENT_MAP: Omit<ComponentMapEntry, 'intent' | 'flowQuestionId'>[] = [
+  // Roof zone
+  { match: /roof\s*sheath|roof\s*deck/i,                   answerId: 'roof_sheath' },
+  { match: /underlayment|roof\s*felt|\bfelt\b/i,           answerId: 'underlayment' },
+  { match: /shingle|roof\s*membrane|tpo|epdm|tile\s*roof/i, answerId: 'roof_cover' },
+  { match: /ridge\s*cap|ridge\s*vent/i,                    answerId: 'ridge_cap' },
+  { match: /rafter|roof\s*truss|\btruss\b/i,               answerId: 'rafter_truss' },
+  // Exterior wall zone
+  { match: /\bsiding\b/i,                                  answerId: 'siding' },
+  { match: /\bwrb\b|housewrap|house\s*wrap|weather\s*resistive/i, answerId: 'wrb' },
+  { match: /wall\s*sheath|exterior\s*sheath/i,             answerId: 'wall_sheath' },
+  { match: /window|exterior\s*door|skylight|rough\s*opening/i, answerId: 'window_door' },
+  { match: /\btrim\b|casing/i,                             answerId: 'trim' },
+  { match: /\bflashing\b/i,                                answerId: 'flashing' },
+  { match: /wall\s*stud|\bstud\b/i,                        answerId: 'wall_stud' },
+  // Shared between roof and exterior
+  { match: /fascia|sub-?fascia/i,                          answerId: 'fascia' },
+  { match: /\bsoffit\b/i,                                  answerId: 'soffit' },
+  // Site / foundation
+  { match: /\bslab\b/i,                                    answerId: 'slab' },
+  { match: /footing/i,                                     answerId: 'footing' },
+  { match: /hardscape|paver/i,                             answerId: 'hardscape' },
+  { match: /grading|topsoil|\bsoil\b/i,                    answerId: 'grading' },
+  // Interior
+  { match: /partition/i,                                   answerId: 'wall_partition' },
+  { match: /bearing\s*wall/i,                              answerId: 'wall_bearing' },
+  { match: /cabinet/i,                                     answerId: 'cabinet' },
+  { match: /flooring|hardwood|tile\s*floor|carpet/i,       answerId: 'flooring' },
+  { match: /ceiling/i,                                     answerId: 'ceiling' },
+  { match: /fixture|toilet|sink|tub|shower/i,              answerId: 'fixture' },
+];
+
+/**
  * Inspect a locationTag and figure out (a) which intent flow naturally fits
  * the building component the user picked, and (b) which first-question answer
  * should be pre-seeded so Step 3 doesn't ask them again.
  *
+ * Pass `pickedIntent` to bias resolution toward the user's intent — e.g. when
+ * they picked `tear_out`, return a tear-out seed (so the demo flow's first
+ * question gets pre-answered) instead of the default envelope/framing seed.
+ *
  * Returns null when no component match is found — Step 3 then runs as before.
  */
 export function resolveComponent(
-  locationTag: string | null | undefined
+  locationTag: string | null | undefined,
+  pickedIntent?: WorkIntent | null
 ): ComponentResolution | null {
   const trailing = trailingComponent(locationTag);
   if (!trailing) return null;
+
+  // Tear-out lookup wins when the user explicitly picked tear_out.
+  if (pickedIntent === 'tear_out') {
+    for (const entry of TEAR_OUT_COMPONENT_MAP) {
+      if (entry.match.test(trailing)) {
+        return {
+          expectedIntent: 'tear_out',
+          flowQuestionId: 'what',
+          answerId: entry.answerId,
+          componentLabel: trailing,
+        };
+      }
+    }
+    // Fall through to default map only if nothing matched in tear-out map.
+  }
+
   for (const entry of COMPONENT_MAP) {
     if (entry.match.test(trailing)) {
       return {
@@ -707,8 +847,12 @@ export function resolveComponent(
  * picked intent is in a *different family* from the component. We don't
  * force a switch between damage/add_new/redo/modify since they share the
  * same first-question (member) — but we DO switch between framing-family
- * intents and envelope_work / structural_install / tear_out, since those
- * have entirely different question trees.
+ * intents and envelope_work / structural_install, since those have
+ * entirely different question trees.
+ *
+ * `tear_out` is intentionally NEVER swapped: demo of a roof, WRB, or
+ * sheathing is genuinely demolition (not envelope install work), and
+ * TEAR_OUT_FLOW is now zone-aware so it shows the right options.
  */
 export function suggestIntentForComponent(
   pickedIntent: WorkIntent | null | undefined,
@@ -719,6 +863,10 @@ export function suggestIntentForComponent(
 
   // Same intent — no swap needed.
   if (pickedIntent === expectedIntent) return null;
+
+  // Tear-out is its own intent regardless of which envelope/framing
+  // component the user picked. The zone-aware TEAR_OUT_FLOW handles it.
+  if (pickedIntent === 'tear_out') return null;
 
   // Member-based framing intents are interchangeable for question routing.
   const FRAMING_FAMILY: WorkIntent[] = ['repair_damage', 'add_new', 'redo_work', 'modify_existing'];
