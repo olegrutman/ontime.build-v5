@@ -160,6 +160,13 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       text: 'Who handles disposal?',
       hint: 'Affects price and equipment needs (dumpster, dump runs).',
       grid: 'cols-3',
+      // Disposal logistics matter most for interior renovation and site
+      // (concrete) demos. For roof and exterior-wall tear-offs, debris
+      // handling is implicit in the price; skip the question.
+      showFor: (ctx) => {
+        const k = tearOutZoneKey(ctx);
+        return k === 'interior' || k === 'site';
+      },
       answers: [
         { id: 'us_haul',  label: 'We haul it',     icon: '🚚' },
         { id: 'gc_dump',  label: 'GC has dumpster', icon: '🗑️' },
@@ -170,6 +177,8 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       id: 'protection',
       text: 'Protection / dust control needed?',
       grid: 'cols-3',
+      // Dust containment is an interior-only concern.
+      showFor: (ctx) => tearOutZoneKey(ctx) === 'interior',
       answers: [
         { id: 'none',       label: 'None',                 icon: '◯' },
         { id: 'plastic',    label: 'Poly + zip walls',     icon: '┃' },
