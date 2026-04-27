@@ -33,6 +33,10 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
   locationTag: string;
   reason: COReasonCode;
   reasonDescription: string;
+  /** Wizard-only: true when this synthetic item bundles several originals into one row. Not persisted. */
+  isCombined?: boolean;
+  /** Wizard-only: snapshot of the originals that were merged, so the user can Uncombine. Not persisted. */
+  combinedFrom?: SelectedScopeItem[];
 }
 
 export type AssemblyState = 'pre_rough' | 'roughed' | 'sheathed_decked' | 'dried_in';
