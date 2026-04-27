@@ -758,17 +758,77 @@ export interface ComponentResolution {
 }
 
 /**
+ * Tear-out variant of the component map. Same trailing-component matching
+ * but routes into TEAR_OUT_FLOW's first question (`what`) so Step 3 can
+ * skip the "what are you removing?" question when Step 2 already implied it.
+ *
+ * Answer ids must match the ids in TEAR_OUT_ANSWERS for the relevant zone.
+ */
+const TEAR_OUT_COMPONENT_MAP: Omit<ComponentMapEntry, 'intent' | 'flowQuestionId'>[] = [
+  // Roof zone
+  { match: /roof\s*sheath|roof\s*deck/i,                   answerId: 'roof_sheath' },
+  { match: /underlayment|roof\s*felt|\bfelt\b/i,           answerId: 'underlayment' },
+  { match: /shingle|roof\s*membrane|tpo|epdm|tile\s*roof/i, answerId: 'roof_cover' },
+  { match: /ridge\s*cap|ridge\s*vent/i,                    answerId: 'ridge_cap' },
+  { match: /rafter|roof\s*truss|\btruss\b/i,               answerId: 'rafter_truss' },
+  // Exterior wall zone
+  { match: /\bsiding\b/i,                                  answerId: 'siding' },
+  { match: /\bwrb\b|housewrap|house\s*wrap|weather\s*resistive/i, answerId: 'wrb' },
+  { match: /wall\s*sheath|exterior\s*sheath/i,             answerId: 'wall_sheath' },
+  { match: /window|exterior\s*door|skylight|rough\s*opening/i, answerId: 'window_door' },
+  { match: /\btrim\b|casing/i,                             answerId: 'trim' },
+  { match: /\bflashing\b/i,                                answerId: 'flashing' },
+  { match: /wall\s*stud|\bstud\b/i,                        answerId: 'wall_stud' },
+  // Shared between roof and exterior
+  { match: /fascia|sub-?fascia/i,                          answerId: 'fascia' },
+  { match: /\bsoffit\b/i,                                  answerId: 'soffit' },
+  // Site / foundation
+  { match: /\bslab\b/i,                                    answerId: 'slab' },
+  { match: /footing/i,                                     answerId: 'footing' },
+  { match: /hardscape|paver/i,                             answerId: 'hardscape' },
+  { match: /grading|topsoil|\bsoil\b/i,                    answerId: 'grading' },
+  // Interior
+  { match: /partition/i,                                   answerId: 'wall_partition' },
+  { match: /bearing\s*wall/i,                              answerId: 'wall_bearing' },
+  { match: /cabinet/i,                                     answerId: 'cabinet' },
+  { match: /flooring|hardwood|tile\s*floor|carpet/i,       answerId: 'flooring' },
+  { match: /ceiling/i,                                     answerId: 'ceiling' },
+  { match: /fixture|toilet|sink|tub|shower/i,              answerId: 'fixture' },
+];
+
+/**
  * Inspect a locationTag and figure out (a) which intent flow naturally fits
  * the building component the user picked, and (b) which first-question answer
  * should be pre-seeded so Step 3 doesn't ask them again.
  *
+ * Pass `pickedIntent` to bias resolution toward the user's intent — e.g. when
+ * they picked `tear_out`, return a tear-out seed (so the demo flow's first
+ * question gets pre-answered) instead of the default envelope/framing seed.
+ *
  * Returns null when no component match is found — Step 3 then runs as before.
  */
 export function resolveComponent(
-  locationTag: string | null | undefined
+  locationTag: string | null | undefined,
+  pickedIntent?: WorkIntent | null
 ): ComponentResolution | null {
   const trailing = trailingComponent(locationTag);
   if (!trailing) return null;
+
+  // Tear-out lookup wins when the user explicitly picked tear_out.
+  if (pickedIntent === 'tear_out') {
+    for (const entry of TEAR_OUT_COMPONENT_MAP) {
+      if (entry.match.test(trailing)) {
+        return {
+          expectedIntent: 'tear_out',
+          flowQuestionId: 'what',
+          answerId: entry.answerId,
+          componentLabel: trailing,
+        };
+      }
+    }
+    // Fall through to default map only if nothing matched in tear-out map.
+  }
+
   for (const entry of COMPONENT_MAP) {
     if (entry.match.test(trailing)) {
       return {
