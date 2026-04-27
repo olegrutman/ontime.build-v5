@@ -1268,42 +1268,46 @@ export function StepReview({
         </DialogContent>
       </Dialog>
 
-      {/* Team */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Team</p>
-        {participants.map((p, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-            <span className={cn('w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white', COLORS[p.role] ?? 'bg-muted')}>
-              {p.role.charAt(0)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-              <p className="text-[11px] text-muted-foreground">{p.role}</p>
+      {/* Team — only when creating a new CO */}
+      {!isAddMode && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Team</p>
+          {participants.map((p, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+              <span className={cn('w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white', COLORS[p.role] ?? 'bg-muted')}>
+                {p.role.charAt(0)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
+                <p className="text-[11px] text-muted-foreground">{p.role}</p>
+              </div>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.status}</span>
             </div>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.status}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Summary */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Summary</p>
-        {data.reason && (
-          <SummaryRow label="Reason" value={CO_REASON_LABELS[data.reason]} />
-        )}
-        {selectedWorkType && (
-          <SummaryRow label="Work Type" value={selectedWorkType.label} />
-        )}
-        {data.locationTag && (
-          <SummaryRow label="Location" value={data.locationTag} />
-        )}
-        <SummaryRow label="Pricing" value={
-          data.pricingType === 'fixed' ? 'Fixed Price' : data.pricingType === 'tm' ? 'Time & Material' : `Not-to-Exceed${data.nteCap ? ` · $${parseFloat(data.nteCap).toLocaleString()}` : ''}`
-        } />
-        {data.selectedItems.length > 0 && (
-          <SummaryRow label="Scope" value={`${data.selectedItems.length} items`} />
-        )}
-      </div>
+      {/* Summary — only when creating a new CO (pricing/team aren't being set in add-item flow) */}
+      {!isAddMode && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Summary</p>
+          {data.reason && (
+            <SummaryRow label="Reason" value={CO_REASON_LABELS[data.reason]} />
+          )}
+          {selectedWorkType && (
+            <SummaryRow label="Work Type" value={selectedWorkType.label} />
+          )}
+          {data.locationTag && (
+            <SummaryRow label="Location" value={data.locationTag} />
+          )}
+          <SummaryRow label="Pricing" value={
+            data.pricingType === 'fixed' ? 'Fixed Price' : data.pricingType === 'tm' ? 'Time & Material' : `Not-to-Exceed${data.nteCap ? ` · $${parseFloat(data.nteCap).toLocaleString()}` : ''}`
+          } />
+          {data.selectedItems.length > 0 && (
+            <SummaryRow label="Scope" value={`${data.selectedItems.length} items`} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
