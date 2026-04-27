@@ -522,7 +522,11 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           sort_order: idx,
           location_tag: data.locationTag || null,
           reason: (data.reason || null) as string | null,
-          description: data.itemDescriptions?.[item.id] || item.reasonDescription || null,
+          description:
+            data.itemDescriptions?.[item.id]?.trim() ||
+            (item.isCombined && item.combinedFrom?.length
+              ? buildCombinedDescription(item, data.locationTag, data.intent)
+              : item.reasonDescription || null),
         }));
         const { data: insertedRows, error: lineError } = await supabase
           .from('co_line_items')
