@@ -323,6 +323,10 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   }
 
   async function generateAIDescription() {
+    // Snapshot the items at request time so we can detect/ignore stale responses.
+    const snapshotItems = data.selectedItems;
+    const snapshotIds = new Set(snapshotItems.map(i => i.id));
+    const mySeq = ++regenSeqRef.current;
     setGeneratingAI(true);
     try {
       const { data: resp, error } = await supabase.functions.invoke('generate-work-order-description', {
@@ -335,7 +339,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           intent: data.intent ?? null,
           intent_label: data.intent ? WORK_INTENT_LABELS[data.intent] : null,
           qa_answers: data.qaAnswers ?? {},
-          selected_items: data.selectedItems.map(i => ({
+          selected_items: snapshotItems.map(i => ({
             id: i.id,
             name: i.item_name,
             qty: i.qty ?? null,
@@ -361,37 +365,56 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
         },
       });
       if (error) throw error;
+
+      // If a newer regen request started while we were waiting, drop this response entirely.
+      if (mySeq !== regenSeqRef.current) return;
+
       // New shape: { items: [{ id, description }], summary?: string }
       if (resp?.items && Array.isArray(resp.items)) {
-        const map: Record<string, string> = {};
-        for (const r of resp.items) {
-          if (r?.id && typeof r.description === 'string') map[r.id] = r.description;
-        }
-        update({ itemDescriptions: map, aiDescription: resp.summary || '' });
+        setData(prev => {
+          const currentIds = new Set(prev.selectedItems.map(i => i.id));
+          const merged: Record<string, string> = { ...(prev.itemDescriptions ?? {}) };
+          for (const r of resp.items) {
+            if (!r?.id || typeof r.description !== 'string' || !r.description.trim()) continue;
+            // Only accept descriptions for IDs that (a) we asked for and (b) still exist.
+            if (!snapshotIds.has(r.id) || !currentIds.has(r.id)) continue;
+            merged[r.id] = r.description;
+          }
+          // Safety net: ensure every current combined item has a description.
+          for (const item of prev.selectedItems) {
+            if (item.isCombined && !merged[item.id]?.trim()) {
+              merged[item.id] = buildCombinedDescription(item, prev.locationTag, prev.intent);
+            }
+          }
+          return { ...prev, itemDescriptions: merged, aiDescription: resp.summary || prev.aiDescription || '' };
+        });
       } else if (resp?.description) {
         // Legacy fallback (single blob)
         update({ aiDescription: resp.description });
       }
     } catch (err) {
       console.error('AI generation failed:', err);
-      // Fallback: per-item descriptions built locally
-      const map: Record<string, string> = {};
-      const intentLabel = data.intent ? WORK_INTENT_LABELS[data.intent] : '';
-      const where = data.locationTag || 'TBD';
-      for (const i of data.selectedItems) {
-        const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
-        if (i.isCombined && i.combinedFrom?.length) {
-          const subList = i.combinedFrom
-            .map(s => `• ${s.item_name}${s.qty ? ` (${s.qty}${s.unit ? ` ${s.unit}` : ''})` : ''}`)
-            .join('\n');
-          map[i.id] = `Combined scope at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}, covering ${i.combinedFrom.length} related items.\n${subList}`;
-        } else {
-          map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+      // Stale guard for the catch path too.
+      if (mySeq !== regenSeqRef.current) return;
+      // Local fallback: synthesize per-item descriptions for the CURRENT item set,
+      // merging into existing values rather than replacing them.
+      setData(prev => {
+        const intentLabel = prev.intent ? WORK_INTENT_LABELS[prev.intent] : '';
+        const where = prev.locationTag || 'TBD';
+        const merged: Record<string, string> = { ...(prev.itemDescriptions ?? {}) };
+        for (const i of prev.selectedItems) {
+          if (merged[i.id]?.trim()) continue; // don't overwrite manual edits / existing
+          if (i.isCombined && i.combinedFrom?.length) {
+            merged[i.id] = buildCombinedDescription(i, prev.locationTag, prev.intent);
+          } else {
+            const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
+            merged[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+          }
         }
-      }
-      update({ itemDescriptions: map, aiDescription: '' });
+        return { ...prev, itemDescriptions: merged };
+      });
     } finally {
-      setGeneratingAI(false);
+      if (mySeq === regenSeqRef.current) setGeneratingAI(false);
     }
   }
 
