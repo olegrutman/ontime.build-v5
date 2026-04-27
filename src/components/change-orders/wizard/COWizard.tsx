@@ -1163,12 +1163,17 @@ export function StepReview({
 
       {/* Per-item descriptions */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Label>Per-item descriptions</Label>
-          <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generatingAI} className="gap-1.5 h-7 text-xs">
-            <Sparkles className="h-3.5 w-3.5" />
-            {generatingAI ? 'Generating…' : 'Regenerate all'}
-          </Button>
+          <div className="flex items-center gap-1">
+            {data.selectedItems.length >= 2 && !data.selectedItems.some(i => i.isCombined) && (
+              <CombineButton data={data} onChange={onChange} onAfterCombine={onRegenerate} />
+            )}
+            <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generatingAI} className="gap-1.5 h-7 text-xs">
+              <Sparkles className="h-3.5 w-3.5" />
+              {generatingAI ? 'Generating…' : 'Regenerate all'}
+            </Button>
+          </div>
         </div>
         {generatingAI ? (
           <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-muted/30">
@@ -1181,15 +1186,59 @@ export function StepReview({
               const desc = data.itemDescriptions?.[item.id] ?? '';
               return (
                 <div key={item.id} className="p-3 space-y-1.5">
-                  <p className="text-sm font-semibold text-foreground">{item.item_name}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {item.isCombined && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/15 text-primary shrink-0">
+                          Combined · {item.combinedFrom?.length ?? 0}
+                        </span>
+                      )}
+                      {item.isCombined ? (
+                        <Input
+                          value={item.item_name}
+                          onChange={e => {
+                            const next = data.selectedItems.map(s =>
+                              s.id === item.id ? { ...s, item_name: e.target.value } : s,
+                            );
+                            onChange({ selectedItems: next });
+                          }}
+                          className="h-7 text-sm font-semibold"
+                          maxLength={120}
+                          aria-label="Combined item name"
+                        />
+                      ) : (
+                        <p className="text-sm font-semibold text-foreground truncate">{item.item_name}</p>
+                      )}
+                    </div>
+                    {item.isCombined && (
+                      <button
+                        type="button"
+                        className="text-[11px] text-primary hover:underline shrink-0"
+                        onClick={() => {
+                          // Restore originals; drop the synthetic combined row.
+                          const restored = item.combinedFrom ?? [];
+                          const next = [
+                            ...data.selectedItems.filter(s => s.id !== item.id),
+                            ...restored,
+                          ];
+                          const descs = { ...(data.itemDescriptions ?? {}) };
+                          delete descs[item.id];
+                          onChange({ selectedItems: next, itemDescriptions: descs });
+                          setTimeout(() => onRegenerate(), 200);
+                        }}
+                      >
+                        Uncombine
+                      </button>
+                    )}
+                  </div>
                   <Textarea
                     value={desc}
                     onChange={e => onChange({
                       itemDescriptions: { ...(data.itemDescriptions ?? {}), [item.id]: e.target.value },
                     })}
-                    rows={2}
+                    rows={item.isCombined ? 4 : 2}
                     placeholder="What is this item, where, and why? (1–2 sentences)"
-                    className="text-xs"
+                    className="text-xs whitespace-pre-wrap"
                   />
                 </div>
               );
