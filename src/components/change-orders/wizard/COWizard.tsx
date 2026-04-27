@@ -1122,32 +1122,57 @@ function StepReview({
 
   return (
     <div className="space-y-5">
-      {/* AI-generated scope description */}
+      {/* Optional CO/WO name */}
+      <div className="space-y-2">
+        <Label>Name this {isTM ? 'work order' : 'change order'} <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Input
+          value={data.coName ?? ''}
+          onChange={e => onChange({ coName: e.target.value })}
+          placeholder="e.g. Roof tear-out + WRB repair"
+          maxLength={80}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Leave blank and we'll use the date. The "why" and "where" live on each scope item below — not on the title.
+        </p>
+      </div>
+
+      {/* Per-item descriptions */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>Scope Description</Label>
+          <Label>Per-item descriptions</Label>
           <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generatingAI} className="gap-1.5 h-7 text-xs">
             <Sparkles className="h-3.5 w-3.5" />
-            {generatingAI ? 'Generating…' : 'Regenerate'}
+            {generatingAI ? 'Generating…' : 'Regenerate all'}
           </Button>
         </div>
         {generatingAI ? (
           <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-muted/30">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">AI is drafting your scope description…</span>
+            <span className="text-sm text-muted-foreground">Sasha is drafting descriptions for each item…</span>
           </div>
         ) : (
-          <Textarea
-            value={data.aiDescription}
-            onChange={e => onChange({ aiDescription: e.target.value })}
-            rows={4}
-            placeholder="Scope description…"
-          />
+          <div className="rounded-lg border border-border bg-card divide-y">
+            {data.selectedItems.map((item) => {
+              const desc = data.itemDescriptions?.[item.id] ?? '';
+              return (
+                <div key={item.id} className="p-3 space-y-1.5">
+                  <p className="text-sm font-semibold text-foreground">{item.item_name}</p>
+                  <Textarea
+                    value={desc}
+                    onChange={e => onChange({
+                      itemDescriptions: { ...(data.itemDescriptions ?? {}), [item.id]: e.target.value },
+                    })}
+                    rows={2}
+                    placeholder="What is this item, where, and why? (1–2 sentences)"
+                    className="text-xs"
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
-        <p className="text-[11px] text-muted-foreground">AI-drafted — edit freely before creating.</p>
+        <p className="text-[11px] text-muted-foreground">AI-drafted per item — edit any line freely.</p>
       </div>
-
-      {/* Scope items — editable */}
       {data.selectedItems.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
