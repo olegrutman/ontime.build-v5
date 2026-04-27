@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
       `Zone: ${body.zone ?? "unknown"}`,
       `Reason: ${body.reason}`,
       `Work type: ${body.work_type ?? "unspecified"}`,
+      `Work intent: ${body.intent ?? "unspecified"}`,
       `Building type: ${body.building_type}`,
       `Framing method: ${body.framing_method ?? "unspecified"}`,
       body.answers ? `Structured answers: ${JSON.stringify(body.answers)}` : "",
