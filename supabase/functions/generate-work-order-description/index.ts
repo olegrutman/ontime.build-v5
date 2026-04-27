@@ -22,6 +22,10 @@ interface ScopeItemContext {
   qty?: number | null;
   unit?: string | null;
   category?: string | null;
+  /** True when this item bundles several originals into one row. */
+  combined?: boolean;
+  /** Snapshot of original items merged into this combined row. */
+  sub_items?: Array<{ name: string; qty?: number | null; unit?: string | null; category?: string | null }>;
 }
 
 interface ProjectContext {
