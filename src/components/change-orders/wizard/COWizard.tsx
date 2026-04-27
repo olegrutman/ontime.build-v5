@@ -33,6 +33,10 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
   locationTag: string;
   reason: COReasonCode;
   reasonDescription: string;
+  /** Wizard-only: true when this synthetic item bundles several originals into one row. Not persisted. */
+  isCombined?: boolean;
+  /** Wizard-only: snapshot of the originals that were merged, so the user can Uncombine. Not persisted. */
+  combinedFrom?: SelectedScopeItem[];
 }
 
 export type AssemblyState = 'pre_rough' | 'roughed' | 'sheathed_decked' | 'dried_in';
@@ -316,6 +320,15 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
             qty: i.qty ?? null,
             unit: i.unit ?? null,
             category: i.category_name ?? null,
+            combined: !!i.isCombined,
+            sub_items: i.isCombined && i.combinedFrom
+              ? i.combinedFrom.map(s => ({
+                  name: s.item_name,
+                  qty: s.qty ?? null,
+                  unit: s.unit ?? null,
+                  category: s.category_name ?? null,
+                }))
+              : undefined,
           })),
           reason_code: data.reason || '',
           trigger_code: data.triggerCode ?? undefined,
@@ -346,7 +359,14 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       const where = data.locationTag || 'TBD';
       for (const i of data.selectedItems) {
         const qtyStr = i.qty ? ` (${i.qty}${i.unit ? ` ${i.unit}` : ''})` : '';
-        map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+        if (i.isCombined && i.combinedFrom?.length) {
+          const subList = i.combinedFrom
+            .map(s => `• ${s.item_name}${s.qty ? ` (${s.qty}${s.unit ? ` ${s.unit}` : ''})` : ''}`)
+            .join('\n');
+          map[i.id] = `Combined scope at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}, covering ${i.combinedFrom.length} related items.\n${subList}`;
+        } else {
+          map[i.id] = `${i.item_name}${qtyStr} at ${where}${intentLabel ? ` — ${intentLabel.toLowerCase()}` : ''}.`;
+        }
       }
       update({ itemDescriptions: map, aiDescription: '' });
     } finally {
@@ -1066,6 +1086,93 @@ function StepHow({
   );
 }
 
+// ── Combine helper: merges 2+ selected items into one synthetic row ──
+function CombineButton({
+  data,
+  onChange,
+  onAfterCombine,
+}: {
+  data: COWizardData;
+  onChange: (p: Partial<COWizardData>) => void;
+  onAfterCombine: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const defaultName = useMemo(() => {
+    const first = data.selectedItems[0]?.item_name ?? 'Combined scope';
+    const more = data.selectedItems.length - 1;
+    return more > 0 ? `${first} + ${more} more` : first;
+  }, [data.selectedItems]);
+  const [name, setName] = useState(defaultName);
+
+  useEffect(() => { setName(defaultName); }, [defaultName]);
+
+  function doCombine() {
+    if (data.selectedItems.length < 2) return;
+    const originals = [...data.selectedItems];
+    const first = originals[0];
+    const combined: SelectedScopeItem = {
+      ...first,
+      // Synthetic id so React keys stay stable; persistence uses catalog_item_id from `first`.
+      id: `combined-${Date.now()}`,
+      item_name: name.trim() || defaultName,
+      category_name: 'Combined scope',
+      qty: null,
+      unit: null,
+      quantity_source: 'manual',
+      isCombined: true,
+      combinedFrom: originals,
+    };
+    onChange({ selectedItems: [combined], itemDescriptions: {} });
+    setOpen(false);
+    setTimeout(() => onAfterCombine(), 200);
+  }
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 text-xs gap-1.5"
+        onClick={() => { setName(defaultName); setOpen(true); }}
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Combine into one item
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>Combine {data.selectedItems.length} items into one</DialogTitle>
+          <DialogDescription>
+            They'll be saved as a single line item. The originals are listed inside its description.
+          </DialogDescription>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Combined item name</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} maxLength={120} autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Items being combined</Label>
+              <div className="rounded-md border border-border bg-muted/30 p-2 max-h-40 overflow-y-auto space-y-1">
+                {data.selectedItems.map(i => (
+                  <div key={i.id} className="text-xs flex items-center justify-between gap-2">
+                    <span className="truncate">{i.item_name}</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
+                      {i.qty ? `${i.qty}${i.unit ? ` ${i.unit}` : ''}` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button size="sm" onClick={doCombine} disabled={!name.trim()}>Combine</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // ── Step 5: Review (with AI description) ─────────────
 export function StepReview({
   data, onChange, role, isTM, projectId, generatingAI, onRegenerate, mode = 'create',
@@ -1143,12 +1250,17 @@ export function StepReview({
 
       {/* Per-item descriptions */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Label>Per-item descriptions</Label>
-          <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generatingAI} className="gap-1.5 h-7 text-xs">
-            <Sparkles className="h-3.5 w-3.5" />
-            {generatingAI ? 'Generating…' : 'Regenerate all'}
-          </Button>
+          <div className="flex items-center gap-1">
+            {data.selectedItems.length >= 2 && !data.selectedItems.some(i => i.isCombined) && (
+              <CombineButton data={data} onChange={onChange} onAfterCombine={onRegenerate} />
+            )}
+            <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generatingAI} className="gap-1.5 h-7 text-xs">
+              <Sparkles className="h-3.5 w-3.5" />
+              {generatingAI ? 'Generating…' : 'Regenerate all'}
+            </Button>
+          </div>
         </div>
         {generatingAI ? (
           <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-muted/30">
@@ -1161,15 +1273,59 @@ export function StepReview({
               const desc = data.itemDescriptions?.[item.id] ?? '';
               return (
                 <div key={item.id} className="p-3 space-y-1.5">
-                  <p className="text-sm font-semibold text-foreground">{item.item_name}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {item.isCombined && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/15 text-primary shrink-0">
+                          Combined · {item.combinedFrom?.length ?? 0}
+                        </span>
+                      )}
+                      {item.isCombined ? (
+                        <Input
+                          value={item.item_name}
+                          onChange={e => {
+                            const next = data.selectedItems.map(s =>
+                              s.id === item.id ? { ...s, item_name: e.target.value } : s,
+                            );
+                            onChange({ selectedItems: next });
+                          }}
+                          className="h-7 text-sm font-semibold"
+                          maxLength={120}
+                          aria-label="Combined item name"
+                        />
+                      ) : (
+                        <p className="text-sm font-semibold text-foreground truncate">{item.item_name}</p>
+                      )}
+                    </div>
+                    {item.isCombined && (
+                      <button
+                        type="button"
+                        className="text-[11px] text-primary hover:underline shrink-0"
+                        onClick={() => {
+                          // Restore originals; drop the synthetic combined row.
+                          const restored = item.combinedFrom ?? [];
+                          const next = [
+                            ...data.selectedItems.filter(s => s.id !== item.id),
+                            ...restored,
+                          ];
+                          const descs = { ...(data.itemDescriptions ?? {}) };
+                          delete descs[item.id];
+                          onChange({ selectedItems: next, itemDescriptions: descs });
+                          setTimeout(() => onRegenerate(), 200);
+                        }}
+                      >
+                        Uncombine
+                      </button>
+                    )}
+                  </div>
                   <Textarea
                     value={desc}
                     onChange={e => onChange({
                       itemDescriptions: { ...(data.itemDescriptions ?? {}), [item.id]: e.target.value },
                     })}
-                    rows={2}
+                    rows={item.isCombined ? 4 : 2}
                     placeholder="What is this item, where, and why? (1–2 sentences)"
-                    className="text-xs"
+                    className="text-xs whitespace-pre-wrap"
                   />
                 </div>
               );
@@ -1196,26 +1352,34 @@ export function StepReview({
                     <p className="font-medium text-foreground truncate">{item.item_name}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{item.category_name}</p>
                   </div>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    aria-label={`Quantity for ${item.item_name}`}
-                    value={item.qty ?? ''}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      const num = raw === '' ? null : Number(raw);
-                      if (num != null && Number.isNaN(num)) return;
-                      const next = [...data.selectedItems];
-                      next[idx] = { ...item, qty: num, quantity_source: num != null ? 'manual' : null };
-                      onChange({ selectedItems: next });
-                    }}
-                    placeholder="—"
-                    className="w-16 text-right rounded border border-border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  />
-                  <span className="text-[10px] text-muted-foreground w-8 shrink-0">{item.unit}</span>
-                  <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0', sourceBadge.cls)}>
-                    {sourceBadge.label}
-                  </span>
+                  {item.isCombined ? (
+                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 px-2 py-1 rounded bg-primary/10 text-primary font-semibold">
+                      {item.combinedFrom?.length ?? 0} bundled
+                    </span>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        aria-label={`Quantity for ${item.item_name}`}
+                        value={item.qty ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          const num = raw === '' ? null : Number(raw);
+                          if (num != null && Number.isNaN(num)) return;
+                          const next = [...data.selectedItems];
+                          next[idx] = { ...item, qty: num, quantity_source: num != null ? 'manual' : null };
+                          onChange({ selectedItems: next });
+                        }}
+                        placeholder="—"
+                        className="w-16 text-right rounded border border-border bg-background px-1.5 py-1 text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+                      <span className="text-[10px] text-muted-foreground w-8 shrink-0">{item.unit}</span>
+                      <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0', sourceBadge.cls)}>
+                        {sourceBadge.label}
+                      </span>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

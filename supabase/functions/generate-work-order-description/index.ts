@@ -22,6 +22,10 @@ interface ScopeItemContext {
   qty?: number | null;
   unit?: string | null;
   category?: string | null;
+  /** True when this item bundles several originals into one row. */
+  combined?: boolean;
+  /** Snapshot of original items merged into this combined row. */
+  sub_items?: Array<{ name: string; qty?: number | null; unit?: string | null; category?: string | null }>;
 }
 
 interface ProjectContext {
@@ -152,21 +156,30 @@ serve(async (req) => {
       const itemList = items
         .map((i, idx) => {
           const qty = i.qty != null && i.qty > 0 ? `${i.qty}${i.unit ? " " + i.unit : ""}` : "";
-          return `${idx + 1}. id=${i.id ?? `idx${idx}`} | name="${i.name}" | category="${i.category ?? ""}" | qty="${qty}"`;
+          const subs = i.combined && i.sub_items?.length
+            ? `\n   COMBINED — sub-items:\n${i.sub_items
+                .map((s) => {
+                  const sQty = s.qty != null && s.qty > 0 ? ` (${s.qty}${s.unit ? " " + s.unit : ""})` : "";
+                  return `   • ${s.name}${sQty}`;
+                })
+                .join("\n")}`
+            : "";
+          return `${idx + 1}. id=${i.id ?? `idx${idx}`} | name="${i.name}" | category="${i.category ?? ""}" | qty="${qty}"${subs}`;
         })
         .join("\n");
 
       const perItemSystem = `You are a precise construction scope writer.
-Return STRICT JSON: { "items": [ { "id": "<exact id>", "description": "<1-2 sentences>" } ], "summary": "<one short sentence summarizing the whole CO>" }.
+Return STRICT JSON: { "items": [ { "id": "<exact id>", "description": "<1-3 sentences>" } ], "summary": "<one short sentence summarizing the whole CO>" }.
 
 Rules:
 1. Output one description per scope item, keyed by the exact id provided. No extra items, no missing items.
-2. Each description is 1-2 sentences, plain prose, grounded ONLY in: the item name, the location, the intent, and the QA answers provided.
+2. Each description is 1-3 sentences, plain prose, grounded ONLY in: the item name, the location, the intent, and the QA answers provided.
 3. Mention the location and what makes this specific item necessary (intent + relevant QA detail).
 4. If a quantity/unit is provided for an item, include it inline (e.g. "120 SF").
-5. Do NOT invent dimensions, materials, methods, sequencing, pricing, schedules, or items.
-6. Do NOT add caveats, recommendations, or pleasantries.
-7. Output JSON only — no markdown fences, no commentary.`;
+5. For items marked COMBINED: write 1-2 sentences describing the bundled work as a whole at the location, then append a newline and a bullet list of every sub-item exactly as provided ("• <name> (<qty> <unit>)" — omit qty if none). Do NOT skip sub-items.
+6. Do NOT invent dimensions, materials, methods, sequencing, pricing, schedules, or items.
+7. Do NOT add caveats, recommendations, or pleasantries.
+8. Output JSON only — no markdown fences, no commentary.`;
 
       const perItemUser = `Project: ${body.project_name}
 Location: ${locationDesc}

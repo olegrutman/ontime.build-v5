@@ -1,55 +1,51 @@
+## Combine selected items into a single line item
 
-## Goal
+Add a "Combine into one item" affordance on the **Review** step of both the CO Wizard (`COWizard.tsx`) and the Add-Item mini-wizard (`AddScopeItemButton.tsx`). When two or more items are selected, the user can merge them into a single `co_line_items` row that carries one combined name, one AI description, and a list of the original items as sub-bullets in its description.
 
-When a user clicks **+ Add item** on an existing CO/WO, run them through the **same Why → Where → Scope → Review** flow that produced the first batch of items — not just a bare catalog picker. Each newly added item carries its own intent, location, reason, QA-grounded description, and per-item editable description, exactly like the originals.
+### UX
 
-## Today vs. after
+In `StepReview` (which both flows share):
 
-Today (`AddScopeItemButton.tsx`):
-```text
-[+ Add item] → modal → StepCatalog (bare picker) → save line items
-                       ⛔ no Why, no Where, no QA, no per-item description
-```
+- When `data.selectedItems.length >= 2`, show a small **"Combine into one item"** button at the top of the "Per-item descriptions" section, next to "Regenerate all".
+- Clicking it opens an inline confirm strip:
+  - Editable **Combined name** input (default: `"<First item> + N more"`, e.g. `"Opening modification + 2 more"`).
+  - Preview list of items being combined (read-only chips).
+  - **Combine** / **Cancel** buttons.
+- After combine: the selected-items list collapses to **one** synthetic item; AI re-generates a single description that mentions all the original sub-items (one paragraph) plus an indented bullet list of original names. The user can still edit the description and the combined name.
+- An **"Uncombine"** link appears on the merged item so the action is reversible during the wizard (we keep the originals in local state under `data.combinedSource`).
 
-After:
-```text
-[+ Add item] → modal → Why → Where → Scope (catalog + QA) → Review (per-item descriptions) → save line items
-```
+### Data model (no DB migration)
 
-We deliberately **skip** the original wizard's "How" step (pricing, NTE, FC/material toggles) and the "Create CO" submit. Those are CO-level decisions already locked in when the CO was created. Add-item only contributes scope rows.
+We store the combined item as a single `co_line_items` row, reusing existing columns:
 
-## What to build
+- `item_name` = combined name (e.g. `"Opening modification + Damaged material removal + Header installation"` truncated, or user-edited).
+- `description` = AI-drafted paragraph + newline-separated `• <orig name> (qty unit)` lines.
+- `qty` / `unit` = `null` (mixed units) — UI shows "—" and hides the qty input for combined rows.
+- `catalog_item_id` = the **first** source item's catalog id (so FK still resolves) — acceptable because the row is treated as a custom composite line; the description is the source of truth.
+- `category_name` = `"Combined scope"` (constant) so it's visually distinct.
+- `quantity_source` = `'manual'`.
 
-Refactor `AddScopeItemButton` from a single-step dialog into a **mini-wizard reusing the exact same step components** as `COWizard`:
+We add a transient field on `SelectedScopeItem` used **only in wizard state** (not persisted): `isCombined?: boolean` and `combinedFrom?: { name: string; qty: number|null; unit: string|null }[]`. Persistence still goes through the existing `handleSaveItems` / Add-Item insert path — no schema change needed.
 
-1. Extract the step renderer + footer from `COWizard.tsx` into something the add-item modal can share. Cleanest: keep `COWizard` as-is, but **import** the same step component imports it already uses (`StepWhy`, `StepWhere`, `StepCatalog`, `StepReview`) into `AddScopeItemButton` and drive a local 4-step state machine there. No duplication of the step UIs themselves.
+### AI description
 
-2. Step list inside Add Item modal:
-   - **Why** — `<StepWhy data={wizardData} onChange={update} isTM={isTM} />` (sets `intent`, `reason`, optional trigger)
-   - **Where** — `<StepWhere ... />` (sets `locationTag`)
-   - **Scope** — `<StepCatalog ... intent={data.intent} />` (drives QA → catalog selection, populates `selectedItems` with their per-item `locationTag`/`reason`/`reasonDescription`)
-   - **Review** — `<StepReview .../>` but in **"add-mode"**: hide the CO-name input, hide pricing summary, hide "Create CO" copy. Only show the per-item description editor list and a "Add N items" submit. (Add a small `mode?: 'create' | 'add'` prop to `StepReview` that gates the non-applicable sections.)
+Extend `generate-work-order-description` (`per_item` mode) to accept a `combined: true` flag with `sub_items: [...]`. When set, returns one description (1-3 sentences per the AI scope description rule) that names the location and reason and references the bundled work, followed by a `• ...` list of the originals. Local fallback in both wizards builds the same shape so offline still works.
 
-3. Reuse the same per-item AI description generation (the `generate-work-order-description` edge function with `mode: 'per_item'`) on entry to the Review step, identical to `COWizard`'s flow.
+### Files touched
 
-4. On submit, keep the existing `co_line_items` insert logic in `AddScopeItemButton.handleSaveItems`, but additionally persist the per-item `description` from `wizardData.itemDescriptions[item.id]` (today it uses `item.reasonDescription`; switch to the edited Review-step description when present, falling back to `reasonDescription`).
+- `src/components/change-orders/wizard/COWizard.tsx`
+  - Extend `SelectedScopeItem` (in-memory only) with `isCombined?` and `combinedFrom?`.
+  - In `StepReview`: add Combine button, inline combine panel, Uncombine link, and qty-input suppression for combined rows.
+  - Update local-fallback description builder to handle the combined case.
+- `src/components/change-orders/AddScopeItemButton.tsx`
+  - Mirror the local-fallback combined description builder.
+  - `handleSaveItems` already inserts whatever is in `data.selectedItems` — no change needed beyond letting one combined row through.
+- `supabase/functions/generate-work-order-description/index.ts`
+  - Accept and honor `combined` + `sub_items` in `per_item` mode; return a single `items: [{ id, description }]` entry shaped the same as today.
 
-5. Source the modal's initial `intent`/`reason`/`locationTag` from the parent CO (`co.reason`, `co.location_tag`) as **suggested defaults** the user can change — if their added item is in a different room or for a different reason, they're free to pick again. This matches your point that "additional items could be unrelated to the original why."
+### Edge cases
 
-6. Reuse the same Dialog/Sheet shell and stepper UI pattern as `COWizard` (top progress dots + step nav, footer with Back/Next/Submit). Mobile uses `Sheet`; desktop uses `Dialog`. Reuse `WORK_INTENT_LABELS`/`CO_REASON_LABELS` chips in the header for consistency.
-
-## Files to touch
-
-- `src/components/change-orders/AddScopeItemButton.tsx` — convert from one-step `StepCatalog` modal into a 4-step mini-wizard reusing `StepWhy`/`StepWhere`/`StepCatalog`/`StepReview`. Add the per-item AI description trigger on entering Review. Update `handleSaveItems` to write the Review-edited `itemDescriptions` into `co_line_items.description`.
-- `src/components/change-orders/wizard/COWizard.tsx` — export `StepWhy`, `StepWhere`, `StepReview` (currently they're inner components in this file based on `function StepReview` at line 1070). Make them named exports so `AddScopeItemButton` can import them. No behavioral change.
-- `src/components/change-orders/wizard/StepReview.tsx` *(or wherever it lives after extraction)* — add an optional `mode: 'create' | 'add'` prop that hides CO-name input, pricing summary, and the FC/material configuration recap when `mode === 'add'`.
-
-## Out of scope
-
-- The original full COWizard for new COs is unchanged.
-- No DB schema changes — `co_line_items` already has `reason`, `location_tag`, and `description` per row.
-- No changes to the "How" step (pricing/NTE/responsibilities) — that's a CO-level configuration, not per added item.
-
-## Open question (will default if not answered)
-
-Should the **Why** and **Where** steps in Add-Item be **prefilled from the parent CO's `co.reason` / `co.location_tag`** so power users can hit Next twice and jump to Scope? Default: **yes, prefill but fully editable** — matches the new per-item model where additional items often share context but don't have to.
+- Combining is disabled (button hidden) when fewer than 2 items are selected.
+- Removing items inside a combined row isn't supported — user must Uncombine first.
+- If user goes Back to Scope step and changes selections, any existing combined item is auto-uncombined and originals are restored.
+- Reason and location_tag for the combined row use the wizard-level values (consistent with the per-item model — combining implies the same why/where applies).
