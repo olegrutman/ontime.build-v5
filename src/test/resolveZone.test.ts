@@ -22,6 +22,12 @@ describe('resolveZoneFromLocationTag', () => {
     expect(resolveZoneFromLocationTag('Exterior · Eave detail')).toBe('roof');
   });
 
+  it('exterior + roof beats structural keywords (regression)', () => {
+    // Before fix: "truss" matched structural first and discarded roof context.
+    expect(resolveZoneFromLocationTag('Exterior · Roof system · Roof trusses · East elevation')).toBe('roof');
+    expect(resolveZoneFromLocationTag('Exterior · Roof · Rafter')).toBe('roof');
+  });
+
   it('resolves exterior + deck keywords to deck', () => {
     expect(resolveZoneFromLocationTag('Exterior · Rear deck')).toBe('deck');
     expect(resolveZoneFromLocationTag('Exterior · Pergola')).toBe('deck');
