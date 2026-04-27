@@ -1086,6 +1086,93 @@ function StepHow({
   );
 }
 
+// ── Combine helper: merges 2+ selected items into one synthetic row ──
+function CombineButton({
+  data,
+  onChange,
+  onAfterCombine,
+}: {
+  data: COWizardData;
+  onChange: (p: Partial<COWizardData>) => void;
+  onAfterCombine: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const defaultName = useMemo(() => {
+    const first = data.selectedItems[0]?.item_name ?? 'Combined scope';
+    const more = data.selectedItems.length - 1;
+    return more > 0 ? `${first} + ${more} more` : first;
+  }, [data.selectedItems]);
+  const [name, setName] = useState(defaultName);
+
+  useEffect(() => { setName(defaultName); }, [defaultName]);
+
+  function doCombine() {
+    if (data.selectedItems.length < 2) return;
+    const originals = [...data.selectedItems];
+    const first = originals[0];
+    const combined: SelectedScopeItem = {
+      ...first,
+      // Synthetic id so React keys stay stable; persistence uses catalog_item_id from `first`.
+      id: `combined-${Date.now()}`,
+      item_name: name.trim() || defaultName,
+      category_name: 'Combined scope',
+      qty: null,
+      unit: null,
+      quantity_source: 'manual',
+      isCombined: true,
+      combinedFrom: originals,
+    };
+    onChange({ selectedItems: [combined], itemDescriptions: {} });
+    setOpen(false);
+    setTimeout(() => onAfterCombine(), 200);
+  }
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 text-xs gap-1.5"
+        onClick={() => { setName(defaultName); setOpen(true); }}
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Combine into one item
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>Combine {data.selectedItems.length} items into one</DialogTitle>
+          <DialogDescription>
+            They'll be saved as a single line item. The originals are listed inside its description.
+          </DialogDescription>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Combined item name</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} maxLength={120} autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Items being combined</Label>
+              <div className="rounded-md border border-border bg-muted/30 p-2 max-h-40 overflow-y-auto space-y-1">
+                {data.selectedItems.map(i => (
+                  <div key={i.id} className="text-xs flex items-center justify-between gap-2">
+                    <span className="truncate">{i.item_name}</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
+                      {i.qty ? `${i.qty}${i.unit ? ` ${i.unit}` : ''}` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button size="sm" onClick={doCombine} disabled={!name.trim()}>Combine</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // ── Step 5: Review (with AI description) ─────────────
 export function StepReview({
   data, onChange, role, isTM, projectId, generatingAI, onRegenerate, mode = 'create',
