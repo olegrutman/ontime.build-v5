@@ -193,6 +193,8 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
   });
   const [submitting, setSubmitting] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  /** Monotonically-increasing seq so late-arriving regen responses can't clobber newer state. */
+  const regenSeqRef = useRef(0);
   const { shareCO } = useChangeOrders(projectId);
 
   // ── Draft autosave (sessionStorage) ──────────────────
