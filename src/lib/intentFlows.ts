@@ -34,6 +34,88 @@ function lookup(map: Record<string, string>, key: string, fallback = ''): string
 }
 
 // ── New intent flow: tear_out ──────────────────────────────────
+//
+// Zone-aware: the first question ("what are we removing?") branches on
+// ctx.zone so a Roof tear-out shows roof components, an Exterior wall
+// tear-out shows siding/WRB/sheathing, etc. Without this, the picker
+// previously showed Cabinets/Flooring/Fixtures regardless of location.
+
+type TearOutZoneKey = 'roof' | 'exterior_wall' | 'site' | 'interior';
+
+function tearOutZoneKey(ctx: FlowContext): TearOutZoneKey {
+  const z = ctx.zone;
+  if (z === 'roof') return 'roof';
+  if (z === 'exterior_wall' || z === 'envelope_opening') return 'exterior_wall';
+  if (z === 'foundation' || z === 'basement') return 'site';
+  return 'interior';
+}
+
+const TEAR_OUT_ANSWERS: Record<TearOutZoneKey, { id: string; label: string; icon?: string; sub?: string; spec?: boolean }[]> = {
+  roof: [
+    { id: 'roof_sheath',   label: 'Roof sheathing / decking', icon: '⟍' },
+    { id: 'underlayment',  label: 'Underlayment / felt',      icon: '▤' },
+    { id: 'roof_cover',    label: 'Shingles / membrane',      icon: '▦' },
+    { id: 'fascia',        label: 'Fascia / sub-fascia',      icon: '═' },
+    { id: 'soffit',        label: 'Soffit material',          icon: '▤' },
+    { id: 'rafter_truss',  label: 'Rafter / truss',           icon: '╱', spec: true, sub: 'PE may be needed' },
+    { id: 'ridge_cap',     label: 'Ridge cap / vent',         icon: '▲' },
+    { id: 'other',         label: 'Other',                    icon: '•' },
+  ],
+  exterior_wall: [
+    { id: 'siding',        label: 'Siding',                   icon: '┃' },
+    { id: 'wrb',           label: 'WRB / housewrap',          icon: '🛡️' },
+    { id: 'wall_sheath',   label: 'Wall sheathing',           icon: '▦' },
+    { id: 'window_door',   label: 'Window / door (R.O.)',     icon: '🪟' },
+    { id: 'trim',          label: 'Trim / casing',            icon: '─' },
+    { id: 'flashing',      label: 'Flashing',                 icon: '〰' },
+    { id: 'wall_stud',     label: 'Wall stud',                icon: '┃', spec: true, sub: 'PE if bearing' },
+    { id: 'other',         label: 'Other',                    icon: '•' },
+  ],
+  site: [
+    { id: 'slab',          label: 'Concrete slab section',    icon: '▬' },
+    { id: 'footing',       label: 'Footing',                  icon: '▭', spec: true },
+    { id: 'hardscape',     label: 'Hardscape / pavers',       icon: '▦' },
+    { id: 'grading',       label: 'Grading / soil',           icon: '◢' },
+    { id: 'other',         label: 'Other',                    icon: '•' },
+  ],
+  interior: [
+    { id: 'wall_partition', label: 'Partition wall',  icon: '▮' },
+    { id: 'wall_bearing',   label: 'Bearing wall',    icon: '⬛', spec: true, sub: 'PE may be needed' },
+    { id: 'soffit',         label: 'Soffit / bulkhead', icon: '▤' },
+    { id: 'cabinet',        label: 'Cabinets',        icon: '☐' },
+    { id: 'flooring',       label: 'Flooring',        icon: '═' },
+    { id: 'fixture',        label: 'Fixtures',        icon: '🚿' },
+    { id: 'ceiling',        label: 'Ceiling',         icon: '─' },
+    { id: 'other',          label: 'Other',           icon: '•' },
+  ],
+};
+
+const TEAR_OUT_QUESTION_TEXT: Record<TearOutZoneKey, string> = {
+  roof: 'What roof component are you removing?',
+  exterior_wall: 'What exterior component are you removing?',
+  site: 'What site element are you removing?',
+  interior: 'What are you tearing out?',
+};
+
+const TEAR_OUT_LABEL_MAP: Record<string, string> = {
+  // roof
+  roof_sheath: 'roof sheathing/decking', underlayment: 'roof underlayment',
+  roof_cover: 'roof covering', fascia: 'fascia/sub-fascia', soffit: 'soffit',
+  rafter_truss: 'rafter/truss', ridge_cap: 'ridge cap/vent',
+  // exterior wall
+  siding: 'siding', wrb: 'WRB/housewrap', wall_sheath: 'wall sheathing',
+  window_door: 'window/door rough opening', trim: 'trim/casing',
+  flashing: 'flashing', wall_stud: 'wall stud',
+  // site
+  slab: 'concrete slab', footing: 'footing', hardscape: 'hardscape',
+  grading: 'grading/soil',
+  // interior (existing)
+  wall_partition: 'partition wall', wall_bearing: 'bearing wall',
+  cabinet: 'cabinets', flooring: 'flooring', fixture: 'fixtures',
+  ceiling: 'ceiling',
+  // shared
+  other: 'existing work',
+};
 
 const TEAR_OUT_FLOW: ScopeFlow = {
   title: 'What needs to come out?',
@@ -43,16 +125,11 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       id: 'what',
       text: 'What are you tearing out?',
       grid: 'cols-4',
-      answers: [
-        { id: 'wall_partition', label: 'Partition wall',  icon: '▮' },
-        { id: 'wall_bearing',   label: 'Bearing wall',    icon: '⬛', spec: true, sub: 'PE may be needed' },
-        { id: 'soffit',         label: 'Soffit / bulkhead', icon: '▤' },
-        { id: 'cabinet',        label: 'Cabinets',        icon: '☐' },
-        { id: 'flooring',       label: 'Flooring',        icon: '═' },
-        { id: 'fixture',        label: 'Fixtures',        icon: '🚿' },
-        { id: 'ceiling',        label: 'Ceiling',         icon: '─' },
-        { id: 'other',          label: 'Other',           icon: '•' },
-      ],
+      // Static fallback list (used only if ctx is missing). The
+      // renderer prefers `answersFor`/`textFor` when present.
+      answers: TEAR_OUT_ANSWERS.interior,
+      textFor: (ctx) => TEAR_OUT_QUESTION_TEXT[tearOutZoneKey(ctx)],
+      answersFor: (ctx) => TEAR_OUT_ANSWERS[tearOutZoneKey(ctx)],
     },
     {
       id: 'extent',
@@ -89,23 +166,26 @@ const TEAR_OUT_FLOW: ScopeFlow = {
     },
   ],
   summarize: (ctx, a) => {
-    const what = lookup({
-      wall_partition: 'partition wall', wall_bearing: 'bearing wall',
-      soffit: 'soffit/bulkhead', cabinet: 'cabinets', flooring: 'flooring',
-      fixture: 'fixtures', ceiling: 'ceiling', other: 'existing work',
-    }, val(a, 'what'), 'existing work');
+    const whatId = val(a, 'what');
+    const what = lookup(TEAR_OUT_LABEL_MAP, whatId, 'existing work');
     const extent = lookup({
       spot: 'a spot of', small: 'a small section of', medium: 'a medium area of',
-      large: 'a large area of', full: 'the full room of',
+      large: 'a large area of', full: 'the full extent of',
     }, val(a, 'extent'), '');
     const disposal = val(a, 'disposal') === 'us_haul' ? 'We haul debris.' :
                      val(a, 'disposal') === 'gc_dump' ? 'GC dumpster on site.' : '';
     const protect = val(a, 'protection') === 'occupied' ? 'Occupied — full dust containment required.' :
                     val(a, 'protection') === 'plastic' ? 'Poly sheeting and zip walls.' : '';
-    const bearingNote = val(a, 'what') === 'wall_bearing'
+    const bearingNote = whatId === 'wall_bearing'
       ? 'BEARING wall — temporary shoring required, engineer review per IRC R301.1.3.'
+      : whatId === 'rafter_truss'
+      ? 'Structural roof member — temporary shoring + engineer review required.'
+      : whatId === 'wall_stud' && tearOutZoneKey(ctx) === 'exterior_wall'
+      ? 'Verify bearing condition before removal; shore if loaded.'
+      : whatId === 'footing'
+      ? 'Footing removal — confirm load path / underpinning plan.'
       : '';
-    return `Demo ${extent} ${what} in the ${loc(ctx)}. ${bearingNote} ${disposal} ${protect}`.replace(/\s+/g, ' ').trim();
+    return `Demo ${extent} ${what} at the ${loc(ctx)}. ${bearingNote} ${disposal} ${protect}`.replace(/\s+/g, ' ').trim();
   },
 };
 
