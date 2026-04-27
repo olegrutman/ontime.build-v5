@@ -405,8 +405,9 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
       }
 
       const coNumber = await generateCONumber({ projectId, creatorOrgId: orgId, assignedToOrgId: resolvedAssignedToOrgId, isTM });
-      const intentLabel = data.intent ? WORK_INTENT_LABELS[data.intent] : (selectedWorkType?.label ?? '');
-      const title = `${coNumber} · ${intentLabel ? intentLabel + ' · ' : ''}${format(new Date(), 'MMM d, yyyy')}`;
+      const userName = (data.coName ?? '').trim();
+      const titleSuffix = userName || format(new Date(), 'MMM d, yyyy');
+      const title = `${coNumber} · ${titleSuffix}`;
       const preGeneratedId = crypto.randomUUID();
 
       // resolvedAssignedToOrgId already computed above for CO number generation
