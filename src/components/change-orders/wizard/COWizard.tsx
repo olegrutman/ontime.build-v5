@@ -94,6 +94,10 @@ export interface COWizardData {
   shareDraftNow: boolean;
   quickHours: number | null;
   aiDescription: string;
+  /** Optional user-typed name for the CO/WO. When empty, the title is just `{co_number} · {date}`. */
+  coName?: string;
+  /** Per-line-item descriptions, keyed by selectedItems[i].id. Drives co_line_items.description. */
+  itemDescriptions?: Record<string, string>;
   /** Phase 3 — structured answers from the QA flow, persisted as evidence */
   qaAnswers?: Record<string, string | string[]>;
 }
