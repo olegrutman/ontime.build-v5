@@ -320,6 +320,15 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
             qty: i.qty ?? null,
             unit: i.unit ?? null,
             category: i.category_name ?? null,
+            combined: !!i.isCombined,
+            sub_items: i.isCombined && i.combinedFrom
+              ? i.combinedFrom.map(s => ({
+                  name: s.item_name,
+                  qty: s.qty ?? null,
+                  unit: s.unit ?? null,
+                  category: s.category_name ?? null,
+                }))
+              : undefined,
           })),
           reason_code: data.reason || '',
           trigger_code: data.triggerCode ?? undefined,
