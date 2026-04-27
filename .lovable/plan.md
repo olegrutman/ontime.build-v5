@@ -1,68 +1,70 @@
-## What's broken (in plain English)
+## What I found (in plain English)
 
-You picked **Exterior · Roof system · Roof** in Step 2 and **Tear out / demo** in Step 1. Sasha then asked "What are you tearing out?" and offered: **Partition wall, Bearing wall, Soffit/bulkhead, Cabinets, Flooring, Fixtures, Ceiling, Other**.
+You picked **Tear out / demo + Addition** in Step 1, and **Exterior · Roof system · Roof trusses · East elevation** in Step 2. That's enough information for any human to know exactly what's being asked. But Step 3 still asked you "What are you tearing out?" and showed you a list of **interior** options — Partition wall, Bearing wall, Cabinets, Flooring, Fixtures, Ceiling. Then when you typed "sheathing and moving trusses," Sasha handed back generic catalog items ("Scope addition – general," "Temporary bracing," "Layout and layout checks") that have nothing to do with a roof tear-out.
 
-None of those belong on a roof. You can't "tear out cabinets" from a roof system. This is the same class of bug as the framing screen — the wizard collected the location and intent, then ignored both when it built the question.
+Three real bugs are stacked on top of each other.
 
-## Root cause (one sentence)
+### Bug 1 — Zone resolver throws away the roof context
 
-`TEAR_OUT_FLOW` in `src/lib/intentFlows.ts` is a **single static interior-demo list**. It does not branch on the location zone (roof vs. interior vs. exterior wall vs. site), and the location-component pre-seed map (`COMPONENT_MAP`) only routes roof/wall components into `envelope_work` and `repair_damage` — it has **no entries that route into `tear_out` at all**. So tear-out always shows interior cabinets/flooring/fixtures regardless of where you said the work is.
+`resolveZoneFromLocationTag()` checks for the word "truss" *first*, before it checks whether you're on the roof. As soon as it sees "truss" anywhere in the tag, it returns `'structural'` and stops.
 
-Two smaller related issues fall out of the same root cause:
-1. `tear_out` skips the smarter component pre-seed entirely (no zone awareness, no skip-the-first-question shortcut that the other flows now have).
-2. The "envelope" intent has roof sheathing, but there is no demo equivalent — so a user wanting "tear off roof sheathing and decking" has no clean path.
+Then `tearOutZoneKey()` in the demo flow only knows four buckets — `roof`, `exterior_wall`, `site`, `interior`. It doesn't know what to do with `'structural'`, so it falls through to **`interior`**. That's why you got cabinets and flooring on a roof job.
 
-## The fix (3 parts)
+### Bug 2 — Pre-seed silently fails, so Q1 isn't skipped
 
-### Part 1 — Make `TEAR_OUT_FLOW` zone-aware
+The Step-2 → Step-3 hand-off was supposed to recognize "Roof trusses" and pre-fill the first question with `rafter_truss`, then skip straight to Q2. But because the question is now showing the **interior** answer set (which doesn't contain `rafter_truss`), the safety check `staticAnswers.some(a => a.id === answerId) || dynamicAnswers.some(a => a.id === answerId)` fails. So instead of auto-skipping, you got asked the question with the wrong options. Same root cause as Bug 1.
 
-Use the existing `answersFor(ctx)` and `textFor(ctx)` hooks already supported by `ScopeQuestion` (the same pattern the framing trees use). The first question becomes context-driven:
+### Bug 3 — Demo flow asks logistics questions that don't belong on a roof
 
-- **ctx.zone === 'roof'** → "What roof component are you removing?"
-  Roof sheathing/decking, Underlayment / felt, Shingles / membrane (if in scope), Fascia / sub-fascia, Soffit material, Rafter / truss (spec, PE flag), Ridge cap, Other.
-- **ctx.zone === 'exterior_wall'** → "What exterior component are you removing?"
-  Siding, WRB / housewrap, Wall sheathing, Window / door (rough opening), Trim / casing, Flashing, Wall stud (spec, PE flag if bearing), Other.
-- **ctx.zone === 'interior_wall' / 'ceiling' / 'floor' / null** → keep today's interior list (Partition wall, Bearing wall, Soffit/bulkhead, Cabinets, Flooring, Fixtures, Ceiling, Other).
-- **ctx.zone === 'site' / 'foundation'** → site list (Concrete slab section, Footing, Hardscape, Grading, Other).
+Even if Bugs 1 and 2 are fixed, `TEAR_OUT_FLOW` always asks the same 4 questions: *what / extent / disposal / protection*. "Protection / dust control needed?" with options like "Poly + zip walls" and "Occupied — full negative-air" makes no sense for an exterior roof tear-off. That's the "extra confusing steps" you felt.
 
-Disposal, extent, and protection questions stay the same (they apply to all demo).
+### Bug 4 — AI suggester ignores the demo intent
 
-The `summarize()` function gets a small `componentLabelMap` per zone so the AI sentence reads naturally ("Demo of roof sheathing at the Roof…" instead of "Demo of existing work…").
+The "Type instead" path in screenshot 2 returned generic items because the edge function `suggest-scope-items` doesn't know the user's **intent** is `tear_out`. It receives `reason`, `work_type`, `building_type`, but the system prompt and ranking logic don't bias toward demolition catalog items when the intent is demo. Result: a tear-out request gets matched against general-purpose framing items.
 
-### Part 2 — Add tear-out entries to `COMPONENT_MAP` so Step 2 pre-seeds Step 3
+---
 
-Right now `resolveComponent("…Roof system · Roof")` returns nothing useful for tear-out. Add tear-out-aware mappings that run **only when the picked intent is `tear_out`** (or extend `suggestIntentForComponent` to keep `tear_out` separate from the framing family).
+## The fix (4 small, focused changes)
 
-Specifically, when the trailing component matches roof / sheathing / siding / WRB / etc. AND intent is `tear_out`, pre-seed the new context-aware first question to the matching answer (e.g., `roof_sheath`, `siding`, `wrb`). This gives the same one-question-skip + "Pre-filled from your location" chip the other flows already have.
+**1. Fix the zone resolver — check location before structural keywords.**
+In `src/lib/resolveZone.ts`, move the exterior/roof check *above* the structural check. If a tag starts with "Exterior" and contains "roof", that's `'roof'`, full stop — even if "truss" appears in it. Structural-member detection should only kick in when no location zone is identifiable.
 
-### Part 3 — Reconcile intent ↔ location for obvious mismatches
+**2. Teach the demo flow to recognize structural roof/wall tags.**
+In `src/lib/intentFlows.ts`, update `tearOutZoneKey()` so that when zone is `'structural'`, it inspects the location tag itself to decide between `roof`, `exterior_wall`, `site`, or `interior`. Belt-and-suspenders coverage in case the resolver still returns `'structural'` for edge cases.
 
-Today `suggestIntentForComponent` only swaps between framing-family and envelope/structural. Extend it so that when the user says **tear_out** but the location is clearly an envelope layer (roof sheathing, WRB, siding), we either:
-- keep `tear_out` (preferred — demo is its own intent), OR
-- offer a soft-swap suggestion to `envelope_work` if the answer chosen is "remove and reinstall WRB/sheathing" rather than pure demo.
+**3. Trim the demo flow to 2 questions for exterior/roof zones.**
+The "disposal" and "dust protection" questions are interior-renovation questions. For roof and exterior_wall demos, ask only:
+- Q1: What component (already pre-seeded from Step 2 → auto-skip)
+- Q2: How much (extent)
 
-Implementation: keep `tear_out` and just trust Part 1+2 to make the questions correct. No forced swap — that's the right call because "tear out roof sheathing" is genuinely demo, not envelope work.
+That's it. Disposal stays only for interior (where dumpster vs. haul matters more) and site (concrete). Dust protection only for interior. This is done by gating questions in the flow with a `showFor(ctx)` predicate, then teaching `useQuestionFlow` to skip questions whose predicate returns false.
 
-## Files to change
+**4. Pass intent to the AI suggester and bias the ranking.**
+In `supabase/functions/suggest-scope-items/index.ts`:
+- Accept a top-level `intent` field in the request body.
+- Add it to the user message ("Work intent: tear_out").
+- Update the system prompt with one rule: *"When intent is `tear_out`, prioritize demolition / removal / tear-off catalog items. Do not suggest 'general scope addition' or generic placeholder items unless no demo item exists."*
+- In `StepCatalogQA.tsx`, pass `intent: resolvedIntent` alongside the existing `__intent` field in `answers` so it's a first-class request parameter, not just a hidden answer.
 
-| File | Change |
-|---|---|
-| `src/lib/intentFlows.ts` | Rewrite `TEAR_OUT_FLOW.questions[0]` to use `answersFor(ctx)` + `textFor(ctx)` keyed on `ctx.zone`. Update `summarize()` to map labels by zone. Add 8–10 new entries to `COMPONENT_MAP` for tear-out (roof sheath, underlayment, siding, WRB, fascia, soffit, slab, hardscape). Adjust `suggestIntentForComponent` to leave `tear_out` alone (no auto-swap into envelope). |
-| `src/types/scopeQA.ts` | No changes — `answersFor`/`textFor` already exist on `ScopeQuestion`. |
-| `src/hooks/useQuestionFlow.ts` | No changes — already supports seed-from-component. |
-| `src/components/change-orders/wizard/StepCatalogQA.tsx` | Verify the renderer reads `question.answersFor?.(ctx) ?? question.answers` and `question.textFor?.(ctx) ?? question.text`. If it currently only reads the static arrays, add the two fallbacks (one-line each). |
+---
 
-## Tests
+## What you will see after the fix
 
-- Add a unit test in `src/test/` that constructs `FlowContext` for each zone (roof, exterior_wall, interior_wall, site) with intent `tear_out`, calls `getIntentFlow('tear_out', 'apartments_mf')`, then asserts the first question's `answersFor(ctx)` returns the zone-appropriate list (no "Cabinets" on roof; no "Roof sheathing" on interior wall).
-- Add a `resolveComponent` test for `"Exterior · Roof system · Roof sheathing"` returning the roof-sheath pre-seed.
+For your exact scenario (Tear out + Roof trusses on East elevation):
 
-## What you'll see after the fix
+1. Step 3 opens, sees "Roof trusses" in the tag, recognizes `rafter_truss`, **skips Q1 entirely**.
+2. Shows a small "Pre-filled from your location: Roof trusses · Change" chip.
+3. Asks **one** question: "How much is coming out? Spot / Small / Medium / Large / Full".
+4. Sasha summary reads: *"Demo of a [extent] of rafter/truss at the Roof system / East elevation. Structural roof member — temporary shoring + engineer review required."*
+5. AI returns demo-specific catalog items (truss removal, roof tear-off, temporary shoring) instead of "Scope addition – general."
 
-Same scenario — Exterior · Roof system · Roof + Tear out:
-- Header: "Editing scope for **Exterior · Roof system · Roof** · Tear out / demo" (unchanged).
-- Question 1 becomes "**What roof component are you removing?**" with roof-only answers. If Step 2 was specific enough (e.g., "Roof sheathing"), Q1 is auto-answered and skipped with a "Pre-filled from your location · Change" chip, matching the framing screen behavior.
-- The remaining demo questions (extent, disposal, protection) stay the same.
-- Sasha's generated description reads like "Demo of roof sheathing at the Roof — medium area (80–400 SF). GC dumpster on site." instead of the generic interior phrasing.
+Total: **1 click in Step 3** instead of 4 questions and a confused AI response.
 
-No DB changes, no edge function changes — this is a pure client fix in one file plus a tiny renderer fallback.
+## Files touched
+
+- `src/lib/resolveZone.ts` — reorder checks (exterior + roof beats structural keyword).
+- `src/lib/intentFlows.ts` — `tearOutZoneKey()` location-aware fallback; add `showFor(ctx)` to disposal/protection questions.
+- `src/hooks/useQuestionFlow.ts` — honor `showFor(ctx)` and auto-skip hidden questions.
+- `src/components/change-orders/wizard/StepCatalogQA.tsx` — pass `intent` to suggester request.
+- `supabase/functions/suggest-scope-items/index.ts` — accept `intent`, add it to prompt + system rule.
+- `src/test/tearOutFlow.test.ts` + `src/test/resolveZone.test.ts` — cover "Exterior · Roof system · Roof trusses · …" → zone `roof`, demo flow seeds `rafter_truss`, only `extent` is asked, summary reads "Demo … at the Roof system".
