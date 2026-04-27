@@ -1,8 +1,7 @@
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { CO_STATUS_LABELS, CO_REASON_LABELS } from '@/types/changeOrder';
-import type { ChangeOrder, COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
-import { Check, MapPin, Calendar, Tag } from 'lucide-react';
+import { CO_STATUS_LABELS } from '@/types/changeOrder';
+import type { ChangeOrder, COStatus, COCreatedByRole } from '@/types/changeOrder';
+import { Check } from 'lucide-react';
 
 interface COHeaderStripProps {
   co: ChangeOrder;
@@ -41,42 +40,26 @@ function getActiveStep(status: string): number {
 }
 
 export function COHeaderStrip({ co, role, myOrgName, isTM = false }: COHeaderStripProps) {
-  const displayTitle = co.title ?? co.co_number ?? (isTM ? 'Work Order' : 'Change Order');
   const status = co.status as COStatus;
   const activeStep = getActiveStep(status);
+  // Optional user-typed name (anything other than the co_number itself)
+  const userName = co.title && co.title !== co.co_number ? co.title : null;
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
       {/* Top section */}
       <div className="px-5 py-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="font-mono text-[0.65rem] uppercase tracking-widest text-muted-foreground font-medium">
-              {co.co_number ?? '—'}
-            </p>
-            <h1 className="font-heading text-foreground truncate mt-1" style={{ fontSize: '1.6rem', fontWeight: 800, lineHeight: 1.15 }}>
-              {displayTitle}
-            </h1>
-
-            {/* Tag pills */}
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {co.location_tag && (
-                <span className="inline-flex items-center gap-1 text-[0.65rem] px-2.5 py-1 rounded-full bg-accent text-muted-foreground font-medium">
-                  <MapPin className="h-3 w-3" /> {co.location_tag}
-                </span>
-              )}
-              {co.reason && (
-                <span className="inline-flex items-center gap-1 text-[0.65rem] px-2.5 py-1 rounded-full bg-accent text-muted-foreground font-medium">
-                  <Tag className="h-3 w-3" /> {CO_REASON_LABELS[co.reason as COReasonCode] ?? co.reason}
-                </span>
-              )}
-              {co.created_at && (
-                <span className="inline-flex items-center gap-1 text-[0.65rem] px-2.5 py-1 rounded-full bg-accent text-muted-foreground font-medium">
-                  <Calendar className="h-3 w-3" /> {format(new Date(co.created_at), 'MMM d, yyyy')}
-                </span>
-              )}
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1
+                className="font-heading text-foreground truncate"
+                style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.01em' }}
+              >
+                {co.co_number ?? (isTM ? 'Work Order' : 'Change Order')}
+              </h1>
               <span className={cn(
-                'inline-flex items-center text-[0.65rem] px-2.5 py-1 rounded-full font-semibold',
+                'inline-flex items-center text-[0.7rem] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide',
                 status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
                 status === 'submitted' ? 'bg-blue-100 text-blue-700' :
                 status === 'rejected' ? 'bg-red-100 text-red-700' :
@@ -86,6 +69,9 @@ export function COHeaderStrip({ co, role, myOrgName, isTM = false }: COHeaderStr
                 {CO_STATUS_LABELS[status]}
               </span>
             </div>
+            {userName && (
+              <p className="text-sm text-muted-foreground mt-1 truncate">{userName}</p>
+            )}
           </div>
 
           {/* TC name / role */}
