@@ -137,6 +137,102 @@ serve(async (req) => {
     const locationDesc =
       body.location_tag || buildLocationDescription(body.location) || "unspecified location";
 
+    // ── Per-item mode ───────────────────────────────────────
+    if (body.mode === "per_item" && body.selected_items?.length) {
+      const items: ScopeItemContext[] = body.selected_items.map((it) =>
+        typeof it === "string" ? { name: it } : it,
+      );
+
+      const intentLine = body.intent_label ? `Intent: ${body.intent_label}` : "";
+      const reasonLine = body.reason_code || body.reason ? `Reason: ${body.reason_code || body.reason}` : "";
+      const qaLine = body.qa_answers && Object.keys(body.qa_answers).length
+        ? `QA answers: ${JSON.stringify(body.qa_answers)}`
+        : "";
+
+      const itemList = items
+        .map((i, idx) => {
+          const qty = i.qty != null && i.qty > 0 ? `${i.qty}${i.unit ? " " + i.unit : ""}` : "";
+          return `${idx + 1}. id=${i.id ?? `idx${idx}`} | name="${i.name}" | category="${i.category ?? ""}" | qty="${qty}"`;
+        })
+        .join("\n");
+
+      const perItemSystem = `You are a precise construction scope writer.
+Return STRICT JSON: { "items": [ { "id": "<exact id>", "description": "<1-2 sentences>" } ], "summary": "<one short sentence summarizing the whole CO>" }.
+
+Rules:
+1. Output one description per scope item, keyed by the exact id provided. No extra items, no missing items.
+2. Each description is 1-2 sentences, plain prose, grounded ONLY in: the item name, the location, the intent, and the QA answers provided.
+3. Mention the location and what makes this specific item necessary (intent + relevant QA detail).
+4. If a quantity/unit is provided for an item, include it inline (e.g. "120 SF").
+5. Do NOT invent dimensions, materials, methods, sequencing, pricing, schedules, or items.
+6. Do NOT add caveats, recommendations, or pleasantries.
+7. Output JSON only — no markdown fences, no commentary.`;
+
+      const perItemUser = `Project: ${body.project_name}
+Location: ${locationDesc}
+${intentLine}
+${reasonLine}
+${qaLine}
+
+Scope items:
+${itemList}`;
+
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: perItemSystem },
+            { role: "user", content: perItemUser },
+          ],
+          max_tokens: 800,
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (!aiResp.ok) {
+        const txt = await aiResp.text();
+        console.error("per-item AI error:", aiResp.status, txt);
+        // Fallback: synthesize minimal per-item descriptions locally
+        const fallback = items.map((i, idx) => ({
+          id: i.id ?? `idx${idx}`,
+          description: `${i.name}${i.qty ? ` (${i.qty}${i.unit ? " " + i.unit : ""})` : ""} at ${locationDesc}${body.intent_label ? ` — ${body.intent_label.toLowerCase()}` : ""}.`,
+        }));
+        return new Response(JSON.stringify({ items: fallback, summary: "" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const aiJson = await aiResp.json();
+      const raw = aiJson.choices?.[0]?.message?.content?.trim() || "{}";
+      let parsed: { items?: Array<{ id: string; description: string }>; summary?: string } = {};
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = {};
+      }
+
+      // Ensure every requested id has a description; fill missing with fallback.
+      const byId = new Map((parsed.items ?? []).map((r) => [r.id, r.description]));
+      const finalItems = items.map((i, idx) => {
+        const id = i.id ?? `idx${idx}`;
+        return {
+          id,
+          description:
+            byId.get(id) ||
+            `${i.name}${i.qty ? ` (${i.qty}${i.unit ? " " + i.unit : ""})` : ""} at ${locationDesc}.`,
+        };
+      });
+
+      return new Response(JSON.stringify({ items: finalItems, summary: parsed.summary ?? "" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
+
     const itemsBlock = body.selected_items?.length
       ? formatItemsForPrompt(body.selected_items)
       : body.structural_element || "";
