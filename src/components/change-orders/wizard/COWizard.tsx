@@ -741,7 +741,7 @@ const REASON_TO_INTENT_HINT: Partial<Record<COReasonCode, WorkIntent>> = {
 };
 
 // ── Step 1: Why ──────────────────────────────────────
-function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
+export function StepWhy({ data, onChange, isTM = false }: { data: COWizardData; onChange: (p: Partial<COWizardData>) => void; isTM?: boolean }) {
   function pickReason(reason: COReasonCode) {
     // If no intent yet, pre-select the typical intent for this reason as a hint
     const hint = REASON_TO_INTENT_HINT[reason];
@@ -852,7 +852,7 @@ function pushRecentLocation(userId: string | undefined, projectId: string, tag: 
   } catch {/* quota */}
 }
 
-function StepWhere({
+export function StepWhere({
   projectId, data, onChange, savedLocation, userId,
 }: {
   projectId: string;
@@ -1067,8 +1067,8 @@ function StepHow({
 }
 
 // ── Step 5: Review (with AI description) ─────────────
-function StepReview({
-  data, onChange, role, isTM, projectId, generatingAI, onRegenerate,
+export function StepReview({
+  data, onChange, role, isTM, projectId, generatingAI, onRegenerate, mode = 'create',
 }: {
   data: COWizardData;
   onChange: (p: Partial<COWizardData>) => void;
@@ -1077,7 +1077,10 @@ function StepReview({
   projectId: string;
   generatingAI: boolean;
   onRegenerate: () => void;
+  /** 'create' = full review (CO name + team + summary). 'add' = only per-item descriptions for adding to an existing CO. */
+  mode?: 'create' | 'add';
 }) {
+  const isAddMode = mode === 'add';
   const [addItemsOpen, setAddItemsOpen] = useState(false);
   // Snapshot the item IDs at the time the add-dialog opens so we can detect newly added items
   const itemCountRef = useRef(data.selectedItems.length);
