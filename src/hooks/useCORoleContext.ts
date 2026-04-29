@@ -97,11 +97,13 @@ export function useCORoleContext(
     // or once a per-party pricing freeze applies.
     const finalStatuses = ['approved', 'rejected', 'contracted'];
     const submittedOrFinal = ['submitted', ...finalStatuses].includes(co?.status ?? '');
-    const tcFrozen = co?.tc_submitted_price != null;
+    // Note: tc_submitted_price is a derived snapshot written during draft (e.g. by
+    // FCPricingToggleCard recomputes); it is NOT a "TC submitted" event marker, so we
+    // can't use it as a freeze. fc_pricing_submitted_at IS set by an explicit FC action,
+    // so it still freezes FC's external edits before status changes.
     const fcFrozen = co?.fc_pricing_submitted_at != null;
     const externalFrozenForRole =
       isFC ? (fcFrozen || submittedOrFinal)
-      : isTC ? (tcFrozen || submittedOrFinal)
       : submittedOrFinal;
     const canEditExternal =
       !!co && (isGC || isTC || isFC) && !externalFrozenForRole && (!isFC || isCollaboratorOrg || isFCCreator);
