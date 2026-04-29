@@ -222,7 +222,9 @@ export function LaborEntryForm({
             <DollarSign className="h-4 w-4" style={{ color: 'hsl(var(--amber-d))' }} />
           )}
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: isActualCost ? undefined : 'hsl(var(--amber-d))' }}>
-            {isActualCost ? 'Log Internal Cost (Private)' : 'Add Pricing Entry'}
+            {isEditing
+              ? (isActualCost ? 'Edit Internal Cost (Private)' : 'Edit Pricing Entry')
+              : (isActualCost ? 'Log Internal Cost (Private)' : 'Add Pricing Entry')}
           </span>
         </div>
         {onCancel && (
@@ -446,7 +448,9 @@ export function LaborEntryForm({
               style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' }}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {computedTotal > 0 ? `Save Entry — $${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'Save Entry'}
+              {computedTotal > 0
+                ? `${isEditing ? 'Update' : 'Save'} Entry — $${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                : (isEditing ? 'Update Entry' : 'Save Entry')}
             </Button>
           </div>
         )}
