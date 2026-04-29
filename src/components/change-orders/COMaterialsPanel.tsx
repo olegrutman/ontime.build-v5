@@ -188,6 +188,31 @@ export function COMaterialsPanel({
   const showPricingColumns = isFC ? false : isGC ? true : isTC && materialsResponsible === 'TC';
   const addedByRole = isGC ? 'GC' : isFC ? 'FC' : 'TC';
 
+  const [editingMatId, setEditingMatId] = useState<string | null>(null);
+  const [matDraft, setMatDraft] = useState<{ description: string; quantity: string; unit_cost: string } | null>(null);
+  const [savingMatEdit, setSavingMatEdit] = useState(false);
+
+  async function commitMatEdit(id: string) {
+    if (!matDraft) return;
+    setSavingMatEdit(true);
+    try {
+      const { error } = await supabase.from('co_material_items').update({
+        description: matDraft.description.trim() || 'Material',
+        quantity: parseFloat(matDraft.quantity) || 0,
+        unit_cost: matDraft.unit_cost.trim() === '' ? null : (parseFloat(matDraft.unit_cost) || 0),
+      }).eq('id', id);
+      if (error) throw error;
+      toast.success('Material updated');
+      setEditingMatId(null);
+      setMatDraft(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update');
+    } finally {
+      setSavingMatEdit(false);
+    }
+  }
+
   const activePricingRequest = useMemo(
     () => linkedRequests.find(request => request.status !== 'DELIVERED') ?? linkedRequests[0] ?? null,
     [linkedRequests]
