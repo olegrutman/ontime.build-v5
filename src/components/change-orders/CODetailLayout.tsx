@@ -362,7 +362,9 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                     isTC={isTC} isGC={isGC} isFC={isFC}
                     materialsOnSite={co.materials_on_site}
                     materialsResponsible={responsibility.materialResponsible}
-                    canEdit={canEdit} onRefresh={refreshDetail}
+                    canEdit={canEdit}
+                    canEditExternal={canEditExternal}
+                    onRefresh={refreshDetail}
                   />
                 </div>
               )}
@@ -373,7 +375,9 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
                   equipmentResponsible={responsibility.equipmentResponsible}
-                  canEdit={canEdit} onRefresh={refreshDetail}
+                  canEdit={canEdit}
+                  canEditExternal={canEditExternal}
+                  onRefresh={refreshDetail}
                 />
               )}
 
