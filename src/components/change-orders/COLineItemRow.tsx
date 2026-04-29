@@ -78,6 +78,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const isMyOrgItem = item.org_id === orgId;
   const canEditHeader = canEditExternal && isMyOrgItem;
 
+  const [deleting, setDeleting] = useState(false);
+
   async function saveHeader() {
     setSavingHeader(true);
     try {
@@ -101,6 +103,30 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
       toast.error(err?.message ?? 'Failed to update item');
     } finally {
       setSavingHeader(false);
+    }
+  }
+
+  async function deleteItem() {
+    const hasEntries = laborEntries.length > 0;
+    const msg = hasEntries
+      ? `Delete "${item.item_name}"? This will also remove ${laborEntries.length} time/cost entr${laborEntries.length === 1 ? 'y' : 'ies'} attached to it.`
+      : `Delete "${item.item_name}"?`;
+    if (!window.confirm(msg)) return;
+    setDeleting(true);
+    try {
+      // Remove dependent labor entries first to satisfy FK constraints in any environment.
+      if (hasEntries) {
+        await supabase.from('co_labor_entries').delete().eq('co_line_item_id', item.id);
+      }
+      const { error } = await supabase.from('co_line_items').delete().eq('id', item.id);
+      if (error) throw error;
+      toast.success('Scope item deleted');
+      setEditHeaderOpen(false);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to delete item');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -326,11 +352,23 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                         </Select>
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditHeaderOpen(false)} disabled={savingHeader}>Cancel</Button>
-                      <Button size="sm" onClick={saveHeader} disabled={savingHeader}>
-                        {savingHeader ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                    <div className="flex items-center justify-between pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                        onClick={deleteItem}
+                        disabled={savingHeader || deleting}
+                      >
+                        {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                        Delete item
                       </Button>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setEditHeaderOpen(false)} disabled={savingHeader || deleting}>Cancel</Button>
+                        <Button size="sm" onClick={saveHeader} disabled={savingHeader || deleting}>
+                          {savingHeader ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                        </Button>
+                      </div>
                     </div>
                   </PopoverContent>
                 </Popover>
