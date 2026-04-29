@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { COLaborRole, COPricingMode } from '@/types/changeOrder';
+import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 
 interface LaborEntryFormProps {
   coId: string;
@@ -20,6 +20,8 @@ interface LaborEntryFormProps {
   isTC?: boolean;
   isFC?: boolean;
   isActualCost?: boolean;
+  /** When provided, the form edits this existing entry instead of inserting a new one. */
+  editingEntry?: COLaborEntry;
   onSaved: () => void;
   onCancel?: () => void;
   nteCap?: number | null;
@@ -32,19 +34,25 @@ type EntryMode = 'hourly' | 'lump_sum' | 'unit_price';
 export function LaborEntryForm({
   coId, lineItemId, orgId, enteredByRole, pricingType,
   isTC = false, isFC = false, isActualCost = false,
+  editingEntry,
   onSaved, onCancel, nteCap, nteUsed = 0,
 }: LaborEntryFormProps) {
   const { user } = useAuth();
+  const isEditing = !!editingEntry;
 
-  const [mode, setMode] = useState<EntryMode>(pricingType === 'fixed' ? 'lump_sum' : 'hourly');
-  const [entryDate, setEntryDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [hours, setHours] = useState('');
-  const [rate, setRate] = useState('');
+  const [mode, setMode] = useState<EntryMode>(
+    editingEntry
+      ? (editingEntry.pricing_mode === 'lump_sum' ? 'lump_sum' : 'hourly')
+      : (pricingType === 'fixed' ? 'lump_sum' : 'hourly'),
+  );
+  const [entryDate, setEntryDate] = useState(editingEntry?.entry_date ?? format(new Date(), 'yyyy-MM-dd'));
+  const [hours, setHours] = useState(editingEntry?.hours != null ? String(editingEntry.hours) : '');
+  const [rate, setRate] = useState(editingEntry?.hourly_rate != null ? String(editingEntry.hourly_rate) : '');
   const [markup, setMarkup] = useState('');
-  const [lumpSum, setLumpSum] = useState('');
+  const [lumpSum, setLumpSum] = useState(editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '');
   const [qty, setQty] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(editingEntry?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
   const [internalCostOpen, setInternalCostOpen] = useState(true);
@@ -125,13 +133,33 @@ export function LaborEntryForm({
     if (!user) { toast.error('Sign in required'); return; }
     if (!canSave) { toast.error(validationMessage ?? 'Complete required fields.'); return; }
 
-    if (!isActualCost && nteCap && nteCap > 0) {
+    if (!isActualCost && !isEditing && nteCap && nteCap > 0) {
       if (nteUsed >= nteCap) { toast.error('NTE cap reached. GC must increase.'); return; }
       if (willExceed && !showNTEWarn) { setShowNTEWarn(true); return; }
     }
 
     setSaving(true);
     try {
+      if (isEditing && editingEntry) {
+        const { error } = await supabase
+          .from('co_labor_entries')
+          .update({
+            entry_date: entryDate,
+            pricing_mode: getDbMode(),
+            hours: getDbHours(),
+            hourly_rate: getDbRate(),
+            lump_sum: mode === 'lump_sum'
+              ? (lumpSumValue + (isTC && markupPct > 0 ? lumpSumValue * (markupPct / 100) : 0))
+              : null,
+            description: description.trim() || null,
+          })
+          .eq('id', editingEntry.id);
+        if (error) throw error;
+        toast.success('Entry updated');
+        onSaved();
+        return;
+      }
+
       const { error } = await supabase.from('co_labor_entries').insert({
         co_id: coId, co_line_item_id: lineItemId, org_id: orgId,
         entered_by_role: enteredByRole, entry_date: entryDate,
@@ -194,7 +222,9 @@ export function LaborEntryForm({
             <DollarSign className="h-4 w-4" style={{ color: 'hsl(var(--amber-d))' }} />
           )}
           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: isActualCost ? undefined : 'hsl(var(--amber-d))' }}>
-            {isActualCost ? 'Log Internal Cost (Private)' : 'Add Pricing Entry'}
+            {isEditing
+              ? (isActualCost ? 'Edit Internal Cost (Private)' : 'Edit Pricing Entry')
+              : (isActualCost ? 'Log Internal Cost (Private)' : 'Add Pricing Entry')}
           </span>
         </div>
         {onCancel && (
@@ -344,7 +374,7 @@ export function LaborEntryForm({
         )}
 
         {/* Internal cost section */}
-        {!isActualCost && (isTC || isFC) && (
+        {!isActualCost && !isEditing && (isTC || isFC) && (
           <Collapsible open={internalCostOpen} onOpenChange={setInternalCostOpen}>
             <CollapsibleTrigger asChild>
               <button type="button" className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-dashed border-border hover:border-[hsl(var(--amber)/0.3)] transition-colors text-xs">
@@ -418,7 +448,9 @@ export function LaborEntryForm({
               style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' }}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {computedTotal > 0 ? `Save Entry — $${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'Save Entry'}
+              {computedTotal > 0
+                ? `${isEditing ? 'Update' : 'Save'} Entry — $${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                : (isEditing ? 'Update Entry' : 'Save Entry')}
             </Button>
           </div>
         )}

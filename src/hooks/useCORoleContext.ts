@@ -12,6 +12,10 @@ interface UseCORoleContextResult {
   myOrgId: string;
   myOrgName: string;
   canEdit: boolean;
+  /** Editable until this CO is submitted upstream (or per-party freeze applies). */
+  canEditExternal: boolean;
+  /** Editable until this CO is finalized (approved / rejected / contracted). */
+  canEditInternal: boolean;
   canRequestFCInput: boolean;
   canCompleteFCInput: boolean;
   nteBlocked: boolean;
@@ -89,12 +93,30 @@ export function useCORoleContext(
     const canEdit = baseCanEdit && (!isFC || isCollaboratorOrg || isFCCreator);
     const nteBlocked = co?.pricing_type === 'nte' && !!co?.nte_cap && (financials.nteUsedPercent ?? 0) >= 100;
 
+    // External (billable / upstream-facing) edits — locked once the CO is submitted upstream
+    // or once a per-party pricing freeze applies.
+    const finalStatuses = ['approved', 'rejected', 'contracted'];
+    const submittedOrFinal = ['submitted', ...finalStatuses].includes(co?.status ?? '');
+    const tcFrozen = co?.tc_submitted_price != null;
+    const fcFrozen = co?.fc_pricing_submitted_at != null;
+    const externalFrozenForRole =
+      isFC ? (fcFrozen || submittedOrFinal)
+      : isTC ? (tcFrozen || submittedOrFinal)
+      : submittedOrFinal;
+    const canEditExternal =
+      !!co && (isGC || isTC || isFC) && !externalFrozenForRole && (!isFC || isCollaboratorOrg || isFCCreator);
+
+    // Internal (private cost) edits — locked only when CO reaches a final state.
+    const canEditInternal =
+      !!co && (isGC || isTC || isFC) && !finalStatuses.includes(co?.status ?? '') && (!isFC || isCollaboratorOrg || isFCCreator);
+
     const VALID = ['fixed', 'tm', 'nte'];
     const pricingType = co && VALID.includes(co.pricing_type) ? co.pricing_type as 'fixed' | 'tm' | 'nte' : 'fixed';
 
     return {
       isGC, isTC, isFC, role, myOrgId, myOrgName,
-      canEdit, canRequestFCInput, canCompleteFCInput, nteBlocked, pricingType,
+      canEdit, canEditExternal, canEditInternal,
+      canRequestFCInput, canCompleteFCInput, nteBlocked, pricingType,
       collaboratorOrgIds, currentCollaborator, fcCollabName, isCollaboratorOrg,
     };
   }, [co, collaborators, financials, currentRole, userOrgRoles, fcCreatorOrg]);

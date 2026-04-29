@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Wrench } from 'lucide-react';
+import { Plus, Trash2, Loader2, Wrench, Pencil, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,8 @@ interface COEquipmentPanelProps {
   isFC:      boolean;
   equipmentResponsible?: string | null;
   canEdit:   boolean;
+  /** Inline-edit window for already-saved rows; locks once CO is submitted upstream. */
+  canEditExternal?: boolean;
   onRefresh: () => void;
 }
 
@@ -59,12 +61,50 @@ export function COEquipmentPanel({
   isFC,
   equipmentResponsible,
   canEdit,
+  canEditExternal = false,
   onRefresh,
 }: COEquipmentPanelProps) {
   const [drafts, setDrafts]         = useState<DraftEquip[]>([]);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [editDraft, setEditDraft]   = useState<{ description: string; duration_note: string; cost: string; markup_percent: string; notes: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  function startEdit(item: COEquipmentItem) {
+    setEditingId(item.id);
+    setEditDraft({
+      description: item.description,
+      duration_note: item.duration_note ?? '',
+      cost: String(item.cost ?? 0),
+      markup_percent: String(item.markup_percent ?? 0),
+      notes: item.notes ?? '',
+    });
+  }
+
+  async function commitEdit() {
+    if (!editingId || !editDraft) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase.from('co_equipment_items').update({
+        description: editDraft.description.trim() || 'Equipment',
+        duration_note: editDraft.duration_note.trim() || null,
+        cost: parseFloat(editDraft.cost) || 0,
+        markup_percent: parseFloat(editDraft.markup_percent) || 0,
+        notes: editDraft.notes.trim() || null,
+      }).eq('id', editingId);
+      if (error) throw error;
+      toast.success('Equipment updated');
+      setEditingId(null);
+      setEditDraft(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   const totalCost   = equipment.reduce((s, e) => s + (e.cost ?? 0), 0);
   const totalBilled = equipment.reduce((s, e) => s + (e.billed_amount ?? 0), 0);
@@ -187,46 +227,51 @@ export function COEquipmentPanel({
       ) : (
         <>
           <div className="divide-y divide-border">
-            {equipment.map(item => (
-              <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{item.description}</p>
-                  {item.duration_note && (
-                    <p className="text-xs text-muted-foreground">{item.duration_note}</p>
+            {equipment.map(item => {
+              const isEditing = editingId === item.id;
+              const rowEditable = canEditExternal && item.org_id === orgId;
+              if (isEditing && editDraft) {
+                return (
+                  <div key={item.id} className="px-4 py-3 space-y-2 bg-muted/20">
+                    <Input value={editDraft.description} onChange={e => setEditDraft({ ...editDraft, description: e.target.value })} className="h-8 text-sm" placeholder="Description" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input value={editDraft.duration_note} onChange={e => setEditDraft({ ...editDraft, duration_note: e.target.value })} className="h-7 text-xs" placeholder="Duration" />
+                      <Input type="number" value={editDraft.cost} onChange={e => setEditDraft({ ...editDraft, cost: e.target.value })} className="h-7 text-xs" placeholder="Cost" />
+                      <Input type="number" value={editDraft.markup_percent} onChange={e => setEditDraft({ ...editDraft, markup_percent: e.target.value })} className="h-7 text-xs" placeholder="Markup %" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setEditingId(null); setEditDraft(null); }} disabled={savingEdit}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" className="h-7 text-xs" onClick={commitEdit} disabled={savingEdit}>
+                        {savingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{item.description}</p>
+                    {item.duration_note && (<p className="text-xs text-muted-foreground">{item.duration_note}</p>)}
+                  </div>
+                  <div className="text-right text-sm shrink-0">
+                    {isTC && equipmentResponsible === 'TC' && (<div className="text-xs text-muted-foreground">Cost: ${fmt(item.cost ?? 0)}</div>)}
+                    {isTC && equipmentResponsible === 'TC' && item.markup_percent > 0 && (<div className="text-[10px] text-muted-foreground">+{item.markup_percent}% markup</div>)}
+                    {!isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (<div className="font-medium text-foreground">${fmt(item.billed_amount ?? 0)}</div>)}
+                  </div>
+                  {rowEditable && (
+                    <button onClick={() => startEdit(item)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
+                  )}
+                  {canEdit && (isTC || isGC || isFC) && (
+                    <button onClick={() => deleteItem(item.id)} disabled={deleting === item.id} className="text-muted-foreground hover:text-destructive transition-colors ml-1 shrink-0">
+                      {deleting === item.id ? (<Loader2 className="h-3.5 w-3.5 animate-spin" />) : (<Trash2 className="h-3.5 w-3.5" />)}
+                    </button>
                   )}
                 </div>
-                <div className="text-right text-sm shrink-0">
-                  {isTC && equipmentResponsible === 'TC' && (
-                    <div className="text-xs text-muted-foreground">
-                      Cost: ${fmt(item.cost ?? 0)}
-                    </div>
-                  )}
-                  {isTC && equipmentResponsible === 'TC' && item.markup_percent > 0 && (
-                    <div className="text-[10px] text-muted-foreground">
-                      +{item.markup_percent}% markup
-                    </div>
-                  )}
-                  {!isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (
-                    <div className="font-medium text-foreground">
-                      ${fmt(item.billed_amount ?? 0)}
-                    </div>
-                  )}
-                </div>
-                {canEdit && (isTC || isGC || isFC) && (
-                  <button
-                    onClick={() => deleteItem(item.id)}
-                    disabled={deleting === item.id}
-                    className="text-muted-foreground hover:text-destructive transition-colors ml-1 shrink-0"
-                  >
-                    {deleting === item.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             {drafts.map(draft => {
               const cost   = parseFloat(draft.cost) || 0;

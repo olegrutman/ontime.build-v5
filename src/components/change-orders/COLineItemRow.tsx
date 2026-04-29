@@ -1,7 +1,12 @@
 import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +28,10 @@ interface COLineItemRowProps {
   nteCap?: number | null;
   nteUsed?: number;
   canAddLabor: boolean;
+  /** Edit window for billable / external fields (locked once CO is submitted upstream). */
+  canEditExternal?: boolean;
+  /** Edit window for internal / private cost fields (locked once CO is finalized). */
+  canEditInternal?: boolean;
   onRefresh: () => void;
   isEven?: boolean;
   index?: number;
@@ -50,11 +59,56 @@ const STATUS_BORDER_COLOR: Record<StatusColor, string> = {
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, pricingType, nteCap, nteUsed = 0,
-  canAddLabor, onRefresh, isEven = true, index,
+  canAddLabor, canEditExternal = false, canEditInternal = false,
+  onRefresh, isEven = true, index,
 }, ref) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [editHeaderOpen, setEditHeaderOpen] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [draftName, setDraftName] = useState(item.item_name);
+  const [draftDesc, setDraftDesc] = useState(item.description ?? '');
+  const [draftQty, setDraftQty] = useState(item.qty != null ? String(item.qty) : '');
+  const [draftLocation, setDraftLocation] = useState(item.location_tag ?? '');
+  const [draftReason, setDraftReason] = useState<COReasonCode | ''>(item.reason ?? '');
+
+  const myRoleStr = isFC ? 'FC' : isTC ? 'TC' : isGC ? 'GC' : null;
+  const isMyOrgItem = item.org_id === orgId;
+  const canEditHeader = canEditExternal && isMyOrgItem;
+
+  async function saveHeader() {
+    setSavingHeader(true);
+    try {
+      const qtyNum = draftQty.trim() === '' ? null : Number(draftQty);
+      if (qtyNum != null && Number.isNaN(qtyNum)) { toast.error('Quantity must be a number'); return; }
+      const { error } = await supabase
+        .from('co_line_items')
+        .update({
+          item_name: draftName.trim() || item.item_name,
+          description: draftDesc.trim() || null,
+          qty: qtyNum,
+          location_tag: draftLocation.trim() || null,
+          reason: draftReason || null,
+        })
+        .eq('id', item.id);
+      if (error) throw error;
+      toast.success('Item updated');
+      setEditHeaderOpen(false);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update item');
+    } finally {
+      setSavingHeader(false);
+    }
+  }
+
+  function canEditEntry(entry: COLaborEntry): boolean {
+    if (entry.entered_by_role !== myRoleStr) return false;
+    if (entry.org_id !== orgId) return false;
+    return entry.is_actual_cost ? canEditInternal : canEditExternal;
+  }
 
   const billable = laborEntries.filter(e => !e.is_actual_cost);
   const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
@@ -105,10 +159,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   return (
     <div ref={ref} className={cn('border-b border-border last:border-b-0')} style={{ borderLeft: `3px solid ${STATUS_BORDER_COLOR[statusColor]}` }}>
       {/* Item header — clickable to expand */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
+        className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
@@ -132,6 +188,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 )}
                 {item.unit && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.unit}</span>
+                )}
+                {item.qty != null && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium font-mono">qty {item.qty}</span>
                 )}
                 {item.reason && (
                   <span
@@ -196,10 +255,96 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </span>
             )}
 
-            <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform mt-0.5', expanded && 'rotate-180')} />
+            <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+              {canEditHeader && (
+                <Popover open={editHeaderOpen} onOpenChange={(o) => {
+                  setEditHeaderOpen(o);
+                  if (o) {
+                    setDraftName(item.item_name);
+                    setDraftDesc(item.description ?? '');
+                    setDraftQty(item.qty != null ? String(item.qty) : '');
+                    setDraftLocation(item.location_tag ?? '');
+                    setDraftReason(item.reason ?? '');
+                  }
+                }}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Edit scope item"
+                      className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-96 p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-foreground">Edit scope item</p>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Unit: {item.unit}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Name</Label>
+                        <Input value={draftName} onChange={(e) => setDraftName(e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Description</Label>
+                        <Textarea
+                          value={draftDesc}
+                          onChange={(e) => setDraftDesc(e.target.value)}
+                          rows={4}
+                          className="text-sm whitespace-pre-line"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Quantity</Label>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            value={draftQty}
+                            onChange={(e) => setDraftQty(e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Location</Label>
+                          <Input value={draftLocation} onChange={(e) => setDraftLocation(e.target.value)} className="h-8 text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Reason</Label>
+                        <Select value={draftReason || 'none'} onValueChange={(v) => setDraftReason(v === 'none' ? '' : (v as COReasonCode))}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="No reason" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No reason</SelectItem>
+                            {(Object.keys(CO_REASON_LABELS) as COReasonCode[]).map((r) => (
+                              <SelectItem key={r} value={r}>{CO_REASON_LABELS[r]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="ghost" size="sm" onClick={() => setEditHeaderOpen(false)} disabled={savingHeader}>Cancel</Button>
+                      <Button size="sm" onClick={saveHeader} disabled={savingHeader}>
+                        {savingHeader ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+              {!canEditExternal && isMyOrgItem && (
+                <span title="Locked — CO submitted" className="text-muted-foreground/60">
+                  <Lock className="h-3 w-3" />
+                </span>
+              )}
+              <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', expanded && 'rotate-180')} />
+            </div>
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Expanded entries panel */}
       {expanded && (
@@ -237,40 +382,85 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               {visibleBillable.map(entry => {
                 const gcApproved = (entry as any).gc_approved;
                 const matchingActual = actualCosts.find(a => a.entry_date === entry.entry_date);
+                const billableEditable = canEditEntry(entry);
+                const internalEditable = matchingActual ? canEditEntry(matchingActual) : false;
+                const isEditingThisRow = editEntryId === entry.id || editEntryId === matchingActual?.id;
 
                 return (
-                  <div key={entry.id} className="flex items-center text-xs px-5 py-2.5 border-b border-border/30 hover:bg-accent/40">
-                    {showGCApproval && (
-                      <Checkbox
-                        checked={!!gcApproved}
-                        onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
-                        className="h-3.5 w-3.5 mr-2"
-                      />
-                    )}
-                    <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
-                    <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
-                    <span className="w-14 text-right font-mono text-muted-foreground">
-                      {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
-                    </span>
-                    <span className="w-20 text-right font-mono font-semibold text-foreground">${fmt(entry.line_total ?? 0)}</span>
-                    {(isTC || isFC) && (
-                      <span className="w-24 text-right">
-                        {matchingActual ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
-                            <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
-                          </span>
-                        ) : (
+                  <div key={entry.id} className="border-b border-border/30">
+                    <div className="flex items-center text-xs px-5 py-2.5 hover:bg-accent/40">
+                      {showGCApproval && (
+                        <Checkbox
+                          checked={!!gcApproved}
+                          onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
+                          className="h-3.5 w-3.5 mr-2"
+                        />
+                      )}
+                      <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
+                      <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
+                      <span className="w-14 text-right font-mono text-muted-foreground">
+                        {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
+                      </span>
+                      <span className="w-20 text-right font-mono font-semibold text-foreground">${fmt(entry.line_total ?? 0)}</span>
+                      {(isTC || isFC) && (
+                        <span className="w-24 text-right">
+                          {matchingActual ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
+                              <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
+                              className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
+                            >
+                              + add cost
+                            </button>
+                          )}
+                        </span>
+                      )}
+                      <span className="w-8 flex items-center justify-end gap-1">
+                        {billableEditable && (
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
-                            className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
+                            aria-label="Edit billable entry"
+                            onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === entry.id ? null : entry.id); }}
+                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                            title="Edit billable entry"
                           >
-                            + add cost
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                        {matchingActual && internalEditable && (
+                          <button
+                            type="button"
+                            aria-label="Edit internal cost"
+                            onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === matchingActual.id ? null : matchingActual.id); }}
+                            className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                            title="Edit internal cost"
+                          >
+                            <Lock className="h-3 w-3" />
                           </button>
                         )}
                       </span>
-                    )}
-                    <span className="w-8" />
+                    </div>
+
+                    {isEditingThisRow && (() => {
+                      const editingObj = editEntryId === entry.id ? entry : matchingActual!;
+                      return (
+                        <div className="px-5 pb-3 pt-1 bg-accent/20">
+                          <LaborEntryForm
+                            coId={coId} lineItemId={item.id} orgId={orgId}
+                            enteredByRole={enteredByRole} pricingType={pricingType}
+                            isTC={isTC} isFC={isFC}
+                            isActualCost={editingObj.is_actual_cost}
+                            editingEntry={editingObj}
+                            onSaved={() => { setEditEntryId(null); onRefresh(); }}
+                            onCancel={() => setEditEntryId(null)}
+                          />
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
