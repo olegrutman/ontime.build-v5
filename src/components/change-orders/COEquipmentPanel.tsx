@@ -61,12 +61,50 @@ export function COEquipmentPanel({
   isFC,
   equipmentResponsible,
   canEdit,
+  canEditExternal = false,
   onRefresh,
 }: COEquipmentPanelProps) {
   const [drafts, setDrafts]         = useState<DraftEquip[]>([]);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [editDraft, setEditDraft]   = useState<{ description: string; duration_note: string; cost: string; markup_percent: string; notes: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  function startEdit(item: COEquipmentItem) {
+    setEditingId(item.id);
+    setEditDraft({
+      description: item.description,
+      duration_note: item.duration_note ?? '',
+      cost: String(item.cost ?? 0),
+      markup_percent: String(item.markup_percent ?? 0),
+      notes: item.notes ?? '',
+    });
+  }
+
+  async function commitEdit() {
+    if (!editingId || !editDraft) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase.from('co_equipment_items').update({
+        description: editDraft.description.trim() || 'Equipment',
+        duration_note: editDraft.duration_note.trim() || null,
+        cost: parseFloat(editDraft.cost) || 0,
+        markup_percent: parseFloat(editDraft.markup_percent) || 0,
+        notes: editDraft.notes.trim() || null,
+      }).eq('id', editingId);
+      if (error) throw error;
+      toast.success('Equipment updated');
+      setEditingId(null);
+      setEditDraft(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   const totalCost   = equipment.reduce((s, e) => s + (e.cost ?? 0), 0);
   const totalBilled = equipment.reduce((s, e) => s + (e.billed_amount ?? 0), 0);
