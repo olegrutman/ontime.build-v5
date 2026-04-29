@@ -159,10 +159,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   return (
     <div ref={ref} className={cn('border-b border-border last:border-b-0')} style={{ borderLeft: `3px solid ${STATUS_BORDER_COLOR[statusColor]}` }}>
       {/* Item header — clickable to expand */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
+        className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
@@ -186,6 +188,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 )}
                 {item.unit && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.unit}</span>
+                )}
+                {item.qty != null && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium font-mono">qty {item.qty}</span>
                 )}
                 {item.reason && (
                   <span
@@ -250,10 +255,96 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </span>
             )}
 
-            <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform mt-0.5', expanded && 'rotate-180')} />
+            <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+              {canEditHeader && (
+                <Popover open={editHeaderOpen} onOpenChange={(o) => {
+                  setEditHeaderOpen(o);
+                  if (o) {
+                    setDraftName(item.item_name);
+                    setDraftDesc(item.description ?? '');
+                    setDraftQty(item.qty != null ? String(item.qty) : '');
+                    setDraftLocation(item.location_tag ?? '');
+                    setDraftReason(item.reason ?? '');
+                  }
+                }}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Edit scope item"
+                      className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-96 p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-foreground">Edit scope item</p>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Unit: {item.unit}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Name</Label>
+                        <Input value={draftName} onChange={(e) => setDraftName(e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Description</Label>
+                        <Textarea
+                          value={draftDesc}
+                          onChange={(e) => setDraftDesc(e.target.value)}
+                          rows={4}
+                          className="text-sm whitespace-pre-line"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Quantity</Label>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            value={draftQty}
+                            onChange={(e) => setDraftQty(e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Location</Label>
+                          <Input value={draftLocation} onChange={(e) => setDraftLocation(e.target.value)} className="h-8 text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Reason</Label>
+                        <Select value={draftReason || 'none'} onValueChange={(v) => setDraftReason(v === 'none' ? '' : (v as COReasonCode))}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="No reason" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No reason</SelectItem>
+                            {(Object.keys(CO_REASON_LABELS) as COReasonCode[]).map((r) => (
+                              <SelectItem key={r} value={r}>{CO_REASON_LABELS[r]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="ghost" size="sm" onClick={() => setEditHeaderOpen(false)} disabled={savingHeader}>Cancel</Button>
+                      <Button size="sm" onClick={saveHeader} disabled={savingHeader}>
+                        {savingHeader ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+              {!canEditExternal && isMyOrgItem && (
+                <span title="Locked — CO submitted" className="text-muted-foreground/60">
+                  <Lock className="h-3 w-3" />
+                </span>
+              )}
+              <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', expanded && 'rotate-180')} />
+            </div>
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Expanded entries panel */}
       {expanded && (
