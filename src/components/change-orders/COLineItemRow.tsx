@@ -401,25 +401,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       <span className="w-14 text-right font-mono text-muted-foreground">
                         {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
                       </span>
-                      <span className="w-20 text-right font-mono font-semibold text-foreground">${fmt(entry.line_total ?? 0)}</span>
-                      {(isTC || isFC) && (
-                        <span className="w-24 text-right">
-                          {matchingActual ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
-                              <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
-                              className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
-                            >
-                              + add cost
-                            </button>
-                          )}
-                        </span>
-                      )}
-                      <span className="w-8 flex items-center justify-end gap-1">
+                      {/* Billable amount + inline edit pencil */}
+                      <span className="w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1">
+                        ${fmt(entry.line_total ?? 0)}
                         {billableEditable && (
                           <button
                             type="button"
@@ -431,18 +415,40 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                             <Pencil className="h-3 w-3" />
                           </button>
                         )}
-                        {matchingActual && internalEditable && (
-                          <button
-                            type="button"
-                            aria-label="Edit internal cost"
-                            onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === matchingActual.id ? null : matchingActual.id); }}
-                            className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
-                            title="Edit internal cost"
-                          >
-                            <Lock className="h-3 w-3" />
-                          </button>
-                        )}
                       </span>
+                      {/* Internal cost + inline edit pencil */}
+                      {(isTC || isFC) && (
+                        <span className="w-28 text-right inline-flex items-center justify-end gap-1">
+                          {matchingActual ? (
+                            <>
+                              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
+                                <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
+                              </span>
+                              {internalEditable && (
+                                <button
+                                  type="button"
+                                  aria-label="Edit internal cost"
+                                  onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === matchingActual.id ? null : matchingActual.id); }}
+                                  className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                                  title="Edit internal cost"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            canEditInternal && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
+                                className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
+                              >
+                                + add cost
+                              </button>
+                            )
+                          )}
+                        </span>
+                      )}
                     </div>
 
                     {isEditingThisRow && (() => {
