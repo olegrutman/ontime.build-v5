@@ -470,6 +470,65 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 );
               })}
 
+              {/* Orphan internal costs (no matching billable date) */}
+              {(isTC || isFC) && (() => {
+                const billableDates = new Set(visibleBillable.map(e => e.entry_date));
+                const orphanActuals = actualCosts.filter(a => !billableDates.has(a.entry_date));
+                if (orphanActuals.length === 0) return null;
+                return (
+                  <div className="border-t border-border/40 bg-emerald-50/30 dark:bg-emerald-950/10">
+                    <div className="px-5 py-1.5 text-[10px] uppercase tracking-wider text-emerald-700/70 dark:text-emerald-400/70 font-semibold flex items-center gap-1">
+                      <Lock className="h-2.5 w-2.5" /> Internal-only entries
+                    </div>
+                    {orphanActuals.map(a => {
+                      const editable = canEditEntry(a);
+                      const isEditingThisRow = editEntryId === a.id;
+                      return (
+                        <div key={a.id} className="border-b border-border/30 last:border-b-0">
+                          <div className="flex items-center text-xs px-5 py-2 hover:bg-accent/40">
+                            <span className="w-20 text-muted-foreground">{a.entry_date}</span>
+                            <span className="flex-1 text-muted-foreground truncate">{a.description || '—'}</span>
+                            <span className="w-14 text-right font-mono text-muted-foreground">
+                              {a.pricing_mode === 'lump_sum' ? '—' : `${a.hours ?? 0}`}
+                            </span>
+                            <span className="w-24 text-right font-mono text-muted-foreground/40">—</span>
+                            <span className="w-28 text-right inline-flex items-center justify-end gap-1">
+                              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium font-mono">
+                                <Lock className="h-2.5 w-2.5" /> ${fmt(a.line_total ?? 0)}
+                              </span>
+                              {editable && (
+                                <button
+                                  type="button"
+                                  aria-label="Edit internal cost"
+                                  onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === a.id ? null : a.id); }}
+                                  className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                                  title="Edit internal cost"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                            </span>
+                          </div>
+                          {isEditingThisRow && (
+                            <div className="px-5 pb-3 pt-1 bg-accent/20">
+                              <LaborEntryForm
+                                coId={coId} lineItemId={item.id} orgId={orgId}
+                                enteredByRole={enteredByRole} pricingType={pricingType}
+                                isTC={isTC} isFC={isFC}
+                                isActualCost
+                                editingEntry={a}
+                                onSaved={() => { setEditEntryId(null); onRefresh(); }}
+                                onCancel={() => setEditEntryId(null)}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {/* TC downstream costs */}
               {isTC && tcDownstreamCosts.length > 0 && (
                 <div className="border-t border-border px-5 py-2">
