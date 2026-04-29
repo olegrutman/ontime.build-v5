@@ -29,13 +29,14 @@ function fmtCurrency(value: number) {
 function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
   const { co, isGC, isTC, isFC, financials, fcCollabName } = props;
   const status = co.status;
-  const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+  // Single source of truth: price the GC sees == price the TC submits.
+  const priceToUpstream = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
   if (isGC) {
     if (status === 'submitted') {
       return {
         icon: <CheckCircle className="h-5 w-5" />,
-        title: `Review & approve ${fmtCurrency(totalToApprove)}`,
+        title: `Review & approve ${fmtCurrency(priceToUpstream)}`,
         subtitle: 'TC submitted this work order for your approval',
         actions: [
           { label: 'Approve', action: 'approve', primary: true },
@@ -61,7 +62,7 @@ function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
     if (status === 'closed_for_pricing') {
       return {
         icon: <Send className="h-5 w-5" />,
-        title: `Finalize pricing and submit ${fmtCurrency(financials.grandTotal)} to GC`,
+        title: `Finalize pricing and submit ${fmtCurrency(priceToUpstream)} to GC`,
         subtitle: 'Review your pricing, then submit for approval',
         actions: [
           { label: 'Submit to GC', action: 'submit', primary: true },
@@ -84,7 +85,7 @@ function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
       return {
         icon: <Clock className="h-5 w-5" />,
         title: 'Waiting on General Contractor approval',
-        subtitle: `Submitted ${fmtCurrency(financials.grandTotal)} — you'll be notified when reviewed`,
+        subtitle: `Submitted ${fmtCurrency(priceToUpstream)} — you'll be notified when reviewed`,
         actions: [],
       };
     }
