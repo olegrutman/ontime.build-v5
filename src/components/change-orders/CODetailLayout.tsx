@@ -94,21 +94,42 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
       case 'scroll_fc': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'request_fc':
-        if (fcOrgOptions.length === 1) {
+        if (fcOrgOptions.length === 0) {
+          toast.info('No field crews found on this project');
+        } else if (fcOrgOptions.length === 1) {
           try {
             await requestFCInput.mutateAsync(fcOrgOptions[0].id);
             toast.success(`Requested hours from ${fcOrgOptions[0].name}`);
           } catch { toast.error('Failed to request FC input'); }
-        } else if (fcOrgOptions.length > 1) {
-          document.getElementById('fc-request-card')?.scrollIntoView({ behavior: 'smooth' });
         } else {
-          toast.info('No field crews found on this project');
+          // Multi-FC: prefer scrolling to the dedicated card; if it isn't on screen
+          // (mobile/condensed sidebar) fall back to a simple prompt.
+          const el = document.getElementById('fc-request-card');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            const labels = fcOrgOptions.map((o, i) => `${i + 1}. ${o.name}`).join('\n');
+            const choice = window.prompt(`Pick a field crew to request hours from:\n${labels}\n\nEnter number 1-${fcOrgOptions.length}`);
+            const idx = choice ? parseInt(choice, 10) - 1 : -1;
+            if (idx >= 0 && idx < fcOrgOptions.length) {
+              try {
+                await requestFCInput.mutateAsync(fcOrgOptions[idx].id);
+                toast.success(`Requested hours from ${fcOrgOptions[idx].name}`);
+              } catch { toast.error('Failed to request FC input'); }
+            }
+          }
         }
         break;
       case 'submit_to_tc':
         if (co) {
           try {
-            await completeFCInput.mutateAsync();
+            // FC-as-creator submits the CO itself; FC-as-collaborator marks input complete.
+            const isFCCreator = co.created_by_role === 'FC' && co.org_id === myOrgId;
+            if (isFCCreator) {
+              await submitCO.mutateAsync(co.id);
+            } else {
+              await completeFCInput.mutateAsync();
+            }
             toast.success('Submitted to Trade Contractor');
           } catch (e: any) { toast.error(e?.message ?? 'Failed to submit to TC'); }
         }
