@@ -27,10 +27,12 @@ export function COAcceptBanner({ co, projectId, myOrgId, collaborators, onRefres
 
   if (!invitation || accepted) return null;
 
-  // Resolve inviter org name
+  // Resolve inviter org name. The CO creator (co.org_id) is always the inviter — fall
+  // back to "Someone" only when neither the creator nor a collaborator row matches.
+  const inviterFromCollaborators = collaborators.find(c => c.organization_id === co.org_id);
   const inviterOrgName = co.org_id === myOrgId
     ? 'Your organization'
-    : collaborators.find(c => c.organization_id !== myOrgId)?.organization?.name ?? 'Someone';
+    : inviterFromCollaborators?.organization?.name ?? 'Someone';
 
   async function handleAccept() {
     setActing(true);
