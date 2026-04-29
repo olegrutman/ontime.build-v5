@@ -374,7 +374,7 @@ export function LaborEntryForm({
         )}
 
         {/* Internal cost section */}
-        {!isActualCost && (isTC || isFC) && (
+        {!isActualCost && !isEditing && (isTC || isFC) && (
           <Collapsible open={internalCostOpen} onOpenChange={setInternalCostOpen}>
             <CollapsibleTrigger asChild>
               <button type="button" className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-dashed border-border hover:border-[hsl(var(--amber)/0.3)] transition-colors text-xs">
