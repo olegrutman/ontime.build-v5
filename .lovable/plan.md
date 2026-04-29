@@ -1,21 +1,18 @@
-Plan:
+# CO/WO end-to-end audit — implementation status
 
-1. Fix internal-cost edit eligibility for TCs
-- Update the line-item row logic so TC internal cost entries can be edited when the CO is not final.
-- Keep ownership protection: users can only edit entries from their own org/role.
-- Ensure internal costs stay editable until `approved`, `rejected`, or `contracted`.
+## Shipped this loop
 
-2. Fix the internal-cost form prefill/save behavior
-- When editing an existing internal-cost entry, prefill the form with the actual saved dollar amount.
-- Avoid the current blank/invalid edit state for internal cost rows.
-- Save updates back to the existing `co_labor_entries` row instead of creating a new row.
+- **#1 + #6 contract integrity**: Removed client-side `project_contracts.contract_sum` increment from `COStatusActions.doApprove`. Added `apply_co_contract_delta` trigger on `change_orders` (with `co_grand_total` and `_co_target_contract_id` helpers) that applies the delta on `approved` and reverses it on rejection / recall / re-approval at a different amount.
+- **#2 FC submit branch**: `CODetailLayout` `submit_to_tc` now calls `submitCO` when the FC owns the CO and `completeFCInput` only for FC collaborators.
+- **#5 Delete CO scope item**: Added a destructive "Delete item" button to `COLineItemRow`'s edit popover, with confirm + cascade cleanup of `co_labor_entries`.
+- **#9 Inviter resolution**: `COAcceptBanner` now resolves the inviter via `co.org_id` instead of "any other collaborator".
+- **#10 Price-to-upstream consistency**: `CONextActionBanner` uses one `priceToUpstream` formula for both the GC approve CTA and the TC submit CTA.
+- **#11 Multi-FC request**: When >1 FC and the sidebar card is off-screen (mobile), falls back to a numbered `prompt` selector instead of failing silently.
 
-3. Move edit controls beside the values they edit
-- Put the billable edit pencil directly beside the billable dollar amount.
-- Put the internal-cost edit control directly beside the internal cost dollar amount.
-- Keep the far-right column only for row actions/spacing as needed, so users are not guessing which number the pencil affects.
+## Deferred (need design call or migration)
 
-4. Test the TC path
-- Verify the current CO row shows an edit affordance next to both Billable and Int. Cost for TC-owned entries.
-- Verify clicking internal cost opens the edit form with the saved amount populated.
-- Verify saving updates the amount and refreshes the financial totals.
+- **#3 paired internal/billable entries** — needs `paired_billable_entry_id` column + migration of existing rows.
+- **#4 `tc_submitted_price` rename to `tc_price_snapshot`** — too many call sites; semantics now enforced by trigger #1, rename can come later.
+- **#7 "what changed" prompt on resubmit after reject** — UX decision pending.
+- **#8 NTE total-vs-cap second bar** — needs design.
+- **#12 single state-transition helper that always logs activity** — refactor of `useChangeOrderDetail` mutations.
