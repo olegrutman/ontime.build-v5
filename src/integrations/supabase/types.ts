@@ -5771,6 +5771,10 @@ export type Database = {
       }
     }
     Functions: {
+      _co_target_contract_id: {
+        Args: { _org_a: string; _org_b: string; _project_id: string }
+        Returns: string
+      }
       accept_org_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -5818,6 +5822,7 @@ export type Database = {
         Returns: undefined
       }
       check_org_setup_needed: { Args: never; Returns: Json }
+      co_grand_total: { Args: { _co_id: string }; Returns: number }
       complete_fc_change_order_input: {
         Args: { _co_id: string }
         Returns: {
