@@ -1,7 +1,12 @@
 import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +28,10 @@ interface COLineItemRowProps {
   nteCap?: number | null;
   nteUsed?: number;
   canAddLabor: boolean;
+  /** Edit window for billable / external fields (locked once CO is submitted upstream). */
+  canEditExternal?: boolean;
+  /** Edit window for internal / private cost fields (locked once CO is finalized). */
+  canEditInternal?: boolean;
   onRefresh: () => void;
   isEven?: boolean;
   index?: number;
