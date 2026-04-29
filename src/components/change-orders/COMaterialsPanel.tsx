@@ -39,6 +39,8 @@ interface COMaterialsPanelProps {
   materialsOnSite: boolean;
   materialsResponsible?: string | null;
   canEdit: boolean;
+  /** Inline-edit window for already-saved rows; locks once CO is submitted upstream. */
+  canEditExternal?: boolean;
   onRefresh: () => void;
 }
 
@@ -160,6 +162,7 @@ export function COMaterialsPanel({
   materialsOnSite,
   materialsResponsible,
   canEdit,
+  canEditExternal = false,
   onRefresh,
 }: COMaterialsPanelProps) {
   const navigate = useNavigate();
