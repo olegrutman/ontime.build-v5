@@ -796,63 +796,75 @@ export function COMaterialsPanel({
                     ? material.quantity * sp!.unit_price! * (1 + (material.markup_percent ?? 0) / 100)
                     : (material.billed_amount ?? 0);
 
+                  const isEditingMat = editingMatId === material.id;
+                  const matRowEditable = canEditExternal && (material as any).org_id === orgId;
                   return (
                     <tr key={material.id} className="border-b border-border last:border-0">
                       <td className="px-4 py-2.5">
-                        <p className="font-medium text-foreground">{material.description}</p>
-                        {material.supplier_sku && (
-                          <p className="text-[10px] text-muted-foreground">SKU: {material.supplier_sku}</p>
+                        {isEditingMat && matDraft ? (
+                          <Input value={matDraft.description} onChange={e => setMatDraft({ ...matDraft, description: e.target.value })} className="h-7 text-xs" />
+                        ) : (
+                          <>
+                            <p className="font-medium text-foreground">{material.description}</p>
+                            {material.supplier_sku && (<p className="text-[10px] text-muted-foreground">SKU: {material.supplier_sku}</p>)}
+                          </>
                         )}
                       </td>
-                      <td className="text-right px-2 py-2.5 text-foreground">{material.quantity}</td>
+                      <td className="text-right px-2 py-2.5 text-foreground">
+                        {isEditingMat && matDraft ? (
+                          <Input type="number" value={matDraft.quantity} onChange={e => setMatDraft({ ...matDraft, quantity: e.target.value })} className="h-7 text-xs w-16 text-right" />
+                        ) : material.quantity}
+                      </td>
                       <td className="px-2 py-2.5 text-muted-foreground">{material.uom}</td>
                       {showPricingColumns && !isGC && (
                         <td className="text-right px-2 py-2.5">
-                          {displayUnitCost != null ? (
-                            <span className={hasSupplierPrice ? 'text-primary font-medium' : 'text-muted-foreground'}>
-                              ${fmt(displayUnitCost)}
-                            </span>
+                          {isEditingMat && matDraft ? (
+                            <Input type="number" value={matDraft.unit_cost} onChange={e => setMatDraft({ ...matDraft, unit_cost: e.target.value })} className="h-7 text-xs w-20 text-right" />
+                          ) : displayUnitCost != null ? (
+                            <span className={hasSupplierPrice ? 'text-primary font-medium' : 'text-muted-foreground'}>${fmt(displayUnitCost)}</span>
                           ) : '—'}
-                          {hasSupplierPrice && material.unit_cost != null && material.unit_cost !== sp!.unit_price && (
-                            <span className="block text-[10px] text-muted-foreground line-through">
-                              ${fmt(material.unit_cost)}
-                            </span>
+                          {!isEditingMat && hasSupplierPrice && material.unit_cost != null && material.unit_cost !== sp!.unit_price && (
+                            <span className="block text-[10px] text-muted-foreground line-through">${fmt(material.unit_cost)}</span>
                           )}
                         </td>
                       )}
                       {showPricingColumns && !isGC && (
                         <td className="text-right px-2 py-2.5">
                           {canEdit && isTC ? (
-                            <MarkupEditor
-                              materialId={material.id}
-                              initialValue={material.markup_percent}
-                              onRefresh={onRefresh}
-                            />
+                            <MarkupEditor materialId={material.id} initialValue={material.markup_percent} onRefresh={onRefresh} />
                           ) : (
-                            <span className="text-muted-foreground">
-                              {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
-                            </span>
+                            <span className="text-muted-foreground">{material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}</span>
                           )}
                         </td>
                       )}
                       {showPricingColumns && (
-                        <td className="text-right px-4 py-2.5 font-medium text-foreground">
-                          ${fmt(displayAmount)}
-                        </td>
+                        <td className="text-right px-4 py-2.5 font-medium text-foreground">${fmt(displayAmount)}</td>
                       )}
                       {canManageMaterials && (
                         <td className="px-2 py-2.5">
-                          <button
-                            onClick={() => deleteRow(material.id)}
-                            disabled={deleting === material.id}
-                            className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
-                          >
-                            {deleting === material.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <div className="flex items-center justify-end gap-1">
+                            {isEditingMat ? (
+                              <>
+                                <button onClick={() => commitMatEdit(material.id)} disabled={savingMatEdit} className="text-emerald-700 hover:text-emerald-800 p-0.5" title="Save">
+                                  {savingMatEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-xs font-bold">✓</span>}
+                                </button>
+                                <button onClick={() => { setEditingMatId(null); setMatDraft(null); }} disabled={savingMatEdit} className="text-muted-foreground hover:text-foreground p-0.5" title="Cancel">
+                                  <span className="text-xs font-bold">✕</span>
+                                </button>
+                              </>
                             ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <>
+                                {matRowEditable && (
+                                  <button onClick={() => { setEditingMatId(material.id); setMatDraft({ description: material.description, quantity: String(material.quantity), unit_cost: material.unit_cost != null ? String(material.unit_cost) : '' }); }} className="text-muted-foreground hover:text-foreground p-0.5" title="Edit">
+                                    <span className="text-xs">✎</span>
+                                  </button>
+                                )}
+                                <button onClick={() => deleteRow(material.id)} disabled={deleting === material.id} className="text-muted-foreground hover:text-destructive transition-colors p-0.5">
+                                  {deleting === material.id ? (<Loader2 className="h-3.5 w-3.5 animate-spin" />) : (<Trash2 className="h-3.5 w-3.5" />)}
+                                </button>
+                              </>
                             )}
-                          </button>
+                          </div>
                         </td>
                       )}
                     </tr>
