@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { COLaborRole, COPricingMode } from '@/types/changeOrder';
+import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 
 interface LaborEntryFormProps {
   coId: string;
@@ -20,6 +20,8 @@ interface LaborEntryFormProps {
   isTC?: boolean;
   isFC?: boolean;
   isActualCost?: boolean;
+  /** When provided, the form edits this existing entry instead of inserting a new one. */
+  editingEntry?: COLaborEntry;
   onSaved: () => void;
   onCancel?: () => void;
   nteCap?: number | null;
@@ -32,9 +34,11 @@ type EntryMode = 'hourly' | 'lump_sum' | 'unit_price';
 export function LaborEntryForm({
   coId, lineItemId, orgId, enteredByRole, pricingType,
   isTC = false, isFC = false, isActualCost = false,
+  editingEntry,
   onSaved, onCancel, nteCap, nteUsed = 0,
 }: LaborEntryFormProps) {
   const { user } = useAuth();
+  const isEditing = !!editingEntry;
 
   const [mode, setMode] = useState<EntryMode>(pricingType === 'fixed' ? 'lump_sum' : 'hourly');
   const [entryDate, setEntryDate] = useState(format(new Date(), 'yyyy-MM-dd'));
