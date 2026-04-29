@@ -40,15 +40,19 @@ export function LaborEntryForm({
   const { user } = useAuth();
   const isEditing = !!editingEntry;
 
-  const [mode, setMode] = useState<EntryMode>(pricingType === 'fixed' ? 'lump_sum' : 'hourly');
-  const [entryDate, setEntryDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [hours, setHours] = useState('');
-  const [rate, setRate] = useState('');
+  const [mode, setMode] = useState<EntryMode>(
+    editingEntry
+      ? (editingEntry.pricing_mode === 'lump_sum' ? 'lump_sum' : 'hourly')
+      : (pricingType === 'fixed' ? 'lump_sum' : 'hourly'),
+  );
+  const [entryDate, setEntryDate] = useState(editingEntry?.entry_date ?? format(new Date(), 'yyyy-MM-dd'));
+  const [hours, setHours] = useState(editingEntry?.hours != null ? String(editingEntry.hours) : '');
+  const [rate, setRate] = useState(editingEntry?.hourly_rate != null ? String(editingEntry.hourly_rate) : '');
   const [markup, setMarkup] = useState('');
-  const [lumpSum, setLumpSum] = useState('');
+  const [lumpSum, setLumpSum] = useState(editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '');
   const [qty, setQty] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(editingEntry?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
   const [internalCostOpen, setInternalCostOpen] = useState(true);
