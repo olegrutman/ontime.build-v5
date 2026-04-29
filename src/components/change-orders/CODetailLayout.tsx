@@ -63,7 +63,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
 
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
-    canEdit, canRequestFCInput, canCompleteFCInput, nteBlocked,
+    canEdit, canEditExternal, canEditInternal, canRequestFCInput, canCompleteFCInput, nteBlocked,
     pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
   } = useCORoleContext(co ?? null, collaborators, financials);
 
@@ -331,6 +331,8 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                         coId={co.id} orgId={myOrgId} pricingType={pricingType}
                         nteCap={co.nte_cap} nteUsed={financials.laborTotal}
                         canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
+                        canEditExternal={canEditExternal}
+                        canEditInternal={canEditInternal}
                         onRefresh={refreshDetail}
                         isEven={idx % 2 === 0}
                         index={idx + 1}
