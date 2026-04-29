@@ -382,40 +382,85 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               {visibleBillable.map(entry => {
                 const gcApproved = (entry as any).gc_approved;
                 const matchingActual = actualCosts.find(a => a.entry_date === entry.entry_date);
+                const billableEditable = canEditEntry(entry);
+                const internalEditable = matchingActual ? canEditEntry(matchingActual) : false;
+                const isEditingThisRow = editEntryId === entry.id || editEntryId === matchingActual?.id;
 
                 return (
-                  <div key={entry.id} className="flex items-center text-xs px-5 py-2.5 border-b border-border/30 hover:bg-accent/40">
-                    {showGCApproval && (
-                      <Checkbox
-                        checked={!!gcApproved}
-                        onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
-                        className="h-3.5 w-3.5 mr-2"
-                      />
-                    )}
-                    <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
-                    <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
-                    <span className="w-14 text-right font-mono text-muted-foreground">
-                      {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
-                    </span>
-                    <span className="w-20 text-right font-mono font-semibold text-foreground">${fmt(entry.line_total ?? 0)}</span>
-                    {(isTC || isFC) && (
-                      <span className="w-24 text-right">
-                        {matchingActual ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
-                            <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
-                          </span>
-                        ) : (
+                  <div key={entry.id} className="border-b border-border/30">
+                    <div className="flex items-center text-xs px-5 py-2.5 hover:bg-accent/40">
+                      {showGCApproval && (
+                        <Checkbox
+                          checked={!!gcApproved}
+                          onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
+                          className="h-3.5 w-3.5 mr-2"
+                        />
+                      )}
+                      <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
+                      <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
+                      <span className="w-14 text-right font-mono text-muted-foreground">
+                        {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
+                      </span>
+                      <span className="w-20 text-right font-mono font-semibold text-foreground">${fmt(entry.line_total ?? 0)}</span>
+                      {(isTC || isFC) && (
+                        <span className="w-24 text-right">
+                          {matchingActual ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
+                              <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
+                              className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
+                            >
+                              + add cost
+                            </button>
+                          )}
+                        </span>
+                      )}
+                      <span className="w-8 flex items-center justify-end gap-1">
+                        {billableEditable && (
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
-                            className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
+                            aria-label="Edit billable entry"
+                            onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === entry.id ? null : entry.id); }}
+                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                            title="Edit billable entry"
                           >
-                            + add cost
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                        {matchingActual && internalEditable && (
+                          <button
+                            type="button"
+                            aria-label="Edit internal cost"
+                            onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === matchingActual.id ? null : matchingActual.id); }}
+                            className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                            title="Edit internal cost"
+                          >
+                            <Lock className="h-3 w-3" />
                           </button>
                         )}
                       </span>
-                    )}
-                    <span className="w-8" />
+                    </div>
+
+                    {isEditingThisRow && (() => {
+                      const editingObj = editEntryId === entry.id ? entry : matchingActual!;
+                      return (
+                        <div className="px-5 pb-3 pt-1 bg-accent/20">
+                          <LaborEntryForm
+                            coId={coId} lineItemId={item.id} orgId={orgId}
+                            enteredByRole={enteredByRole} pricingType={pricingType}
+                            isTC={isTC} isFC={isFC}
+                            isActualCost={editingObj.is_actual_cost}
+                            editingEntry={editingObj}
+                            onSaved={() => { setEditEntryId(null); onRefresh(); }}
+                            onCancel={() => setEditEntryId(null)}
+                          />
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
