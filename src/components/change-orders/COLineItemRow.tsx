@@ -59,11 +59,56 @@ const STATUS_BORDER_COLOR: Record<StatusColor, string> = {
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, pricingType, nteCap, nteUsed = 0,
-  canAddLabor, onRefresh, isEven = true, index,
+  canAddLabor, canEditExternal = false, canEditInternal = false,
+  onRefresh, isEven = true, index,
 }, ref) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [editHeaderOpen, setEditHeaderOpen] = useState(false);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [draftName, setDraftName] = useState(item.item_name);
+  const [draftDesc, setDraftDesc] = useState(item.description ?? '');
+  const [draftQty, setDraftQty] = useState(item.qty != null ? String(item.qty) : '');
+  const [draftLocation, setDraftLocation] = useState(item.location_tag ?? '');
+  const [draftReason, setDraftReason] = useState<COReasonCode | ''>(item.reason ?? '');
+
+  const myRoleStr = isFC ? 'FC' : isTC ? 'TC' : isGC ? 'GC' : null;
+  const isMyOrgItem = item.org_id === orgId;
+  const canEditHeader = canEditExternal && isMyOrgItem;
+
+  async function saveHeader() {
+    setSavingHeader(true);
+    try {
+      const qtyNum = draftQty.trim() === '' ? null : Number(draftQty);
+      if (qtyNum != null && Number.isNaN(qtyNum)) { toast.error('Quantity must be a number'); return; }
+      const { error } = await supabase
+        .from('co_line_items')
+        .update({
+          item_name: draftName.trim() || item.item_name,
+          description: draftDesc.trim() || null,
+          qty: qtyNum,
+          location_tag: draftLocation.trim() || null,
+          reason: draftReason || null,
+        })
+        .eq('id', item.id);
+      if (error) throw error;
+      toast.success('Item updated');
+      setEditHeaderOpen(false);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update item');
+    } finally {
+      setSavingHeader(false);
+    }
+  }
+
+  function canEditEntry(entry: COLaborEntry): boolean {
+    if (entry.entered_by_role !== myRoleStr) return false;
+    if (entry.org_id !== orgId) return false;
+    return entry.is_actual_cost ? canEditInternal : canEditExternal;
+  }
 
   const billable = laborEntries.filter(e => !e.is_actual_cost);
   const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
