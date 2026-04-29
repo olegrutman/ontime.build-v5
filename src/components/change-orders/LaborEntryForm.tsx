@@ -133,13 +133,33 @@ export function LaborEntryForm({
     if (!user) { toast.error('Sign in required'); return; }
     if (!canSave) { toast.error(validationMessage ?? 'Complete required fields.'); return; }
 
-    if (!isActualCost && nteCap && nteCap > 0) {
+    if (!isActualCost && !isEditing && nteCap && nteCap > 0) {
       if (nteUsed >= nteCap) { toast.error('NTE cap reached. GC must increase.'); return; }
       if (willExceed && !showNTEWarn) { setShowNTEWarn(true); return; }
     }
 
     setSaving(true);
     try {
+      if (isEditing && editingEntry) {
+        const { error } = await supabase
+          .from('co_labor_entries')
+          .update({
+            entry_date: entryDate,
+            pricing_mode: getDbMode(),
+            hours: getDbHours(),
+            hourly_rate: getDbRate(),
+            lump_sum: mode === 'lump_sum'
+              ? (lumpSumValue + (isTC && markupPct > 0 ? lumpSumValue * (markupPct / 100) : 0))
+              : null,
+            description: description.trim() || null,
+          })
+          .eq('id', editingEntry.id);
+        if (error) throw error;
+        toast.success('Entry updated');
+        onSaved();
+        return;
+      }
+
       const { error } = await supabase.from('co_labor_entries').insert({
         co_id: coId, co_line_item_id: lineItemId, org_id: orgId,
         entered_by_role: enteredByRole, entry_date: entryDate,
