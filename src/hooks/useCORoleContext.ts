@@ -12,6 +12,10 @@ interface UseCORoleContextResult {
   myOrgId: string;
   myOrgName: string;
   canEdit: boolean;
+  /** Editable until this CO is submitted upstream (or per-party freeze applies). */
+  canEditExternal: boolean;
+  /** Editable until this CO is finalized (approved / rejected / contracted). */
+  canEditInternal: boolean;
   canRequestFCInput: boolean;
   canCompleteFCInput: boolean;
   nteBlocked: boolean;
