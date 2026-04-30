@@ -749,6 +749,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </div>
       </div>
 
+      {/* Buyer Materials Analytics — only when TC handles materials */}
+      {financials.isTCMaterialResponsible && (
+        <BuyerMaterialsAnalyticsSection
+          analytics={buyerAnalyticsQuery.data}
+          loading={buyerAnalyticsQuery.isLoading}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {/* Warnings */}
       {warnings.length > 0 && (
         <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
