@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { useSupplierProjectAnalytics } from '@/hooks/useSupplierProjectAnalytics';
+import { SupplierProjectAnalyticsSection } from './SupplierProjectAnalyticsSection';
 
 /* ═══════════════════════════════════════════════════ */
 
