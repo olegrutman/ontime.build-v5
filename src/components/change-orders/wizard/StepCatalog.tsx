@@ -91,6 +91,9 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
   const [typeSelected, setTypeSelected] = useState<Set<string>>(new Set());
   const [typeDraft, setTypeDraft] = useState('');
 
+  // "Add custom item" escape hatch — used when nothing in the catalog fits.
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
   const searchResults = useMemo(() => search(query), [query, search]);
 
