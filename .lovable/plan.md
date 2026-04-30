@@ -1,102 +1,127 @@
 
-# PO Analytics for the Material-Responsible Party
+# Per-Pack Variance Card — Bug Audit & Fix
 
-## Why this matters
+I tested the math against your live project (`ad28bf07…66f53`). Three real bugs and one cosmetic issue.
 
-Today the **supplier** (sell-side) has a rich analytics section (`SupplierProjectAnalyticsSection`: sell-through, A/R aging, lien clock, OTIF, returns, demand). But the **buy-side** — the GC or TC who is `isGCMaterialResponsible` / `isTCMaterialResponsible` — only sees three numbers in `MaterialsCommandCenter` (Estimate, Ordered, Delivered) and a single variance pill.
+## What the screenshot shows vs. reality
 
-That party is the one signing POs, eating overruns, and answering to the owner. Material spend is typically **35–55% of a residential/light-commercial project**, so they need the same depth the supplier has — but framed around **budget protection, schedule risk, and cash exposure**, not sell-through.
+Screenshot (4 packs, all `+0.0%` / `OK`, all `Estimate $0`):
 
-This plan adds a `BuyerMaterialsAnalyticsSection` mounted on the project overview whenever the viewer is the material-responsible org.
+| Pack | Est shown | Est actual | Ord shown | Variance shown | Real variance |
+|---|---|---|---|---|---|
+| 1st Floor Framing & Sub-Floor Sheeting | $0 | **$13,993** | $14.2K | +0.0% OK | **+1.4% Watch** |
+| Basement Framing | $0 | **$4,684** | $6.0K | +0.0% OK | **+28.1% Over** |
+| Walkout | $0 | **$2,172** | $5.0K | +0.0% OK | **+128.7% Over** |
+| Ad-hoc | $0 | n/a | $468 | +0.0% OK | n/a |
 
----
-
-## What gets added (6 cards + pipeline + pack table)
-
-### 1. Budget Burn & Forecast at Completion (FAC)
-- **Estimate** vs **Committed (POs ordered+)** vs **Forecast** vs **Remaining headroom**
-- Forecast = Delivered + Open POs + (avg overrun % × un-ordered estimate)
-- Pill: `On budget` / `Watch ±5%` / `Over`
-- **Why:** Pure variance hides the trajectory. FAC tells the GC *where they'll land*, not where they are.
-
-### 2. PO Pipeline Funnel
-- Counts + $ at each stage: `Draft → Submitted → Priced → Ordered → Ready → Delivered → Finalized`
-- Highlights bottlenecks (e.g. "$48K stuck in PRICED >5 days — supplier waiting on approval")
-- **Why:** Material-responsible PMs lose days because POs sit unapproved. Surfacing the bottleneck = faster cycle time.
-
-### 3. Price Variance vs Estimate
-- For every PO line with a `source_estimate_item_id`, compare `unit_price` to `original_unit_price`
-- Show: total $ over/under estimate, % of lines adjusted by supplier, top 5 worst offenders by SKU
-- **Why:** Suppliers re-price line items between estimate and PO. The buyer needs to see *which SKUs are drifting* so they can renegotiate or re-bid.
-
-### 4. Delivery & Schedule Risk
-- Avg quoted lead time, on-time delivery rate, # POs **late** (ordered_at + lead_time_days < today, not delivered)
-- Cross-reference with SOV/schedule milestones: "2 POs late blocking Framing phase"
-- **Why:** A late drop of LVLs stops the framing crew. Material PMs need an early-warning list, not a post-mortem.
-
-### 5. Returns & Waste Impact
-- Total returned $, return rate %, restocking fees paid, top 3 reasons (over-ordered, damaged, wrong spec)
-- Net material cost = Delivered − Returns + Restocking
-- **Why:** Returns silently inflate cost. Showing waste as a % of spend turns it into a KPI worth managing.
-
-### 6. Cash Exposure
-- **Open commitments** (Ordered but not invoiced) — money they owe but haven't been billed for
-- **Unpaid supplier invoices** by aging bucket (0-30 / 31-60 / 60+)
-- Next 14-day expected outflow based on net terms
-- **Why:** A GC can be "on budget" and still run out of cash. This is the payable-side mirror of the supplier's A/R card.
+Only 4 of 15 estimated packs show; the 11 that have estimates but no PO yet are hidden, when they're the most important ones (un-ordered budget).
 
 ---
 
-## Per-Pack Variance Table (expandable)
+## Bug 1 — Status case mismatch hides ALL estimate values 🔴
 
-Below the cards, one row per estimate pack:
-
-| Pack | Estimate | Ordered | Delivered | Variance $ | Variance % | Status |
-|---|---|---|---|---|---|---|
-| Framing Lumber | $42,100 | $44,800 | $40,200 | +$2,700 | +6.4% | Watch |
-| Sheathing | $11,200 | $10,950 | $10,950 | -$250 | -2.2% | OK |
-
-Click row → opens existing `MaterialsBudgetDrawer`.
-
-**Why:** A single project-level variance hides which pack is bleeding. Pack-level surfaces the actual decision ("re-quote sheathing", "lock framing pricing now").
-
----
-
-## Mount logic
-
-In `GCProjectOverviewContent.tsx` and `TCProjectOverview.tsx`, render the section when:
-
-```text
-financials.isGCMaterialResponsible || financials.isTCMaterialResponsible
+`useBuyerMaterialsAnalytics.ts` line ~152:
+```ts
+.from('supplier_estimates').select('id')
+  .eq('project_id', projectId)
+  .eq('status', 'approved')   // ← lowercase
 ```
 
-When the viewer is *not* responsible (e.g. TC on a GC-procures job), keep the current "Materials controlled by the General Contractor" line — no change.
+DB enum is uppercase (`'APPROVED'`, `'DRAFT'`, …). Query returns 0 rows → `estimateIds` empty → no estimate items fetched → every pack's `estimate` stays `0` → every variance % is `0`.
+
+**Fix:** `.eq('status', 'APPROVED')`.
+
+This single fix restores all the actual numbers in the table.
+
+## Bug 2 — Forecast at Completion overrun ratio is mathematically broken 🔴
+
+Lines 191-193:
+```ts
+const overrunRatio = estimateTotal > 0 && committedTotal > 0
+  ? Math.max(0, (committedTotal / estimateTotal) - (committedTotal > 0 ? committedTotal / Math.max(estimateTotal, committedTotal) : 0))
+  : 0;
+```
+
+- When `committed ≤ estimate`: `max(estimate, committed) = estimate` → expression = `committed/estimate − committed/estimate = 0`. **Always 0.**
+- When `committed > estimate`: `(committed/estimate) − 1`. That's the variance on what you've committed, but applied to the *un-committed* portion as if every future buy will overrun by that exact amount — which double-counts the overrun.
+
+Result: FAC essentially equals `estimate` whenever you're under-committed (the normal case mid-project), so the card cannot detect drift until the project is over-spent.
+
+**Fix:** compute overrun against the *expected slice of estimate that committed POs map to*. Two clean options:
+
+**Option A (preferred — uses pack data we already have):**
+```ts
+// Sum estimate $ for packs that have at least one PO ordered+
+const committedPacksEstimate = packs
+  .filter(p => p.ordered > 0)
+  .reduce((s, p) => s + p.estimate, 0);
+const overrunRatio = committedPacksEstimate > 0
+  ? Math.max(0, (committedTotal - committedPacksEstimate) / committedPacksEstimate)
+  : 0;
+const forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
+```
+
+This means: "POs we've placed are running X% over their slice of the estimate; assume future POs do the same."
+
+**Option B (fallback when no source_pack_name on POs):** use a flat overrun
+```ts
+const overrunRatio = estimateTotal > 0
+  ? Math.max(0, (committedTotal - Math.min(committedTotal, estimateTotal)) / estimateTotal)
+  : 0;
+```
+
+Use A when `committedPacksEstimate > 0`, else fall back to B.
+
+For your project: $25.2K committed against $20.8K of those-packs estimate → overrun ratio ≈ 21%. FAC ≈ $25.2K + $95.8K × 1.21 ≈ **$141.0K vs budget $116.6K → +20.9% Over**. That's the truth.
+
+## Bug 3 — Ad-hoc POs (no `source_pack_name`) compute misleading 0% variance 🟡
+
+Line 360 buckets POs without a pack into `'Ad-hoc'` with estimate=0. Then line 373's guard returns 0% (`p.estimate > 0` false), so the Ad-hoc row shows `+$468 (+0.0%) OK` — looks fine when it's really 100% over (no estimate at all).
+
+**Fix:** when `estimate === 0 && ordered > 0`, status should be `'over'` (un-budgeted spend) and the variance label should show `(no estimate)` instead of `+0.0%`. Suggested:
+
+```ts
+const variancePct = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
+const status = p.estimate === 0 && p.ordered > 0 ? 'over'
+  : variancePct == null ? 'ok'
+  : variancePct > 5 ? 'over' : variancePct > 0 ? 'watch' : 'ok';
+```
+
+In the section component, render `variancePct == null ? '(no estimate)' : pctLabel(variancePct)`.
+
+## Bug 4 — Hidden un-ordered packs hide the real risk 🟡
+
+After Bug 1 is fixed, all 15 estimate packs appear. That's correct, but the sort `b.estimate + b.ordered − (a.estimate + a.ordered)` puts the largest at top, which is fine. Add one defensive filter:
+
+```ts
+.filter(p => p.estimate > 0 || p.ordered > 0)   // drop empty rows
+```
+
+(Won't change anything in your data but prevents future ghost rows from `estimate_packs` rows with 0 items.)
+
+## Bug 5 — Sort tiebreaker (cosmetic) ⚪
+
+`sort((a, b) => b.estimate + b.ordered − (a.estimate + a.ordered))` ranks by sum, which means a $40K-estimate / $0-ordered pack ranks the same as a $20K / $20K pack. Better: rank by `Math.max(estimate, ordered)` so Walkout (most over) sits near the top, not buried.
 
 ---
 
-## Technical details
+## Files to change
 
-**New files**
-- `src/hooks/useBuyerMaterialsAnalytics.ts` — aggregates from `purchase_orders`, `po_line_items`, `supplier_invoices`, `returns`, `supplier_estimates`, `estimate_packs`. Returns one typed object.
-- `src/components/project/BuyerMaterialsAnalyticsSection.tsx` — 6 KpiCards + funnel + pack table. Uses existing `KpiCard`, `KpiGrid`, `Pill`, `THead/TdN/TdM/TRow` shared primitives so it matches the supplier section visually.
+- `src/hooks/useBuyerMaterialsAnalytics.ts` — fix Bugs 1, 2, 3, 4, 5 (all in the pack-variance and FAC sections, ~25 lines)
+- `src/components/project/BuyerMaterialsAnalyticsSection.tsx` — handle `variancePct === null` ("no estimate" label) in the per-pack table, ~3 lines
 
-**Reused**
-- `useProjectFinancials` for material totals & responsibility flags (no new queries duplicated)
-- `MaterialsBudgetDrawer` for pack drill-in
-- `EVENT_META` pattern from supplier section for consistency
+No schema changes. No new queries.
 
-**Modified**
-- `GCProjectOverviewContent.tsx` — mount `<BuyerMaterialsAnalyticsSection />` after `MaterialsCommandCenter`
-- `TCProjectOverview.tsx` — same, gated by `isTCMaterialResponsible`
+## Expected after-fix behavior on the current project
 
-**No schema changes.** All data already exists in `purchase_orders`, `po_line_items` (with `source_estimate_item_id`, `original_unit_price`, `lead_time_days`), `supplier_invoices`, `returns`. No migration needed.
+Per-Pack table (top 5):
+| Pack | Estimate | Ordered | Delivered | Variance | Status |
+|---|---|---|---|---|---|
+| Exterior Siding & Soffit Trim | $39.1K | $0 | $0 | -$39.1K (-100%) | OK (un-ordered) |
+| 1st Floor Framing & Sub-Floor Sheeting | $14.0K | $14.2K | $0 | +$195 (+1.4%) | Watch |
+| Rake Fascia | $12.7K | $0 | $0 | -$12.7K | OK |
+| Basement Framing | $4.7K | $6.0K | $6.0K | +$1.3K (+28%) | Over |
+| Walkout | $2.2K | $5.0K | $0 | +$2.8K (+128%) | Over |
+| Ad-hoc | — | $468 | $0 | +$468 (no estimate) | Over |
 
-**Privacy:** Section never renders for FC or for TCs on GC-procures jobs — respects the existing `material_responsibility` rule from the privacy memory.
-
----
-
-## Out of scope (could be Phase 2)
-
-- POS/ERP exports (Hyphen/EPICOR/ECi) — separate roadmap item
-- AI-driven re-order suggestions
-- Cross-project material spend analytics (portfolio view)
+FAC card: **~$141K · +20.9% vs budget · Over** instead of the current misleading "+0.0% On Budget".
