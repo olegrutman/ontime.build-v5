@@ -300,9 +300,10 @@ export function useBuyerMaterialsAnalytics({
       };
 
       // ── Cash exposure ──
+      // Bug fix 6.3: include FINALIZED — supplier still expects payment if no invoice exists.
       const invoicedPoIds = new Set(invoices.map(i => i.po_id).filter(Boolean));
       const openCommitments = pos
-        .filter(p => ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED'].includes(p.status))
+        .filter(p => ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status))
         .filter(p => !invoicedPoIds.has(p.id))
         .reduce((s, p) => s + (p.po_total || 0), 0);
 
@@ -360,27 +361,43 @@ export function useBuyerMaterialsAnalytics({
         });
       }
 
-      // Sum POs per pack
+      // Sum POs per pack — bug fix 7.1: normalize key to avoid case/whitespace splits.
+      const normalize = (s: string) => s.trim().toLowerCase();
+      // Re-key existing entries by normalized name while preserving display name.
+      const normalizedMap = new Map<string, PackVariance>();
+      packMap.forEach((v, k) => {
+        const nk = normalize(k);
+        const existing = normalizedMap.get(nk);
+        if (existing) {
+          existing.estimate += v.estimate;
+          existing.ordered += v.ordered;
+          existing.delivered += v.delivered;
+        } else {
+          normalizedMap.set(nk, { ...v });
+        }
+      });
+
       pos.forEach(p => {
-        const name = p.source_pack_name || 'Ad-hoc';
-        const cur = packMap.get(name) || { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
+        const rawName = p.source_pack_name || 'Ad-hoc';
+        const nk = normalize(rawName);
+        const cur = normalizedMap.get(nk) || { packName: rawName, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
         if (['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status)) {
           cur.ordered += Number(p.po_total || 0);
         }
         if (['DELIVERED', 'FINALIZED'].includes(p.status)) {
           cur.delivered += Number(p.po_total || 0);
         }
-        packMap.set(name, cur);
+        normalizedMap.set(nk, cur);
       });
 
-      const packs = Array.from(packMap.values())
+      const packs = Array.from(normalizedMap.values())
         .filter(p => p.estimate > 0 || p.ordered > 0)
         .map(p => {
           const variance = p.ordered - p.estimate;
           const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
           let status: PackVariance['status'];
           if (p.estimate === 0 && p.ordered > 0) {
-            status = 'over'; // un-budgeted spend
+            status = 'over'; // un-budgeted (ad-hoc) spend
           } else if (variancePct == null) {
             status = 'ok';
           } else if (variancePct > 5) {
@@ -392,15 +409,27 @@ export function useBuyerMaterialsAnalytics({
           }
           return { ...p, variance, variancePct, status };
         })
-        .sort((a, b) => Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered));
+        // Bug fix 7.3: sort by status priority (over → watch → ok), then by size,
+        // so small high-risk packs aren't buried under big on-budget ones.
+        .sort((a, b) => {
+          const rank = (s: PackVariance['status']) => (s === 'over' ? 0 : s === 'watch' ? 1 : 2);
+          const r = rank(a.status) - rank(b.status);
+          if (r !== 0) return r;
+          return Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered);
+        });
 
       // ── Recompute FAC using pack-level overrun ──
+      // Bug fix 1.1: uncommitted estimate = estimate slice not yet covered by ordered POs.
+      // Previously subtracted ALL committedTotal (including ad-hoc), which under-forecasts.
       const committedPacksEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
         .reduce((s, p) => s + p.estimate, 0);
       const committedAgainstKnownEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
         .reduce((s, p) => s + p.ordered, 0);
+      const adHocCommitted = Math.max(0, committedTotal - committedAgainstKnownEstimate);
+      const unCommittedEstimate = Math.max(0, estimateTotal - committedPacksEstimate);
+
       if (committedPacksEstimate > 0) {
         overrunRatio = Math.max(0, (committedAgainstKnownEstimate - committedPacksEstimate) / committedPacksEstimate);
       } else if (estimateTotal > 0 && committedTotal > estimateTotal) {
@@ -408,9 +437,14 @@ export function useBuyerMaterialsAnalytics({
       } else {
         overrunRatio = 0;
       }
+      // FAC = realized commitments + projected spend on the remaining estimate slice,
+      // inflated by the current overrun ratio. Ad-hoc spend already lives in committedTotal.
       forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
-      remainingHeadroom = estimateTotal - forecastAtCompletion;
-      variancePct = estimateTotal > 0 ? ((forecastAtCompletion - estimateTotal) / estimateTotal) * 100 : 0;
+      // Bug fix 1.2: variance baseline must include ad-hoc dollars; otherwise pure off-estimate
+      // ordering looks "on budget" because both numerator and denominator drift together.
+      const variancesBaseline = estimateTotal + adHocCommitted;
+      remainingHeadroom = variancesBaseline - forecastAtCompletion;
+      variancePct = variancesBaseline > 0 ? ((forecastAtCompletion - variancesBaseline) / variancesBaseline) * 100 : 0;
 
       return {
         estimateTotal,
