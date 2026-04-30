@@ -53,16 +53,21 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
   const facLabel = a.variancePct <= 0 ? 'On Budget' : a.variancePct <= 5 ? 'Watch' : 'Over';
 
   // ── Card 2: Pipeline funnel — find bottleneck ──
-  const stuck = a.pipeline.find(s =>
-    (s.key === 'SUBMITTED' || s.key === 'PRICED') && (s.oldestDays || 0) > 5 && s.count > 0
-  );
+  // Bug fix 2.2: READY_FOR_DELIVERY also signals a stall (yard pickup never happened).
+  const stuck = a.pipeline.find(s => {
+    if (!s.count || !s.oldestDays) return false;
+    if ((s.key === 'SUBMITTED' || s.key === 'PRICED') && s.oldestDays > 5) return true;
+    if (s.key === 'READY_FOR_DELIVERY' && s.oldestDays > 10) return true;
+    return false;
+  });
   const pipelinePill: PillType = stuck ? 'pa' : 'pg';
 
-  // ── Card 3: Price Variance ──
+  // ── Card 3: Supplier price adjustments (renamed from "drift vs estimate")
+  // Bug fix 3.1: math is supplier-quote vs final-quote, NOT vs estimate. Renamed.
   const pvPill: PillType = a.priceVariance.totalAdjustedDelta > 0 ? 'pr'
     : a.priceVariance.totalAdjustedDelta < 0 ? 'pg' : 'pm';
   const pvSub = a.priceVariance.adjustedLineCount > 0
-    ? `${a.priceVariance.adjustedLineCount} of ${a.priceVariance.totalLineCount} lines re-priced`
+    ? `${a.priceVariance.adjustedLineCount} of ${a.priceVariance.totalLineCount} lines re-priced by supplier`
     : `No supplier adjustments on ${a.priceVariance.totalLineCount} lines`;
 
   // ── Card 4: Delivery Risk ──
@@ -70,8 +75,9 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
     : (a.deliveryRisk.onTimeRatePct ?? 100) >= 90 ? 'pg' : 'pa';
 
   // ── Card 5: Returns Impact ──
-  const riPill: PillType = a.returnsImpact.returnRatePct > 5 ? 'pr'
-    : a.returnsImpact.returnRatePct > 2 ? 'pa' : 'pg';
+  // Bug fix 5.3: tighter, industry-aligned thresholds (1-3% normal range).
+  const riPill: PillType = a.returnsImpact.returnRatePct > 3 ? 'pr'
+    : a.returnsImpact.returnRatePct > 1 ? 'pa' : 'pg';
 
   // ── Card 6: Cash Exposure ──
   const cePill: PillType = a.cashExposure.aging.d60_plus > 0 ? 'pr'
@@ -102,7 +108,10 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                 <TRow cells={[<TdN>Delivered</TdN>, <TdM>{fmt(a.deliveredTotal)}</TdM>]} />
                 <TRow cells={[<TdN>Forecast at Completion</TdN>, <TdM>{fmt(a.forecastAtCompletion)}</TdM>]} isTotal />
                 <TRow
-                  cells={[<TdN>Headroom remaining</TdN>, <TdM>{fmt(a.remainingHeadroom)}</TdM>]}
+                  cells={[
+                    <TdN>{a.remainingHeadroom >= 0 ? 'Headroom remaining' : 'Projected overrun'}</TdN>,
+                    <TdM>{fmt(Math.abs(a.remainingHeadroom))}</TdM>,
+                  ]}
                   greenText={a.remainingHeadroom >= 0}
                 />
               </tbody>
@@ -154,7 +163,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           accent={C.amber}
           icon="💲"
           iconBg={C.amberPale}
-          label="PRICE DRIFT VS ESTIMATE"
+          label="SUPPLIER PRICE ADJUSTMENTS"
           value={a.priceVariance.totalAdjustedDelta >= 0 ? `+${fmt(a.priceVariance.totalAdjustedDelta)}` : `-${fmt(Math.abs(a.priceVariance.totalAdjustedDelta))}`}
           sub={pvSub}
           pills={[{ type: pvPill, text: a.priceVariance.totalAdjustedDelta > 0 ? 'Over' : a.priceVariance.totalAdjustedDelta < 0 ? 'Under' : 'No drift' }]}
@@ -197,7 +206,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           iconBg={C.redBg}
           label="DELIVERY RISK"
           value={a.deliveryRisk.lateCount > 0 ? `${a.deliveryRisk.lateCount} late` : (a.deliveryRisk.onTimeRatePct != null ? `${a.deliveryRisk.onTimeRatePct}%` : '—')}
-          sub={a.deliveryRisk.avgLeadTimeDays != null ? `Avg lead time ${a.deliveryRisk.avgLeadTimeDays}d · ${fmt(a.deliveryRisk.lateTotal)} at risk` : 'No lead time data yet'}
+          sub={a.deliveryRisk.avgLeadTimeDays != null ? `Avg ~${a.deliveryRisk.avgLeadTimeDays}d order→delivery · ${fmt(a.deliveryRisk.lateTotal)} at risk` : 'No lead time data yet'}
           pills={[{ type: drPill, text: a.deliveryRisk.lateCount > 0 ? 'Late' : 'On Time' }]}
           idx={3}
         >

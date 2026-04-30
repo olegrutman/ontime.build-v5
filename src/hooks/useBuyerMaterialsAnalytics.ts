@@ -186,15 +186,12 @@ export function useBuyerMaterialsAnalytics({
         .filter(p => ['DELIVERED', 'FINALIZED'].includes(p.status))
         .reduce((s, p) => s + (p.po_total || 0), 0);
 
-      // overrun ratio: how much committed POs are running over the estimate slice
-      // they were supposed to cover. Computed below in the pack section so we can use
-      // pack-level estimates as the denominator. Placeholder until packs resolve.
-      const unCommittedEstimate = Math.max(0, estimateTotal - committedTotal);
-      // We compute FAC after packs are built; declare with `let` and fill in later.
+      // FAC computed after packs are built (we need committedAgainstKnownEstimate
+      // to correctly compute uncommitted estimate slice — bug fix 1.1).
       let overrunRatio = 0;
-      let forecastAtCompletion = committedTotal + unCommittedEstimate;
-      let remainingHeadroom = estimateTotal - forecastAtCompletion;
-      let variancePct = estimateTotal > 0 ? ((forecastAtCompletion - estimateTotal) / estimateTotal) * 100 : 0;
+      let forecastAtCompletion = committedTotal;
+      let remainingHeadroom = 0;
+      let variancePct = 0;
 
       // ── Price variance ──
       let totalAdjustedDelta = 0;
@@ -251,6 +248,9 @@ export function useBuyerMaterialsAnalytics({
           const expectedBy = new Date(ordered.getTime() + maxQuoted * 86400000);
           if (now > expectedBy) {
             const daysLate = Math.floor((now.getTime() - expectedBy.getTime()) / 86400000);
+            // Bug fix 4.1: overdue undelivered POs must count against on-time rate;
+            // otherwise a project full of late-but-undelivered POs reports 100% on-time.
+            evaluatedForOnTime++;
             lateList.push({
               id: po.id,
               po_number: po.po_number,
@@ -263,9 +263,20 @@ export function useBuyerMaterialsAnalytics({
       });
       lateList.sort((a, b) => b.daysLate - a.daysLate);
 
+      // avgLeadTimeDays: prefer ACTUAL delivery time when we have enough samples,
+      // otherwise fall back to quoted (bug fix 4.3 — was always quoted).
+      const actualLeadTimes: number[] = [];
+      pos.forEach(po => {
+        if (po.ordered_at && po.delivered_at) {
+          const a = Math.floor((new Date(po.delivered_at).getTime() - new Date(po.ordered_at).getTime()) / 86400000);
+          if (a >= 0) actualLeadTimes.push(a);
+        }
+      });
+      const sourceLeadTimes = actualLeadTimes.length >= 3 ? actualLeadTimes : leadTimes;
+
       const deliveryRisk: DeliveryRisk = {
-        avgLeadTimeDays: leadTimes.length
-          ? Math.round(leadTimes.reduce((s, d) => s + d, 0) / leadTimes.length)
+        avgLeadTimeDays: sourceLeadTimes.length
+          ? Math.round(sourceLeadTimes.reduce((s, d) => s + d, 0) / sourceLeadTimes.length)
           : null,
         onTimeRatePct: evaluatedForOnTime > 0
           ? Math.round((onTimeCount / evaluatedForOnTime) * 100)
@@ -276,12 +287,20 @@ export function useBuyerMaterialsAnalytics({
       };
 
       // ── Returns impact ──
-      const returnedTotal = returns.reduce((s, r) => s + Number(r.credit_subtotal || 0), 0);
-      const restockingTotal = returns.reduce((s, r) => s + Number(r.restocking_total || 0), 0);
-      const netCredit = returns.reduce((s, r) => s + Number(r.net_credit_total ?? (Number(r.credit_subtotal || 0) - Number(r.restocking_total || 0))), 0);
+      // Bug fix 5.1: only count returns that have actually been submitted/paid.
+      // DRAFT returns shouldn't inflate "real material cost" picture.
+      const realizedReturns = returns.filter(r => r.status === 'SUBMITTED' || r.status === 'PAID');
+      const returnedTotal = realizedReturns.reduce((s, r) => s + Number(r.credit_subtotal || 0), 0);
+      const restockingTotal = realizedReturns.reduce((s, r) => s + Number(r.restocking_total || 0), 0);
+      // Bug fix 5.2: always derive consistently from components — net_credit_total may
+      // be null for some rows and populated for others, causing inconsistent sums.
+      const netCredit = realizedReturns.reduce(
+        (s, r) => s + (Number(r.credit_subtotal || 0) - Number(r.restocking_total || 0)),
+        0,
+      );
       const returnRatePct = deliveredTotal > 0 ? +((returnedTotal / deliveredTotal) * 100).toFixed(1) : 0;
       const reasonMap: Record<string, number> = {};
-      returns.forEach(r => {
+      realizedReturns.forEach(r => {
         const reason = r.reason || 'Unspecified';
         reasonMap[reason] = (reasonMap[reason] || 0) + Number(r.credit_subtotal || 0);
       });
@@ -295,9 +314,10 @@ export function useBuyerMaterialsAnalytics({
       };
 
       // ── Cash exposure ──
+      // Bug fix 6.3: include FINALIZED — supplier still expects payment if no invoice exists.
       const invoicedPoIds = new Set(invoices.map(i => i.po_id).filter(Boolean));
       const openCommitments = pos
-        .filter(p => ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED'].includes(p.status))
+        .filter(p => ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status))
         .filter(p => !invoicedPoIds.has(p.id))
         .reduce((s, p) => s + (p.po_total || 0), 0);
 
@@ -355,27 +375,43 @@ export function useBuyerMaterialsAnalytics({
         });
       }
 
-      // Sum POs per pack
+      // Sum POs per pack — bug fix 7.1: normalize key to avoid case/whitespace splits.
+      const normalize = (s: string) => s.trim().toLowerCase();
+      // Re-key existing entries by normalized name while preserving display name.
+      const normalizedMap = new Map<string, PackVariance>();
+      packMap.forEach((v, k) => {
+        const nk = normalize(k);
+        const existing = normalizedMap.get(nk);
+        if (existing) {
+          existing.estimate += v.estimate;
+          existing.ordered += v.ordered;
+          existing.delivered += v.delivered;
+        } else {
+          normalizedMap.set(nk, { ...v });
+        }
+      });
+
       pos.forEach(p => {
-        const name = p.source_pack_name || 'Ad-hoc';
-        const cur = packMap.get(name) || { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
+        const rawName = p.source_pack_name || 'Ad-hoc';
+        const nk = normalize(rawName);
+        const cur = normalizedMap.get(nk) || { packName: rawName, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
         if (['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status)) {
           cur.ordered += Number(p.po_total || 0);
         }
         if (['DELIVERED', 'FINALIZED'].includes(p.status)) {
           cur.delivered += Number(p.po_total || 0);
         }
-        packMap.set(name, cur);
+        normalizedMap.set(nk, cur);
       });
 
-      const packs = Array.from(packMap.values())
+      const packs = Array.from(normalizedMap.values())
         .filter(p => p.estimate > 0 || p.ordered > 0)
         .map(p => {
           const variance = p.ordered - p.estimate;
           const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
           let status: PackVariance['status'];
           if (p.estimate === 0 && p.ordered > 0) {
-            status = 'over'; // un-budgeted spend
+            status = 'over'; // un-budgeted (ad-hoc) spend
           } else if (variancePct == null) {
             status = 'ok';
           } else if (variancePct > 5) {
@@ -387,15 +423,27 @@ export function useBuyerMaterialsAnalytics({
           }
           return { ...p, variance, variancePct, status };
         })
-        .sort((a, b) => Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered));
+        // Bug fix 7.3: sort by status priority (over → watch → ok), then by size,
+        // so small high-risk packs aren't buried under big on-budget ones.
+        .sort((a, b) => {
+          const rank = (s: PackVariance['status']) => (s === 'over' ? 0 : s === 'watch' ? 1 : 2);
+          const r = rank(a.status) - rank(b.status);
+          if (r !== 0) return r;
+          return Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered);
+        });
 
       // ── Recompute FAC using pack-level overrun ──
+      // Bug fix 1.1: uncommitted estimate = estimate slice not yet covered by ordered POs.
+      // Previously subtracted ALL committedTotal (including ad-hoc), which under-forecasts.
       const committedPacksEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
         .reduce((s, p) => s + p.estimate, 0);
       const committedAgainstKnownEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
         .reduce((s, p) => s + p.ordered, 0);
+      const adHocCommitted = Math.max(0, committedTotal - committedAgainstKnownEstimate);
+      const unCommittedEstimate = Math.max(0, estimateTotal - committedPacksEstimate);
+
       if (committedPacksEstimate > 0) {
         overrunRatio = Math.max(0, (committedAgainstKnownEstimate - committedPacksEstimate) / committedPacksEstimate);
       } else if (estimateTotal > 0 && committedTotal > estimateTotal) {
@@ -403,9 +451,14 @@ export function useBuyerMaterialsAnalytics({
       } else {
         overrunRatio = 0;
       }
+      // FAC = realized commitments + projected spend on the remaining estimate slice,
+      // inflated by the current overrun ratio. Ad-hoc spend already lives in committedTotal.
       forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
-      remainingHeadroom = estimateTotal - forecastAtCompletion;
-      variancePct = estimateTotal > 0 ? ((forecastAtCompletion - estimateTotal) / estimateTotal) * 100 : 0;
+      // Bug fix 1.2: variance baseline must include ad-hoc dollars; otherwise pure off-estimate
+      // ordering looks "on budget" because both numerator and denominator drift together.
+      const variancesBaseline = estimateTotal + adHocCommitted;
+      remainingHeadroom = variancesBaseline - forecastAtCompletion;
+      variancePct = variancesBaseline > 0 ? ((forecastAtCompletion - variancesBaseline) / variancesBaseline) * 100 : 0;
 
       return {
         estimateTotal,
