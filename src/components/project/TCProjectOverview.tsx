@@ -12,6 +12,7 @@ import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
+import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -369,6 +370,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           <button onClick={() => onNavigate(isTM ? 'change-orders' : 'sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>{isTM ? 'View Work Orders' : <>View Contract<span className="max-sm:hidden"> · {gcName}</span></>}</button>
         </div>
       </div>
+
+      {/* Needs Attention — TOP placement, compact horizontal chips */}
+      <OverviewAttentionStrip warnings={warnings} projectName={projectName} onNavigate={onNavigate} />
 
       {/* 8 KPI Cards — 4-col grid */}
       <KpiGrid>
@@ -758,18 +762,6 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         />
       )}
 
-      {/* Warnings */}
-      {warnings.length > 0 && (
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16 }}>🚨</span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink }}>Needs Attention — {projectName}</span>
-          </div>
-          {warnings.map((w, i) => (
-            <WarnItem key={i} color={w.color} icon={w.icon} title={w.title} sub={w.sub} value={w.value} pill={w.pill} pillType={w.pillType} onClick={() => onNavigate(w.tab)} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
