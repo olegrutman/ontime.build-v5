@@ -10,6 +10,8 @@ import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import type { OrgType } from '@/types/organization';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, cellStyle, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
+import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
