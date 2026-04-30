@@ -305,8 +305,51 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
             </div>
             <div style={{ fontSize: '0.66rem', color: C.muted }}>{a.packs.length} packs · click to open POs</div>
           </div>
-          <div className="overflow-x-auto">
-            <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
+          {/* Mobile: stacked card per pack */}
+          <div className="sm:hidden">
+            {a.packs.map((p, idx) => {
+              const pill: PillType = p.status === 'over' ? 'pr' : p.status === 'watch' ? 'pa' : 'pg';
+              const label = p.status === 'over' ? 'Over' : p.status === 'watch' ? 'Watch' : 'OK';
+              const varColor = p.status === 'over' ? C.red : p.status === 'watch' ? C.amber : C.green;
+              const varText = p.variance >= 0 ? `+${fmt(p.variance)}` : `-${fmt(Math.abs(p.variance))}`;
+              const pctText = p.variancePct == null ? 'no estimate' : pctLabel(p.variancePct);
+              return (
+                <button
+                  key={p.packName}
+                  onClick={() => onNavigate('purchase-orders')}
+                  className="w-full text-left active:bg-[rgba(245,166,35,.05)] transition-colors"
+                  style={{ padding: '10px 14px', borderTop: idx === 0 ? 'none' : `1px solid ${C.border}` }}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink }} className="truncate">{p.packName}</span>
+                    <Pill type={pill}>{label}</Pill>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {[
+                      { label: 'Est', value: fmt(p.estimate) },
+                      { label: 'Ord', value: fmt(p.ordered) },
+                      { label: 'Del', value: fmt(p.delivered) },
+                    ].map(cell => (
+                      <div key={cell.label}>
+                        <div style={{ fontSize: '0.56rem', textTransform: 'uppercase', letterSpacing: 0.6, color: C.faint, fontWeight: 700, marginBottom: 1 }}>{cell.label}</div>
+                        <div style={{ ...fontMono, fontSize: '0.78rem', color: C.ink2, fontWeight: 700 }}>{cell.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between" style={{ borderTop: `1px dashed ${C.border}`, paddingTop: 6 }}>
+                    <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: 0.6, color: C.faint, fontWeight: 700 }}>Variance</span>
+                    <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: varColor }}>
+                      {varText} <span style={{ color: C.muted, fontWeight: 600 }}>({pctText})</span>
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop: full table */}
+          <div className="hidden sm:block">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Pack', 'Estimate', 'Ordered', 'Delivered', 'Variance', 'Status']} />
               <tbody>
                 {a.packs.map(p => {
