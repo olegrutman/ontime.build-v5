@@ -370,6 +370,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </div>
       </div>
 
+      {/* Needs Attention — TOP placement, compact horizontal chips */}
+      <OverviewAttentionStrip warnings={warnings} projectName={projectName} onNavigate={onNavigate} />
+
       {/* 8 KPI Cards — 4-col grid */}
       <KpiGrid>
 
@@ -758,18 +761,6 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         />
       )}
 
-      {/* Warnings */}
-      {warnings.length > 0 && (
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16 }}>🚨</span>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink }}>Needs Attention — {projectName}</span>
-          </div>
-          {warnings.map((w, i) => (
-            <WarnItem key={i} color={w.color} icon={w.icon} title={w.title} sub={w.sub} value={w.value} pill={w.pill} pillType={w.pillType} onClick={() => onNavigate(w.tab)} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
