@@ -34,11 +34,11 @@ export function OverviewAttentionStrip({ warnings, projectName, onNavigate }: Pr
         background: hasRed ? '#FEF2F2' : '#FFFBEB',
         borderRadius: 12,
         border: `1px solid ${hasRed ? '#FECACA' : '#FDE68A'}`,
-        padding: '10px 14px',
         ...fontLabel,
       }}
+      className="px-3 py-2 sm:px-3.5 sm:py-2.5"
     >
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="flex items-center gap-1.5 shrink-0">
           <span style={{ fontSize: 14 }}>🚨</span>
           <span
@@ -66,29 +66,32 @@ export function OverviewAttentionStrip({ warnings, projectName, onNavigate }: Pr
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap flex-1 sm:justify-end">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:flex-wrap flex-1 sm:justify-end">
           {warnings.map((w, i) => (
             <button
               key={i}
               onClick={() => onNavigate(w.tab)}
-              className="inline-flex items-center gap-1.5 transition-all hover:-translate-y-px hover:shadow-sm"
+              className="inline-flex items-center gap-1.5 transition-all hover:-translate-y-px hover:shadow-sm w-full sm:w-auto justify-between sm:justify-start"
               style={{
                 background: '#FFFFFF',
                 border: `1px solid ${C.border}`,
                 borderLeft: `3px solid ${w.color}`,
                 borderRadius: 8,
-                padding: '5px 9px 5px 8px',
+                padding: '6px 10px 6px 9px',
                 fontSize: '0.72rem',
                 fontWeight: 600,
                 color: C.ink2,
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
               }}
             >
-              <span style={{ fontSize: 13 }}>{w.icon}</span>
-              <span>{w.title}</span>
-              <Pill type={w.pillType}>{w.pill}</Pill>
-              <ChevronRight className="w-3 h-3 opacity-50" />
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span style={{ fontSize: 13 }}>{w.icon}</span>
+                <span className="truncate">{w.title}</span>
+              </span>
+              <span className="flex items-center gap-1.5 shrink-0">
+                <Pill type={w.pillType}>{w.pill}</Pill>
+                <ChevronRight className="w-3 h-3 opacity-50" />
+              </span>
             </button>
           ))}
         </div>
