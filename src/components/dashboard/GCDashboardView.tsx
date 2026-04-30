@@ -9,6 +9,8 @@ import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
+import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
