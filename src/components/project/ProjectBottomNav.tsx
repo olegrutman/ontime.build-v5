@@ -13,14 +13,11 @@ import {
   RotateCcw,
   CalendarDays,
   PenLine,
-  Camera,
   Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
-import { FieldCaptureSheet } from '@/components/field-capture/FieldCaptureSheet';
-import { useAuth } from '@/hooks/useAuth';
 
 interface BottomItem {
   label: string;
@@ -84,10 +81,6 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [captureOpen, setCaptureOpen] = useState(false);
-  const { userOrgRoles } = useAuth();
-  const fieldCaptureEnabled = useFeatureEnabled('field_capture');
-  const orgId = userOrgRoles[0]?.organization_id;
 
   const pathParts = location.pathname.split('/');
   const activeSection = pathParts[3] || 'overview';
@@ -121,22 +114,10 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
                 )}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[9px] font-semibold">{item.label}</span>
+                <span className="text-[10px] font-semibold">{item.label}</span>
               </button>
             );
           })}
-          {/* Capture FAB */}
-          {fieldCaptureEnabled && (
-            <button
-              onClick={() => setCaptureOpen(true)}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors text-primary min-h-[56px]"
-            >
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <Camera className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="text-[8px] font-bold text-primary">Capture</span>
-            </button>
-          )}
           {/* More */}
           <button
             onClick={() => setMoreOpen(true)}
@@ -146,7 +127,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
             )}
           >
             <Menu className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">More</span>
+            <span className="text-[10px] font-semibold">More</span>
           </button>
         </div>
       </nav>
@@ -166,16 +147,6 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
           </div>
         </DrawerContent>
       </Drawer>
-
-      {/* Field Capture Sheet */}
-      {orgId && (
-        <FieldCaptureSheet
-          open={captureOpen}
-          onOpenChange={setCaptureOpen}
-          projectId={id}
-          organizationId={orgId}
-        />
-      )}
     </>
   );
 }
