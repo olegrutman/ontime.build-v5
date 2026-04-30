@@ -186,15 +186,12 @@ export function useBuyerMaterialsAnalytics({
         .filter(p => ['DELIVERED', 'FINALIZED'].includes(p.status))
         .reduce((s, p) => s + (p.po_total || 0), 0);
 
-      // overrun ratio: how much committed POs are running over the estimate slice
-      // they were supposed to cover. Computed below in the pack section so we can use
-      // pack-level estimates as the denominator. Placeholder until packs resolve.
-      const unCommittedEstimate = Math.max(0, estimateTotal - committedTotal);
-      // We compute FAC after packs are built; declare with `let` and fill in later.
+      // FAC computed after packs are built (we need committedAgainstKnownEstimate
+      // to correctly compute uncommitted estimate slice — bug fix 1.1).
       let overrunRatio = 0;
-      let forecastAtCompletion = committedTotal + unCommittedEstimate;
-      let remainingHeadroom = estimateTotal - forecastAtCompletion;
-      let variancePct = estimateTotal > 0 ? ((forecastAtCompletion - estimateTotal) / estimateTotal) * 100 : 0;
+      let forecastAtCompletion = committedTotal;
+      let remainingHeadroom = 0;
+      let variancePct = 0;
 
       // ── Price variance ──
       let totalAdjustedDelta = 0;
@@ -276,12 +273,20 @@ export function useBuyerMaterialsAnalytics({
       };
 
       // ── Returns impact ──
-      const returnedTotal = returns.reduce((s, r) => s + Number(r.credit_subtotal || 0), 0);
-      const restockingTotal = returns.reduce((s, r) => s + Number(r.restocking_total || 0), 0);
-      const netCredit = returns.reduce((s, r) => s + Number(r.net_credit_total ?? (Number(r.credit_subtotal || 0) - Number(r.restocking_total || 0))), 0);
+      // Bug fix 5.1: only count returns that have actually been submitted/paid.
+      // DRAFT returns shouldn't inflate "real material cost" picture.
+      const realizedReturns = returns.filter(r => r.status === 'SUBMITTED' || r.status === 'PAID');
+      const returnedTotal = realizedReturns.reduce((s, r) => s + Number(r.credit_subtotal || 0), 0);
+      const restockingTotal = realizedReturns.reduce((s, r) => s + Number(r.restocking_total || 0), 0);
+      // Bug fix 5.2: always derive consistently from components — net_credit_total may
+      // be null for some rows and populated for others, causing inconsistent sums.
+      const netCredit = realizedReturns.reduce(
+        (s, r) => s + (Number(r.credit_subtotal || 0) - Number(r.restocking_total || 0)),
+        0,
+      );
       const returnRatePct = deliveredTotal > 0 ? +((returnedTotal / deliveredTotal) * 100).toFixed(1) : 0;
       const reasonMap: Record<string, number> = {};
-      returns.forEach(r => {
+      realizedReturns.forEach(r => {
         const reason = r.reason || 'Unspecified';
         reasonMap[reason] = (reasonMap[reason] || 0) + Number(r.credit_subtotal || 0);
       });
