@@ -56,7 +56,7 @@ export interface PackVariance {
   ordered: number;
   delivered: number;
   variance: number;
-  variancePct: number;
+  variancePct: number | null;
   status: 'ok' | 'watch' | 'over';
 }
 
@@ -156,7 +156,7 @@ export function useBuyerMaterialsAnalytics({
           .from('supplier_estimates')
           .select('id')
           .eq('project_id', projectId)
-          .eq('status', 'approved'),
+          .eq('status', 'APPROVED'),
       ]);
 
       const lines = (linesRes.data || []) as any[];
@@ -186,15 +186,15 @@ export function useBuyerMaterialsAnalytics({
         .filter(p => ['DELIVERED', 'FINALIZED'].includes(p.status))
         .reduce((s, p) => s + (p.po_total || 0), 0);
 
-      // overrun ratio so far = committed/expected_for_committed.
-      // simpler: variance vs estimate scaled to remaining
-      const overrunRatio = estimateTotal > 0 && committedTotal > 0
-        ? Math.max(0, (committedTotal / estimateTotal) - (committedTotal > 0 ? committedTotal / Math.max(estimateTotal, committedTotal) : 0))
-        : 0;
+      // overrun ratio: how much committed POs are running over the estimate slice
+      // they were supposed to cover. Computed below in the pack section so we can use
+      // pack-level estimates as the denominator. Placeholder until packs resolve.
       const unCommittedEstimate = Math.max(0, estimateTotal - committedTotal);
-      const forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
-      const remainingHeadroom = estimateTotal - forecastAtCompletion;
-      const variancePct = estimateTotal > 0 ? ((forecastAtCompletion - estimateTotal) / estimateTotal) * 100 : 0;
+      // We compute FAC after packs are built; declare with `let` and fill in later.
+      let overrunRatio = 0;
+      let forecastAtCompletion = committedTotal + unCommittedEstimate;
+      let remainingHeadroom = estimateTotal - forecastAtCompletion;
+      let variancePct = estimateTotal > 0 ? ((forecastAtCompletion - estimateTotal) / estimateTotal) * 100 : 0;
 
       // ── Price variance ──
       let totalAdjustedDelta = 0;
@@ -342,7 +342,7 @@ export function useBuyerMaterialsAnalytics({
         // Sum estimate per pack name
         (itemRows || []).forEach((it: any) => {
           const name = it.pack_name || 'Unassigned';
-          const cur = packMap.get(name) || { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0, status: 'ok' as const };
+          const cur = packMap.get(name) || { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
           cur.estimate += Number(it.line_total || 0);
           packMap.set(name, cur);
         });
@@ -358,7 +358,7 @@ export function useBuyerMaterialsAnalytics({
       // Sum POs per pack
       pos.forEach(p => {
         const name = p.source_pack_name || 'Ad-hoc';
-        const cur = packMap.get(name) || { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0, status: 'ok' as const };
+        const cur = packMap.get(name) || { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
         if (['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status)) {
           cur.ordered += Number(p.po_total || 0);
         }
@@ -368,13 +368,44 @@ export function useBuyerMaterialsAnalytics({
         packMap.set(name, cur);
       });
 
-      const packs = Array.from(packMap.values()).map(p => {
-        const variance = p.ordered - p.estimate;
-        const variancePct = p.estimate > 0 ? (variance / p.estimate) * 100 : 0;
-        const status: PackVariance['status'] =
-          variancePct > 5 ? 'over' : variancePct > 0 ? 'watch' : 'ok';
-        return { ...p, variance, variancePct, status };
-      }).sort((a, b) => b.estimate + b.ordered - (a.estimate + a.ordered));
+      const packs = Array.from(packMap.values())
+        .filter(p => p.estimate > 0 || p.ordered > 0)
+        .map(p => {
+          const variance = p.ordered - p.estimate;
+          const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
+          let status: PackVariance['status'];
+          if (p.estimate === 0 && p.ordered > 0) {
+            status = 'over'; // un-budgeted spend
+          } else if (variancePct == null) {
+            status = 'ok';
+          } else if (variancePct > 5) {
+            status = 'over';
+          } else if (variancePct > 0) {
+            status = 'watch';
+          } else {
+            status = 'ok';
+          }
+          return { ...p, variance, variancePct, status };
+        })
+        .sort((a, b) => Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered));
+
+      // ── Recompute FAC using pack-level overrun ──
+      const committedPacksEstimate = packs
+        .filter(p => p.ordered > 0 && p.estimate > 0)
+        .reduce((s, p) => s + p.estimate, 0);
+      const committedAgainstKnownEstimate = packs
+        .filter(p => p.ordered > 0 && p.estimate > 0)
+        .reduce((s, p) => s + p.ordered, 0);
+      if (committedPacksEstimate > 0) {
+        overrunRatio = Math.max(0, (committedAgainstKnownEstimate - committedPacksEstimate) / committedPacksEstimate);
+      } else if (estimateTotal > 0 && committedTotal > estimateTotal) {
+        overrunRatio = (committedTotal - estimateTotal) / estimateTotal;
+      } else {
+        overrunRatio = 0;
+      }
+      forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
+      remainingHeadroom = estimateTotal - forecastAtCompletion;
+      variancePct = estimateTotal > 0 ? ((forecastAtCompletion - estimateTotal) / estimateTotal) * 100 : 0;
 
       return {
         estimateTotal,
