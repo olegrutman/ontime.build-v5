@@ -110,9 +110,9 @@ export function useSupplierProjectAnalytics({
           : Promise.resolve({ data: [] as any[] }),
         supabase
           .from('change_orders')
-          .select('id, co_number, status, total_amount, created_at')
+          .select('id, co_number, status, tc_submitted_price, created_at')
           .eq('project_id', projectId)
-          .in('status', ['DRAFT', 'SUBMITTED', 'APPROVED']),
+          .in('status', ['draft', 'shared', 'submitted', 'approved']),
         // Price overrides via po_line_items joined to our POs
         supabase
           .from('purchase_orders')
@@ -176,7 +176,7 @@ export function useSupplierProjectAnalytics({
         }
         if (inv.status === 'DRAFT') return;
         // open invoice
-        const refDate = inv.due_date || inv.submitted_at || inv.created_at;
+        const refDate = inv.submitted_at || inv.created_at;
         if (!refDate) return;
         const daysPast = Math.floor((now.getTime() - new Date(refDate).getTime()) / (1000 * 60 * 60 * 24));
         bucketAge(daysPast, inv.total_amount || 0, aging);
@@ -258,7 +258,7 @@ export function useSupplierProjectAnalytics({
       // ── Future demand ──
       const activeCOs = {
         count: cos.length,
-        total: cos.reduce((s, c) => s + (c.total_amount || 0), 0),
+        total: cos.reduce((s, c) => s + (c.tc_submitted_price || 0), 0),
       };
 
       // ── Timeline ──
@@ -276,7 +276,7 @@ export function useSupplierProjectAnalytics({
         events.push({ ts: r.created_at, type: 'RETURN', title: `Return / credit issued`, amount: r.credit_subtotal });
       });
       cos.forEach(c => {
-        events.push({ ts: c.created_at, type: 'CO', title: `Change order ${c.co_number || ''} (${c.status})`, amount: c.total_amount });
+        events.push({ ts: c.created_at, type: 'CO', title: `Change order ${c.co_number || ''} (${c.status})`, amount: c.tc_submitted_price });
       });
       events.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 
