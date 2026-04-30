@@ -305,29 +305,31 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
             </div>
             <div style={{ fontSize: '0.66rem', color: C.muted }}>{a.packs.length} packs · click to open POs</div>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <THead cols={['Pack', 'Estimate', 'Ordered', 'Delivered', 'Variance', 'Status']} />
-            <tbody>
-              {a.packs.map(p => {
-                const pill: PillType = p.status === 'over' ? 'pr' : p.status === 'watch' ? 'pa' : 'pg';
-                const label = p.status === 'over' ? 'Over' : p.status === 'watch' ? 'Watch' : 'OK';
-                return (
-                  <TRow
-                    key={p.packName}
-                    cells={[
-                      <TdN>{p.packName}</TdN>,
-                      <TdM>{fmt(p.estimate)}</TdM>,
-                      <TdM>{fmt(p.ordered)}</TdM>,
-                      <TdM>{fmt(p.delivered)}</TdM>,
-                      <TdM>{p.variance >= 0 ? `+${fmt(p.variance)}` : `-${fmt(Math.abs(p.variance))}`} ({p.variancePct == null ? 'no estimate' : pctLabel(p.variancePct)})</TdM>,
-                      <Pill type={pill}>{label}</Pill>,
-                    ]}
-                    onClick={() => onNavigate('purchase-orders')}
-                  />
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
+              <THead cols={['Pack', 'Estimate', 'Ordered', 'Delivered', 'Variance', 'Status']} />
+              <tbody>
+                {a.packs.map(p => {
+                  const pill: PillType = p.status === 'over' ? 'pr' : p.status === 'watch' ? 'pa' : 'pg';
+                  const label = p.status === 'over' ? 'Over' : p.status === 'watch' ? 'Watch' : 'OK';
+                  return (
+                    <TRow
+                      key={p.packName}
+                      cells={[
+                        <TdN>{p.packName}</TdN>,
+                        <TdM>{fmt(p.estimate)}</TdM>,
+                        <TdM>{fmt(p.ordered)}</TdM>,
+                        <TdM>{fmt(p.delivered)}</TdM>,
+                        <TdM>{p.variance >= 0 ? `+${fmt(p.variance)}` : `-${fmt(Math.abs(p.variance))}`} ({p.variancePct == null ? 'no estimate' : pctLabel(p.variancePct)})</TdM>,
+                        <Pill type={pill}>{label}</Pill>,
+                      ]}
+                      onClick={() => onNavigate('purchase-orders')}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
