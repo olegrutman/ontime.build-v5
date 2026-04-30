@@ -73,6 +73,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
 
+  // ─── Buyer materials analytics (only when TC is materials-responsible) ───
+  const matEstimateForAnalytics = financials.materialEstimate || financials.approvedEstimateSum || 0;
+  const buyerAnalyticsQuery = useBuyerMaterialsAnalytics({
+    projectId,
+    buyerOrgId: currentOrgId,
+    estimateTotal: matEstimateForAnalytics,
+    enabled: !!financials.isTCMaterialResponsible,
+  });
+
   // ─── GC Contract (upstream, read-only) ───
   const gcContract = financials.upstreamContract;
   const gcContractVal = gcContract?.contract_sum || 0;
