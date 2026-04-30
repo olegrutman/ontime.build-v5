@@ -118,6 +118,9 @@ export function TCDashboardView({
 
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
 
+        {/* Materials Pulse — at-a-glance portfolio materials health */}
+        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+
         {/* KPI Grid — 3 cols for TC */}
         <KpiGrid>
 
