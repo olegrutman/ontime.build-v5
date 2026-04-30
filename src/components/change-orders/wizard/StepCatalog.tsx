@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X, ChevronRight, ChevronDown, MapPin, ArrowLeft, Sparkles, LayoutGrid } from 'lucide-react';
+import { Search, X, ChevronRight, ChevronDown, MapPin, ArrowLeft, Sparkles, LayoutGrid, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
@@ -15,6 +15,7 @@ import { StepCatalogModeSwitch, type ScopePickerMode } from './StepCatalogModeSw
 import { StepCatalogQA } from './StepCatalogQA';
 import { StepCatalogTypeFallback } from './StepCatalogTypeFallback';
 import type { SuggestResponse } from '@/hooks/useScopeSuggestions';
+import { AddCustomItemDialog } from './AddCustomItemDialog';
 
 interface StepCatalogProps {
   data: COWizardData;
