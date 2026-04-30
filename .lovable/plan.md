@@ -1,114 +1,126 @@
-# POS Adapters: BisTrack, Spruce, SupplyPro — what it really takes
+# Per-Project Supplier Analytics — Expansion Plan
 
-## TL;DR
+## Why (real-world lumber/material yard lens)
 
-You don't have to integrate with three platforms. You have to integrate with **one shape of data** (PO, ack, ASN, invoice, item master) plus **two transports** (EDI X12 over file/SFTP and modern REST). All three vendors converge on those.
+Today, `SupplierProjectOverview` shows 6 cards: Estimate, Ordered, Deliveries, Billed, Received, Outstanding — plus pack-by-pack ordered vs estimate. That's a solid finance/throughput view, but a real yard manager, A/R clerk, and outside sales rep also need to answer:
 
-- **Epicor BisTrack** — modern REST API (OAuth, JSON), separately licensed by the dealer. Best path is the BisTrack API; EDI 850/856/810 also supported.
-- **ECi Spruce** — has a REST API ("Spruce API") but most field deployments still run on **EDI X12** (850 PO, 855 ack, 856 ASN, 810 invoice, 832 price catalog). Vendor partners like Saberis broker most third-party flows.
-- **Hyphen SupplyPro / BuildPro** — public REST API exists (saw the docs: BuildPro Integration APIs, BRIX APIs, Wallet API). Geared at production homebuilders, not yards. SupplyPro Connect is the bridge to a yard's ERP.
+1. **"How is THIS job actually consuming material — and what's left to sell into it?"** (sell-through, remaining wallet share, re-order velocity)
+2. **"Am I going to get paid on time on this job?"** (project-level aging, days-to-pay trend, lien/notice clock)
+3. **"What's the operational risk on the next truck?"** (backorders, partial fills, returns/credits eating margin)
+4. **"Is this customer profitable on this job?"** (GM% per pack, returns ratio, price overrides)
+5. **"Where will the next PO come from?"** (un-ordered packs, COs/WOs that imply more material)
 
-So "even an export-only adapter would unlock real adoption" is the right framing — and **export-only via EDI files is ~80% of the win for ~20% of the effort**, because every yard already knows how to ingest a PO PDF, an 850, or a CSV from a vendor.
-
-## What "export-only" means in practice
-
-For each PO the GC/TC sends through your app, the **supplier** can:
-1. Open the PO in the app and click **Export → BisTrack / Spruce / SupplyPro**, or
-2. Receive the PO automatically in their POS inbox (push), or
-3. Have your app drop a file into an SFTP folder their POS watches nightly.
-
-The supplier's POS then creates the sales order on their side. **No two-way sync, no inventory pull, no price book pull.** That's it. Round-trip (ASN, invoice) is Phase 2.
-
-## Three delivery modes, ranked by how fast a real yard will adopt
-
-| Mode | Friction for yard | Friction for you |
-|------|-------------------|------------------|
-| **A. Email PDF + CSV attachment** to a yard inbox (`orders@yardname.com`) | Zero — they already do this | Zero — you have `send-po` already |
-| **B. SFTP drop of an X12 850 file** in a folder their POS polls | Medium — yard IT sets up folder + mapping once | Medium — write an X12 850 generator |
-| **C. Direct API push** (BisTrack REST, Spruce API, SupplyPro Connect) | Low — once mapped, fully automated | High — per-vendor auth, schemas, sandbox, certification |
-
-A real lumber-yard rollout looks like: ship A on day one, B for the yards big enough to care (top 20%), C only for the 2-3 anchor accounts that justify the engineering quarter.
+None of those are answered today on the per-project supplier view. This plan adds them as **new cards/sections** alongside the existing 6 — nothing is removed.
 
 ---
 
-## Phased build plan
+## What to add (in priority order)
 
-### Phase 0 — "Adapter-ready" foundation (1 sprint)
+### 1. Sell-Through & Remaining Wallet (Card 7)
+Right of "Total Ordered". Shows:
+- **Remaining estimate $** = `estimate − ordered` (already computed, surface it as a primary number)
+- **Wallet capture %** = ordered ÷ estimate
+- **Re-order velocity**: POs/week over last 4 weeks (sparkline)
+- **Days since last PO** (stale-job indicator)
+- **Packs not yet ordered** count → click to filter PO list
 
-Without this, every later phase is more painful.
+*Why:* Outside sales' #1 question is "what's left on this job and is it slipping away to a competitor?" Stale-PO + un-ordered-packs flags surface that.
 
-- New table `external_po_exports`: `po_id`, `target_system` (`BISTRACK | SPRUCE | SUPPLYPRO | EMAIL_PDF | EDI_850 | CUSTOM`), `status` (`QUEUED | SENT | ACK | FAILED`), `payload_url` (storage), `external_ref`, `last_error`, timestamps.
-- New table `supplier_integrations`: per `supplier.id` → `target_system`, `transport` (`EMAIL | SFTP | API`), encrypted creds JSONB, `vendor_code_map` JSONB (their internal customer ID for this GC).
-- A normalizer (`buildPoExportPayload(po_id)`) that pulls a PO + lines + GC + supplier + tax + delivery info into a single canonical JSON. **Every adapter consumes this**, so adding a new POS later is just one more renderer.
-- New page `/supplier/integrations` to manage these per supplier.
-- Notification type `PO_EXPORT_FAILED` so the supplier sees retries instead of silence.
+### 2. Project A/R Aging Snapshot (Card 8)
+Project-scoped version of the dashboard receivables. Shows:
+- **Current / 1–30 / 31–60 / 61–90 / 90+** buckets, $ amounts, with the GC name
+- **Average DSO on this project** (paid invoices: avg days submitted→paid)
+- **Days past due on oldest open invoice**
+- **Lien/preliminary-notice deadline** flag (state-configurable, default 90 days from first delivery)
 
-### Phase 1 — Email/PDF + CSV adapter (Mode A) — **ship this first**
+*Why:* Every yard A/R clerk works job-by-job, not org-by-org, when chasing payment. The "lien clock" is the single most important date a materialman tracks.
 
-Trivially the highest ROI.
+### 3. Delivery Performance & Operations (Card 9)
+Replaces today's flat delivery list with metrics:
+- **On-time delivery %** (delivered_at vs requested date)
+- **Avg lead time** (PO created → delivered) per pack
+- **Open backorders** $ and line count (POs in `ORDERED` past their requested date)
+- **Partial deliveries** (POs where shipped qty < ordered qty) — requires `po_shipments` from earlier roadmap; until then, show "—"
+- **Next 7-day delivery calendar strip**
 
-- Extend the existing `send-po` edge function with an "Also send to yard inbox" address per supplier.
-- Generate a paired **`po-<number>.csv`** alongside the PDF — column set matches what BisTrack/Spruce/SupplyPro all accept on import: `vendor_sku, description, qty, uom, unit_price, line_total, ship_date, ship_to, customer_po, notes`.
-- Effort: **S** (1-2 days). Hits ~60% of yards immediately because every yard's order desk already lives in email.
+*Why:* Dispatch and yard ops measure themselves on OTIF (on-time-in-full). Backorders are the #1 source of GC complaints.
 
-### Phase 2 — EDI X12 generator (Mode B) — the real unlock
+### 4. Returns & Credits Impact (Card 10)
+- **Total returns $** issued on this project
+- **Return rate** = returns ÷ delivered (red if >3%)
+- **Credit memos outstanding** (issued but not applied)
+- **Top return reasons** (top 3 with $ totals) — pulled from existing returns table
 
-- Add an X12 generator (Deno, no SDK needed; X12 is just `*` and `~` delimited segments). Start with **850 (Purchase Order)** only — that's "export-only" by definition.
-- New edge function `export-po-edi850` that takes a PO id, builds the 850, writes it to Supabase Storage (`edi-outbox/<supplier>/<po>.edi`), and either:
-  - emails it as an attachment, or
-  - pushes via SFTP if the supplier configured one (use `npm:ssh2-sftp-client`).
-- Required X12 segments for an 850: ISA / GS / ST / BEG / REF / DTM / N1 (ship-to, bill-to) / PO1 (line items) / CTT / SE / GE / IEA. Roughly 80 lines of code per renderer.
-- BisTrack and Spruce both publish their **EDI mapping spec** (which qualifiers they expect for ship-to, UOM codes, etc.). One spec covers most yards on each platform.
-- Add 832 (price catalog) **inbound** later if you want to pre-price POs from the yard's catalog — that's the real two-way upgrade.
-- Effort: **M** (1 sprint for 850 + SFTP). Adds another ~25% of yards.
+*Why:* Returns silently destroy margin and are invisible today on the project view. A 5% return rate on a $200k job is $10k gone.
 
-### Phase 3 — Vendor-specific REST adapters (Mode C)
+### 5. Project Margin & Pricing Health (Card 11)
+- **Estimated GM%** vs **Realized GM%** (requires cost on `catalog_items` or PO line `unit_cost`; if absent, show "Cost data needed" CTA)
+- **Price-override count** (PO lines where `price_adjusted_by_supplier = true`) and total $ given away
+- **Discount $ vs list** (if list price tracked)
+- Per-pack GM% mini-bar
 
-Only build the one(s) where you have an anchor customer asking for it.
+*Why:* The owner's job-by-job profitability question. Override tracking catches sales reps over-discounting.
 
-#### 3a. Hyphen SupplyPro Connect (easiest, public docs)
-- Public REST API at `developer-docs.hyphensolutions.com`. Bearer-token auth.
-- Map our PO → `BuildPro Integration` order endpoint; map our delivery → `BRIX` schedule endpoint; map our invoice → `Wallet` payment endpoint (later).
-- Hyphen is a homebuilder-side platform, so this only matters if the GC is one of the production builders that uses BuildPro. When it does, **the dealer adoption is automatic** because the dealer already has a SupplyPro account.
-- Effort: **M** (1-2 sprints).
+### 6. Future Demand Signal (Card 12)
+- **Active COs/WOs** on this project (count + $) — pulled from `change_orders` joined to project
+- **Estimates submitted but not yet approved** (already partly shown — promote to a leading indicator)
+- **GC's project schedule milestones** (if `project_schedule` data available) — show "Framing starts 2025-06-15 → likely lumber draw"
 
-#### 3b. Epicor BisTrack API
-- REST + JSON, OAuth 2.0. Requires the dealer to have the **BisTrack API license** (separately sold by Epicor — confirm with the customer before starting).
-- Endpoints needed for export-only: customer lookup, sales-order create, line-item add. ~6 calls.
-- Need an Epicor sandbox tenant — typically requires the dealer to grant access; can take 2-4 weeks of partner paperwork.
-- Effort: **L** (1 quarter end-to-end including cert).
+*Why:* Lets the inside sales desk pre-stage material and offer JIT delivery. This is the "why didn't you tell me they needed trusses Friday" prevention card.
 
-#### 3c. ECi Spruce API
-- REST API exists but is gated; ECi often routes integrators through partners (Saberis is the dominant one — most yards already pay them for vendor catalog ingestion).
-- **Realistic shortcut:** instead of integrating with Spruce directly, **drop the EDI 850 file in the format Saberis already accepts**, and let the yard's existing Saberis subscription do the last mile into Spruce. Same for BisTrack.
-- Effort: **L** direct, **S** via Saberis hand-off.
-
-### Phase 4 — Round-trip (acks + ASN + invoice)
-
-Only after suppliers have lived on Phase 1-2 for a while and ask for it.
-
-- **855 PO Acknowledgement** inbound → flips your PO from `SUBMITTED` to `ACCEPTED` automatically.
-- **856 ASN** inbound → creates `po_shipments` rows (the table from the supplier-roadmap Phase 2.3) with `qty_shipped`, BOL, scheduled delivery date.
-- **810 Invoice** inbound → creates an `invoices` row in `DRAFT`, GC reviews and approves.
-- Effort: **L**, but each segment is the same X12 work pattern as the 850.
+### 7. Project Activity Timeline (Side panel, collapsible)
+Single chronological feed of: PO created → priced → delivered → invoiced → paid → returns → COs. Filterable by event type. Today the supplier has to bounce between tabs to reconstruct what happened.
 
 ---
 
-## Engineering & ops realities to plan for
+## Layout
 
-- **No "build once for all three"** — there's a normalizer in the middle, but each platform has its own UOM table, customer-ID format, and required-field quirks. Budget ~3 weeks per direct REST integration after the first one.
-- **Each direct API integration needs a sandbox tenant from the vendor.** Budget 2-6 weeks of vendor paperwork; you cannot move faster than this.
-- **Certification.** Hyphen and Epicor require partner-program enrollment if you want to be listed in their marketplace. Listing is what actually drives yard adoption — the engineering is half the battle, the marketplace listing is the other half.
-- **EDI errors are silent.** You need a per-supplier dashboard for transmission status, retries, and parse errors. The `external_po_exports` table above is the substrate; the UI is half a day on top of it.
-- **Customer-code mapping is the boring part that breaks everything.** "Apex Builders" in your app is `APEX01` in their POS. Build the `vendor_code_map` JSONB on `supplier_integrations` from day one and let the supplier edit it inline when an export fails.
-- **Pricing field is the political part.** If your PO export sends a `unit_price`, the yard's POS will overwrite their own price book — most yards refuse this. Make `include_prices` an opt-in toggle per supplier integration; default OFF for EDI/API exports, ON only for the email/PDF path.
+Existing 6 cards stay in place (rows 1–2). Add:
 
-## Recommendation
+```text
+Row 3:  [ Sell-Through (7) ]   [ A/R Aging (8) ]
+Row 4:  [ Delivery Perf (9) ]  [ Returns (10) ]
+Row 5:  [ Margin & Pricing (11) ] [ Future Demand (12) ]
+Row 6:  [ Project Activity Timeline — full width, collapsible ]
+```
 
-1. **Ship Phase 1 (email + CSV) this week.** That alone closes the "supplier silently re-keys our PO into their POS" complaint for 60% of yards.
-2. **Ship Phase 2 (EDI 850 export over SFTP/email) next quarter** — that closes another ~25%.
-3. **Defer Phase 3 until you have a named anchor account** asking for direct SupplyPro/BisTrack push. When that customer shows up, do **SupplyPro first** (cheapest API, public docs, fastest cert).
-4. **Skip direct Spruce integration entirely** for v1 — partner with Saberis or ship Spruce's expected EDI 850. The math doesn't justify the cert work yet.
-5. **Don't promise round-trip until Phase 4.** The single biggest support burden for ERP integrations is broken acks; it's easier to add them on demand than to support them everywhere.
+Same `KpiCard` / `KpiGrid` primitives already used → zero design drift.
 
-Net: realistically 1 sprint to delight 60% of yards, 1 quarter to delight 85%, and a full FY of vendor paperwork to delight the remaining 15% who specifically want native API push.
+---
+
+## Technical details
+
+**No schema changes required for cards 1, 2, 3 (partial), 4, 6, 7.** All data exists in `purchase_orders`, `invoices`, `returns`, `change_orders`, `supplier_estimates`, `project_schedule`.
+
+**Schema additions needed for full fidelity (defer to follow-up if not approved now):**
+- `purchase_orders.requested_delivery_date` (date) — needed for OTIF % in card 9
+- `po_line_items.unit_cost` (numeric) — needed for realized GM% in card 11. Falls back to `catalog_items.unit_cost` if present.
+- `customer_lien_settings(supplier_id, state, notice_days, lien_days)` — for card 2's lien clock. Until then, hardcode 90-day default.
+- Backorder/partial detection assumes the `po_shipments` table from the earlier supplier roadmap (Phase 2). Until then, card 9 shows "Setup required" for backorder/partial metrics.
+
+**New hook**: `useSupplierProjectAnalytics(projectId, supplierId)` aggregating all six new computations in a single React Query call (server-side via a Postgres view `v_supplier_project_analytics` to keep client lean).
+
+**New components** (under `src/components/project/supplier-analytics/`):
+- `SupplierSellThroughCard.tsx`
+- `SupplierProjectAgingCard.tsx`
+- `SupplierDeliveryPerfCard.tsx`
+- `SupplierReturnsImpactCard.tsx`
+- `SupplierProjectMarginCard.tsx`
+- `SupplierFutureDemandCard.tsx`
+- `SupplierProjectTimeline.tsx`
+
+Mounted from `SupplierProjectOverview.tsx` after the existing `KpiGrid`.
+
+**Notifications** (additive, reuse existing system): `PROJECT_STALE_NO_PO` (no PO in 21 days on active project), `PROJECT_LIEN_CLOCK_30_DAYS`, `PROJECT_BACKORDER_OVERDUE`. All three add to the per-project supplier "needs attention" surface.
+
+**Privacy**: All computations stay within the supplier's own POs/invoices/returns. No new cross-org data exposure. RLS unchanged.
+
+---
+
+## Phasing recommendation
+
+- **Phase A (no schema)**: Cards 1, 2, 4, 6, 7 + timeline. Ship-able immediately against current data.
+- **Phase B (light schema)**: Add `requested_delivery_date` + `unit_cost`, then enable cards 3 and 5 fully.
+- **Phase C (depends on supplier roadmap Phase 2)**: Backorder/partial-fill metrics in card 3 once `po_shipments` lands.
+
+Reply with which phase to build first (A is the obvious start).
