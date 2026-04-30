@@ -9,6 +9,8 @@ import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import { C, fontVal, fontMono, fontLabel, fmt, fmtSigned, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
+import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -61,6 +63,12 @@ export function TCDashboardView({
   const projectCreated = projects.length > 0;
 
   const activeProjects = projects.filter(p => p.status !== 'archived');
+
+  // Materials Pulse — portfolio-wide rollup
+  const { data: materialsPulse, isLoading: pulseLoading } = useMaterialsPulse({
+    buyerOrgId: orgId,
+    projectIds: activeProjects.map(p => p.id),
+  });
 
   // Derive per-project data from projectFinancials
   const pf = projectFinancials.filter(p => p.revenue > 0 || p.costs > 0 || p.paidToYou > 0);
@@ -115,6 +123,9 @@ export function TCDashboardView({
         <OrgInviteBanner />
 
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
+
+        {/* Materials Pulse — at-a-glance portfolio materials health */}
+        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
 
         {/* KPI Grid — 3 cols for TC */}
         <KpiGrid>

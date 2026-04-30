@@ -9,6 +9,8 @@ import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
+import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -98,6 +100,12 @@ export function GCDashboardView({
   // Derive per-project data
   const activeProjects = projects.filter(p => !['archived', 'completed'].includes(p.status));
 
+  // Materials Pulse — portfolio-wide rollup
+  const { data: materialsPulse, isLoading: pulseLoading } = useMaterialsPulse({
+    buyerOrgId: orgId,
+    projectIds: activeProjects.map(p => p.id),
+  });
+
   // Change orders from recentDocs
   const coList = recentDocs.filter(d => d.type === 'change_order');
   const coCount = coList.length;
@@ -148,6 +156,9 @@ export function GCDashboardView({
         {pendingInvites.length > 0 && (
           <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />
         )}
+
+        {/* Materials Pulse — at-a-glance portfolio materials health */}
+        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
 
         {/* KPI Grid */}
         <KpiGrid>
