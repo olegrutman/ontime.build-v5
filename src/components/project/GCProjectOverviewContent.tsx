@@ -270,6 +270,14 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const matPending = financials.materialOrderedPending;
   const matPct = matEstimate > 0 ? Math.round((matOrdered / matEstimate) * 100) : 0;
 
+  // ─── Buyer materials analytics (only when GC is materials-responsible) ───
+  const buyerAnalyticsQuery = useBuyerMaterialsAnalytics({
+    projectId,
+    buyerOrgId: currentOrgId,
+    estimateTotal: matEstimate,
+    enabled: !!financials.isGCMaterialResponsible,
+  });
+
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (pendingInvoices.length > 0) {
