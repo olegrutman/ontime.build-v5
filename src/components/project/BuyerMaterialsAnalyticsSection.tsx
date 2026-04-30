@@ -310,7 +310,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                       <TdM>{fmt(p.estimate)}</TdM>,
                       <TdM>{fmt(p.ordered)}</TdM>,
                       <TdM>{fmt(p.delivered)}</TdM>,
-                      <TdM>{p.variance >= 0 ? `+${fmt(p.variance)}` : `-${fmt(Math.abs(p.variance))}`} ({pctLabel(p.variancePct)})</TdM>,
+                      <TdM>{p.variance >= 0 ? `+${fmt(p.variance)}` : `-${fmt(Math.abs(p.variance))}`} ({p.variancePct == null ? 'no estimate' : pctLabel(p.variancePct)})</TdM>,
                       <Pill type={pill}>{label}</Pill>,
                     ]}
                     onClick={() => onNavigate('purchase-orders')}
