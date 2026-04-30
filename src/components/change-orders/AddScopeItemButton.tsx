@@ -189,22 +189,27 @@ export function AddScopeItemButton({
       const maxSort = await supabase.from('co_line_items').select('sort_order').eq('co_id', coId).order('sort_order', { ascending: false }).limit(1).maybeSingle();
       const nextSort = (maxSort.data?.sort_order ?? 0) + 1;
 
-      const rows = data.selectedItems.map((item, idx) => ({
-        co_id: coId,
-        org_id: orgId,
-        item_name: item.item_name,
-        unit: item.unit || 'EA',
-        catalog_item_id: item.id,
-        division: item.division,
-        category_name: item.category_name,
-        created_by_role: role,
-        sort_order: nextSort + idx,
-        // Per-item context — prefer per-item tag, fall back to wizard-level location.
-        location_tag: item.locationTag || data.locationTag || null,
-        reason: (item.reason ?? data.reason) || null,
-        // Prefer the Review-step edited description, fall back to QA reasonDescription.
-        description: data.itemDescriptions?.[item.id] || item.reasonDescription || null,
-      }));
+      const rows = data.selectedItems.map((item, idx) => {
+        const anyItem = item as typeof item & { isCustom?: boolean; catalogId?: string | null };
+        // Custom one-offs must persist with catalog_item_id = null (synthetic id won't satisfy FK).
+        const catalogItemId = anyItem.isCustom ? (anyItem.catalogId ?? null) : item.id;
+        return {
+          co_id: coId,
+          org_id: orgId,
+          item_name: item.item_name,
+          unit: item.unit || 'EA',
+          catalog_item_id: catalogItemId,
+          division: item.division,
+          category_name: item.category_name,
+          created_by_role: role,
+          sort_order: nextSort + idx,
+          // Per-item context — prefer per-item tag, fall back to wizard-level location.
+          location_tag: item.locationTag || data.locationTag || null,
+          reason: (item.reason ?? data.reason) || null,
+          // Prefer the Review-step edited description, fall back to QA reasonDescription.
+          description: data.itemDescriptions?.[item.id] || item.reasonDescription || null,
+        };
+      });
 
       const { error } = await supabase.from('co_line_items').insert(rows);
       if (error) throw error;
