@@ -92,34 +92,36 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, childr
       className="animate-fade-in"
     >
       <div style={{ height: 3, background: accent }} />
-      <div style={{ padding: '14px 16px 0' }}>
+      <div className="px-3 sm:px-4 pt-3 sm:pt-3.5">
         {/* Icon + Pills row — fixed height */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, minHeight: 36 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{icon}</div>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }} className="sm:w-9 sm:h-9 sm:text-[18px]">{icon}</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end', minHeight: 22 }}>
             {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
           </div>
         </div>
-        {/* Label — fixed height zone for alignment */}
-        <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, marginBottom: 2, fontWeight: 600, minHeight: 28, display: 'flex', alignItems: 'flex-start' }}>
+        {/* Label */}
+        <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, marginBottom: 2, fontWeight: 600, minHeight: 24, display: 'flex', alignItems: 'flex-start' }}>
           <span className="line-clamp-2">{label}</span>
         </div>
-        {/* Value — single line */}
-        <div style={{ fontSize: '2rem', color: C.ink, lineHeight: 1.1, marginBottom: 2, minHeight: 36, display: 'flex', alignItems: 'center', ...fontVal }}>{value}</div>
-        {/* Sub — fixed height zone */}
+        {/* Value */}
+        <div style={{ color: C.ink, lineHeight: 1.1, marginBottom: 2, display: 'flex', alignItems: 'center', ...fontVal }} className="text-2xl sm:text-[2rem] min-h-[30px] sm:min-h-[36px]">{value}</div>
+        {/* Sub */}
         <div style={{ fontSize: '0.67rem', color: C.muted, marginBottom: 10, minHeight: 24 }}>
           <span className="line-clamp-2">{sub}</span>
         </div>
       </div>
       <div
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: C.surface2, fontSize: '0.67rem', color: C.muted, fontWeight: 600, borderTop: `1px solid ${C.border}` }}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: C.surface2, fontSize: '0.67rem', color: C.muted, fontWeight: 600, borderTop: `1px solid ${C.border}` }}
         className="hover:bg-[#FFF7E6] transition-colors"
       >
         <span>{open ? 'Collapse' : 'Expand for detail'}</span>
         <ChevronRight size={13} style={{ transition: 'transform 0.3s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }} />
       </div>
       <div onClick={(e) => e.stopPropagation()} style={{ maxHeight: open ? 1600 : 0, overflow: open ? 'auto' : 'hidden', transition: 'max-height 0.44s cubic-bezier(.22,1,.36,1), opacity 0.3s', opacity: open ? 1 : 0 }}>
-        {children}
+        <div className="overflow-x-auto">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -141,7 +143,7 @@ export function THead({ cols }: { cols: string[] }) {
 export function TdN({ children }: { children: ReactNode }) { return <span style={{ fontWeight: 700, color: C.ink }}>{children}</span>; }
 export function TdM({ children }: { children: ReactNode }) { return <span style={{ ...fontMono, fontSize: '0.78rem', color: C.ink2 }}>{children}</span>; }
 
-export const cellStyle = { padding: '9px 12px', fontSize: '0.76rem', color: C.muted, borderBottom: `1px solid ${C.border}` };
+export const cellStyle = { padding: '7px 9px', fontSize: '0.74rem', color: C.muted, borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' as const };
 export const cellStyleR = { ...cellStyle, textAlign: 'right' as const };
 export const totalRowStyle = { background: C.surface2, fontWeight: 700 };
 
