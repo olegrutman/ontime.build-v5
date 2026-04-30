@@ -98,7 +98,7 @@ export function useSupplierProjectAnalytics({
             if (!ids.length) return { data: [] as any[] };
             return supabase
               .from('invoices')
-              .select('id, invoice_number, total_amount, status, submitted_at, approved_at, paid_at, due_date, created_at, po_id')
+              .select('id, invoice_number, total_amount, status, submitted_at, approved_at, paid_at, created_at, po_id')
               .in('po_id', ids);
           }),
         supplierOrgId
