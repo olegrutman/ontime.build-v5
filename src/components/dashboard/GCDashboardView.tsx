@@ -157,6 +157,9 @@ export function GCDashboardView({
           <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />
         )}
 
+        {/* Materials Pulse — at-a-glance portfolio materials health */}
+        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+
         {/* KPI Grid */}
         <KpiGrid>
           {/* Card 1: Total Owner Budget / Revenue */}
