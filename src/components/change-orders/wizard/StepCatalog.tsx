@@ -318,8 +318,19 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
 
       {/* Mode switch — visible in browse/type modes; in QA mode it sits at the
           bottom escape row so the question owns the top of the card. */}
-      {mode !== 'qa' && (
-        <StepCatalogModeSwitch value={mode} onChange={(m) => { setMode(m); setTypeResults(null); setTypeSelected(new Set()); }} />
+      {mode !== 'qa' ? (
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <StepCatalogModeSwitch value={mode} onChange={(m) => { setMode(m); setTypeResults(null); setTypeSelected(new Set()); }} />
+          <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setCustomDialogOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Add custom item
+          </Button>
+        </div>
+      ) : (
+        <div className="flex justify-end">
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={() => setCustomDialogOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Can't find it? Add custom item
+          </Button>
+        </div>
       )}
 
       {/* QA mode */}
