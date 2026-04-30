@@ -100,6 +100,12 @@ export function GCDashboardView({
   // Derive per-project data
   const activeProjects = projects.filter(p => !['archived', 'completed'].includes(p.status));
 
+  // Materials Pulse — portfolio-wide rollup
+  const { data: materialsPulse, isLoading: pulseLoading } = useMaterialsPulse({
+    buyerOrgId: orgId,
+    projectIds: activeProjects.map(p => p.id),
+  });
+
   // Change orders from recentDocs
   const coList = recentDocs.filter(d => d.type === 'change_order');
   const coCount = coList.length;
