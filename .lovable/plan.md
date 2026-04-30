@@ -1,81 +1,107 @@
-## Why this change
+## The gap
 
-Right now the GC dashboard surfaces **one** materials KPI card ("MATERIALS — GENERAL CONTRACTOR POs") that only shows total PO dollar value and a count. To actually understand the *condition* of material orders across projects, a user has to:
+You want **interior siding installation — e.g., T&G wood plank on ceilings**. Today the catalog has:
 
-1. Scroll past 8 KPI cards, the Portfolio Metrics table, and Needs Attention,
-2. Pick a project,
-3. Open the Buyer Materials Analytics section inside that project.
+- `envelope_exterior / siding_trim` → only **exterior** siding
+- `demo / selective_demo / d4 Ceiling demo` → tear-out, not install
+- No `interior_finish` division at all (no T&G, shiplap, beadboard, paneling, wainscot, beams, tile, drywall finish, trim)
 
-That's three clicks and a lot of scrolling to answer simple, daily questions a GC actually asks every morning:
+So a TC trying to add "T&G wood ceiling install" hits a dead end. The AI fallback (`suggest-scope-items`) only ranks **existing** catalog rows, so it can't rescue you either.
 
-- "Is anything **late** today?"
-- "Did a supplier **re-price** something on me?"
-- "How much cash am I **about to owe** for materials this week?"
-- "Which **project** is the materials risk concentrated in?"
+## Recommended approach (two layers)
 
-The existing per-project `BuyerMaterialsAnalytics` already computes all of this. The dashboard just doesn't aggregate it. This change rolls those signals up to the portfolio level and puts them where the eye lands first — directly under the hero, before the generic KPI grid.
+Solve it in two layers so you fix this case *and* every future "missing item" case.
 
-## Real-world design change
+### Layer 1 — Seed a real "Interior Finishes" branch (data, permanent)
 
-Add a **"Materials Pulse"** strip — a single, dense, horizontal band of 4 traffic-light tiles + a per-project hot-list — placed directly under `DashboardHero` and above the existing `KpiGrid`.
+Add a platform-level division so the right items appear in every project's CO wizard. Proposed taxonomy:
 
 ```text
-┌─ Hero ─────────────────────────────────────────────────────────┐
-└────────────────────────────────────────────────────────────────┘
-┌─ MATERIALS PULSE ──────────────────────────── this week ▾ ────┐
-│  🚦 Late      💲 Re-priced   💵 Due ≤14d    📦 In Transit     │
-│   2 POs       +$1.4k         $48k          5 POs / $22k       │
-│   $12k @risk  3 of 41 lines  31-60d: $8k   ETA today: 2       │
-│  [RED]        [AMBER]        [AMBER]        [GREEN]            │
-├────────────────────────────────────────────────────────────────┤
-│  Hot projects (materials risk)                                 │
-│  • Main St Apartments    Late 2 · Re-priced +$900   →         │
-│  • 5 Cherry Hills Park   Due $22k in 9 days         →         │
-└────────────────────────────────────────────────────────────────┘
+interior_finish /
+├── ceiling_finish
+│   ├── if_tg_wood_ceiling      "T&G wood ceiling — install"        SF
+│   ├── if_shiplap_ceiling      "Shiplap ceiling — install"         SF
+│   ├── if_beadboard_ceiling    "Beadboard ceiling — install"       SF
+│   ├── if_wood_plank_ceiling   "Wood plank ceiling — install"      SF
+│   ├── if_decorative_beams     "Decorative ceiling beams"          LF
+│   └── if_ceiling_trim         "Ceiling perimeter trim"            LF
+├── wall_finish
+│   ├── if_tg_wood_wall         "T&G wood wall paneling — install"  SF
+│   ├── if_shiplap_wall         "Shiplap wall — install"            SF
+│   ├── if_wainscot             "Wainscot — install"                SF
+│   └── if_accent_wall          "Accent wood wall — install"        SF
+└── prep
+    ├── if_furring_strips       "Furring strips for wood ceiling"   SF
+    └── if_substrate_prep       "Substrate prep / blocking"         SF
 ```
 
-Why these four tiles (and not more):
+Each row gets:
+- `applicable_zone` = `interior_ceiling` or `interior_wall`
+- `applicable_work_types` = `['remodel','new_construction','repair']`
+- `applicable_reasons` = `['scope_addition','design_change','owner_request']`
+- `aliases` = e.g. `['t&g','tongue and groove','tongue & groove','plank ceiling','wood ceiling','tg ceiling']` — so AI search and free-text matching find them
+- `is_platform = true`, `org_id = null`
 
-- **Late** — the only metric that costs schedule. Red the moment count > 0.
-- **Re-priced by supplier** — catches silent margin erosion. The user explicitly said the existing per-project version of this works; surface it portfolio-wide.
-- **Cash due ≤14 days** — answers "do I have enough in the bank Friday." Pulled from the existing aging buckets.
-- **In transit / ETA today** — the positive signal. Stops the strip from being a wall of red and tells the field team what's arriving.
+This is shipped via a single migration so every org sees them immediately.
 
-Each tile is **clickable** — tapping it deep-links to a filtered Purchase Orders view (`/purchase-orders?filter=late` etc.) so it's not a dead-end summary. The hot-projects row is the bridge between portfolio rollup and per-project drill-down: at most 3 rows, each linking straight into that project's Materials section.
+### Layer 2 — "Can't find it? Add it." escape hatch (UX, durable)
 
-Mobile: tiles stack 2×2, hot-projects row becomes a vertical list, font sizes drop to match the existing `BuyerMaterialsAnalyticsSection` mobile pattern (already established in memory).
+For the next time something genuinely isn't in the catalog, give users a guarded path instead of getting stuck:
 
-The existing "MATERIALS (GENERAL CONTRACTOR POs)" card in the KPI grid stays — it answers "how much have I committed?" which is a different question (financial commitment vs. operational health). Users have told us they want both.
+1. In Step 3 (Scope) of the Add-Item wizard, when the AI fallback search returns no usable match — or always as a small secondary action — show **"+ Add custom item"**.
+2. Opens a small form: **Name**, **Unit** (EA/SF/LF/HR/LS), **Division** (dropdown of existing divisions + "Other"), **Category**, optional **Quantity**, optional **Description**.
+3. Two save modes:
+   - **One-off** (default) → inserted into `co_line_items` with `catalog_item_id = NULL` (the schema already allows this). Tagged in UI as "Custom".
+   - **Save to my org's catalog** (checkbox, only if user has org admin/owner role) → inserts an `org`-scoped row into `catalog_definitions` (`is_platform = false`, `org_id = <user's org>`), then references it from the line item. Future COs in that org will see it.
+4. Custom items still flow through the AI description generator and Review step like any other line item.
 
-## How I'll build it
+This works because:
+- `co_line_items.catalog_item_id` is already nullable with `ON DELETE SET NULL`.
+- `catalog_definitions` already supports org-scoped rows via `is_platform=false` + `org_id`, with an existing RLS policy "Org catalog readable by members".
 
-### Files to add
+### Why this combination
 
-1. **`src/hooks/useMaterialsPulse.ts`** — portfolio aggregator. Iterates active projects, calls the existing per-project analytics resolvers (`useBuyerMaterialsAnalytics` already does the heavy lifting per project), and returns:
-   ```ts
-   { lateCount, lateValue, repricedDelta, repricedLineCount, repricedTotalLines,
-     dueNext14Days, agingD31_60, inTransitCount, inTransitValue, etaToday,
-     hotProjects: [{ projectId, name, reason, value }] }
-   ```
-   To avoid N round-trips, refactor the per-project query in `useBuyerMaterialsAnalytics` into a shared SQL function that accepts an array of project IDs (or run a single multi-project query joining `purchase_orders`, `po_items`, and the existing PO stage view). RLS is unchanged — we only return rows the user can already see.
+- **Layer 1** fixes your immediate need correctly — T&G ceilings show up in the structured pick-list with proper zones, units, and AI matchability for everyone, not just one CO.
+- **Layer 2** prevents this exact conversation from repeating. Any future missing item is a 20-second add, not a support ticket. Org-level promotion lets each TC build their own working library without polluting the platform catalog.
+- We **don't** let users freely write into the platform catalog — only platform admins can promote an org item to platform-wide later (already manageable from `ScopeItemsTable` in the platform admin area).
 
-2. **`src/components/dashboard/MaterialsPulseStrip.tsx`** — pure presentational. Reuses `KpiCard`, `Pill`, `C` color tokens, `fontMono`/`fontLabel` from `@/components/shared/KpiCard` to match the established Command Center style. No new design tokens.
+## How to build
 
-### Files to edit
+### Migration (Layer 1)
 
-- **`src/components/dashboard/GCDashboardView.tsx`** — insert `<MaterialsPulseStrip />` between the `<DashboardHero />` block (line ~131) and the `<OnboardingChecklist />` / `<KpiGrid>` block. Pass `projects` and the new hook's data.
-- **`src/components/dashboard/TCDashboardView.tsx`** — same insertion, scoped to TC's POs (TCs also order materials).
-- **`src/components/dashboard/index.ts`** — export.
+`supabase/migrations/<ts>_seed_interior_finish_catalog.sql`:
 
-### Out of scope (to keep this focused)
+- `INSERT INTO catalog_definitions (...)` for the ~12 rows above.
+- Slugs like `if_tg_wood_ceiling` so they're stable and namespaced.
+- Populate `search_text` and `aliases` so the existing `suggest-scope-items` edge function ranks them on plain-English queries like "T&G wood ceiling".
 
-- No business-logic changes. Aggregation reuses the formulas already validated in `useBuyerMaterialsAnalytics` (memory: *Supplier: Dashboard*).
-- No changes to the per-project Buyer Materials Analytics section — only adds a portfolio rollup above it.
-- No changes to the existing Materials KPI card in the KPI grid (different question, both kept).
-- FC and Supplier dashboards unchanged (they have their own, role-appropriate materials views per memory).
+No schema changes — the table already supports everything we need.
 
-### Validation
+### Frontend (Layer 2)
 
-- Visual QA at 1920px and 390px viewports (matches existing mobile optimization rules in memory).
-- Confirm each tile's deep-link actually filters the destination page; if the filter param doesn't exist yet on `/purchase-orders`, fall back to the unfiltered page + scroll-to-section (and note it as a follow-up rather than blocking this PR).
-- Sanity-check totals against opening one project's Buyer Materials Analytics card — the portfolio rollup should equal the sum of per-project values.
+New small component, plus one wiring change:
+
+- **New:** `src/components/change-orders/wizard/AddCustomItemDialog.tsx`
+  - Controlled dialog with the form described above.
+  - On save, returns a `SelectedScopeItem` object the wizard can append to `data.selectedItems`. For one-off mode, `id` is a temporary `crypto.randomUUID()` and `catalog_item_id` is null when persisted.
+  - When "Save to org catalog" is checked, calls `supabase.from('catalog_definitions').insert({...})` first, then uses the returned id as `catalog_item_id`.
+
+- **Edit:** `src/components/change-orders/wizard/StepCatalog.tsx`
+  - Add a small `+ Add custom item` button at the top of the picker and inside the empty-results state.
+  - Pipe through to `AddCustomItemDialog`.
+
+- **Edit:** `src/components/change-orders/AddScopeItemButton.tsx` → `handleSaveItems`
+  - Already inserts `catalog_item_id: item.id`. Change to `catalog_item_id: item.isCustom ? null : item.id` (or use a dedicated field like `item.catalogId`) so custom one-offs persist with `null`.
+
+- **Edit:** `src/types/changeOrder.ts` (or wherever `SelectedScopeItem` lives) — add optional `isCustom?: boolean` and `catalogId?: string | null` flags.
+
+### Permissions
+
+- Anyone in the org can add a **one-off** custom item (already allowed by current `co_line_items` RLS).
+- Only org owner/admin (use existing `RequireOrgType`/role check) sees the **"Save to my org's catalog"** checkbox. Insert RLS on `catalog_definitions` must require `org_id = caller's org` — verify the existing policy covers this; if not, add one in the same migration.
+
+### Out of scope
+
+- No changes to AI prompt logic — the new catalog rows just appear in `suggest-scope-items` results once their `search_text`/`aliases` are populated.
+- No changes to invoicing, SOV, or pricing — custom items already flow through the existing CO line-item pipeline.
+- No new platform admin UI — `ScopeItemsTable` already lets platform staff curate and promote items.
