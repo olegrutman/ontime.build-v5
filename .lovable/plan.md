@@ -1,130 +1,114 @@
-# Notifications End-to-End Audit & Fix Plan
+# POS Adapters: BisTrack, Spruce, SupplyPro — what it really takes
 
-I role-played GC, TC, FC, and Supplier through every flow that fires a notification (project invites, CO/WO lifecycle, NTE caps, FC pricing, scope adds, POs, invoices, RFIs, join requests, nudges, project-added). Below is what I found, then exactly what I'll fix.
+## TL;DR
 
----
+You don't have to integrate with three platforms. You have to integrate with **one shape of data** (PO, ack, ASN, invoice, item master) plus **two transports** (EDI X12 over file/SFTP and modern REST). All three vendors converge on those.
 
-## Part 1 — Findings (what's broken right now)
+- **Epicor BisTrack** — modern REST API (OAuth, JSON), separately licensed by the dealer. Best path is the BisTrack API; EDI 850/856/810 also supported.
+- **ECi Spruce** — has a REST API ("Spruce API") but most field deployments still run on **EDI X12** (850 PO, 855 ack, 856 ASN, 810 invoice, 832 price catalog). Vendor partners like Saberis broker most third-party flows.
+- **Hyphen SupplyPro / BuildPro** — public REST API exists (saw the docs: BuildPro Integration APIs, BRIX APIs, Wallet API). Geared at production homebuilders, not yards. SupplyPro Connect is the bridge to a yard's ERP.
 
-### A. Silent enum mismatches (notifications never reach anyone)
+So "even an export-only adapter would unlock real adoption" is the right framing — and **export-only via EDI files is ~80% of the win for ~20% of the effort**, because every yard already knows how to ingest a PO PDF, an 850, or a CSV from a vendor.
 
-The client sends notification `type` strings that **don't exist** in the DB `notification_type` enum. The insert fails the RLS/enum check, the catch block in `sendCONotification` swallows it as a `console.warn`, and the recipient sees nothing.
+## What "export-only" means in practice
 
-| Where | Type sent | Status |
-|---|---|---|
-| `COAcceptBanner.tsx` (line 47, 53) | `CO_ACCEPTED` | **Not in enum.** Should be `CO_ACKNOWLEDGED` (already exists) |
-| `coNotifications.ts` map (line 71) | `FC_INPUT_REQUESTED` | **Not in enum.** No caller today, but landmine |
-| `coNotifications.ts` map (line 75) | `FC_INPUT_COMPLETED` | **Not in enum.** Same |
+For each PO the GC/TC sends through your app, the **supplier** can:
+1. Open the PO in the app and click **Export → BisTrack / Spruce / SupplyPro**, or
+2. Receive the PO automatically in their POS inbox (push), or
+3. Have your app drop a file into an SFTP folder their POS watches nightly.
 
-**Production proof:** `notifications` table shows **0** rows ever inserted with these types, yet `CO_ACKNOWLEDGED` has 4 rows — confirms the accept-banner notification path is dead.
+The supplier's POS then creates the sales order on their side. **No two-way sync, no inventory pull, no price book pull.** That's it. Round-trip (ASN, invoice) is Phase 2.
 
-### B. Visually broken (notifications arrive but render as generic gray dots)
+## Three delivery modes, ranked by how fast a real yard will adopt
 
-`NotificationItem.tsx` only maps 10 of the 27 enum values to an icon + color. Everything else falls back to a gray `Circle` with `text-muted-foreground`. The user can't tell an NTE-blocking alert from a nudge.
+| Mode | Friction for yard | Friction for you |
+|------|-------------------|------------------|
+| **A. Email PDF + CSV attachment** to a yard inbox (`orders@yardname.com`) | Zero — they already do this | Zero — you have `send-po` already |
+| **B. SFTP drop of an X12 850 file** in a folder their POS polls | Medium — yard IT sets up folder + mapping once | Medium — write an X12 850 generator |
+| **C. Direct API push** (BisTrack REST, Spruce API, SupplyPro Connect) | Low — once mapped, fully automated | High — per-vendor auth, schemas, sandbox, certification |
 
-**Unmapped (but actively used in DB):** `CO_RECALLED`, `CO_COMPLETED`, `CO_ACKNOWLEDGED`, `JOIN_REQUEST`, `NUDGE`, `RFI_SUBMITTED`, `RFI_ANSWERED`, `PROJECT_ADDED`, `NTE_REQUESTED`, `NTE_APPROVED`, `NTE_REJECTED`, `NTE_WARNING_80`, `NTE_BLOCKED_100`, `CO_SHARED`, `CO_CLOSED_FOR_PRICING`, `CO_SCOPE_ADDED`, `FC_PRICING_SUBMITTED`.
-
-### C. Channels that have never delivered (in production data)
-
-`notifications` table aggregate by type shows **0 rows** ever for: `PO_SENT`, `CHANGE_APPROVED`, `CO_SHARED`, `CO_SCOPE_ADDED`, `CO_CLOSED_FOR_PRICING`, `FC_PRICING_SUBMITTED`, `NTE_*`, `PROJECT_ADDED`. Some are new flows (acceptable), but `PO_SENT` and `CHANGE_APPROVED` are core paths — investigation shows:
-
-- `PO_SENT`: only inserted by the `send-po` edge function. No recent invocations. Likely never wired to the "Send PO" button — the button updates status but doesn't call the edge function.
-- `CHANGE_APPROVED` / `CHANGE_REJECTED`: client used to insert these from `COStatusActions.doApprove` but we removed that path in the last migration. The new `apply_co_contract_delta` trigger updates the contract sum but **does not insert a notification**, so approval is now silent to the creator.
-
-### D. Action-URL routing
-
-Only `PROJECT_INVITE` has a click-handler override (→ `/dashboard`). Other invite-style notifications (`WORK_ITEM_INVITE`, `WORK_ORDER_ASSIGNED`, `JOIN_REQUEST`) navigate to `action_url` directly. If the entity was deleted (CO recalled, project archived), user lands on a 404. No fallback.
-
-### E. Bell badge desync
-
-`useNotifications` realtime subscription only listens for `INSERT`. If user A reads a notification on tab 1, tab 2's badge stays at the old count until refresh. Minor, but reported feel-bug across roles.
-
-### F. Per-role end-to-end gaps observed
-
-| Role | Flow tested | Result |
-|---|---|---|
-| GC | CO submitted by TC → expected `CHANGE_SUBMITTED` | Works |
-| GC | GC approves CO → expected creator gets `CHANGE_APPROVED` | **Silent.** No notification sent (regression from contract-sum trigger refactor) |
-| GC | TC requests NTE increase → expected `NTE_REQUESTED` | Inserts, but renders as gray dot (Finding B) |
-| TC | GC accepts share → expected `CO_ACCEPTED` to TC | **Lost.** Enum mismatch (Finding A) |
-| TC | Forwards CO to FC → `CO_SHARED` to FC | Inserts, gray dot |
-| FC | NTE 80% reached on labor entry → `NTE_WARNING_80` | Inserts to GC, gray dot |
-| FC | Submits pricing → `FC_PRICING_SUBMITTED` | Code path exists in only one place; not wired into normal FC submit. **Never fires.** |
-| Supplier | PO sent by GC → `PO_SENT` | **Never fires** — `send-po` edge function not invoked from the "Send" button |
-| All | Mark read on phone, badge on laptop | Stale until refresh (Finding E) |
+A real lumber-yard rollout looks like: ship A on day one, B for the yards big enough to care (top 20%), C only for the 2-3 anchor accounts that justify the engineering quarter.
 
 ---
 
-## Part 2 — Implementation Plan (in order)
+## Phased build plan
 
-### Step 1 — Fix the enum-mismatch silent failures (highest-leverage bug)
+### Phase 0 — "Adapter-ready" foundation (1 sprint)
 
-- `COAcceptBanner.tsx`: replace both `CO_ACCEPTED` references with `CO_ACKNOWLEDGED` (already in enum, already mapped in `buildCONotification`). Adjust `buildCONotification` map keys accordingly so the title/body pair matches the "you accepted" wording.
-- `coNotifications.ts`: remove or rename the `FC_INPUT_REQUESTED`/`FC_INPUT_COMPLETED` map entries. Since no enum value exists and no production rows reference them, simplest fix is to delete the dead entries (and any caller — none today).
+Without this, every later phase is more painful.
 
-### Step 2 — Restore CO approve/reject notifications
+- New table `external_po_exports`: `po_id`, `target_system` (`BISTRACK | SPRUCE | SUPPLYPRO | EMAIL_PDF | EDI_850 | CUSTOM`), `status` (`QUEUED | SENT | ACK | FAILED`), `payload_url` (storage), `external_ref`, `last_error`, timestamps.
+- New table `supplier_integrations`: per `supplier.id` → `target_system`, `transport` (`EMAIL | SFTP | API`), encrypted creds JSONB, `vendor_code_map` JSONB (their internal customer ID for this GC).
+- A normalizer (`buildPoExportPayload(po_id)`) that pulls a PO + lines + GC + supplier + tax + delivery info into a single canonical JSON. **Every adapter consumes this**, so adding a new POS later is just one more renderer.
+- New page `/supplier/integrations` to manage these per supplier.
+- Notification type `PO_EXPORT_FAILED` so the supplier sees retries instead of silence.
 
-The `apply_co_contract_delta` trigger handles money but not notifications. Add a sibling trigger `notify_co_status_change` on `change_orders` AFTER UPDATE OF status that inserts a `CHANGE_APPROVED` or `CHANGE_REJECTED` notification to the CO creator (`co.created_by_user_id` + `co.org_id`) when status transitions from `submitted` → `approved`/`rejected`. Body includes the CO title and grand total. This restores the feedback loop GC ↔ TC ↔ FC without re-introducing client-side mutation.
+### Phase 1 — Email/PDF + CSV adapter (Mode A) — **ship this first**
 
-### Step 3 — Wire up the missing PO_SENT path
+Trivially the highest ROI.
 
-Audit the "Send PO" button in `PurchaseOrders.tsx` / PO detail. If status flips to `sent`/`ordered` without invoking the edge function, switch it to call `supabase.functions.invoke('send-po', …)` so the function's existing notification insert runs and the supplier actually hears about it.
+- Extend the existing `send-po` edge function with an "Also send to yard inbox" address per supplier.
+- Generate a paired **`po-<number>.csv`** alongside the PDF — column set matches what BisTrack/Spruce/SupplyPro all accept on import: `vendor_sku, description, qty, uom, unit_price, line_total, ship_date, ship_to, customer_po, notes`.
+- Effort: **S** (1-2 days). Hits ~60% of yards immediately because every yard's order desk already lives in email.
 
-### Step 4 — Fix the icon/color map for the 17 unmapped types
+### Phase 2 — EDI X12 generator (Mode B) — the real unlock
 
-Update `NotificationItem.tsx` so every enum value has a distinct icon + semantic color:
+- Add an X12 generator (Deno, no SDK needed; X12 is just `*` and `~` delimited segments). Start with **850 (Purchase Order)** only — that's "export-only" by definition.
+- New edge function `export-po-edi850` that takes a PO id, builds the 850, writes it to Supabase Storage (`edi-outbox/<supplier>/<po>.edi`), and either:
+  - emails it as an attachment, or
+  - pushes via SFTP if the supplier configured one (use `npm:ssh2-sftp-client`).
+- Required X12 segments for an 850: ISA / GS / ST / BEG / REF / DTM / N1 (ship-to, bill-to) / PO1 (line items) / CTT / SE / GE / IEA. Roughly 80 lines of code per renderer.
+- BisTrack and Spruce both publish their **EDI mapping spec** (which qualifiers they expect for ship-to, UOM codes, etc.). One spec covers most yards on each platform.
+- Add 832 (price catalog) **inbound** later if you want to pre-price POs from the yard's catalog — that's the real two-way upgrade.
+- Effort: **M** (1 sprint for 850 + SFTP). Adds another ~25% of yards.
 
-```text
-CO_*           → ClipboardList / Send / CheckCircle2 / Undo2 / Flag, amber/green/red
-NTE_REQUESTED  → DollarSign, amber
-NTE_APPROVED   → CheckCircle2, green
-NTE_REJECTED   → XCircle, red
-NTE_WARNING_80 → AlertTriangle, amber
-NTE_BLOCKED_100→ ShieldAlert, red
-RFI_SUBMITTED  → HelpCircle, blue
-RFI_ANSWERED   → MessageSquareReply, green
-JOIN_REQUEST   → UserPlus, blue
-NUDGE          → Hand, primary
-PROJECT_ADDED  → FolderPlus, primary
-FC_PRICING_SUBMITTED → DollarSign, blue
-```
+### Phase 3 — Vendor-specific REST adapters (Mode C)
 
-Use `text-warning` / `text-success` / `text-destructive` semantic tokens (not hard-coded colors) per design system rules. Add a generic `Circle / text-muted` only as final fallback for forward-compat.
+Only build the one(s) where you have an anchor customer asking for it.
 
-### Step 5 — Routing safety net
+#### 3a. Hyphen SupplyPro Connect (easiest, public docs)
+- Public REST API at `developer-docs.hyphensolutions.com`. Bearer-token auth.
+- Map our PO → `BuildPro Integration` order endpoint; map our delivery → `BRIX` schedule endpoint; map our invoice → `Wallet` payment endpoint (later).
+- Hyphen is a homebuilder-side platform, so this only matters if the GC is one of the production builders that uses BuildPro. When it does, **the dealer adoption is automatic** because the dealer already has a SupplyPro account.
+- Effort: **M** (1-2 sprints).
 
-In `NotificationItem.handleClick`, wrap the `navigate(targetUrl)` call so deleted-entity notifications (404) gracefully fall back to `/dashboard`. Quick approach: keep current behavior, but add invite-type override (`WORK_ITEM_INVITE`, `JOIN_REQUEST`) → `/dashboard` to match `PROJECT_INVITE`'s pattern.
+#### 3b. Epicor BisTrack API
+- REST + JSON, OAuth 2.0. Requires the dealer to have the **BisTrack API license** (separately sold by Epicor — confirm with the customer before starting).
+- Endpoints needed for export-only: customer lookup, sales-order create, line-item add. ~6 calls.
+- Need an Epicor sandbox tenant — typically requires the dealer to grant access; can take 2-4 weeks of partner paperwork.
+- Effort: **L** (1 quarter end-to-end including cert).
 
-### Step 6 — Realtime UPDATE listener for badge sync
+#### 3c. ECi Spruce API
+- REST API exists but is gated; ECi often routes integrators through partners (Saberis is the dominant one — most yards already pay them for vendor catalog ingestion).
+- **Realistic shortcut:** instead of integrating with Spruce directly, **drop the EDI 850 file in the format Saberis already accepts**, and let the yard's existing Saberis subscription do the last mile into Spruce. Same for BisTrack.
+- Effort: **L** direct, **S** via Saberis hand-off.
 
-In `useNotifications`, add a second `postgres_changes` subscription on `event: 'UPDATE'` for `notifications` filtered by `recipient_user_id = me`. On any UPDATE, refetch unread count. This makes the badge decrement live across tabs/devices when items are marked read.
+### Phase 4 — Round-trip (acks + ASN + invoice)
 
----
+Only after suppliers have lived on Phase 1-2 for a while and ask for it.
 
-## Part 3 — Technical details (for reference)
-
-**Files to edit (frontend):**
-- `src/components/change-orders/COAcceptBanner.tsx`
-- `src/lib/coNotifications.ts`
-- `src/components/notifications/NotificationItem.tsx`
-- `src/hooks/useNotifications.ts`
-- PO send call site (TBD during Step 3 — likely `src/components/purchase-orders/POStatusActions.tsx` or wherever the Send button lives)
-
-**Migration (Step 2):** new function `notify_co_status_change()` + AFTER UPDATE trigger on `public.change_orders`. SECURITY DEFINER, sets `search_path = public`. Inserts into `public.notifications` with type cast. No enum changes needed (`CHANGE_APPROVED`/`CHANGE_REJECTED` already exist).
-
-**No new dependencies.** No schema changes outside the one trigger.
-
-**Out of scope (deferred):**
-- "Read history" tab in the bell sheet (you didn't pick the option — staying unread-only).
-- Per-user notification preferences / mute settings.
-- Push delivery (`usePushNotifications` already exists; not changing it).
+- **855 PO Acknowledgement** inbound → flips your PO from `SUBMITTED` to `ACCEPTED` automatically.
+- **856 ASN** inbound → creates `po_shipments` rows (the table from the supplier-roadmap Phase 2.3) with `qty_shipped`, BOL, scheduled delivery date.
+- **810 Invoice** inbound → creates an `invoices` row in `DRAFT`, GC reviews and approves.
+- Effort: **L**, but each segment is the same X12 work pattern as the 850.
 
 ---
 
-## Verification I'll run after implementing
+## Engineering & ops realities to plan for
 
-1. `supabase--read_query` `notifications` after a test approve → expect `CHANGE_APPROVED` row.
-2. Visual check the bell sheet — every type renders with a distinct icon/color.
-3. Trigger an NTE 80% scenario in a CO → confirm `NTE_WARNING_80` arrives at GC and renders with the `AlertTriangle` icon.
-4. Approve a TC share as GC → confirm CO_ACKNOWLEDGED arrives at the TC.
-5. Mark one as read on the preview, confirm badge count drops without refresh.
+- **No "build once for all three"** — there's a normalizer in the middle, but each platform has its own UOM table, customer-ID format, and required-field quirks. Budget ~3 weeks per direct REST integration after the first one.
+- **Each direct API integration needs a sandbox tenant from the vendor.** Budget 2-6 weeks of vendor paperwork; you cannot move faster than this.
+- **Certification.** Hyphen and Epicor require partner-program enrollment if you want to be listed in their marketplace. Listing is what actually drives yard adoption — the engineering is half the battle, the marketplace listing is the other half.
+- **EDI errors are silent.** You need a per-supplier dashboard for transmission status, retries, and parse errors. The `external_po_exports` table above is the substrate; the UI is half a day on top of it.
+- **Customer-code mapping is the boring part that breaks everything.** "Apex Builders" in your app is `APEX01` in their POS. Build the `vendor_code_map` JSONB on `supplier_integrations` from day one and let the supplier edit it inline when an export fails.
+- **Pricing field is the political part.** If your PO export sends a `unit_price`, the yard's POS will overwrite their own price book — most yards refuse this. Make `include_prices` an opt-in toggle per supplier integration; default OFF for EDI/API exports, ON only for the email/PDF path.
+
+## Recommendation
+
+1. **Ship Phase 1 (email + CSV) this week.** That alone closes the "supplier silently re-keys our PO into their POS" complaint for 60% of yards.
+2. **Ship Phase 2 (EDI 850 export over SFTP/email) next quarter** — that closes another ~25%.
+3. **Defer Phase 3 until you have a named anchor account** asking for direct SupplyPro/BisTrack push. When that customer shows up, do **SupplyPro first** (cheapest API, public docs, fastest cert).
+4. **Skip direct Spruce integration entirely** for v1 — partner with Saberis or ship Spruce's expected EDI 850. The math doesn't justify the cert work yet.
+5. **Don't promise round-trip until Phase 4.** The single biggest support burden for ERP integrations is broken acks; it's easier to add them on demand than to support them everywhere.
+
+Net: realistically 1 sprint to delight 60% of yards, 1 quarter to delight 85%, and a full FY of vendor paperwork to delight the remaining 15% who specifically want native API push.
