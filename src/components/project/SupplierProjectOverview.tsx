@@ -346,6 +346,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         </KpiCard>
       </KpiGrid>
 
+      {/* Phase A — Per-project supplier analytics */}
+      <SupplierProjectAnalyticsSection
+        analytics={analytics}
+        loading={analyticsLoading}
+        estimateTotal={totalEstimate}
+        orderedTotal={totalOrdered}
+        onNavigate={onNavigate}
+      />
+
+
       {/* PO Register */}
       <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: `1px solid ${C.border}` }}>
