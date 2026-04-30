@@ -64,6 +64,12 @@ export function TCDashboardView({
 
   const activeProjects = projects.filter(p => p.status !== 'archived');
 
+  // Materials Pulse — portfolio-wide rollup
+  const { data: materialsPulse, isLoading: pulseLoading } = useMaterialsPulse({
+    buyerOrgId: orgId,
+    projectIds: activeProjects.map(p => p.id),
+  });
+
   // Derive per-project data from projectFinancials
   const pf = projectFinancials.filter(p => p.revenue > 0 || p.costs > 0 || p.paidToYou > 0);
 
