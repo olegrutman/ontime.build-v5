@@ -81,6 +81,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: 'Other',
   corrections: 'Corrections',
   misc: 'Miscellaneous',
+  ceiling_finish: 'Ceiling finishes',
+  wall_finish: 'Wall finishes',
+  prep: 'Prep & substrate',
+  custom: 'Custom items',
 };
 
 function adaptToScopeCatalogItem(d: CatalogDefinition): ScopeCatalogItem {
