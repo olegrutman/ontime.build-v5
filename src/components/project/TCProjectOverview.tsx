@@ -10,6 +10,8 @@ import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import type { OrgType } from '@/types/organization';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, cellStyle, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
+import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -70,6 +72,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
+
+  // ─── Buyer materials analytics (only when TC is materials-responsible) ───
+  const matEstimateForAnalytics = financials.materialEstimate || financials.approvedEstimateSum || 0;
+  const buyerAnalyticsQuery = useBuyerMaterialsAnalytics({
+    projectId,
+    buyerOrgId: currentOrgId,
+    estimateTotal: matEstimateForAnalytics,
+    enabled: !!financials.isTCMaterialResponsible,
+  });
 
   // ─── GC Contract (upstream, read-only) ───
   const gcContract = financials.upstreamContract;
@@ -737,6 +748,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </div>
       </div>
+
+      {/* Buyer Materials Analytics — only when TC handles materials */}
+      {financials.isTCMaterialResponsible && (
+        <BuyerMaterialsAnalyticsSection
+          analytics={buyerAnalyticsQuery.data}
+          loading={buyerAnalyticsQuery.isLoading}
+          onNavigate={onNavigate}
+        />
+      )}
 
       {/* Warnings */}
       {warnings.length > 0 && (

@@ -10,6 +10,8 @@ import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import type { OrgType } from '@/types/organization';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, THead, TdN, TdM, TRow, WarnItem, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
+import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -267,6 +269,14 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const matDelivered = financials.materialDelivered;
   const matPending = financials.materialOrderedPending;
   const matPct = matEstimate > 0 ? Math.round((matOrdered / matEstimate) * 100) : 0;
+
+  // ─── Buyer materials analytics (only when GC is materials-responsible) ───
+  const buyerAnalyticsQuery = useBuyerMaterialsAnalytics({
+    projectId,
+    buyerOrgId: currentOrgId,
+    estimateTotal: matEstimate,
+    enabled: !!financials.isGCMaterialResponsible,
+  });
 
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
@@ -661,6 +671,15 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           </div>
         </KpiCard>
       </KpiGrid>
+
+      {/* Buyer Materials Analytics — only when GC handles materials */}
+      {financials.isGCMaterialResponsible && (
+        <BuyerMaterialsAnalyticsSection
+          analytics={buyerAnalyticsQuery.data}
+          loading={buyerAnalyticsQuery.isLoading}
+          onNavigate={onNavigate}
+        />
+      )}
 
       {/* Warnings */}
       {warnings.length > 0 && (

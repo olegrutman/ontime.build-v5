@@ -1,126 +1,102 @@
-# Per-Project Supplier Analytics — Expansion Plan
 
-## Why (real-world lumber/material yard lens)
+# PO Analytics for the Material-Responsible Party
 
-Today, `SupplierProjectOverview` shows 6 cards: Estimate, Ordered, Deliveries, Billed, Received, Outstanding — plus pack-by-pack ordered vs estimate. That's a solid finance/throughput view, but a real yard manager, A/R clerk, and outside sales rep also need to answer:
+## Why this matters
 
-1. **"How is THIS job actually consuming material — and what's left to sell into it?"** (sell-through, remaining wallet share, re-order velocity)
-2. **"Am I going to get paid on time on this job?"** (project-level aging, days-to-pay trend, lien/notice clock)
-3. **"What's the operational risk on the next truck?"** (backorders, partial fills, returns/credits eating margin)
-4. **"Is this customer profitable on this job?"** (GM% per pack, returns ratio, price overrides)
-5. **"Where will the next PO come from?"** (un-ordered packs, COs/WOs that imply more material)
+Today the **supplier** (sell-side) has a rich analytics section (`SupplierProjectAnalyticsSection`: sell-through, A/R aging, lien clock, OTIF, returns, demand). But the **buy-side** — the GC or TC who is `isGCMaterialResponsible` / `isTCMaterialResponsible` — only sees three numbers in `MaterialsCommandCenter` (Estimate, Ordered, Delivered) and a single variance pill.
 
-None of those are answered today on the per-project supplier view. This plan adds them as **new cards/sections** alongside the existing 6 — nothing is removed.
+That party is the one signing POs, eating overruns, and answering to the owner. Material spend is typically **35–55% of a residential/light-commercial project**, so they need the same depth the supplier has — but framed around **budget protection, schedule risk, and cash exposure**, not sell-through.
+
+This plan adds a `BuyerMaterialsAnalyticsSection` mounted on the project overview whenever the viewer is the material-responsible org.
 
 ---
 
-## What to add (in priority order)
+## What gets added (6 cards + pipeline + pack table)
 
-### 1. Sell-Through & Remaining Wallet (Card 7)
-Right of "Total Ordered". Shows:
-- **Remaining estimate $** = `estimate − ordered` (already computed, surface it as a primary number)
-- **Wallet capture %** = ordered ÷ estimate
-- **Re-order velocity**: POs/week over last 4 weeks (sparkline)
-- **Days since last PO** (stale-job indicator)
-- **Packs not yet ordered** count → click to filter PO list
+### 1. Budget Burn & Forecast at Completion (FAC)
+- **Estimate** vs **Committed (POs ordered+)** vs **Forecast** vs **Remaining headroom**
+- Forecast = Delivered + Open POs + (avg overrun % × un-ordered estimate)
+- Pill: `On budget` / `Watch ±5%` / `Over`
+- **Why:** Pure variance hides the trajectory. FAC tells the GC *where they'll land*, not where they are.
 
-*Why:* Outside sales' #1 question is "what's left on this job and is it slipping away to a competitor?" Stale-PO + un-ordered-packs flags surface that.
+### 2. PO Pipeline Funnel
+- Counts + $ at each stage: `Draft → Submitted → Priced → Ordered → Ready → Delivered → Finalized`
+- Highlights bottlenecks (e.g. "$48K stuck in PRICED >5 days — supplier waiting on approval")
+- **Why:** Material-responsible PMs lose days because POs sit unapproved. Surfacing the bottleneck = faster cycle time.
 
-### 2. Project A/R Aging Snapshot (Card 8)
-Project-scoped version of the dashboard receivables. Shows:
-- **Current / 1–30 / 31–60 / 61–90 / 90+** buckets, $ amounts, with the GC name
-- **Average DSO on this project** (paid invoices: avg days submitted→paid)
-- **Days past due on oldest open invoice**
-- **Lien/preliminary-notice deadline** flag (state-configurable, default 90 days from first delivery)
+### 3. Price Variance vs Estimate
+- For every PO line with a `source_estimate_item_id`, compare `unit_price` to `original_unit_price`
+- Show: total $ over/under estimate, % of lines adjusted by supplier, top 5 worst offenders by SKU
+- **Why:** Suppliers re-price line items between estimate and PO. The buyer needs to see *which SKUs are drifting* so they can renegotiate or re-bid.
 
-*Why:* Every yard A/R clerk works job-by-job, not org-by-org, when chasing payment. The "lien clock" is the single most important date a materialman tracks.
+### 4. Delivery & Schedule Risk
+- Avg quoted lead time, on-time delivery rate, # POs **late** (ordered_at + lead_time_days < today, not delivered)
+- Cross-reference with SOV/schedule milestones: "2 POs late blocking Framing phase"
+- **Why:** A late drop of LVLs stops the framing crew. Material PMs need an early-warning list, not a post-mortem.
 
-### 3. Delivery Performance & Operations (Card 9)
-Replaces today's flat delivery list with metrics:
-- **On-time delivery %** (delivered_at vs requested date)
-- **Avg lead time** (PO created → delivered) per pack
-- **Open backorders** $ and line count (POs in `ORDERED` past their requested date)
-- **Partial deliveries** (POs where shipped qty < ordered qty) — requires `po_shipments` from earlier roadmap; until then, show "—"
-- **Next 7-day delivery calendar strip**
+### 5. Returns & Waste Impact
+- Total returned $, return rate %, restocking fees paid, top 3 reasons (over-ordered, damaged, wrong spec)
+- Net material cost = Delivered − Returns + Restocking
+- **Why:** Returns silently inflate cost. Showing waste as a % of spend turns it into a KPI worth managing.
 
-*Why:* Dispatch and yard ops measure themselves on OTIF (on-time-in-full). Backorders are the #1 source of GC complaints.
-
-### 4. Returns & Credits Impact (Card 10)
-- **Total returns $** issued on this project
-- **Return rate** = returns ÷ delivered (red if >3%)
-- **Credit memos outstanding** (issued but not applied)
-- **Top return reasons** (top 3 with $ totals) — pulled from existing returns table
-
-*Why:* Returns silently destroy margin and are invisible today on the project view. A 5% return rate on a $200k job is $10k gone.
-
-### 5. Project Margin & Pricing Health (Card 11)
-- **Estimated GM%** vs **Realized GM%** (requires cost on `catalog_items` or PO line `unit_cost`; if absent, show "Cost data needed" CTA)
-- **Price-override count** (PO lines where `price_adjusted_by_supplier = true`) and total $ given away
-- **Discount $ vs list** (if list price tracked)
-- Per-pack GM% mini-bar
-
-*Why:* The owner's job-by-job profitability question. Override tracking catches sales reps over-discounting.
-
-### 6. Future Demand Signal (Card 12)
-- **Active COs/WOs** on this project (count + $) — pulled from `change_orders` joined to project
-- **Estimates submitted but not yet approved** (already partly shown — promote to a leading indicator)
-- **GC's project schedule milestones** (if `project_schedule` data available) — show "Framing starts 2025-06-15 → likely lumber draw"
-
-*Why:* Lets the inside sales desk pre-stage material and offer JIT delivery. This is the "why didn't you tell me they needed trusses Friday" prevention card.
-
-### 7. Project Activity Timeline (Side panel, collapsible)
-Single chronological feed of: PO created → priced → delivered → invoiced → paid → returns → COs. Filterable by event type. Today the supplier has to bounce between tabs to reconstruct what happened.
+### 6. Cash Exposure
+- **Open commitments** (Ordered but not invoiced) — money they owe but haven't been billed for
+- **Unpaid supplier invoices** by aging bucket (0-30 / 31-60 / 60+)
+- Next 14-day expected outflow based on net terms
+- **Why:** A GC can be "on budget" and still run out of cash. This is the payable-side mirror of the supplier's A/R card.
 
 ---
 
-## Layout
+## Per-Pack Variance Table (expandable)
 
-Existing 6 cards stay in place (rows 1–2). Add:
+Below the cards, one row per estimate pack:
+
+| Pack | Estimate | Ordered | Delivered | Variance $ | Variance % | Status |
+|---|---|---|---|---|---|---|
+| Framing Lumber | $42,100 | $44,800 | $40,200 | +$2,700 | +6.4% | Watch |
+| Sheathing | $11,200 | $10,950 | $10,950 | -$250 | -2.2% | OK |
+
+Click row → opens existing `MaterialsBudgetDrawer`.
+
+**Why:** A single project-level variance hides which pack is bleeding. Pack-level surfaces the actual decision ("re-quote sheathing", "lock framing pricing now").
+
+---
+
+## Mount logic
+
+In `GCProjectOverviewContent.tsx` and `TCProjectOverview.tsx`, render the section when:
 
 ```text
-Row 3:  [ Sell-Through (7) ]   [ A/R Aging (8) ]
-Row 4:  [ Delivery Perf (9) ]  [ Returns (10) ]
-Row 5:  [ Margin & Pricing (11) ] [ Future Demand (12) ]
-Row 6:  [ Project Activity Timeline — full width, collapsible ]
+financials.isGCMaterialResponsible || financials.isTCMaterialResponsible
 ```
 
-Same `KpiCard` / `KpiGrid` primitives already used → zero design drift.
+When the viewer is *not* responsible (e.g. TC on a GC-procures job), keep the current "Materials controlled by the General Contractor" line — no change.
 
 ---
 
 ## Technical details
 
-**No schema changes required for cards 1, 2, 3 (partial), 4, 6, 7.** All data exists in `purchase_orders`, `invoices`, `returns`, `change_orders`, `supplier_estimates`, `project_schedule`.
+**New files**
+- `src/hooks/useBuyerMaterialsAnalytics.ts` — aggregates from `purchase_orders`, `po_line_items`, `supplier_invoices`, `returns`, `supplier_estimates`, `estimate_packs`. Returns one typed object.
+- `src/components/project/BuyerMaterialsAnalyticsSection.tsx` — 6 KpiCards + funnel + pack table. Uses existing `KpiCard`, `KpiGrid`, `Pill`, `THead/TdN/TdM/TRow` shared primitives so it matches the supplier section visually.
 
-**Schema additions needed for full fidelity (defer to follow-up if not approved now):**
-- `purchase_orders.requested_delivery_date` (date) — needed for OTIF % in card 9
-- `po_line_items.unit_cost` (numeric) — needed for realized GM% in card 11. Falls back to `catalog_items.unit_cost` if present.
-- `customer_lien_settings(supplier_id, state, notice_days, lien_days)` — for card 2's lien clock. Until then, hardcode 90-day default.
-- Backorder/partial detection assumes the `po_shipments` table from the earlier supplier roadmap (Phase 2). Until then, card 9 shows "Setup required" for backorder/partial metrics.
+**Reused**
+- `useProjectFinancials` for material totals & responsibility flags (no new queries duplicated)
+- `MaterialsBudgetDrawer` for pack drill-in
+- `EVENT_META` pattern from supplier section for consistency
 
-**New hook**: `useSupplierProjectAnalytics(projectId, supplierId)` aggregating all six new computations in a single React Query call (server-side via a Postgres view `v_supplier_project_analytics` to keep client lean).
+**Modified**
+- `GCProjectOverviewContent.tsx` — mount `<BuyerMaterialsAnalyticsSection />` after `MaterialsCommandCenter`
+- `TCProjectOverview.tsx` — same, gated by `isTCMaterialResponsible`
 
-**New components** (under `src/components/project/supplier-analytics/`):
-- `SupplierSellThroughCard.tsx`
-- `SupplierProjectAgingCard.tsx`
-- `SupplierDeliveryPerfCard.tsx`
-- `SupplierReturnsImpactCard.tsx`
-- `SupplierProjectMarginCard.tsx`
-- `SupplierFutureDemandCard.tsx`
-- `SupplierProjectTimeline.tsx`
+**No schema changes.** All data already exists in `purchase_orders`, `po_line_items` (with `source_estimate_item_id`, `original_unit_price`, `lead_time_days`), `supplier_invoices`, `returns`. No migration needed.
 
-Mounted from `SupplierProjectOverview.tsx` after the existing `KpiGrid`.
-
-**Notifications** (additive, reuse existing system): `PROJECT_STALE_NO_PO` (no PO in 21 days on active project), `PROJECT_LIEN_CLOCK_30_DAYS`, `PROJECT_BACKORDER_OVERDUE`. All three add to the per-project supplier "needs attention" surface.
-
-**Privacy**: All computations stay within the supplier's own POs/invoices/returns. No new cross-org data exposure. RLS unchanged.
+**Privacy:** Section never renders for FC or for TCs on GC-procures jobs — respects the existing `material_responsibility` rule from the privacy memory.
 
 ---
 
-## Phasing recommendation
+## Out of scope (could be Phase 2)
 
-- **Phase A (no schema)**: Cards 1, 2, 4, 6, 7 + timeline. Ship-able immediately against current data.
-- **Phase B (light schema)**: Add `requested_delivery_date` + `unit_cost`, then enable cards 3 and 5 fully.
-- **Phase C (depends on supplier roadmap Phase 2)**: Backorder/partial-fill metrics in card 3 once `po_shipments` lands.
-
-Reply with which phase to build first (A is the obvious start).
+- POS/ERP exports (Hyphen/EPICOR/ECi) — separate roadmap item
+- AI-driven re-order suggestions
+- Cross-project material spend analytics (portfolio view)
