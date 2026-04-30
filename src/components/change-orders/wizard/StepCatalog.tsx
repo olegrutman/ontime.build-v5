@@ -586,6 +586,17 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
           </div>
         </div>
       )}
+
+      <AddCustomItemDialog
+        open={customDialogOpen}
+        onOpenChange={setCustomDialogOpen}
+        locationTag={data.locationTag}
+        reason={data.reason ?? null}
+        onAdd={(item) => {
+          onChange({ selectedItems: [...data.selectedItems, item] });
+          toast.success('Custom item added');
+        }}
+      />
     </div>
   );
 }
