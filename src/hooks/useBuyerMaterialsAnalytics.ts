@@ -248,6 +248,9 @@ export function useBuyerMaterialsAnalytics({
           const expectedBy = new Date(ordered.getTime() + maxQuoted * 86400000);
           if (now > expectedBy) {
             const daysLate = Math.floor((now.getTime() - expectedBy.getTime()) / 86400000);
+            // Bug fix 4.1: overdue undelivered POs must count against on-time rate;
+            // otherwise a project full of late-but-undelivered POs reports 100% on-time.
+            evaluatedForOnTime++;
             lateList.push({
               id: po.id,
               po_number: po.po_number,
@@ -260,9 +263,20 @@ export function useBuyerMaterialsAnalytics({
       });
       lateList.sort((a, b) => b.daysLate - a.daysLate);
 
+      // avgLeadTimeDays: prefer ACTUAL delivery time when we have enough samples,
+      // otherwise fall back to quoted (bug fix 4.3 — was always quoted).
+      const actualLeadTimes: number[] = [];
+      pos.forEach(po => {
+        if (po.ordered_at && po.delivered_at) {
+          const a = Math.floor((new Date(po.delivered_at).getTime() - new Date(po.ordered_at).getTime()) / 86400000);
+          if (a >= 0) actualLeadTimes.push(a);
+        }
+      });
+      const sourceLeadTimes = actualLeadTimes.length >= 3 ? actualLeadTimes : leadTimes;
+
       const deliveryRisk: DeliveryRisk = {
-        avgLeadTimeDays: leadTimes.length
-          ? Math.round(leadTimes.reduce((s, d) => s + d, 0) / leadTimes.length)
+        avgLeadTimeDays: sourceLeadTimes.length
+          ? Math.round(sourceLeadTimes.reduce((s, d) => s + d, 0) / sourceLeadTimes.length)
           : null,
         onTimeRatePct: evaluatedForOnTime > 0
           ? Math.round((onTimeCount / evaluatedForOnTime) * 100)
