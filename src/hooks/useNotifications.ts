@@ -97,9 +97,23 @@ export function useNotifications() {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
+          filter: `recipient_user_id=eq.${user.id}`,
         },
         () => {
-          // Refetch when new notifications arrive
+          fetchNotifications();
+          fetchUnreadCount();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_user_id=eq.${user.id}`,
+        },
+        () => {
+          // Mark-as-read on another tab/device should refresh badge + list
           fetchNotifications();
           fetchUnreadCount();
         }

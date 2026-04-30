@@ -43,14 +43,14 @@ export function COAcceptBanner({ co, projectId, myOrgId, collaborators, onRefres
         .eq('id', invitation!.id);
       if (error) throw error;
 
-      // Notify CO creator
-      const { title, body } = buildCONotification('CO_ACCEPTED', co.title);
+      // Notify CO creator (CO_ACKNOWLEDGED is the closest enum value for "accepted invitation")
+      const { title, body } = buildCONotification('CO_ACKNOWLEDGED', co.title);
       await sendCONotification({
         recipient_user_id: co.created_by_user_id,
         recipient_org_id: co.org_id,
         co_id: co.id,
         project_id: projectId,
-        type: 'CO_ACCEPTED',
+        type: 'CO_ACKNOWLEDGED',
         title,
         body,
       });
@@ -74,13 +74,13 @@ export function COAcceptBanner({ co, projectId, myOrgId, collaborators, onRefres
         .eq('id', invitation!.id);
       if (error) throw error;
 
-      const { title, body } = buildCONotification('CO_REJECTED', co.title);
+      const { title, body } = buildCONotification('CHANGE_REJECTED', co.title);
       await sendCONotification({
         recipient_user_id: co.created_by_user_id,
         recipient_org_id: co.org_id,
         co_id: co.id,
         project_id: projectId,
-        type: 'CO_REJECTED',
+        type: 'CHANGE_REJECTED',
         title,
         body,
       });
