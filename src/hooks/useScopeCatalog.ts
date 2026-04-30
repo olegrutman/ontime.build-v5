@@ -40,6 +40,8 @@ const DIVISION_LABELS: Record<string, string> = {
   sheathing: 'Sheathing',
   fix: 'Backout & Fixes',
   general: 'General',
+  interior_finish: 'Interior finishes',
+  custom: 'Custom (org)',
 };
 
 const DIVISION_ICONS: Record<string, string> = {
@@ -51,6 +53,8 @@ const DIVISION_ICONS: Record<string, string> = {
   sheathing: '▦',
   fix: '🔧',
   general: '•',
+  interior_finish: '🪵',
+  custom: '✎',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -77,6 +81,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: 'Other',
   corrections: 'Corrections',
   misc: 'Miscellaneous',
+  ceiling_finish: 'Ceiling finishes',
+  wall_finish: 'Wall finishes',
+  prep: 'Prep & substrate',
+  custom: 'Custom items',
 };
 
 function adaptToScopeCatalogItem(d: CatalogDefinition): ScopeCatalogItem {

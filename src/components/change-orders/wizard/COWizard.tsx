@@ -37,6 +37,10 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
   isCombined?: boolean;
   /** Wizard-only: snapshot of the originals that were merged, so the user can Uncombine. Not persisted. */
   combinedFrom?: SelectedScopeItem[];
+  /** Wizard-only: true when item was added via "Add custom item" and may not point at a real catalog row. */
+  isCustom?: boolean;
+  /** Real catalog_definitions.id when promoted to org catalog; otherwise null for one-offs. */
+  catalogId?: string | null;
 }
 
 export type AssemblyState = 'pre_rough' | 'roughed' | 'sheathed_decked' | 'dried_in';
@@ -510,7 +514,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason, isT
           co_id: preGeneratedId,
           org_id: orgId,
           created_by_role: role,
-          catalog_item_id: /^[0-9a-f]{8}-/.test(item.id) ? item.id : null,
+          catalog_item_id: (item as any).catalogId ?? (/^[0-9a-f]{8}-/.test(item.id) ? item.id : null),
           item_name: item.item_name,
           division: item.division,
           category_name: item.category_name,

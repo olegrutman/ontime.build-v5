@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X, ChevronRight, ChevronDown, MapPin, ArrowLeft, Sparkles, LayoutGrid } from 'lucide-react';
+import { Search, X, ChevronRight, ChevronDown, MapPin, ArrowLeft, Sparkles, LayoutGrid, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
@@ -15,6 +15,7 @@ import { StepCatalogModeSwitch, type ScopePickerMode } from './StepCatalogModeSw
 import { StepCatalogQA } from './StepCatalogQA';
 import { StepCatalogTypeFallback } from './StepCatalogTypeFallback';
 import type { SuggestResponse } from '@/hooks/useScopeSuggestions';
+import { AddCustomItemDialog } from './AddCustomItemDialog';
 
 interface StepCatalogProps {
   data: COWizardData;
@@ -89,6 +90,9 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
   const [typeResults, setTypeResults] = useState<{ description: string; resp: SuggestResponse } | null>(null);
   const [typeSelected, setTypeSelected] = useState<Set<string>>(new Set());
   const [typeDraft, setTypeDraft] = useState('');
+
+  // "Add custom item" escape hatch — used when nothing in the catalog fits.
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
 
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
   const searchResults = useMemo(() => search(query), [query, search]);
@@ -314,8 +318,19 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
 
       {/* Mode switch — visible in browse/type modes; in QA mode it sits at the
           bottom escape row so the question owns the top of the card. */}
-      {mode !== 'qa' && (
-        <StepCatalogModeSwitch value={mode} onChange={(m) => { setMode(m); setTypeResults(null); setTypeSelected(new Set()); }} />
+      {mode !== 'qa' ? (
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <StepCatalogModeSwitch value={mode} onChange={(m) => { setMode(m); setTypeResults(null); setTypeSelected(new Set()); }} />
+          <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setCustomDialogOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Add custom item
+          </Button>
+        </div>
+      ) : (
+        <div className="flex justify-end">
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={() => setCustomDialogOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Can't find it? Add custom item
+          </Button>
+        </div>
       )}
 
       {/* QA mode */}
@@ -571,6 +586,17 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
           </div>
         </div>
       )}
+
+      <AddCustomItemDialog
+        open={customDialogOpen}
+        onOpenChange={setCustomDialogOpen}
+        locationTag={data.locationTag}
+        reason={data.reason ?? null}
+        onAdd={(item) => {
+          onChange({ selectedItems: [...data.selectedItems, item] });
+          toast.success('Custom item added');
+        }}
+      />
     </div>
   );
 }
