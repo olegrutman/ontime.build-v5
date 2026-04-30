@@ -155,6 +155,18 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     warnings.push({ color: C.blue, icon: '📦', title: `${unpricedPOs.length} PO${unpricedPOs.length > 1 ? 's' : ''} Need Pricing`, sub: 'GC submitted — awaiting your pricing', value: fmt(unpricedPOs.reduce((s, p) => s + (p.po_total || 0), 0)), pill: 'Action Needed', pillType: 'pb', tab: 'purchase-orders' });
   }
 
+  // Analytics (Phase A — additive per-project insights)
+  const packsOrderedCount = Object.keys(orderedByPack).length;
+  const { data: analytics, isLoading: analyticsLoading } = useSupplierProjectAnalytics({
+    projectId,
+    supplierId,
+    supplierOrgId: currentOrgId,
+    estimateTotal: totalEstimate,
+    orderedTotal: totalOrdered,
+    packCount: packNames.length,
+    packsOrderedCount,
+  });
+
   return (
     <div className="space-y-4">
       {/* Header */}
