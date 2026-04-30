@@ -1,127 +1,158 @@
 
-# Per-Pack Variance Card — Bug Audit & Fix
+# Buyer Materials KPI Cards — Math Audit
 
-I tested the math against your live project (`ad28bf07…66f53`). Three real bugs and one cosmetic issue.
-
-## What the screenshot shows vs. reality
-
-Screenshot (4 packs, all `+0.0%` / `OK`, all `Estimate $0`):
-
-| Pack | Est shown | Est actual | Ord shown | Variance shown | Real variance |
-|---|---|---|---|---|---|
-| 1st Floor Framing & Sub-Floor Sheeting | $0 | **$13,993** | $14.2K | +0.0% OK | **+1.4% Watch** |
-| Basement Framing | $0 | **$4,684** | $6.0K | +0.0% OK | **+28.1% Over** |
-| Walkout | $0 | **$2,172** | $5.0K | +0.0% OK | **+128.7% Over** |
-| Ad-hoc | $0 | n/a | $468 | +0.0% OK | n/a |
-
-Only 4 of 15 estimated packs show; the 11 that have estimates but no PO yet are hidden, when they're the most important ones (un-ordered budget).
+I audited all 6 cards in `BuyerMaterialsAnalyticsSection` against the source data in `useBuyerMaterialsAnalytics`. **5 of 6 cards have real bugs**, ranging from wrong sign conventions to category errors that can mislead decisions.
 
 ---
 
-## Bug 1 — Status case mismatch hides ALL estimate values 🔴
+## Card 1 — Forecast at Completion (FAC)
 
-`useBuyerMaterialsAnalytics.ts` line ~152:
+**Bug 1.1 — `unCommittedEstimate` ignores ad-hoc spend (HIGH).**
 ```ts
-.from('supplier_estimates').select('id')
-  .eq('project_id', projectId)
-  .eq('status', 'approved')   // ← lowercase
+const unCommittedEstimate = Math.max(0, estimateTotal - committedTotal);
 ```
+When a buyer issues POs against packs that aren't in the estimate (e.g. discovered scope), `committedTotal` is added but `estimateTotal` is not. The "uncommitted estimate" gets wrongly reduced, which **hides** future spend and under-forecasts FAC.
+**Fix:** subtract only the *committed-against-known-estimate* portion:
+`unCommittedEstimate = max(0, estimateTotal − committedAgainstKnownEstimate)`.
 
-DB enum is uppercase (`'APPROVED'`, `'DRAFT'`, …). Query returns 0 rows → `estimateIds` empty → no estimate items fetched → every pack's `estimate` stays `0` → every variance % is `0`.
+**Bug 1.2 — FAC ignores ad-hoc commitments after recompute (HIGH).**
+After packs are built we know there's `adHocCommitted = committedTotal − committedAgainstKnownEstimate`. The current FAC `committedTotal + unCommittedEstimate × (1+overrun)` already includes adHoc inside `committedTotal`, but `variancePct` then compares it to `estimateTotal` without acknowledging that the ad-hoc dollars were never in the estimate baseline. Result: a buyer who orders entirely off-estimate looks "on budget."
+**Fix:** in the explanatory copy and in `remainingHeadroom` either (a) add ad-hoc to a separate "out-of-scope" line, or (b) make the baseline `estimateTotal + adHocCommitted` for variance display.
 
-**Fix:** `.eq('status', 'APPROVED')`.
-
-This single fix restores all the actual numbers in the table.
-
-## Bug 2 — Forecast at Completion overrun ratio is mathematically broken 🔴
-
-Lines 191-193:
-```ts
-const overrunRatio = estimateTotal > 0 && committedTotal > 0
-  ? Math.max(0, (committedTotal / estimateTotal) - (committedTotal > 0 ? committedTotal / Math.max(estimateTotal, committedTotal) : 0))
-  : 0;
-```
-
-- When `committed ≤ estimate`: `max(estimate, committed) = estimate` → expression = `committed/estimate − committed/estimate = 0`. **Always 0.**
-- When `committed > estimate`: `(committed/estimate) − 1`. That's the variance on what you've committed, but applied to the *un-committed* portion as if every future buy will overrun by that exact amount — which double-counts the overrun.
-
-Result: FAC essentially equals `estimate` whenever you're under-committed (the normal case mid-project), so the card cannot detect drift until the project is over-spent.
-
-**Fix:** compute overrun against the *expected slice of estimate that committed POs map to*. Two clean options:
-
-**Option A (preferred — uses pack data we already have):**
-```ts
-// Sum estimate $ for packs that have at least one PO ordered+
-const committedPacksEstimate = packs
-  .filter(p => p.ordered > 0)
-  .reduce((s, p) => s + p.estimate, 0);
-const overrunRatio = committedPacksEstimate > 0
-  ? Math.max(0, (committedTotal - committedPacksEstimate) / committedPacksEstimate)
-  : 0;
-const forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
-```
-
-This means: "POs we've placed are running X% over their slice of the estimate; assume future POs do the same."
-
-**Option B (fallback when no source_pack_name on POs):** use a flat overrun
-```ts
-const overrunRatio = estimateTotal > 0
-  ? Math.max(0, (committedTotal - Math.min(committedTotal, estimateTotal)) / estimateTotal)
-  : 0;
-```
-
-Use A when `committedPacksEstimate > 0`, else fall back to B.
-
-For your project: $25.2K committed against $20.8K of those-packs estimate → overrun ratio ≈ 21%. FAC ≈ $25.2K + $95.8K × 1.21 ≈ **$141.0K vs budget $116.6K → +20.9% Over**. That's the truth.
-
-## Bug 3 — Ad-hoc POs (no `source_pack_name`) compute misleading 0% variance 🟡
-
-Line 360 buckets POs without a pack into `'Ad-hoc'` with estimate=0. Then line 373's guard returns 0% (`p.estimate > 0` false), so the Ad-hoc row shows `+$468 (+0.0%) OK` — looks fine when it's really 100% over (no estimate at all).
-
-**Fix:** when `estimate === 0 && ordered > 0`, status should be `'over'` (un-budgeted spend) and the variance label should show `(no estimate)` instead of `+0.0%`. Suggested:
-
-```ts
-const variancePct = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
-const status = p.estimate === 0 && p.ordered > 0 ? 'over'
-  : variancePct == null ? 'ok'
-  : variancePct > 5 ? 'over' : variancePct > 0 ? 'watch' : 'ok';
-```
-
-In the section component, render `variancePct == null ? '(no estimate)' : pctLabel(variancePct)`.
-
-## Bug 4 — Hidden un-ordered packs hide the real risk 🟡
-
-After Bug 1 is fixed, all 15 estimate packs appear. That's correct, but the sort `b.estimate + b.ordered − (a.estimate + a.ordered)` puts the largest at top, which is fine. Add one defensive filter:
-
-```ts
-.filter(p => p.estimate > 0 || p.ordered > 0)   // drop empty rows
-```
-
-(Won't change anything in your data but prevents future ghost rows from `estimate_packs` rows with 0 items.)
-
-## Bug 5 — Sort tiebreaker (cosmetic) ⚪
-
-`sort((a, b) => b.estimate + b.ordered − (a.estimate + a.ordered))` ranks by sum, which means a $40K-estimate / $0-ordered pack ranks the same as a $20K / $20K pack. Better: rank by `Math.max(estimate, ordered)` so Walkout (most over) sits near the top, not buried.
+**Bug 1.3 — FAC vs `remainingHeadroom` sign trap (MEDIUM).**
+`remainingHeadroom = estimateTotal − forecastAtCompletion` can be negative, but the UI labels it "Headroom remaining" with a green/red flag — the wording implies it's always ≥ 0. Either rename to "Headroom / (Overrun)" or display `Math.abs` with a directional badge.
 
 ---
 
-## Files to change
+## Card 2 — PO Pipeline
 
-- `src/hooks/useBuyerMaterialsAnalytics.ts` — fix Bugs 1, 2, 3, 4, 5 (all in the pack-variance and FAC sections, ~25 lines)
-- `src/components/project/BuyerMaterialsAnalyticsSection.tsx` — handle `variancePct === null` ("no estimate" label) in the per-pack table, ~3 lines
+**Bug 2.1 — `oldestDays` uses wrong timestamp for several stages (HIGH).**
+```ts
+STAGE_TIMESTAMP_FIELD = { DRAFT:'created_at', SUBMITTED:'submitted_at', PRICED:'priced_at', ORDERED:'ordered_at', ... }
+```
+The intent is "how long has this PO been **stuck in this stage**." Using `submitted_at` for a PO currently in `PRICED` stage would actually measure time-in-priced... but `priced_at` is the moment it *entered* PRICED, so that's correct. However for `READY_FOR_DELIVERY` we use `ready_for_delivery_at` and for `DELIVERED` we use `delivered_at` — those are correct. **The real bug is `FINALIZED` uses `updated_at`**, which gets touched by any column edit, so age is reset every time someone fixes a typo. Use `finalized_at` if available, else fall back to `delivered_at`.
 
-No schema changes. No new queries.
+**Bug 2.2 — Stuck detection only checks SUBMITTED/PRICED (MEDIUM).**
+```ts
+const stuck = a.pipeline.find(s => (s.key === 'SUBMITTED' || s.key === 'PRICED') && (s.oldestDays||0) > 5);
+```
+A PO sitting in `READY_FOR_DELIVERY` for 30 days is also a bottleneck (often a yard-pickup that never happened). Extend the bottleneck check to include `READY_FOR_DELIVERY` with a higher threshold (e.g., 10d).
 
-## Expected after-fix behavior on the current project
+**Bug 2.3 — `oldestDays` count includes FINALIZED stage value as 0 falsely.**
+`Math.max(...ages)` with `ages = []` yields `-Infinity`, but we guard with `ages.length`. OK. But `inStage.filter(Boolean)` on falsy timestamps means a stage with all rows missing `tsField` shows `null` — the UI shows `—` which is fine. **No fix needed**, just noting.
 
-Per-Pack table (top 5):
-| Pack | Estimate | Ordered | Delivered | Variance | Status |
-|---|---|---|---|---|---|
-| Exterior Siding & Soffit Trim | $39.1K | $0 | $0 | -$39.1K (-100%) | OK (un-ordered) |
-| 1st Floor Framing & Sub-Floor Sheeting | $14.0K | $14.2K | $0 | +$195 (+1.4%) | Watch |
-| Rake Fascia | $12.7K | $0 | $0 | -$12.7K | OK |
-| Basement Framing | $4.7K | $6.0K | $6.0K | +$1.3K (+28%) | Over |
-| Walkout | $2.2K | $5.0K | $0 | +$2.8K (+128%) | Over |
-| Ad-hoc | — | $468 | $0 | +$468 (no estimate) | Over |
+---
 
-FAC card: **~$141K · +20.9% vs budget · Over** instead of the current misleading "+0.0% On Budget".
+## Card 3 — Price Drift vs Estimate
+
+**Bug 3.1 — Label is misleading (MEDIUM).**
+The card is titled "PRICE DRIFT VS ESTIMATE" but the math is **supplier adjustments vs. originally quoted unit price**, not vs. the estimate. The estimate's unit price and the PO's `original_unit_price` are different things (the latter is the supplier's first quoted price). Rename to "SUPPLIER PRICE ADJUSTMENTS" or compute true estimate-vs-actual (would require joining `supplier_estimate_items.unit_price` to PO lines by SKU).
+
+**Bug 3.2 — Pill logic flips wrong way (LOW).**
+```ts
+const pvPill = totalAdjustedDelta > 0 ? 'pr' : totalAdjustedDelta < 0 ? 'pg' : 'pm';
+```
+That's correct (positive delta = paid more = bad). But the sub-label text shows `+$X` for positive, and the pill says "Over" — fine. **Verify** the `'pm'` PillType exists; if not, this throws. (Need to inspect `KpiCard` types.)
+
+**Bug 3.3 — Lines without `original_unit_price` are silently excluded.**
+If a supplier's first quote already differed from the estimate, the PO line never gets `price_adjusted_by_supplier=true`, so the entire delta is invisible. Combined with bug 3.1, this makes the card appear "no drift" while the project is actually $XX over estimate.
+
+---
+
+## Card 4 — Delivery Risk
+
+**Bug 4.1 — On-time rate excludes still-open POs (MEDIUM).**
+```ts
+if (ordered && delivered && maxQuoted != null) { evaluatedForOnTime++; ... }
+```
+Only delivered POs count toward on-time %. A PO that's 30 days late but undelivered is in `lateList` but not in the denominator. Result: a project with many late-but-undelivered POs can show "100% on-time."
+**Fix:** count overdue undelivered POs as `evaluatedForOnTime++` with `onTime=false`.
+
+**Bug 4.2 — Late detection requires `ordered_at`, missing for fast deliveries (LOW).**
+If a PO skipped statuses (jumped DRAFT→DELIVERED via manual fix), `ordered_at` may be null and on-time evaluation silently skips it. Fall back to `submitted_at` or `created_at`.
+
+**Bug 4.3 — `avgLeadTimeDays` uses *quoted* lead times only (LOW).**
+Card sub copy says "Avg lead time Xd" implying actual delivery time. It's actually **average max quoted lead time**. Either rename or compute from `delivered_at − ordered_at`.
+
+---
+
+## Card 5 — Returns & Waste
+
+**Bug 5.1 — `returnRatePct` denominator wrong (HIGH).**
+```ts
+const returnRatePct = deliveredTotal > 0 ? (returnedTotal / deliveredTotal) * 100 : 0;
+```
+`returnedTotal` is summed from **all returns regardless of status** (including `DRAFT`/`REJECTED`/`PENDING`). A draft return inflates the "real cost" picture. Filter to `status IN ('APPROVED','CREDITED')`.
+
+**Bug 5.2 — `netCredit` calculation is double-fallback-prone (MEDIUM).**
+```ts
+r.net_credit_total ?? (credit_subtotal − restocking_total)
+```
+If `net_credit_total` is `0` (legitimately zero, e.g. fully restocked), the `??` keeps it. Good. But if the column is `null` for some rows and populated for others, the fallback formula doesn't include taxes or other fees — sums become inconsistent across rows. Either always compute from components or always use the stored column.
+
+**Bug 5.3 — Pill thresholds are arbitrary and not industry-aligned (LOW).**
+`>5% red, >2% amber` — construction return rate norms are typically 1-3%. Consider `>3% red, >1% amber`.
+
+---
+
+## Card 6 — Cash Exposure
+
+**Bug 6.1 — "Next 14 days outflow" measures the wrong thing (HIGH).**
+```ts
+if (daysOld <= 14) next14DaysOutflow += amt;
+```
+This sums invoices **created in the last 14 days**, not invoices **due in the next 14 days**. The two are not the same — a 30-day-old invoice with NET-30 terms is due *today*, but won't be counted. If invoice `due_date` exists, use `due_date BETWEEN now AND now+14d`. Otherwise compute due as `submitted_at + payment_terms_days`.
+
+**Bug 6.2 — Aging excludes `APPROVED` invoices ambiguously (MEDIUM).**
+```ts
+if (inv.status === 'PAID' || inv.status === 'DRAFT' || inv.status === 'REJECTED') return;
+```
+`APPROVED` (waiting to be paid) is included — correct. `SUBMITTED` is included — correct. But `PARTIALLY_PAID` (if used in your status enum) is included with **full** `total_amount`, not the unpaid balance. Subtract `paid_amount` if available.
+
+**Bug 6.3 — `openCommitments` excludes FINALIZED (LOW).**
+```ts
+['ORDERED','READY_FOR_DELIVERY','DELIVERED'].includes(p.status)
+```
+A `FINALIZED` PO with no invoice is still a real exposure (supplier expects payment). Add `FINALIZED` unless your finalization step requires payment.
+
+**Bug 6.4 — Aging buckets use submission date, not invoice age from due date (MEDIUM).**
+True A/P aging is measured from **due date**, not submission. Otherwise NET-60 invoices look "60+ days late" the moment they're submitted with NET-60 terms. Use `daysPastDue = max(0, today − due_date)` for bucketing.
+
+---
+
+## Pack Variance Table
+
+**Bug 7.1 — Pack name matching is case/whitespace sensitive (HIGH).**
+PO `source_pack_name` comes from the wizard, estimate `pack_name` from the upload parser. A trailing space or capitalization difference creates two rows for the same pack. Normalize: `name.trim().toLowerCase()` for the map key, but display the original.
+
+**Bug 7.2 — `variance` doesn't account for delivered partial overruns (LOW).**
+Variance is `ordered − estimate` but doesn't surface the case where `delivered > ordered` (returns/refusals) or `delivered < ordered` (in transit). Add a "% delivered" sub-column.
+
+**Bug 7.3 — Sort buries small-but-critical packs (LOW).**
+Sorting by `Math.max(estimate, ordered)` desc means a $500 pack 200% over budget appears below a $50k pack that's on budget. Add a secondary sort by `|variancePct|` desc within status groups.
+
+---
+
+## Proposed Fix Plan (Priority Order)
+
+1. **Pack name normalization** (bug 7.1) — single line fix, unlocks accurate per-pack data.
+2. **Returns rate denominator + status filter** (bug 5.1) — prevents drafts inflating waste.
+3. **On-time rate includes overdue** (bug 4.1) — flips false-positive "100% on-time" into honest number.
+4. **`unCommittedEstimate` uses known-estimate committed** (bug 1.1) — fixes FAC under-forecast.
+5. **Cash next-14d uses due dates** (bug 6.1) + **aging from due_date** (bug 6.4).
+6. **Card 3 rename + true estimate-vs-actual** (bugs 3.1, 3.3) — significant refactor; could be follow-up.
+7. **Pipeline FINALIZED uses `finalized_at`** (bug 2.1) + **bottleneck includes READY_FOR_DELIVERY** (bug 2.2).
+8. UI/labeling polish (bugs 1.3, 4.3, 5.3).
+
+## Files Affected
+
+- `src/hooks/useBuyerMaterialsAnalytics.ts` — calculation fixes
+- `src/components/project/BuyerMaterialsAnalyticsSection.tsx` — labels, sort, pill thresholds
+
+## Open Questions
+
+- Do invoices have a `due_date` column or do we derive it from `payment_terms_days`?
+- Does the PO status enum include `PARTIALLY_PAID` and a `paid_amount` field?
+- Is there a `finalized_at` column on `purchase_orders`?
+
+I'll confirm these via a quick schema read before implementing if you approve the plan.
