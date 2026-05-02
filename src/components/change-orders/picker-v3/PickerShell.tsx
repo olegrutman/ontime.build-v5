@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +12,7 @@ import { itemLaborTotal, itemMaterialTotal, itemEquipmentTotal } from './types';
 import { usePickerState } from './usePickerState';
 import { PickerStepper } from './PickerStepper';
 import { PickerAside } from './PickerAside';
-import { CORoleSwitcher } from './CORoleSwitcher';
+
 import { StepWhere } from './StepWhere';
 import { StepWhy } from './StepWhy';
 import { StepWho } from './StepWho';
