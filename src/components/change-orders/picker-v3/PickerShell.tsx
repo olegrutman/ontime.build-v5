@@ -62,6 +62,13 @@ export function PickerShell({ projectId }: PickerShellProps) {
 
   const [state, dispatch] = usePickerState(detectedRole);
 
+  // Sync detected role into state when async query resolves
+  useEffect(() => {
+    if (detectedRole && detectedRole !== state.role) {
+      dispatch({ type: 'SET_ROLE', role: detectedRole });
+    }
+  }, [detectedRole, dispatch]); // intentionally omit state.role to avoid loops
+
   const { data: projectInfo } = useQuery({
     queryKey: ['project-basic-info', projectId],
     queryFn: async () => {
@@ -296,9 +303,6 @@ export function PickerShell({ projectId }: PickerShellProps) {
     }
   }, [user, orgId, isSubmitting, detectedRole, projectId, state, cur.docType, isTM, queryClient, dispatch]);
 
-  const handleRoleSwitch = useCallback((role: COCreatedByRole) => {
-    // For demo purposes only — in production, role is derived from auth
-  }, []);
 
   const stepContent = (() => {
     switch (state.step) {
@@ -360,7 +364,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
         <header className="bg-background border-b px-6 py-3 flex items-center gap-3.5 sticky top-0 z-10 shadow-xs">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(`/project/${projectId}/change-orders`)}
             className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-amber-50 hover:border-amber-400 hover:text-amber-700 transition-all"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -373,8 +377,9 @@ export function PickerShell({ projectId }: PickerShellProps) {
               New {cur.docType === 'CO' ? 'Change Order' : 'Work Order'}
             </p>
           </div>
-          <div className="flex-shrink-0">
-            <CORoleSwitcher activeRole={state.role} onSwitch={handleRoleSwitch} />
+          <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted border border-border">
+            <span className={`w-2 h-2 rounded-full ${detectedRole === 'GC' ? 'bg-blue-600' : detectedRole === 'FC' ? 'bg-amber-500' : 'bg-green-600'}`} />
+            <span className="text-[0.72rem] font-semibold text-muted-foreground">Creating as {detectedRole}</span>
           </div>
         </header>
 
