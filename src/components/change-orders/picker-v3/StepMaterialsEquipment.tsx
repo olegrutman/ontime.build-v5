@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Search, Package, FileText, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import type { PickerState, PickerAction, MaterialDraft, EquipmentDraft } from './types';
+import type { CatalogSearchResult } from '@/types/supplier';
 
 interface StepMaterialsEquipmentProps {
   state: PickerState;
   dispatch: React.Dispatch<PickerAction>;
+  projectId: string;
 }
 
 function fmt(n: number) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -18,10 +22,165 @@ function blankEquipment(): Omit<EquipmentDraft, 'tempId'> {
   return { description: '', supplier: '', durationNote: '', cost: 0, icon: '🔧' };
 }
 
-export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipmentProps) {
+type AddMode = 'none' | 'custom' | 'catalog' | 'estimate';
+
+// ── Catalog Search Panel ──────────────────────────────────────────
+function CatalogPanel({ onSelect }: { onSelect: (item: CatalogSearchResult) => void }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<CatalogSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  const search = useCallback(async (q: string) => {
+    if (q.length < 2) return;
+    setLoading(true);
+    setSearched(true);
+    const { data } = await supabase.rpc('search_catalog_v2', {
+      search_query: q,
+      category_filter: null,
+      secondary_category_filter: null,
+      manufacturer_filter: null,
+      max_results: 30,
+    });
+    setResults((data as CatalogSearchResult[]) ?? []);
+    setLoading(false);
+  }, []);
+
+  return (
+    <div className="space-y-2.5">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          autoFocus
+          placeholder="Search by SKU, name, dimensions, species..."
+          value={query}
+          onChange={e => { setQuery(e.target.value); }}
+          onKeyDown={e => e.key === 'Enter' && search(query)}
+          className="w-full pl-8 pr-3 py-2 rounded-lg border bg-background text-[0.78rem] focus:border-amber-400 focus:outline-none"
+        />
+        {query && (
+          <button type="button" onClick={() => { setQuery(''); setResults([]); setSearched(false); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted">
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      {loading && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
+      {!loading && searched && results.length === 0 && (
+        <div className="text-center py-6 text-muted-foreground text-[0.78rem]">No items found. Try different terms.</div>
+      )}
+      {!loading && results.length > 0 && (
+        <div className="max-h-[320px] overflow-y-auto space-y-1 pr-0.5">
+          {results.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelect(item)}
+              className="w-full text-left flex items-start gap-2.5 p-2.5 rounded-lg border bg-background hover:border-amber-400 hover:bg-amber-50/40 transition-all"
+            >
+              <span className="w-7 h-7 rounded-md bg-amber-50 text-amber-700 flex items-center justify-center text-[0.7rem] font-bold shrink-0 mt-0.5">
+                <Package className="h-3.5 w-3.5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[0.78rem] font-semibold text-foreground truncate">{item.name || item.description}</p>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <code className="text-[0.6rem] font-mono bg-muted px-1 py-px rounded">{item.supplier_sku}</code>
+                  <span className="text-[0.6rem] text-muted-foreground">{item.category}</span>
+                  {item.dimension && <span className="text-[0.6rem] text-muted-foreground">• {item.dimension}</span>}
+                  {item.length && <span className="text-[0.6rem] text-muted-foreground">• {item.length}</span>}
+                </div>
+              </div>
+              <span className="text-[0.7rem] font-mono text-muted-foreground shrink-0">{item.uom_default}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {!loading && !searched && (
+        <div className="text-center py-6 text-muted-foreground text-[0.72rem]">
+          <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
+          Type at least 2 characters and press Enter to search
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Estimate Items Panel ──────────────────────────────────────────
+function EstimatePanel({ projectId, onSelect }: { projectId: string; onSelect: (item: any) => void }) {
+  const { data: items, isLoading } = useQuery({
+    queryKey: ['project-estimate-items-for-picker', projectId],
+    queryFn: async () => {
+      // Get estimates for this project
+      const { data: estimates } = await supabase
+        .from('supplier_estimates')
+        .select('id, name, supplier_org_id')
+        .eq('project_id', projectId)
+        .in('status', ['APPROVED', 'SUBMITTED']);
+
+      if (!estimates?.length) return [];
+
+      const estIds = estimates.map(e => e.id);
+      const { data: estItems } = await supabase
+        .from('supplier_estimate_items')
+        .select('id, estimate_id, description, supplier_sku, quantity, uom, unit_price, pack_name')
+        .in('estimate_id', estIds)
+        .order('pack_name');
+
+      // Map estimate names
+      const estMap = new Map(estimates.map(e => [e.id, e.name]));
+      return (estItems ?? []).map(i => ({
+        ...i,
+        estimateName: estMap.get(i.estimate_id) ?? 'Estimate',
+      }));
+    },
+    staleTime: 60_000,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  if (!items?.length) return (
+    <div className="text-center py-6 text-muted-foreground text-[0.72rem]">
+      <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+      No approved or submitted estimates found for this project.
+    </div>
+  );
+
+  return (
+    <div className="max-h-[360px] overflow-y-auto space-y-1 pr-0.5">
+      {items.map(item => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onSelect(item)}
+          className="w-full text-left flex items-start gap-2.5 p-2.5 rounded-lg border bg-background hover:border-green-400 hover:bg-green-50/40 transition-all"
+        >
+          <span className="w-7 h-7 rounded-md bg-green-50 text-green-700 flex items-center justify-center text-[0.7rem] font-bold shrink-0 mt-0.5">
+            <FileText className="h-3.5 w-3.5" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.78rem] font-semibold text-foreground truncate">{item.description}</p>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              {item.supplier_sku && <code className="text-[0.6rem] font-mono bg-muted px-1 py-px rounded">{item.supplier_sku}</code>}
+              <span className="text-[0.6rem] text-muted-foreground">{item.estimateName}</span>
+              {item.pack_name && <span className="text-[0.6rem] text-green-600">• {item.pack_name}</span>}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <span className="text-[0.72rem] font-mono font-semibold text-foreground">{item.quantity} {item.uom}</span>
+            {item.unit_price != null && (
+              <p className="text-[0.6rem] font-mono text-muted-foreground">{fmt(item.unit_price)}/{item.uom}</p>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────
+export function StepMaterialsEquipment({ state, dispatch, projectId }: StepMaterialsEquipmentProps) {
   const cur = state.items[state.currentItemIndex];
   const [tab, setTab] = useState<'mat' | 'eq'>('mat');
-  const [showMatForm, setShowMatForm] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode>('none');
   const [showEqForm, setShowEqForm] = useState(false);
   const [matDraft, setMatDraft] = useState(blankMaterial());
   const [eqDraft, setEqDraft] = useState(blankEquipment());
@@ -33,7 +192,41 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
       material: { ...matDraft, tempId: crypto.randomUUID() },
     });
     setMatDraft(blankMaterial());
-    setShowMatForm(false);
+    setAddMode('none');
+  };
+
+  const handleCatalogSelect = (item: CatalogSearchResult) => {
+    dispatch({
+      type: 'ADD_MATERIAL',
+      material: {
+        tempId: crypto.randomUUID(),
+        description: item.name || item.description,
+        sku: item.supplier_sku,
+        supplier: '',
+        quantity: 1,
+        unit: item.uom_default || 'EA',
+        unitCost: 0,
+        icon: '📦',
+      },
+    });
+    setAddMode('none');
+  };
+
+  const handleEstimateSelect = (item: any) => {
+    dispatch({
+      type: 'ADD_MATERIAL',
+      material: {
+        tempId: crypto.randomUUID(),
+        description: item.description,
+        sku: item.supplier_sku ?? '',
+        supplier: '',
+        quantity: item.quantity ?? 1,
+        unit: item.uom ?? 'EA',
+        unitCost: item.unit_price ?? 0,
+        icon: '📦',
+      },
+    });
+    // Keep estimate panel open so user can pick multiple items
   };
 
   const handleAddEquipment = () => {
@@ -55,7 +248,7 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
             What do we need to buy or rent?
           </h2>
           <p className="text-[0.78rem] text-muted-foreground mt-1 max-w-xl leading-relaxed">
-            Stage materials and equipment now. POs to suppliers can be sent later from the CO overview.
+            Pick from the catalog, pull from an estimate, or add custom items. After the CO is created, you can send materials to a supplier for pricing.
           </p>
         </div>
         <span className="text-[0.65rem] font-bold px-2.5 py-1 rounded-full bg-background border text-muted-foreground whitespace-nowrap shrink-0">
@@ -128,18 +321,18 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
           </div>
         </div>
 
-        {/* List */}
+        {/* Material/Equipment List */}
         <div className="p-3.5">
-          {tab === 'mat' && cur.materials.length === 0 && !showMatForm && (
+          {tab === 'mat' && cur.materials.length === 0 && addMode === 'none' && (
             <div className="text-center py-6 text-muted-foreground text-[0.78rem] border-2 border-dashed rounded-lg">
-              No materials added yet. Use the button below to add items.
+              No materials added yet. Use the buttons below to add from catalog, estimate, or manually.
             </div>
           )}
           {tab === 'mat' && cur.materials.map(m => (
             <div key={m.tempId} className="flex items-center gap-2.5 p-2.5 bg-background border rounded-lg mb-1.5">
               <span className="w-[30px] h-[30px] rounded-md bg-amber-50 text-amber-700 flex items-center justify-center text-[0.85rem] shrink-0">{m.icon}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-[0.78rem] font-semibold text-foreground">{m.description}</p>
+                <p className="text-[0.78rem] font-semibold text-foreground truncate">{m.description}</p>
                 <p className="text-[0.62rem] text-muted-foreground font-mono">{m.sku ? `${m.sku} · ` : ''}{m.supplier || 'No supplier'}</p>
               </div>
               <span className="font-mono text-[0.72rem] font-semibold text-foreground/80 shrink-0">{m.quantity} {m.unit}</span>
@@ -177,12 +370,37 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
             </div>
           ))}
 
-          {/* Inline Material Form */}
-          {tab === 'mat' && showMatForm && (
+          {/* ── Catalog Panel ──────────────────────────────────── */}
+          {tab === 'mat' && addMode === 'catalog' && (
             <div className="border-2 border-amber-300 rounded-xl p-3.5 bg-amber-50/30 mt-2 animate-fade-in">
-              <p className="text-[0.65rem] font-bold text-amber-700 uppercase tracking-[1px] mb-2.5">Add Material</p>
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="text-[0.65rem] font-bold text-amber-700 uppercase tracking-[1px]">From Catalog</p>
+                <button type="button" onClick={() => setAddMode('none')}
+                  className="text-[0.7rem] font-semibold text-muted-foreground hover:text-foreground">Close</button>
+              </div>
+              <CatalogPanel onSelect={handleCatalogSelect} />
+            </div>
+          )}
+
+          {/* ── Estimate Panel ─────────────────────────────────── */}
+          {tab === 'mat' && addMode === 'estimate' && (
+            <div className="border-2 border-green-300 rounded-xl p-3.5 bg-green-50/30 mt-2 animate-fade-in">
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="text-[0.65rem] font-bold text-green-700 uppercase tracking-[1px]">From Estimate</p>
+                <button type="button" onClick={() => setAddMode('none')}
+                  className="text-[0.7rem] font-semibold text-muted-foreground hover:text-foreground">Close</button>
+              </div>
+              <EstimatePanel projectId={projectId} onSelect={handleEstimateSelect} />
+            </div>
+          )}
+
+          {/* ── Custom Material Form ───────────────────────────── */}
+          {tab === 'mat' && addMode === 'custom' && (
+            <div className="border-2 border-amber-300 rounded-xl p-3.5 bg-amber-50/30 mt-2 animate-fade-in">
+              <p className="text-[0.65rem] font-bold text-amber-700 uppercase tracking-[1px] mb-2.5">Custom Material</p>
               <div className="grid grid-cols-[1fr_80px_60px_90px] gap-2 mb-2">
                 <input
+                  autoFocus
                   placeholder="Description *"
                   value={matDraft.description}
                   onChange={e => setMatDraft(d => ({ ...d, description: e.target.value }))}
@@ -227,7 +445,7 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={() => { setShowMatForm(false); setMatDraft(blankMaterial()); }}
+                <button type="button" onClick={() => { setAddMode('none'); setMatDraft(blankMaterial()); }}
                   className="px-3 py-1.5 rounded-lg text-[0.72rem] font-semibold text-muted-foreground hover:bg-muted transition-all">
                   Cancel
                 </button>
@@ -245,6 +463,7 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
               <p className="text-[0.65rem] font-bold text-purple-700 uppercase tracking-[1px] mb-2.5">Add Equipment</p>
               <div className="grid grid-cols-[1fr_100px] gap-2 mb-2">
                 <input
+                  autoFocus
                   placeholder="Description *"
                   value={eqDraft.description}
                   onChange={e => setEqDraft(d => ({ ...d, description: e.target.value }))}
@@ -293,7 +512,7 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
           <div className="flex items-center gap-2 mx-3.5 mb-3 p-2.5 bg-blue-50 border border-blue-200 border-l-[3px] border-l-blue-600 rounded-lg text-[0.72rem] text-foreground/80">
             <span className="text-base">{tab === 'mat' ? '📦' : '🔧'}</span>
             <div className="flex-1">
-              <span className="font-bold text-blue-700">Staged for PO</span> — These will appear on the CO overview where you can send to suppliers.
+              <span className="font-bold text-blue-700">Staged for PO</span> — After the CO is created, go to the CO detail page to send these items to a supplier for pricing.
             </div>
           </div>
         )}
@@ -301,14 +520,32 @@ export function StepMaterialsEquipment({ state, dispatch }: StepMaterialsEquipme
         {/* Add buttons */}
         <div className="flex gap-1.5 px-3.5 py-2.5 border-t border-dashed">
           {tab === 'mat' ? (
-            <button
-              type="button"
-              onClick={() => setShowMatForm(true)}
-              disabled={showMatForm}
-              className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 bg-muted border rounded-lg text-[0.74rem] font-semibold text-foreground/80 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 disabled:opacity-40 transition-all"
-            >
-              <Plus className="h-3.5 w-3.5" /> Add Material
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setAddMode('catalog')}
+                disabled={addMode !== 'none'}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 bg-muted border rounded-lg text-[0.74rem] font-semibold text-foreground/80 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 disabled:opacity-40 transition-all"
+              >
+                <Search className="h-3.5 w-3.5" /> From Catalog
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddMode('estimate')}
+                disabled={addMode !== 'none'}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 bg-muted border rounded-lg text-[0.74rem] font-semibold text-foreground/80 hover:bg-green-50 hover:border-green-300 hover:text-green-700 disabled:opacity-40 transition-all"
+              >
+                <FileText className="h-3.5 w-3.5" /> From Estimate
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddMode('custom')}
+                disabled={addMode !== 'none'}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 bg-muted border rounded-lg text-[0.74rem] font-semibold text-foreground/80 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 disabled:opacity-40 transition-all"
+              >
+                <Plus className="h-3.5 w-3.5" /> Custom Item
+              </button>
+            </>
           ) : (
             <button
               type="button"
