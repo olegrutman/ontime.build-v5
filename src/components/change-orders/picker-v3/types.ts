@@ -120,6 +120,7 @@ export interface PickerState {
 // ─── Reducer Actions ─────────────────────────────────────────────
 export type PickerAction =
   | { type: 'SET_STEP'; step: number }
+  | { type: 'SET_ROLE'; role: COCreatedByRole }
   | { type: 'SET_LOCATION'; locations: string[] }
   | { type: 'TOGGLE_MULTI_LOCATION' }
   | { type: 'SET_SYSTEM'; systemId: string; systemName: string }
