@@ -92,7 +92,7 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
         </div>
       </div>
 
-      {/* Attachments */}
+      {/* Attachments — coming soon */}
       <div className="flex gap-2 flex-wrap">
         {[
           { icon: '📷', label: 'Add Photos' },
@@ -102,9 +102,12 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
           <button
             key={att.label}
             type="button"
-            className="flex items-center gap-2 flex-1 justify-center px-3.5 py-2.5 rounded-lg bg-background border-[1.5px] border-dashed border-muted-foreground/30 text-[0.78rem] font-semibold text-muted-foreground hover:bg-amber-50 hover:border-amber-300 hover:text-foreground transition-all"
+            disabled
+            title="Coming soon"
+            className="flex items-center gap-2 flex-1 justify-center px-3.5 py-2.5 rounded-lg bg-background border-[1.5px] border-dashed border-muted-foreground/20 text-[0.78rem] font-semibold text-muted-foreground/50 cursor-not-allowed relative"
           >
-            <span className="text-base">{att.icon}</span> {att.label}
+            <span className="text-base opacity-50">{att.icon}</span> {att.label}
+            <span className="absolute -top-1.5 -right-1.5 text-[0.5rem] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full uppercase tracking-[0.5px]">Soon</span>
           </button>
         ))}
       </div>
