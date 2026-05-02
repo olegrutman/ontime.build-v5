@@ -163,58 +163,73 @@ export function PickerShell({ projectId }: PickerShellProps) {
 
         // Insert line items from work types
         const workTypeEntries = Array.from(item.workTypes);
+        let createdLineItemIds: string[] = [];
+
         if (workTypeEntries.length > 0) {
           const lineItems = workTypeEntries.map((wt, idx) => ({
             co_id: co.id,
             org_id: orgId,
-            description: item.workNames[wt] ?? wt,
+            created_by_role: detectedRole,
+            item_name: item.workNames[wt] ?? wt,
+            description: item.narrative || null,
+            unit: 'EA',
             sort_order: idx + 1,
-            scope_summary: item.narrative || null,
           }));
-          const { error: liError } = await supabase
+          const { data: liData, error: liError } = await supabase
             .from('co_line_items')
-            .insert(lineItems);
+            .insert(lineItems)
+            .select('id');
           if (liError) console.error('Line items insert error:', liError);
-        } else if (item.narrative) {
-          // Create a single line item from the narrative
-          const { error: liError } = await supabase
+          createdLineItemIds = (liData ?? []).map(li => li.id);
+        } else {
+          // Create a single line item from the narrative or title
+          const { data: liData, error: liError } = await supabase
             .from('co_line_items')
             .insert({
               co_id: co.id,
               org_id: orgId,
-              description: item.narrative.substring(0, 200),
+              created_by_role: detectedRole,
+              item_name: item.narrative?.substring(0, 120) || item.causeName || 'Scope item',
+              description: item.narrative || null,
+              unit: 'EA',
               sort_order: 1,
-              scope_summary: item.narrative,
-            });
+            })
+            .select('id');
           if (liError) console.error('Line item insert error:', liError);
+          createdLineItemIds = (liData ?? []).map(li => li.id);
         }
 
-        // Insert labor entries
-        for (const labor of item.laborEntries) {
-          if (labor.hours <= 0) continue;
-          await supabase.from('co_labor_entries').insert({
-            co_id: co.id,
-            org_id: orgId,
-            entered_by_role: detectedRole,
-            worker_role: labor.role,
-            rate: labor.rate,
-            hours: labor.hours,
-            line_total: labor.rate * labor.hours,
-            pricing_mode: 'hourly',
-            is_actual_cost: false,
-          });
+        // Insert labor entries (linked to first line item)
+        const firstLineItemId = createdLineItemIds[0];
+        if (firstLineItemId) {
+          for (const labor of item.laborEntries) {
+            if (labor.hours <= 0) continue;
+            await supabase.from('co_labor_entries').insert({
+              co_id: co.id,
+              org_id: orgId,
+              co_line_item_id: firstLineItemId,
+              entered_by_role: detectedRole,
+              description: labor.role,
+              hourly_rate: labor.rate,
+              hours: labor.hours,
+              line_total: labor.rate * labor.hours,
+              pricing_mode: 'hourly',
+              is_actual_cost: false,
+            });
+          }
         }
 
         // Insert materials
-        for (const mat of item.materials) {
+        for (let mi = 0; mi < item.materials.length; mi++) {
+          const mat = item.materials[mi];
           await supabase.from('co_material_items').insert({
             co_id: co.id,
             org_id: orgId,
+            added_by_role: detectedRole,
             description: mat.description,
-            sku: mat.sku || null,
-            supplier_name: mat.supplier || null,
+            supplier_sku: mat.sku || null,
             quantity: mat.quantity,
-            unit: mat.unit,
+            uom: mat.unit || 'EA',
             unit_cost: mat.unitCost,
             line_cost: mat.unitCost * mat.quantity,
             markup_percent: item.markup,
@@ -228,8 +243,8 @@ export function PickerShell({ projectId }: PickerShellProps) {
           await supabase.from('co_equipment_items').insert({
             co_id: co.id,
             org_id: orgId,
+            added_by_role: detectedRole,
             description: eq.description,
-            supplier_name: eq.supplier || null,
             duration_note: eq.durationNote || null,
             cost: eq.cost,
             markup_percent: item.markup,
@@ -243,7 +258,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
           await supabase.from('change_order_collaborators').insert({
             co_id: co.id,
             organization_id: state.collaboration.assignedFcOrgId,
-            role: 'FC',
+            collaborator_type: 'FC',
             status: 'invited',
             invited_by_user_id: user.id,
           });
