@@ -312,7 +312,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
       case 4: return <StepPricing state={state} dispatch={dispatch} />;
       case 5: return <StepWork state={state} dispatch={dispatch} />;
       case 6: return <StepScope state={state} dispatch={dispatch} />;
-      case 7: return <StepMaterialsEquipment state={state} dispatch={dispatch} />;
+      case 7: return <StepMaterialsEquipment state={state} dispatch={dispatch} projectId={projectId} />;
       case 8: return <StepTotal state={state} dispatch={dispatch} onAddItem={handleAddItem} onGoReview={() => dispatch({ type: 'SET_STEP', step: 9 })} />;
       case 9: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} />;
       default: return null;
