@@ -30,16 +30,35 @@ interface PickerShellProps {
 
 export function PickerShell({ projectId }: PickerShellProps) {
   const navigate = useNavigate();
-  const { userOrgRoles } = useAuth();
+  const { userOrgRoles, user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Resolve current user's role
+  // Resolve current user's role using project participant context
+  const { data: myParticipant } = useQuery({
+    queryKey: ['my-project-participant', projectId],
+    queryFn: async () => {
+      const orgId = userOrgRoles?.[0]?.organization_id;
+      if (!orgId) return null;
+      const { data } = await supabase
+        .from('project_participants')
+        .select('role, organization_id, organization:organizations(id, name, type)')
+        .eq('project_id', projectId)
+        .eq('organization_id', orgId)
+        .eq('invite_status', 'ACCEPTED')
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!projectId && !!userOrgRoles?.length,
+  });
+
   const detectedRole: COCreatedByRole = (() => {
-    const membership = userOrgRoles[0];
-    const orgType = membership?.organization?.type;
-    if (orgType === 'GC') return 'GC';
-    if (orgType === 'FC') return 'FC';
+    if (myParticipant?.role === 'GC') return 'GC';
+    if (myParticipant?.role === 'FC') return 'FC';
     return 'TC';
   })();
+
+  const orgId = (myParticipant?.organization_id ?? userOrgRoles?.[0]?.organization_id) as string;
 
   const [state, dispatch] = usePickerState(detectedRole);
 
@@ -57,6 +76,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
     staleTime: Infinity,
   });
 
+  const isTM = projectInfo?.contract_mode === 'tm';
   const cur = state.items[state.currentItemIndex];
 
   const handleStepClick = useCallback((step: number) => {
@@ -79,11 +99,169 @@ export function PickerShell({ projectId }: PickerShellProps) {
     dispatch({ type: 'ADD_ITEM' });
   }, [dispatch]);
 
-  const handleSubmit = useCallback(() => {
-    dispatch({ type: 'SET_SUBMITTED' });
-    toast.success(`${cur.docType} submitted successfully`);
-    // In real implementation, create the CO in the database here
-  }, [dispatch, cur.docType]);
+  const handleSubmit = useCallback(async () => {
+    if (!user || !orgId || isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      // Determine assigned_to_org_id based on role
+      let assignedToOrgId: string | null = null;
+      if (detectedRole === 'TC' || detectedRole === 'FC') {
+        // Find the GC on this project
+        const { data: gcParticipant } = await supabase
+          .from('project_participants')
+          .select('organization_id')
+          .eq('project_id', projectId)
+          .eq('role', 'GC')
+          .eq('invite_status', 'ACCEPTED')
+          .maybeSingle();
+        assignedToOrgId = gcParticipant?.organization_id ?? null;
+      } else if (state.collaboration.assignedTcOrgId) {
+        assignedToOrgId = state.collaboration.assignedTcOrgId;
+      }
+
+      // Create one CO per item
+      for (const item of state.items) {
+        const coNumber = await generateCONumber({
+          projectId,
+          creatorOrgId: orgId,
+          assignedToOrgId,
+          isTM: isTM || item.docType === 'WO',
+        });
+
+        const locationTag = item.locations.length > 0
+          ? item.locations.join(' + ')
+          : null;
+
+        const { data: co, error: coError } = await supabase
+          .from('change_orders')
+          .insert({
+            org_id: orgId,
+            project_id: projectId,
+            created_by_user_id: user.id,
+            created_by_role: detectedRole,
+            co_number: coNumber,
+            title: item.narrative
+              ? item.narrative.substring(0, 120)
+              : `${item.systemName ?? ''} · ${item.causeName ?? ''}`.trim() || coNumber,
+            status: 'draft',
+            pricing_type: item.pricingType,
+            reason: item.reason ?? 'owner_upgrade',
+            reason_note: item.causeName ?? null,
+            location_tag: locationTag,
+            assigned_to_org_id: assignedToOrgId,
+            fc_input_needed: state.collaboration.requestFcInput,
+            materials_needed: item.materials.length > 0,
+            equipment_needed: item.equipment.length > 0,
+            materials_responsible: item.materialResponsible,
+            equipment_responsible: item.equipmentResponsible,
+          })
+          .select()
+          .single();
+
+        if (coError) throw coError;
+
+        // Insert line items from work types
+        const workTypeEntries = Array.from(item.workTypes);
+        if (workTypeEntries.length > 0) {
+          const lineItems = workTypeEntries.map((wt, idx) => ({
+            co_id: co.id,
+            org_id: orgId,
+            description: item.workNames[wt] ?? wt,
+            sort_order: idx + 1,
+            scope_summary: item.narrative || null,
+          }));
+          const { error: liError } = await supabase
+            .from('co_line_items')
+            .insert(lineItems);
+          if (liError) console.error('Line items insert error:', liError);
+        } else if (item.narrative) {
+          // Create a single line item from the narrative
+          const { error: liError } = await supabase
+            .from('co_line_items')
+            .insert({
+              co_id: co.id,
+              org_id: orgId,
+              description: item.narrative.substring(0, 200),
+              sort_order: 1,
+              scope_summary: item.narrative,
+            });
+          if (liError) console.error('Line item insert error:', liError);
+        }
+
+        // Insert labor entries
+        for (const labor of item.laborEntries) {
+          if (labor.hours <= 0) continue;
+          await supabase.from('co_labor_entries').insert({
+            co_id: co.id,
+            org_id: orgId,
+            entered_by_role: detectedRole,
+            worker_role: labor.role,
+            rate: labor.rate,
+            hours: labor.hours,
+            line_total: labor.rate * labor.hours,
+            pricing_mode: 'hourly',
+            is_actual_cost: false,
+          });
+        }
+
+        // Insert materials
+        for (const mat of item.materials) {
+          await supabase.from('co_material_items').insert({
+            co_id: co.id,
+            org_id: orgId,
+            description: mat.description,
+            sku: mat.sku || null,
+            supplier_name: mat.supplier || null,
+            quantity: mat.quantity,
+            unit: mat.unit,
+            unit_cost: mat.unitCost,
+            line_cost: mat.unitCost * mat.quantity,
+            markup_percent: item.markup,
+            markup_amount: (mat.unitCost * mat.quantity * item.markup) / 100,
+            billed_amount: mat.unitCost * mat.quantity * (1 + item.markup / 100),
+          });
+        }
+
+        // Insert equipment
+        for (const eq of item.equipment) {
+          await supabase.from('co_equipment_items').insert({
+            co_id: co.id,
+            org_id: orgId,
+            description: eq.description,
+            supplier_name: eq.supplier || null,
+            duration_note: eq.durationNote || null,
+            cost: eq.cost,
+            markup_percent: item.markup,
+            markup_amount: (eq.cost * item.markup) / 100,
+            billed_amount: eq.cost * (1 + item.markup / 100),
+          });
+        }
+
+        // Insert collaborator if FC input requested
+        if (state.collaboration.requestFcInput && state.collaboration.assignedFcOrgId) {
+          await supabase.from('change_order_collaborators').insert({
+            co_id: co.id,
+            organization_id: state.collaboration.assignedFcOrgId,
+            role: 'FC',
+            status: 'invited',
+            invited_by_user_id: user.id,
+          });
+        }
+      }
+
+      // Invalidate queries so lists refresh
+      queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
+
+      dispatch({ type: 'SET_SUBMITTED' });
+      toast.success(`${cur.docType === 'WO' ? 'Work Order' : 'Change Order'} created successfully`);
+    } catch (err: any) {
+      console.error('Failed to create CO:', err);
+      toast.error(err.message ?? 'Failed to create change order');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [user, orgId, isSubmitting, detectedRole, projectId, state, cur.docType, isTM, queryClient, dispatch]);
 
   const handleRoleSwitch = useCallback((role: COCreatedByRole) => {
     // For demo purposes only — in production, role is derived from auth
