@@ -1,53 +1,30 @@
 
-# Fix CO/WO Picker v3 — End-to-End
+# Fix CO Picker v3 — Role Lock, Exit, and Sidebar
 
-The wizard renders but has multiple non-functional elements and data bugs preventing real use.
+## Problems
+1. **Role Switcher visible** — `CORoleSwitcher` shows GC/TC/FC tabs in the header. This is wrong; the role must come from the user's actual project participation, not a manual toggle.
+2. **Role not syncing** — `usePickerState` initializes with `detectedRole`, but the participant query is async. The initial render uses a stale default before the query resolves. No `useEffect` syncs the detected role back into state.
+3. **No exit** — the back arrow calls `navigate(-1)` which may not work if the user landed directly. Need a reliable "back to CO list" route.
+4. **Sidebar always visible** — the picker already renders full-screen (`min-h-screen` grid), but it shares the route context with `ProjectHome` which has `ProjectSidebar`. The picker page is already outside that layout, so the "sidebar" the user sees is likely the `PickerAside` right panel (340px). This is intentional as a summary panel — but on certain screen sizes it may feel stuck. Will verify this is not a `ProjectSidebar` leak.
 
-## Bugs Found
+## Changes
 
-### Critical (prevents submission)
-1. **Invalid reason code in submit** — `reason: cur.reason ?? 'owner_upgrade'` but `owner_upgrade` is not a valid enum value. Should be `'owner_request'`.
-2. **Invalid `entered_by_role` for GC** — Labor entries set `entered_by_role: detectedRole` which can be `'GC'`, but `co_labor_entries.entered_by_role` only accepts `'FC' | 'TC'`. GC-created labor should default to `'TC'`.
-3. **Missing `line_number`** on material inserts — the `co_material_items` table requires `line_number` but the insert doesn't calculate it (uses index `mi` but the column name isn't set).
+### 1. Remove `CORoleSwitcher` from `PickerShell.tsx`
+- Delete the import and the `<CORoleSwitcher>` JSX block from the header (lines 15, 376-378).
+- Delete the dead `handleRoleSwitch` callback (lines 299-301).
+- Display a small role badge instead (e.g., "Creating as TC") so the user knows their detected role.
 
-### High (dead buttons / no functionality)
-4. **"+ From Catalog" and "Custom Item" buttons** on Step 7 (Materials) have no `onClick` handlers — completely dead.
-5. **"Add Photos", "Attach RFI", "Pin to Plan" buttons** on Step 6 (Scope) have no handlers.
-6. **Locations are hardcoded** — Step 1 shows fake locations instead of pulling from the project's actual building structure (`project_scope_details` or project profile).
-7. **Work types are hardcoded** — Step 5 shows static suggestions not tied to the selected system.
+### 2. Sync detected role into reducer state
+- Add a `SET_ROLE` action to the reducer in `usePickerState.ts` and `types.ts`.
+- Add a `useEffect` in `PickerShell` that dispatches `SET_ROLE` when `detectedRole` changes and differs from `state.role`.
 
-### Medium (UX gaps)
-8. **No step validation** — user can skip to Review and submit a blank CO with no location, cause, or work types.
-9. **`project_team` query in StepWho** — references `project_team` table which may not match the schema; should use `project_participants`.
+### 3. Reliable exit navigation
+- Change the back arrow `onClick` from `navigate(-1)` to `navigate(`/project/${projectId}/change-orders`)` so it always goes to the CO list.
 
-## Fix Plan
+### 4. Verify no sidebar leak
+- Confirm the route at `/project/:id/change-orders/new` renders `COPickerV3Page` directly (not inside `ProjectHome`). Already confirmed — no fix needed.
 
-### 1. Fix submit logic (PickerShell.tsx)
-- Change fallback reason from `'owner_upgrade'` to `'owner_request'`
-- Map `entered_by_role`: if detectedRole is `'GC'`, use `'TC'`; otherwise use detectedRole
-- Fix material `line_number` to use `mi + 1`
-
-### 2. Wire Materials & Equipment buttons (StepMaterialsEquipment.tsx)
-- Add inline "Custom Item" form (dialog or expandable row) that dispatches `ADD_MATERIAL` / `ADD_EQUIPMENT`
-- Add "From Catalog" button that opens the existing `CatalogSearch` component to pick items
-
-### 3. Pull real locations from project data (StepWhere.tsx)
-- Query `project_scope_details` for the project's building structure
-- Fall back to the current hardcoded list if no scope data exists
-
-### 4. Add basic step validation
-- Track which steps are "complete" (location selected, cause selected, etc.)
-- Disable Next / Submit when current step requirements aren't met
-- Show visual indicators on stepper for completed vs incomplete steps
-
-### 5. Fix StepWho table reference
-- Replace `project_team` query with `project_participants` to match the actual schema
-
-### 6. Mark attachment buttons as "Coming Soon"
-- Add disabled state + tooltip for Photos/RFI/Pin buttons since those features aren't built yet
-
-## Technical Details
-
-- All changes are frontend-only (no migrations needed)
-- Primary files: `PickerShell.tsx`, `StepMaterialsEquipment.tsx`, `StepWhere.tsx`, `StepWho.tsx`, `StepScope.tsx`, `PickerStepper.tsx`
-- The custom material form needs fields: description, quantity, unit, unit cost, and optionally SKU/supplier
+### Files Modified
+- `src/components/change-orders/picker-v3/PickerShell.tsx` — remove switcher, add role badge, fix back nav, add role sync effect
+- `src/components/change-orders/picker-v3/types.ts` — add `SET_ROLE` action type
+- `src/components/change-orders/picker-v3/usePickerState.ts` — handle `SET_ROLE` in reducer
