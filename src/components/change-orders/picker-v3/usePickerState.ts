@@ -16,6 +16,9 @@ function pickerReducer(state: PickerState, action: PickerAction): PickerState {
     case 'SET_STEP':
       return { ...state, step: action.step };
 
+    case 'SET_ROLE':
+      return { ...state, role: action.role };
+
     case 'SET_LOCATION':
       return updateItem({ locations: action.locations });
 
