@@ -414,9 +414,10 @@ export function PickerShell({ projectId }: PickerShellProps) {
             <button
               type="button"
               onClick={handleSubmit}
-              className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-green-600 text-white"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-green-600 text-white disabled:opacity-60"
             >
-              ✓ Submit
+              {isSubmitting ? 'Saving…' : '✓ Submit'}
             </button>
           ) : (
             <button
