@@ -1,107 +1,180 @@
-## The gap
 
-You want **interior siding installation — e.g., T&G wood plank on ceilings**. Today the catalog has:
+# CO/WO Picker v3 + Role-Aware Overview Page
 
-- `envelope_exterior / siding_trim` → only **exterior** siding
-- `demo / selective_demo / d4 Ceiling demo` → tear-out, not install
-- No `interior_finish` division at all (no T&G, shiplap, beadboard, paneling, wainscot, beams, tile, drywall finish, trim)
+Two new artifacts replacing both the current `COWizard.tsx` dialog and augmenting `CODetailLayout.tsx`.
 
-So a TC trying to add "T&G wood ceiling install" hits a dead end. The AI fallback (`suggest-scope-items`) only ranks **existing** catalog rows, so it can't rescue you either.
+---
 
-## Recommended approach (two layers)
+## What I Learned from the Three Prototypes
 
-Solve it in two layers so you fix this case *and* every future "missing item" case.
+**Picker v2** (first upload): Full 8-step wizard with navy summary sidebar, multi-item support, narrative builder, approval chain. Established the split-panel pattern.
 
-### Layer 1 — Seed a real "Interior Finishes" branch (data, permanent)
+**Picker v3** (second upload): Refined version with key additions:
+- **Step 3 "Who"** — role-dependent collaboration setup (GC assigns TC + optional FC; TC optionally requests FC; FC auto-routes to TC)
+- **Step 7 "Materials & Equipment"** — tabbed panel with responsibility toggles (GC/TC), catalog modal picker, staged-for-PO pattern (no inline PO creation)
+- **Right aside** changed from navy summary to white card-based item list + navy total panel at bottom
+- **Role switcher** in topbar for demo/review
+- **Routing chain** preview (navy strip showing approval flow)
+- 9 steps: Where → Why → **Who** → Pricing → Work → Scope → **Materials & Equipment** → Total → Review
 
-Add a platform-level division so the right items appear in every project's CO wizard. Proposed taxonomy:
+**Overview page** (third upload): Role-aware detail page with:
+- **Status pipeline** (Created → Pricing → Review → Submitted → Approved) with progress line
+- **Next Action Banner** — completely different per role (GC: Approve/Reject, TC: Waiting/Recall, FC: Hours submitted)
+- **KPI strip** — 4 cards that swap entirely by role (GC: TC Submitted/Material/Equipment/Budget; TC: FC Cost/My Billable/Mat+Equip/Total to GC; FC: Hours/Billed to TC/Internal Cost/Margin)
+- **2-column layout**: left (scope items + materials/equipment table) + right rail (financials, FC pricing toggle, team, approval chain, activity)
+- **Role-aware visibility** via `data-active-role` attribute and CSS rules
+- **Financials panel** shows different breakdowns per role (TC sees internal/private cost + margin; FC sees wage cost + margin; GC sees only submitted totals)
+- **FC pricing base toggle** — TC-only card showing hours × rate = billable
+- **Collaboration panel** — team list with status badges (Active, Invited, Done)
+- **Linked PO banner** on materials table
 
-```text
-interior_finish /
-├── ceiling_finish
-│   ├── if_tg_wood_ceiling      "T&G wood ceiling — install"        SF
-│   ├── if_shiplap_ceiling      "Shiplap ceiling — install"         SF
-│   ├── if_beadboard_ceiling    "Beadboard ceiling — install"       SF
-│   ├── if_wood_plank_ceiling   "Wood plank ceiling — install"      SF
-│   ├── if_decorative_beams     "Decorative ceiling beams"          LF
-│   └── if_ceiling_trim         "Ceiling perimeter trim"            LF
-├── wall_finish
-│   ├── if_tg_wood_wall         "T&G wood wall paneling — install"  SF
-│   ├── if_shiplap_wall         "Shiplap wall — install"            SF
-│   ├── if_wainscot             "Wainscot — install"                SF
-│   └── if_accent_wall          "Accent wood wall — install"        SF
-└── prep
-    ├── if_furring_strips       "Furring strips for wood ceiling"   SF
-    └── if_substrate_prep       "Substrate prep / blocking"         SF
-```
+---
 
-Each row gets:
-- `applicable_zone` = `interior_ceiling` or `interior_wall`
-- `applicable_work_types` = `['remodel','new_construction','repair']`
-- `applicable_reasons` = `['scope_addition','design_change','owner_request']`
-- `aliases` = e.g. `['t&g','tongue and groove','tongue & groove','plank ceiling','wood ceiling','tg ceiling']` — so AI search and free-text matching find them
-- `is_platform = true`, `org_id = null`
+## Artifact 1: CO/WO Picker v3
 
-This is shipped via a single migration so every org sees them immediately.
+### Layout
+- Full-page split: left main area (topbar + stepper + content), right aside (item list + total panel + nav buttons)
+- Aside is sticky 340px on desktop, slides in as drawer on mobile (< 920px)
+- Role switcher in topbar for demo purposes
 
-### Layer 2 — "Can't find it? Add it." escape hatch (UX, durable)
+### Step Flow (9 steps from v3 prototype)
 
-For the next time something genuinely isn't in the catalog, give users a guarded path instead of getting stuck:
+| # | Key | Content |
+|---|-----|---------|
+| 1 | Where | Location picker (building + system) with multi-location toggle. Reuse `VisualLocationPicker` data. |
+| 2 | Why | Grouped cause cards (conflict / site issue / add-on). Infers CO vs WO, billable, backcharge. |
+| 3 | Who | **Role-dependent**: GC picks TC + optional FC; TC sees auto-assigned GC + optional FC; FC sees auto-routing. Routing chain preview. |
+| 4 | Pricing | Fixed / T&M / NTE card selector. |
+| 5 | Work | Multi-select pills with ★ suggested items based on cause + system. |
+| 6 | Scope | AI-generated narrative with tone toggle (clinical/plain), voice note + photo attach. |
+| 7 | Materials & Equipment | Tabbed panel. Responsibility toggles (GC/TC). Catalog modal. "Staged for PO" badge. |
+| 8 | Total | Per-item pricing summary with markup %. "Add Another Item" or "Go to Review" fork. |
+| 9 | Review | Multi-item roll-up table, approval chain, submit. |
 
-1. In Step 3 (Scope) of the Add-Item wizard, when the AI fallback search returns no usable match — or always as a small secondary action — show **"+ Add custom item"**.
-2. Opens a small form: **Name**, **Unit** (EA/SF/LF/HR/LS), **Division** (dropdown of existing divisions + "Other"), **Category**, optional **Quantity**, optional **Description**.
-3. Two save modes:
-   - **One-off** (default) → inserted into `co_line_items` with `catalog_item_id = NULL` (the schema already allows this). Tagged in UI as "Custom".
-   - **Save to my org's catalog** (checkbox, only if user has org admin/owner role) → inserts an `org`-scoped row into `catalog_definitions` (`is_platform = false`, `org_id = <user's org>`), then references it from the line item. Future COs in that org will see it.
-4. Custom items still flow through the AI description generator and Review step like any other line item.
+### What Stays from Prototypes
+- Split-panel layout with aside item list
+- Pick card grid for location/cause
+- Pill-based work type multi-select with ★ suggestions
+- Inference badges (CO/WO, billable, backcharge)
+- Pricing card trio
+- Narrative builder with tone toggle + regenerate shimmer
+- Multi-item support (add another, each inherits cause/pricing)
+- Responsibility toggles on materials/equipment
+- Catalog modal for adding materials
+- Routing chain preview (navy strip)
+- Stepper with done/active/future states
+- Item context strip when editing item 2+
+- Total panel with breakdown rows
+- All typography: Barlow Condensed headings, IBM Plex Mono financials, DM Sans body
+- Amber accent throughout
 
-This works because:
-- `co_line_items.catalog_item_id` is already nullable with `ON DELETE SET NULL`.
-- `catalog_definitions` already supports org-scoped rows via `is_platform=false` + `org_id`, with an existing RLS policy "Org catalog readable by members".
+### What Changes vs Current Code
+- **Replaces** `COWizard.tsx` (1558-line dialog) entirely
+- Full page route instead of dialog/sheet
+- State via `useReducer` with multi-item array
+- Adds Step 3 (Who) — collaboration setup
+- Adds Step 7 (Materials & Equipment) with responsibility toggles
+- Materials stage on CO, PO creation deferred to overview page
+- FC collaborator row created on submit (status: 'invited')
 
-### Why this combination
+### Technical Details
+- New route: `/projects/:id/co/new` (and `/wo/new`)
+- Components in `src/components/change-orders/picker-v3/`:
+  - `PickerShell.tsx` — grid layout + responsive aside drawer
+  - `PickerStepper.tsx` — 9-step bar
+  - `PickerAside.tsx` — item list + total panel + nav buttons
+  - `StepWhere.tsx`, `StepWhy.tsx`, `StepWho.tsx`, `StepPricing.tsx`, `StepWork.tsx`, `StepScope.tsx`, `StepMaterialsEquipment.tsx`, `StepTotal.tsx`, `StepReview.tsx`
+  - `CatalogModal.tsx` — material/equipment catalog picker
+  - `RoutingChain.tsx` — navy approval flow preview
+  - `usePickerState.ts` — reducer managing items[], currentIndex, step
+  - `types.ts` — PickerItem, PickerState
+- Reuses: `useScopeCatalog`, `useProjectFCOrgs`, `useCORoleContext`, `generateCONumber`
+- On submit: single transaction creating `change_orders` + `co_line_items` + `co_materials` + `co_equipment` + `change_order_collaborators`
 
-- **Layer 1** fixes your immediate need correctly — T&G ceilings show up in the structured pick-list with proper zones, units, and AI matchability for everyone, not just one CO.
-- **Layer 2** prevents this exact conversation from repeating. Any future missing item is a 20-second add, not a support ticket. Org-level promotion lets each TC build their own working library without polluting the platform catalog.
-- We **don't** let users freely write into the platform catalog — only platform admins can promote an org item to platform-wide later (already manageable from `ScopeItemsTable` in the platform admin area).
+---
 
-## How to build
+## Artifact 2: CO/WO Overview Page
 
-### Migration (Layer 1)
+### Layout
+- Topbar with breadcrumb + role switcher
+- Header card: CO number + status pill + pricing pill + title + pipeline visualization
+- Next Action Banner (navy, role-dependent)
+- KPI strip (4 cards, role-aware)
+- 2-column grid: left (scope items + materials/equipment) + right rail (financials + FC pricing toggle + team + approval chain + activity)
 
-`supabase/migrations/<ts>_seed_interior_finish_catalog.sql`:
+### Role-Aware Rendering
 
-- `INSERT INTO catalog_definitions (...)` for the ~12 rows above.
-- Slugs like `if_tg_wood_ceiling` so they're stable and namespaced.
-- Populate `search_text` and `aliases` so the existing `suggest-scope-items` edge function ranks them on plain-English queries like "T&G wood ceiling".
+**GC sees:**
+- Next Action: "Review & approve $X" with Approve/Reject buttons
+- KPIs: TC Submitted | Material Cost | Equipment | Budget Impact
+- Financials: TC Labor + Materials + Equipment = Total to Approve + budget usage bar
+- Materials table with linked PO banner, "Send for Pricing" action
+- No internal cost or markup visibility
 
-No schema changes — the table already supports everything we need.
+**TC sees:**
+- Next Action: "Waiting on GC" with Recall button
+- KPIs: FC Cost | My Billable | Mat + Equip | Total to GC
+- Financials: Billable section + Internal/Private section (FC cost, material cost, equip cost) + margin block with progress bar
+- FC Pricing Base toggle card (hours × rate = billable)
+- Materials table with full pricing columns
 
-### Frontend (Layer 2)
+**FC sees:**
+- Next Action: "Your hours are with [TC]" with Add Hours button
+- KPIs: Hours Logged | Billed to TC | Internal Cost | Margin
+- Financials: Hour breakdown by role + Billed to TC total + Internal wage cost + margin
+- Materials table without cost columns (hidden via role CSS)
+- No PO actions visible
 
-New small component, plus one wiring change:
+### What Stays from Current `CODetailLayout`
+All existing sub-components are preserved and reused where they fit:
+- `CONextActionBanner` — enhanced with role-specific content from prototype
+- `COKPIStrip` — enhanced with full role-conditional metrics
+- `COLineItemRow`, `COMaterialsPanel`, `COEquipmentPanel`
+- `COActivityFeed`, `COAcceptBanner`, `COStatusActions`
+- `FCPricingToggleCard`, `FCInputRequestCard`
+- `useCORoleContext`, `useCOResponsibility`, `useCORealtime`
 
-- **New:** `src/components/change-orders/wizard/AddCustomItemDialog.tsx`
-  - Controlled dialog with the form described above.
-  - On save, returns a `SelectedScopeItem` object the wizard can append to `data.selectedItems`. For one-off mode, `id` is a temporary `crypto.randomUUID()` and `catalog_item_id` is null when persisted.
-  - When "Save to org catalog" is checked, calls `supabase.from('catalog_definitions').insert({...})` first, then uses the returned id as `catalog_item_id`.
+### What's New
+- **Status pipeline** in header card (5-step progress with line fill)
+- **Role switcher** matching dashboard tab pattern
+- **Financials panel** with role-conditional breakdown + margin block
+- **Team/Collaboration panel** with status badges (Active/Invited/Done)
+- **Linked PO banner** on materials panel
+- **Approval chain** as vertical timeline with pulse animation on active step
 
-- **Edit:** `src/components/change-orders/wizard/StepCatalog.tsx`
-  - Add a small `+ Add custom item` button at the top of the picker and inside the empty-results state.
-  - Pipe through to `AddCustomItemDialog`.
+### Files Modified
+- `CODetailLayout.tsx` — restructured to 2-column grid layout with role switcher
+- `COHeaderStrip.tsx` — add pipeline visualization
+- `COKPIStrip.tsx` — complete role-conditional content
 
-- **Edit:** `src/components/change-orders/AddScopeItemButton.tsx` → `handleSaveItems`
-  - Already inserts `catalog_item_id: item.id`. Change to `catalog_item_id: item.isCustom ? null : item.id` (or use a dedicated field like `item.catalogId`) so custom one-offs persist with `null`.
+### New Components
+- `COPipelineStatus.tsx` — the 5-step progress line
+- `COFinancialsPanel.tsx` — role-aware financial breakdown with margin block
+- `COTeamPanel.tsx` — collaborator list with status badges
+- `COApprovalTimeline.tsx` — vertical approval chain
+- `CORoleSwitcher.tsx` — reusable GC/TC/FC tab switcher
 
-- **Edit:** `src/types/changeOrder.ts` (or wherever `SelectedScopeItem` lives) — add optional `isCustom?: boolean` and `catalogId?: string | null` flags.
+---
 
-### Permissions
+## Design Decisions Confirmed
 
-- Anyone in the org can add a **one-off** custom item (already allowed by current `co_line_items` RLS).
-- Only org owner/admin (use existing `RequireOrgType`/role check) sees the **"Save to my org's catalog"** checkbox. Insert RLS on `catalog_definitions` must require `org_id = caller's org` — verify the existing policy covers this; if not, add one in the same migration.
+1. **Two artifacts** — picker creates, overview manages. Different layouts, different mental modes.
+2. **Role switcher** follows dashboard tab pattern (not dev-only).
+3. **Materials stage, not inline PO** — picker stages materials on the CO. PO creation from overview's COMaterialsPanel.
+4. **FC invitation on CO submit** — collaborator row with status 'invited'. FC sees Accept Banner.
+5. **Aside is white cards, not navy** — v3 moved from navy sidebar to white aside with navy total panel at bottom.
 
-### Out of scope
+---
 
-- No changes to AI prompt logic — the new catalog rows just appear in `suggest-scope-items` results once their `search_text`/`aliases` are populated.
-- No changes to invoicing, SOV, or pricing — custom items already flow through the existing CO line-item pipeline.
-- No new platform admin UI — `ScopeItemsTable` already lets platform staff curate and promote items.
+## Implementation Order
+
+1. Picker v3 shell (layout, stepper, aside, reducer)
+2. Steps 1-2 (Where + Why)
+3. Step 3 (Who — role-dependent collaboration)
+4. Steps 4-5 (Pricing + Work types)
+5. Step 6 (Scope narrative with AI integration)
+6. Step 7 (Materials & Equipment with catalog modal)
+7. Steps 8-9 (Total + Review + submit transaction)
+8. Overview: pipeline status + role switcher
+9. Overview: KPI strip + financials panel (role-aware)
+10. Overview: team panel + approval timeline
