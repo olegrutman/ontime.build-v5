@@ -1,10 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateCONumber } from '@/lib/generateCONumber';
+import type { PickerItem } from './types';
+import { itemLaborTotal, itemMaterialTotal, itemEquipmentTotal } from './types';
 
 import { usePickerState } from './usePickerState';
 import { PickerStepper } from './PickerStepper';
