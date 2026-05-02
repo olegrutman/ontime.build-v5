@@ -21,15 +21,16 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
     enabled: !!projectId,
     queryFn: async () => {
       const { data } = await supabase
-        .from('project_team')
-        .select('org_id, organization:organizations!project_team_org_id_fkey(id, name, type)')
-        .eq('project_id', projectId);
+        .from('project_participants')
+        .select('organization_id, organization:organizations!project_participants_organization_id_fkey(id, name, type)')
+        .eq('project_id', projectId)
+        .eq('invite_status', 'ACCEPTED');
       const unique = new Map<string, { id: string; name: string; initials: string }>();
       for (const row of data ?? []) {
         const org = row.organization as { id: string; name: string; type: string } | null;
         if (!org || org.type !== 'TC') continue;
-        unique.set(row.org_id, {
-          id: row.org_id,
+        unique.set(row.organization_id, {
+          id: row.organization_id,
           name: org.name,
           initials: org.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         });
