@@ -5,7 +5,8 @@ import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { COWizard } from './wizard/COWizard';
+// Legacy wizard kept for reference but no longer used in the main flow
+// import { COWizard } from './wizard/COWizard';
 
 import { COBoardCard } from './COBoardCard';
 import { FCHomeScreen } from './FCHomeScreen';
@@ -32,7 +33,8 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const isFC = orgType === 'FC';
 
   const canCreateCO = usePermission('canCreateChangeOrders');
-  const [wizardOpen, setWizardOpen] = useState(false);
+  // Navigate to the new Picker v3 full-page wizard
+  const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
   const [filter, setFilter] = useState<FilterKey>('all');
   function handleCardClick(id: string) {
     navigate(`/project/${projectId}/change-orders/${id}`);
@@ -113,7 +115,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           </div>
 
           {canCreateCO && (
-            <Button size="sm" onClick={() => setWizardOpen(true)} className="gap-1.5 shrink-0">
+            <Button size="sm" onClick={openNewPicker} className="gap-1.5 shrink-0">
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">{isTM ? 'New WO' : 'New CO'}</span>
             </Button>
@@ -177,7 +179,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           <p className="text-lg font-medium text-foreground">No {isTM ? 'work orders' : 'change orders'} yet</p>
           <p className="text-sm text-muted-foreground max-w-sm">Create a {isTM ? 'work order' : 'change order'} to track scope changes on this project.</p>
           {canCreateCO && (
-            <Button onClick={() => setWizardOpen(true)} className="gap-1.5 mt-2">
+            <Button onClick={openNewPicker} className="gap-1.5 mt-2">
               <Plus className="h-4 w-4" />
               New {isTM ? 'Work Order' : 'Change Order'}
             </Button>
@@ -196,7 +198,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         </div>
       )}
 
-      <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} isTM={isTM} />
+      {/* Legacy wizard removed — now using Picker v3 full-page route */}
 
     </div>
   );
