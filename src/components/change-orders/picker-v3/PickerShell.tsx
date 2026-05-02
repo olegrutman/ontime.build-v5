@@ -379,7 +379,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
         </header>
 
         {/* Stepper */}
-        <PickerStepper currentStep={state.step} onStepClick={handleStepClick} />
+        <PickerStepper currentStep={state.step} onStepClick={handleStepClick} completedSteps={completedSteps} />
 
         {/* Item context strip */}
         {state.items.length > 1 && state.step < 9 && (
