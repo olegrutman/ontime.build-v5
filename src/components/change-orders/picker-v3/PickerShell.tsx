@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -79,6 +79,23 @@ export function PickerShell({ projectId }: PickerShellProps) {
   const isTM = projectInfo?.contract_mode === 'tm';
   const cur = state.items[state.currentItemIndex];
 
+  // Compute completed steps for the stepper
+  const completedSteps = useMemo(() => {
+    const done = new Set<number>();
+    if (cur.locations.length > 0) done.add(1);
+    if (cur.causeId) done.add(2);
+    // Step 3 (Who) is always "done" for TC/FC (auto-routed)
+    if (detectedRole !== 'GC' || state.collaboration.assignedTcOrgId) done.add(3);
+    if (cur.pricingType) done.add(4); // always has a default
+    if (cur.workTypes.size > 0) done.add(5);
+    if (cur.narrative || cur.causeId) done.add(6); // auto-generated narrative counts
+    done.add(7); // Materials/Equipment is optional
+    done.add(8); // Total is always viewable
+    return done;
+  }, [cur, detectedRole, state.collaboration.assignedTcOrgId]);
+
+  const canSubmit = cur.locations.length > 0 && !!cur.causeId;
+
   const handleStepClick = useCallback((step: number) => {
     dispatch({ type: 'SET_STEP', step });
   }, [dispatch]);
@@ -146,7 +163,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
               : `${item.systemName ?? ''} · ${item.causeName ?? ''}`.trim() || coNumber,
             status: 'draft',
             pricing_type: item.pricingType,
-            reason: item.reason ?? 'owner_upgrade',
+            reason: item.reason ?? 'owner_request',
             reason_note: item.causeName ?? null,
             location_tag: locationTag,
             assigned_to_org_id: assignedToOrgId,
@@ -208,7 +225,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
               co_id: co.id,
               org_id: orgId,
               co_line_item_id: firstLineItemId,
-              entered_by_role: detectedRole,
+              entered_by_role: detectedRole === 'GC' ? 'TC' : detectedRole,
               description: labor.role,
               hourly_rate: labor.rate,
               hours: labor.hours,
@@ -226,6 +243,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
             co_id: co.id,
             org_id: orgId,
             added_by_role: detectedRole,
+            line_number: mi + 1,
             description: mat.description,
             supplier_sku: mat.sku || null,
             quantity: mat.quantity,
@@ -361,7 +379,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
         </header>
 
         {/* Stepper */}
-        <PickerStepper currentStep={state.step} onStepClick={handleStepClick} />
+        <PickerStepper currentStep={state.step} onStepClick={handleStepClick} completedSteps={completedSteps} />
 
         {/* Item context strip */}
         {state.items.length > 1 && state.step < 9 && (
@@ -414,7 +432,7 @@ export function PickerShell({ projectId }: PickerShellProps) {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canSubmit}
               className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-green-600 text-white disabled:opacity-60"
             >
               {isSubmitting ? 'Saving…' : '✓ Submit'}

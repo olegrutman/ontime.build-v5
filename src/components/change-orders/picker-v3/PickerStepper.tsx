@@ -1,18 +1,20 @@
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import { PICKER_STEPS } from './types';
 
 interface PickerStepperProps {
   currentStep: number;
   onStepClick: (step: number) => void;
+  completedSteps?: Set<number>;
 }
 
-export function PickerStepper({ currentStep, onStepClick }: PickerStepperProps) {
+export function PickerStepper({ currentStep, onStepClick, completedSteps }: PickerStepperProps) {
   return (
     <div className="bg-background border-b flex items-center gap-1.5 px-6 py-3.5 overflow-x-auto scrollbar-hide sticky top-[57px] z-[9]">
       {PICKER_STEPS.map((step, i) => {
-        const isDone = step.num < currentStep;
+        const isDone = completedSteps?.has(step.num) ?? step.num < currentStep;
         const isActive = step.num === currentStep;
+        const isRequired = step.num <= 2; // Where + Why are required
         return (
           <div key={step.key} className="contents">
             <button
@@ -29,7 +31,8 @@ export function PickerStepper({ currentStep, onStepClick }: PickerStepperProps) 
                   'w-[22px] h-[22px] rounded-full flex items-center justify-center text-[0.7rem] font-bold shrink-0 border-[1.5px] transition-all',
                   isDone && 'bg-green-600 border-green-600 text-white',
                   isActive && 'bg-[hsl(var(--navy))] border-[hsl(var(--navy))] text-white shadow-[0_0_0_4px_rgba(13,31,60,0.12)]',
-                  !isDone && !isActive && 'bg-muted border-border text-muted-foreground',
+                  !isDone && !isActive && isRequired && 'bg-amber-50 border-amber-300 text-amber-600',
+                  !isDone && !isActive && !isRequired && 'bg-muted border-border text-muted-foreground',
                 )}
               >
                 {isDone ? <Check className="h-3 w-3" /> : step.num}

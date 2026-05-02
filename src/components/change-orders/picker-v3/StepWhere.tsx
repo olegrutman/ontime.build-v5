@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import type { PickerState, PickerAction, SystemOption } from './types';
 
 interface StepWhereProps {
@@ -8,12 +10,10 @@ interface StepWhereProps {
   projectId: string;
 }
 
-const LOCATIONS = [
-  { id: 'l1', icon: '🏢', label: 'Level 2 — Unit 4', sub: 'Grid C-D / 4-5' },
-  { id: 'l2', icon: '🏢', label: 'Level 2 — Unit 5', sub: 'Grid D-E / 4-5' },
-  { id: 'l3', icon: '🏢', label: 'Level 2 — Unit 6', sub: 'Grid E-F / 4-5' },
-  { id: 'l4', icon: '🏢', label: 'Level 3 — All', sub: 'Floor plate' },
-  { id: 'l5', icon: '🏗', label: 'Exterior · East', sub: 'Bldg A facade' },
+const FALLBACK_LOCATIONS = [
+  { id: 'l1', icon: '🏢', label: 'Level 1', sub: 'Ground floor' },
+  { id: 'l2', icon: '🏢', label: 'Level 2', sub: 'Second floor' },
+  { id: 'l3', icon: '🏗', label: 'Exterior', sub: 'Building exterior' },
   { id: 'l6', icon: '⊞', label: 'Other / Custom', sub: 'Specify location' },
 ];
 
@@ -29,8 +29,76 @@ const SYSTEMS: SystemOption[] = [
   { id: 'other', icon: '⊞', label: 'Other', sub: 'Specify system' },
 ];
 
-export function StepWhere({ state, dispatch }: StepWhereProps) {
+function buildLocations(scope: any): { id: string; icon: string; label: string; sub: string }[] {
+  if (!scope) return FALLBACK_LOCATIONS;
+  const locs: { id: string; icon: string; label: string; sub: string }[] = [];
+
+  const floors = scope.floors ?? scope.stories ?? 1;
+  const numBuildings = scope.num_buildings ?? 1;
+  const homeType = scope.home_type ?? '';
+
+  // Generate per-floor entries
+  for (let f = 1; f <= Math.min(floors, 8); f++) {
+    locs.push({
+      id: `floor-${f}`,
+      icon: '🏢',
+      label: `Level ${f}`,
+      sub: f === 1 ? 'Ground floor' : `Floor ${f}`,
+    });
+  }
+
+  // Basement if applicable
+  if (scope.foundation_type === 'basement' || scope.basement_type) {
+    locs.push({ id: 'basement', icon: '⬇', label: 'Basement', sub: scope.basement_type ?? 'Below grade' });
+  }
+
+  // Roof
+  if (scope.roof_type) {
+    locs.push({ id: 'roof', icon: '△', label: 'Roof', sub: scope.roof_type });
+  }
+
+  // Exterior
+  locs.push({ id: 'exterior', icon: '🏗', label: 'Exterior', sub: 'Building exterior' });
+
+  // Multi-building
+  if (numBuildings > 1) {
+    for (let b = 2; b <= Math.min(numBuildings, 6); b++) {
+      locs.push({ id: `bldg-${b}`, icon: '🏠', label: `Building ${b}`, sub: `Structure ${b}` });
+    }
+  }
+
+  // Balcony / deck
+  if (scope.has_balconies) {
+    locs.push({ id: 'balcony', icon: '▥', label: 'Balcony', sub: scope.balcony_type ?? 'Exterior platform' });
+  }
+  if (scope.decking_included) {
+    locs.push({ id: 'deck', icon: '▥', label: 'Deck', sub: scope.decking_type ?? 'Exterior deck' });
+  }
+
+  // Other always at the end
+  locs.push({ id: 'other', icon: '⊞', label: 'Other / Custom', sub: 'Specify location' });
+
+  return locs;
+}
+
+export function StepWhere({ state, dispatch, projectId }: StepWhereProps) {
   const cur = state.items[state.currentItemIndex];
+
+  const { data: scopeDetails } = useQuery({
+    queryKey: ['project-scope-details', projectId],
+    enabled: !!projectId,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('project_scope_details')
+        .select('*')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const locations = buildLocations(scopeDetails);
 
   const handleLocClick = (label: string) => {
     if (cur.multiLocation) {
@@ -77,7 +145,7 @@ export function StepWhere({ state, dispatch }: StepWhereProps) {
         Building Position
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2 mb-5">
-        {LOCATIONS.map(loc => {
+        {locations.map(loc => {
           const selected = cur.locations.includes(loc.label);
           return (
             <button
