@@ -79,6 +79,23 @@ export function PickerShell({ projectId }: PickerShellProps) {
   const isTM = projectInfo?.contract_mode === 'tm';
   const cur = state.items[state.currentItemIndex];
 
+  // Compute completed steps for the stepper
+  const completedSteps = useMemo(() => {
+    const done = new Set<number>();
+    if (cur.locations.length > 0) done.add(1);
+    if (cur.causeId) done.add(2);
+    // Step 3 (Who) is always "done" for TC/FC (auto-routed)
+    if (detectedRole !== 'GC' || state.collaboration.assignedTcOrgId) done.add(3);
+    if (cur.pricingType) done.add(4); // always has a default
+    if (cur.workTypes.size > 0) done.add(5);
+    if (cur.narrative || cur.causeId) done.add(6); // auto-generated narrative counts
+    done.add(7); // Materials/Equipment is optional
+    done.add(8); // Total is always viewable
+    return done;
+  }, [cur, detectedRole, state.collaboration.assignedTcOrgId]);
+
+  const canSubmit = cur.locations.length > 0 && !!cur.causeId;
+
   const handleStepClick = useCallback((step: number) => {
     dispatch({ type: 'SET_STEP', step });
   }, [dispatch]);
