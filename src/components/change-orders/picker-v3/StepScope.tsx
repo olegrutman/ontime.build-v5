@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { PickerState, PickerAction } from './types';
 import { locationDisplay } from './types';
+import { VoiceInputButton } from '@/components/VoiceInputButton';
+import { locationDisplay } from './types';
 
 interface StepScopeProps {
   state: PickerState;
