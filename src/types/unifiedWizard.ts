@@ -176,7 +176,6 @@ export interface WizardStepDef {
 
 export const ALL_WIZARD_STEPS: WizardStepDef[] = [
   { key: 'mode', title: 'Capture Mode', description: 'How do you want to build this change order?' },
-  { key: 'mode', title: 'Capture Mode', description: 'How do you want to build this change order?' },
   { key: 'scope', title: 'Scope of Work', description: 'Select tasks from the catalog' },
   { key: 'location', title: 'Location', description: 'Where will this work be performed?' },
   { key: 'labor', title: 'Labor', description: 'Set your rate and log hours' },
