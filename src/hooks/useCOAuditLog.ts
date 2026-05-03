@@ -25,7 +25,7 @@ export function useCOAuditLog(coId: string | undefined) {
         .eq('co_id', coId!)
         .order('changed_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as COAuditEntry[];
+      return (data ?? []) as unknown as COAuditEntry[];
     },
   });
 }
