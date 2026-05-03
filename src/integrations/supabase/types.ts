@@ -4376,6 +4376,7 @@ export type Database = {
           parties: Json | null
           project_type: string | null
           retainage_percent: number | null
+          role_label_overrides: Json
           scope: Json | null
           start_date: string | null
           state: string | null
@@ -4400,6 +4401,7 @@ export type Database = {
           parties?: Json | null
           project_type?: string | null
           retainage_percent?: number | null
+          role_label_overrides?: Json
           scope?: Json | null
           start_date?: string | null
           state?: string | null
@@ -4424,6 +4426,7 @@ export type Database = {
           parties?: Json | null
           project_type?: string | null
           retainage_percent?: number | null
+          role_label_overrides?: Json
           scope?: Json | null
           start_date?: string | null
           state?: string | null
