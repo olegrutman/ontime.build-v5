@@ -26,7 +26,7 @@ interface FooterConfig {
   action: string;
 }
 
-function getFooterConfig(props: COStickyFooterProps): FooterConfig | null {
+function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConfig | null {
   const { status, isGC, isTC, isFC, financials, fcCollabName } = props;
   const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
