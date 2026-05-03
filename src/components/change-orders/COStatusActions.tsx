@@ -50,6 +50,7 @@ export function COStatusActions({
   assignedOrgName,
   onRefresh,
   isTM = false,
+  lineItemCount = 0,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
   const { shareCO, updateCO } = useChangeOrders(projectId);
