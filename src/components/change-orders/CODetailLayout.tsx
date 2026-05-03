@@ -33,10 +33,9 @@ import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 interface CODetailLayoutProps {
   coId: string;
   projectId: string;
-  isTM?: boolean;
 }
 
-export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayoutProps) {
+export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const canApprove = usePermission('canApprove');
@@ -200,7 +199,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
   }
 
   const status = co.status as COStatus;
-  const displayTitle = co.title ?? co.co_number ?? (isTM ? 'Work Order' : 'Change Order');
+  const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
 
   // Scope & Labor totals
   const pricedCount = lineItems.filter(li =>
@@ -232,7 +231,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0 text-xs text-muted-foreground truncate">
-              <span className="hidden sm:inline">{isTM ? 'Work Orders' : 'Change Orders'} › </span>
+              <span className="hidden sm:inline">{co.document_type === 'WO' ? 'Work Orders' : 'Change Orders'} › </span>
               <span className="font-medium text-foreground font-mono">{co.co_number ?? displayTitle}</span>
             </div>
           </div>
@@ -256,10 +255,10 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
       <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
         <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
           {/* Full-width Header Card + Pipeline */}
-          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} isTM={isTM} />
+          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
 
           {/* Next Action Banner */}
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} isTM={isTM} />
+          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
 
           {/* KPI Row */}
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} />
