@@ -27,7 +27,7 @@ function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
+function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): BannerConfig | null {
   const { co, isGC, isTC, isFC, financials, fcCollabName } = props;
   const status = co.status;
   // Single source of truth: price the GC sees == price the TC submits.
