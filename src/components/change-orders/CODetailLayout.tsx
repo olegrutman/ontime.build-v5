@@ -284,11 +284,14 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                       </span>
                     </div>
                     {canEdit && !nteBlocked && co && (
-                      <AddScopeItemButton
-                        coId={co.id} orgId={myOrgId} projectId={projectId}
-                        role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
-                        isTM={isTM}
-                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => navigate(`/project/${projectId}/change-orders/${co.id}/add-items`)}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add item
+                      </Button>
                     )}
                   </div>
 
