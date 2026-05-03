@@ -63,6 +63,7 @@ export function ProjectShell({
   const { toast } = useToast();
   const { profile, currentRole, signOut } = useAuth();
   const [downloading, setDownloading] = useState(false);
+  const roleLabels = useRoleLabels(projectId);
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
