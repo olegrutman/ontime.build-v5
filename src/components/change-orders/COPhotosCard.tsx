@@ -145,13 +145,14 @@ interface AddPhotoSheetProps {
   userId: string;
   lineItems: COLineItem[];
   onUpload: ReturnType<typeof useCOPhotos>['uploadPhoto'];
+  initialPhotoType?: COPhoto['photo_type'];
 }
 
-function AddPhotoSheet({ open, onClose, coId, role, userId, lineItems, onUpload }: AddPhotoSheetProps) {
+function AddPhotoSheet({ open, onClose, coId, role, userId, lineItems, onUpload, initialPhotoType }: AddPhotoSheetProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [photoType, setPhotoType] = useState<COPhoto['photo_type']>('other');
+  const [photoType, setPhotoType] = useState<COPhoto['photo_type']>(initialPhotoType ?? 'other');
   const [caption, setCaption] = useState('');
   const [lineItemId, setLineItemId] = useState<string>('none');
   const [saving, setSaving] = useState(false);
