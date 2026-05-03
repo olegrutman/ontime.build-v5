@@ -29,7 +29,8 @@ interface PickerShellProps {
   addToCoId?: string;
 }
 
-export function PickerShell({ projectId }: PickerShellProps) {
+export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
+  const isAddMode = !!addToCoId;
   const navigate = useNavigate();
   const { userOrgRoles, user } = useAuth();
   const queryClient = useQueryClient();
