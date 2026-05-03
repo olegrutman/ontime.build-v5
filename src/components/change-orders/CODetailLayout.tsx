@@ -147,6 +147,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'submit_to_tc':
         if (co) {
+          if (photosBlocked) {
+            toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
+            photosCardRef.current?.openAdd('during');
+            break;
+          }
           try {
             // FC-as-creator submits the CO itself; FC-as-collaborator marks input complete.
             const isFCCreator = co.created_by_role === 'FC' && co.org_id === myOrgId;
