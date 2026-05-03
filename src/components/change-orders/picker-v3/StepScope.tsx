@@ -56,6 +56,13 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
         >
           ↻ Regenerate
         </button>
+        <VoiceInputButton
+          onTranscript={(text) => {
+            const current = cur.narrative || narrative;
+            dispatch({ type: 'SET_NARRATIVE', narrative: current ? current + ' ' + text : text });
+          }}
+          size="md"
+        />
       </div>
 
       {/* Narrative box */}
