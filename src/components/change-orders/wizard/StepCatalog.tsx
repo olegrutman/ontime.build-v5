@@ -75,11 +75,7 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
 
   // ── Phase 3: scope picker mode (qa | type | browse) ──
   const modeKey = `co_wizard_scope_mode_${projectId}`;
-  const [mode, setMode] = useState<ScopePickerMode>(() => {
-    if (typeof window === 'undefined') return 'qa';
-    const saved = window.localStorage.getItem(modeKey);
-    return (saved === 'browse' || saved === 'type' || saved === 'qa') ? saved : 'qa';
-  });
+  const [mode, setMode] = useState<ScopePickerMode>('qa');
   useEffect(() => {
     if (typeof window !== 'undefined') window.localStorage.setItem(modeKey, mode);
   }, [mode, modeKey]);
