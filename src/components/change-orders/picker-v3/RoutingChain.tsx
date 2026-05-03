@@ -1,6 +1,7 @@
 import type { COCreatedByRole } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface RoutingNode {
   label: string;
@@ -23,33 +24,37 @@ interface RoutingChainProps {
 
 export function RoutingChain({
   role,
-  tcName = 'Trade Contractor',
+  tcName,
   tcInitials = 'TC',
-  fcName = 'Field Crew',
+  fcName,
   fcInitials = 'FC',
-  gcName = 'General Contractor',
+  gcName,
   gcInitials = 'GC',
   requestFc = false,
 }: RoutingChainProps) {
+  const rl = useRoleLabelsContext();
+  const resolvedTcName = tcName ?? rl.TC;
+  const resolvedFcName = fcName ?? rl.FC;
+  const resolvedGcName = gcName ?? rl.GC;
   const nodes: RoutingNode[] = [];
 
   if (role === 'GC') {
     nodes.push({ label: 'You', initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Create CO', isYou: true });
     if (requestFc) {
-      nodes.push({ label: fcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
     }
-    nodes.push({ label: tcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices & submits' });
+    nodes.push({ label: resolvedTcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices & submits' });
     nodes.push({ label: 'You', initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approve', isYou: true });
   } else if (role === 'TC') {
     if (requestFc) {
-      nodes.push({ label: fcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
     }
     nodes.push({ label: 'You', initials: tcInitials, roleColor: 'bg-green-600', sub: 'Price & submit', isYou: true });
-    nodes.push({ label: gcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
+    nodes.push({ label: resolvedGcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
   } else {
     nodes.push({ label: 'You', initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Log hours', isYou: true });
-    nodes.push({ label: tcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices' });
-    nodes.push({ label: gcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
+    nodes.push({ label: resolvedTcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices' });
+    nodes.push({ label: resolvedGcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
   }
 
   return (

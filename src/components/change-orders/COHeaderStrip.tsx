@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { ChangeOrder, COStatus, COCreatedByRole } from '@/types/changeOrder';
 import { Check } from 'lucide-react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface COHeaderStripProps {
   co: ChangeOrder;
@@ -39,6 +40,7 @@ function getActiveStep(status: string): number {
 }
 
 export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
+  const rl = useRoleLabelsContext();
   const status = co.status as COStatus;
   const activeStep = getActiveStep(status);
   // Optional user-typed name (anything other than the co_number itself)
@@ -83,7 +85,7 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
             </span>
             <div className="text-right">
               <p className="text-xs font-semibold text-foreground">{myOrgName}</p>
-              <p className="text-[10px] text-muted-foreground">{role === 'GC' ? 'General Contractor' : role === 'TC' ? 'Trade Contractor' : 'Field Crew'}</p>
+              <p className="text-[10px] text-muted-foreground">{rl.label(role)}</p>
             </div>
           </div>
         </div>

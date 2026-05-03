@@ -3,6 +3,8 @@ import { DT } from '@/lib/design-tokens';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { ChangeOrder, COCollaborator } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleCode } from '@/hooks/useRoleLabels';
 
 interface COTeamCardProps {
   co: ChangeOrder;
@@ -33,6 +35,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export function COTeamCard({ co, collaborators }: COTeamCardProps) {
+  const rl = useRoleLabelsContext();
   // Fetch org names for creator and assigned orgs
   const orgIds = [co.org_id, co.assigned_to_org_id, ...collaborators.map(c => c.organization_id)].filter(Boolean) as string[];
   const uniqueOrgIds = [...new Set(orgIds)];
@@ -128,7 +131,7 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{member.orgName}</p>
-              <p className="text-[11px] text-muted-foreground">{member.roleLabel === 'GC' ? 'General Contractor' : member.roleLabel === 'TC' ? 'Trade Contractor' : member.roleLabel === 'FC' ? 'Field Crew' : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel}</p>
+              <p className="text-[11px] text-muted-foreground">{['GC','TC','FC'].includes(member.roleLabel) ? rl.label(member.roleLabel as RoleCode) : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel}</p>
             </div>
             <span
               className={cn(

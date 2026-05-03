@@ -2,6 +2,8 @@ import { cn } from '@/lib/utils';
 import { AlertTriangle, Send, Lock, ClipboardList, Clock, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleLabels } from '@/hooks/useRoleLabels';
 
 interface CONextActionBannerProps {
   co: ChangeOrder;
@@ -25,7 +27,7 @@ function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
+function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): BannerConfig | null {
   const { co, isGC, isTC, isFC, financials, fcCollabName } = props;
   const status = co.status;
   // Single source of truth: price the GC sees == price the TC submits.
@@ -83,7 +85,7 @@ function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
     if (status === 'submitted') {
       return {
         icon: <Clock className="h-5 w-5" />,
-        title: 'Waiting on General Contractor approval',
+        title: `Waiting on ${rl.GC} approval`,
         subtitle: `Submitted ${fmtCurrency(priceToUpstream)} — you'll be notified when reviewed`,
         actions: [],
       };
@@ -96,7 +98,7 @@ function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
     return {
       icon: <Clock className="h-5 w-5" />,
       title: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hours logged — submit when ready` : 'Log your hours for this work order',
-      subtitle: 'Add time entries then submit to your Trade Contractor',
+      subtitle: `Add time entries then submit to your ${rl.TC}`,
       actions: [
         { label: 'Log Hours', action: 'log_hours', primary: true },
         ...(financials.fcTotalHours > 0 ? [{ label: 'Submit to TC', action: 'submit_to_tc' }] : []),
@@ -108,7 +110,8 @@ function getBannerConfig(props: CONextActionBannerProps): BannerConfig | null {
 }
 
 export function CONextActionBanner(props: CONextActionBannerProps) {
-  const config = getBannerConfig(props);
+  const rl = useRoleLabelsContext();
+  const config = getBannerConfig(props, rl);
   if (!config) return null;
 
   return (

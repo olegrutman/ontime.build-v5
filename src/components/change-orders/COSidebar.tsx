@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { CONTEPanel } from './CONTEPanel';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { FCInputRequestCard } from './FCInputRequestCard';
@@ -47,6 +48,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     onRefresh,
   } = props;
+  const rl = useRoleLabelsContext();
 
   const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
@@ -205,7 +207,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
       {isTC && (
         <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-border">
-            <h3 className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">Field Crew</h3>
+            <h3 className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">{rl.FC}</h3>
           </div>
           <div className="px-4 py-3">
             <FCInputRequestCard

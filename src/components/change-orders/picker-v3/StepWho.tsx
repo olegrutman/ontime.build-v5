@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { Switch } from '@/components/ui/switch';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +14,7 @@ interface StepWhoProps {
 }
 
 export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
+  const rl = useRoleLabelsContext();
   const { data: fcOrgs = [] } = useProjectFCOrgs(projectId);
 
   // Fetch TC orgs on this project
@@ -44,9 +46,9 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
   const selectedTc = tcOrgs.find(o => o.id === collab.assignedTcOrgId);
   const selectedFc = fcOrgs.find(o => o.id === collab.assignedFcOrgId);
 
-  const rolePip = state.role === 'GC' ? 'As General Contractor'
-    : state.role === 'TC' ? 'As Trade Contractor'
-    : 'As Field Crew';
+  const rolePip = state.role === 'GC' ? `As ${rl.GC}`
+    : state.role === 'TC' ? `As ${rl.TC}`
+    : `As ${rl.FC}`;
 
   const helpText = state.role === 'GC'
     ? 'Assign this CO to the trade contractor doing the work, and decide whether you need field crew input on labor.'
@@ -75,7 +77,7 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
           <div className="bg-background border rounded-xl overflow-hidden mb-3.5 shadow-xs">
             <div className="px-3.5 py-3 border-b flex items-center justify-between">
               <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.5px] text-foreground/80 flex items-center gap-2">
-                ⊡ Assign To Trade Contractor
+                ⊡ Assign To {rl.TC}
               </p>
               <span className="text-[0.6rem] font-bold px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground">Required</span>
             </div>
@@ -97,7 +99,7 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.85rem] font-bold text-foreground">{tc.name}</p>
-                    <p className="text-[0.65rem] text-muted-foreground">Trade Contractor</p>
+                    <p className="text-[0.65rem] text-muted-foreground">{rl.TC}</p>
                   </div>
                   <div className={cn(
                     'w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
@@ -117,7 +119,7 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
           <div className="bg-background border rounded-xl overflow-hidden mb-3.5 shadow-xs">
             <div className="px-3.5 py-3 border-b">
               <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.5px] text-foreground/80">
-                ⚒ Field Crew Input <span className="text-[0.6rem] text-muted-foreground font-normal normal-case">Optional</span>
+                ⚒ {rl.FC} Input <span className="text-[0.6rem] text-muted-foreground font-normal normal-case">Optional</span>
               </p>
             </div>
             <div className="p-3.5">
@@ -155,7 +157,7 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[0.85rem] font-bold text-foreground">{fc.name}</p>
-                        <p className="text-[0.65rem] text-muted-foreground">Field Crew</p>
+                        <p className="text-[0.65rem] text-muted-foreground">{rl.FC}</p>
                       </div>
                       <div className={cn(
                         'w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0',
@@ -183,7 +185,7 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
               <div className="flex items-center gap-2.5 p-2.5 rounded-lg border bg-amber-50 border-amber-400">
                 <span className="w-[34px] h-[34px] rounded-full bg-blue-600 text-white flex items-center justify-center text-[0.75rem] font-bold">GC</span>
                 <div className="flex-1">
-                  <p className="text-[0.85rem] font-bold text-foreground">General Contractor</p>
+                  <p className="text-[0.85rem] font-bold text-foreground">{rl.GC}</p>
                   <p className="text-[0.65rem] text-muted-foreground">Auto-assigned from project</p>
                 </div>
                 <span className="text-[0.6rem] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">● Active</span>
@@ -194,7 +196,7 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
           <div className="bg-background border rounded-xl overflow-hidden mb-3.5 shadow-xs">
             <div className="px-3.5 py-3 border-b">
               <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.5px] text-foreground/80">
-                ⚒ Field Crew Input <span className="text-[0.6rem] text-muted-foreground font-normal normal-case">Optional</span>
+                ⚒ {rl.FC} Input <span className="text-[0.6rem] text-muted-foreground font-normal normal-case">Optional</span>
               </p>
             </div>
             <div className="p-3.5">
@@ -232,7 +234,7 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[0.85rem] font-bold text-foreground">{fc.name}</p>
-                        <p className="text-[0.65rem] text-muted-foreground">Field Crew</p>
+                        <p className="text-[0.65rem] text-muted-foreground">{rl.FC}</p>
                       </div>
                     </button>
                   ))}
@@ -247,13 +249,13 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
       {state.role === 'FC' && (
         <div className="bg-background border rounded-xl overflow-hidden mb-3.5 shadow-xs">
           <div className="px-3.5 py-3 border-b">
-            <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.5px] text-foreground/80">↑ Routes To Your Trade Contractor</p>
+            <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.5px] text-foreground/80">↑ Routes To Your {rl.TC}</p>
           </div>
           <div className="p-3.5">
             <div className="flex items-center gap-2.5 p-2.5 rounded-lg border bg-amber-50 border-amber-400">
               <span className="w-[34px] h-[34px] rounded-full bg-green-600 text-white flex items-center justify-center text-[0.75rem] font-bold">TC</span>
               <div className="flex-1">
-                <p className="text-[0.85rem] font-bold text-foreground">Trade Contractor</p>
+                <p className="text-[0.85rem] font-bold text-foreground">{rl.TC}</p>
                 <p className="text-[0.65rem] text-muted-foreground">Will price your hours</p>
               </div>
               <span className="text-[0.6rem] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">● Active</span>

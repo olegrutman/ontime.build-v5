@@ -1,4 +1,6 @@
 import { ReactNode, useState } from 'react';
+import { useRoleLabels } from '@/hooks/useRoleLabels';
+import { RoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
@@ -61,6 +63,7 @@ export function ProjectShell({
   const { toast } = useToast();
   const { profile, currentRole, signOut } = useAuth();
   const [downloading, setDownloading] = useState(false);
+  const roleLabels = useRoleLabels(projectId);
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -161,7 +164,9 @@ export function ProjectShell({
 
       {/* Content below bar */}
       <div className="flex flex-1 pt-[52px]">
-        {children}
+        <RoleLabelsContext.Provider value={roleLabels}>
+          {children}
+        </RoleLabelsContext.Provider>
       </div>
 
       
