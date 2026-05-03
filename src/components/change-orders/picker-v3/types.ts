@@ -81,7 +81,7 @@ export interface PickerItem {
 
   // Step 6: Scope narrative
   narrative: string;
-  tone: 'clinical' | 'plain';
+  tone: 'plain';
 
   // Step 7: Materials & Equipment
   materials: MaterialDraft[];
@@ -128,7 +128,7 @@ export type PickerAction =
   | { type: 'SET_PRICING'; pricingType: COPricingType; pricingName: string }
   | { type: 'TOGGLE_WORK_TYPE'; workTypeId: string; workTypeName: string }
   | { type: 'SET_NARRATIVE'; narrative: string }
-  | { type: 'SET_TONE'; tone: 'clinical' | 'plain' }
+  | { type: 'SET_TONE'; tone: 'plain' }
   | { type: 'SET_MARKUP'; markup: number }
   | { type: 'SET_LABOR_HOURS'; index: number; hours: number }
   | { type: 'ADD_MATERIAL'; material: MaterialDraft }
@@ -175,7 +175,7 @@ export function blankItem(): PickerItem {
     workTypes: new Set(),
     workNames: {},
     narrative: '',
-    tone: 'clinical',
+    tone: 'plain',
     materials: [],
     equipment: [],
     materialResponsible: 'TC',

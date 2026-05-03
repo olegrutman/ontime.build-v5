@@ -17,9 +17,6 @@ function buildNarrative(state: PickerState): string {
     : verbs.length === 1 ? verbs[0].toLowerCase()
     : verbs.slice(0, -1).map(v => v.toLowerCase()).join(', ') + ', and ' + verbs[verbs.length - 1].toLowerCase();
 
-  if (cur.tone === 'clinical') {
-    return `${cur.causeName} requires modification to the ${sys} at ${loc}. Trade contractor shall ${actions}, and prepare the area for related finishes by others.`;
-  }
   return `${cur.causeName} needs work in the ${sys} at ${loc}. We'll ${actions}, and leave the area ready for the next trade.`;
 }
 
@@ -45,29 +42,12 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
           Here's the scope description we drafted.
         </h2>
         <p className="text-[0.78rem] text-muted-foreground mt-1 max-w-xl leading-relaxed">
-          Built from your picks. Edit the text directly or swap the tone.
+          Built from your picks. Edit the text directly or regenerate.
         </p>
       </div>
 
-      {/* Tone toggle + regen */}
+      {/* Regenerate button */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <div className="flex bg-muted border rounded-lg p-[3px]">
-          {(['clinical', 'plain'] as const).map(t => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => {
-                dispatch({ type: 'SET_TONE', tone: t });
-                dispatch({ type: 'SET_NARRATIVE', narrative: '' }); // force rebuild
-              }}
-              className={`px-3 py-1.5 rounded-md text-[0.72rem] font-semibold transition-all ${
-                cur.tone === t ? 'bg-[hsl(var(--navy))] text-white' : 'text-muted-foreground'
-              }`}
-            >
-              {t === 'clinical' ? 'Clinical' : 'Plain'}
-            </button>
-          ))}
-        </div>
         <button
           type="button"
           onClick={handleRegenerate}
