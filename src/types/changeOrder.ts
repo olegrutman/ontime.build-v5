@@ -56,6 +56,8 @@ export const CO_STATUS_LABELS: Record<COStatus, string> = {
   contracted:         'Contracted',
 };
 
+export type CODocumentType = 'CO' | 'WO';
+
 export interface ChangeOrder {
   id: string;
   org_id: string;
