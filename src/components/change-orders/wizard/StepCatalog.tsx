@@ -11,7 +11,7 @@ import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './wizardTypes';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
-import { StepCatalogModeSwitch, type ScopePickerMode } from './StepCatalogModeSwitch';
+import { StepCatalogModeSwitch, BrowseCatalogLink, type ScopePickerMode } from './StepCatalogModeSwitch';
 import { StepCatalogQA } from './StepCatalogQA';
 import { StepCatalogTypeFallback } from './StepCatalogTypeFallback';
 import type { SuggestResponse } from '@/hooks/useScopeSuggestions';
@@ -75,11 +75,7 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
 
   // ── Phase 3: scope picker mode (qa | type | browse) ──
   const modeKey = `co_wizard_scope_mode_${projectId}`;
-  const [mode, setMode] = useState<ScopePickerMode>(() => {
-    if (typeof window === 'undefined') return 'qa';
-    const saved = window.localStorage.getItem(modeKey);
-    return (saved === 'browse' || saved === 'type' || saved === 'qa') ? saved : 'qa';
-  });
+  const [mode, setMode] = useState<ScopePickerMode>('qa');
   useEffect(() => {
     if (typeof window !== 'undefined') window.localStorage.setItem(modeKey, mode);
   }, [mode, modeKey]);
@@ -327,25 +323,28 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
 
       {/* QA mode */}
       {mode === 'qa' && data.locationTag && data.reason && (
-        <StepCatalogQA
-          projectId={projectId}
-          locationTag={data.locationTag}
-          reason={data.reason}
-          workType={workType ?? null}
-          
-          onComplete={({ description, answers, selectedItems }) => {
-            if (selectedItems.length === 0) {
-              toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });
-              setMode('browse');
-              return;
-            }
-            completeFromItems(selectedItems, description, answers);
-            toast.success(`Added ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'}`);
-          }}
-          onFallbackToType={(draft) => { setTypeDraft(draft); setMode('type'); }}
-          onFallbackToBrowse={() => setMode('browse')}
-          onLocationRefine={handleLocationRefine}
-        />
+        <>
+          <StepCatalogQA
+            projectId={projectId}
+            locationTag={data.locationTag}
+            reason={data.reason}
+            workType={workType ?? null}
+            
+            onComplete={({ description, answers, selectedItems }) => {
+              if (selectedItems.length === 0) {
+                toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });
+                setMode('browse');
+                return;
+              }
+              completeFromItems(selectedItems, description, answers);
+              toast.success(`Added ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'}`);
+            }}
+            onFallbackToType={(draft) => { setTypeDraft(draft); setMode('type'); }}
+            onFallbackToBrowse={() => setMode('browse')}
+            onLocationRefine={handleLocationRefine}
+          />
+          <BrowseCatalogLink onOpen={() => setMode('browse')} />
+        </>
       )}
 
       {/* Type mode */}
