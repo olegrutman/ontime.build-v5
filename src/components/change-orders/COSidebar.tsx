@@ -48,6 +48,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     onRefresh,
   } = props;
+  const rl = useRoleLabelsContext();
 
   const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
