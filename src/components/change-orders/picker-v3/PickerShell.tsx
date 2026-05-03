@@ -26,6 +26,7 @@ import type { COCreatedByRole } from '@/types/changeOrder';
 
 interface PickerShellProps {
   projectId: string;
+  addToCoId?: string;
 }
 
 export function PickerShell({ projectId }: PickerShellProps) {
