@@ -688,7 +688,7 @@ export function COMaterialsPanel({
           .eq('id', newPO.id);
 
         if (approvalError) throw approvalError;
-        toast.success(`Pricing request ${poNumber} sent to General Contractor for approval`);
+        toast.success(`Pricing request ${poNumber} sent to ${rl.GC} for approval`);
         await fetchLinkedRequests();
         return;
       }
@@ -1075,7 +1075,7 @@ export function COMaterialsPanel({
                     disabled={pricingAction !== null || supplierLoading || !supplierId}
                   >
                     {pricingAction === 'send' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                    {isTC && poRequiresApproval ? 'Send to General Contractor for approval' : 'Send to supplier for pricing'}
+                    {isTC && poRequiresApproval ? `Send to ${rl.GC} for approval` : 'Send to supplier for pricing'}
                   </Button>
                 </div>
               )}
