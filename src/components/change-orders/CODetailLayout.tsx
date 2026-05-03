@@ -26,9 +26,11 @@ import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
-import { COPhotosCard } from './COPhotosCard';
+import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
+import { COPhotoNudgeBanner } from './COPhotoNudgeBanner';
 import { COAcceptBanner } from './COAcceptBanner';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
+import { useCOPhotos } from '@/hooks/useCOPhotos';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
