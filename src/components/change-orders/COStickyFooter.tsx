@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { COStatus, COFinancials } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleLabels } from '@/hooks/useRoleLabels';
 
 interface COStickyFooterProps {
   status: COStatus;
