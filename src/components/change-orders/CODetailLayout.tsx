@@ -286,6 +286,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           {/* Next Action Banner */}
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
 
+          {/* Photo nudge banner */}
+          <COPhotoNudgeBanner
+            status={co.status}
+            photos={photos}
+            onTakePhoto={(type) => photosCardRef.current?.openAdd(type)}
+          />
+
           {/* KPI Row */}
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} />
 
