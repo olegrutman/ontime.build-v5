@@ -308,6 +308,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     setDraftQty(item.qty != null ? String(item.qty) : '');
                     setDraftLocation(item.location_tag ?? '');
                     setDraftReason(item.reason ?? '');
+                    setDraftPricingType(item.pricing_type as COPricingType ?? '');
+                    setDraftNteCap(item.nte_cap != null ? String(item.nte_cap) : '');
                   }
                 }}>
                   <PopoverTrigger asChild>
