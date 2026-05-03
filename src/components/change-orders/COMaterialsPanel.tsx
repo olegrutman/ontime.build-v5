@@ -1,3 +1,4 @@
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -136,7 +137,7 @@ function getLinkedRequestDescription(status: string, supplierName?: string | nul
     case 'ACTIVE':
       return `${supplierLabel} pricing draft is ready to review in the PO workflow`;
     case 'PENDING_APPROVAL':
-      return 'Pricing request is waiting for General Contractor approval before it can be sent';
+      return 'Pricing request is waiting for ` + rl.GC + ` approval before it can be sent';
     case 'SUBMITTED':
       return `${supplierLabel} has received this pricing request`;
     case 'PRICED':
