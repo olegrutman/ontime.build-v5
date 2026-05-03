@@ -26,7 +26,7 @@ import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { COAcceptBanner } from './COAcceptBanner';
-import { AddScopeItemButton } from './AddScopeItemButton';
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 
