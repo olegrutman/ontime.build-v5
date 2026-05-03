@@ -882,12 +882,15 @@ export function COMaterialsPanel({
                   return (
                     <tr key={row.tempId} className="border-b border-border last:border-0 bg-muted/20">
                       <td className="px-4 py-2">
-                        <Input
-                          value={row.description}
-                          onChange={e => updateRow(row.tempId, 'description', e.target.value)}
-                          placeholder="Description *"
-                          className="h-7 text-xs"
-                        />
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={row.description}
+                            onChange={e => updateRow(row.tempId, 'description', e.target.value)}
+                            placeholder="Description *"
+                            className="h-7 text-xs flex-1"
+                          />
+                          <VoiceInputButton onTranscript={(text) => updateRow(row.tempId, 'description', row.description ? row.description + ' ' + text : text)} />
+                        </div>
                         <Input
                           value={row.supplier_sku}
                           onChange={e => updateRow(row.tempId, 'supplier_sku', e.target.value)}
