@@ -8,11 +8,10 @@ import { useScopeSuggestions, type SuggestPick, type SuggestResponse } from '@/h
 import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { resolveBuildingType } from '@/lib/framingQuestionTrees';
-import { getIntentFlow, resolveIntentFromLegacy, resolveComponent, suggestIntentForComponent } from '@/lib/intentFlows';
+import { getIntentFlow, resolveIntentFromLegacy, resolveComponent, suggestIntentForComponent, type WorkIntent } from '@/lib/intentFlows';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './wizardTypes';
-import type { FlowContext, WorkIntent } from '@/types/scopeQA';
-import { WORK_INTENT_LABELS } from '@/types/scopeQA';
+import type { FlowContext } from '@/types/scopeQA';
 import { QuantityEditPopover } from './QuantityEditPopover';
 import { LocationRefinementBanner } from './LocationRefinementBanner';
 
