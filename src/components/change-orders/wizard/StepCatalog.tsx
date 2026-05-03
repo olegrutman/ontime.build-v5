@@ -11,7 +11,7 @@ import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './wizardTypes';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
-import { StepCatalogModeSwitch, type ScopePickerMode } from './StepCatalogModeSwitch';
+import { StepCatalogModeSwitch, BrowseCatalogLink, type ScopePickerMode } from './StepCatalogModeSwitch';
 import { StepCatalogQA } from './StepCatalogQA';
 import { StepCatalogTypeFallback } from './StepCatalogTypeFallback';
 import type { SuggestResponse } from '@/hooks/useScopeSuggestions';
@@ -342,6 +342,8 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
           onFallbackToBrowse={() => setMode('browse')}
           onLocationRefine={handleLocationRefine}
         />
+        {/* Bottom escape hatch to full catalog */}
+        <BrowseCatalogLink onOpen={() => setMode('browse')} />
       )}
 
       {/* Type mode */}
