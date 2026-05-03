@@ -102,7 +102,8 @@ function getTimeAgo(dateStr: string): string {
 }
 
 export function COContextualAlert(props: COContextualAlertProps) {
-  const config = getAlertConfig(props);
+  const rl = useRoleLabelsContext();
+  const config = getAlertConfig(props, rl);
   if (!config) return null;
 
   return (
