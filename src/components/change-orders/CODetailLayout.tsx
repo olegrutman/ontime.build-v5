@@ -67,6 +67,24 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   } = useChangeOrderDetail(coId);
   useCORealtime(coId);
   const { data: projectFCOrgs = [] } = useProjectFCOrgs(projectId);
+  const { photos } = useCOPhotos(coId);
+
+  // Project-level photo requirement setting
+  const { data: projectSettings } = useQuery({
+    queryKey: ['project-photo-settings', projectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('projects')
+        .select('require_photos_on_submit')
+        .eq('id', projectId)
+        .single();
+      return data;
+    },
+    enabled: !!projectId,
+    staleTime: Infinity,
+  });
+  const requirePhotos = !!(projectSettings as any)?.require_photos_on_submit;
+  const photosBlocked = requirePhotos && photos.length === 0;
 
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
