@@ -169,6 +169,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'submit':
         if (co) {
+          if (photosBlocked) {
+            toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
+            photosCardRef.current?.openAdd('during');
+            break;
+          }
           try {
             await submitCO.mutateAsync(co.id);
             toast.success('Submitted for approval');
