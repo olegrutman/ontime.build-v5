@@ -540,7 +540,10 @@ export function COStatusActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
-            <Label htmlFor="reject-note">Reason *</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="reject-note">Reason *</Label>
+              <VoiceInputButton onTranscript={(text) => setRejectNote(prev => prev ? prev + ' ' + text : text)} />
+            </div>
             <Textarea
               id="reject-note"
               value={rejectNote}
