@@ -1,5 +1,5 @@
 export { COListPage }        from './COListPage';
-export { COWizard }          from './wizard/COWizard';
+
 export { CODetailLayout }    from './CODetailLayout';
 export { COMaterialsPanel }  from './COMaterialsPanel';
 export { COEquipmentPanel }  from './COEquipmentPanel';

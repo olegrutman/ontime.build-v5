@@ -8,7 +8,7 @@ import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import { WORK_INTENT_LABELS, WORK_INTENT_ICONS } from '@/types/scopeQA';
 import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
-import type { COWizardData, SelectedScopeItem } from './COWizard';
+import type { COWizardData, SelectedScopeItem } from './wizardTypes';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { StepCatalogModeSwitch, type ScopePickerMode } from './StepCatalogModeSwitch';
