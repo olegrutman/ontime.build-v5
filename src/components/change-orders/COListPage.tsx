@@ -22,6 +22,7 @@ interface COListPageProps {
 type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter';
 
 export function COListPage({ projectId, isTM = false }: COListPageProps) {
+  const dt = docTypeFromMode(isTM);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { userOrgRoles } = useAuth();
