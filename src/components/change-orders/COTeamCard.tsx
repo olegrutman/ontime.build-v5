@@ -131,7 +131,7 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{member.orgName}</p>
-              <p className="text-[11px] text-muted-foreground">{member.roleLabel === 'GC' ? 'General Contractor' : member.roleLabel === 'TC' ? 'Trade Contractor' : member.roleLabel === 'FC' ? 'Field Crew' : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel}</p>
+              <p className="text-[11px] text-muted-foreground">{['GC','TC','FC'].includes(member.roleLabel) ? rl.label(member.roleLabel as RoleCode) : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel}</p>
             </div>
             <span
               className={cn(
