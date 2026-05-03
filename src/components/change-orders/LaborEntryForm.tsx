@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Check, Clock, DollarSign, Hash, Lock, ChevronDown } from 'lucide-react';
+import { Loader2, Check, Clock, DollarSign, Lock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +29,7 @@ interface LaborEntryFormProps {
 }
 
 const QUICK_HOURS = [2, 4, 8, 10];
-type EntryMode = 'hourly' | 'lump_sum' | 'unit_price';
+type EntryMode = 'hourly' | 'lump_sum';
 
 export function LaborEntryForm({
   coId, lineItemId, orgId, enteredByRole, pricingType,
@@ -50,8 +50,6 @@ export function LaborEntryForm({
   const [rate, setRate] = useState(editingEntry?.hourly_rate != null ? String(editingEntry.hourly_rate) : '');
   const [markup, setMarkup] = useState('');
   const [lumpSum, setLumpSum] = useState(editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '');
-  const [qty, setQty] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
   const [description, setDescription] = useState(editingEntry?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
@@ -82,12 +80,10 @@ export function LaborEntryForm({
   const hoursValue = parseFloat(hours) || 0;
   const rateValue = parseFloat(rate) || 0;
   const lumpSumValue = parseFloat(lumpSum) || 0;
-  const qtyValue = parseFloat(qty) || 0;
-  const unitPriceValue = parseFloat(unitPrice) || 0;
   const markupPct = parseFloat(markup) || 0;
   const internalCostValue = parseFloat(internalCost) || 0;
 
-  const baseTotal = mode === 'lump_sum' ? lumpSumValue : mode === 'unit_price' ? qtyValue * unitPriceValue : hoursValue * rateValue;
+  const baseTotal = mode === 'lump_sum' ? lumpSumValue : hoursValue * rateValue;
   const markupAmount = isTC && markupPct > 0 ? baseTotal * (markupPct / 100) : 0;
   const computedTotal = baseTotal + markupAmount;
 
@@ -102,7 +98,6 @@ export function LaborEntryForm({
   const validationMessage =
     !entryDate ? 'Select a date.'
     : mode === 'lump_sum' ? (lumpSumValue <= 0 ? 'Enter an amount greater than zero.' : null)
-    : mode === 'unit_price' ? (qtyValue <= 0 ? 'Enter quantity.' : unitPriceValue <= 0 ? 'Enter unit price.' : null)
     : hoursValue <= 0 ? 'Enter hours greater than zero.'
     : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
     : null;
@@ -116,15 +111,15 @@ export function LaborEntryForm({
   function handleQuickHour(h: number) { setHours(String(h)); setMode('hourly'); }
 
   function resetForm() {
-    setHours(''); setLumpSum(''); setQty(''); setUnitPrice(''); setDescription('');
+    setHours(''); setLumpSum(''); setDescription('');
     setInternalCost(''); setInternalCostOpen(true); setCostType('labor_wages');
     setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
   }
 
   function getDbMode(): COPricingMode { return mode === 'lump_sum' ? 'lump_sum' : 'hourly'; }
-  function getDbHours() { return mode === 'hourly' ? hoursValue : mode === 'unit_price' ? qtyValue : null; }
+  function getDbHours() { return mode === 'hourly' ? hoursValue : null; }
   function getDbRate() {
-    const baseRate = mode === 'hourly' ? rateValue : mode === 'unit_price' ? unitPriceValue : null;
+    const baseRate = mode === 'hourly' ? rateValue : null;
     if (baseRate && isTC && markupPct > 0) return baseRate + baseRate * (markupPct / 100);
     return baseRate;
   }
@@ -235,11 +230,10 @@ export function LaborEntryForm({
 
       <div className="p-4 space-y-4">
         {/* 3-tile Entry Type */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {([
             { key: 'hourly' as const, icon: Clock, label: 'Hours', sub: 'Rate × Hours' },
             { key: 'lump_sum' as const, icon: DollarSign, label: 'Flat Rate', sub: 'Fixed Amount' },
-            { key: 'unit_price' as const, icon: Hash, label: 'Unit Price', sub: 'Qty × Unit' },
           ]).map(opt => (
             <button
               key={opt.key}
@@ -312,20 +306,6 @@ export function LaborEntryForm({
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
                 <Input type="number" step="0.01" min="0" value={rate} onChange={e => setRate(e.target.value)} className="h-11 text-base font-semibold pl-7" />
-              </div>
-            </div>
-          </div>
-        ) : mode === 'unit_price' ? (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1 block">Quantity</Label>
-              <Input type="number" step="1" min="0" value={qty} onChange={e => setQty(e.target.value)} placeholder="0" className="h-11 text-base font-semibold" />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1 block">Unit Price</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
-                <Input type="number" step="0.01" min="0" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} placeholder="0.00" className="h-11 text-base font-semibold pl-7" />
               </div>
             </div>
           </div>
