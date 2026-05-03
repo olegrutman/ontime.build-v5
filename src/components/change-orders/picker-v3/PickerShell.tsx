@@ -317,11 +317,12 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
         }
 
         for (const item of state.items) {
+          const docType = item.docType === 'WO' || isTM ? 'WO' : 'CO';
           const coNumber = await generateCONumber({
             projectId,
             creatorOrgId: orgId,
             assignedToOrgId,
-            isTM: isTM || item.docType === 'WO',
+            isTM: docType === 'WO',
           });
 
           const locationTag = item.locations.length > 0
