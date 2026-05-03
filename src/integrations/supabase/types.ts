@@ -748,6 +748,54 @@ export type Database = {
           },
         ]
       }
+      co_evidence: {
+        Row: {
+          caption: string | null
+          co_id: string
+          co_line_item_id: string | null
+          created_at: string
+          file_type: string
+          file_url: string
+          id: string
+          uploaded_by_user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          co_id: string
+          co_line_item_id?: string | null
+          created_at?: string
+          file_type?: string
+          file_url: string
+          id?: string
+          uploaded_by_user_id: string
+        }
+        Update: {
+          caption?: string | null
+          co_id?: string
+          co_line_item_id?: string | null
+          created_at?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          uploaded_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_evidence_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_evidence_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_labor_entries: {
         Row: {
           actual_cost_note: string | null
