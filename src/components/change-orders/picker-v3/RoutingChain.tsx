@@ -41,20 +41,20 @@ export function RoutingChain({
   if (role === 'GC') {
     nodes.push({ label: 'You', initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Create CO', isYou: true });
     if (requestFc) {
-      nodes.push({ label: fcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
     }
-    nodes.push({ label: tcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices & submits' });
+    nodes.push({ label: resolvedTcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices & submits' });
     nodes.push({ label: 'You', initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approve', isYou: true });
   } else if (role === 'TC') {
     if (requestFc) {
-      nodes.push({ label: fcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Logs hours' });
     }
     nodes.push({ label: 'You', initials: tcInitials, roleColor: 'bg-green-600', sub: 'Price & submit', isYou: true });
-    nodes.push({ label: gcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
+    nodes.push({ label: resolvedGcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
   } else {
     nodes.push({ label: 'You', initials: fcInitials, roleColor: 'bg-amber-500', sub: 'Log hours', isYou: true });
-    nodes.push({ label: tcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices' });
-    nodes.push({ label: gcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
+    nodes.push({ label: resolvedTcName, initials: tcInitials, roleColor: 'bg-green-600', sub: 'Prices' });
+    nodes.push({ label: resolvedGcName, initials: gcInitials, roleColor: 'bg-blue-600', sub: 'Approves' });
   }
 
   return (
