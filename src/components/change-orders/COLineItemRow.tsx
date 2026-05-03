@@ -24,9 +24,9 @@ interface COLineItemRowProps {
   isFC: boolean;
   coId: string;
   orgId: string;
-  pricingType: 'fixed' | 'tm' | 'nte';
-  nteCap?: number | null;
-  nteUsed?: number;
+  coPricingType: COPricingType;
+  coNteCap?: number | null;
+  coNteUsed?: number;
   canAddLabor: boolean;
   /** Edit window for billable / external fields (locked once CO is submitted upstream). */
   canEditExternal?: boolean;
