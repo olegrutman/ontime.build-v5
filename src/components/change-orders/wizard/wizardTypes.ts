@@ -3,7 +3,6 @@
  * Still consumed by StepCatalog, StepCatalogQA, AddCustomItemDialog, and PickerShell.
  */
 import type { COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
-import type { WorkIntent } from '@/types/scopeQA';
 
 export interface SelectedScopeItem extends ScopeCatalogItem {
   locationTag: string;
@@ -50,8 +49,6 @@ export const ASSEMBLY_STATE_HINTS: Record<AssemblyState, string> = {
 };
 
 export interface COWizardData {
-  /** Phase B — primary work-intent driver for Sasha's question flow */
-  intent?: WorkIntent | null;
   reason: COReasonCode | null;
   workType: string | null;
   /** Phase 2 — what triggered this CO/WO (optional) */
