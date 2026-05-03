@@ -1120,6 +1120,60 @@ export type Database = {
           },
         ]
       }
+      co_photos: {
+        Row: {
+          caption: string | null
+          co_id: string
+          co_line_item_id: string | null
+          created_at: string
+          id: string
+          photo_type: string
+          storage_path: string
+          taken_at: string
+          uploaded_by_role: string
+          uploaded_by_user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          co_id: string
+          co_line_item_id?: string | null
+          created_at?: string
+          id?: string
+          photo_type?: string
+          storage_path: string
+          taken_at?: string
+          uploaded_by_role?: string
+          uploaded_by_user_id: string
+        }
+        Update: {
+          caption?: string | null
+          co_id?: string
+          co_line_item_id?: string | null
+          created_at?: string
+          id?: string
+          photo_type?: string
+          storage_path?: string
+          taken_at?: string
+          uploaded_by_role?: string
+          uploaded_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_photos_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_photos_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_scope_evidence: {
         Row: {
           ai_model: string | null
