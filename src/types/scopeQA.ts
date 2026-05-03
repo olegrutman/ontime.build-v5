@@ -9,61 +9,6 @@ export type BuildingType =
 
 export type FlowScenario = 'damage' | 'addition' | 'rework';
 
-/**
- * WorkIntent — the single user choice that drives Sasha's question flow.
- * Each intent maps 1:1 to a purpose-built question tree in `intentFlows.ts`.
- * This replaces the broken (reason × workType → addition default) lookup.
- */
-export type WorkIntent =
-  | 'repair_damage'        // Plumber cut a joist; weather damage
-  | 'add_new'              // Build a closet, add a wall
-  | 'modify_existing'      // Move a window, enlarge an opening
-  | 'redo_work'            // Wall framed crooked; rework
-  | 'tear_out'             // Selective demo, cabinet pull
-  | 'envelope_work'        // WRB, flashing, sheathing, siding prep
-  | 'structural_install'   // Beam, post, hold-down, shear wall
-  | 'mep_blocking'         // TV mount blocking, grab bar backing
-  | 'inspection_fix'       // Backout, code correction, punch list
-  | 'other';               // Free-text fallback
-
-export const WORK_INTENT_LABELS: Record<WorkIntent, string> = {
-  repair_damage:      'Fix damage',
-  add_new:            'Add new',
-  modify_existing:    'Modify existing',
-  redo_work:          'Redo work',
-  tear_out:           'Tear out / demo',
-  envelope_work:      'Envelope / WRB',
-  structural_install: 'Structural install',
-  mep_blocking:       'Blocking / backing',
-  inspection_fix:     'Inspector / punch fix',
-  other:              'Other',
-};
-
-export const WORK_INTENT_DESCRIPTIONS: Record<WorkIntent, string> = {
-  repair_damage:      'Something got damaged — fix it',
-  add_new:            'New scope not in the original plan',
-  modify_existing:    'Change something already built',
-  redo_work:          'Something built wrong — redo it',
-  tear_out:           'Demolish or remove existing work',
-  envelope_work:      'Exterior, WRB, flashing, sheathing',
-  structural_install: 'Beams, posts, hold-downs, shear walls',
-  mep_blocking:       'Blocking or backing for another trade',
-  inspection_fix:     'Inspector callback or punch-list item',
-  other:              "Doesn't fit — let me describe it",
-};
-
-export const WORK_INTENT_ICONS: Record<WorkIntent, string> = {
-  repair_damage:      '🔧',
-  add_new:            '➕',
-  modify_existing:    '↔️',
-  redo_work:          '🔄',
-  tear_out:           '🔨',
-  envelope_work:      '🛡️',
-  structural_install: '⚙️',
-  mep_blocking:       '🧱',
-  inspection_fix:     '✅',
-  other:              '📝',
-};
 
 export interface ScopeAnswer {
   id: string;

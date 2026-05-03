@@ -8,11 +8,10 @@ import { useScopeSuggestions, type SuggestPick, type SuggestResponse } from '@/h
 import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { resolveBuildingType } from '@/lib/framingQuestionTrees';
-import { getIntentFlow, resolveIntentFromLegacy, resolveComponent, suggestIntentForComponent } from '@/lib/intentFlows';
+import { getIntentFlow, resolveIntentFromLegacy, resolveComponent, suggestIntentForComponent, WORK_INTENT_LABELS, type WorkIntent } from '@/lib/intentFlows';
 import type { COReasonCode } from '@/types/changeOrder';
 import type { SelectedScopeItem } from './wizardTypes';
-import type { FlowContext, WorkIntent } from '@/types/scopeQA';
-import { WORK_INTENT_LABELS } from '@/types/scopeQA';
+import type { FlowContext } from '@/types/scopeQA';
 import { QuantityEditPopover } from './QuantityEditPopover';
 import { LocationRefinementBanner } from './LocationRefinementBanner';
 
@@ -21,9 +20,6 @@ interface StepCatalogQAProps {
   locationTag: string;
   reason: string;
   workType: string | null;
-  /** Phase A: explicit work intent — drives the question tree.
-   *  When omitted, falls back to legacy (reason × workType) resolution. */
-  intent?: WorkIntent;
   projectName?: string;
   onComplete: (result: {
     description: string;
@@ -46,7 +42,6 @@ export function StepCatalogQA({
   locationTag,
   reason,
   workType,
-  intent,
   projectName,
   onComplete,
   onFallbackToType,
@@ -69,8 +64,8 @@ export function StepCatalogQA({
   // intent-aware (e.g. tear_out + Roof should seed the demo flow, not the
   // envelope flow).
   const baseIntent: WorkIntent = useMemo(
-    () => intent ?? resolveIntentFromLegacy(reason, workType),
-    [intent, reason, workType]
+    () => resolveIntentFromLegacy(reason, workType),
+    [reason, workType]
   );
   const componentResolution = useMemo(
     () => resolveComponent(locationTag, baseIntent),
