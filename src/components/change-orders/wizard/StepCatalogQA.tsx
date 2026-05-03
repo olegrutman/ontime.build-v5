@@ -10,7 +10,7 @@ import { resolveZoneFromLocationTag } from '@/lib/resolveZone';
 import { resolveBuildingType } from '@/lib/framingQuestionTrees';
 import { getIntentFlow, resolveIntentFromLegacy, resolveComponent, suggestIntentForComponent } from '@/lib/intentFlows';
 import type { COReasonCode } from '@/types/changeOrder';
-import type { SelectedScopeItem } from './COWizard';
+import type { SelectedScopeItem } from './wizardTypes';
 import type { FlowContext, WorkIntent } from '@/types/scopeQA';
 import { WORK_INTENT_LABELS } from '@/types/scopeQA';
 import { QuantityEditPopover } from './QuantityEditPopover';

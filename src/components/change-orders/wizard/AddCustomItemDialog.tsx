@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
-import type { SelectedScopeItem } from './COWizard';
+import type { SelectedScopeItem } from './wizardTypes';
 
 interface AddCustomItemDialogProps {
   open: boolean;
