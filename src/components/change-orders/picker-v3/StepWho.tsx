@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { Switch } from '@/components/ui/switch';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +14,7 @@ interface StepWhoProps {
 }
 
 export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
+  const rl = useRoleLabelsContext();
   const { data: fcOrgs = [] } = useProjectFCOrgs(projectId);
 
   // Fetch TC orgs on this project
@@ -44,9 +46,9 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
   const selectedTc = tcOrgs.find(o => o.id === collab.assignedTcOrgId);
   const selectedFc = fcOrgs.find(o => o.id === collab.assignedFcOrgId);
 
-  const rolePip = state.role === 'GC' ? 'As General Contractor'
-    : state.role === 'TC' ? 'As Trade Contractor'
-    : 'As Field Crew';
+  const rolePip = state.role === 'GC' ? `As ${rl.GC}`
+    : state.role === 'TC' ? `As ${rl.TC}`
+    : `As ${rl.FC}`;
 
   const helpText = state.role === 'GC'
     ? 'Assign this CO to the trade contractor doing the work, and decide whether you need field crew input on labor.'
