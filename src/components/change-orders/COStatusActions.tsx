@@ -3,8 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
