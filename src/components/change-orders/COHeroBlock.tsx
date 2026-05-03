@@ -22,7 +22,6 @@ interface COHeroBlockProps {
   financials: COFinancials;
   fcCollabName: string;
   onAction: (action: string) => void;
-  isTM?: boolean;
 }
 
 function fmtCurrency(value: number) {
@@ -63,7 +62,7 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
     }
     return {
       eyebrow: co.status.toUpperCase().replace(/_/g, ' '),
-      headline: props.isTM ? 'WORK ORDER' : 'CHANGE ORDER',
+      headline: props.co.document_type === 'WO' ? 'WORK ORDER' : 'CHANGE ORDER',
       hint: 'Review the details below',
       cards: [
         { variant: 'secondary', icon: '📊', title: 'Review cost', description: 'Financial breakdown', action: 'scroll_pricing' },
@@ -100,7 +99,7 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
     }
     return {
       eyebrow: co.status.toUpperCase().replace(/_/g, ' '),
-      headline: props.isTM ? 'WORK ORDER' : 'CHANGE ORDER',
+      headline: props.co.document_type === 'WO' ? 'WORK ORDER' : 'CHANGE ORDER',
       hint: status === 'submitted' ? 'Waiting on GC approval' : 'Review the details below',
       cards: [
         { variant: 'secondary', icon: '📊', title: 'Review pricing', description: 'Financial breakdown', action: 'scroll_pricing' },

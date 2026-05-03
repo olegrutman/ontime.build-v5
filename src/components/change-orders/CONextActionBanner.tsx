@@ -11,7 +11,6 @@ interface CONextActionBannerProps {
   financials: COFinancials;
   fcCollabName: string;
   onAction: (action: string) => void;
-  isTM?: boolean;
 }
 
 interface BannerConfig {
