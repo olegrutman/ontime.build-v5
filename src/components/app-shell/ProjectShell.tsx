@@ -164,7 +164,9 @@ export function ProjectShell({
 
       {/* Content below bar */}
       <div className="flex flex-1 pt-[52px]">
-        {children}
+        <RoleLabelsContext.Provider value={roleLabels}>
+          {children}
+        </RoleLabelsContext.Provider>
       </div>
 
       
