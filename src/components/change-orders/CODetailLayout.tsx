@@ -50,6 +50,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const scopeRef = useRef<HTMLDivElement>(null);
   const materialsRef = useRef<HTMLDivElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
+  const photosCardRef = useRef<COPhotosCardHandle>(null);
 
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
