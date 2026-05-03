@@ -323,27 +323,28 @@ export function StepCatalog({ data, onChange, projectId, workType }: StepCatalog
 
       {/* QA mode */}
       {mode === 'qa' && data.locationTag && data.reason && (
-        <StepCatalogQA
-          projectId={projectId}
-          locationTag={data.locationTag}
-          reason={data.reason}
-          workType={workType ?? null}
-          
-          onComplete={({ description, answers, selectedItems }) => {
-            if (selectedItems.length === 0) {
-              toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });
-              setMode('browse');
-              return;
-            }
-            completeFromItems(selectedItems, description, answers);
-            toast.success(`Added ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'}`);
-          }}
-          onFallbackToType={(draft) => { setTypeDraft(draft); setMode('type'); }}
-          onFallbackToBrowse={() => setMode('browse')}
-          onLocationRefine={handleLocationRefine}
-        />
-        {/* Bottom escape hatch to full catalog */}
-        <BrowseCatalogLink onOpen={() => setMode('browse')} />
+        <>
+          <StepCatalogQA
+            projectId={projectId}
+            locationTag={data.locationTag}
+            reason={data.reason}
+            workType={workType ?? null}
+            
+            onComplete={({ description, answers, selectedItems }) => {
+              if (selectedItems.length === 0) {
+                toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });
+                setMode('browse');
+                return;
+              }
+              completeFromItems(selectedItems, description, answers);
+              toast.success(`Added ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'}`);
+            }}
+            onFallbackToType={(draft) => { setTypeDraft(draft); setMode('type'); }}
+            onFallbackToBrowse={() => setMode('browse')}
+            onLocationRefine={handleLocationRefine}
+          />
+          <BrowseCatalogLink onOpen={() => setMode('browse')} />
+        </>
       )}
 
       {/* Type mode */}
