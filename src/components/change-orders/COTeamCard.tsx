@@ -35,6 +35,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export function COTeamCard({ co, collaborators }: COTeamCardProps) {
+  const rl = useRoleLabelsContext();
   // Fetch org names for creator and assigned orgs
   const orgIds = [co.org_id, co.assigned_to_org_id, ...collaborators.map(c => c.organization_id)].filter(Boolean) as string[];
   const uniqueOrgIds = [...new Set(orgIds)];
