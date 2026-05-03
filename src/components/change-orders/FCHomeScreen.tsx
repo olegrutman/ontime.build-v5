@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Clock, Package, Zap, ChevronRight, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
