@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, ChevronLeft, ImagePlus, MapPin, Mic, Plus, X, Check, Loader2 } from 'lucide-react';
+import { Camera, ChevronLeft, ImagePlus, MapPin, Plus, X, Check, Loader2 } from 'lucide-react';
+import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -363,9 +364,9 @@ export function QuickCaptureFlow({ projectId }: QuickCaptureFlowProps) {
               placeholder="What happened? e.g. plumber cut 3 joists in master bath"
               className="w-full rounded-xl border border-border bg-card px-4 py-3 pr-12 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-muted">
-              <Mic className="h-4 w-4 text-muted-foreground" />
-            </button>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <VoiceInputButton onTranscript={(text) => setDescription(prev => prev ? prev + ' ' + text : text)} />
+            </div>
           </div>
           {!showDetail ? (
             <button

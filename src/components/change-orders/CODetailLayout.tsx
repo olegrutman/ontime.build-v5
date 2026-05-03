@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera } from 'lucide-react';
+import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -483,6 +484,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           placeholder="Add a note…" className="min-h-[36px] h-9 resize-none text-sm flex-1" rows={1}
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
                         />
+                        <VoiceInputButton onTranscript={(text) => setComment(prev => prev ? prev + ' ' + text : text)} />
                         <Button size="sm" disabled={!comment.trim() || sendingComment} onClick={handleSendComment} className="h-9">
                           <Send className="h-3 w-3" />
                         </Button>
