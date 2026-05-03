@@ -492,29 +492,38 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
             ✓
           </div>
           <h1 className="font-heading text-3xl font-extrabold text-foreground mb-2">
-            {cur.docType === 'CO' ? 'Change Order' : 'Work Order'} Created
+            {isAddMode ? 'Items Added' : `${cur.docType === 'CO' ? 'Change Order' : 'Work Order'} Created`}
           </h1>
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
-            Your draft is ready for review. Open it to add details and submit for approval.
+            {isAddMode
+              ? 'Scope items have been added to the existing order.'
+              : 'Your draft is ready for review. Open it to add details and submit for approval.'}
           </p>
-          <div className="font-mono text-sm font-semibold bg-amber-50 border border-amber-400 rounded-lg px-4 py-2 inline-block mb-6">
-            {cur.docType}-DRAFT · {projectInfo?.name ?? 'Project'}
-          </div>
+          {!isAddMode && (
+            <div className="font-mono text-sm font-semibold bg-amber-50 border border-amber-400 rounded-lg px-4 py-2 inline-block mb-6">
+              {cur.docType}-DRAFT · {projectInfo?.name ?? 'Project'}
+            </div>
+          )}
           <div className="flex gap-3 justify-center">
             <button
               type="button"
-              onClick={() => navigate(`/project/${projectId}/change-orders`)}
+              onClick={() => navigate(isAddMode
+                ? `/project/${projectId}/change-orders/${addToCoId}`
+                : `/project/${projectId}/change-orders`
+              )}
               className="px-5 py-2.5 rounded-lg bg-muted border text-sm font-semibold hover:bg-amber-50 transition-all"
             >
-              Back to List
+              {isAddMode ? 'Back to Order' : 'Back to List'}
             </button>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="px-5 py-2.5 rounded-lg bg-[hsl(var(--navy))] text-white text-sm font-semibold hover:opacity-90 transition-all"
-            >
-              Start Another
-            </button>
+            {!isAddMode && (
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-5 py-2.5 rounded-lg bg-[hsl(var(--navy))] text-white text-sm font-semibold hover:opacity-90 transition-all"
+              >
+                Start Another
+              </button>
+            )}
           </div>
         </div>
       </div>
