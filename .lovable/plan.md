@@ -1,64 +1,40 @@
 
-# CO/WO Field Mismatch & Bug Audit — Round 2
+# Replace Add Scope Item Wizard with V3 Picker
 
-## Methodology
-Compared every active trigger function, RPC, and client-side code against actual DB column names and frontend routes.
+## Problem
+The "Add item" button on the CO detail page opens an old 4-step wizard (`AddScopeItemButton`) instead of the V3 Picker (`PickerShell`) that's used for creating new COs. The user wants the same V3 experience when adding scope items to an existing CO.
 
----
+## Approach
+Navigate the user to the V3 Picker in an **"add-to-existing"** mode. When in this mode, the picker skips CO creation and instead inserts line items, materials, equipment, and labor directly into the existing CO.
 
-## Active Bugs Found
+## Implementation
 
-### BUG 1 — CRITICAL: Notification `action_url` uses wrong route `/projects/` instead of `/project/`
+### 1. Add route for "add items to existing CO"
+- New route: `/project/:id/change-orders/:coId/add-items`
+- Renders `COPickerV3Page` with the `coId` param available
 
-**Where:** Two locations:
-1. **DB trigger** `notify_co_status_change()` — line: `'/projects/' || NEW.project_id || '/change-orders/' || NEW.id`
-2. **Client code** `src/lib/coNotifications.ts` line 24: `` `/projects/${payload.project_id}/change-orders/${payload.co_id}` ``
+### 2. Extend PickerShell with `addToCoId` prop
+- When `addToCoId` is provided, the picker operates in "add mode":
+  - **Skip steps that are already set on the parent CO**: Who (step 3) — the CO already has assignment. Pricing (step 4) — already set.
+  - **Pre-populate**: Location from existing CO's `location_tag`, reason from CO's `reason`.
+  - **Submit behavior**: Instead of creating a new CO, insert `co_line_items`, `co_labor_entries`, `co_material_items`, `co_equipment_items` into the existing CO.
+  - **Header**: Shows "Add Items to CO-XXX" instead of "New Change Order".
+  - **Success screen**: Shows "Items Added" with a "Back to CO" button instead of "Back to List".
 
-**Impact:** Every CO notification (approved, rejected, submitted, shared) links to a 404 page because the actual route is `/project/:id/change-orders/:coId` (singular `project`).
+### 3. Replace AddScopeItemButton usage
+- In `CODetailLayout.tsx`, replace the `<AddScopeItemButton>` with a simple `<Button>` that navigates to the new route.
 
-**Fix:** Change `/projects/` to `/project/` in both locations.
+### 4. Clean up
+- Remove `AddScopeItemButton.tsx` (now unused).
+- Remove the old wizard components it imported if they're only used by it (`StepCatalog` from `./wizard/StepCatalog`).
 
-### BUG 2 — LOW: Dead trigger functions reference non-existent columns/tables
+## Technical Details
 
-These functions exist but have **NO active triggers** attached:
-- `notify_change_order_status()` — references `NEW.created_by` (should be `created_by_user_id`), `NEW.rejection_notes` (should be `rejection_note`), `change_order_participants` table (doesn't exist in current schema), `ready_for_approval` status
-- `cleanup_change_order_notification()` — uses uppercase `'APPROVED'`, `'REJECTED'` but statuses are lowercase
-- `log_change_order_status_change()` — no issues but is dead code
-- `create_change_order_checklist()` — references non-existent `change_order_checklist` table
+**Modified files:**
+- `src/App.tsx` — add route `/project/:id/change-orders/:coId/add-items`
+- `src/pages/COPickerV3.tsx` — pass `coId` param to `PickerShell` when present
+- `src/components/change-orders/picker-v3/PickerShell.tsx` — add `addToCoId` prop, modify submit to insert into existing CO, adjust header/success screen
+- `src/components/change-orders/CODetailLayout.tsx` — replace `AddScopeItemButton` with navigation button
 
-**Impact:** None currently (dead code). But could cause confusion if someone tries to re-attach them.
-
-**Fix:** Drop all 4 dead functions to prevent accidental attachment.
-
----
-
-## Verified Working (No Issues)
-
-| Component | Status |
-|-----------|--------|
-| `apply_co_contract_delta` trigger | All columns valid |
-| `notify_co_status_change` trigger | Fixed (derives `is_tm` from project) |
-| `request_fc_change_order_input` RPC | All columns valid |
-| `complete_fc_change_order_input` RPC | All columns valid |
-| `forward_change_order_to_upstream_gc` RPC | All columns valid, `to_role` values match |
-| `co_grand_total` function | Valid |
-| `_co_target_contract_id` function | Valid |
-| TypeScript `ChangeOrder` type | Matches DB (extra TS fields like `combined_at` exist in DB too) |
-| `COLineItem` type | Matches DB (DB has extra `task_index`, `pricing_mode`, `task_phase` not in TS — safe) |
-| `COLaborEntry` type | Matches DB (DB has extra `gc_approved`, `gc_approved_at` — safe) |
-| `COMaterialItem` type | Exact match |
-| `COEquipmentItem` type | Exact match |
-| `co_activity` table | Matches `COActivityEntry` type |
-| `co_nte_log` table | Matches `CONTELogEntry` type |
-| `change_order_collaborators` table | Matches `COCollaborator` type |
-
----
-
-## Implementation Plan
-
-### Step 1: Fix notification URLs (Bug 1)
-- **Migration**: Update `notify_co_status_change()` to use `/project/` instead of `/projects/`
-- **Code edit**: Fix `src/lib/coNotifications.ts` line 24
-
-### Step 2: Drop dead functions (Bug 2)
-- **Migration**: Drop `notify_change_order_status`, `cleanup_change_order_notification`, `log_change_order_status_change`, `create_change_order_checklist`
+**Deleted files:**
+- `src/components/change-orders/AddScopeItemButton.tsx`
