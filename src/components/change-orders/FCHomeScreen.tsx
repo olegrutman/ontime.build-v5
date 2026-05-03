@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Clock, Package, Zap, ChevronRight, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,8 +50,6 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
   const navigate = useNavigate();
   const { userOrgRoles } = useAuth();
   const { changeOrders } = useChangeOrders(projectId);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [preSelectedReason, setPreSelectedReason] = useState<COReasonCode | undefined>();
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? '';
 
@@ -86,10 +84,9 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
 
   function handleHeroTap(key: string, reason: COReasonCode | null) {
     if (key === 'something_happened' || key === 'saw_damage') {
-      setPreSelectedReason(reason ?? undefined);
-      setWizardOpen(true);
+      const params = reason ? `?reason=${reason}` : '';
+      navigate(`/project/${projectId}/change-orders/new${params}`);
     } else if (key === 'log_hours' || key === 'need_material') {
-      // Navigate to CO list — these are secondary flows
       navigate(`/project/${projectId}/change-orders`);
     }
   }
@@ -300,12 +297,6 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
         </div>
       )}
 
-      <COWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        projectId={projectId}
-        preSelectedReason={preSelectedReason}
-      />
     </div>
   );
 }
