@@ -342,6 +342,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
                 : `${item.systemName ?? ''} · ${item.causeName ?? ''}`.trim() || coNumber,
               status: 'draft',
               pricing_type: item.pricingType,
+              document_type: docType,
               reason: item.reason ?? 'owner_request',
               reason_note: item.causeName ?? null,
               location_tag: locationTag,
