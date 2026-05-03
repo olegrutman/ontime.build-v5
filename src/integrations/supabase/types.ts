@@ -605,6 +605,53 @@ export type Database = {
           },
         ]
       }
+      co_audit_log: {
+        Row: {
+          actor_role: string | null
+          actor_user_id: string | null
+          changed_at: string
+          co_id: string
+          field_name: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          source_row_id: string | null
+          source_table: string
+        }
+        Insert: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          changed_at?: string
+          co_id: string
+          field_name: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          source_row_id?: string | null
+          source_table?: string
+        }
+        Update: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          changed_at?: string
+          co_id?: string
+          field_name?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          source_row_id?: string | null
+          source_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_audit_log_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_combined_members: {
         Row: {
           added_at: string | null

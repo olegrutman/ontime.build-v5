@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +25,9 @@ import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
+import { COAuditLog } from './COAuditLog';
 import { COAcceptBanner } from './COAcceptBanner';
+import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -49,7 +51,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
 
+  const { data: auditEntries = [] } = useCOAuditLog(coId);
   const {
     co, collaborators, lineItems, laborEntries, materials, equipment,
     nteLog, activity, financials, isLoading,
@@ -441,6 +445,26 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           <Send className="h-3 w-3" />
                         </Button>
                       </div>
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+
+              {/* Audit Log — Collapsible */}
+              <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
+                <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                  <CollapsibleTrigger asChild>
+                    <button type="button" className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-accent/30 transition-colors">
+                      <h3 className="font-heading text-[0.75rem] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" /> Audit Log
+                        <span className="text-[10px] bg-muted rounded-full px-2 py-0.5">{auditEntries.length}</span>
+                      </h3>
+                      <span className={cn('h-4 w-4 text-muted-foreground transition-transform', auditOpen && 'rotate-180')}>▾</span>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="border-t border-border">
+                      <COAuditLog entries={auditEntries} viewerRole={role} />
                     </div>
                   </CollapsibleContent>
                 </div>
