@@ -12,6 +12,13 @@ export function useCORealtime(coId: string | null) {
       .channel(`co-realtime-${coId}`)
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'co_line_items', filter: `co_id=eq.${coId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'line-items'] });
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'co_labor_entries', filter: `co_id=eq.${coId}` }, // ✓ verified
         () => {
           queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'labor'] }); // ✓ verified
