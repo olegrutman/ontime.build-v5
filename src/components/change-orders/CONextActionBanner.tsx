@@ -85,7 +85,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     if (status === 'submitted') {
       return {
         icon: <Clock className="h-5 w-5" />,
-        title: 'Waiting on General Contractor approval',
+        title: `Waiting on ${rl.GC} approval`,
         subtitle: `Submitted ${fmtCurrency(priceToUpstream)} — you'll be notified when reviewed`,
         actions: [],
       };
@@ -98,7 +98,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     return {
       icon: <Clock className="h-5 w-5" />,
       title: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hours logged — submit when ready` : 'Log your hours for this work order',
-      subtitle: 'Add time entries then submit to your Trade Contractor',
+      subtitle: `Add time entries then submit to your ${rl.TC}`,
       actions: [
         { label: 'Log Hours', action: 'log_hours', primary: true },
         ...(financials.fcTotalHours > 0 ? [{ label: 'Submit to TC', action: 'submit_to_tc' }] : []),
@@ -110,7 +110,8 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
 }
 
 export function CONextActionBanner(props: CONextActionBannerProps) {
-  const config = getBannerConfig(props);
+  const rl = useRoleLabelsContext();
+  const config = getBannerConfig(props, rl);
   if (!config) return null;
 
   return (
