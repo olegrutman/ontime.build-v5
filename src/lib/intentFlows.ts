@@ -11,7 +11,33 @@
  * brand-new flows authored here.
  */
 
-import type { ScopeFlow, WorkIntent, BuildingType, FlowContext } from '@/types/scopeQA';
+import type { ScopeFlow, BuildingType, FlowContext } from '@/types/scopeQA';
+
+/** Internal routing type — not user-facing. Derived from reason + workType via resolveIntentFromLegacy. */
+export type WorkIntent =
+  | 'repair_damage'
+  | 'add_new'
+  | 'modify_existing'
+  | 'redo_work'
+  | 'tear_out'
+  | 'envelope_work'
+  | 'structural_install'
+  | 'mep_blocking'
+  | 'inspection_fix'
+  | 'other';
+
+const WORK_INTENT_LABELS: Record<WorkIntent, string> = {
+  repair_damage:      'Fix damage',
+  add_new:            'Add new',
+  modify_existing:    'Modify existing',
+  redo_work:          'Redo work',
+  tear_out:           'Tear out / demo',
+  envelope_work:      'Envelope / WRB',
+  structural_install: 'Structural install',
+  mep_blocking:       'Blocking / backing',
+  inspection_fix:     'Inspector / punch fix',
+  other:              'Other',
+};
 import { FLOWS } from '@/lib/framingQuestionTrees';
 
 // ── Helpers shared by new intent flows ─────────────────────────
