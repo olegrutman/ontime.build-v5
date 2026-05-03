@@ -366,13 +366,16 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
                 </div>
 
                 {/* Add another scope item row */}
-                {canEdit && !nteBlocked && lineItems.length > 0 && (
-                  <div className="border-t border-dashed border-border">
-                    <AddScopeItemButton
-                      coId={co.id} orgId={myOrgId} projectId={projectId}
-                      role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
-                      isTM={isTM}
-                    />
+                {canEdit && !nteBlocked && lineItems.length > 0 && co && (
+                  <div className="border-t border-dashed border-border p-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs gap-1 text-muted-foreground"
+                      onClick={() => navigate(`/project/${projectId}/change-orders/${co.id}/add-items`)}
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add another item
+                    </Button>
                   </div>
                 )}
               </div>
