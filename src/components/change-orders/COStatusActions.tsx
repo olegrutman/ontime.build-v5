@@ -298,7 +298,12 @@ export function COStatusActions({
     try {
       await updateCO.mutateAsync({
         id: co.id,
-        updates: { status: 'draft', submitted_at: null },
+        updates: {
+          status: 'draft',
+          submitted_at: null,
+          shared_at: null,
+          draft_shared_with_next: false,
+        },
       });
       toast.success('CO recalled');
       await logActivity('recalled');
