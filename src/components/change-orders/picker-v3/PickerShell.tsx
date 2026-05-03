@@ -130,8 +130,29 @@ export function PickerShell({ projectId }: PickerShellProps) {
     try {
       // Determine assigned_to_org_id based on role
       let assignedToOrgId: string | null = null;
-      if (detectedRole === 'TC' || detectedRole === 'FC') {
-        // Find the GC on this project
+      if (detectedRole === 'FC') {
+        // FC routes to hiring TC first (upstream contract), not directly to GC
+        const { data: upstreamContract } = await supabase
+          .from('project_contracts')
+          .select('from_org_id')
+          .eq('project_id', projectId)
+          .eq('to_org_id', orgId)
+          .maybeSingle();
+        if (upstreamContract?.from_org_id) {
+          assignedToOrgId = upstreamContract.from_org_id;
+        } else {
+          // Fallback: find TC on project
+          const { data: tcParticipant } = await supabase
+            .from('project_participants')
+            .select('organization_id')
+            .eq('project_id', projectId)
+            .eq('role', 'TC')
+            .eq('invite_status', 'ACCEPTED')
+            .maybeSingle();
+          assignedToOrgId = tcParticipant?.organization_id ?? null;
+        }
+      } else if (detectedRole === 'TC') {
+        // TC routes to GC
         const { data: gcParticipant } = await supabase
           .from('project_participants')
           .select('organization_id')
