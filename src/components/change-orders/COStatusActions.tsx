@@ -34,7 +34,6 @@ interface COStatusActionsProps {
   collaborators?: COCollaborator[];
   assignedOrgName?: string;
   onRefresh: () => void;
-  isTM?: boolean;
   lineItemCount?: number;
 }
 
@@ -49,7 +48,6 @@ export function COStatusActions({
   collaborators = [],
   assignedOrgName,
   onRefresh,
-  isTM = false,
   lineItemCount = 0,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
