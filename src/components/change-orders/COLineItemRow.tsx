@@ -368,6 +368,35 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Pricing type</Label>
+                          <Select value={draftPricingType || 'inherit'} onValueChange={(v) => setDraftPricingType(v === 'inherit' ? '' : (v as COPricingType))}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="inherit">CO default ({coPricingType === 'fixed' ? 'Fixed' : coPricingType === 'tm' ? 'T&M' : 'NTE'})</SelectItem>
+                              <SelectItem value="fixed">Fixed</SelectItem>
+                              <SelectItem value="tm">T&M</SelectItem>
+                              <SelectItem value="nte">NTE</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {(draftPricingType === 'nte') && (
+                          <div>
+                            <Label className="text-xs text-muted-foreground">NTE cap ($)</Label>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              value={draftNteCap}
+                              onChange={(e) => setDraftNteCap(e.target.value)}
+                              className="h-8 text-sm"
+                              placeholder="Cap amount"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between pt-2">
                       <Button
