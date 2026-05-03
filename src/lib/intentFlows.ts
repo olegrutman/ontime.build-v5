@@ -26,7 +26,7 @@ export type WorkIntent =
   | 'inspection_fix'
   | 'other';
 
-const WORK_INTENT_LABELS: Record<WorkIntent, string> = {
+export const WORK_INTENT_LABELS: Record<WorkIntent, string> = {
   repair_damage:      'Fix damage',
   add_new:            'Add new',
   modify_existing:    'Modify existing',
