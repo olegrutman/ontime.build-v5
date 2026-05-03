@@ -21,7 +21,6 @@ interface StepCatalogQAProps {
   reason: string;
   workType: string | null;
   projectName?: string;
-  projectName?: string;
   onComplete: (result: {
     description: string;
     answers: Record<string, string | string[]>;
