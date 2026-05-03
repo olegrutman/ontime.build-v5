@@ -4,7 +4,6 @@ import { AlertTriangle, Clock, Package, Zap, ChevronRight, MapPin } from 'lucide
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
-import { COWizard } from './wizard/COWizard';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COStatus } from '@/types/changeOrder';
 
