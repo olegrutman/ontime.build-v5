@@ -145,197 +145,324 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
     setIsSubmitting(true);
 
     try {
-      // Determine assigned_to_org_id based on role
-      let assignedToOrgId: string | null = null;
-      if (detectedRole === 'FC') {
-        // FC routes to hiring TC first (upstream contract), not directly to GC
-        const { data: upstreamContract } = await supabase
-          .from('project_contracts')
-          .select('from_org_id')
-          .eq('project_id', projectId)
-          .eq('to_org_id', orgId)
+      if (isAddMode && addToCoId) {
+        // ─── ADD MODE: insert items into existing CO ───
+        // Get max sort_order for existing line items
+        const maxSort = await supabase
+          .from('co_line_items')
+          .select('sort_order')
+          .eq('co_id', addToCoId)
+          .order('sort_order', { ascending: false })
+          .limit(1)
           .maybeSingle();
-        if (upstreamContract?.from_org_id) {
-          assignedToOrgId = upstreamContract.from_org_id;
-        } else {
-          // Fallback: find TC on project
-          const { data: tcParticipant } = await supabase
+        let nextSort = (maxSort.data?.sort_order ?? 0) + 1;
+
+        for (const item of state.items) {
+          const workTypeEntries = Array.from(item.workTypes);
+          let createdLineItemIds: string[] = [];
+
+          if (workTypeEntries.length > 0) {
+            const lineItems = workTypeEntries.map((wt, idx) => ({
+              co_id: addToCoId,
+              org_id: orgId,
+              created_by_role: detectedRole,
+              item_name: item.workNames[wt] ?? wt,
+              description: item.narrative || null,
+              unit: 'EA',
+              sort_order: nextSort + idx,
+              location_tag: item.locations.join(' + ') || null,
+              reason: item.reason ?? null,
+            }));
+            const { data: liData, error: liError } = await supabase
+              .from('co_line_items')
+              .insert(lineItems)
+              .select('id');
+            if (liError) console.error('Line items insert error:', liError);
+            createdLineItemIds = (liData ?? []).map(li => li.id);
+            nextSort += workTypeEntries.length;
+          } else {
+            const { data: liData, error: liError } = await supabase
+              .from('co_line_items')
+              .insert({
+                co_id: addToCoId,
+                org_id: orgId,
+                created_by_role: detectedRole,
+                item_name: item.narrative?.substring(0, 120) || item.causeName || 'Scope item',
+                description: item.narrative || null,
+                unit: 'EA',
+                sort_order: nextSort,
+                location_tag: item.locations.join(' + ') || null,
+                reason: item.reason ?? null,
+              })
+              .select('id');
+            if (liError) console.error('Line item insert error:', liError);
+            createdLineItemIds = (liData ?? []).map(li => li.id);
+            nextSort += 1;
+          }
+
+          // Insert labor entries
+          const firstLineItemId = createdLineItemIds[0];
+          if (firstLineItemId) {
+            for (const labor of item.laborEntries) {
+              if (labor.hours <= 0) continue;
+              await supabase.from('co_labor_entries').insert({
+                co_id: addToCoId,
+                org_id: orgId,
+                co_line_item_id: firstLineItemId,
+                entered_by_role: detectedRole === 'GC' ? 'TC' : detectedRole,
+                description: labor.role,
+                hourly_rate: labor.rate,
+                hours: labor.hours,
+                line_total: labor.rate * labor.hours,
+                pricing_mode: 'hourly',
+                is_actual_cost: false,
+              });
+            }
+          }
+
+          // Insert materials
+          for (let mi = 0; mi < item.materials.length; mi++) {
+            const mat = item.materials[mi];
+            await supabase.from('co_material_items').insert({
+              co_id: addToCoId,
+              org_id: orgId,
+              added_by_role: detectedRole,
+              line_number: mi + 1,
+              description: mat.description,
+              supplier_sku: mat.sku || null,
+              quantity: mat.quantity,
+              uom: mat.unit || 'EA',
+              unit_cost: mat.unitCost,
+              line_cost: mat.unitCost * mat.quantity,
+              markup_percent: item.markup,
+              markup_amount: (mat.unitCost * mat.quantity * item.markup) / 100,
+              billed_amount: mat.unitCost * mat.quantity * (1 + item.markup / 100),
+            });
+          }
+
+          // Insert equipment
+          for (const eq of item.equipment) {
+            await supabase.from('co_equipment_items').insert({
+              co_id: addToCoId,
+              org_id: orgId,
+              added_by_role: detectedRole,
+              description: eq.description,
+              duration_note: eq.durationNote || null,
+              cost: eq.cost,
+              markup_percent: item.markup,
+              markup_amount: (eq.cost * item.markup) / 100,
+              billed_amount: eq.cost * (1 + item.markup / 100),
+            });
+          }
+
+          // Update CO flags if materials/equipment were added
+          if (item.materials.length > 0 || item.equipment.length > 0) {
+            await supabase.from('change_orders').update({
+              materials_needed: item.materials.length > 0 || undefined,
+              equipment_needed: item.equipment.length > 0 || undefined,
+              updated_at: new Date().toISOString(),
+            }).eq('id', addToCoId);
+          }
+        }
+
+        // Activity log
+        const totalItems = state.items.reduce((s, it) => s + Math.max(it.workTypes.size, 1), 0);
+        await supabase.from('co_activity').insert({
+          co_id: addToCoId,
+          project_id: projectId,
+          actor_user_id: user.id,
+          actor_role: detectedRole,
+          action: 'scope_added',
+          detail: `Added ${totalItems} item(s) via picker`,
+        });
+
+        queryClient.invalidateQueries({ queryKey: ['co-detail'] });
+        queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
+
+        dispatch({ type: 'SET_SUBMITTED' });
+        toast.success(`${totalItems} item(s) added`);
+      } else {
+        // ─── CREATE MODE: original logic ───
+        let assignedToOrgId: string | null = null;
+        if (detectedRole === 'FC') {
+          const { data: upstreamContract } = await supabase
+            .from('project_contracts')
+            .select('from_org_id')
+            .eq('project_id', projectId)
+            .eq('to_org_id', orgId)
+            .maybeSingle();
+          if (upstreamContract?.from_org_id) {
+            assignedToOrgId = upstreamContract.from_org_id;
+          } else {
+            const { data: tcParticipant } = await supabase
+              .from('project_participants')
+              .select('organization_id')
+              .eq('project_id', projectId)
+              .eq('role', 'TC')
+              .eq('invite_status', 'ACCEPTED')
+              .maybeSingle();
+            assignedToOrgId = tcParticipant?.organization_id ?? null;
+          }
+        } else if (detectedRole === 'TC') {
+          const { data: gcParticipant } = await supabase
             .from('project_participants')
             .select('organization_id')
             .eq('project_id', projectId)
-            .eq('role', 'TC')
+            .eq('role', 'GC')
             .eq('invite_status', 'ACCEPTED')
             .maybeSingle();
-          assignedToOrgId = tcParticipant?.organization_id ?? null;
+          assignedToOrgId = gcParticipant?.organization_id ?? null;
+        } else if (state.collaboration.assignedTcOrgId) {
+          assignedToOrgId = state.collaboration.assignedTcOrgId;
         }
-      } else if (detectedRole === 'TC') {
-        // TC routes to GC
-        const { data: gcParticipant } = await supabase
-          .from('project_participants')
-          .select('organization_id')
-          .eq('project_id', projectId)
-          .eq('role', 'GC')
-          .eq('invite_status', 'ACCEPTED')
-          .maybeSingle();
-        assignedToOrgId = gcParticipant?.organization_id ?? null;
-      } else if (state.collaboration.assignedTcOrgId) {
-        assignedToOrgId = state.collaboration.assignedTcOrgId;
-      }
 
-      // Create one CO per item
-      for (const item of state.items) {
-        const coNumber = await generateCONumber({
-          projectId,
-          creatorOrgId: orgId,
-          assignedToOrgId,
-          isTM: isTM || item.docType === 'WO',
-        });
+        for (const item of state.items) {
+          const coNumber = await generateCONumber({
+            projectId,
+            creatorOrgId: orgId,
+            assignedToOrgId,
+            isTM: isTM || item.docType === 'WO',
+          });
 
-        const locationTag = item.locations.length > 0
-          ? item.locations.join(' + ')
-          : null;
+          const locationTag = item.locations.length > 0
+            ? item.locations.join(' + ')
+            : null;
 
-        const { data: co, error: coError } = await supabase
-          .from('change_orders')
-          .insert({
-            org_id: orgId,
-            project_id: projectId,
-            created_by_user_id: user.id,
-            created_by_role: detectedRole,
-            co_number: coNumber,
-            title: item.narrative
-              ? item.narrative.substring(0, 120)
-              : `${item.systemName ?? ''} · ${item.causeName ?? ''}`.trim() || coNumber,
-            status: 'draft',
-            pricing_type: item.pricingType,
-            reason: item.reason ?? 'owner_request',
-            reason_note: item.causeName ?? null,
-            location_tag: locationTag,
-            assigned_to_org_id: assignedToOrgId,
-            fc_input_needed: state.collaboration.requestFcInput,
-            materials_needed: item.materials.length > 0,
-            equipment_needed: item.equipment.length > 0,
-            materials_responsible: item.materialResponsible,
-            equipment_responsible: item.equipmentResponsible,
-          })
-          .select()
-          .single();
-
-        if (coError) throw coError;
-
-        // Insert line items from work types
-        const workTypeEntries = Array.from(item.workTypes);
-        let createdLineItemIds: string[] = [];
-
-        if (workTypeEntries.length > 0) {
-          const lineItems = workTypeEntries.map((wt, idx) => ({
-            co_id: co.id,
-            org_id: orgId,
-            created_by_role: detectedRole,
-            item_name: item.workNames[wt] ?? wt,
-            description: item.narrative || null,
-            unit: 'EA',
-            sort_order: idx + 1,
-          }));
-          const { data: liData, error: liError } = await supabase
-            .from('co_line_items')
-            .insert(lineItems)
-            .select('id');
-          if (liError) console.error('Line items insert error:', liError);
-          createdLineItemIds = (liData ?? []).map(li => li.id);
-        } else {
-          // Create a single line item from the narrative or title
-          const { data: liData, error: liError } = await supabase
-            .from('co_line_items')
+          const { data: co, error: coError } = await supabase
+            .from('change_orders')
             .insert({
+              org_id: orgId,
+              project_id: projectId,
+              created_by_user_id: user.id,
+              created_by_role: detectedRole,
+              co_number: coNumber,
+              title: item.narrative
+                ? item.narrative.substring(0, 120)
+                : `${item.systemName ?? ''} · ${item.causeName ?? ''}`.trim() || coNumber,
+              status: 'draft',
+              pricing_type: item.pricingType,
+              reason: item.reason ?? 'owner_request',
+              reason_note: item.causeName ?? null,
+              location_tag: locationTag,
+              assigned_to_org_id: assignedToOrgId,
+              fc_input_needed: state.collaboration.requestFcInput,
+              materials_needed: item.materials.length > 0,
+              equipment_needed: item.equipment.length > 0,
+              materials_responsible: item.materialResponsible,
+              equipment_responsible: item.equipmentResponsible,
+            })
+            .select()
+            .single();
+
+          if (coError) throw coError;
+
+          const workTypeEntries = Array.from(item.workTypes);
+          let createdLineItemIds: string[] = [];
+
+          if (workTypeEntries.length > 0) {
+            const lineItems = workTypeEntries.map((wt, idx) => ({
               co_id: co.id,
               org_id: orgId,
               created_by_role: detectedRole,
-              item_name: item.narrative?.substring(0, 120) || item.causeName || 'Scope item',
+              item_name: item.workNames[wt] ?? wt,
               description: item.narrative || null,
               unit: 'EA',
-              sort_order: 1,
-            })
-            .select('id');
-          if (liError) console.error('Line item insert error:', liError);
-          createdLineItemIds = (liData ?? []).map(li => li.id);
-        }
+              sort_order: idx + 1,
+            }));
+            const { data: liData, error: liError } = await supabase
+              .from('co_line_items')
+              .insert(lineItems)
+              .select('id');
+            if (liError) console.error('Line items insert error:', liError);
+            createdLineItemIds = (liData ?? []).map(li => li.id);
+          } else {
+            const { data: liData, error: liError } = await supabase
+              .from('co_line_items')
+              .insert({
+                co_id: co.id,
+                org_id: orgId,
+                created_by_role: detectedRole,
+                item_name: item.narrative?.substring(0, 120) || item.causeName || 'Scope item',
+                description: item.narrative || null,
+                unit: 'EA',
+                sort_order: 1,
+              })
+              .select('id');
+            if (liError) console.error('Line item insert error:', liError);
+            createdLineItemIds = (liData ?? []).map(li => li.id);
+          }
 
-        // Insert labor entries (linked to first line item)
-        const firstLineItemId = createdLineItemIds[0];
-        if (firstLineItemId) {
-          for (const labor of item.laborEntries) {
-            if (labor.hours <= 0) continue;
-            await supabase.from('co_labor_entries').insert({
+          const firstLineItemId = createdLineItemIds[0];
+          if (firstLineItemId) {
+            for (const labor of item.laborEntries) {
+              if (labor.hours <= 0) continue;
+              await supabase.from('co_labor_entries').insert({
+                co_id: co.id,
+                org_id: orgId,
+                co_line_item_id: firstLineItemId,
+                entered_by_role: detectedRole === 'GC' ? 'TC' : detectedRole,
+                description: labor.role,
+                hourly_rate: labor.rate,
+                hours: labor.hours,
+                line_total: labor.rate * labor.hours,
+                pricing_mode: 'hourly',
+                is_actual_cost: false,
+              });
+            }
+          }
+
+          for (let mi = 0; mi < item.materials.length; mi++) {
+            const mat = item.materials[mi];
+            await supabase.from('co_material_items').insert({
               co_id: co.id,
               org_id: orgId,
-              co_line_item_id: firstLineItemId,
-              entered_by_role: detectedRole === 'GC' ? 'TC' : detectedRole,
-              description: labor.role,
-              hourly_rate: labor.rate,
-              hours: labor.hours,
-              line_total: labor.rate * labor.hours,
-              pricing_mode: 'hourly',
-              is_actual_cost: false,
+              added_by_role: detectedRole,
+              line_number: mi + 1,
+              description: mat.description,
+              supplier_sku: mat.sku || null,
+              quantity: mat.quantity,
+              uom: mat.unit || 'EA',
+              unit_cost: mat.unitCost,
+              line_cost: mat.unitCost * mat.quantity,
+              markup_percent: item.markup,
+              markup_amount: (mat.unitCost * mat.quantity * item.markup) / 100,
+              billed_amount: mat.unitCost * mat.quantity * (1 + item.markup / 100),
+            });
+          }
+
+          for (const eq of item.equipment) {
+            await supabase.from('co_equipment_items').insert({
+              co_id: co.id,
+              org_id: orgId,
+              added_by_role: detectedRole,
+              description: eq.description,
+              duration_note: eq.durationNote || null,
+              cost: eq.cost,
+              markup_percent: item.markup,
+              markup_amount: (eq.cost * item.markup) / 100,
+              billed_amount: eq.cost * (1 + item.markup / 100),
+            });
+          }
+
+          if (state.collaboration.requestFcInput && state.collaboration.assignedFcOrgId) {
+            await supabase.from('change_order_collaborators').insert({
+              co_id: co.id,
+              organization_id: state.collaboration.assignedFcOrgId,
+              collaborator_type: 'FC',
+              status: 'invited',
+              invited_by_user_id: user.id,
             });
           }
         }
 
-        // Insert materials
-        for (let mi = 0; mi < item.materials.length; mi++) {
-          const mat = item.materials[mi];
-          await supabase.from('co_material_items').insert({
-            co_id: co.id,
-            org_id: orgId,
-            added_by_role: detectedRole,
-            line_number: mi + 1,
-            description: mat.description,
-            supplier_sku: mat.sku || null,
-            quantity: mat.quantity,
-            uom: mat.unit || 'EA',
-            unit_cost: mat.unitCost,
-            line_cost: mat.unitCost * mat.quantity,
-            markup_percent: item.markup,
-            markup_amount: (mat.unitCost * mat.quantity * item.markup) / 100,
-            billed_amount: mat.unitCost * mat.quantity * (1 + item.markup / 100),
-          });
-        }
+        queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
 
-        // Insert equipment
-        for (const eq of item.equipment) {
-          await supabase.from('co_equipment_items').insert({
-            co_id: co.id,
-            org_id: orgId,
-            added_by_role: detectedRole,
-            description: eq.description,
-            duration_note: eq.durationNote || null,
-            cost: eq.cost,
-            markup_percent: item.markup,
-            markup_amount: (eq.cost * item.markup) / 100,
-            billed_amount: eq.cost * (1 + item.markup / 100),
-          });
-        }
-
-        // Insert collaborator if FC input requested
-        if (state.collaboration.requestFcInput && state.collaboration.assignedFcOrgId) {
-          await supabase.from('change_order_collaborators').insert({
-            co_id: co.id,
-            organization_id: state.collaboration.assignedFcOrgId,
-            collaborator_type: 'FC',
-            status: 'invited',
-            invited_by_user_id: user.id,
-          });
-        }
+        dispatch({ type: 'SET_SUBMITTED' });
+        toast.success(`${cur.docType === 'WO' ? 'Work Order' : 'Change Order'} created successfully`);
       }
-
-      // Invalidate queries so lists refresh
-      queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
-
-      dispatch({ type: 'SET_SUBMITTED' });
-      toast.success(`${cur.docType === 'WO' ? 'Work Order' : 'Change Order'} created successfully`);
     } catch (err: any) {
-      console.error('Failed to create CO:', err);
-      toast.error(err.message ?? 'Failed to create change order');
+      console.error('Failed to save:', err);
+      toast.error(err.message ?? 'Failed to save');
     } finally {
       setIsSubmitting(false);
     }
