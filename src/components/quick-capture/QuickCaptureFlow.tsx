@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, ChevronLeft, ImagePlus, MapPin, Mic, Plus, X, Check, Loader2 } from 'lucide-react';
+import { Camera, ChevronLeft, ImagePlus, MapPin, Plus, X, Check, Loader2 } from 'lucide-react';
+import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
