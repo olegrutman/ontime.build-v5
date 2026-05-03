@@ -51,7 +51,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
 
+  const { data: auditEntries = [] } = useCOAuditLog(coId);
   const {
     co, collaborators, lineItems, laborEntries, materials, equipment,
     nteLog, activity, financials, isLoading,
