@@ -85,6 +85,21 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
     staleTime: Infinity,
   });
 
+  // Fetch existing CO when in add mode
+  const { data: existingCO } = useQuery({
+    queryKey: ['co-for-add', addToCoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('change_orders')
+        .select('id, co_number, title, location_tag, reason, pricing_type, org_id, assigned_to_org_id')
+        .eq('id', addToCoId!)
+        .single();
+      return data;
+    },
+    enabled: isAddMode && !!addToCoId,
+    staleTime: Infinity,
+  });
+
   const isTM = projectInfo?.contract_mode === 'tm';
   const cur = state.items[state.currentItemIndex];
 
