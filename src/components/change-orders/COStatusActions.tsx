@@ -35,6 +35,7 @@ interface COStatusActionsProps {
   assignedOrgName?: string;
   onRefresh: () => void;
   isTM?: boolean;
+  lineItemCount?: number;
 }
 
 export function COStatusActions({
