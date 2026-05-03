@@ -139,6 +139,21 @@ export function FCDashboardView({
           <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />
         )}
 
+        {/* ═══ Quick Capture CTA ═══ */}
+        {primaryProject && (
+          <button
+            onClick={() => navigate(`/project/${primaryProject.id}/change-orders/quick`)}
+            className="w-full flex items-center gap-4 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-4 active:scale-[0.98] transition-transform text-left"
+          >
+            <span className="text-2xl">🚨</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-foreground">Something happened</div>
+              <div className="text-xs text-muted-foreground">Document an issue with photo &amp; location in 90 seconds</div>
+            </div>
+            <span className="text-muted-foreground">›</span>
+          </button>
+        )}
+
         {/* ═══ 6 KPI Cards — 3-column grid ═══ */}
         <KpiGrid>
 
