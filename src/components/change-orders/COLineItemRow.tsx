@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LaborEntryForm } from './LaborEntryForm';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
-import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode } from '@/types/changeOrder';
+import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -24,9 +24,9 @@ interface COLineItemRowProps {
   isFC: boolean;
   coId: string;
   orgId: string;
-  pricingType: 'fixed' | 'tm' | 'nte';
-  nteCap?: number | null;
-  nteUsed?: number;
+  coPricingType: COPricingType;
+  coNteCap?: number | null;
+  coNteUsed?: number;
   canAddLabor: boolean;
   /** Edit window for billable / external fields (locked once CO is submitted upstream). */
   canEditExternal?: boolean;
@@ -58,10 +58,15 @@ const STATUS_BORDER_COLOR: Record<StatusColor, string> = {
 
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
-  coId, orgId, pricingType, nteCap, nteUsed = 0,
+  coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index,
 }, ref) {
+  // Resolve effective pricing type: line-item override wins, else CO default
+  const pricingType: COPricingType = (item.pricing_type as COPricingType) ?? coPricingType;
+  const nteCap = item.nte_cap ?? coNteCap;
+  const nteUsed = coNteUsed; // NTE used is CO-level aggregate
+  const hasPricingOverride = item.pricing_type != null && item.pricing_type !== coPricingType;
   const [showActualForm, setShowActualForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -73,6 +78,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const [draftQty, setDraftQty] = useState(item.qty != null ? String(item.qty) : '');
   const [draftLocation, setDraftLocation] = useState(item.location_tag ?? '');
   const [draftReason, setDraftReason] = useState<COReasonCode | ''>(item.reason ?? '');
+  const [draftPricingType, setDraftPricingType] = useState<COPricingType | ''>(item.pricing_type as COPricingType ?? '');
+  const [draftNteCap, setDraftNteCap] = useState(item.nte_cap != null ? String(item.nte_cap) : '');
 
   const myRoleStr = isFC ? 'FC' : isTC ? 'TC' : isGC ? 'GC' : null;
   const isMyOrgItem = item.org_id === orgId;
@@ -85,6 +92,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     try {
       const qtyNum = draftQty.trim() === '' ? null : Number(draftQty);
       if (qtyNum != null && Number.isNaN(qtyNum)) { toast.error('Quantity must be a number'); return; }
+      const nteCapNum = draftNteCap.trim() === '' ? null : Number(draftNteCap);
+      if (nteCapNum != null && (Number.isNaN(nteCapNum) || nteCapNum <= 0)) { toast.error('NTE cap must be a positive number'); setSavingHeader(false); return; }
       const { error } = await supabase
         .from('co_line_items')
         .update({
@@ -93,6 +102,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           qty: qtyNum,
           location_tag: draftLocation.trim() || null,
           reason: draftReason || null,
+          pricing_type: draftPricingType || null,
+          nte_cap: draftPricingType === 'nte' ? nteCapNum : null,
         })
         .eq('id', item.id);
       if (error) throw error;
@@ -234,6 +245,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     <MapPin className="h-2.5 w-2.5" /> {item.location_tag}
                   </span>
                 )}
+                {hasPricingOverride && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400">
+                    <DollarSign className="h-2.5 w-2.5" />
+                    {pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'T&M' : 'NTE'}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -291,6 +308,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     setDraftQty(item.qty != null ? String(item.qty) : '');
                     setDraftLocation(item.location_tag ?? '');
                     setDraftReason(item.reason ?? '');
+                    setDraftPricingType(item.pricing_type as COPricingType ?? '');
+                    setDraftNteCap(item.nte_cap != null ? String(item.nte_cap) : '');
                   }
                 }}>
                   <PopoverTrigger asChild>
@@ -350,6 +369,35 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Pricing type</Label>
+                          <Select value={draftPricingType || 'inherit'} onValueChange={(v) => setDraftPricingType(v === 'inherit' ? '' : (v as COPricingType))}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="inherit">CO default ({coPricingType === 'fixed' ? 'Fixed' : coPricingType === 'tm' ? 'T&M' : 'NTE'})</SelectItem>
+                              <SelectItem value="fixed">Fixed</SelectItem>
+                              <SelectItem value="tm">T&M</SelectItem>
+                              <SelectItem value="nte">NTE</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {(draftPricingType === 'nte') && (
+                          <div>
+                            <Label className="text-xs text-muted-foreground">NTE cap ($)</Label>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              value={draftNteCap}
+                              onChange={(e) => setDraftNteCap(e.target.value)}
+                              className="h-8 text-sm"
+                              placeholder="Cap amount"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-2">

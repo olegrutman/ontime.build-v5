@@ -352,8 +352,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         key={item.id} item={item}
                         laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
                         role={role} isGC={isGC} isTC={isTC} isFC={isFC}
-                        coId={co.id} orgId={myOrgId} pricingType={pricingType}
-                        nteCap={co.nte_cap} nteUsed={financials.laborTotal}
+                        coId={co.id} orgId={myOrgId} coPricingType={pricingType}
+                        coNteCap={co.nte_cap} coNteUsed={financials.laborTotal}
                         canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
                         canEditExternal={canEditExternal}
                         canEditInternal={canEditInternal}

@@ -117,6 +117,8 @@ export interface COLineItem {
   location_tag: string | null;
   reason: COReasonCode | null;
   description: string | null;
+  pricing_type: COPricingType | null;
+  nte_cap: number | null;
   created_at: string;
 }
 
