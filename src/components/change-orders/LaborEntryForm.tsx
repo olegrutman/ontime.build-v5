@@ -51,7 +51,6 @@ export function LaborEntryForm({
   const [markup, setMarkup] = useState('');
   const [lumpSum, setLumpSum] = useState(editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '');
   const [description, setDescription] = useState(editingEntry?.description ?? '');
-  const [description, setDescription] = useState(editingEntry?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
   const [internalCostOpen, setInternalCostOpen] = useState(true);
@@ -81,7 +80,6 @@ export function LaborEntryForm({
   const hoursValue = parseFloat(hours) || 0;
   const rateValue = parseFloat(rate) || 0;
   const lumpSumValue = parseFloat(lumpSum) || 0;
-  const markupPct = parseFloat(markup) || 0;
   const markupPct = parseFloat(markup) || 0;
   const internalCostValue = parseFloat(internalCost) || 0;
 
