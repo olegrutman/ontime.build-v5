@@ -194,6 +194,10 @@ export function COStatusActions({
       toast.error('This CO has no assigned party. Assign a TC or GC before submitting.');
       return;
     }
+    if (lineItemCount === 0) {
+      toast.error('Add at least one scope item before submitting.');
+      return;
+    }
 
     setActing(true);
     try {
