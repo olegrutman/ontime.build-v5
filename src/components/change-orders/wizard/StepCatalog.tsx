@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
-import { WORK_INTENT_LABELS, WORK_INTENT_ICONS } from '@/types/scopeQA';
+
 import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './wizardTypes';
 import { VisualLocationPicker } from '../VisualLocationPicker';
@@ -22,8 +22,6 @@ interface StepCatalogProps {
   onChange: (patch: Partial<COWizardData>) => void;
   projectId: string;
   workType?: string;
-  /** Phase B — explicit intent from Step 1 picker. Drives Sasha's Q-flow. */
-  intent?: import('@/types/scopeQA').WorkIntent | null;
 }
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -51,7 +49,7 @@ const REASONS: { code: COReasonCode; description: string }[] = [
   { code: 'other',             description: 'Anything else' },
 ];
 
-export function StepCatalog({ data, onChange, projectId, workType, intent }: StepCatalogProps) {
+export function StepCatalog({ data, onChange, projectId, workType }: StepCatalogProps) {
   const { divisions, search, filterByContext, isLoading } = useScopeCatalog();
 
   const workTypeLabel = workType ? WORK_TYPE_LABELS[workType] ?? workType : null;
@@ -307,12 +305,6 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
               <button onClick={() => setPhase('reason')} className="ml-1 opacity-60 hover:opacity-100">✕</button>
             </div>
           )}
-          {intent && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-foreground text-xs font-medium">
-              <span aria-hidden>{WORK_INTENT_ICONS[intent]}</span>
-              {WORK_INTENT_LABELS[intent]}
-            </div>
-          )}
         </div>
       )}
 
@@ -340,7 +332,7 @@ export function StepCatalog({ data, onChange, projectId, workType, intent }: Ste
           locationTag={data.locationTag}
           reason={data.reason}
           workType={workType ?? null}
-          intent={intent ?? undefined}
+          
           onComplete={({ description, answers, selectedItems }) => {
             if (selectedItems.length === 0) {
               toast.message('No automatic matches — try the manual catalog', { description: 'Switching to Browse mode.' });
