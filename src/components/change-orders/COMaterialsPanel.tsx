@@ -166,6 +166,7 @@ export function COMaterialsPanel({
   canEditExternal = false,
   onRefresh,
 }: COMaterialsPanelProps) {
+  const rl = useRoleLabelsContext();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [draftRows, setDraftRows] = useState<DraftRow[]>([]);

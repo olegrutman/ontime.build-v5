@@ -370,7 +370,7 @@ export function LaborEntryForm({
             <CollapsibleContent>
               <div className="pt-3 space-y-3">
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Internal costs are private and never shared with the General Contractor. Use this to track your actual labor and material costs.
+                  Internal costs are private and never shared upstream. Use this to track your actual labor and material costs.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
