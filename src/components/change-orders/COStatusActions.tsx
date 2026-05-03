@@ -341,7 +341,11 @@ export function COStatusActions({
     try {
       await updateCO.mutateAsync({
         id: co.id,
-        updates: { completion_acknowledged_at: new Date().toISOString() },
+        updates: {
+          status: 'contracted',
+          completion_acknowledged_at: new Date().toISOString(),
+          contracted_at: new Date().toISOString(),
+        },
       });
       toast.success('Completion acknowledged — TC can now invoice');
       await logActivity('acknowledged_completion');
