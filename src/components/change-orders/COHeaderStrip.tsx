@@ -7,7 +7,6 @@ interface COHeaderStripProps {
   co: ChangeOrder;
   role: COCreatedByRole;
   myOrgName: string;
-  isTM?: boolean;
 }
 
 const ROLE_PILL_COLORS: Record<string, string> = {
@@ -39,7 +38,7 @@ function getActiveStep(status: string): number {
   }
 }
 
-export function COHeaderStrip({ co, role, myOrgName, isTM = false }: COHeaderStripProps) {
+export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
   const status = co.status as COStatus;
   const activeStep = getActiveStep(status);
   // Optional user-typed name (anything other than the co_number itself)
@@ -56,7 +55,7 @@ export function COHeaderStrip({ co, role, myOrgName, isTM = false }: COHeaderStr
                 className="font-heading text-foreground truncate"
                 style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.01em' }}
               >
-                {co.co_number ?? (isTM ? 'Work Order' : 'Change Order')}
+                {co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order')}
               </h1>
               <span className={cn(
                 'inline-flex items-center text-[0.7rem] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide',
