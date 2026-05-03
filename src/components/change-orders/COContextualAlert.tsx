@@ -22,7 +22,7 @@ interface AlertConfig {
   action?: { label: string; onClick: () => void };
 }
 
-function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
+function getAlertConfig(props: COContextualAlertProps, rl: RoleLabels): AlertConfig | null {
   const { co, isGC, isTC, isFC, tcName, fcCollabName, financials, onUseFCBase } = props;
   const status = co.status;
 
@@ -49,7 +49,7 @@ function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
       return {
         bg: 'bg-emerald-50 dark:bg-emerald-950/30',
         border: 'border-emerald-200 dark:border-emerald-800',
-        text: `${fcCollabName ?? 'Field Crew'} submitted ${financials.fcTotalHours} hrs — use as your pricing base?`,
+        text: `${fcCollabName ?? rl.FC} submitted ${financials.fcTotalHours} hrs — use as your pricing base?`,
         action: onUseFCBase ? { label: 'Yes', onClick: onUseFCBase } : undefined,
       };
     }
@@ -57,7 +57,7 @@ function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
       return {
         bg: 'bg-muted/40',
         border: 'border-border',
-        text: 'Submitted to General Contractor — waiting on approval.',
+        text: `Submitted to ${rl.GC} — waiting on approval.`,
       };
     }
     if (['shared', 'work_in_progress'].includes(status)) {
