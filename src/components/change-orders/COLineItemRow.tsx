@@ -239,6 +239,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     <MapPin className="h-2.5 w-2.5" /> {item.location_tag}
                   </span>
                 )}
+                {hasPricingOverride && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400">
+                    <DollarSign className="h-2.5 w-2.5" />
+                    {pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'T&M' : 'NTE'}
+                  </span>
+                )}
               </div>
             </div>
           </div>
