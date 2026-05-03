@@ -26,6 +26,7 @@ import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
+import { COPhotosCard } from './COPhotosCard';
 import { COAcceptBanner } from './COAcceptBanner';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 
