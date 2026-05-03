@@ -153,6 +153,7 @@ function AddPhotoSheet({ open, onClose, coId, role, userId, lineItems, onUpload,
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [photoType, setPhotoType] = useState<COPhoto['photo_type']>(initialPhotoType ?? 'other');
+  useEffect(() => { if (initialPhotoType) setPhotoType(initialPhotoType); }, [initialPhotoType]);
   const [caption, setCaption] = useState('');
   const [lineItemId, setLineItemId] = useState<string>('none');
   const [saving, setSaving] = useState(false);
