@@ -78,6 +78,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const [draftQty, setDraftQty] = useState(item.qty != null ? String(item.qty) : '');
   const [draftLocation, setDraftLocation] = useState(item.location_tag ?? '');
   const [draftReason, setDraftReason] = useState<COReasonCode | ''>(item.reason ?? '');
+  const [draftPricingType, setDraftPricingType] = useState<COPricingType | ''>(item.pricing_type as COPricingType ?? '');
+  const [draftNteCap, setDraftNteCap] = useState(item.nte_cap != null ? String(item.nte_cap) : '');
 
   const myRoleStr = isFC ? 'FC' : isTC ? 'TC' : isGC ? 'GC' : null;
   const isMyOrgItem = item.org_id === orgId;
