@@ -413,6 +413,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 />
               )}
 
+              {/* Photos */}
+              <COPhotosCard coId={co.id} role={role} lineItems={lineItems} />
+
               {/* Activity — Collapsible */}
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
