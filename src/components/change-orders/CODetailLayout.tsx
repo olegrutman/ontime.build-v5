@@ -449,6 +449,26 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
+
+              {/* Audit Log — Collapsible */}
+              <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
+                <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                  <CollapsibleTrigger asChild>
+                    <button type="button" className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-accent/30 transition-colors">
+                      <h3 className="font-heading text-[0.75rem] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" /> Audit Log
+                        <span className="text-[10px] bg-muted rounded-full px-2 py-0.5">{auditEntries.length}</span>
+                      </h3>
+                      <span className={cn('h-4 w-4 text-muted-foreground transition-transform', auditOpen && 'rotate-180')}>▾</span>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="border-t border-border">
+                      <COAuditLog entries={auditEntries} viewerRole={role} />
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
             </div>
 
             {/* Sidebar */}
