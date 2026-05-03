@@ -442,7 +442,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Photos */}
-              <COPhotosCard coId={co.id} role={role} lineItems={lineItems} />
+              <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
 
               {/* Activity — Collapsible */}
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
