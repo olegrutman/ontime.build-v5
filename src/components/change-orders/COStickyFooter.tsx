@@ -33,25 +33,25 @@ function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConf
   if (isFC) {
     if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
       if (financials.fcTotalHours > 0) {
-        return { label: `🚀 Submit ${financials.fcTotalHours} hrs to Trade Contractor →`, className: 'bg-emerald-600 hover:bg-emerald-700 text-white', disabled: false, action: 'submit_to_tc' };
+        return { label: `🚀 Submit ${financials.fcTotalHours} hrs to ${rl.TC} →`, className: 'bg-emerald-600 hover:bg-emerald-700 text-white', disabled: false, action: 'submit_to_tc' };
       }
       return { label: '⏱ Log hours first', className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
     }
     if (status === 'submitted') {
-      return { label: 'Waiting on Trade Contractor pricing', className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
+      return { label: `Waiting on ${rl.TC} pricing`, className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
     }
     return null;
   }
 
   if (isTC) {
     if (status === 'closed_for_pricing') {
-      return { label: `Submit ${fmtCurrency(financials.grandTotal)} to General Contractor →`, className: 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90', disabled: false, action: 'submit' };
+      return { label: `Submit ${fmtCurrency(financials.grandTotal)} to ${rl.GC} →`, className: 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90', disabled: false, action: 'submit' };
     }
     if (['shared', 'work_in_progress'].includes(status)) {
-      return { label: `Waiting on ${fcCollabName || 'Field Crew'} hours`, className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
+      return { label: `Waiting on ${fcCollabName || rl.FC} hours`, className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
     }
     if (status === 'submitted') {
-      return { label: 'Waiting on General Contractor approval', className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
+      return { label: `Waiting on ${rl.GC} approval`, className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
     }
     return null;
   }
@@ -67,7 +67,8 @@ function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConf
 }
 
 export function COStickyFooter(props: COStickyFooterProps) {
-  const config = getFooterConfig(props);
+  const rl = useRoleLabelsContext();
+  const config = getFooterConfig(props, rl);
   if (!config) return null;
 
   return (
