@@ -797,8 +797,10 @@ export type Database = {
           id: string
           item_name: string
           location_tag: string | null
+          nte_cap: number | null
           org_id: string
           pricing_mode: string | null
+          pricing_type: string | null
           qty: number | null
           quantity_source: string | null
           reason: string | null
@@ -820,8 +822,10 @@ export type Database = {
           id?: string
           item_name: string
           location_tag?: string | null
+          nte_cap?: number | null
           org_id: string
           pricing_mode?: string | null
+          pricing_type?: string | null
           qty?: number | null
           quantity_source?: string | null
           reason?: string | null
@@ -843,8 +847,10 @@ export type Database = {
           id?: string
           item_name?: string
           location_tag?: string | null
+          nte_cap?: number | null
           org_id?: string
           pricing_mode?: string | null
+          pricing_type?: string | null
           qty?: number | null
           quantity_source?: string | null
           reason?: string | null
