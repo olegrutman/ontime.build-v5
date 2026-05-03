@@ -1,6 +1,7 @@
 import type { COCreatedByRole } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface RoutingNode {
   label: string;
@@ -23,14 +24,18 @@ interface RoutingChainProps {
 
 export function RoutingChain({
   role,
-  tcName = 'Trade Contractor',
+  tcName,
   tcInitials = 'TC',
-  fcName = 'Field Crew',
+  fcName,
   fcInitials = 'FC',
-  gcName = 'General Contractor',
+  gcName,
   gcInitials = 'GC',
   requestFc = false,
 }: RoutingChainProps) {
+  const rl = useRoleLabelsContext();
+  const resolvedTcName = tcName ?? rl.TC;
+  const resolvedFcName = fcName ?? rl.FC;
+  const resolvedGcName = gcName ?? rl.GC;
   const nodes: RoutingNode[] = [];
 
   if (role === 'GC') {
