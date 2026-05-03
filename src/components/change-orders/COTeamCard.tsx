@@ -3,6 +3,8 @@ import { DT } from '@/lib/design-tokens';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { ChangeOrder, COCollaborator } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleCode } from '@/hooks/useRoleLabels';
 
 interface COTeamCardProps {
   co: ChangeOrder;
