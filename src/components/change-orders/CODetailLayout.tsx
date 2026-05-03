@@ -219,6 +219,7 @@ export function CODetailLayout({ coId, projectId, isTM = false }: CODetailLayout
     nteLog, requestFCInput, completeFCInput,
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     onRefresh: refreshDetail,
+    lineItemCount: lineItems.length,
   };
 
   return (

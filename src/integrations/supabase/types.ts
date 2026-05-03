@@ -5809,6 +5809,15 @@ export type Database = {
         Args: { _co_id: string; _fc_org_id: string; _user_id?: string }
         Returns: boolean
       }
+      can_see_co_labor_entry: {
+        Args: {
+          _co_id: string
+          _entry_org_id: string
+          _is_actual_cost: boolean
+          _user_id?: string
+        }
+        Returns: boolean
+      }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
       can_supplier_edit_po_pricing: {

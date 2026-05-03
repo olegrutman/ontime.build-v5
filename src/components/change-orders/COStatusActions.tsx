@@ -35,6 +35,7 @@ interface COStatusActionsProps {
   assignedOrgName?: string;
   onRefresh: () => void;
   isTM?: boolean;
+  lineItemCount?: number;
 }
 
 export function COStatusActions({
@@ -49,6 +50,7 @@ export function COStatusActions({
   assignedOrgName,
   onRefresh,
   isTM = false,
+  lineItemCount = 0,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
   const { shareCO, updateCO } = useChangeOrders(projectId);
@@ -93,8 +95,10 @@ export function COStatusActions({
       if (!members || members.length === 0) return;
 
       const { title, body } = buildCONotification(type, co.title, amount);
+      // Exclude the actor from receiving their own notification
+      const recipients = members.filter(m => m.user_id !== user?.id);
       await Promise.allSettled(
-        members.map(member =>
+        recipients.map(member =>
           sendCONotification({
             recipient_user_id: member.user_id,
             recipient_org_id: targetOrgId,
@@ -188,6 +192,10 @@ export function COStatusActions({
   async function doSubmit() {
     if (!co.assigned_to_org_id) {
       toast.error('This CO has no assigned party. Assign a TC or GC before submitting.');
+      return;
+    }
+    if (lineItemCount === 0) {
+      toast.error('Add at least one scope item before submitting.');
       return;
     }
 
@@ -298,7 +306,12 @@ export function COStatusActions({
     try {
       await updateCO.mutateAsync({
         id: co.id,
-        updates: { status: 'draft', submitted_at: null },
+        updates: {
+          status: 'draft',
+          submitted_at: null,
+          shared_at: null,
+          draft_shared_with_next: false,
+        },
       });
       toast.success('CO recalled');
       await logActivity('recalled');
@@ -334,7 +347,11 @@ export function COStatusActions({
     try {
       await updateCO.mutateAsync({
         id: co.id,
-        updates: { completion_acknowledged_at: new Date().toISOString() },
+        updates: {
+          status: 'contracted',
+          completion_acknowledged_at: new Date().toISOString(),
+          contracted_at: new Date().toISOString(),
+        },
       });
       toast.success('Completion acknowledged — TC can now invoice');
       await logActivity('acknowledged_completion');

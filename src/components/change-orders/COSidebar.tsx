@@ -31,6 +31,7 @@ interface COSidebarProps {
   approveNTEIncrease: UseMutationResult<any, Error, any, unknown>;
   rejectNTEIncrease: UseMutationResult<any, Error, any, unknown>;
   onRefresh: () => void;
+  lineItemCount?: number;
 }
 
 function fmtCurrency(value: number) {
@@ -86,6 +87,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             currentOrgId={myOrgId} projectId={projectId}
             financials={financials} collaborators={collaborators}
             onRefresh={onRefresh}
+            lineItemCount={props.lineItemCount}
           />
         </div>
       </div>
