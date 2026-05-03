@@ -92,6 +92,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     try {
       const qtyNum = draftQty.trim() === '' ? null : Number(draftQty);
       if (qtyNum != null && Number.isNaN(qtyNum)) { toast.error('Quantity must be a number'); return; }
+      const nteCapNum = draftNteCap.trim() === '' ? null : Number(draftNteCap);
+      if (nteCapNum != null && (Number.isNaN(nteCapNum) || nteCapNum <= 0)) { toast.error('NTE cap must be a positive number'); setSavingHeader(false); return; }
       const { error } = await supabase
         .from('co_line_items')
         .update({
@@ -100,6 +102,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           qty: qtyNum,
           location_tag: draftLocation.trim() || null,
           reason: draftReason || null,
+          pricing_type: draftPricingType || null,
+          nte_cap: draftPricingType === 'nte' ? nteCapNum : null,
         })
         .eq('id', item.id);
       if (error) throw error;
