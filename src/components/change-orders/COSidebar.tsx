@@ -87,6 +87,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             currentOrgId={myOrgId} projectId={projectId}
             financials={financials} collaborators={collaborators}
             onRefresh={onRefresh}
+            lineItemCount={props.lineItemCount}
           />
         </div>
       </div>
