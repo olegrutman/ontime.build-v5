@@ -538,22 +538,25 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
         <header className="bg-background border-b px-6 py-3 flex items-center gap-3.5 sticky top-0 z-10 shadow-xs">
           <button
             type="button"
-            onClick={() => navigate(`/project/${projectId}/change-orders`)}
+            onClick={() => navigate(isAddMode
+              ? `/project/${projectId}/change-orders/${addToCoId}`
+              : `/project/${projectId}/change-orders`
+            )}
             className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-amber-50 hover:border-amber-400 hover:text-amber-700 transition-all"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-[0.7rem] text-muted-foreground">
-              <span className="font-semibold text-foreground/80">{projectInfo?.name ?? 'Project'}</span> › {cur.docType === 'CO' ? 'Change Orders' : 'Work Orders'} › New
+              <span className="font-semibold text-foreground/80">{projectInfo?.name ?? 'Project'}</span> › {cur.docType === 'CO' ? 'Change Orders' : 'Work Orders'} › {isAddMode ? `${existingCO?.co_number ?? 'Order'} › Add Items` : 'New'}
             </p>
             <p className="font-heading text-[1.35rem] font-extrabold text-foreground leading-none tracking-tight">
-              New {cur.docType === 'CO' ? 'Change Order' : 'Work Order'}
+              {isAddMode ? `Add Items to ${existingCO?.co_number ?? 'Order'}` : `New ${cur.docType === 'CO' ? 'Change Order' : 'Work Order'}`}
             </p>
           </div>
           <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted border border-border">
             <span className={`w-2 h-2 rounded-full ${detectedRole === 'GC' ? 'bg-blue-600' : detectedRole === 'FC' ? 'bg-amber-500' : 'bg-green-600'}`} />
-            <span className="text-[0.72rem] font-semibold text-muted-foreground">Creating as {detectedRole}</span>
+            <span className="text-[0.72rem] font-semibold text-muted-foreground">{isAddMode ? 'Adding as' : 'Creating as'} {detectedRole}</span>
           </div>
         </header>
 
