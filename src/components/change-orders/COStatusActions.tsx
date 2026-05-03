@@ -93,8 +93,10 @@ export function COStatusActions({
       if (!members || members.length === 0) return;
 
       const { title, body } = buildCONotification(type, co.title, amount);
+      // Exclude the actor from receiving their own notification
+      const recipients = members.filter(m => m.user_id !== user?.id);
       await Promise.allSettled(
-        members.map(member =>
+        recipients.map(member =>
           sendCONotification({
             recipient_user_id: member.user_id,
             recipient_org_id: targetOrgId,
