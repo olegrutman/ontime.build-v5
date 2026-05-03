@@ -24,9 +24,6 @@ export default function CODetail() {
     staleTime: Infinity,
   });
 
-  const contractMode = projectInfo?.contract_mode ?? 'fixed';
-  const isTM = contractMode === 'tm';
-
   if (!projectId || !coId) return null;
 
   return (
@@ -36,9 +33,9 @@ export default function CODetail() {
       projectStatus={projectInfo?.status ?? 'draft'}
     >
       <div className="flex flex-1 overflow-hidden">
-        <ProjectSidebar isTM={isTM} />
+        <ProjectSidebar isTM={(projectInfo?.contract_mode ?? 'fixed') === 'tm'} />
         <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
-          <CODetailLayout coId={coId} projectId={projectId} isTM={isTM} />
+          <CODetailLayout coId={coId} projectId={projectId} />
         </main>
         <ProjectBottomNav />
       </div>
