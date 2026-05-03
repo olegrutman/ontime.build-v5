@@ -1,6 +1,8 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleLabels } from '@/hooks/useRoleLabels';
 
 interface COContextualAlertProps {
   co: ChangeOrder;
