@@ -195,7 +195,8 @@ export function LaborEntryForm({
               for (const oid of orgs) {
                 const { data: members } = await supabase.from('user_org_roles').select('user_id').eq('organization_id', oid).limit(10);
                 if (members) {
-                  for (const m of members) { sendCONotification({ recipient_user_id: m.user_id, recipient_org_id: oid, co_id: coId, project_id: coData.project_id, type: notifType, title, body }); }
+                  // Exclude the actor from receiving their own NTE notification
+                  for (const m of members) { if (m.user_id !== user.id) { sendCONotification({ recipient_user_id: m.user_id, recipient_org_id: oid, co_id: coId, project_id: coData.project_id, type: notifType, title, body }); } }
                 }
               }
             }
