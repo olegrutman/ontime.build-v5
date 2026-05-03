@@ -58,10 +58,15 @@ const STATUS_BORDER_COLOR: Record<StatusColor, string> = {
 
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
-  coId, orgId, pricingType, nteCap, nteUsed = 0,
+  coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index,
 }, ref) {
+  // Resolve effective pricing type: line-item override wins, else CO default
+  const pricingType: COPricingType = (item.pricing_type as COPricingType) ?? coPricingType;
+  const nteCap = item.nte_cap ?? coNteCap;
+  const nteUsed = coNteUsed; // NTE used is CO-level aggregate
+  const hasPricingOverride = item.pricing_type != null && item.pricing_type !== coPricingType;
   const [showActualForm, setShowActualForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
