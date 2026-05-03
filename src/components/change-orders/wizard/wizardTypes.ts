@@ -9,10 +9,6 @@ export interface SelectedScopeItem extends ScopeCatalogItem {
   locationTag: string;
   reason: COReasonCode;
   reasonDescription: string;
-  /** Wizard-only: true when this synthetic item bundles several originals into one row. Not persisted. */
-  isCombined?: boolean;
-  /** Wizard-only: snapshot of the originals that were merged, so the user can Uncombine. Not persisted. */
-  combinedFrom?: SelectedScopeItem[];
   /** Wizard-only: true when item was added via "Add custom item" and may not point at a real catalog row. */
   isCustom?: boolean;
   /** Real catalog_definitions.id when promoted to org catalog; otherwise null for one-offs. */
