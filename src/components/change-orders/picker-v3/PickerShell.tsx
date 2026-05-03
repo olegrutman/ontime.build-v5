@@ -130,8 +130,29 @@ export function PickerShell({ projectId }: PickerShellProps) {
     try {
       // Determine assigned_to_org_id based on role
       let assignedToOrgId: string | null = null;
-      if (detectedRole === 'TC' || detectedRole === 'FC') {
-        // Find the GC on this project
+      if (detectedRole === 'FC') {
+        // FC routes to hiring TC first (upstream contract), not directly to GC
+        const { data: upstreamContract } = await supabase
+          .from('project_contracts')
+          .select('from_org_id')
+          .eq('project_id', projectId)
+          .eq('to_org_id', orgId)
+          .maybeSingle();
+        if (upstreamContract?.from_org_id) {
+          assignedToOrgId = upstreamContract.from_org_id;
+        } else {
+          // Fallback: find TC on project
+          const { data: tcParticipant } = await supabase
+            .from('project_participants')
+            .select('organization_id')
+            .eq('project_id', projectId)
+            .eq('role', 'TC')
+            .eq('invite_status', 'ACCEPTED')
+            .maybeSingle();
+          assignedToOrgId = tcParticipant?.organization_id ?? null;
+        }
+      } else if (detectedRole === 'TC') {
+        // TC routes to GC
         const { data: gcParticipant } = await supabase
           .from('project_participants')
           .select('organization_id')
@@ -327,10 +348,10 @@ export function PickerShell({ projectId }: PickerShellProps) {
             ✓
           </div>
           <h1 className="font-heading text-3xl font-extrabold text-foreground mb-2">
-            {cur.docType === 'CO' ? 'Change Order' : 'Work Order'} Submitted
+            {cur.docType === 'CO' ? 'Change Order' : 'Work Order'} Created
           </h1>
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
-            Routed for approval. You'll get a notification when it's signed.
+            Your draft is ready for review. Open it to add details and submit for approval.
           </p>
           <div className="font-mono text-sm font-semibold bg-amber-50 border border-amber-400 rounded-lg px-4 py-2 inline-block mb-6">
             {cur.docType}-DRAFT · {projectInfo?.name ?? 'Project'}
