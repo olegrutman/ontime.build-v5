@@ -1,4 +1,6 @@
+import { Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { COStatus, COFinancials } from '@/types/changeOrder';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
@@ -12,6 +14,9 @@ interface COStickyFooterProps {
   financials: COFinancials;
   fcCollabName: string;
   onAction: (action: string) => void;
+  photoCount?: number;
+  photosBlocked?: boolean;
+  onOpenCamera?: () => void;
 }
 
 function fmtCurrency(value: number) {
@@ -66,20 +71,57 @@ function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConf
   return null;
 }
 
+const ACTIVE_STATUSES = new Set<string>(['draft', 'shared', 'work_in_progress', 'closed_for_pricing']);
+
 export function COStickyFooter(props: COStickyFooterProps) {
   const rl = useRoleLabelsContext();
   const config = getFooterConfig(props, rl);
-  if (!config) return null;
+  const { photoCount = 0, photosBlocked, onOpenCamera, status } = props;
+
+  const showCameraButton = ACTIVE_STATUSES.has(status) && photoCount === 0 && !!onOpenCamera;
+
+  if (!config && !showCameraButton) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 bg-background/95 backdrop-blur border-t border-border md:hidden safe-area-bottom">
-      <Button
-        className={cn('w-full h-12 text-sm font-semibold rounded-xl', config.className)}
-        disabled={config.disabled}
-        onClick={() => config.action && props.onAction(config.action)}
-      >
-        {config.label}
-      </Button>
+      <div className="flex items-center gap-2">
+        {/* Camera shortcut */}
+        {showCameraButton && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 rounded-xl shrink-0 border-amber-300 text-amber-700 dark:text-amber-400"
+                onClick={onOpenCamera}
+              >
+                <Camera className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Take photo</TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Main action */}
+        {config && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className={cn('flex-1 h-12 text-sm font-semibold rounded-xl', config.className)}
+                disabled={config.disabled || photosBlocked}
+                onClick={() => config.action && props.onAction(config.action)}
+              >
+                {config.label}
+              </Button>
+            </TooltipTrigger>
+            {photosBlocked && (
+              <TooltipContent side="top">
+                At least 1 photo is required before submitting
+              </TooltipContent>
+            )}
+          </Tooltip>
+        )}
+      </div>
     </div>
   );
 }
