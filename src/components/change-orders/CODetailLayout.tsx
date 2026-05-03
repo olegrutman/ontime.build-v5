@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera } from 'lucide-react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -26,9 +26,11 @@ import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
-import { COPhotosCard } from './COPhotosCard';
+import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
+import { COPhotoNudgeBanner } from './COPhotoNudgeBanner';
 import { COAcceptBanner } from './COAcceptBanner';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
+import { useCOPhotos } from '@/hooks/useCOPhotos';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -48,6 +50,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const scopeRef = useRef<HTMLDivElement>(null);
   const materialsRef = useRef<HTMLDivElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
+  const photosCardRef = useRef<COPhotosCardHandle>(null);
 
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
@@ -64,6 +67,24 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   } = useChangeOrderDetail(coId);
   useCORealtime(coId);
   const { data: projectFCOrgs = [] } = useProjectFCOrgs(projectId);
+  const { photos } = useCOPhotos(coId);
+
+  // Project-level photo requirement setting
+  const { data: projectSettings } = useQuery({
+    queryKey: ['project-photo-settings', projectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('projects')
+        .select('require_photos_on_submit')
+        .eq('id', projectId)
+        .single();
+      return data;
+    },
+    enabled: !!projectId,
+    staleTime: Infinity,
+  });
+  const requirePhotos = !!(projectSettings as any)?.require_photos_on_submit;
+  const photosBlocked = requirePhotos && photos.length === 0;
 
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
@@ -126,6 +147,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'submit_to_tc':
         if (co) {
+          if (photosBlocked) {
+            toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
+            photosCardRef.current?.openAdd('during');
+            break;
+          }
           try {
             // FC-as-creator submits the CO itself; FC-as-collaborator marks input complete.
             const isFCCreator = co.created_by_role === 'FC' && co.org_id === myOrgId;
@@ -148,6 +174,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'submit':
         if (co) {
+          if (photosBlocked) {
+            toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
+            photosCardRef.current?.openAdd('during');
+            break;
+          }
           try {
             await submitCO.mutateAsync(co.id);
             toast.success('Submitted for approval');
@@ -264,6 +295,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           {/* Next Action Banner */}
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
+
+          {/* Photo nudge banner */}
+          <COPhotoNudgeBanner
+            status={co.status}
+            photos={photos}
+            onTakePhoto={(type) => photosCardRef.current?.openAdd(type)}
+          />
 
           {/* KPI Row */}
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} />
@@ -414,7 +452,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Photos */}
-              <COPhotosCard coId={co.id} role={role} lineItems={lineItems} />
+              <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
 
               {/* Activity — Collapsible */}
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
@@ -487,7 +525,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         </div>
       </div>
 
-      <COStickyFooter status={status} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
+      <COStickyFooter
+        status={status} isGC={isGC} isTC={isTC} isFC={isFC}
+        financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
+        photoCount={photos.length} photosBlocked={photosBlocked}
+        onOpenCamera={() => photosCardRef.current?.openAdd()}
+      />
     </div>
   );
 }

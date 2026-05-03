@@ -4524,6 +4524,7 @@ export type Database = {
           organization_id: string
           parties: Json | null
           project_type: string | null
+          require_photos_on_submit: boolean
           retainage_percent: number | null
           role_label_overrides: Json
           scope: Json | null
@@ -4549,6 +4550,7 @@ export type Database = {
           organization_id: string
           parties?: Json | null
           project_type?: string | null
+          require_photos_on_submit?: boolean
           retainage_percent?: number | null
           role_label_overrides?: Json
           scope?: Json | null
@@ -4574,6 +4576,7 @@ export type Database = {
           organization_id?: string
           parties?: Json | null
           project_type?: string | null
+          require_photos_on_submit?: boolean
           retainage_percent?: number | null
           role_label_overrides?: Json
           scope?: Json | null
