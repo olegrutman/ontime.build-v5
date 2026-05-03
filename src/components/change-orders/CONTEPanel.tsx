@@ -51,6 +51,7 @@ export function CONTEPanel({
   rejectNTEIncrease,
   onRefresh,
 }: CONTEPanelProps) {
+  const rl = useRoleLabelsContext();
   const [requestOpen, setRequestOpen] = useState(false);
   const [increaseAmt, setIncreaseAmt] = useState('');
   const [increaseNote, setIncreaseNote] = useState('');
