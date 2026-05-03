@@ -5,8 +5,6 @@ import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-// Legacy wizard kept for reference but no longer used in the main flow
-// import { COWizard } from './wizard/COWizard';
 
 import { COBoardCard } from './COBoardCard';
 import { FCHomeScreen } from './FCHomeScreen';
