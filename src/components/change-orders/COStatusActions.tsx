@@ -353,7 +353,7 @@ export function COStatusActions({
 
   /* Draft actions — suppress Share when Send-to-WIP is available (M5) */
   const canSendToWIP = isGC && isCreator && status === 'draft' && !!co.assigned_to_org_id;
-  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP;
+  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP && !!co.assigned_to_org_id;
   /* GC can close for pricing (Flow 1) */
   const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
   /* TC/FC submit for approval — include 'rejected' (C3). FC collaborators (any status) should NOT see primary submit.
