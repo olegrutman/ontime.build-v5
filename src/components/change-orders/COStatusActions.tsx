@@ -508,11 +508,11 @@ export function COStatusActions({
       <AlertDialog open={approveOpen} onOpenChange={setApproveOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{forwardsToGC ? 'Approve FC scope and send to GC' : (isTM ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
+            <AlertDialogTitle>{forwardsToGC ? 'Approve FC scope and send to GC' : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
             <AlertDialogDescription>
               {forwardsToGC
-                ? `This approves the FC portion as TC cost and immediately forwards the ${isTM ? 'work order' : 'change order'} to GC review.`
-                : `Are you sure you want to approve this ${isTM ? 'work order' : 'change order'}?`}
+                ? `This approves the FC portion as TC cost and immediately forwards the ${co.document_type === 'WO' ? 'work order' : 'change order'} to GC review.`
+                : `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`}
               {!forwardsToGC && co.pricing_type === 'fixed' && (
                 <span className="block mt-1">
                   The TC will be able to submit an invoice once approved.
@@ -533,7 +533,7 @@ export function COStatusActions({
       <AlertDialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{isTM ? 'Reject work order' : 'Reject change order'}</AlertDialogTitle>
+            <AlertDialogTitle>{co.document_type === 'WO' ? 'Reject work order' : 'Reject change order'}</AlertDialogTitle>
             <AlertDialogDescription>
               Provide a reason. The submitter will see this note and can revise and resubmit.
             </AlertDialogDescription>
@@ -544,7 +544,7 @@ export function COStatusActions({
               id="reject-note"
               value={rejectNote}
               onChange={e => setRejectNote(e.target.value)}
-              placeholder={isTM ? "Explain why this WO is being rejected…" : "Explain why this CO is being rejected…"}
+              placeholder={co.document_type === 'WO' ? "Explain why this WO is being rejected…" : "Explain why this CO is being rejected…"}
               rows={3}
               className="mt-1.5 resize-none"
             />
