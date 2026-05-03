@@ -109,12 +109,13 @@ export const COPhotosCard = forwardRef<COPhotosCardHandle, COPhotosCardProps>(fu
       {/* Add Photo Sheet */}
       <AddPhotoSheet
         open={addOpen}
-        onClose={() => setAddOpen(false)}
+        onClose={() => { setAddOpen(false); setPresetPhotoType(undefined); }}
         coId={coId}
         role={role}
         userId={user?.id ?? ''}
         lineItems={lineItems}
         onUpload={uploadPhoto}
+        initialPhotoType={presetPhotoType}
       />
 
       {/* Full-screen viewer */}
@@ -133,7 +134,7 @@ export const COPhotosCard = forwardRef<COPhotosCardHandle, COPhotosCardProps>(fu
       )}
     </div>
   );
-}
+});
 
 /* ─── Add Photo Sheet ─── */
 interface AddPhotoSheetProps {
