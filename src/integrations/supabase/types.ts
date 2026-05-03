@@ -368,6 +368,7 @@ export type Database = {
           created_at: string | null
           created_by_role: string
           created_by_user_id: string
+          document_type: string
           draft_shared_with_next: boolean
           equipment_needed: boolean
           equipment_responsible: string | null
@@ -417,6 +418,7 @@ export type Database = {
           created_at?: string | null
           created_by_role: string
           created_by_user_id: string
+          document_type?: string
           draft_shared_with_next?: boolean
           equipment_needed?: boolean
           equipment_responsible?: string | null
@@ -466,6 +468,7 @@ export type Database = {
           created_at?: string | null
           created_by_role?: string
           created_by_user_id?: string
+          document_type?: string
           draft_shared_with_next?: boolean
           equipment_needed?: boolean
           equipment_responsible?: string | null
@@ -5949,6 +5952,7 @@ export type Database = {
           created_at: string | null
           created_by_role: string
           created_by_user_id: string
+          document_type: string
           draft_shared_with_next: boolean
           equipment_needed: boolean
           equipment_responsible: string | null
