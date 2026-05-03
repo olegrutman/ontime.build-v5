@@ -1,9 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Camera, ImagePlus, Plus, X, Expand, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useCOPhotos, getPhotoUrl, type COPhoto } from '@/hooks/useCOPhotos';
-import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { COLineItem } from '@/types/changeOrder';
 
-const PHOTO_TYPE_CONFIG: Record<COPhoto['photo_type'], { label: string; color: string; bg: string }> = {
+export const PHOTO_TYPE_CONFIG: Record<COPhoto['photo_type'], { label: string; color: string; bg: string }> = {
   before:  { label: 'Before',  color: '#2563EB', bg: '#EFF6FF' },
   after:   { label: 'After',   color: '#059669', bg: '#ECFDF5' },
   during:  { label: 'During',  color: '#D97706', bg: '#FFFBEB' },
@@ -19,17 +18,29 @@ const PHOTO_TYPE_CONFIG: Record<COPhoto['photo_type'], { label: string; color: s
   other:   { label: 'Other',   color: '#6B7280', bg: '#F9FAFB' },
 };
 
+export interface COPhotosCardHandle {
+  openAdd: (presetType?: COPhoto['photo_type']) => void;
+}
+
 interface COPhotosCardProps {
   coId: string;
   role: string;
   lineItems: COLineItem[];
 }
 
-export function COPhotosCard({ coId, role, lineItems }: COPhotosCardProps) {
+export const COPhotosCard = forwardRef<COPhotosCardHandle, COPhotosCardProps>(function COPhotosCard({ coId, role, lineItems }, ref) {
   const { user } = useAuth();
   const { photos, isLoading, uploadPhoto, deletePhoto } = useCOPhotos(coId);
   const [addOpen, setAddOpen] = useState(false);
+  const [presetPhotoType, setPresetPhotoType] = useState<COPhoto['photo_type'] | undefined>(undefined);
   const [viewerPhoto, setViewerPhoto] = useState<COPhoto | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    openAdd(presetType?: COPhoto['photo_type']) {
+      setPresetPhotoType(presetType);
+      setAddOpen(true);
+    },
+  }));
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
