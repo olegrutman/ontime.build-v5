@@ -2,6 +2,8 @@ import { cn } from '@/lib/utils';
 import { AlertTriangle, Send, Lock, ClipboardList, Clock, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleLabels } from '@/hooks/useRoleLabels';
 
 interface CONextActionBannerProps {
   co: ChangeOrder;
