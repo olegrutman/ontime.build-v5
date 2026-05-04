@@ -551,7 +551,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
         <PickerStepper currentStep={state.step} onStepClick={handleStepClick} completedSteps={completedSteps} />
 
         {/* Item context strip */}
-        {state.items.length > 1 && state.step < 9 && (
+        {state.items.length > 1 && state.step < 4 && (
           <div className="flex items-center gap-2.5 mx-6 mt-2.5 mb-0 px-3 py-2 bg-gradient-to-r from-amber-50 to-transparent border-l-[3px] border-amber-400 rounded-lg">
             <span className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1px]">
               Editing Item
@@ -586,7 +586,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
       {/* Mobile bottom bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t px-4 py-3 flex items-center justify-between gap-3 z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
         <span className="text-[0.72rem] text-muted-foreground">
-          Step <span className="font-bold text-foreground">{state.step}</span> of 9
+          Step <span className="font-bold text-foreground">{state.step}</span> of 4
         </span>
         <div className="flex gap-2">
           <button
@@ -597,7 +597,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           >
             ← Back
           </button>
-          {state.step === 9 ? (
+          {state.step === 4 ? (
             <button
               type="button"
               onClick={handleSubmit}

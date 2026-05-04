@@ -23,7 +23,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">Step 9 of 9 · Final Review</p>
+        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">Step 4 of 4 · Final Review</p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
           Review and submit.
         </h2>
