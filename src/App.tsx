@@ -179,6 +179,7 @@ function AppRoutes() {
             <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
             <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
+            <Route path="/external/co/:token" element={<COExternalView />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
