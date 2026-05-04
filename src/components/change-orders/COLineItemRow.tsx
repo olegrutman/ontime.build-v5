@@ -161,11 +161,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
 
-  const hideGCBreakdown = isGC && pricingType === 'fixed';
-  const visibleBillable = hideGCBreakdown ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
+  // Markup visibility logic for GC
+  const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
+  const gcSummaryOnly = isGC && markupVisibility === 'summary';
+  const visibleBillable = hideGCBreakdown ? [] : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
   const tcDownstreamCosts = isTC ? fcBillable : [];
   const totalForRole = hideGCBreakdown ? 0 : isGC ? tcTotal : isFC ? fcTotal : tcTotal;
-  const entryCount = hideGCBreakdown ? billable.length : visibleBillable.length;
+  const entryCount = hideGCBreakdown ? billable.length : gcSummaryOnly ? billable.length : visibleBillable.length;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
