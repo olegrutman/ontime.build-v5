@@ -304,13 +304,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
 
-  // Creation checklist flags (shown for draft COs)
-  const isDraft = status === 'draft';
-  const hasLocation = !!(co.location_tag);
-  const hasReason = !!(co.reason);
-  const hasScopeItems = lineItems.length > 0;
-  const hasPricing = lineItems.length > 0 && laborEntries.some(e => !e.is_actual_cost);
-  const creationReady = hasLocation && hasReason && hasScopeItems;
+
 
   // Scope & Labor totals
   const pricedCount = lineItems.filter(li =>
