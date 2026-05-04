@@ -61,6 +61,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [sendingComment, setSendingComment] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [externalInviteOpen, setExternalInviteOpen] = useState(false);
 
   const { data: auditEntries = [] } = useCOAuditLog(coId);
   const {
