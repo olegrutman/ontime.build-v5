@@ -626,7 +626,12 @@ export function COStatusActions({
         </div>
       </div>
 
-      <AlertDialog open={approveOpen} onOpenChange={setApproveOpen}>
+      <AlertDialog open={approveOpen} onOpenChange={(open) => {
+        setApproveOpen(open);
+        if (open && isDamagedByOthers) {
+          setBackchargeAmount(String(financials?.grandTotal ?? 0));
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{forwardsToGC ? 'Approve FC scope and send to GC' : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
@@ -641,11 +646,45 @@ export function COStatusActions({
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* Backcharge fields for damaged_by_others */}
+          {isDamagedByOthers && isGC && !forwardsToGC && (
+            <div className="space-y-3 py-2 border-t border-border">
+              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                This CO is for damage caused by another trade. A backcharge will be created.
+              </p>
+              <div>
+                <Label className="text-xs text-muted-foreground">Who is responsible?</Label>
+                <select
+                  value={backchargeOrgId}
+                  onChange={e => setBackchargeOrgId(e.target.value)}
+                  className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Select responsible party...</option>
+                  {projectParticipants.map(p => (
+                    <option key={p.org_id} value={p.org_id}>{p.org_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Backcharge Amount</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={backchargeAmount}
+                  onChange={e => setBackchargeAmount(e.target.value)}
+                  className="h-9 mt-1 font-mono"
+                />
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={doApprove} disabled={acting}>
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {forwardsToGC ? 'Approve & send to GC' : 'Approve'}
+              {forwardsToGC ? 'Approve & send to GC' : isDamagedByOthers && isGC ? 'Approve & Create Backcharge' : 'Approve'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
