@@ -446,6 +446,16 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <p className="text-sm font-semibold text-foreground">Pricing details hidden</p>
               <p className="text-xs text-muted-foreground mt-1">GC only sees the final submitted amount on fixed-price change orders.</p>
             </div>
+          ) : gcSummaryOnly ? (
+            <div className="px-5 py-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Labor Total</span>
+                <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
+              </div>
+              {billable.length > 0 && (
+                <p className="text-[10px] text-muted-foreground">{billable.length} entr{billable.length === 1 ? 'y' : 'ies'} · Rates hidden in summary mode</p>
+              )}
+            </div>
           ) : entryCount === 0 && !autoExpand ? (
             /* Empty state */
             <div className="px-6 py-8 text-center">
