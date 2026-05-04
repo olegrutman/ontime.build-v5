@@ -13,14 +13,9 @@ import { usePickerState } from './usePickerState';
 import { PickerStepper } from './PickerStepper';
 import { PickerAside } from './PickerAside';
 
-import { StepWhere } from './StepWhere';
-import { StepWhy } from './StepWhy';
-import { StepWho } from './StepWho';
-import { StepPricing } from './StepPricing';
-import { StepWork } from './StepWork';
-import { StepScope } from './StepScope';
-import { StepMaterialsEquipment } from './StepMaterialsEquipment';
-import { StepTotal } from './StepTotal';
+import { StepWhereAndWhy } from './StepWhereAndWhy';
+import { StepScopeCombined } from './StepScopeCombined';
+import { StepPricingAndRouting } from './StepPricingAndRouting';
 import { StepReview } from './StepReview';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
@@ -103,20 +98,14 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
   const isTM = projectInfo?.contract_mode === 'tm';
   const cur = state.items[state.currentItemIndex];
 
-  // Compute completed steps for the stepper
+  // Compute completed steps for the stepper (4 steps)
   const completedSteps = useMemo(() => {
     const done = new Set<number>();
-    if (cur.locations.length > 0) done.add(1);
-    if (cur.causeId) done.add(2);
-    // Step 3 (Who) is always "done" for TC/FC (auto-routed)
-    if (detectedRole !== 'GC' || state.collaboration.assignedTcOrgId) done.add(3);
-    if (cur.pricingType) done.add(4); // always has a default
-    if (cur.workTypes.size > 0) done.add(5);
-    if (cur.narrative || cur.causeId) done.add(6); // auto-generated narrative counts
-    done.add(7); // Materials/Equipment is optional
-    done.add(8); // Total is always viewable
+    if (cur.locations.length > 0 && cur.causeId) done.add(1); // Where & Why
+    if (cur.workTypes.size > 0 || cur.narrative) done.add(2); // Scope
+    if (cur.pricingType) done.add(3); // Pricing & Routing (always has default)
     return done;
-  }, [cur, detectedRole, state.collaboration.assignedTcOrgId]);
+  }, [cur]);
 
   const canSubmit = cur.locations.length > 0 && !!cur.causeId;
 
@@ -125,7 +114,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
   }, [dispatch]);
 
   const handleNext = useCallback(() => {
-    if (state.step < 9) dispatch({ type: 'SET_STEP', step: state.step + 1 });
+    if (state.step < 4) dispatch({ type: 'SET_STEP', step: state.step + 1 });
   }, [state.step, dispatch]);
 
   const handleBack = useCallback(() => {
@@ -474,15 +463,10 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
   const stepContent = (() => {
     switch (state.step) {
-      case 1: return <StepWhere state={state} dispatch={dispatch} projectId={projectId} />;
-      case 2: return <StepWhy state={state} dispatch={dispatch} />;
-      case 3: return <StepWho state={state} dispatch={dispatch} projectId={projectId} />;
-      case 4: return <StepPricing state={state} dispatch={dispatch} />;
-      case 5: return <StepWork state={state} dispatch={dispatch} />;
-      case 6: return <StepScope state={state} dispatch={dispatch} />;
-      case 7: return <StepMaterialsEquipment state={state} dispatch={dispatch} projectId={projectId} />;
-      case 8: return <StepTotal state={state} dispatch={dispatch} onAddItem={handleAddItem} onGoReview={() => dispatch({ type: 'SET_STEP', step: 9 })} />;
-      case 9: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} />;
+      case 1: return <StepWhereAndWhy state={state} dispatch={dispatch} projectId={projectId} />;
+      case 2: return <StepScopeCombined state={state} dispatch={dispatch} />;
+      case 3: return <StepPricingAndRouting state={state} dispatch={dispatch} projectId={projectId} onAddItem={handleAddItem} onGoReview={() => dispatch({ type: 'SET_STEP', step: 4 })} />;
+      case 4: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} />;
       default: return null;
     }
   })();

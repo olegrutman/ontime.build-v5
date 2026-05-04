@@ -149,15 +149,10 @@ export type PickerAction =
 
 // ─── Step Definitions ────────────────────────────────────────────
 export const PICKER_STEPS = [
-  { key: 'where', label: 'Where', num: 1 },
-  { key: 'why', label: 'Why', num: 2 },
-  { key: 'who', label: 'Who', num: 3 },
-  { key: 'pricing', label: 'Pricing', num: 4 },
-  { key: 'work', label: 'Work', num: 5 },
-  { key: 'scope', label: 'Scope', num: 6 },
-  { key: 'materials', label: 'Materials', num: 7 },
-  { key: 'total', label: 'Total', num: 8 },
-  { key: 'review', label: 'Review', num: 9 },
+  { key: 'where-why', label: 'Where & Why', num: 1 },
+  { key: 'scope', label: 'Scope', num: 2 },
+  { key: 'pricing-routing', label: 'Pricing & Routing', num: 3 },
+  { key: 'review', label: 'Review', num: 4 },
 ] as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────
