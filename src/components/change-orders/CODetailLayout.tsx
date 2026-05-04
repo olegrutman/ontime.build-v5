@@ -648,6 +648,17 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         projectId={projectId}
         onInviteSent={refreshDetail}
       />
+
+      <CreateInvoiceFromCOs
+        open={createInvoiceOpen}
+        onOpenChange={setCreateInvoiceOpen}
+        projectId={projectId}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['co-linked-invoice', coId] });
+          refreshDetail();
+        }}
+        isTM={co.document_type === 'WO'}
+      />
     </div>
   );
 }
