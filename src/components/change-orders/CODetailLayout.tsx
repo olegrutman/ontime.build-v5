@@ -348,6 +348,26 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             >
               {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} PDF
             </Button>
+            {/* Invoice: show linked or generate */}
+            {linkedInvoice ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1 text-emerald-600"
+                onClick={() => navigate(`/project/${projectId}/invoices`)}
+              >
+                <Receipt className="h-3.5 w-3.5" /> {linkedInvoice.invoice_number}
+              </Button>
+            ) : (isTC || isFC) && (status === 'approved' || status === 'contracted') ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1 text-primary"
+                onClick={() => setCreateInvoiceOpen(true)}
+              >
+                <Receipt className="h-3.5 w-3.5" /> Generate Invoice
+              </Button>
+            ) : null}
             {isGC && (
               <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
                 <ExternalLink className="h-3.5 w-3.5" /> Invite External
