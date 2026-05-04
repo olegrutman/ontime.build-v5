@@ -116,6 +116,28 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 <span>TC Submitted</span>
                 <span className="font-mono">{fmtCurrency(financials.grandTotal)}</span>
               </div>
+              {financials.totalTax > 0 && (
+                <div className="border-t border-border pt-2 mt-2 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Materials tax</span>
+                    <span className="font-mono">{fmtCurrency(financials.materialsTax)}</span>
+                  </div>
+                  {financials.laborTaxable && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Labor tax</span>
+                      <span className="font-mono">{fmtCurrency(financials.laborTax)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Equipment tax</span>
+                    <span className="font-mono">{fmtCurrency(financials.equipmentTax)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold pt-1">
+                    <span>Total (incl. {fmtCurrency(financials.totalTax)} tax)</span>
+                    <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
+                  </div>
+                </div>
+              )}
             </>
           )}
           {isTC && (
@@ -142,6 +164,28 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                   <span className="font-mono">{fmtCurrency(financials.grandTotal)}</span>
                 </div>
               </div>
+              {financials.totalTax > 0 && (
+                <div className="border-t border-border pt-2 mt-2 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Materials tax</span>
+                    <span className="font-mono">{fmtCurrency(financials.materialsTax)}</span>
+                  </div>
+                  {financials.laborTaxable && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Labor tax</span>
+                      <span className="font-mono">{fmtCurrency(financials.laborTax)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Equipment tax</span>
+                    <span className="font-mono">{fmtCurrency(financials.equipmentTax)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold pt-1">
+                    <span>Total (incl. {fmtCurrency(financials.totalTax)} tax)</span>
+                    <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
+                  </div>
+                </div>
+              )}
             </>
           )}
           {isFC && (

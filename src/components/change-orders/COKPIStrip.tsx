@@ -118,6 +118,16 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       });
     }
 
+    // Tax tile when there's tax
+    if (financials.totalTax > 0) {
+      tiles.push({
+        label: financials.taxJurisdictionLabel ?? 'Tax',
+        value: fmtCurrency(financials.totalTax),
+        color: '#8B5CF6',
+        sub: `${financials.taxRate}%`,
+      });
+    }
+
     return tiles;
   }
 
