@@ -397,7 +397,7 @@ export default function ProjectHome() {
             )}
 
             {activeTab === 'rfis' && (
-              isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
+              isInDemoMode ? <DemoRFIsTab /> : <RFIListPageInline projectId={id!} />
             )}
             {activeTab === 'estimates' && isSupplier && supplierOrgId && (
               <FeatureGate feature="supplier_estimates">
