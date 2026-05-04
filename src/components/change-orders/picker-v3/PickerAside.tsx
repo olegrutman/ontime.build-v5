@@ -20,7 +20,7 @@ function fmt(n: number) {
 export function PickerAside({
   state, onSwitchItem, onAddItem, onBack, onNext, onSubmit, canGoBack,
 }: PickerAsideProps) {
-  const isReview = state.step === 9;
+  const isReview = state.step === 4;
   const cur = state.items[state.currentItemIndex];
   const total = grandTotal(state.items);
 
