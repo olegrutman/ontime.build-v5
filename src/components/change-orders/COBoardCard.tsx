@@ -97,6 +97,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
         'relative bg-card border border-border rounded-lg cursor-pointer transition-all',
         'hover:shadow-md hover:border-foreground/20',
         isActive && 'ring-2 ring-primary shadow-lg',
+        isWithdrawn && 'opacity-50',
       )}
       onClick={() => onClick(co.id)}
     >
