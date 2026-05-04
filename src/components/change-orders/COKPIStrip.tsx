@@ -41,7 +41,7 @@ const BADGE_CLASSES = {
 };
 
 function getTiles(props: COKPIStripProps): KPITile[] {
-  const { isGC, isTC, isFC, financials } = props;
+  const { isGC, isTC, isFC, financials, markupVisibility = 'hidden' } = props;
   const matResp = props.materialResponsible ?? 'TC';
   const eqResp = props.equipmentResponsible ?? 'TC';
 
