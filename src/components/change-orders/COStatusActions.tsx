@@ -318,6 +318,24 @@ export function COStatusActions({
         await logActivity('forwarded_to_gc', undefined, financials?.grandTotal || undefined);
         await notifyOrg(nextOrgId, 'CHANGE_SUBMITTED', financials?.grandTotal || undefined);
       } else {
+        // Compute retainage before approving
+        const { data: projRetainage } = await supabase
+          .from('projects')
+          .select('retainage_percent')
+          .eq('id', projectId)
+          .single();
+        const retPct = projRetainage?.retainage_percent ?? 0;
+        const grandTotalForRetainage = financials?.grandTotal ?? 0;
+        const retainageAmt = grandTotalForRetainage * (retPct / 100);
+
+        // Update retainage snapshot on approval
+        if (retPct > 0) {
+          await supabase
+            .from('change_orders')
+            .update({ retainage_amount: retainageAmt })
+            .eq('id', co.id);
+        }
+
         await approveCO.mutateAsync(co.id);
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
