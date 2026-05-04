@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { LaborEntryForm } from './LaborEntryForm';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
+import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -35,6 +36,8 @@ interface COLineItemRowProps {
   onRefresh: () => void;
   isEven?: boolean;
   index?: number;
+  /** How much TC cost breakdown to show GCs. Default 'hidden'. */
+  markupVisibility?: MarkupVisibility;
 }
 
 function fmt(n: number) {
