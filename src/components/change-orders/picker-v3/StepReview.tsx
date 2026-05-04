@@ -1,6 +1,10 @@
 import { cn } from '@/lib/utils';
 import type { PickerState, PickerAction } from './types';
 import { itemSubtotal, grandTotal, locationDisplay } from './types';
+import { useOpenRFIs } from '@/hooks/useRFIs';
+import { useParams } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MessageSquareMore } from 'lucide-react';
 
 interface StepReviewProps {
   state: PickerState;
