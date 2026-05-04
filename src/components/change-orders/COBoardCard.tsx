@@ -34,6 +34,7 @@ function getProgress(status: string): number {
     draft: 0.1, shared: 0.15, work_in_progress: 0.3,
     rejected: 0, closed_for_pricing: 0.5,
     submitted: 0.7, approved: 0.9, contracted: 1,
+    withdrawn: 0,
   };
   return map[status] ?? 0.1;
 }
@@ -49,6 +50,7 @@ function getDotColor(status: string): string {
     case 'approved': return 'bg-emerald-500';
     case 'rejected': return 'bg-destructive';
     case 'contracted': return 'bg-muted-foreground';
+    case 'withdrawn': return 'bg-muted-foreground';
     default: return 'bg-primary';
   }
 }
