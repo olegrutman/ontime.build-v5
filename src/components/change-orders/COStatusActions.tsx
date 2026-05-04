@@ -515,13 +515,44 @@ export function COStatusActions({
     );
   }
 
+  const canReleaseRetainage = isGC && isContracted && (co as any).retainage_amount > 0 && !(co as any).retainage_released;
+
+  async function doReleaseRetainage() {
+    setActing(true);
+    try {
+      await supabase
+        .from('change_orders')
+        .update({
+          retainage_released: true,
+          retainage_released_at: new Date().toISOString(),
+        })
+        .eq('id', co.id);
+      toast.success('Retainage released');
+      await logActivity('retainage_released', `Retainage of $${((co as any).retainage_amount ?? 0).toFixed(2)} released`);
+      await notifyOrg(co.assigned_to_org_id, 'RETAINAGE_RELEASED', (co as any).retainage_amount);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to release retainage');
+    } finally {
+      setActing(false);
+    }
+  }
+
   if (isContracted) {
     return (
-      <div className="co-light-shell px-4 py-3 flex items-center gap-2">
-        <Check className="h-4 w-4 co-light-success-text" />
-        <span className="text-sm font-medium text-foreground">
-          Contracted — TC can now invoice
-        </span>
+      <div className="co-light-shell px-4 py-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <Check className="h-4 w-4 co-light-success-text" />
+          <span className="text-sm font-medium text-foreground">
+            Contracted — TC can now invoice
+          </span>
+        </div>
+        {canReleaseRetainage && (
+          <Button size="sm" variant="outline" className="h-8 text-xs gap-1 w-full" onClick={doReleaseRetainage} disabled={acting}>
+            {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+            Release Retainage
+          </Button>
+        )}
       </div>
     );
   }
