@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink, Download, Receipt } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,7 @@ import { useCOPhotos } from '@/hooks/useCOPhotos';
 import { CORFIBlockBanner } from './CORFIBlockBanner';
 import { COExternalInviteDialog } from './COExternalInviteDialog';
 import { COExternalInvitesCard } from './COExternalInvitesCard';
+import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -130,6 +131,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const photosBlocked = requirePhotos && photos.length === 0;
   const markupVisibility = ((projectSettings as any)?.tc_markup_visibility ?? 'hidden') as import('@/hooks/useMarkupVisibility').MarkupVisibility;
 
+  // Check for existing invoice linked to this CO
+  const { data: linkedInvoice } = useQuery({
+    queryKey: ['co-linked-invoice', coId],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, status')
+        .contains('co_ids', [coId])
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
     canEdit, canEditExternal, canEditInternal, canRequestFCInput, canCompleteFCInput, nteBlocked,
@@ -331,6 +348,26 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             >
               {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} PDF
             </Button>
+            {/* Invoice: show linked or generate */}
+            {linkedInvoice ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1 text-emerald-600"
+                onClick={() => navigate(`/project/${projectId}/invoices`)}
+              >
+                <Receipt className="h-3.5 w-3.5" /> {linkedInvoice.invoice_number}
+              </Button>
+            ) : (isTC || isFC) && (status === 'approved' || status === 'contracted') ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1 text-primary"
+                onClick={() => setCreateInvoiceOpen(true)}
+              >
+                <Receipt className="h-3.5 w-3.5" /> Generate Invoice
+              </Button>
+            ) : null}
             {isGC && (
               <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
                 <ExternalLink className="h-3.5 w-3.5" /> Invite External
@@ -610,6 +647,17 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         coTitle={displayTitle}
         projectId={projectId}
         onInviteSent={refreshDetail}
+      />
+
+      <CreateInvoiceFromCOs
+        open={createInvoiceOpen}
+        onOpenChange={setCreateInvoiceOpen}
+        projectId={projectId}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['co-linked-invoice', coId] });
+          refreshDetail();
+        }}
+        isTM={co.document_type === 'WO'}
       />
     </div>
   );
