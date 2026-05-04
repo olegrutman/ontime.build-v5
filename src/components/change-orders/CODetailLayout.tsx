@@ -306,7 +306,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* KPI Row */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
