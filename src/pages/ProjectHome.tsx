@@ -65,6 +65,7 @@ import { useToast } from '@/hooks/use-toast';
 import { FeatureGate, useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { COListPage } from '@/components/change-orders';
+import { BackchargesList } from '@/components/backcharges/BackchargesList';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
 import { useProjectEstimateRows } from '@/hooks/useProjectEstimateRows';
 import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
@@ -458,6 +459,9 @@ export default function ProjectHome() {
               <FeatureGate feature="change_orders">
                 <COListPage projectId={id!} isTM={isTM} />
               </FeatureGate>
+             )}
+            {activeTab === 'backcharges' && (
+              <BackchargesList projectId={id!} />
             )}
           </div>
         </main>

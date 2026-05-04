@@ -14,6 +14,7 @@ const TABS: Tab[] = [
   { key: 'invoices', label: 'Invoices', featureKey: 'invoicing' },
   { key: 'purchase-orders', label: 'Purchase Orders', featureKey: 'purchase_orders' },
   { key: 'returns', label: 'Returns', featureKey: 'returns_tracking' },
+  { key: 'backcharges', label: 'Backcharges' },
   { key: 'schedule', label: 'Schedule', featureKey: 'schedule_gantt', hideForSupplier: true },
   { key: 'daily-log', label: 'Daily Log', featureKey: 'daily_logs', hideForSupplier: true },
 ];

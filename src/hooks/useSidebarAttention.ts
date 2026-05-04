@@ -10,7 +10,7 @@ export function useSidebarAttention(projectId: string | undefined) {
     if (!projectId || !user) return;
 
     const fetch = async () => {
-      const [coRes, invRes, poSubmittedRes, poPendingRes, rfiRes] = await Promise.all([
+      const [coRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes] = await Promise.all([
         supabase.from('change_orders').select('id', { count: 'exact', head: true })
           .eq('project_id', projectId).eq('status', 'SUBMITTED'),
         supabase.from('invoices').select('id', { count: 'exact', head: true })
@@ -21,6 +21,8 @@ export function useSidebarAttention(projectId: string | undefined) {
           .eq('project_id', projectId).in('status', ['ORDERED', 'READY_FOR_DELIVERY']),
         supabase.from('project_rfis').select('id', { count: 'exact', head: true })
           .eq('project_id', projectId).in('status', ['open', 'in_review']),
+        supabase.from('backcharges').select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId).eq('status', 'pending'),
       ]);
 
       const result: Record<string, number> = {};
@@ -30,6 +32,7 @@ export function useSidebarAttention(projectId: string | undefined) {
       const poTotal = (poSubmittedRes.count || 0) + (poPendingRes.count || 0);
       if (poTotal > 0) result['purchase-orders'] = poTotal;
       if (rfiRes.count && rfiRes.count > 0) result['rfis'] = rfiRes.count;
+      if (bcRes.count && bcRes.count > 0) result['backcharges'] = bcRes.count;
       setCounts(result);
     };
 

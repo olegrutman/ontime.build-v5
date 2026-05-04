@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
@@ -14,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Share2, Send, Check, X, RotateCcw, Loader2, Lock, CheckCircle2, ThumbsUp, Trash2,
+  Share2, Send, Check, X, RotateCcw, Loader2, Lock, CheckCircle2, ThumbsUp, Trash2, AlertTriangle,
 } from 'lucide-react';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
@@ -62,6 +63,29 @@ export function COStatusActions({
   const [approveOpen, setApproveOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState('');
+  const [backchargeOrgId, setBackchargeOrgId] = useState<string>('');
+  const [backchargeAmount, setBackchargeAmount] = useState('');
+  const [backchargeNote, setBackchargeNote] = useState('');
+  const [projectParticipants, setProjectParticipants] = useState<Array<{ org_id: string; org_name: string }>>([]);
+
+  const isDamagedByOthers = co.reason === 'damaged_by_others';
+
+  // Fetch project participants when needed for backcharge dialog
+  useEffect(() => {
+    if (!isDamagedByOthers || !isGC) return;
+    supabase
+      .from('project_participants')
+      .select('organization_id, organizations:organization_id(id, name)')
+      .eq('project_id', projectId)
+      .then(({ data }) => {
+        if (data) {
+          const participants = data
+            .map((p: any) => ({ org_id: p.organization_id, org_name: p.organizations?.name ?? 'Unknown' }))
+            .filter((p: any) => p.org_id !== currentOrgId);
+          setProjectParticipants(participants);
+        }
+      });
+  }, [isDamagedByOthers, isGC, projectId, currentOrgId]);
 
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
@@ -295,12 +319,27 @@ export function COStatusActions({
         await notifyOrg(nextOrgId, 'CHANGE_SUBMITTED', financials?.grandTotal || undefined);
       } else {
         await approveCO.mutateAsync(co.id);
-        // Contract sum is now updated automatically via the apply_co_contract_delta DB trigger.
-        // The trigger reverses the delta on rejection/recall and re-applies on re-approval, so the
-        // contract is always derived from the current set of approved COs.
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
         await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined);
+
+        // Auto-create backcharge for damaged_by_others COs
+        if (isDamagedByOthers && user) {
+          const bcAmount = parseFloat(backchargeAmount) || (financials?.grandTotal ?? 0);
+          const selectedOrg = projectParticipants.find(p => p.org_id === backchargeOrgId);
+          await supabase.from('backcharges').insert({
+            project_id: projectId,
+            source_co_id: co.id,
+            responsible_org_id: backchargeOrgId || null,
+            responsible_party_name: selectedOrg?.org_name ?? null,
+            amount: bcAmount,
+            created_by_user_id: user.id,
+          });
+          if (backchargeOrgId) {
+            await notifyOrg(backchargeOrgId, 'BACKCHARGE_CREATED', bcAmount);
+          }
+          await logActivity('backcharge_created', `Backcharge of $${bcAmount.toFixed(2)} against ${selectedOrg?.org_name ?? 'TBD'}`, bcAmount);
+        }
       }
 
       setApproveOpen(false);
@@ -587,7 +626,12 @@ export function COStatusActions({
         </div>
       </div>
 
-      <AlertDialog open={approveOpen} onOpenChange={setApproveOpen}>
+      <AlertDialog open={approveOpen} onOpenChange={(open) => {
+        setApproveOpen(open);
+        if (open && isDamagedByOthers) {
+          setBackchargeAmount(String(financials?.grandTotal ?? 0));
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{forwardsToGC ? 'Approve FC scope and send to GC' : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
@@ -602,11 +646,45 @@ export function COStatusActions({
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* Backcharge fields for damaged_by_others */}
+          {isDamagedByOthers && isGC && !forwardsToGC && (
+            <div className="space-y-3 py-2 border-t border-border">
+              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                This CO is for damage caused by another trade. A backcharge will be created.
+              </p>
+              <div>
+                <Label className="text-xs text-muted-foreground">Who is responsible?</Label>
+                <select
+                  value={backchargeOrgId}
+                  onChange={e => setBackchargeOrgId(e.target.value)}
+                  className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Select responsible party...</option>
+                  {projectParticipants.map(p => (
+                    <option key={p.org_id} value={p.org_id}>{p.org_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Backcharge Amount</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={backchargeAmount}
+                  onChange={e => setBackchargeAmount(e.target.value)}
+                  className="h-9 mt-1 font-mono"
+                />
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={doApprove} disabled={acting}>
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {forwardsToGC ? 'Approve & send to GC' : 'Approve'}
+              {forwardsToGC ? 'Approve & send to GC' : isDamagedByOthers && isGC ? 'Approve & Create Backcharge' : 'Approve'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
