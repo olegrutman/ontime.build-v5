@@ -77,6 +77,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
   const stripe = useMemo(() => getStripeColor(co), [co]);
   const progress = getProgress(co.status);
   const isRejected = co.status === 'rejected';
+  const isWithdrawn = co.status === 'withdrawn';
   const title = co.title ?? co.co_number ?? 'Untitled CO';
   const dotColor = getDotColor(co.status);
 
