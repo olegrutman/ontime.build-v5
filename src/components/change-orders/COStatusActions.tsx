@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Share2, Send, Check, X, RotateCcw, Loader2, Lock, CheckCircle2, ThumbsUp,
+  Share2, Send, Check, X, RotateCcw, Loader2, Lock, CheckCircle2, ThumbsUp, Trash2,
 } from 'lucide-react';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
@@ -60,6 +60,8 @@ export function COStatusActions({
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [approveOpen, setApproveOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawReason, setWithdrawReason] = useState('');
 
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
