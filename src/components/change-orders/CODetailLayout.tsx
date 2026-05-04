@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink, Download, Receipt } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
