@@ -100,6 +100,8 @@ export interface ChangeOrder {
   tc_submitted_price: number | null;
   fc_pricing_submitted_at: string | null;
   document_type: CODocumentType;
+  withdrawn_at: string | null;
+  withdrawn_reason: string | null;
   created_at: string;
   updated_at: string;
 }
