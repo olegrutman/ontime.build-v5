@@ -9,6 +9,7 @@ import { COSOVPanel } from './COSOVPanel';
 import type { ChangeOrder, COFinancials, COCollaborator, COFCOrgOption, COCreatedByRole } from '@/types/changeOrder';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { CONTELogEntry } from '@/types/changeOrder';
+import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 
 interface COSidebarProps {
   co: ChangeOrder;
