@@ -190,6 +190,30 @@ export function useChangeOrderDetail(coId: string | null) {
   // Bug 3: NTE tracks labor spend only, not materials/equipment
   const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0;
 
+  // Tax computations — use snapshot if available, else project settings
+  const { data: projectTaxSettings } = useQuery({
+    queryKey: ['project-tax-settings', co?.project_id],
+    enabled: !!co?.project_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('sales_tax_rate, labor_taxable, tax_jurisdiction_label')
+        .eq('id', co!.project_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const taxRate = (co as any)?.tax_rate_snapshot ?? projectTaxSettings?.sales_tax_rate ?? 0;
+  const laborTaxable = (co as any)?.labor_taxable_snapshot ?? projectTaxSettings?.labor_taxable ?? false;
+  const taxPct = taxRate / 100;
+  const materialsTax = materialsTotal * taxPct;
+  const laborTax = laborTaxable ? laborTotal * taxPct : 0;
+  const equipmentTax = equipmentTotal * taxPct;
+  const totalTax = materialsTax + laborTax + equipmentTax;
+  const grandTotalWithTax = grandTotal + totalTax;
+
   const financials: COFinancials = {
     laborTotal,
     fcLaborTotal,
@@ -209,6 +233,14 @@ export function useChangeOrderDetail(coId: string | null) {
     fcActualCostTotal,
     profitMargin,
     nteUsedPercent,
+    materialsTax,
+    laborTax,
+    equipmentTax,
+    totalTax,
+    grandTotalWithTax,
+    taxRate,
+    laborTaxable,
+    taxJurisdictionLabel: projectTaxSettings?.tax_jurisdiction_label ?? null,
   };
 
   const addLineItem = useMutation({
