@@ -37,7 +37,7 @@ import { CORFIBlockBanner } from './CORFIBlockBanner';
 import { COExternalInviteDialog } from './COExternalInviteDialog';
 import { COExternalInvitesCard } from './COExternalInvitesCard';
 import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs';
-import { COCreationChecklist } from './COCreationChecklist';
+
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -304,13 +304,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
 
-  // Creation checklist flags (shown for draft COs)
-  const isDraft = status === 'draft';
-  const hasLocation = !!(co.location_tag);
-  const hasReason = !!(co.reason);
-  const hasScopeItems = lineItems.length > 0;
-  const hasPricing = lineItems.length > 0 && laborEntries.some(e => !e.is_actual_cost);
-  const creationReady = hasLocation && hasReason && hasScopeItems;
+
 
   // Scope & Labor totals
   const pricedCount = lineItems.filter(li =>
@@ -402,19 +396,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
         <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
 
-          {/* Creation Checklist — shown for draft COs */}
-          {isDraft && (
-            <COCreationChecklist
-              projectId={projectId}
-              hasLocation={hasLocation}
-              hasReason={hasReason}
-              hasScopeItems={hasScopeItems}
-              hasPricing={hasPricing}
-              onScrollTo={(section) => {
-                if (section === 'scope' || section === 'pricing') scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            />
-          )}
 
           {/* Full-width Header Card + Pipeline */}
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
