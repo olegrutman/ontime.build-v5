@@ -291,7 +291,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             )}
 
             {/* Margin badge */}
-            {hasMargin && (isTC || isFC) && (
+            {hasMargin && (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
               <span className={cn(
                 'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
                 marginAmount >= 0
