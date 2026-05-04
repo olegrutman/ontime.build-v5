@@ -52,9 +52,10 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     let approvedCount = 0;
     let myActionCount = 0;
     let inProgressCount = 0;
+    let withdrawnCount = 0;
 
     for (const co of changeOrders) {
-      if (co.status !== 'draft') totalValue += (co.tc_submitted_price ?? 0);
+      if (co.status !== 'draft' && co.status !== 'withdrawn') totalValue += (co.tc_submitted_price ?? 0);
       if (co.status === 'submitted' && co.org_id === orgId) pendingApproval++;
       if (co.status === 'closed_for_pricing') awaitingPricing++;
       if (co.status === 'approved') {
@@ -64,6 +65,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co.status)) {
         inProgressCount++;
       }
+      if (co.status === 'withdrawn') withdrawnCount++;
       if (
         (co.status === 'submitted' && co.org_id === orgId) ||
         (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
@@ -71,7 +73,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       ) myActionCount++;
     }
 
-    return { totalValue, pendingApproval, awaitingPricing, approvedBillableValue, approvedCount, myActionCount, inProgressCount };
+    return { totalValue, pendingApproval, awaitingPricing, approvedBillableValue, approvedCount, myActionCount, inProgressCount, withdrawnCount };
   }, [changeOrders, orgId]);
 
   // Filter
