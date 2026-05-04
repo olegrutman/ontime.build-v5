@@ -37,6 +37,7 @@ import { CORFIBlockBanner } from './CORFIBlockBanner';
 import { COExternalInviteDialog } from './COExternalInviteDialog';
 import { COExternalInvitesCard } from './COExternalInvitesCard';
 import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs';
+import { COCreationChecklist } from './COCreationChecklist';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
