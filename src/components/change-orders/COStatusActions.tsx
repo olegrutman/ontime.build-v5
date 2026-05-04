@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Share2, Send, Check, X, RotateCcw, Loader2, Lock, CheckCircle2, ThumbsUp,
+  Share2, Send, Check, X, RotateCcw, Loader2, Lock, CheckCircle2, ThumbsUp, Trash2,
 } from 'lucide-react';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
@@ -60,6 +60,8 @@ export function COStatusActions({
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [approveOpen, setApproveOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawReason, setWithdrawReason] = useState('');
 
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
@@ -363,6 +365,31 @@ export function COStatusActions({
     }
   }
 
+  async function doWithdraw() {
+    if (!withdrawReason.trim()) return;
+    setActing(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: {
+          status: 'withdrawn',
+          withdrawn_at: new Date().toISOString(),
+          withdrawn_reason: withdrawReason.trim(),
+        },
+      });
+      toast.success('CO withdrawn permanently');
+      await logActivity('withdrawn', withdrawReason.trim());
+      await notifyAllCOParties('CO_WITHDRAWN');
+      setWithdrawOpen(false);
+      setWithdrawReason('');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to withdraw');
+    } finally {
+      setActing(false);
+    }
+  }
+
   const isCreator = co.created_by_user_id === user?.id;
   const isActiveCollaborator = collaborators.some(c => c.organization_id === currentOrgId && c.status === 'active');
   const isAnyCollaborator = collaborators.some(c => c.organization_id === currentOrgId);
@@ -390,6 +417,17 @@ export function COStatusActions({
   const canMarkCompleted = isTC && isApproved && !co.completed_at;
   const canAcknowledge = isGC && isApproved && !!co.completed_at && !co.completion_acknowledged_at;
   const isContracted = status === 'contracted';
+  const isWithdrawn = status === 'withdrawn';
+  /* Creator can withdraw from draft/shared/rejected */
+  const canWithdraw = isCreator && ['draft', 'shared', 'rejected'].includes(status);
+  if (isWithdrawn) {
+    return (
+      <div className="co-light-shell border-muted bg-muted/30 px-4 py-3 space-y-1">
+        <p className="text-sm font-semibold text-muted-foreground">Withdrawn</p>
+        {co.withdrawn_reason && <p className="text-xs text-muted-foreground">{co.withdrawn_reason}</p>}
+      </div>
+    );
+  }
 
   if (isContracted) {
     return (
@@ -418,17 +456,25 @@ export function COStatusActions({
       <div className="co-light-shell border-destructive/30 bg-destructive/5 px-4 py-3 space-y-2">
         <p className="text-sm font-semibold text-destructive">Rejected</p>
         <p className="text-xs text-muted-foreground">{co.rejection_note}</p>
-        {(canSubmit || canSubmitFCPricing) && (
-          <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
-            {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            Resubmit
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {(canSubmit || canSubmitFCPricing) && (
+            <Button size="sm" className="flex-1 h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
+              {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              Resubmit
+            </Button>
+          )}
+          {canWithdraw && (
+            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs gap-1 text-muted-foreground" onClick={() => setWithdrawOpen(true)} disabled={acting}>
+              <Trash2 className="h-3 w-3" />
+              Withdraw
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
 
-  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge;
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge || canWithdraw;
 
   if (!hasAnyAction) {
     if (isApproved) {
@@ -503,6 +549,12 @@ export function COStatusActions({
               Acknowledge Completion
             </Button>
           )}
+          {canWithdraw && (
+            <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-muted-foreground border-muted-foreground/30" onClick={() => setWithdrawOpen(true)} disabled={acting}>
+              <Trash2 className="h-3 w-3" />
+              Withdraw permanently
+            </Button>
+          )}
         </div>
       </div>
 
@@ -562,6 +614,42 @@ export function COStatusActions({
             >
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Withdraw {co.document_type === 'WO' ? 'work order' : 'change order'} permanently</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The {co.document_type === 'WO' ? 'work order' : 'change order'} will be permanently closed and cannot be resubmitted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="withdraw-reason">Reason *</Label>
+              <VoiceInputButton onTranscript={(text) => setWithdrawReason(prev => prev ? prev + ' ' + text : text)} />
+            </div>
+            <Textarea
+              id="withdraw-reason"
+              value={withdrawReason}
+              onChange={e => setWithdrawReason(e.target.value)}
+              placeholder="Why is this being withdrawn?"
+              rows={3}
+              className="mt-1.5 resize-none"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doWithdraw}
+              disabled={acting || !withdrawReason.trim()}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Withdraw permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

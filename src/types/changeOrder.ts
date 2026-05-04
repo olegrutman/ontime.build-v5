@@ -6,7 +6,8 @@ export type COStatus =
   | 'submitted'
   | 'approved'
   | 'rejected'
-  | 'contracted';
+  | 'contracted'
+  | 'withdrawn';
 
 export type COPricingType = 'fixed' | 'tm' | 'nte';
 
@@ -54,6 +55,7 @@ export const CO_STATUS_LABELS: Record<COStatus, string> = {
   approved:           'Approved',
   rejected:           'Rejected',
   contracted:         'Contracted',
+  withdrawn:          'Withdrawn',
 };
 
 export type CODocumentType = 'CO' | 'WO';
@@ -98,6 +100,8 @@ export interface ChangeOrder {
   tc_submitted_price: number | null;
   fc_pricing_submitted_at: string | null;
   document_type: CODocumentType;
+  withdrawn_at: string | null;
+  withdrawn_reason: string | null;
   created_at: string;
   updated_at: string;
 }

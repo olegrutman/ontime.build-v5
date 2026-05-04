@@ -34,6 +34,7 @@ function getProgress(status: string): number {
     draft: 0.1, shared: 0.15, work_in_progress: 0.3,
     rejected: 0, closed_for_pricing: 0.5,
     submitted: 0.7, approved: 0.9, contracted: 1,
+    withdrawn: 0,
   };
   return map[status] ?? 0.1;
 }
@@ -49,6 +50,7 @@ function getDotColor(status: string): string {
     case 'approved': return 'bg-emerald-500';
     case 'rejected': return 'bg-destructive';
     case 'contracted': return 'bg-muted-foreground';
+    case 'withdrawn': return 'bg-muted-foreground';
     default: return 'bg-primary';
   }
 }
@@ -75,6 +77,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
   const stripe = useMemo(() => getStripeColor(co), [co]);
   const progress = getProgress(co.status);
   const isRejected = co.status === 'rejected';
+  const isWithdrawn = co.status === 'withdrawn';
   const title = co.title ?? co.co_number ?? 'Untitled CO';
   const dotColor = getDotColor(co.status);
 
@@ -94,6 +97,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
         'relative bg-card border border-border rounded-lg cursor-pointer transition-all',
         'hover:shadow-md hover:border-foreground/20',
         isActive && 'ring-2 ring-primary shadow-lg',
+        isWithdrawn && 'opacity-50',
       )}
       onClick={() => onClick(co.id)}
     >
@@ -114,7 +118,10 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
           )}
         </div>
 
-        <h4 className="text-sm font-medium text-foreground line-clamp-2 leading-snug">
+        <h4 className={cn(
+          'text-sm font-medium text-foreground line-clamp-2 leading-snug',
+          isWithdrawn && 'line-through text-muted-foreground',
+        )}>
           {title}
         </h4>
 

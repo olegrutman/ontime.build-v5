@@ -19,7 +19,7 @@ interface COListPageProps {
   isTM?: boolean;
 }
 
-type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter';
+type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter' | 'withdrawn_filter';
 
 export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const dt = docTypeFromMode(isTM);
@@ -52,9 +52,10 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     let approvedCount = 0;
     let myActionCount = 0;
     let inProgressCount = 0;
+    let withdrawnCount = 0;
 
     for (const co of changeOrders) {
-      if (co.status !== 'draft') totalValue += (co.tc_submitted_price ?? 0);
+      if (co.status !== 'draft' && co.status !== 'withdrawn') totalValue += (co.tc_submitted_price ?? 0);
       if (co.status === 'submitted' && co.org_id === orgId) pendingApproval++;
       if (co.status === 'closed_for_pricing') awaitingPricing++;
       if (co.status === 'approved') {
@@ -64,6 +65,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co.status)) {
         inProgressCount++;
       }
+      if (co.status === 'withdrawn') withdrawnCount++;
       if (
         (co.status === 'submitted' && co.org_id === orgId) ||
         (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
@@ -71,7 +73,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       ) myActionCount++;
     }
 
-    return { totalValue, pendingApproval, awaitingPricing, approvedBillableValue, approvedCount, myActionCount, inProgressCount };
+    return { totalValue, pendingApproval, awaitingPricing, approvedBillableValue, approvedCount, myActionCount, inProgressCount, withdrawnCount };
   }, [changeOrders, orgId]);
 
   // Filter
@@ -88,6 +90,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     if (filter === 'approved_filter') return changeOrders.filter(co =>
       ['approved', 'contracted'].includes(co.status)
     );
+    if (filter === 'withdrawn_filter') return changeOrders.filter(co => co.status === 'withdrawn');
     return changeOrders;
   }, [changeOrders, filter, orgId]);
 
@@ -129,6 +132,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
             { key: 'my_action', label: 'Action', count: stats.myActionCount },
             { key: 'in_progress', label: 'Active', count: stats.inProgressCount },
             { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
+            ...(stats.withdrawnCount > 0 ? [{ key: 'withdrawn_filter' as FilterKey, label: 'Withdrawn', count: stats.withdrawnCount }] : []),
           ] as { key: FilterKey; label: string; count: number }[]).map(f => (
             <button
               key={f.key}
