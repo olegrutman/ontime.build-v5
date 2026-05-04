@@ -127,7 +127,7 @@ export default function COApprovalPage() {
     setActing(true);
     try {
       const prefix = approvalType === 'owner' ? 'owner' : 'architect';
-      const { error: err } = await supabase
+      const { error: err } = await (supabase as any)
         .from('change_orders')
         .update({
           [`${prefix}_approval_status`]: 'rejected',
