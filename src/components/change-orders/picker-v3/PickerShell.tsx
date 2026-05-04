@@ -13,14 +13,9 @@ import { usePickerState } from './usePickerState';
 import { PickerStepper } from './PickerStepper';
 import { PickerAside } from './PickerAside';
 
-import { StepWhere } from './StepWhere';
-import { StepWhy } from './StepWhy';
-import { StepWho } from './StepWho';
-import { StepPricing } from './StepPricing';
-import { StepWork } from './StepWork';
-import { StepScope } from './StepScope';
-import { StepMaterialsEquipment } from './StepMaterialsEquipment';
-import { StepTotal } from './StepTotal';
+import { StepWhereAndWhy } from './StepWhereAndWhy';
+import { StepScopeCombined } from './StepScopeCombined';
+import { StepPricingAndRouting } from './StepPricingAndRouting';
 import { StepReview } from './StepReview';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
