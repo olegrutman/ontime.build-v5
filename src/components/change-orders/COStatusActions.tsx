@@ -456,17 +456,25 @@ export function COStatusActions({
       <div className="co-light-shell border-destructive/30 bg-destructive/5 px-4 py-3 space-y-2">
         <p className="text-sm font-semibold text-destructive">Rejected</p>
         <p className="text-xs text-muted-foreground">{co.rejection_note}</p>
-        {(canSubmit || canSubmitFCPricing) && (
-          <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
-            {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            Resubmit
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {(canSubmit || canSubmitFCPricing) && (
+            <Button size="sm" className="flex-1 h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
+              {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              Resubmit
+            </Button>
+          )}
+          {canWithdraw && (
+            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs gap-1 text-muted-foreground" onClick={() => setWithdrawOpen(true)} disabled={acting}>
+              <Trash2 className="h-3 w-3" />
+              Withdraw
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
 
-  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge;
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge || canWithdraw;
 
   if (!hasAnyAction) {
     if (isApproved) {
