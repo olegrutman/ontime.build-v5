@@ -233,6 +233,10 @@ export interface COFinancials {
   taxRate: number;
   laborTaxable: boolean;
   taxJurisdictionLabel: string | null;
+  retainagePercent: number;
+  retainageAmount: number;
+  netPayableAmount: number;
+  retainageReleased: boolean;
 }
 
 export interface ScopeCatalogItem {

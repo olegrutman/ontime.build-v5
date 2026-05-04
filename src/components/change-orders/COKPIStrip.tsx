@@ -128,6 +128,22 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       });
     }
 
+    // Retainage tiles
+    if (financials.retainagePercent > 0 && financials.retainageAmount > 0) {
+      tiles.push({
+        label: 'Retainage Held',
+        value: fmtCurrency(financials.retainageAmount),
+        color: '#DC2626',
+        sub: `${financials.retainagePercent}%`,
+        badge: financials.retainageReleased ? { text: 'Released', variant: 'healthy' } : { text: 'Held', variant: 'watch' },
+      });
+      tiles.push({
+        label: 'Net Payable',
+        value: fmtCurrency(financials.netPayableAmount),
+        color: '#059669',
+      });
+    }
+
     return tiles;
   }
 
@@ -167,6 +183,22 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       value: fmtCurrency(totalToGC),
       color: '#F5A623',
     });
+
+    // Retainage tiles for TC
+    if (financials.retainagePercent > 0 && financials.retainageAmount > 0) {
+      tiles.push({
+        label: 'Retainage Held',
+        value: fmtCurrency(financials.retainageAmount),
+        color: '#DC2626',
+        sub: `${financials.retainagePercent}%`,
+        badge: financials.retainageReleased ? { text: 'Released', variant: 'healthy' } : { text: 'Held', variant: 'watch' },
+      });
+      tiles.push({
+        label: 'Net Payable',
+        value: fmtCurrency(financials.netPayableAmount),
+        color: '#059669',
+      });
+    }
 
     return tiles;
   }

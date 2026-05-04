@@ -26,7 +26,7 @@ export default function ProjectSettings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('id, name, tc_markup_visibility, require_photos_on_submit, role_label_overrides, sales_tax_rate, labor_taxable, tax_jurisdiction_label')
+        .select('id, name, tc_markup_visibility, require_photos_on_submit, role_label_overrides, sales_tax_rate, labor_taxable, tax_jurisdiction_label, retainage_percent, retainage_release_trigger')
         .eq('id', projectId!)
         .single();
       if (error) throw error;
@@ -40,13 +40,17 @@ export default function ProjectSettings() {
   const [laborTaxable, setLaborTaxable] = useState(false);
   const [taxLabel, setTaxLabel] = useState('');
   const [savingTax, setSavingTax] = useState(false);
-
+  const [retainagePct, setRetainagePct] = useState('');
+  const [retainageTrigger, setRetainageTrigger] = useState('substantial_completion');
+  const [savingRetainage, setSavingRetainage] = useState(false);
   useEffect(() => {
     if (project) {
       setMarkupVis((project.tc_markup_visibility as MarkupVisibility) ?? 'hidden');
       setTaxRate(String(project.sales_tax_rate ?? 0));
       setLaborTaxable(project.labor_taxable ?? false);
       setTaxLabel(project.tax_jurisdiction_label ?? '');
+      setRetainagePct(String(project.retainage_percent ?? 0));
+      setRetainageTrigger(project.retainage_release_trigger ?? 'substantial_completion');
     }
   }, [project]);
 
@@ -219,6 +223,85 @@ export default function ProjectSettings() {
               </div>
             </label>
           </RadioGroup>
+        </div>
+        {/* Retainage */}
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              Retainage
+              {savingRetainage && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Withhold a percentage from each CO payment until a release trigger is met.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Retainage Rate (%)</Label>
+              <Input
+                type="number"
+                step="0.5"
+                min="0"
+                max="100"
+                value={retainagePct}
+                onChange={e => setRetainagePct(e.target.value)}
+                placeholder="5"
+                className="h-9 mt-1 font-mono max-w-[160px]"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground mb-2 block">Release Trigger</Label>
+              <RadioGroup value={retainageTrigger} onValueChange={setRetainageTrigger} className="space-y-2">
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+                  <RadioGroupItem value="substantial_completion" className="mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Substantial Completion</p>
+                    <p className="text-xs text-muted-foreground">Release when the project reaches substantial completion.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+                  <RadioGroupItem value="final_completion" className="mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Final Completion</p>
+                    <p className="text-xs text-muted-foreground">Release after all punch-list items are resolved.</p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-lg border border-border hover:bg-accent/50 transition-colors">
+                  <RadioGroupItem value="project_close" className="mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Project Close</p>
+                    <p className="text-xs text-muted-foreground">Release only when the project is formally closed out.</p>
+                  </div>
+                </label>
+              </RadioGroup>
+            </div>
+
+            <Button size="sm" onClick={async () => {
+              const rate = parseFloat(retainagePct);
+              if (isNaN(rate) || rate < 0 || rate > 100) {
+                toast.error('Enter a valid retainage rate between 0 and 100');
+                return;
+              }
+              setSavingRetainage(true);
+              const { error } = await supabase
+                .from('projects')
+                .update({ retainage_percent: rate, retainage_release_trigger: retainageTrigger })
+                .eq('id', projectId!);
+              setSavingRetainage(false);
+              if (error) {
+                toast.error('Failed to save retainage settings');
+              } else {
+                toast.success('Retainage settings updated');
+                queryClient.invalidateQueries({ queryKey: ['project-settings', projectId] });
+                queryClient.invalidateQueries({ queryKey: ['project-tax-settings'] });
+              }
+            }} disabled={savingRetainage} className="h-8 text-xs">
+              {savingRetainage ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Save Retainage Settings
+            </Button>
+          </div>
         </div>
       </div>
     </div>
