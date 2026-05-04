@@ -96,6 +96,28 @@ function getTiles(props: COKPIStripProps): KPITile[] {
         : undefined,
     });
 
+    // Summary mode: show labor + material totals
+    if (markupVisibility === 'summary') {
+      tiles.push({
+        label: 'Labor',
+        value: fmtCurrency(laborCost),
+        color: '#7C3AED',
+      });
+    }
+
+    // Detailed mode: show TC margin
+    if (markupVisibility === 'detailed') {
+      const tcInternalCost = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
+      const tcMargin = totalTCCost - tcInternalCost;
+      const tcMarginPct = totalTCCost > 0 ? (tcMargin / totalTCCost) * 100 : 0;
+      tiles.push({
+        label: 'TC Margin',
+        value: fmtCurrency(tcMargin),
+        color: tcMargin >= 0 ? '#059669' : '#DC2626',
+        badge: tcInternalCost > 0 ? { text: `${tcMarginPct.toFixed(0)}%`, variant: tcMargin >= 0 ? 'healthy' as const : 'watch' as const } : undefined,
+      });
+    }
+
     return tiles;
   }
 
