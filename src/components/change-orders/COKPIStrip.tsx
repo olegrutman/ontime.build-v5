@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import type { COFinancials, ChangeOrder } from '@/types/changeOrder';
+import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 
 interface COKPIStripProps {
   co: ChangeOrder;
@@ -15,6 +16,7 @@ interface COKPIStripProps {
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
   onRefresh?: () => void;
+  markupVisibility?: MarkupVisibility;
 }
 
 function fmtCurrency(value: number) {
