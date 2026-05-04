@@ -77,6 +77,76 @@ export type Database = {
           },
         ]
       }
+      backcharges: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by_user_id: string
+          dispute_note: string | null
+          gc_approved: boolean
+          gc_approved_at: string | null
+          id: string
+          project_id: string
+          responsible_org_id: string | null
+          responsible_party_name: string | null
+          source_co_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by_user_id: string
+          dispute_note?: string | null
+          gc_approved?: boolean
+          gc_approved_at?: string | null
+          id?: string
+          project_id: string
+          responsible_org_id?: string | null
+          responsible_party_name?: string | null
+          source_co_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by_user_id?: string
+          dispute_note?: string | null
+          gc_approved?: boolean
+          gc_approved_at?: string | null
+          id?: string
+          project_id?: string
+          responsible_org_id?: string | null
+          responsible_party_name?: string | null
+          source_co_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backcharges_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backcharges_responsible_org_id_fkey"
+            columns: ["responsible_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backcharges_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_definitions: {
         Row: {
           aliases: string[]
