@@ -555,6 +555,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         photoCount={photos.length} photosBlocked={photosBlocked}
         onOpenCamera={() => photosCardRef.current?.openAdd()}
       />
+
+      <COExternalInviteDialog
+        open={externalInviteOpen}
+        onOpenChange={setExternalInviteOpen}
+        coId={co.id}
+        coNumber={co.co_number}
+        coTitle={displayTitle}
+        projectId={projectId}
+        onInviteSent={refreshDetail}
+      />
     </div>
   );
 }
