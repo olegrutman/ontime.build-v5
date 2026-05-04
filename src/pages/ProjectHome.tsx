@@ -458,6 +458,9 @@ export default function ProjectHome() {
               <FeatureGate feature="change_orders">
                 <COListPage projectId={id!} isTM={isTM} />
               </FeatureGate>
+             )}
+            {activeTab === 'backcharges' && (
+              <BackchargesList projectId={id!} />
             )}
           </div>
         </main>
