@@ -319,12 +319,27 @@ export function COStatusActions({
         await notifyOrg(nextOrgId, 'CHANGE_SUBMITTED', financials?.grandTotal || undefined);
       } else {
         await approveCO.mutateAsync(co.id);
-        // Contract sum is now updated automatically via the apply_co_contract_delta DB trigger.
-        // The trigger reverses the delta on rejection/recall and re-applies on re-approval, so the
-        // contract is always derived from the current set of approved COs.
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
         await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined);
+
+        // Auto-create backcharge for damaged_by_others COs
+        if (isDamagedByOthers && user) {
+          const bcAmount = parseFloat(backchargeAmount) || (financials?.grandTotal ?? 0);
+          const selectedOrg = projectParticipants.find(p => p.org_id === backchargeOrgId);
+          await supabase.from('backcharges').insert({
+            project_id: projectId,
+            source_co_id: co.id,
+            responsible_org_id: backchargeOrgId || null,
+            responsible_party_name: selectedOrg?.org_name ?? null,
+            amount: bcAmount,
+            created_by_user_id: user.id,
+          });
+          if (backchargeOrgId) {
+            await notifyOrg(backchargeOrgId, 'BACKCHARGE_CREATED', bcAmount);
+          }
+          await logActivity('backcharge_created', `Backcharge of $${bcAmount.toFixed(2)} against ${selectedOrg?.org_name ?? 'TBD'}`, bcAmount);
+        }
       }
 
       setApproveOpen(false);
