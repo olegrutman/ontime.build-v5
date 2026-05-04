@@ -10,7 +10,7 @@ export function useSidebarAttention(projectId: string | undefined) {
     if (!projectId || !user) return;
 
     const fetch = async () => {
-      const [coRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes] = await Promise.all([
+      const [coRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes, rfiNewRes] = await Promise.all([
         supabase.from('change_orders').select('id', { count: 'exact', head: true })
           .eq('project_id', projectId).eq('status', 'SUBMITTED'),
         supabase.from('invoices').select('id', { count: 'exact', head: true })
@@ -23,6 +23,8 @@ export function useSidebarAttention(projectId: string | undefined) {
           .eq('project_id', projectId).in('status', ['open', 'in_review']),
         supabase.from('backcharges').select('id', { count: 'exact', head: true })
           .eq('project_id', projectId).eq('status', 'pending'),
+        supabase.from('rfis').select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId).eq('status', 'open'),
       ]);
 
       const result: Record<string, number> = {};
