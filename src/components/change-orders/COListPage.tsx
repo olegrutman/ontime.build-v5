@@ -90,6 +90,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     if (filter === 'approved_filter') return changeOrders.filter(co =>
       ['approved', 'contracted'].includes(co.status)
     );
+    if (filter === 'withdrawn_filter') return changeOrders.filter(co => co.status === 'withdrawn');
     return changeOrders;
   }, [changeOrders, filter, orgId]);
 
