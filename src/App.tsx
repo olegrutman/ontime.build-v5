@@ -189,6 +189,7 @@ function AppRoutes() {
             <Route path="/project/:id/contract/:contractId/scope" element={<RequireAuth><ContractScopeWizard /></RequireAuth>} />
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
             <Route path="/project/:id/gc-overview" element={<RequireAuth><GCProjectOverview /></RequireAuth>} />
+            <Route path="/project/:id/settings" element={<RequireAuth><ProjectSettings /></RequireAuth>} />
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/:section" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
