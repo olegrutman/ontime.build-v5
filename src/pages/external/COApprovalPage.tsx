@@ -86,7 +86,7 @@ export default function COApprovalPage() {
     setActing(true);
     try {
       const prefix = approvalType === 'owner' ? 'owner' : 'architect';
-      const { error: err } = await supabase
+      const { error: err } = await (supabase as any)
         .from('change_orders')
         .update({
           [`${prefix}_approval_status`]: 'approved',
@@ -98,7 +98,7 @@ export default function COApprovalPage() {
       if (err) throw err;
 
       // Check if all approvals are done — transition to contracted
-      const { data: updated } = await supabase
+      const { data: updated } = await (supabase as any)
         .from('change_orders')
         .select('owner_approval_status, architect_approval_status')
         .eq('id', co.id)
@@ -108,7 +108,7 @@ export default function COApprovalPage() {
         const ownerDone = updated.owner_approval_status === 'not_required' || updated.owner_approval_status === 'approved';
         const archDone = updated.architect_approval_status === 'not_required' || updated.architect_approval_status === 'approved';
         if (ownerDone && archDone) {
-          await supabase
+          await (supabase as any)
             .from('change_orders')
             .update({ status: 'contracted', contracted_at: new Date().toISOString() })
             .eq('id', co.id);
