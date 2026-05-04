@@ -401,6 +401,21 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       {/* Body */}
       <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
         <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+
+          {/* Creation Checklist — shown for draft COs */}
+          {isDraft && (
+            <COCreationChecklist
+              projectId={projectId}
+              hasLocation={hasLocation}
+              hasReason={hasReason}
+              hasScopeItems={hasScopeItems}
+              hasPricing={hasPricing}
+              onScrollTo={(section) => {
+                if (section === 'scope' || section === 'pricing') scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            />
+          )}
+
           {/* Full-width Header Card + Pipeline */}
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
 
