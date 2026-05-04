@@ -225,6 +225,14 @@ export interface COFinancials {
   tcBillableToGC: number;
   profitMargin: number | null;
   nteUsedPercent: number | null;
+  materialsTax: number;
+  laborTax: number;
+  equipmentTax: number;
+  totalTax: number;
+  grandTotalWithTax: number;
+  taxRate: number;
+  laborTaxable: boolean;
+  taxJurisdictionLabel: string | null;
 }
 
 export interface ScopeCatalogItem {

@@ -31,7 +31,7 @@ interface COStatusActionsProps {
   isFC: boolean;
   currentOrgId: string;
   projectId: string;
-  financials?: Pick<COFinancials, 'grandTotal' | 'laborTotal' | 'fcLaborTotal' | 'fcTotalHours' | 'fcLumpSumTotal'> | null;
+  financials?: Pick<COFinancials, 'grandTotal' | 'laborTotal' | 'fcLaborTotal' | 'fcTotalHours' | 'fcLumpSumTotal' | 'materialsTotal' | 'equipmentTotal'> | null;
   collaborators?: COCollaborator[];
   assignedOrgName?: string;
   onRefresh: () => void;
@@ -202,6 +202,25 @@ export function COStatusActions({
 
     setActing(true);
     try {
+      // Snapshot tax settings from project
+      const { data: projTax } = await supabase
+        .from('projects')
+        .select('sales_tax_rate, labor_taxable')
+        .eq('id', projectId)
+        .single();
+
+      const taxSnapshot: Record<string, any> = {};
+      if (projTax) {
+        taxSnapshot.tax_rate_snapshot = projTax.sales_tax_rate ?? 0;
+        taxSnapshot.labor_taxable_snapshot = projTax.labor_taxable ?? false;
+        // Compute tax amounts
+        const rate = (projTax.sales_tax_rate ?? 0) / 100;
+        taxSnapshot.materials_tax = (financials?.materialsTotal ?? 0) * rate;
+        taxSnapshot.labor_tax = projTax.labor_taxable ? (financials?.laborTotal ?? 0) * rate : 0;
+        taxSnapshot.equipment_tax = (financials?.equipmentTotal ?? 0) * rate;
+        taxSnapshot.total_tax = (taxSnapshot.materials_tax ?? 0) + (taxSnapshot.labor_tax ?? 0) + (taxSnapshot.equipment_tax ?? 0);
+      }
+
       // Snapshot TC rates if toggle is ON
       if (isTC && co.use_fc_pricing_base) {
         const { data: settings } = await supabase
@@ -223,6 +242,7 @@ export function COStatusActions({
             tc_snapshot_hourly_rate: rate,
             tc_snapshot_markup_percent: markup,
             tc_submitted_price: calcPrice,
+            ...taxSnapshot,
           })
           .eq('id', co.id);
       } else if (isTC) {
@@ -231,8 +251,17 @@ export function COStatusActions({
           .from('change_orders')
           .update({
             tc_submitted_price: financials?.grandTotal ?? 0,
+            ...taxSnapshot,
           })
           .eq('id', co.id);
+      } else {
+        // Non-TC submitter — still snapshot tax
+        if (Object.keys(taxSnapshot).length > 0) {
+          await supabase
+            .from('change_orders')
+            .update(taxSnapshot)
+            .eq('id', co.id);
+        }
       }
 
       await submitCO.mutateAsync(co.id);
