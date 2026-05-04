@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import type { COFinancials, ChangeOrder } from '@/types/changeOrder';
+import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 
 interface COKPIStripProps {
   co: ChangeOrder;
@@ -15,6 +16,7 @@ interface COKPIStripProps {
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
   onRefresh?: () => void;
+  markupVisibility?: MarkupVisibility;
 }
 
 function fmtCurrency(value: number) {
@@ -39,7 +41,7 @@ const BADGE_CLASSES = {
 };
 
 function getTiles(props: COKPIStripProps): KPITile[] {
-  const { isGC, isTC, isFC, financials } = props;
+  const { isGC, isTC, isFC, financials, markupVisibility = 'hidden' } = props;
   const matResp = props.materialResponsible ?? 'TC';
   const eqResp = props.equipmentResponsible ?? 'TC';
 
@@ -93,6 +95,28 @@ function getTiles(props: COKPIStripProps): KPITile[] {
         ? { text: `${((totalTCCost / gcBudget) * 100).toFixed(0)}%`, variant: totalTCCost <= gcBudget ? 'healthy' as const : 'watch' as const }
         : undefined,
     });
+
+    // Summary mode: show labor + material totals
+    if (markupVisibility === 'summary') {
+      tiles.push({
+        label: 'Labor',
+        value: fmtCurrency(laborCost),
+        color: '#7C3AED',
+      });
+    }
+
+    // Detailed mode: show TC margin
+    if (markupVisibility === 'detailed') {
+      const tcInternalCost = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
+      const tcMargin = totalTCCost - tcInternalCost;
+      const tcMarginPct = totalTCCost > 0 ? (tcMargin / totalTCCost) * 100 : 0;
+      tiles.push({
+        label: 'TC Margin',
+        value: fmtCurrency(tcMargin),
+        color: tcMargin >= 0 ? '#059669' : '#DC2626',
+        badge: tcInternalCost > 0 ? { text: `${tcMarginPct.toFixed(0)}%`, variant: tcMargin >= 0 ? 'healthy' as const : 'watch' as const } : undefined,
+      });
+    }
 
     return tiles;
   }

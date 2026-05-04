@@ -57,6 +57,7 @@ const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 const QuickCapture = lazy(() => import("./pages/QuickCapture"));
 const GCProjectOverview = lazy(() => import("./pages/GCProjectOverview"));
+const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
 const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
 const DemoV2ProjectOverview = lazy(() => import("./pages/DemoV2ProjectOverview"));
@@ -188,6 +189,7 @@ function AppRoutes() {
             <Route path="/project/:id/contract/:contractId/scope" element={<RequireAuth><ContractScopeWizard /></RequireAuth>} />
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
             <Route path="/project/:id/gc-overview" element={<RequireAuth><GCProjectOverview /></RequireAuth>} />
+            <Route path="/project/:id/settings" element={<RequireAuth><ProjectSettings /></RequireAuth>} />
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/:section" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />

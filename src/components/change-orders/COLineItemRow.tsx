@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { LaborEntryForm } from './LaborEntryForm';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
+import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -35,6 +36,8 @@ interface COLineItemRowProps {
   onRefresh: () => void;
   isEven?: boolean;
   index?: number;
+  /** How much TC cost breakdown to show GCs. Default 'hidden'. */
+  markupVisibility?: MarkupVisibility;
 }
 
 function fmt(n: number) {
@@ -60,7 +63,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
-  onRefresh, isEven = true, index,
+  onRefresh, isEven = true, index, markupVisibility = 'hidden',
 }, ref) {
   // Resolve effective pricing type: line-item override wins, else CO default
   const pricingType: COPricingType = (item.pricing_type as COPricingType) ?? coPricingType;
@@ -158,11 +161,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
 
-  const hideGCBreakdown = isGC && pricingType === 'fixed';
-  const visibleBillable = hideGCBreakdown ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
+  // Markup visibility logic for GC
+  const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
+  const gcSummaryOnly = isGC && markupVisibility === 'summary';
+  const visibleBillable = hideGCBreakdown ? [] : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
   const tcDownstreamCosts = isTC ? fcBillable : [];
   const totalForRole = hideGCBreakdown ? 0 : isGC ? tcTotal : isFC ? fcTotal : tcTotal;
-  const entryCount = hideGCBreakdown ? billable.length : visibleBillable.length;
+  const entryCount = hideGCBreakdown ? billable.length : gcSummaryOnly ? billable.length : visibleBillable.length;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
@@ -286,7 +291,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             )}
 
             {/* Margin badge */}
-            {hasMargin && (isTC || isFC) && (
+            {hasMargin && (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
               <span className={cn(
                 'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
                 marginAmount >= 0
@@ -441,6 +446,16 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <p className="text-sm font-semibold text-foreground">Pricing details hidden</p>
               <p className="text-xs text-muted-foreground mt-1">GC only sees the final submitted amount on fixed-price change orders.</p>
             </div>
+          ) : gcSummaryOnly ? (
+            <div className="px-5 py-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Labor Total</span>
+                <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
+              </div>
+              {billable.length > 0 && (
+                <p className="text-[10px] text-muted-foreground">{billable.length} entr{billable.length === 1 ? 'y' : 'ies'} · Rates hidden in summary mode</p>
+              )}
+            </div>
           ) : entryCount === 0 && !autoExpand ? (
             /* Empty state */
             <div className="px-6 py-8 text-center">
@@ -456,7 +471,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <span className="flex-1">Description</span>
                 <span className="w-14 text-right">Hours</span>
                 <span className="w-24 text-right">Billable</span>
-                {(isTC || isFC) && (
+                {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                   <span className="w-28 text-right flex items-center justify-end gap-1">
                     <Lock className="h-2.5 w-2.5" /> Int. Cost
                   </span>
@@ -502,7 +517,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                         )}
                       </span>
                       {/* Internal cost + inline edit pencil */}
-                      {(isTC || isFC) && (
+                      {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                         <span className="w-28 text-right inline-flex items-center justify-end gap-1">
                           {matchingActual ? (
                             <>

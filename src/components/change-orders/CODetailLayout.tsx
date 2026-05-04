@@ -72,11 +72,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   // Project-level photo requirement setting
   const { data: projectSettings } = useQuery({
-    queryKey: ['project-photo-settings', projectId],
+    queryKey: ['project-co-settings', projectId],
     queryFn: async () => {
       const { data } = await supabase
         .from('projects')
-        .select('require_photos_on_submit')
+        .select('require_photos_on_submit, tc_markup_visibility')
         .eq('id', projectId)
         .single();
       return data;
@@ -86,6 +86,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   });
   const requirePhotos = !!(projectSettings as any)?.require_photos_on_submit;
   const photosBlocked = requirePhotos && photos.length === 0;
+  const markupVisibility = ((projectSettings as any)?.tc_markup_visibility ?? 'hidden') as import('@/hooks/useMarkupVisibility').MarkupVisibility;
 
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
@@ -256,6 +257,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     onRefresh: refreshDetail,
     lineItemCount: lineItems.length,
+    markupVisibility,
   };
 
   return (
@@ -305,7 +307,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* KPI Row */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
@@ -404,6 +406,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         onRefresh={refreshDetail}
                         isEven={idx % 2 === 0}
                         index={idx + 1}
+                        markupVisibility={markupVisibility}
                       />
                     ))
                   )}

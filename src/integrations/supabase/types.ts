@@ -4538,6 +4538,7 @@ export type Database = {
           state: string | null
           status: string
           structures: Json | null
+          tc_markup_visibility: string
           updated_at: string
           zip: string | null
         }
@@ -4564,6 +4565,7 @@ export type Database = {
           state?: string | null
           status?: string
           structures?: Json | null
+          tc_markup_visibility?: string
           updated_at?: string
           zip?: string | null
         }
@@ -4590,6 +4592,7 @@ export type Database = {
           state?: string | null
           status?: string
           structures?: Json | null
+          tc_markup_visibility?: string
           updated_at?: string
           zip?: string | null
         }
