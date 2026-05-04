@@ -195,6 +195,8 @@ function AppRoutes() {
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
             <Route path="/project/:id/gc-overview" element={<RequireAuth><GCProjectOverview /></RequireAuth>} />
             <Route path="/project/:id/settings" element={<RequireAuth><ProjectSettings /></RequireAuth>} />
+            <Route path="/project/:id/rfis/new" element={<RequireAuth><CreateRFIPage /></RequireAuth>} />
+            <Route path="/project/:id/rfis/:rfiId" element={<RequireAuth><RFIDetailPage /></RequireAuth>} />
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/:section" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
