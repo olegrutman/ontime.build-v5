@@ -159,8 +159,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             </>
           )}
 
-          {/* TC / FC Profitability */}
-          {(isTC || isFC) && (
+          {/* TC / FC Profitability — also show to GC when detailed visibility */}
+          {(isTC || isFC || (isGC && props.markupVisibility === 'detailed')) && (
             <div className="border-t border-border pt-3 mt-3 space-y-2">
               <p className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted-foreground">
                 {isTC ? 'TC' : 'FC'} Profitability
