@@ -257,6 +257,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     onRefresh: refreshDetail,
     lineItemCount: lineItems.length,
+    markupVisibility,
   };
 
   return (
