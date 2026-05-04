@@ -239,6 +239,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   }
 
   const status = co.status as COStatus;
+  const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
 
   // Scope & Labor totals
