@@ -365,6 +365,31 @@ export function COStatusActions({
     }
   }
 
+  async function doWithdraw() {
+    if (!withdrawReason.trim()) return;
+    setActing(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: {
+          status: 'withdrawn',
+          withdrawn_at: new Date().toISOString(),
+          withdrawn_reason: withdrawReason.trim(),
+        },
+      });
+      toast.success('CO withdrawn permanently');
+      await logActivity('withdrawn', withdrawReason.trim());
+      await notifyAllCOParties('CO_WITHDRAWN');
+      setWithdrawOpen(false);
+      setWithdrawReason('');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to withdraw');
+    } finally {
+      setActing(false);
+    }
+  }
+
   const isCreator = co.created_by_user_id === user?.id;
   const isActiveCollaborator = collaborators.some(c => c.organization_id === currentOrgId && c.status === 'active');
   const isAnyCollaborator = collaborators.some(c => c.organization_id === currentOrgId);
