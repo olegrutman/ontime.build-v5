@@ -461,7 +461,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <span className="flex-1">Description</span>
                 <span className="w-14 text-right">Hours</span>
                 <span className="w-24 text-right">Billable</span>
-                {(isTC || isFC) && (
+                {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                   <span className="w-28 text-right flex items-center justify-end gap-1">
                     <Lock className="h-2.5 w-2.5" /> Int. Cost
                   </span>
