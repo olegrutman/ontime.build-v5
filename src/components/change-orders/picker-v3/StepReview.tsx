@@ -16,6 +16,8 @@ interface StepReviewProps {
 function fmt(n: number) { return '$' + Math.round(n).toLocaleString('en-US'); }
 
 export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepReviewProps) {
+  const { id: projectId } = useParams<{ id: string }>();
+  const { data: openRFIs = [] } = useOpenRFIs(projectId);
   const total = grandTotal(state.items);
 
   return (
