@@ -401,6 +401,8 @@ export type Database = {
           trigger_code: string | null
           updated_at: string | null
           use_fc_pricing_base: boolean | null
+          withdrawn_at: string | null
+          withdrawn_reason: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -451,6 +453,8 @@ export type Database = {
           trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
+          withdrawn_at?: string | null
+          withdrawn_reason?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -501,6 +505,8 @@ export type Database = {
           trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
+          withdrawn_at?: string | null
+          withdrawn_reason?: string | null
         }
         Relationships: [
           {
@@ -6146,6 +6152,8 @@ export type Database = {
           trigger_code: string | null
           updated_at: string | null
           use_fc_pricing_base: boolean | null
+          withdrawn_at: string | null
+          withdrawn_reason: string | null
         }
         SetofOptions: {
           from: "*"
