@@ -59,10 +59,10 @@ export default function COApprovalPage() {
         }
       } else {
         // Try architect token
-        const { data: archData } = await supabase
+        const { data: archData } = await (supabase as any)
           .from('change_orders')
           .select('id, title, co_number, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
-          .eq('architect_approval_token' as any, token)
+          .eq('architect_approval_token', token)
           .maybeSingle();
 
         if (archData) {
