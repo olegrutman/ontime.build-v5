@@ -549,6 +549,12 @@ export function COStatusActions({
               Acknowledge Completion
             </Button>
           )}
+          {canWithdraw && (
+            <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-muted-foreground border-muted-foreground/30" onClick={() => setWithdrawOpen(true)} disabled={acting}>
+              <Trash2 className="h-3 w-3" />
+              Withdraw permanently
+            </Button>
+          )}
         </div>
       </div>
 
@@ -608,6 +614,42 @@ export function COStatusActions({
             >
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Withdraw {co.document_type === 'WO' ? 'work order' : 'change order'} permanently</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The {co.document_type === 'WO' ? 'work order' : 'change order'} will be permanently closed and cannot be resubmitted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="withdraw-reason">Reason *</Label>
+              <VoiceInputButton onTranscript={(text) => setWithdrawReason(prev => prev ? prev + ' ' + text : text)} />
+            </div>
+            <Textarea
+              id="withdraw-reason"
+              value={withdrawReason}
+              onChange={e => setWithdrawReason(e.target.value)}
+              placeholder="Why is this being withdrawn?"
+              rows={3}
+              className="mt-1.5 resize-none"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doWithdraw}
+              disabled={acting || !withdrawReason.trim()}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Withdraw permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
