@@ -6,7 +6,8 @@ export type COStatus =
   | 'submitted'
   | 'approved'
   | 'rejected'
-  | 'contracted';
+  | 'contracted'
+  | 'withdrawn';
 
 export type COPricingType = 'fixed' | 'tm' | 'nte';
 
@@ -54,6 +55,7 @@ export const CO_STATUS_LABELS: Record<COStatus, string> = {
   approved:           'Approved',
   rejected:           'Rejected',
   contracted:         'Contracted',
+  withdrawn:          'Withdrawn',
 };
 
 export type CODocumentType = 'CO' | 'WO';
