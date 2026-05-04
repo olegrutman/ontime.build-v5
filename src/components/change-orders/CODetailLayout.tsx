@@ -72,11 +72,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   // Project-level photo requirement setting
   const { data: projectSettings } = useQuery({
-    queryKey: ['project-photo-settings', projectId],
+    queryKey: ['project-co-settings', projectId],
     queryFn: async () => {
       const { data } = await supabase
         .from('projects')
-        .select('require_photos_on_submit')
+        .select('require_photos_on_submit, tc_markup_visibility')
         .eq('id', projectId)
         .single();
       return data;
@@ -86,6 +86,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   });
   const requirePhotos = !!(projectSettings as any)?.require_photos_on_submit;
   const photosBlocked = requirePhotos && photos.length === 0;
+  const markupVisibility = ((projectSettings as any)?.tc_markup_visibility ?? 'hidden') as import('@/hooks/useMarkupVisibility').MarkupVisibility;
 
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
