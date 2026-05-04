@@ -417,7 +417,9 @@ export function COStatusActions({
   const canMarkCompleted = isTC && isApproved && !co.completed_at;
   const canAcknowledge = isGC && isApproved && !!co.completed_at && !co.completion_acknowledged_at;
   const isContracted = status === 'contracted';
-
+  const isWithdrawn = status === 'withdrawn';
+  /* Creator can withdraw from draft/shared/rejected */
+  const canWithdraw = isCreator && ['draft', 'shared', 'rejected'].includes(status);
   if (isContracted) {
     return (
       <div className="co-light-shell px-4 py-3 flex items-center gap-2">
