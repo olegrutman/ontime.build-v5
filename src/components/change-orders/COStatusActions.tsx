@@ -63,6 +63,29 @@ export function COStatusActions({
   const [approveOpen, setApproveOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState('');
+  const [backchargeOrgId, setBackchargeOrgId] = useState<string>('');
+  const [backchargeAmount, setBackchargeAmount] = useState('');
+  const [backchargeNote, setBackchargeNote] = useState('');
+  const [projectParticipants, setProjectParticipants] = useState<Array<{ org_id: string; org_name: string }>>([]);
+
+  const isDamagedByOthers = co.reason === 'damaged_by_others';
+
+  // Fetch project participants when needed for backcharge dialog
+  useEffect(() => {
+    if (!isDamagedByOthers || !isGC) return;
+    supabase
+      .from('project_participants')
+      .select('organization_id, organizations:organization_id(id, name)')
+      .eq('project_id', projectId)
+      .then(({ data }) => {
+        if (data) {
+          const participants = data
+            .map((p: any) => ({ org_id: p.organization_id, org_name: p.organizations?.name ?? 'Unknown' }))
+            .filter((p: any) => p.org_id !== currentOrgId);
+          setProjectParticipants(participants);
+        }
+      });
+  }, [isDamagedByOthers, isGC, projectId, currentOrgId]);
 
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
