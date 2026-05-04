@@ -372,14 +372,18 @@ export type Database = {
           draft_shared_with_next: boolean
           equipment_needed: boolean
           equipment_responsible: string | null
+          equipment_tax: number | null
           fc_input_needed: boolean
           fc_pricing_submitted_at: string | null
           gc_budget: number | null
           id: string
+          labor_tax: number | null
+          labor_taxable_snapshot: boolean | null
           location_tag: string | null
           materials_needed: boolean
           materials_on_site: boolean
           materials_responsible: string | null
+          materials_tax: number | null
           nte_cap: number | null
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
@@ -394,10 +398,12 @@ export type Database = {
           shared_at: string | null
           status: string
           submitted_at: string | null
+          tax_rate_snapshot: number | null
           tc_snapshot_hourly_rate: number | null
           tc_snapshot_markup_percent: number | null
           tc_submitted_price: number | null
           title: string | null
+          total_tax: number | null
           trigger_code: string | null
           updated_at: string | null
           use_fc_pricing_base: boolean | null
@@ -424,14 +430,18 @@ export type Database = {
           draft_shared_with_next?: boolean
           equipment_needed?: boolean
           equipment_responsible?: string | null
+          equipment_tax?: number | null
           fc_input_needed?: boolean
           fc_pricing_submitted_at?: string | null
           gc_budget?: number | null
           id?: string
+          labor_tax?: number | null
+          labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
           materials_needed?: boolean
           materials_on_site?: boolean
           materials_responsible?: string | null
+          materials_tax?: number | null
           nte_cap?: number | null
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
@@ -446,10 +456,12 @@ export type Database = {
           shared_at?: string | null
           status?: string
           submitted_at?: string | null
+          tax_rate_snapshot?: number | null
           tc_snapshot_hourly_rate?: number | null
           tc_snapshot_markup_percent?: number | null
           tc_submitted_price?: number | null
           title?: string | null
+          total_tax?: number | null
           trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
@@ -476,14 +488,18 @@ export type Database = {
           draft_shared_with_next?: boolean
           equipment_needed?: boolean
           equipment_responsible?: string | null
+          equipment_tax?: number | null
           fc_input_needed?: boolean
           fc_pricing_submitted_at?: string | null
           gc_budget?: number | null
           id?: string
+          labor_tax?: number | null
+          labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
           materials_needed?: boolean
           materials_on_site?: boolean
           materials_responsible?: string | null
+          materials_tax?: number | null
           nte_cap?: number | null
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
@@ -498,10 +514,12 @@ export type Database = {
           shared_at?: string | null
           status?: string
           submitted_at?: string | null
+          tax_rate_snapshot?: number | null
           tc_snapshot_hourly_rate?: number | null
           tc_snapshot_markup_percent?: number | null
           tc_submitted_price?: number | null
           title?: string | null
+          total_tax?: number | null
           trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
@@ -4525,6 +4543,7 @@ export type Database = {
           created_by_org_id: string | null
           description: string | null
           id: string
+          labor_taxable: boolean
           mobilization_enabled: boolean | null
           name: string
           organization_id: string
@@ -4533,11 +4552,13 @@ export type Database = {
           require_photos_on_submit: boolean
           retainage_percent: number | null
           role_label_overrides: Json
+          sales_tax_rate: number
           scope: Json | null
           start_date: string | null
           state: string | null
           status: string
           structures: Json | null
+          tax_jurisdiction_label: string | null
           tc_markup_visibility: string
           updated_at: string
           zip: string | null
@@ -4552,6 +4573,7 @@ export type Database = {
           created_by_org_id?: string | null
           description?: string | null
           id?: string
+          labor_taxable?: boolean
           mobilization_enabled?: boolean | null
           name: string
           organization_id: string
@@ -4560,11 +4582,13 @@ export type Database = {
           require_photos_on_submit?: boolean
           retainage_percent?: number | null
           role_label_overrides?: Json
+          sales_tax_rate?: number
           scope?: Json | null
           start_date?: string | null
           state?: string | null
           status?: string
           structures?: Json | null
+          tax_jurisdiction_label?: string | null
           tc_markup_visibility?: string
           updated_at?: string
           zip?: string | null
@@ -4579,6 +4603,7 @@ export type Database = {
           created_by_org_id?: string | null
           description?: string | null
           id?: string
+          labor_taxable?: boolean
           mobilization_enabled?: boolean | null
           name?: string
           organization_id?: string
@@ -4587,11 +4612,13 @@ export type Database = {
           require_photos_on_submit?: boolean
           retainage_percent?: number | null
           role_label_overrides?: Json
+          sales_tax_rate?: number
           scope?: Json | null
           start_date?: string | null
           state?: string | null
           status?: string
           structures?: Json | null
+          tax_jurisdiction_label?: string | null
           tc_markup_visibility?: string
           updated_at?: string
           zip?: string | null
@@ -6126,14 +6153,18 @@ export type Database = {
           draft_shared_with_next: boolean
           equipment_needed: boolean
           equipment_responsible: string | null
+          equipment_tax: number | null
           fc_input_needed: boolean
           fc_pricing_submitted_at: string | null
           gc_budget: number | null
           id: string
+          labor_tax: number | null
+          labor_taxable_snapshot: boolean | null
           location_tag: string | null
           materials_needed: boolean
           materials_on_site: boolean
           materials_responsible: string | null
+          materials_tax: number | null
           nte_cap: number | null
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
@@ -6148,10 +6179,12 @@ export type Database = {
           shared_at: string | null
           status: string
           submitted_at: string | null
+          tax_rate_snapshot: number | null
           tc_snapshot_hourly_rate: number | null
           tc_snapshot_markup_percent: number | null
           tc_submitted_price: number | null
           title: string | null
+          total_tax: number | null
           trigger_code: string | null
           updated_at: string | null
           use_fc_pricing_base: boolean | null
