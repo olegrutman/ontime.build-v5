@@ -51,6 +51,7 @@ const RFIListPage = lazy(() => import("./pages/RFIListPage"));
 const RFIDetailPage = lazy(() => import("./pages/RFIDetailPage"));
 const CreateRFIPage = lazy(() => import("./pages/CreateRFIPage"));
 const COApprovalPage = lazy(() => import("./pages/external/COApprovalPage"));
+const COExternalView = lazy(() => import("./pages/external/COExternalView"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
