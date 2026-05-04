@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink, Download } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -62,6 +62,43 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [activityOpen, setActivityOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  async function handleDownloadPdf() {
+    if (!co) return;
+    setDownloadingPdf(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-co-pdf`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ co_id: co.id }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Failed' }));
+        throw new Error(err.error);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CO-${co.co_number ?? co.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF downloaded');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to download PDF');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
 
   const { data: auditEntries = [] } = useCOAuditLog(coId);
   const {
@@ -285,6 +322,15 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs gap-1 text-muted-foreground"
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+            >
+              {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} PDF
+            </Button>
             {isGC && (
               <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
                 <ExternalLink className="h-3.5 w-3.5" /> Invite External
