@@ -285,6 +285,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {isGC && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
+                <ExternalLink className="h-3.5 w-3.5" /> Invite External
+              </Button>
+            )}
             <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground">
               <Copy className="h-3.5 w-3.5" /> Duplicate
             </Button>
