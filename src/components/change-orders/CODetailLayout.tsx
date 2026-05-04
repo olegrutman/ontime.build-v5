@@ -33,6 +33,7 @@ import { COAcceptBanner } from './COAcceptBanner';
 import { COExternalApprovalBanner } from './COExternalApprovalBanner';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 import { useCOPhotos } from '@/hooks/useCOPhotos';
+import { CORFIBlockBanner } from './CORFIBlockBanner';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
