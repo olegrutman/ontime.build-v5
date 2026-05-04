@@ -420,6 +420,15 @@ export function COStatusActions({
   const isWithdrawn = status === 'withdrawn';
   /* Creator can withdraw from draft/shared/rejected */
   const canWithdraw = isCreator && ['draft', 'shared', 'rejected'].includes(status);
+  if (isWithdrawn) {
+    return (
+      <div className="co-light-shell border-muted bg-muted/30 px-4 py-3 space-y-1">
+        <p className="text-sm font-semibold text-muted-foreground">Withdrawn</p>
+        {co.withdrawn_reason && <p className="text-xs text-muted-foreground">{co.withdrawn_reason}</p>}
+      </div>
+    );
+  }
+
   if (isContracted) {
     return (
       <div className="co-light-shell px-4 py-3 flex items-center gap-2">
