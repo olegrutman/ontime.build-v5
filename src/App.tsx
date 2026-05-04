@@ -47,6 +47,7 @@ const Reminders = lazy(() => import("./pages/Reminders"));
 const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
 const SupplierProjectEstimates = lazy(() => import("./pages/SupplierProjectEstimates"));
 const RFIs = lazy(() => import("./pages/RFIs"));
+const COApprovalPage = lazy(() => import("./pages/external/COApprovalPage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
