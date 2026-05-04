@@ -1,6 +1,10 @@
 import { cn } from '@/lib/utils';
 import type { PickerState, PickerAction } from './types';
 import { itemSubtotal, grandTotal, locationDisplay } from './types';
+import { useOpenRFIs } from '@/hooks/useRFIs';
+import { useParams } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MessageSquareMore } from 'lucide-react';
 
 interface StepReviewProps {
   state: PickerState;
@@ -12,6 +16,8 @@ interface StepReviewProps {
 function fmt(n: number) { return '$' + Math.round(n).toLocaleString('en-US'); }
 
 export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepReviewProps) {
+  const { id: projectId } = useParams<{ id: string }>();
+  const { data: openRFIs = [] } = useOpenRFIs(projectId);
   const total = grandTotal(state.items);
 
   return (
@@ -140,6 +146,35 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
           <p className="text-[0.7rem] text-muted-foreground mt-0.5">Auto-invoice from approved CO</p>
         </div>
       </div>
+
+      {/* Link to RFI (optional) */}
+      {openRFIs.length > 0 && (
+        <div className="mt-4 p-3.5 bg-background border rounded-xl">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageSquareMore className="h-4 w-4 text-muted-foreground" />
+            <p className="text-[0.62rem] font-bold text-muted-foreground uppercase tracking-[1.2px]">Link to RFI (optional)</p>
+          </div>
+          <Select
+            value={state.linkedRfiId ?? 'none'}
+            onValueChange={v => dispatch({ type: 'SET_LINKED_RFI', rfiId: v === 'none' ? null : v })}
+          >
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="No linked RFI" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No linked RFI</SelectItem>
+              {openRFIs.map(rfi => (
+                <SelectItem key={rfi.id} value={rfi.id}>
+                  {rfi.rfi_number} — {rfi.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[0.65rem] text-muted-foreground mt-1.5">
+            Linking blocks this CO until the RFI is answered.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

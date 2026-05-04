@@ -47,6 +47,9 @@ const Reminders = lazy(() => import("./pages/Reminders"));
 const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
 const SupplierProjectEstimates = lazy(() => import("./pages/SupplierProjectEstimates"));
 const RFIs = lazy(() => import("./pages/RFIs"));
+const RFIListPage = lazy(() => import("./pages/RFIListPage"));
+const RFIDetailPage = lazy(() => import("./pages/RFIDetailPage"));
+const CreateRFIPage = lazy(() => import("./pages/CreateRFIPage"));
 const COApprovalPage = lazy(() => import("./pages/external/COApprovalPage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -192,6 +195,8 @@ function AppRoutes() {
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
             <Route path="/project/:id/gc-overview" element={<RequireAuth><GCProjectOverview /></RequireAuth>} />
             <Route path="/project/:id/settings" element={<RequireAuth><ProjectSettings /></RequireAuth>} />
+            <Route path="/project/:id/rfis/new" element={<RequireAuth><CreateRFIPage /></RequireAuth>} />
+            <Route path="/project/:id/rfis/:rfiId" element={<RequireAuth><RFIDetailPage /></RequireAuth>} />
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/:section" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />

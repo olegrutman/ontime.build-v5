@@ -115,6 +115,7 @@ export interface PickerState {
   collaboration: CollaborationState;
   role: COCreatedByRole;
   submitted: boolean;
+  linkedRfiId: string | null;
 }
 
 // ─── Reducer Actions ─────────────────────────────────────────────
@@ -143,7 +144,8 @@ export type PickerAction =
   | { type: 'ADD_ITEM' }
   | { type: 'SWITCH_ITEM'; index: number }
   | { type: 'DELETE_ITEM'; index: number }
-  | { type: 'SET_SUBMITTED' };
+  | { type: 'SET_SUBMITTED' }
+  | { type: 'SET_LINKED_RFI'; rfiId: string | null };
 
 // ─── Step Definitions ────────────────────────────────────────────
 export const PICKER_STEPS = [
@@ -200,6 +202,7 @@ export function initialPickerState(role: COCreatedByRole): PickerState {
     },
     role,
     submitted: false,
+    linkedRfiId: null,
   };
 }
 

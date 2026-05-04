@@ -352,6 +352,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               equipment_needed: item.equipment.length > 0,
               materials_responsible: item.materialResponsible,
               equipment_responsible: item.equipmentResponsible,
+              blocked_by_rfi_id: state.linkedRfiId ?? null,
             })
             .select()
             .single();

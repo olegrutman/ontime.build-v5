@@ -59,6 +59,7 @@ import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
 import { ContractSOVEditor } from '@/components/sov';
 import { RFIsTab } from '@/components/rfi';
+import RFIListPage from '@/pages/RFIListPage';
 import { ScheduleTab } from '@/components/schedule/ScheduleTab';
 import { DailyLogPanel } from '@/components/daily-log/DailyLogPanel';
 import { useToast } from '@/hooks/use-toast';
@@ -397,7 +398,7 @@ export default function ProjectHome() {
             )}
 
             {activeTab === 'rfis' && (
-              isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
+              isInDemoMode ? <DemoRFIsTab /> : <RFIListPage />
             )}
             {activeTab === 'estimates' && isSupplier && supplierOrgId && (
               <FeatureGate feature="supplier_estimates">

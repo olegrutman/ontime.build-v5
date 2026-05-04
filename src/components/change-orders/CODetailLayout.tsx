@@ -33,6 +33,7 @@ import { COAcceptBanner } from './COAcceptBanner';
 import { COExternalApprovalBanner } from './COExternalApprovalBanner';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 import { useCOPhotos } from '@/hooks/useCOPhotos';
+import { CORFIBlockBanner } from './CORFIBlockBanner';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -177,6 +178,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'submit':
         if (co) {
+          if (rfiBlocked) {
+            toast.error('This change order is blocked by an open RFI. Resolve the RFI first.');
+            break;
+          }
           if (photosBlocked) {
             toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
             photosCardRef.current?.openAdd('during');
@@ -238,6 +243,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   }
 
   const status = co.status as COStatus;
+  const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
 
   // Scope & Labor totals
@@ -287,8 +293,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
 
       {/* Accept Banner */}
-      <div className="max-w-7xl mx-auto w-full px-4 pt-3">
+      <div className="max-w-7xl mx-auto w-full px-4 pt-3 space-y-3">
         <COAcceptBanner co={co} projectId={projectId} myOrgId={myOrgId} collaborators={collaborators} onRefresh={refreshDetail} />
+        <CORFIBlockBanner blockedByRfiId={(co as any).blocked_by_rfi_id} projectId={projectId} />
       </div>
 
       {/* Body */}

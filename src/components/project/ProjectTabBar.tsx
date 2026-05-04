@@ -11,6 +11,7 @@ interface Tab {
 const TABS: Tab[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'change-orders', label: 'Change Orders', featureKey: 'change_orders' },
+  { key: 'rfis', label: 'RFIs' },
   { key: 'invoices', label: 'Invoices', featureKey: 'invoicing' },
   { key: 'purchase-orders', label: 'Purchase Orders', featureKey: 'purchase_orders' },
   { key: 'returns', label: 'Returns', featureKey: 'returns_tracking' },
