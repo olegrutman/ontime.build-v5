@@ -44,10 +44,10 @@ export default function COApprovalPage() {
 
     async function load() {
       // Try owner token first
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('change_orders')
         .select('id, title, co_number, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
-        .eq('owner_approval_token' as any, token)
+        .eq('owner_approval_token', token)
         .maybeSingle();
 
       if (data) {
