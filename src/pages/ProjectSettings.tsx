@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +26,7 @@ export default function ProjectSettings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('id, name, tc_markup_visibility, require_photos_on_submit, role_label_overrides')
+        .select('id, name, tc_markup_visibility, require_photos_on_submit, role_label_overrides, sales_tax_rate, labor_taxable, tax_jurisdiction_label')
         .eq('id', projectId!)
         .single();
       if (error) throw error;
@@ -34,10 +36,17 @@ export default function ProjectSettings() {
 
   const [markupVis, setMarkupVis] = useState<MarkupVisibility>('hidden');
   const [saving, setSaving] = useState(false);
+  const [taxRate, setTaxRate] = useState('');
+  const [laborTaxable, setLaborTaxable] = useState(false);
+  const [taxLabel, setTaxLabel] = useState('');
+  const [savingTax, setSavingTax] = useState(false);
 
   useEffect(() => {
     if (project) {
       setMarkupVis((project.tc_markup_visibility as MarkupVisibility) ?? 'hidden');
+      setTaxRate(String(project.sales_tax_rate ?? 0));
+      setLaborTaxable(project.labor_taxable ?? false);
+      setTaxLabel(project.tax_jurisdiction_label ?? '');
     }
   }, [project]);
 
@@ -56,6 +65,31 @@ export default function ProjectSettings() {
       queryClient.invalidateQueries({ queryKey: ['project-co-settings', projectId] });
       queryClient.invalidateQueries({ queryKey: ['markup-visibility', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-settings', projectId] });
+    }
+  }
+
+  async function saveTaxSettings() {
+    const rate = parseFloat(taxRate);
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      toast.error('Enter a valid tax rate between 0 and 100');
+      return;
+    }
+    setSavingTax(true);
+    const { error } = await supabase
+      .from('projects')
+      .update({
+        sales_tax_rate: rate,
+        labor_taxable: laborTaxable,
+        tax_jurisdiction_label: taxLabel.trim() || null,
+      })
+      .eq('id', projectId!);
+    setSavingTax(false);
+    if (error) {
+      toast.error('Failed to save tax settings');
+    } else {
+      toast.success('Tax settings updated');
+      queryClient.invalidateQueries({ queryKey: ['project-settings', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-tax-settings'] });
     }
   }
 
@@ -95,6 +129,59 @@ export default function ProjectSettings() {
         <div>
           <h1 className="text-xl font-bold text-foreground">{project?.name ?? 'Project'} Settings</h1>
           <p className="text-sm text-muted-foreground mt-1">Configure project-level behavior and visibility rules.</p>
+        </div>
+
+        {/* Sales Tax */}
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              Sales Tax
+              {savingTax && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Configure per-jurisdiction tax rates. Tax is snapshotted when a CO is submitted.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Tax Rate (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={taxRate}
+                  onChange={e => setTaxRate(e.target.value)}
+                  placeholder="8.25"
+                  className="h-9 mt-1 font-mono"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Jurisdiction Label</Label>
+                <Input
+                  value={taxLabel}
+                  onChange={e => setTaxLabel(e.target.value)}
+                  placeholder="WA Sales Tax"
+                  className="h-9 mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+              <div>
+                <p className="text-sm font-medium text-foreground">Labor is taxable</p>
+                <p className="text-xs text-muted-foreground">Some jurisdictions tax labor; most only tax materials & equipment.</p>
+              </div>
+              <Switch checked={laborTaxable} onCheckedChange={setLaborTaxable} />
+            </div>
+
+            <Button size="sm" onClick={saveTaxSettings} disabled={savingTax} className="h-8 text-xs">
+              {savingTax ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Save Tax Settings
+            </Button>
+          </div>
         </div>
 
         {/* Markup Disclosure */}
