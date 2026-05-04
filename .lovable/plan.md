@@ -1,154 +1,108 @@
 
-# CO/WO Feature Audit — Findings from Code Review
+# Comprehensive CO/WO Test Suite
 
-I've completed a deep static analysis of the entire CO/WO system. Below are the bugs and risks I found, grouped by severity. Since I cannot spin up three simultaneous authenticated sessions in a browser, this audit is code-review based — but it covers every area in your test plan.
+## Layer 1: Pure Unit Tests (Vitest)
 
----
+Test pure utility functions with no DB dependencies.
 
-## CRITICAL — Visibility Leaks & Data Exposure
+**File: `src/test/coLabel.test.ts`**
+- `coLabel('CO')` → "Change Order", `coLabel('WO')` → "Work Order"
+- `coLabel('CO', true)` → "Change Orders" (plural)
+- `coAbbrev` returns "CO"/"WO"/"COs"/"WOs"
+- `docTypeFromMode(true)` → "WO", `docTypeFromMode(false)` → "CO"
 
-### 1. [ANY] [Part 2 - RLS] Internal costs (is_actual_cost) are readable by ALL CO participants at the DB level
+**File: `src/test/pickerTypes.test.ts`**
+- `blankItem()` returns correct defaults (markup 18, empty locations, etc.)
+- `initialPickerState('TC')` sets role and single blank item
+- `itemLaborTotal` — sums rate * hours across entries
+- `itemMaterialTotal` — sums unitCost * quantity
+- `itemEquipmentTotal` — sums costs
+- `itemSubtotal` — applies markup and multi-location multiplier correctly
+- `grandTotal` — sums multiple items
+- `locationDisplay` / `locationShort` — edge cases (0, 1, multiple locations)
 
-**File:** `supabase/migrations/...738.sql` line 113
+## Layer 2: Reducer Tests (Vitest)
 
-The `co_labor_entries` SELECT policy grants access to anyone whose org is `org_id` or `assigned_to_org_id` on the parent CO. This means:
-- **GC can read FC's `is_actual_cost=true` entries** via direct Supabase query
-- **TC can read FC's internal costs** via direct query
-- The UI filters them out (line 141: `actualCosts.filter(e => e.is_actual_cost && e.entered_by_role === myRole)`), but this is **client-side only** — a savvy user with the anon key can bypass it
+Test the `pickerReducer` state machine without rendering.
 
-**Fix:** Add a column-level or row-level restriction. Either:
-- Add `AND (NOT is_actual_cost OR org_id IN (SELECT ...))` to the SELECT policy
-- Or create a view that strips `is_actual_cost` rows from other orgs
+**File: `src/test/pickerReducer.test.ts`**
 
-### 2. [GC] [Part 2 - RLS] GC can read ALL labor entry details (hours, rates) on fixed-price COs at DB level
+Import the reducer directly (needs a small refactor to export it, or test via `usePickerState` with `renderHook`).
 
-The UI hides this (`hideGCBreakdown = isGC && pricingType === 'fixed'`, line 150), but the SELECT policy on `co_labor_entries` returns all rows. A GC user can query the table directly and see TC/FC hourly rates and hours — defeating the fixed-price privacy model.
+- **SET_STEP** — updates step number
+- **SET_LOCATION** — sets locations array on current item
+- **TOGGLE_MULTI_LOCATION** — toggles flag; trims to 1 location when disabling
+- **SET_SYSTEM** — sets system id and name
+- **SET_CAUSE** — sets causeId, causeName, docType, billable, reason
+- **SET_PRICING** — sets pricingType and pricingName
+- **TOGGLE_WORK_TYPE** — adds new type, removes existing type (toggle)
+- **SET_NARRATIVE** — updates narrative string
+- **SET_LABOR_HOURS** — updates specific labor entry hours
+- **ADD_MATERIAL / REMOVE_MATERIAL** — add and remove by tempId
+- **ADD_EQUIPMENT / REMOVE_EQUIPMENT** — same pattern
+- **ADD_ITEM** — inherits cause/pricing/markup from current item, resets step to 1
+- **SWITCH_ITEM** — changes currentItemIndex
+- **DELETE_ITEM** — can't delete last item; adjusts index if needed
+- **SET_SUBMITTED** — flips submitted flag
+- **SET_LINKED_RFI** — stores RFI id
+- **Collaboration actions** — SET_ASSIGNED_TC, SET_REQUEST_FC, SET_ASSIGNED_FC
 
-### 3. [GC] [Part 2 - Materials] GC can read TC markup_percent on co_material_items at DB level
+## Layer 3: Edge Function Tests
 
-The `co_material_items` SELECT policy returns all columns including `markup_percent`, `markup_amount`. The UI may not display markup to GC, but the data is fully readable. Same issue for `co_equipment_items`.
+### 3a. Deno Unit Tests
 
-### 4. [ANY] [Part 6 - RLS] Change order UPDATE policy only checks `org_id`, not `assigned_to_org_id`
+**File: `supabase/functions/generate-co-pdf/index_test.ts`**
+- Calls the function with a valid `co_id` via fetch, checks 200 status and `application/pdf` content type
+- Calls with missing `co_id`, expects 400
+- Calls with non-existent UUID, expects error response
 
-**File:** migration line 66: `USING (org_id IN (SELECT organization_id FROM ...))`
+**File: `supabase/functions/generate-payment-app-pdf/index_test.ts`**
+- Same pattern: valid project_id + co_ids returns PDF
+- Missing params returns 400
 
-The assigned TC/FC org **cannot update the CO** (e.g., submit, mark completed) because the UPDATE policy only allows the creating org. But `COStatusActions.tsx` calls `updateCO` as TC — this likely **silently fails** or is only saved because `submitCO`/`approveCO` use `.update()` which may return empty without error (using `.maybeSingle()`).
+### 3b. curl_edge_functions Integration Tests
+- Hit `generate-co-pdf` with a real CO id from the database and verify response
+- Hit `send-co-external-invite` with test data and verify invite creation
 
-**Impact:** TC calling `doCloseForPricing`, `doRecall`, `doMarkCompleted`, `doAcknowledgeCompletion` — all of these call `.update()` on `change_orders` as the assigned org. They will be blocked by RLS.
+## Layer 4: Database Query Tests
 
-**This is likely the most impactful bug in the system.** TCs cannot perform most status transitions.
+Using `read_query` to validate data integrity and RLS:
 
----
+- **CO numbering**: Query `change_orders` for a project, verify `co_number` format matches `WO-XXX-XX-XX-0001` pattern
+- **Status constraints**: Verify status values are within allowed set
+- **Line items linkage**: Check all `co_line_items.co_id` values reference valid `change_orders.id`
+- **Labor entries**: Verify `co_labor_entries` link to valid line items
+- **Materials/Equipment**: Verify entries have valid co_id references
+- **RFI linkage**: Check `rfis` table has valid project_id references
+- **External invites**: Verify `co_external_invites` tokens are unique and have expiry dates
 
-## HIGH — Workflow Blockers
+## Layer 5: Browser Automation Tests
 
-### 5. [TC/FC] [Part 3 - Recall] Recall does NOT clear `shared_at` or `draft_shared_with_next`
+Navigate the live preview and test the CO/WO UI flows:
 
-**File:** `COStatusActions.tsx` line 299-301
-
-```typescript
-updates: { status: 'draft', submitted_at: null }
-```
-
-After recall, the CO goes back to `draft` but `shared_at` and `draft_shared_with_next` remain truthy. This means the `canShare` check (line 356: `!co.draft_shared_with_next`) will block re-sharing, and the TC may retain visibility to a recalled draft.
-
-### 6. [TC/FC] [Part 3 - Recall] Recall does NOT handle FC labor entries
-
-When a CO with logged FC hours is recalled to draft, those entries remain. The test plan specifically asks: "What happens to the entries?" Answer: they persist silently. This isn't necessarily wrong, but there's no warning to the recalling user that hours exist.
-
-### 7. [FC] [Part 1 - Accept] FC collaborators can't submit from 'draft' status
-
-**File:** `COStatusActions.tsx` line 362-365
-
-```typescript
-const submitStatuses = isOwnerOrg
-  ? ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'rejected']
-  : ['shared', 'work_in_progress', 'closed_for_pricing', 'rejected'];
-```
-
-If an FC is the CO owner (created the CO), they can submit from draft. But if they're the assigned org, they can only submit from 'shared' onwards. This is by design, but combined with bug #4 (RLS blocking assigned org updates), FC-as-creator flow may also fail at the DB level.
-
-### 8. [ANY] [Part 9 - Notifications] NTE notifications don't exclude the actor
-
-**File:** `LaborEntryForm.tsx` lines 193-199
-
-When NTE threshold is crossed, notifications are sent to ALL members of `org_id` and `assigned_to_org_id` — including the user who just logged the hours. The actor should be excluded.
-
-### 9. [ANY] [Part 9 - Notifications] `notifyOrg` sends to all org members including the acting user
-
-**File:** `COStatusActions.tsx` lines 83-113
-
-The `notifyOrg` function fetches all `user_org_roles` members and sends to each. It doesn't filter out `user.id` (the actor). While `notifyAllCOParties` excludes the actor's *org* (line 122: `orgIds.delete(currentOrgId)`), `notifyOrg` for single-org notifications (like `CO_SHARED`) will include the actor if they happen to be a member of the target org too.
-
-### 10. [ANY] [Part 4 - NTE] NTE blocking is client-side only — no DB enforcement
-
-The `nteBlocked` flag (useCORoleContext line 94) and the check in `LaborEntryForm.tsx` (line 137) are purely client-side. A user can bypass by calling `.insert()` on `co_labor_entries` directly. There's no DB trigger or check constraint preventing labor entries when NTE cap is exceeded.
-
----
-
-## MEDIUM — UX Papercuts & Logic Issues
-
-### 11. [TC] [Part 2 - KPI] KPI strip uses `financials.tcBillableToGC` which may show stale snapshot price
-
-When `use_fc_pricing_base` is true and `tc_submitted_price` was set, the KPI strip shows the snapshot — not the live calculated value. If FC logs more hours after the snapshot was taken, the KPI is stale until TC re-submits.
-
-### 12. [ANY] [Part 7 - Realtime] `useCORealtime` doesn't subscribe to `co_line_items` changes
-
-**File:** `useCORealtime.ts`
-
-The channel subscribes to `co_labor_entries`, `co_material_items`, `co_equipment_items`, `co_nte_log`, `change_orders`, and `co_activity` — but NOT `co_line_items`. When one user adds a line item (via the new V3 picker "Add Items" flow), the other user won't see it in realtime.
-
-### 13. [ANY] [Part 7 - Realtime] No conflict detection on concurrent edits
-
-Last-write-wins is acceptable per the test plan, but there's no optimistic locking or version check. Two users editing the same scope item description will silently overwrite each other.
-
-### 14. [GC] [Part 1 - Approval] `doAcknowledgeCompletion` sets `completion_acknowledged_at` but doesn't transition to 'contracted'
-
-**File:** `COStatusActions.tsx` lines 332-348
-
-The function updates `completion_acknowledged_at` but doesn't set `status: 'contracted'`. The test plan expects: "Confirm it transitions to contracted and the 'ready to invoice' state appears." The status check at line 389 shows the approved+acknowledged state, but `contracted` status is never reached through this flow.
-
-### 15. [ANY] [Part 8 - Wizard] Draft autosave relies on sessionStorage
-
-Per memory `mem://features/project-setup/wizard-draft-persistence`, drafts use `sessionStorage`. This means:
-- Closing the tab destroys the draft (sessionStorage is tab-scoped)
-- The "resume-draft banner" won't appear after closing and reopening a new tab
-
-### 16. [TC] [Part 5 - Materials] "Apply supplier pricing" clears the `supplierPriceMap` state immediately
-
-**File:** `COMaterialsPanel.tsx` line 444: `setSupplierPriceMap(new Map())`
-
-After applying pricing, the map is cleared. If the user navigates away and back, the "Supplier priced" badge logic depends on the PO status still being in `PRICED_STATUSES`, which should work. But the strikethrough visual is lost since the old prices are overwritten.
-
-### 17. [ANY] [Part 3 - Status] No zero-scope-item guard on submit
-
-The test plan asks: "Try to submit a CO with no assigned org. Should be blocked." The `doSubmit` function (line 188-193) checks for `assigned_to_org_id` but does NOT check if `lineItems.length === 0`. A CO with zero scope items can be submitted.
+1. **CO List Page**: Navigate to project's change-orders tab, verify list renders
+2. **New CO Creation**: Click "+ New" button, verify draft creation and redirect to detail page
+3. **Detail Page Checklist**: On a new draft CO, verify the creation checklist shows unchecked items
+4. **Inline Editing**: Observe editable fields on detail page (location, reason)
+5. **Picker Wizard**: Click "Use guided wizard instead", verify 4-step flow renders with correct step labels
+6. **RFI Banner**: If a CO has a linked RFI, verify the block banner appears
+7. **PDF Download**: Click "Download PDF" button on an approved CO, verify network request fires
+8. **Responsive**: Resize viewport to 390px width and verify layout doesn't break
 
 ---
 
-## LOW — Polish
+## Technical Details
 
-### 18. [GC] [Part 2 - KPI] GC Budget tile shows "Click to edit" always, even on approved/contracted COs
+- All Vitest tests go in `src/test/` following existing conventions
+- Reducer test requires exporting `pickerReducer` from `usePickerState.ts` (minor refactor)
+- Edge function Deno tests use `import "https://deno.land/std@0.224.0/dotenv/load.ts"` for env vars
+- Browser tests use `navigate_to_sandbox` → `observe` → `act` → `screenshot` workflow
+- DB tests are read-only queries via `read_query` tool — no migrations needed
+- Estimated: ~6 test files, ~80-100 individual test cases
 
-The `EditableBudgetTile` doesn't check CO status before allowing edits.
+## Execution Order
 
-### 19. [ANY] [Part 3 - Activity] Recall activity uses action string 'recalled' but activity feed rendering may not have a specific icon/label for it.
-
-### 20. [FC] [Part 2 - KPI] FC KPI "Hours Logged" shows days as `Math.ceil(hours/8)` — not accounting for multi-worker scenarios where 16 hours could be 1 day with 2 workers.
-
----
-
-## Summary of Fixes Needed (Priority Order)
-
-1. **CRITICAL:** Fix `change_orders` UPDATE RLS policy to include `assigned_to_org_id` — TCs literally cannot perform status transitions
-2. **CRITICAL:** Add RLS restriction on `co_labor_entries` SELECT to hide `is_actual_cost=true` rows from non-owning orgs
-3. **CRITICAL:** Add RLS restriction or view to hide labor rate/hour details from GC on fixed-price COs
-4. **CRITICAL:** Hide `markup_percent`/`markup_amount` columns from GC on material/equipment tables
-5. **HIGH:** Fix recall to clear `shared_at` and `draft_shared_with_next`
-6. **HIGH:** Exclude actor from NTE threshold notifications
-7. **HIGH:** Add `co_line_items` to realtime subscription
-8. **MEDIUM:** Add DB-level NTE enforcement trigger
-9. **MEDIUM:** Implement `contracted` status transition on acknowledgment
-10. **MEDIUM:** Add zero-scope guard on CO submit
-
-Want me to proceed with implementing these fixes? I'd recommend starting with the CRITICAL RLS issues (#1-4) as they represent real security vulnerabilities.
+1. Unit tests + reducer tests first (fastest, no dependencies)
+2. DB query validation (read-only, fast)
+3. Edge function tests (requires deployment)
+4. Browser automation tests (slowest, done last)

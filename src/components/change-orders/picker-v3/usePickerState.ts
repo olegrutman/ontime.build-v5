@@ -3,7 +3,7 @@ import type { PickerState, PickerAction, PickerItem } from './types';
 import { blankItem, initialPickerState } from './types';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
-function pickerReducer(state: PickerState, action: PickerAction): PickerState {
+export function pickerReducer(state: PickerState, action: PickerAction): PickerState {
   const cur = state.items[state.currentItemIndex];
 
   function updateItem(patch: Partial<PickerItem>): PickerState {
