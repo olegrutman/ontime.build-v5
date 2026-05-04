@@ -138,6 +138,25 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                   </div>
                 </div>
               )}
+              {financials.retainagePercent > 0 && financials.retainageAmount > 0 && (
+                <div className="border-t border-border pt-2 mt-2 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-red-600 dark:text-red-400">
+                    <span>Less retainage ({financials.retainagePercent}%)</span>
+                    <span className="font-mono">-{fmtCurrency(financials.retainageAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold pt-1">
+                    <span>Net payable now</span>
+                    <span className="font-mono">{fmtCurrency(financials.netPayableAmount)}</span>
+                  </div>
+                  {financials.retainageReleased && (
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Retainage released</p>
+                  )}
+                </div>
+              )}
             </>
           )}
           {isTC && (
@@ -184,6 +203,25 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                     <span>Total (incl. {fmtCurrency(financials.totalTax)} tax)</span>
                     <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
                   </div>
+                </div>
+              )}
+              {financials.retainagePercent > 0 && financials.retainageAmount > 0 && (
+                <div className="border-t border-border pt-2 mt-2 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-red-600 dark:text-red-400">
+                    <span>Less retainage ({financials.retainagePercent}%)</span>
+                    <span className="font-mono">-{fmtCurrency(financials.retainageAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold pt-1">
+                    <span>Net payable now</span>
+                    <span className="font-mono">{fmtCurrency(financials.netPayableAmount)}</span>
+                  </div>
+                  {financials.retainageReleased && (
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Retainage released</p>
+                  )}
                 </div>
               )}
             </>
