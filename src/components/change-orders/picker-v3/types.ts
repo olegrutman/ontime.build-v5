@@ -202,6 +202,7 @@ export function initialPickerState(role: COCreatedByRole): PickerState {
     },
     role,
     submitted: false,
+    linkedRfiId: null,
   };
 }
 
