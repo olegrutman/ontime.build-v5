@@ -2944,6 +2944,80 @@ export type Database = {
           },
         ]
       }
+      payment_applications: {
+        Row: {
+          application_number: number
+          balance_to_finish: number
+          co_ids: string[]
+          created_at: string
+          current_contract_sum: number
+          current_payment_due: number
+          generated_by_user_id: string | null
+          id: string
+          less_previous_applications: number
+          net_change_orders: number
+          original_contract_sum: number
+          period_from: string | null
+          period_to: string | null
+          project_id: string
+          retainage_held: number
+          status: string
+          total_completed: number
+          total_earned_less_retainage: number
+          updated_at: string
+        }
+        Insert: {
+          application_number?: number
+          balance_to_finish?: number
+          co_ids?: string[]
+          created_at?: string
+          current_contract_sum?: number
+          current_payment_due?: number
+          generated_by_user_id?: string | null
+          id?: string
+          less_previous_applications?: number
+          net_change_orders?: number
+          original_contract_sum?: number
+          period_from?: string | null
+          period_to?: string | null
+          project_id: string
+          retainage_held?: number
+          status?: string
+          total_completed?: number
+          total_earned_less_retainage?: number
+          updated_at?: string
+        }
+        Update: {
+          application_number?: number
+          balance_to_finish?: number
+          co_ids?: string[]
+          created_at?: string
+          current_contract_sum?: number
+          current_payment_due?: number
+          generated_by_user_id?: string | null
+          id?: string
+          less_previous_applications?: number
+          net_change_orders?: number
+          original_contract_sum?: number
+          period_from?: string | null
+          period_to?: string | null
+          project_id?: string
+          retainage_held?: number
+          status?: string
+          total_completed?: number
+          total_earned_less_retainage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_applications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_features: {
         Row: {
           created_at: string

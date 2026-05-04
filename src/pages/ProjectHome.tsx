@@ -67,6 +67,7 @@ import { FeatureGate, useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { COListPage } from '@/components/change-orders';
 import { BackchargesList } from '@/components/backcharges/BackchargesList';
+import PaymentApplicationsPage from '@/pages/PaymentApplicationsPage';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
 import { useProjectEstimateRows } from '@/hooks/useProjectEstimateRows';
 import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
@@ -463,6 +464,9 @@ export default function ProjectHome() {
              )}
             {activeTab === 'backcharges' && (
               <BackchargesList projectId={id!} />
+            )}
+            {activeTab === 'payment-apps' && (
+              <PaymentApplicationsPage />
             )}
           </div>
         </main>

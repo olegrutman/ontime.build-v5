@@ -64,6 +64,7 @@ const QuickCapture = lazy(() => import("./pages/QuickCapture"));
 const GCProjectOverview = lazy(() => import("./pages/GCProjectOverview"));
 const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
+const PaymentApplicationsPage = lazy(() => import("./pages/PaymentApplicationsPage"));
 const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
 const DemoV2ProjectOverview = lazy(() => import("./pages/DemoV2ProjectOverview"));
 

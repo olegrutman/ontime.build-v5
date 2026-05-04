@@ -53,6 +53,7 @@ function getNavGroups(isTM: boolean): NavItem[][] {
       { key: 'purchase-orders', label: 'Purchase Orders', icon: Package, route: 'purchase-orders', featureKey: 'purchase_orders' },
       { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
       { key: 'backcharges', label: 'Backcharges', icon: AlertTriangle, route: 'backcharges' },
+      { key: 'payment-apps', label: 'Payment Apps', icon: FileText, route: 'payment-apps', hideForSupplier: true },
     ],
     [
       { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true, hideForSupplier: true },
