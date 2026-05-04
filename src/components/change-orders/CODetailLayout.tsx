@@ -405,6 +405,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         onRefresh={refreshDetail}
                         isEven={idx % 2 === 0}
                         index={idx + 1}
+                        markupVisibility={markupVisibility}
                       />
                     ))
                   )}
