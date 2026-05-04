@@ -30,6 +30,7 @@ import { COAuditLog } from './COAuditLog';
 import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
 import { COPhotoNudgeBanner } from './COPhotoNudgeBanner';
 import { COAcceptBanner } from './COAcceptBanner';
+import { COExternalApprovalBanner } from './COExternalApprovalBanner';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 import { useCOPhotos } from '@/hooks/useCOPhotos';
 
