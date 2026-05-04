@@ -51,6 +51,7 @@ const RFIListPage = lazy(() => import("./pages/RFIListPage"));
 const RFIDetailPage = lazy(() => import("./pages/RFIDetailPage"));
 const CreateRFIPage = lazy(() => import("./pages/CreateRFIPage"));
 const COApprovalPage = lazy(() => import("./pages/external/COApprovalPage"));
+const COExternalView = lazy(() => import("./pages/external/COExternalView"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -178,6 +179,7 @@ function AppRoutes() {
             <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
             <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
+            <Route path="/external/co/:token" element={<COExternalView />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />

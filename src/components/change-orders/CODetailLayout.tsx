@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,8 @@ import { COExternalApprovalBanner } from './COExternalApprovalBanner';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 import { useCOPhotos } from '@/hooks/useCOPhotos';
 import { CORFIBlockBanner } from './CORFIBlockBanner';
+import { COExternalInviteDialog } from './COExternalInviteDialog';
+import { COExternalInvitesCard } from './COExternalInvitesCard';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -59,6 +61,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [sendingComment, setSendingComment] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [externalInviteOpen, setExternalInviteOpen] = useState(false);
 
   const { data: auditEntries = [] } = useCOAuditLog(coId);
   const {
@@ -282,6 +285,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {isGC && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
+                <ExternalLink className="h-3.5 w-3.5" /> Invite External
+              </Button>
+            )}
             <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground">
               <Copy className="h-3.5 w-3.5" /> Duplicate
             </Button>
@@ -466,6 +474,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               {/* Photos */}
               <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
 
+              {/* External Invites */}
+              <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
+
               {/* Activity — Collapsible */}
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
@@ -543,6 +554,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
         photoCount={photos.length} photosBlocked={photosBlocked}
         onOpenCamera={() => photosCardRef.current?.openAdd()}
+      />
+
+      <COExternalInviteDialog
+        open={externalInviteOpen}
+        onOpenChange={setExternalInviteOpen}
+        coId={co.id}
+        coNumber={co.co_number}
+        coTitle={displayTitle}
+        projectId={projectId}
+        onInviteSent={refreshDetail}
       />
     </div>
   );

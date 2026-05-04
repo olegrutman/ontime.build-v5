@@ -939,6 +939,59 @@ export type Database = {
           },
         ]
       }
+      co_external_invites: {
+        Row: {
+          co_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invite_purpose: string
+          invited_at: string
+          invited_by_user_id: string | null
+          responded_at: string | null
+          respondent_name: string | null
+          response_data: Json | null
+          token: string
+        }
+        Insert: {
+          co_id: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invite_purpose?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          responded_at?: string | null
+          respondent_name?: string | null
+          response_data?: Json | null
+          token?: string
+        }
+        Update: {
+          co_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invite_purpose?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          responded_at?: string | null
+          respondent_name?: string | null
+          response_data?: Json | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_external_invites_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_labor_entries: {
         Row: {
           actual_cost_note: string | null

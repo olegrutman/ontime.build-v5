@@ -24,6 +24,8 @@ const ACTION_LABELS: Record<string, string> = {
   equipment_added: 'added equipment',
   note_added: 'added a note',
   recalled: 'recalled submission',
+  external_invite_sent: 'invited an external party',
+  external_response: 'external party responded',
 };
 
 const ROLE_STYLES: Record<string, string> = {
