@@ -132,6 +132,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
             { key: 'my_action', label: 'Action', count: stats.myActionCount },
             { key: 'in_progress', label: 'Active', count: stats.inProgressCount },
             { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
+            ...(stats.withdrawnCount > 0 ? [{ key: 'withdrawn_filter' as FilterKey, label: 'Withdrawn', count: stats.withdrawnCount }] : []),
           ] as { key: FilterKey; label: string; count: number }[]).map(f => (
             <button
               key={f.key}
