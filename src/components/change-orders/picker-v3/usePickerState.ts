@@ -131,6 +131,9 @@ function pickerReducer(state: PickerState, action: PickerAction): PickerState {
     case 'SET_SUBMITTED':
       return { ...state, submitted: true };
 
+    case 'SET_LINKED_RFI':
+      return { ...state, linkedRfiId: action.rfiId };
+
     default:
       return state;
   }
