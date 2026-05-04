@@ -178,6 +178,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'submit':
         if (co) {
+          if (rfiBlocked) {
+            toast.error('This change order is blocked by an open RFI. Resolve the RFI first.');
+            break;
+          }
           if (photosBlocked) {
             toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
             photosCardRef.current?.openAdd('during');
