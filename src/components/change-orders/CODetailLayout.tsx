@@ -288,8 +288,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
 
       {/* Accept Banner */}
-      <div className="max-w-7xl mx-auto w-full px-4 pt-3">
+      <div className="max-w-7xl mx-auto w-full px-4 pt-3 space-y-3">
         <COAcceptBanner co={co} projectId={projectId} myOrgId={myOrgId} collaborators={collaborators} onRefresh={refreshDetail} />
+        <CORFIBlockBanner blockedByRfiId={(co as any).blocked_by_rfi_id} projectId={projectId} />
       </div>
 
       {/* Body */}
