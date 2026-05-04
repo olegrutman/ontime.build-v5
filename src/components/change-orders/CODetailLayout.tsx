@@ -474,6 +474,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               {/* Photos */}
               <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
 
+              {/* External Invites */}
+              <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
+
               {/* Activity — Collapsible */}
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
