@@ -115,6 +115,7 @@ export interface PickerState {
   collaboration: CollaborationState;
   role: COCreatedByRole;
   submitted: boolean;
+  linkedRfiId: string | null;
 }
 
 // ─── Reducer Actions ─────────────────────────────────────────────
