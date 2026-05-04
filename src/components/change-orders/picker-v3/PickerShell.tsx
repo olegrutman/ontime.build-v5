@@ -463,15 +463,10 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
   const stepContent = (() => {
     switch (state.step) {
-      case 1: return <StepWhere state={state} dispatch={dispatch} projectId={projectId} />;
-      case 2: return <StepWhy state={state} dispatch={dispatch} />;
-      case 3: return <StepWho state={state} dispatch={dispatch} projectId={projectId} />;
-      case 4: return <StepPricing state={state} dispatch={dispatch} />;
-      case 5: return <StepWork state={state} dispatch={dispatch} />;
-      case 6: return <StepScope state={state} dispatch={dispatch} />;
-      case 7: return <StepMaterialsEquipment state={state} dispatch={dispatch} projectId={projectId} />;
-      case 8: return <StepTotal state={state} dispatch={dispatch} onAddItem={handleAddItem} onGoReview={() => dispatch({ type: 'SET_STEP', step: 9 })} />;
-      case 9: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} />;
+      case 1: return <StepWhereAndWhy state={state} dispatch={dispatch} projectId={projectId} />;
+      case 2: return <StepScopeCombined state={state} dispatch={dispatch} />;
+      case 3: return <StepPricingAndRouting state={state} dispatch={dispatch} projectId={projectId} onAddItem={handleAddItem} onGoReview={() => dispatch({ type: 'SET_STEP', step: 4 })} />;
+      case 4: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} />;
       default: return null;
     }
   })();
