@@ -63,7 +63,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
-  onRefresh, isEven = true, index,
+  onRefresh, isEven = true, index, markupVisibility = 'hidden',
 }, ref) {
   // Resolve effective pricing type: line-item override wins, else CO default
   const pricingType: COPricingType = (item.pricing_type as COPricingType) ?? coPricingType;
