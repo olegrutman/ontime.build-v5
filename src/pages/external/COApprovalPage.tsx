@@ -44,31 +44,33 @@ export default function COApprovalPage() {
 
     async function load() {
       // Try owner token first
-      let { data } = await supabase
+      const { data } = await supabase
         .from('change_orders')
-        .select('id, title, co_number, description, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
-        .eq('owner_approval_token', token)
+        .select('id, title, co_number, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
+        .eq('owner_approval_token' as any, token)
         .maybeSingle();
 
       if (data) {
-        setCO(data as COData);
+        const d = data as unknown as COData;
+        setCO({ ...d, description: null });
         setApprovalType('owner');
-        if (data.owner_approval_status !== 'pending') {
-          setDone(data.owner_approval_status === 'approved' ? 'approved' : 'rejected');
+        if (d.owner_approval_status !== 'pending') {
+          setDone(d.owner_approval_status === 'approved' ? 'approved' : 'rejected');
         }
       } else {
         // Try architect token
         const { data: archData } = await supabase
           .from('change_orders')
-          .select('id, title, co_number, description, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
-          .eq('architect_approval_token', token)
+          .select('id, title, co_number, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
+          .eq('architect_approval_token' as any, token)
           .maybeSingle();
 
         if (archData) {
-          setCO(archData as COData);
+          const ad = archData as unknown as COData;
+          setCO({ ...ad, description: null });
           setApprovalType('architect');
-          if (archData.architect_approval_status !== 'pending') {
-            setDone(archData.architect_approval_status === 'approved' ? 'approved' : 'rejected');
+          if (ad.architect_approval_status !== 'pending') {
+            setDone(ad.architect_approval_status === 'approved' ? 'approved' : 'rejected');
           }
         } else {
           setError('This approval link is invalid or has expired.');
