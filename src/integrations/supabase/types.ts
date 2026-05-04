@@ -431,6 +431,7 @@ export type Database = {
           architect_rejection_note: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
+          blocked_by_rfi_id: string | null
           closed_for_pricing_at: string | null
           co_equipment_responsible_override: string | null
           co_material_responsible_override: string | null
@@ -502,6 +503,7 @@ export type Database = {
           architect_rejection_note?: string | null
           assembly_state?: string | null
           assigned_to_org_id?: string | null
+          blocked_by_rfi_id?: string | null
           closed_for_pricing_at?: string | null
           co_equipment_responsible_override?: string | null
           co_material_responsible_override?: string | null
@@ -573,6 +575,7 @@ export type Database = {
           architect_rejection_note?: string | null
           assembly_state?: string | null
           assigned_to_org_id?: string | null
+          blocked_by_rfi_id?: string | null
           closed_for_pricing_at?: string | null
           co_equipment_responsible_override?: string | null
           co_material_responsible_override?: string | null
@@ -641,6 +644,13 @@ export type Database = {
             columns: ["assigned_to_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_blocked_by_rfi_id_fkey"
+            columns: ["blocked_by_rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
             referencedColumns: ["id"]
           },
           {
@@ -5229,6 +5239,126 @@ export type Database = {
           },
         ]
       }
+      rfi_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_type: string | null
+          file_url: string
+          id: string
+          rfi_id: string
+          uploaded_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_type?: string | null
+          file_url: string
+          id?: string
+          rfi_id: string
+          uploaded_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          rfi_id?: string
+          uploaded_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_attachments_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfis: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          answered_by_user_id: string | null
+          asked_at: string
+          created_at: string
+          due_date: string | null
+          id: string
+          project_id: string
+          question: string
+          rfi_number: string
+          status: string
+          submitted_by_org_id: string | null
+          submitted_by_user_id: string | null
+          submitted_to_org_id: string | null
+          title: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by_user_id?: string | null
+          asked_at?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          project_id: string
+          question: string
+          rfi_number: string
+          status?: string
+          submitted_by_org_id?: string | null
+          submitted_by_user_id?: string | null
+          submitted_to_org_id?: string | null
+          title: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by_user_id?: string | null
+          asked_at?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          project_id?: string
+          question?: string
+          rfi_number?: string
+          status?: string
+          submitted_by_org_id?: string | null
+          submitted_by_user_id?: string | null
+          submitted_to_org_id?: string | null
+          title?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfis_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfis_submitted_by_org_id_fkey"
+            columns: ["submitted_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfis_submitted_to_org_id_fkey"
+            columns: ["submitted_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scope_items: {
         Row: {
           created_at: string
@@ -6266,6 +6396,7 @@ export type Database = {
           architect_rejection_note: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
+          blocked_by_rfi_id: string | null
           closed_for_pricing_at: string | null
           co_equipment_responsible_override: string | null
           co_material_responsible_override: string | null
