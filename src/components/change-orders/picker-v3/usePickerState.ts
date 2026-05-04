@@ -29,7 +29,13 @@ export function pickerReducer(state: PickerState, action: PickerAction): PickerS
     }
 
     case 'SET_SYSTEM':
-      return updateItem({ system: action.systemId, systemName: action.systemName });
+      return updateItem({
+        system: action.systemId,
+        systemName: action.systemName,
+        workTypes: new Set<string>(),
+        workNames: {},
+        narrative: '',
+      });
 
     case 'SET_CAUSE':
       return updateItem({
