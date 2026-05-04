@@ -197,7 +197,7 @@ export function useChangeOrderDetail(coId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('sales_tax_rate, labor_taxable, tax_jurisdiction_label')
+        .select('sales_tax_rate, labor_taxable, tax_jurisdiction_label, retainage_percent')
         .eq('id', co!.project_id)
         .single();
       if (error) throw error;
@@ -213,6 +213,12 @@ export function useChangeOrderDetail(coId: string | null) {
   const equipmentTax = equipmentTotal * taxPct;
   const totalTax = materialsTax + laborTax + equipmentTax;
   const grandTotalWithTax = grandTotal + totalTax;
+
+  // Retainage
+  const retainagePercent = projectTaxSettings?.retainage_percent ?? 0;
+  const retainageAmount = (co as any)?.retainage_amount ?? (grandTotalWithTax * retainagePercent / 100);
+  const retainageReleased = (co as any)?.retainage_released ?? false;
+  const netPayableAmount = retainageReleased ? grandTotalWithTax : grandTotalWithTax - retainageAmount;
 
   const financials: COFinancials = {
     laborTotal,
@@ -241,6 +247,10 @@ export function useChangeOrderDetail(coId: string | null) {
     taxRate,
     laborTaxable,
     taxJurisdictionLabel: projectTaxSettings?.tax_jurisdiction_label ?? null,
+    retainagePercent,
+    retainageAmount,
+    netPayableAmount,
+    retainageReleased,
   };
 
   const addLineItem = useMutation({
