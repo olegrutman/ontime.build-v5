@@ -42,19 +42,19 @@ function getActiveStep(status: string): number {
 export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
   const rl = useRoleLabelsContext();
   const status = co.status as COStatus;
+  const isWithdrawn = status === 'withdrawn';
   const activeStep = getActiveStep(status);
-  // Optional user-typed name (anything other than the co_number itself)
   const userName = co.title && co.title !== co.co_number ? co.title : null;
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+    <div className={cn('bg-card border border-border rounded-xl overflow-hidden shadow-sm', isWithdrawn && 'opacity-60')}>
       {/* Top section */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3 flex-wrap">
               <h1
-                className="font-heading text-foreground truncate"
+                className={cn('font-heading text-foreground truncate', isWithdrawn && 'line-through')}
                 style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.01em' }}
               >
                 {co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order')}
