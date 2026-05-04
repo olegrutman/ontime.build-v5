@@ -475,6 +475,9 @@ export type Database = {
           reason_note: string | null
           rejected_at: string | null
           rejection_note: string | null
+          retainage_amount: number | null
+          retainage_released: boolean
+          retainage_released_at: string | null
           shared_at: string | null
           status: string
           submitted_at: string | null
@@ -543,6 +546,9 @@ export type Database = {
           reason_note?: string | null
           rejected_at?: string | null
           rejection_note?: string | null
+          retainage_amount?: number | null
+          retainage_released?: boolean
+          retainage_released_at?: string | null
           shared_at?: string | null
           status?: string
           submitted_at?: string | null
@@ -611,6 +617,9 @@ export type Database = {
           reason_note?: string | null
           rejected_at?: string | null
           rejection_note?: string | null
+          retainage_amount?: number | null
+          retainage_released?: boolean
+          retainage_released_at?: string | null
           shared_at?: string | null
           status?: string
           submitted_at?: string | null
@@ -4655,6 +4664,7 @@ export type Database = {
           project_type: string | null
           require_photos_on_submit: boolean
           retainage_percent: number | null
+          retainage_release_trigger: string
           role_label_overrides: Json
           sales_tax_rate: number
           scope: Json | null
@@ -4689,6 +4699,7 @@ export type Database = {
           project_type?: string | null
           require_photos_on_submit?: boolean
           retainage_percent?: number | null
+          retainage_release_trigger?: string
           role_label_overrides?: Json
           sales_tax_rate?: number
           scope?: Json | null
@@ -4723,6 +4734,7 @@ export type Database = {
           project_type?: string | null
           require_photos_on_submit?: boolean
           retainage_percent?: number | null
+          retainage_release_trigger?: string
           role_label_overrides?: Json
           sales_tax_rate?: number
           scope?: Json | null
@@ -6298,6 +6310,9 @@ export type Database = {
           reason_note: string | null
           rejected_at: string | null
           rejection_note: string | null
+          retainage_amount: number | null
+          retainage_released: boolean
+          retainage_released_at: string | null
           shared_at: string | null
           status: string
           submitted_at: string | null
