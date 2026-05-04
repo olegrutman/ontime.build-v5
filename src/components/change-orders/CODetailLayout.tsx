@@ -130,6 +130,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const photosBlocked = requirePhotos && photos.length === 0;
   const markupVisibility = ((projectSettings as any)?.tc_markup_visibility ?? 'hidden') as import('@/hooks/useMarkupVisibility').MarkupVisibility;
 
+  // Check for existing invoice linked to this CO
+  const { data: linkedInvoice } = useQuery({
+    queryKey: ['co-linked-invoice', coId],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, status')
+        .contains('co_ids', [coId])
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
     canEdit, canEditExternal, canEditInternal, canRequestFCInput, canCompleteFCInput, nteBlocked,
