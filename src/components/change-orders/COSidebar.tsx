@@ -34,6 +34,7 @@ interface COSidebarProps {
   rejectNTEIncrease: UseMutationResult<any, Error, any, unknown>;
   onRefresh: () => void;
   lineItemCount?: number;
+  markupVisibility?: MarkupVisibility;
 }
 
 function fmtCurrency(value: number) {
