@@ -47,6 +47,7 @@ const Reminders = lazy(() => import("./pages/Reminders"));
 const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
 const SupplierProjectEstimates = lazy(() => import("./pages/SupplierProjectEstimates"));
 const RFIs = lazy(() => import("./pages/RFIs"));
+const COApprovalPage = lazy(() => import("./pages/external/COApprovalPage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -173,6 +174,7 @@ function AppRoutes() {
             <Route path="/signup" element={<AuthPage />} />
             <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />

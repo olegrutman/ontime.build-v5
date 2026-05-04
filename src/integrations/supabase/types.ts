@@ -424,6 +424,11 @@ export type Database = {
       change_orders: {
         Row: {
           approved_at: string | null
+          architect_approval_status: string
+          architect_approval_token: string | null
+          architect_approved_at: string | null
+          architect_approver_name: string | null
+          architect_rejection_note: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
           closed_for_pricing_at: string | null
@@ -458,6 +463,11 @@ export type Database = {
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
           org_id: string
+          owner_approval_status: string
+          owner_approval_token: string | null
+          owner_approved_at: string | null
+          owner_approver_name: string | null
+          owner_rejection_note: string | null
           parent_co_id: string | null
           pricing_type: string
           project_id: string
@@ -482,6 +492,11 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          architect_approval_status?: string
+          architect_approval_token?: string | null
+          architect_approved_at?: string | null
+          architect_approver_name?: string | null
+          architect_rejection_note?: string | null
           assembly_state?: string | null
           assigned_to_org_id?: string | null
           closed_for_pricing_at?: string | null
@@ -516,6 +531,11 @@ export type Database = {
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
           org_id: string
+          owner_approval_status?: string
+          owner_approval_token?: string | null
+          owner_approved_at?: string | null
+          owner_approver_name?: string | null
+          owner_rejection_note?: string | null
           parent_co_id?: string | null
           pricing_type?: string
           project_id: string
@@ -540,6 +560,11 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          architect_approval_status?: string
+          architect_approval_token?: string | null
+          architect_approved_at?: string | null
+          architect_approver_name?: string | null
+          architect_rejection_note?: string | null
           assembly_state?: string | null
           assigned_to_org_id?: string | null
           closed_for_pricing_at?: string | null
@@ -574,6 +599,11 @@ export type Database = {
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
           org_id?: string
+          owner_approval_status?: string
+          owner_approval_token?: string | null
+          owner_approved_at?: string | null
+          owner_approver_name?: string | null
+          owner_rejection_note?: string | null
           parent_co_id?: string | null
           pricing_type?: string
           project_id?: string
@@ -4605,6 +4635,8 @@ export type Database = {
       projects: {
         Row: {
           address: Json | null
+          architect_approval_email: string | null
+          architect_approval_required: boolean
           build_type: string | null
           city: string | null
           contract_mode: string
@@ -4617,6 +4649,8 @@ export type Database = {
           mobilization_enabled: boolean | null
           name: string
           organization_id: string
+          owner_approval_email: string | null
+          owner_approval_threshold: number | null
           parties: Json | null
           project_type: string | null
           require_photos_on_submit: boolean
@@ -4635,6 +4669,8 @@ export type Database = {
         }
         Insert: {
           address?: Json | null
+          architect_approval_email?: string | null
+          architect_approval_required?: boolean
           build_type?: string | null
           city?: string | null
           contract_mode?: string
@@ -4647,6 +4683,8 @@ export type Database = {
           mobilization_enabled?: boolean | null
           name: string
           organization_id: string
+          owner_approval_email?: string | null
+          owner_approval_threshold?: number | null
           parties?: Json | null
           project_type?: string | null
           require_photos_on_submit?: boolean
@@ -4665,6 +4703,8 @@ export type Database = {
         }
         Update: {
           address?: Json | null
+          architect_approval_email?: string | null
+          architect_approval_required?: boolean
           build_type?: string | null
           city?: string | null
           contract_mode?: string
@@ -4677,6 +4717,8 @@ export type Database = {
           mobilization_enabled?: boolean | null
           name?: string
           organization_id?: string
+          owner_approval_email?: string | null
+          owner_approval_threshold?: number | null
           parties?: Json | null
           project_type?: string | null
           require_photos_on_submit?: boolean
@@ -6205,6 +6247,11 @@ export type Database = {
         Args: { _co_id: string }
         Returns: {
           approved_at: string | null
+          architect_approval_status: string
+          architect_approval_token: string | null
+          architect_approved_at: string | null
+          architect_approver_name: string | null
+          architect_rejection_note: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
           closed_for_pricing_at: string | null
@@ -6239,6 +6286,11 @@ export type Database = {
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
           org_id: string
+          owner_approval_status: string
+          owner_approval_token: string | null
+          owner_approved_at: string | null
+          owner_approver_name: string | null
+          owner_rejection_note: string | null
           parent_co_id: string | null
           pricing_type: string
           project_id: string
