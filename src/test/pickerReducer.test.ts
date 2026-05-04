@@ -57,6 +57,17 @@ describe('pickerReducer', () => {
       expect(s.items[0].system).toBe('framing');
       expect(s.items[0].systemName).toBe('Framing');
     });
+
+    it('clears work types and narrative on system change', () => {
+      let s = state();
+      s = act(s, { type: 'TOGGLE_WORK_TYPE', workTypeId: 'w1', workTypeName: 'Work 1' });
+      s = act(s, { type: 'SET_NARRATIVE', narrative: 'Some scope text' });
+      expect(s.items[0].workTypes.size).toBe(1);
+      expect(s.items[0].narrative).toBe('Some scope text');
+      s = act(s, { type: 'SET_SYSTEM', systemId: 'wall', systemName: 'Wall System' });
+      expect(s.items[0].workTypes.size).toBe(0);
+      expect(s.items[0].narrative).toBe('');
+    });
   });
 
   describe('SET_CAUSE', () => {
