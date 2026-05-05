@@ -23,6 +23,7 @@ export function PickerAside({
   const isReview = state.step === 4;
   const cur = state.items[state.currentItemIndex];
   const total = grandTotal(state.items);
+  const isGC = state.role === 'GC';
 
   return (
     <aside className="bg-background border-l flex flex-col sticky top-0 h-screen overflow-hidden">
@@ -45,6 +46,16 @@ export function PickerAside({
             const loc = locationShort(item);
             const configured = item.causeId && item.workTypes.size > 0;
 
+            // Build descriptive work type names
+            const workNames = [...item.workTypes]
+              .map(k => item.workNames[k])
+              .filter(Boolean);
+            const workSummary = workNames.length > 0
+              ? workNames.length <= 3
+                ? workNames.join(', ')
+                : workNames.slice(0, 2).join(', ') + ` +${workNames.length - 2} more`
+              : 'No work types selected';
+
             return (
               <button
                 key={i}
@@ -66,10 +77,12 @@ export function PickerAside({
                 <p className="text-[0.7rem] text-foreground font-semibold mt-0.5">
                   {item.causeName ?? 'Not configured'}
                 </p>
-                <p className="text-[0.6rem] text-muted-foreground mt-0.5 flex gap-1.5">
-                  <span>{item.workTypes.size} work types</span>
-                  <span>·</span>
-                  <span>{item.materials.length} materials</span>
+                <p className="text-[0.6rem] text-muted-foreground mt-0.5 leading-snug line-clamp-2">
+                  {workSummary}
+                </p>
+                <p className="text-[0.55rem] text-muted-foreground/70 mt-0.5">
+                  {item.pricingName}{!isGC && item.markup > 0 ? ` · ${item.markup}% markup` : ''}
+                  {item.materials.length > 0 ? ` · ${item.materials.length} material${item.materials.length !== 1 ? 's' : ''}` : ''}
                 </p>
                 {configured && (
                   <p className="font-mono text-[0.78rem] font-bold text-foreground mt-1.5">
@@ -98,7 +111,7 @@ export function PickerAside({
             {fmt(total)}
           </p>
           <p className="text-[0.66rem] text-white/50 mt-1.5">
-            {state.items.length} item{state.items.length !== 1 ? 's' : ''} · {cur.pricingName} · {cur.markup}% markup
+            {state.items.length} item{state.items.length !== 1 ? 's' : ''} · {cur.pricingName}
           </p>
           <div className="border-t border-white/10 mt-2.5 pt-2.5 space-y-1">
             <div className="flex justify-between text-[0.7rem] text-white/70">
@@ -119,10 +132,12 @@ export function PickerAside({
                 {fmt(state.items.reduce((s, it) => s + itemEquipmentTotal(it), 0))}
               </span>
             </div>
-            <div className="flex justify-between text-[0.7rem] text-white/70 border-t border-white/10 pt-1.5 mt-1">
-              <span>Markup</span>
-              <span className="font-semibold text-white">+{cur.markup}%</span>
-            </div>
+            {!isGC && (
+              <div className="flex justify-between text-[0.7rem] text-white/70 border-t border-white/10 pt-1.5 mt-1">
+                <span>Markup</span>
+                <span className="font-semibold text-white">+{cur.markup}%</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
