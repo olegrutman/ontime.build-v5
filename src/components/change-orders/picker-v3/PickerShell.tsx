@@ -6,8 +6,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateCONumber } from '@/lib/generateCONumber';
-import type { PickerItem } from './types';
-import { itemLaborTotal, itemMaterialTotal, itemEquipmentTotal } from './types';
 
 import { usePickerState } from './usePickerState';
 import { PickerStepper } from './PickerStepper';
@@ -64,7 +62,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
     if (detectedRole && detectedRole !== state.role) {
       dispatch({ type: 'SET_ROLE', role: detectedRole });
     }
-  }, [detectedRole, dispatch]); // intentionally omit state.role to avoid loops
+  }, [detectedRole, dispatch]);
 
   const { data: projectInfo } = useQuery({
     queryKey: ['project-basic-info', projectId],
@@ -101,9 +99,9 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
   // Compute completed steps for the stepper (4 steps)
   const completedSteps = useMemo(() => {
     const done = new Set<number>();
-    if (cur.locations.length > 0 && cur.causeId) done.add(1); // Where & Why
-    if (cur.workTypes.size > 0 || cur.narrative) done.add(2); // Scope
-    if (cur.pricingType) done.add(3); // Pricing & Routing (always has default)
+    if (cur.locations.length > 0 && cur.causeId) done.add(1);
+    if (cur.workTypes.size > 0 || cur.narrative) done.add(2);
+    if (cur.pricingType) done.add(3);
     return done;
   }, [cur]);
 
@@ -135,8 +133,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
     try {
       if (isAddMode && addToCoId) {
-        // ─── ADD MODE: insert items into existing CO ───
-        // Get max sort_order for existing line items
+        // ─── ADD MODE: insert scope items into existing CO ───
         const maxSort = await supabase
           .from('co_line_items')
           .select('sort_order')
@@ -148,7 +145,6 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
         for (const item of state.items) {
           const workTypeEntries = Array.from(item.workTypes);
-          let createdLineItemIds: string[] = [];
 
           if (workTypeEntries.length > 0) {
             const lineItems = workTypeEntries.map((wt, idx) => ({
@@ -162,15 +158,13 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               location_tag: item.locations.join(' + ') || null,
               reason: item.reason ?? null,
             }));
-            const { data: liData, error: liError } = await supabase
+            const { error: liError } = await supabase
               .from('co_line_items')
-              .insert(lineItems)
-              .select('id');
+              .insert(lineItems);
             if (liError) console.error('Line items insert error:', liError);
-            createdLineItemIds = (liData ?? []).map(li => li.id);
             nextSort += workTypeEntries.length;
           } else {
-            const { data: liData, error: liError } = await supabase
+            const { error: liError } = await supabase
               .from('co_line_items')
               .insert({
                 co_id: addToCoId,
@@ -182,73 +176,18 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
                 sort_order: nextSort,
                 location_tag: item.locations.join(' + ') || null,
                 reason: item.reason ?? null,
-              })
-              .select('id');
+              });
             if (liError) console.error('Line item insert error:', liError);
-            createdLineItemIds = (liData ?? []).map(li => li.id);
             nextSort += 1;
           }
 
-          // Insert labor entries
-          const firstLineItemId = createdLineItemIds[0];
-          if (firstLineItemId) {
-            for (const labor of item.laborEntries) {
-              if (labor.hours <= 0) continue;
-              await supabase.from('co_labor_entries').insert({
-                co_id: addToCoId,
-                org_id: orgId,
-                co_line_item_id: firstLineItemId,
-                entered_by_role: detectedRole === 'GC' ? 'TC' : detectedRole,
-                description: labor.role,
-                hourly_rate: labor.rate,
-                hours: labor.hours,
-                line_total: labor.rate * labor.hours,
-                pricing_mode: 'hourly',
-                is_actual_cost: false,
-              });
-            }
-          }
-
-          // Insert materials
-          for (let mi = 0; mi < item.materials.length; mi++) {
-            const mat = item.materials[mi];
-            await supabase.from('co_material_items').insert({
-              co_id: addToCoId,
-              org_id: orgId,
-              added_by_role: detectedRole,
-              line_number: mi + 1,
-              description: mat.description,
-              supplier_sku: mat.sku || null,
-              quantity: mat.quantity,
-              uom: mat.unit || 'EA',
-              unit_cost: mat.unitCost,
-              line_cost: mat.unitCost * mat.quantity,
-              markup_percent: item.markup,
-              markup_amount: (mat.unitCost * mat.quantity * item.markup) / 100,
-              billed_amount: mat.unitCost * mat.quantity * (1 + item.markup / 100),
-            });
-          }
-
-          // Insert equipment
-          for (const eq of item.equipment) {
-            await supabase.from('co_equipment_items').insert({
-              co_id: addToCoId,
-              org_id: orgId,
-              added_by_role: detectedRole,
-              description: eq.description,
-              duration_note: eq.durationNote || null,
-              cost: eq.cost,
-              markup_percent: item.markup,
-              markup_amount: (eq.cost * item.markup) / 100,
-              billed_amount: eq.cost * (1 + item.markup / 100),
-            });
-          }
-
-          // Update CO flags if materials/equipment were added
-          if (item.materials.length > 0 || item.equipment.length > 0) {
+          // Update CO flags if needs were flagged
+          if (item.materialsNeeded || item.equipmentNeeded) {
             await supabase.from('change_orders').update({
-              materials_needed: item.materials.length > 0 || undefined,
-              equipment_needed: item.equipment.length > 0 || undefined,
+              materials_needed: item.materialsNeeded || undefined,
+              equipment_needed: item.equipmentNeeded || undefined,
+              materials_responsible: item.materialResponsible,
+              equipment_responsible: item.equipmentResponsible,
               updated_at: new Date().toISOString(),
             }).eq('id', addToCoId);
           }
@@ -271,7 +210,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
         dispatch({ type: 'SET_SUBMITTED' });
         toast.success(`${totalItems} item(s) added`);
       } else {
-        // ─── CREATE MODE: original logic ───
+        // ─── CREATE MODE ───
         let assignedToOrgId: string | null = null;
         if (detectedRole === 'FC') {
           const { data: upstreamContract } = await supabase
@@ -337,8 +276,8 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               location_tag: locationTag,
               assigned_to_org_id: assignedToOrgId,
               fc_input_needed: state.collaboration.requestFcInput,
-              materials_needed: item.materials.length > 0,
-              equipment_needed: item.equipment.length > 0,
+              materials_needed: item.materialsNeeded,
+              equipment_needed: item.equipmentNeeded,
               materials_responsible: item.materialResponsible,
               equipment_responsible: item.equipmentResponsible,
               blocked_by_rfi_id: state.linkedRfiId ?? null,
@@ -348,8 +287,8 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
           if (coError) throw coError;
 
+          // Insert scope line items
           const workTypeEntries = Array.from(item.workTypes);
-          let createdLineItemIds: string[] = [];
 
           if (workTypeEntries.length > 0) {
             const lineItems = workTypeEntries.map((wt, idx) => ({
@@ -361,14 +300,12 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               unit: 'EA',
               sort_order: idx + 1,
             }));
-            const { data: liData, error: liError } = await supabase
+            const { error: liError } = await supabase
               .from('co_line_items')
-              .insert(lineItems)
-              .select('id');
+              .insert(lineItems);
             if (liError) console.error('Line items insert error:', liError);
-            createdLineItemIds = (liData ?? []).map(li => li.id);
           } else {
-            const { data: liData, error: liError } = await supabase
+            const { error: liError } = await supabase
               .from('co_line_items')
               .insert({
                 co_id: co.id,
@@ -378,64 +315,11 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
                 description: item.narrative || null,
                 unit: 'EA',
                 sort_order: 1,
-              })
-              .select('id');
-            if (liError) console.error('Line item insert error:', liError);
-            createdLineItemIds = (liData ?? []).map(li => li.id);
-          }
-
-          const firstLineItemId = createdLineItemIds[0];
-          if (firstLineItemId) {
-            for (const labor of item.laborEntries) {
-              if (labor.hours <= 0) continue;
-              await supabase.from('co_labor_entries').insert({
-                co_id: co.id,
-                org_id: orgId,
-                co_line_item_id: firstLineItemId,
-                entered_by_role: detectedRole === 'GC' ? 'TC' : detectedRole,
-                description: labor.role,
-                hourly_rate: labor.rate,
-                hours: labor.hours,
-                line_total: labor.rate * labor.hours,
-                pricing_mode: 'hourly',
-                is_actual_cost: false,
               });
-            }
+            if (liError) console.error('Line item insert error:', liError);
           }
 
-          for (let mi = 0; mi < item.materials.length; mi++) {
-            const mat = item.materials[mi];
-            await supabase.from('co_material_items').insert({
-              co_id: co.id,
-              org_id: orgId,
-              added_by_role: detectedRole,
-              line_number: mi + 1,
-              description: mat.description,
-              supplier_sku: mat.sku || null,
-              quantity: mat.quantity,
-              uom: mat.unit || 'EA',
-              unit_cost: mat.unitCost,
-              line_cost: mat.unitCost * mat.quantity,
-              markup_percent: item.markup,
-              markup_amount: (mat.unitCost * mat.quantity * item.markup) / 100,
-              billed_amount: mat.unitCost * mat.quantity * (1 + item.markup / 100),
-            });
-          }
-
-          for (const eq of item.equipment) {
-            await supabase.from('co_equipment_items').insert({
-              co_id: co.id,
-              org_id: orgId,
-              added_by_role: detectedRole,
-              description: eq.description,
-              duration_note: eq.durationNote || null,
-              cost: eq.cost,
-              markup_percent: item.markup,
-              markup_amount: (eq.cost * item.markup) / 100,
-              billed_amount: eq.cost * (1 + item.markup / 100),
-            });
-          }
-
+          // FC collaboration invite
           if (state.collaboration.requestFcInput && state.collaboration.assignedFcOrgId) {
             await supabase.from('change_order_collaborators').insert({
               co_id: co.id,
@@ -465,7 +349,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
     switch (state.step) {
       case 1: return <StepWhereAndWhy state={state} dispatch={dispatch} projectId={projectId} />;
       case 2: return <StepScopeCombined state={state} dispatch={dispatch} />;
-      case 3: return <StepPricingAndRouting state={state} dispatch={dispatch} projectId={projectId} onAddItem={handleAddItem} onGoReview={() => dispatch({ type: 'SET_STEP', step: 4 })} />;
+      case 3: return <StepPricingAndRouting state={state} dispatch={dispatch} projectId={projectId} />;
       case 4: return <StepReview state={state} dispatch={dispatch} onSwitchItem={handleSwitchItem} onAddItem={handleAddItem} />;
       default: return null;
     }
@@ -484,7 +368,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
             {isAddMode
               ? 'Scope items have been added to the existing order.'
-              : 'Your draft is ready for review. Open it to add details and submit for approval.'}
+              : 'Your draft is ready for review. Open it to add details, pricing, and submit for approval.'}
           </p>
           {!isAddMode && (
             <div className="font-mono text-sm font-semibold bg-amber-50 border border-amber-400 rounded-lg px-4 py-2 inline-block mb-6">
