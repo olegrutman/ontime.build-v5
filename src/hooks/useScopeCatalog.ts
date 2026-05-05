@@ -219,7 +219,7 @@ export function useScopeCatalog() {
 
   // ── Context filter (Phase 1 core feature) ─────────────────────────
   function filterByContext(ctx: FilterContext): FilteredCatalog {
-    const primary: ScopeCatalogItem[] = [];
+    const scored: Array<{ item: ScopeCatalogItem; score: number }> = [];
     const secondary: ScopeCatalogItem[] = [];
     const hidden: ScopeCatalogItem[] = [];
     const { zone, reason, workType } = ctx;
@@ -231,13 +231,9 @@ export function useScopeCatalog() {
         continue;
       }
 
-      // Zone match: 'any' or null applicable_zone is wildcard;
-      // null context zone is also wildcard (don't have one yet).
+      const isZoneWildcard = !def.applicable_zone || def.applicable_zone === 'any';
       const zoneOk =
-        !zone ||
-        !def.applicable_zone ||
-        def.applicable_zone === 'any' ||
-        def.applicable_zone === zone;
+        !zone || isZoneWildcard || def.applicable_zone === zone;
 
       const workTypeOk =
         !workType ||
@@ -250,13 +246,27 @@ export function useScopeCatalog() {
         def.applicable_reasons.includes(reason);
 
       if (zoneOk && workTypeOk && reasonOk) {
-        primary.push(item);
+        // Zone-wildcard items that don't strongly match reason+workType → secondary
+        if (isZoneWildcard && zone && (!reasonOk || !workTypeOk)) {
+          secondary.push(item);
+        } else {
+          // Relevance score: exact zone > wildcard; each matching dimension adds weight
+          let score = 0;
+          if (zone && !isZoneWildcard && def.applicable_zone === zone) score += 2;
+          if (reason && def.applicable_reasons.length > 0 && def.applicable_reasons.includes(reason)) score += 1;
+          if (workType && def.applicable_work_types.length > 0 && def.applicable_work_types.includes(workType)) score += 1;
+          scored.push({ item, score });
+        }
       } else if (zoneOk) {
         secondary.push(item);
       } else {
         hidden.push(item);
       }
     }
+
+    // Sort primary by descending relevance score
+    scored.sort((a, b) => b.score - a.score);
+    const primary = scored.map(s => s.item);
 
     return { primary, secondary, hidden };
   }
