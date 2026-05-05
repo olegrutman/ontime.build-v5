@@ -68,26 +68,11 @@ export function pickerReducer(state: PickerState, action: PickerAction): PickerS
     case 'SET_TONE':
       return updateItem({ tone: action.tone });
 
-    case 'SET_MARKUP':
-      return updateItem({ markup: action.markup });
+    case 'SET_MATERIALS_NEEDED':
+      return updateItem({ materialsNeeded: action.value });
 
-    case 'SET_LABOR_HOURS': {
-      const entries = [...cur.laborEntries];
-      entries[action.index] = { ...entries[action.index], hours: action.hours };
-      return updateItem({ laborEntries: entries });
-    }
-
-    case 'ADD_MATERIAL':
-      return updateItem({ materials: [...cur.materials, action.material] });
-
-    case 'REMOVE_MATERIAL':
-      return updateItem({ materials: cur.materials.filter(m => m.tempId !== action.tempId) });
-
-    case 'ADD_EQUIPMENT':
-      return updateItem({ equipment: [...cur.equipment, action.equipment] });
-
-    case 'REMOVE_EQUIPMENT':
-      return updateItem({ equipment: cur.equipment.filter(e => e.tempId !== action.tempId) });
+    case 'SET_EQUIPMENT_NEEDED':
+      return updateItem({ equipmentNeeded: action.value });
 
     case 'SET_MATERIAL_RESPONSIBLE':
       return updateItem({ materialResponsible: action.value });
@@ -115,7 +100,6 @@ export function pickerReducer(state: PickerState, action: PickerAction): PickerS
       newItem.pricingType = cur.pricingType;
       newItem.pricingName = cur.pricingName;
       newItem.tone = cur.tone;
-      newItem.markup = cur.markup;
       return {
         ...state,
         items: [...state.items, newItem],

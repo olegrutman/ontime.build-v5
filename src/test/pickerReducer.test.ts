@@ -118,42 +118,15 @@ describe('pickerReducer', () => {
     });
   });
 
-  describe('SET_LABOR_HOURS', () => {
-    it('updates hours at specific index', () => {
-      const s = act(state(), { type: 'SET_LABOR_HOURS', index: 0, hours: 8 });
-      expect(s.items[0].laborEntries[0].hours).toBe(8);
-      expect(s.items[0].laborEntries[1].hours).toBe(0); // unchanged
-    });
-  });
-
-  describe('materials', () => {
-    const mat = { tempId: 'm1', description: 'Lumber', sku: '', supplier: '', quantity: 10, unit: 'ea', unitCost: 25, icon: '' };
-
-    it('ADD_MATERIAL appends material', () => {
-      const s = act(state(), { type: 'ADD_MATERIAL', material: mat });
-      expect(s.items[0].materials).toHaveLength(1);
-      expect(s.items[0].materials[0].tempId).toBe('m1');
+  describe('needs flags', () => {
+    it('SET_MATERIALS_NEEDED', () => {
+      const s = act(state(), { type: 'SET_MATERIALS_NEEDED', value: true });
+      expect(s.items[0].materialsNeeded).toBe(true);
     });
 
-    it('REMOVE_MATERIAL removes by tempId', () => {
-      let s = act(state(), { type: 'ADD_MATERIAL', material: mat });
-      s = act(s, { type: 'REMOVE_MATERIAL', tempId: 'm1' });
-      expect(s.items[0].materials).toHaveLength(0);
-    });
-  });
-
-  describe('equipment', () => {
-    const equip = { tempId: 'e1', description: 'Crane', supplier: '', durationNote: '1 day', cost: 500, icon: '' };
-
-    it('ADD_EQUIPMENT appends', () => {
-      const s = act(state(), { type: 'ADD_EQUIPMENT', equipment: equip });
-      expect(s.items[0].equipment).toHaveLength(1);
-    });
-
-    it('REMOVE_EQUIPMENT removes by tempId', () => {
-      let s = act(state(), { type: 'ADD_EQUIPMENT', equipment: equip });
-      s = act(s, { type: 'REMOVE_EQUIPMENT', tempId: 'e1' });
-      expect(s.items[0].equipment).toHaveLength(0);
+    it('SET_EQUIPMENT_NEEDED', () => {
+      const s = act(state(), { type: 'SET_EQUIPMENT_NEEDED', value: true });
+      expect(s.items[0].equipmentNeeded).toBe(true);
     });
   });
 
@@ -190,7 +163,6 @@ describe('pickerReducer', () => {
     it('ADD_ITEM inherits shared fields and resets step', () => {
       let s = state();
       s = act(s, { type: 'SET_CAUSE', causeId: 'c1', causeName: 'Rework', docType: 'WO', billable: 'no', reason: 'rework' });
-      s = act(s, { type: 'SET_MARKUP', markup: 25 });
       s = act(s, { type: 'ADD_ITEM' });
       expect(s.items).toHaveLength(2);
       expect(s.currentItemIndex).toBe(1);
@@ -198,7 +170,6 @@ describe('pickerReducer', () => {
       // Inherited fields
       expect(s.items[1].causeId).toBe('c1');
       expect(s.items[1].reason).toBe('rework');
-      expect(s.items[1].markup).toBe(25);
       // Non-inherited fields should be blank
       expect(s.items[1].locations).toEqual([]);
       expect(s.items[1].narrative).toBe('');

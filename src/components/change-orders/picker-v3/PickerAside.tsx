@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
-import { Plus } from 'lucide-react';
+import { Plus, MapPin, Wrench, FileText, CheckCircle2, Circle, Users, ArrowRight } from 'lucide-react';
 import type { PickerState } from './types';
-import { itemSubtotal, grandTotal, locationShort, itemLaborTotal, itemMaterialTotal, itemEquipmentTotal } from './types';
+import { locationShort } from './types';
 
 interface PickerAsideProps {
   state: PickerState;
@@ -13,17 +13,12 @@ interface PickerAsideProps {
   canGoBack: boolean;
 }
 
-function fmt(n: number) {
-  return '$' + Math.round(n).toLocaleString('en-US');
-}
-
 export function PickerAside({
   state, onSwitchItem, onAddItem, onBack, onNext, onSubmit, canGoBack,
 }: PickerAsideProps) {
   const isReview = state.step === 4;
+  const isRoutingStep = state.step >= 3;
   const cur = state.items[state.currentItemIndex];
-  const total = grandTotal(state.items);
-  const isGC = state.role === 'GC';
 
   return (
     <aside className="bg-background border-l flex flex-col sticky top-0 h-screen overflow-hidden">
@@ -42,7 +37,6 @@ export function PickerAside({
         <div className="flex flex-col gap-1.5 mb-3">
           {state.items.map((item, i) => {
             const isActive = i === state.currentItemIndex && !isReview;
-            const sub = itemSubtotal(item);
             const loc = locationShort(item);
             const configured = item.causeId && item.workTypes.size > 0;
 
@@ -80,13 +74,34 @@ export function PickerAside({
                 <p className="text-[0.6rem] text-muted-foreground mt-0.5 leading-snug line-clamp-2">
                   {workSummary}
                 </p>
-                <p className="text-[0.55rem] text-muted-foreground/70 mt-0.5">
-                  {item.pricingName}{!isGC && item.markup > 0 ? ` · ${item.markup}% markup` : ''}
-                  {item.materials.length > 0 ? ` · ${item.materials.length} material${item.materials.length !== 1 ? 's' : ''}` : ''}
-                </p>
+                {/* Show doc type + billable badge */}
                 {configured && (
-                  <p className="font-mono text-[0.78rem] font-bold text-foreground mt-1.5">
-                    {fmt(sub)}
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className={cn(
+                      'text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-[0.5px]',
+                      item.docType === 'CO' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700',
+                    )}>
+                      {item.docType}
+                    </span>
+                    <span className={cn(
+                      'text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-[0.5px]',
+                      item.billable === 'yes' ? 'bg-green-100 text-green-700'
+                        : item.billable === 'maybe' ? 'bg-amber-100 text-amber-700'
+                        : 'bg-muted text-muted-foreground',
+                    )}>
+                      {item.billable === 'yes' ? 'Billable' : item.billable === 'maybe' ? 'Maybe' : 'Non-billable'}
+                    </span>
+                    {item.pricingName && isRoutingStep && (
+                      <span className="text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground uppercase tracking-[0.5px]">
+                        {item.pricingName}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {/* Narrative snippet */}
+                {item.narrative && (
+                  <p className="text-[0.55rem] text-muted-foreground/70 mt-1 leading-snug line-clamp-2 italic">
+                    "{item.narrative.substring(0, 100)}{item.narrative.length > 100 ? '…' : ''}"
                   </p>
                 )}
               </button>
@@ -102,44 +117,67 @@ export function PickerAside({
           <Plus className="h-3.5 w-3.5" /> Add another item
         </button>
 
-        {/* Total panel */}
-        <div className="bg-[hsl(var(--navy))] rounded-xl p-3.5 text-white mt-3">
-          <p className="text-[0.6rem] text-white/50 uppercase tracking-[1.2px] mb-1">
-            Total {cur.docType} Value
-          </p>
-          <p className="font-heading text-[1.95rem] font-black text-amber-400 leading-none tracking-tight">
-            {fmt(total)}
-          </p>
-          <p className="text-[0.66rem] text-white/50 mt-1.5">
-            {state.items.length} item{state.items.length !== 1 ? 's' : ''} · {cur.pricingName}
-          </p>
-          <div className="border-t border-white/10 mt-2.5 pt-2.5 space-y-1">
-            <div className="flex justify-between text-[0.7rem] text-white/70">
-              <span>Labor</span>
-              <span className="font-semibold text-white">
-                {fmt(state.items.reduce((s, it) => s + itemLaborTotal(it), 0))}
-              </span>
+        {/* Bottom panel: Completeness (steps 1-2) or Routing (steps 3-4) */}
+        {!isRoutingStep ? (
+          /* ── Scope Completeness Panel ── */
+          <div className="bg-[hsl(var(--navy))] rounded-xl p-3.5 text-white mt-3">
+            <p className="text-[0.6rem] text-white/50 uppercase tracking-[1.2px] mb-2.5">
+              Item Completeness
+            </p>
+            <div className="space-y-2">
+              <CompletenessRow icon={<MapPin className="h-3 w-3" />} label="Location" done={cur.locations.length > 0} detail={cur.locations.length > 0 ? locationShort(cur) : undefined} />
+              <CompletenessRow icon={<FileText className="h-3 w-3" />} label="Cause" done={!!cur.causeId} detail={cur.causeName ?? undefined} />
+              <CompletenessRow icon={<Wrench className="h-3 w-3" />} label="System" done={!!cur.system} detail={cur.systemName ?? undefined} />
+              <CompletenessRow icon={<Wrench className="h-3 w-3" />} label="Work Types" done={cur.workTypes.size > 0} detail={cur.workTypes.size > 0 ? `${cur.workTypes.size} selected` : undefined} />
+              <CompletenessRow icon={<FileText className="h-3 w-3" />} label="Narrative" done={!!cur.narrative} />
             </div>
-            <div className="flex justify-between text-[0.7rem] text-white/70">
-              <span>Materials</span>
-              <span className="font-semibold text-white">
-                {fmt(state.items.reduce((s, it) => s + itemMaterialTotal(it), 0))}
-              </span>
-            </div>
-            <div className="flex justify-between text-[0.7rem] text-white/70">
-              <span>Equipment</span>
-              <span className="font-semibold text-white">
-                {fmt(state.items.reduce((s, it) => s + itemEquipmentTotal(it), 0))}
-              </span>
-            </div>
-            {!isGC && (
-              <div className="flex justify-between text-[0.7rem] text-white/70 border-t border-white/10 pt-1.5 mt-1">
-                <span>Markup</span>
-                <span className="font-semibold text-white">+{cur.markup}%</span>
-              </div>
-            )}
+            <p className="text-[0.6rem] text-white/40 mt-2.5 pt-2.5 border-t border-white/10">
+              {state.items.length} item{state.items.length !== 1 ? 's' : ''} in draft
+            </p>
           </div>
-        </div>
+        ) : (
+          /* ── Routing Summary Panel ── */
+          <div className="bg-[hsl(var(--navy))] rounded-xl p-3.5 text-white mt-3">
+            <p className="text-[0.6rem] text-white/50 uppercase tracking-[1.2px] mb-2.5">
+              Routing Summary
+            </p>
+            <div className="space-y-2">
+              <div className="flex justify-between text-[0.7rem]">
+                <span className="text-white/70">Pricing Model</span>
+                <span className="font-semibold text-white">{cur.pricingName}</span>
+              </div>
+              {state.collaboration.assignedTcOrgId && (
+                <div className="flex justify-between text-[0.7rem]">
+                  <span className="text-white/70">Assigned TC</span>
+                  <span className="font-semibold text-amber-400">✓ Assigned</span>
+                </div>
+              )}
+              <div className="flex justify-between text-[0.7rem]">
+                <span className="text-white/70">FC Input</span>
+                <span className="font-semibold text-white">
+                  {state.collaboration.requestFcInput ? '✓ Requested' : 'Not requested'}
+                </span>
+              </div>
+              <div className="border-t border-white/10 pt-2 mt-1 space-y-1.5">
+                <div className="flex justify-between text-[0.7rem]">
+                  <span className="text-white/70">Materials</span>
+                  <span className="font-semibold text-white">
+                    {cur.materialsNeeded ? `Needed · ${cur.materialResponsible}` : 'None'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[0.7rem]">
+                  <span className="text-white/70">Equipment</span>
+                  <span className="font-semibold text-white">
+                    {cur.equipmentNeeded ? `Needed · ${cur.equipmentResponsible}` : 'None'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <p className="text-[0.6rem] text-white/40 mt-2.5 pt-2.5 border-t border-white/10">
+              {state.items.length} item{state.items.length !== 1 ? 's' : ''} · {cur.pricingName}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Footer nav */}
@@ -171,5 +209,17 @@ export function PickerAside({
         )}
       </div>
     </aside>
+  );
+}
+
+function CompletenessRow({ icon, label, done, detail }: { icon: React.ReactNode; label: string; done: boolean; detail?: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={cn('shrink-0', done ? 'text-green-400' : 'text-white/30')}>
+        {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+      </span>
+      <span className={cn('text-[0.7rem] flex-1', done ? 'text-white' : 'text-white/50')}>{label}</span>
+      {detail && <span className="text-[0.6rem] text-white/50 truncate max-w-[120px]">{detail}</span>}
+    </div>
   );
 }

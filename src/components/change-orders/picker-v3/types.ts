@@ -32,27 +32,6 @@ export interface WorkTypeOption {
   section?: string;
 }
 
-// ─── Material / Equipment Draft ──────────────────────────────────
-export interface MaterialDraft {
-  tempId: string;
-  description: string;
-  sku: string;
-  supplier: string;
-  quantity: number;
-  unit: string;
-  unitCost: number;
-  icon: string;
-}
-
-export interface EquipmentDraft {
-  tempId: string;
-  description: string;
-  supplier: string;
-  durationNote: string;
-  cost: number;
-  icon: string;
-}
-
 // ─── Per-Item State ──────────────────────────────────────────────
 export interface PickerItem {
   // Step 1: Where
@@ -68,36 +47,23 @@ export interface PickerItem {
   billable: 'yes' | 'maybe' | 'no';
   reason: COReasonCode | null;
 
-  // Step 3: Who (shared across items)
-  // (stored at top-level state)
-
-  // Step 4: Pricing
+  // Step 3: Routing & Responsibilities
   pricingType: COPricingType;
   pricingName: string;
 
-  // Step 5: Work types
+  // Step 2: Work types
   workTypes: Set<string>;
   workNames: Record<string, string>;
 
-  // Step 6: Scope narrative
+  // Step 2: Scope narrative
   narrative: string;
   tone: 'plain';
 
-  // Step 7: Materials & Equipment
-  materials: MaterialDraft[];
-  equipment: EquipmentDraft[];
+  // Step 3: Needs flags (not itemized — pricing deferred to detail page)
+  materialsNeeded: boolean;
+  equipmentNeeded: boolean;
   materialResponsible: 'GC' | 'TC';
   equipmentResponsible: 'GC' | 'TC';
-
-  // Step 8: Total
-  markup: number;
-
-  // Computed labor (simplified for v3)
-  laborEntries: Array<{
-    role: string;
-    rate: number;
-    hours: number;
-  }>;
 }
 
 // ─── Collaboration State (shared across all items) ───────────────
@@ -130,12 +96,8 @@ export type PickerAction =
   | { type: 'TOGGLE_WORK_TYPE'; workTypeId: string; workTypeName: string }
   | { type: 'SET_NARRATIVE'; narrative: string }
   | { type: 'SET_TONE'; tone: 'plain' }
-  | { type: 'SET_MARKUP'; markup: number }
-  | { type: 'SET_LABOR_HOURS'; index: number; hours: number }
-  | { type: 'ADD_MATERIAL'; material: MaterialDraft }
-  | { type: 'REMOVE_MATERIAL'; tempId: string }
-  | { type: 'ADD_EQUIPMENT'; equipment: EquipmentDraft }
-  | { type: 'REMOVE_EQUIPMENT'; tempId: string }
+  | { type: 'SET_MATERIALS_NEEDED'; value: boolean }
+  | { type: 'SET_EQUIPMENT_NEEDED'; value: boolean }
   | { type: 'SET_MATERIAL_RESPONSIBLE'; value: 'GC' | 'TC' }
   | { type: 'SET_EQUIPMENT_RESPONSIBLE'; value: 'GC' | 'TC' }
   | { type: 'SET_ASSIGNED_TC'; orgId: string | null }
@@ -151,7 +113,7 @@ export type PickerAction =
 export const PICKER_STEPS = [
   { key: 'where-why', label: 'Where & Why', num: 1 },
   { key: 'scope', label: 'Scope', num: 2 },
-  { key: 'pricing-routing', label: 'Pricing & Routing', num: 3 },
+  { key: 'routing', label: 'Routing', num: 3 },
   { key: 'review', label: 'Review', num: 4 },
 ] as const;
 
@@ -173,15 +135,10 @@ export function blankItem(): PickerItem {
     workNames: {},
     narrative: '',
     tone: 'plain',
-    materials: [],
-    equipment: [],
+    materialsNeeded: false,
+    equipmentNeeded: false,
     materialResponsible: 'TC',
     equipmentResponsible: 'TC',
-    markup: 18,
-    laborEntries: [
-      { role: 'Lead Carpenter', rate: 72, hours: 0 },
-      { role: 'Carpenter', rate: 60, hours: 0 },
-    ],
   };
 }
 
@@ -199,28 +156,6 @@ export function initialPickerState(role: COCreatedByRole): PickerState {
     submitted: false,
     linkedRfiId: null,
   };
-}
-
-export function itemLaborTotal(item: PickerItem): number {
-  return item.laborEntries.reduce((s, e) => s + e.rate * e.hours, 0);
-}
-
-export function itemMaterialTotal(item: PickerItem): number {
-  return item.materials.reduce((s, m) => s + m.unitCost * m.quantity, 0);
-}
-
-export function itemEquipmentTotal(item: PickerItem): number {
-  return item.equipment.reduce((s, e) => s + e.cost, 0);
-}
-
-export function itemSubtotal(item: PickerItem): number {
-  const base = itemLaborTotal(item) + itemMaterialTotal(item) + itemEquipmentTotal(item);
-  const mult = item.multiLocation && item.locations.length > 1 ? item.locations.length : 1;
-  return base * mult * (1 + item.markup / 100);
-}
-
-export function grandTotal(items: PickerItem[]): number {
-  return items.reduce((s, it) => s + itemSubtotal(it), 0);
 }
 
 export function locationDisplay(item: PickerItem): string {
