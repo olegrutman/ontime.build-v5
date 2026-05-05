@@ -31,8 +31,8 @@ export function ScopeCatalogBrowser({ state, dispatch }: ScopeCatalogBrowserProp
   const filterCtx: FilterContext = useMemo(() => ({
     zone,
     reason: cur.reason ?? null,
-    workType: null,
-  }), [zone, cur.reason]);
+    workType: cur.system ?? null,
+  }), [zone, cur.reason, cur.system]);
 
   const filtered = useMemo(() => filterByContext(filterCtx), [filterByContext, filterCtx]);
 

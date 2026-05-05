@@ -1,48 +1,49 @@
 
-# CO Picker v3 — Scope Step Improvements
+## Problem
 
-Three issues to fix on the Scope step (Step 2 of 4):
+The "Suggested" items on the Scope step show unrelated items together (e.g., "Electrical Conflict" corrections alongside "T&G wood wall paneling — install" finishes). This happens because of three filter gaps:
 
-## 1. Add Full Catalog Browser to Scope Step
+1. **`workType` is always `null`** in the filter context passed to `filterByContext()`. The `ScopeCatalogBrowser` never reads `cur.system` (the selected system like "Framing", "Electrical", etc.) to narrow results. Since `!null === true`, the workType check always passes — every item's `applicable_work_types` is ignored.
 
-**Problem:** Work types are hardcoded per system (WORK_BY_SYSTEM in StepScopeCombined.tsx). Users can only pick from a small curated list, not the full `catalog_definitions` table.
+2. **`applicable_zone: 'any'` is too permissive** — Corrections items (Code correction, MEP backout, etc.) have `zone: 'any'`, so they always land in "primary" as long as reason matches. They should only be primary when reason strongly matches.
 
-**Solution:** Replace the hardcoded work type pills with a catalog browser that uses `useScopeCatalog()` — the same hook that already exists and powers the CO scope picker logic. The flow:
+3. **No scoring/ranking** — All "primary" items are treated equally. A relevance score would push strongly-matching items to the top and weakly-matching items lower.
 
-- Show AI-suggested items first (from `filterByContext` using the current item's zone/reason/system).
-- Below suggestions, add a "Browse Full Catalog" button/section that opens a drill-down by division > category > items (same structure PO wizard uses with `CategoryGrid` > `SecondaryCategoryList` > item list).
-- Add a search bar at the top for quick text search (uses `useScopeCatalog().search()`).
-- Selected items get added as work types in the picker state.
+## Plan
 
-Files changed:
-- `src/components/change-orders/picker-v3/StepScopeCombined.tsx` — replace hardcoded WORK_BY_SYSTEM with catalog-driven UI
-- Potentially extract a `ScopeCatalogBrowser` sub-component for cleanliness
+### 1. Wire `system` into the filter context
 
-## 2. Hide Markup % from GC View in Aside
+In `ScopeCatalogBrowser.tsx`, map `cur.system` (e.g., `"electrical"`, `"framing"`) to the `workType` field of `FilterContext`. This immediately eliminates items whose `applicable_work_types` don't include the selected system.
 
-**Problem:** The right-side panel (PickerAside) shows "18% markup" in the total panel. Per spec, GCs should not see TC/FC markup details.
+- If user selected system = "Electrical" and reason = "conflict", only items with `applicable_work_types` containing `"electrical"` (or empty = wildcard) AND `applicable_reasons` containing the resolved reason will be primary.
+- T&G paneling has `applicable_work_types: [remodel, new_construction, repair]` — it won't match "electrical" and drops to secondary/hidden.
 
-**Solution:** In `PickerAside.tsx`, conditionally hide the markup row and the "· 18% markup" text in the summary line when `state.role === 'GC'`. GCs see a clean total without margin breakdown.
+### 2. Downgrade `zone: 'any'` items to secondary when reason doesn't match
 
-Files changed:
-- `src/components/change-orders/picker-v3/PickerAside.tsx` — conditionally render markup row based on role
+Tighten the scoring in `filterByContext()`:
+- Items with `applicable_zone: 'any'` that match on reason + workType → primary
+- Items with `applicable_zone: 'any'` that fail reason OR workType → secondary (not primary)
 
-## 3. More Descriptive Item Cards in Aside
+This prevents generic "catch-all" corrections from polluting the suggestions when the user is doing an owner-requested interior finish.
 
-**Problem:** The item cards on the right show minimal info — just location, cause name, and counts like "3 work types · 0 materials".
+### 3. Add a simple relevance score to sort primary items
 
-**Solution:** Replace the generic counts with:
-- The actual work type names (comma-separated, truncated if long)
-- The pricing type label (Fixed / T&M / Unit)
-- The system name more prominently
+Within the primary bucket, score items by how many dimensions match:
+- +2 for exact zone match (not wildcard)
+- +1 for reason match
+- +1 for workType match
 
-Files changed:
-- `src/components/change-orders/picker-v3/PickerAside.tsx` — enrich item card content
+Sort primary descending by score. This pushes the most relevant items to the top of the grid.
 
----
+### Files changed
 
-### Technical Notes
+| File | Change |
+|------|--------|
+| `src/components/change-orders/picker-v3/ScopeCatalogBrowser.tsx` | Pass `cur.system` as `workType` in `FilterContext` |
+| `src/hooks/useScopeCatalog.ts` | Update `filterByContext` to downgrade zone-wildcard items and add scoring |
 
-- `useScopeCatalog()` already provides `divisions`, `search()`, and `filterByContext()` — no new data fetching needed.
-- The zone can be resolved from the item's `locations` + `system` using existing `resolveZone()` utility.
-- Catalog items selected from the browser will map to work types in the picker state (id = catalog slug, label = canonical_name).
+### What this does NOT change
+
+- The full catalog browse remains unaffected (no filtering there)
+- Search results remain unfiltered
+- No database changes needed — the `applicable_*` columns already have the right data
