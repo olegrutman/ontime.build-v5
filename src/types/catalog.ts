@@ -40,6 +40,7 @@ export interface CatalogDefinition {
   applicable_zone: string | null;
   applicable_work_types: string[];
   applicable_reasons: string[];
+  applicable_systems: string[];
   search_text: string | null;
   aliases: string[];
   sort_order: number | null;

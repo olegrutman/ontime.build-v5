@@ -110,11 +110,12 @@ export interface FilterContext {
   zone: Zone | null;
   reason: string | null;
   workType: string | null;
+  system: string | null;
 }
 
 export interface FilteredCatalog {
-  primary: ScopeCatalogItem[];   // matches zone + reason + workType
-  secondary: ScopeCatalogItem[]; // matches zone but fails reason or workType
+  primary: ScopeCatalogItem[];   // matches zone + reason + workType + system
+  secondary: ScopeCatalogItem[]; // matches zone but fails one of the others
   hidden: ScopeCatalogItem[];    // everything else
 }
 
@@ -222,7 +223,7 @@ export function useScopeCatalog() {
     const scored: Array<{ item: ScopeCatalogItem; score: number }> = [];
     const secondary: ScopeCatalogItem[] = [];
     const hidden: ScopeCatalogItem[] = [];
-    const { zone, reason, workType } = ctx;
+    const { zone, reason, workType, system } = ctx;
 
     for (const item of items) {
       const def = itemsByDefId.get(item.id);
@@ -245,26 +246,30 @@ export function useScopeCatalog() {
         def.applicable_reasons.length === 0 ||
         def.applicable_reasons.includes(reason);
 
-      if (zoneOk && workTypeOk && reasonOk) {
-        // Zone-wildcard items that don't strongly match reason+workType → secondary
-        if (isZoneWildcard && zone && (!reasonOk || !workTypeOk)) {
+      const systemOk =
+        !system ||
+        !def.applicable_systems ||
+        def.applicable_systems.length === 0 ||
+        def.applicable_systems.includes(system);
+
+      if (zoneOk && workTypeOk && reasonOk && systemOk) {
+        if (isZoneWildcard && zone && (!reasonOk || !workTypeOk || !systemOk)) {
           secondary.push(item);
         } else {
-          // Relevance score: exact zone > wildcard; each matching dimension adds weight
           let score = 0;
           if (zone && !isZoneWildcard && def.applicable_zone === zone) score += 2;
           if (reason && def.applicable_reasons.length > 0 && def.applicable_reasons.includes(reason)) score += 1;
           if (workType && def.applicable_work_types.length > 0 && def.applicable_work_types.includes(workType)) score += 1;
+          if (system && def.applicable_systems && def.applicable_systems.length > 0 && def.applicable_systems.includes(system)) score += 2;
           scored.push({ item, score });
         }
-      } else if (zoneOk) {
+      } else if (zoneOk && systemOk) {
         secondary.push(item);
       } else {
         hidden.push(item);
       }
     }
 
-    // Sort primary by descending relevance score
     scored.sort((a, b) => b.score - a.score);
     const primary = scored.map(s => s.item);
 
