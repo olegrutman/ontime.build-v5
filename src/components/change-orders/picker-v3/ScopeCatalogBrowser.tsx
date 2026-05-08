@@ -22,11 +22,26 @@ export function ScopeCatalogBrowser({ state, dispatch }: ScopeCatalogBrowserProp
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
-  // Resolve zone from current item's locations
+  // Map the chosen System (wall/floor/roof/...) to the matching catalog zone.
+  // System wins over location-derived zone, because "Main Floor + Wall System"
+  // means walls on the main floor — not floor work.
+  const SYSTEM_TO_ZONE: Record<string, import('@/types/catalog').Zone> = {
+    wall: 'interior_wall',
+    floor: 'interior_floor',
+    ceiling: 'interior_ceiling',
+    roof: 'roof',
+    exterior: 'exterior_wall',
+    openings: 'envelope_opening',
+    deck: 'deck',
+    stair: 'stairs',
+    // 'other' → no zone override
+  };
+
   const zone = useMemo(() => {
+    if (cur.system && SYSTEM_TO_ZONE[cur.system]) return SYSTEM_TO_ZONE[cur.system];
     const tag = cur.locations.join(' · ');
     return resolveZoneFromLocationTag(tag);
-  }, [cur.locations]);
+  }, [cur.locations, cur.system]);
 
   const filterCtx: FilterContext = useMemo(() => ({
     zone,
