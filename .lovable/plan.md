@@ -1,66 +1,58 @@
-## Goal
+## Bug
 
-The CO Picker's "Where is the work happening?" step currently labels floors generically (Level 1 / Ground floor, Level 2 / Second floor, then Basement appended at the end). This doesn't reflect how the project was actually set up. When a basement exists, it IS the ground level, and Floor 1 is the Main Floor — not "Ground floor".
+CO Picker → "Where is the work happening?" never shows the basement and never uses the new "Main Floor" naming for Fuller Residence even though the project setup clearly captured a finished basement.
+
+## Root cause
+
+`StepWhere.tsx` queries a single table:
+
+```ts
+supabase.from('project_scope_details').select('*').eq('project_id', projectId).maybeSingle()
+```
+
+`project_scope_details` is only populated for **T&M / Remodel** projects (written from `CreateProjectNew.tsx` line 216). For standard contract projects (the wizard path used by Fuller Residence), the building info lives in `project_setup_answers` as key/value rows:
+
+| field_key | value |
+|---|---|
+| stories | `1` |
+| has_basement | `"yes"` |
+| basement_type | `"Finished"` |
+| basement_walkout | `"no"` |
+| has_garage | `{enabled:true, subtype:"Attached"}` |
+| has_rooftop_deck | `"no"` |
+| … | … |
+
+Because no `project_scope_details` row exists, the query returns `null`, `buildLocations(null)` returns `FALLBACK_LOCATIONS`, and the user sees the generic "Level 1 / Level 2 / Exterior / Other" set with no basement.
 
 ## Fix
 
-Update `buildLocations()` in `src/components/change-orders/picker-v3/StepWhere.tsx` to generate floor labels based on the real project structure pulled from `project_scope_details` (already queried).
+Make `StepWhere.tsx` resilient to both data sources. Read `project_scope_details` first; if missing, fetch `project_setup_answers` and adapt the rows into the same shape `buildLocations()` expects.
 
-### New labeling rules
+### Implementation
 
-When a basement exists (`foundation_type` ≈ "basement" or `basement_type` set):
+1. In `StepWhere.tsx`, replace the single `useQuery` with one that:
+   - Selects from `project_scope_details` (maybeSingle).
+   - If `null`, selects all rows from `project_setup_answers` for the project and folds them into an object: `{ [field_key]: value }` (parsing JSON values).
+   - Returns a normalized scope object with the keys `buildLocations` already uses: `floors`, `stories`, `foundation_type`, `basement_type`, `roof_type`, `has_balconies`, `decking_included`, `num_buildings`, plus an inferred `home_type`.
 
-```text
-Basement       — Ground level (or basement_type, e.g. "Walkout / Standard")
-Main Floor     — Level 1
-Second Floor   — Level 2
-Third Floor    — Level 3
-…
-Attic          — if attic_type / has_attic
-Roof           — if roof_type
-Exterior       — always
-```
+2. Map `project_setup_answers` keys to the normalized shape:
+   - `stories` → `floors` and `stories`
+   - `has_basement === "yes"` (or truthy) → `foundation_type = "basement"`
+   - `basement_type` → `basement_type` (e.g., "Finished", "Walkout")
+   - `basement_walkout === "yes"` → override `basement_type` label to "Walkout"
+   - `roof_type` / `has_rooftop_deck` → carry over if present
+   - `has_garage.enabled` → record but not used for floor levels
+   - `num_buildings` → carry over if present
+   - `home_type` / `building_type` → carry over if present
 
-When no basement:
+3. `buildLocations()` already handles the rest — basement first, "Main Floor" naming, etc.
 
-```text
-Main Floor     — Ground level (Level 1)
-Second Floor   — Level 2
-Third Floor    — Level 3
-…
-Roof / Exterior as above
-```
+### Files touched
 
-For multi-unit / apartments (`home_type` like `apartments_mf`, `num_buildings > 1`), keep current per-building entries but apply the same floor naming inside each.
-
-### Ordinal helper
-
-Add a small `floorLabel(n)` helper:
-- 1 → "Main Floor"
-- 2 → "Second Floor"
-- 3 → "Third Floor"
-- 4 → "Fourth Floor"
-- 5+ → "Level N" fallback
-
-Sub-text shows the matching `Level N` so users still see the numeric reference (e.g. label: "Main Floor", sub: "Level 1").
-
-### Order
-
-1. Basement (if any)
-2. Main Floor → upper floors in ascending order
-3. Attic (if any)
-4. Roof
-5. Exterior
-6. Additional buildings (if multi-building)
-7. Balcony / Deck (if applicable)
-8. Other / Custom
-
-## Files touched
-
-- `src/components/change-orders/picker-v3/StepWhere.tsx` — rewrite `buildLocations()` and add `floorLabel()` helper. No other files, no DB changes, no business-logic changes outside this presentational mapping.
+- `src/components/change-orders/picker-v3/StepWhere.tsx` — only the `useQuery` block + a small `normalizeScope()` helper. No other files, no DB changes.
 
 ## Out of scope
 
-- Changing the project setup wizard.
-- Changing how locations are stored on CO items (still saved as the visible label string).
-- Renaming any other "Level N" usage outside the CO picker.
+- Backfilling `project_scope_details` for existing wizard projects (would be a separate, broader migration).
+- Changing setup-wizard write paths.
+- Any other consumer of `project_scope_details`.
