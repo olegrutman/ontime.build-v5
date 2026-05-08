@@ -492,7 +492,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               disabled={isSubmitting || !canSubmit}
               className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-green-600 text-white disabled:opacity-60"
             >
-              {isSubmitting ? 'Saving…' : '✓ Submit'}
+              {isSubmitting ? 'Saving…' : '✓ Create'}
             </button>
           ) : (
             <button
