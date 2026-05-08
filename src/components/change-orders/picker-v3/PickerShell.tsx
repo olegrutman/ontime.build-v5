@@ -15,6 +15,7 @@ import { StepWhereAndWhy } from './StepWhereAndWhy';
 import { StepScopeCombined } from './StepScopeCombined';
 import { StepPricingAndRouting } from './StepPricingAndRouting';
 import { StepReview } from './StepReview';
+import { buildNarrativeFromItem } from './narrative';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
 interface PickerShellProps {
