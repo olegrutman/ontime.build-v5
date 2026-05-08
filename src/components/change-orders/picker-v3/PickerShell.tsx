@@ -207,11 +207,12 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
         queryClient.invalidateQueries({ queryKey: ['co-detail'] });
         queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
 
-        dispatch({ type: 'SET_SUBMITTED' });
         toast.success(`${totalItems} item(s) added`);
+        navigate(`/project/${projectId}/change-orders/${addToCoId}`, { replace: true });
       } else {
         // ─── CREATE MODE ───
         let assignedToOrgId: string | null = null;
+        let firstCreatedCoId: string | null = null;
         if (detectedRole === 'FC') {
           const { data: upstreamContract } = await supabase
             .from('project_contracts')
@@ -286,6 +287,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
             .single();
 
           if (coError) throw coError;
+          firstCreatedCoId ??= co.id;
 
           // Insert scope line items
           const workTypeEntries = Array.from(item.workTypes);
@@ -333,8 +335,10 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
         queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
 
-        dispatch({ type: 'SET_SUBMITTED' });
         toast.success(`${cur.docType === 'WO' ? 'Work Order' : 'Change Order'} created successfully`);
+        if (firstCreatedCoId) {
+          navigate(`/project/${projectId}/change-orders/${firstCreatedCoId}`, { replace: true });
+        }
       }
     } catch (err: any) {
       console.error('Failed to save:', err);
@@ -342,7 +346,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [user, orgId, isSubmitting, detectedRole, projectId, state, cur.docType, isTM, queryClient, dispatch]);
+  }, [user, orgId, isSubmitting, isAddMode, addToCoId, detectedRole, projectId, state, cur.docType, isTM, queryClient, navigate]);
 
 
   const stepContent = (() => {
