@@ -266,15 +266,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
           {/* Right side */}
           <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
-            {/* Status chip */}
+            {/* Status chip / CTA */}
             {(entryCount > 0 ? (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                 Priced
               </span>
             ) : canAddLabor ? (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                Needs Pricing
-              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded(true);
+                  setFormOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm ring-2 ring-amber-300/60 hover:bg-amber-600 hover:ring-amber-400/70 transition-all"
+              >
+                <DollarSign className="h-3.5 w-3.5" />
+                Add pricing
+              </button>
             ) : null)}
 
             {totalForRole > 0 && (
