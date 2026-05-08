@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { DemoProvider } from "@/contexts/DemoContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -157,7 +157,10 @@ function PageLoader() {
 function AuthenticatedSashaBubble() {
   const { user } = useAuth();
   const { isDemoMode } = useDemo();
+  const { pathname } = useLocation();
   if (!user && !isDemoMode) return null;
+  // Hide on full-screen picker/wizard routes where Sasha overlaps the submit bar
+  if (/\/change-orders\/(new|[^/]+\/add)/.test(pathname)) return null;
   return <SashaBubble />;
 }
 
