@@ -1,39 +1,66 @@
-# Fix: CO Photos Not Saving — RLS Argument Order Bug
+## Goal
 
-## Root Cause
-
-The `is_project_participant(_user_id, _project_id)` function expects `user_id` as the first argument and `project_id` as the second. However, several RLS policies call it with **swapped arguments**: `is_project_participant(project_id, auth.uid())` — passing `project_id` where `user_id` should be and vice versa.
-
-This causes the function to always return `false`, blocking all inserts/selects for those tables.
-
-The storage upload succeeds (200), but the subsequent `INSERT INTO co_photos` fails with **403 RLS violation**.
+The CO Picker's "Where is the work happening?" step currently labels floors generically (Level 1 / Ground floor, Level 2 / Second floor, then Basement appended at the end). This doesn't reflect how the project was actually set up. When a basement exists, it IS the ground level, and Floor 1 is the Main Floor — not "Ground floor".
 
 ## Fix
 
-One migration to drop and recreate all affected policies with the correct argument order:
+Update `buildLocations()` in `src/components/change-orders/picker-v3/StepWhere.tsx` to generate floor labels based on the real project structure pulled from `project_scope_details` (already queried).
 
-**Affected tables and policies:**
-| Table | Policy | Command |
-|-------|--------|---------|
-| `co_photos` | Participants can view CO photos | SELECT |
-| `co_photos` | Participants can insert CO photos | INSERT |
-| `co_evidence` | Participants can view CO evidence | SELECT |
-| `co_evidence` | Participants can insert CO evidence | INSERT |
-| `backcharges` | Project participants can view backcharges | SELECT |
-| `backcharges` | Authenticated users can create backcharges | INSERT |
-| `backcharges` | Project participants can update backcharges | UPDATE |
-| `rfis` | Project participants can view rfis | SELECT |
-| `rfis` | Project participants can create rfis | INSERT |
-| `rfis` | Submitter or recipient org can update rfis | UPDATE |
-| `rfi_attachments` | RFI participants can view attachments | SELECT |
-| `rfi_attachments` | Authenticated users can add attachments | INSERT |
-| `co_external_invites` | Project participants can view co_external_invites | SELECT |
-| `co_external_invites` | Project participants can create co_external_invites | INSERT |
+### New labeling rules
 
-Each policy will be dropped and recreated with `is_project_participant(auth.uid(), ...)` instead of `is_project_participant(..., auth.uid())`.
+When a basement exists (`foundation_type` ≈ "basement" or `basement_type` set):
 
-## Technical Details
+```text
+Basement       — Ground level (or basement_type, e.g. "Walkout / Standard")
+Main Floor     — Level 1
+Second Floor   — Level 2
+Third Floor    — Level 3
+…
+Attic          — if attic_type / has_attic
+Roof           — if roof_type
+Exterior       — always
+```
 
-- Single SQL migration
-- No schema changes, no code changes — purely RLS policy corrections
-- No downtime; policies are replaced atomically
+When no basement:
+
+```text
+Main Floor     — Ground level (Level 1)
+Second Floor   — Level 2
+Third Floor    — Level 3
+…
+Roof / Exterior as above
+```
+
+For multi-unit / apartments (`home_type` like `apartments_mf`, `num_buildings > 1`), keep current per-building entries but apply the same floor naming inside each.
+
+### Ordinal helper
+
+Add a small `floorLabel(n)` helper:
+- 1 → "Main Floor"
+- 2 → "Second Floor"
+- 3 → "Third Floor"
+- 4 → "Fourth Floor"
+- 5+ → "Level N" fallback
+
+Sub-text shows the matching `Level N` so users still see the numeric reference (e.g. label: "Main Floor", sub: "Level 1").
+
+### Order
+
+1. Basement (if any)
+2. Main Floor → upper floors in ascending order
+3. Attic (if any)
+4. Roof
+5. Exterior
+6. Additional buildings (if multi-building)
+7. Balcony / Deck (if applicable)
+8. Other / Custom
+
+## Files touched
+
+- `src/components/change-orders/picker-v3/StepWhere.tsx` — rewrite `buildLocations()` and add `floorLabel()` helper. No other files, no DB changes, no business-logic changes outside this presentational mapping.
+
+## Out of scope
+
+- Changing the project setup wizard.
+- Changing how locations are stored on CO items (still saved as the visible label string).
+- Renaming any other "Level N" usage outside the CO picker.

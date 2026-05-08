@@ -29,27 +29,51 @@ const SYSTEMS: SystemOption[] = [
   { id: 'other', icon: '⊞', label: 'Other', sub: 'Specify system' },
 ];
 
+function floorLabel(n: number): string {
+  switch (n) {
+    case 1: return 'Main Floor';
+    case 2: return 'Second Floor';
+    case 3: return 'Third Floor';
+    case 4: return 'Fourth Floor';
+    case 5: return 'Fifth Floor';
+    default: return `Level ${n}`;
+  }
+}
+
 function buildLocations(scope: any): { id: string; icon: string; label: string; sub: string }[] {
   if (!scope) return FALLBACK_LOCATIONS;
   const locs: { id: string; icon: string; label: string; sub: string }[] = [];
 
   const floors = scope.floors ?? scope.stories ?? 1;
   const numBuildings = scope.num_buildings ?? 1;
-  const homeType = scope.home_type ?? '';
+  const foundation = (scope.foundation_type ?? '').toString().toLowerCase();
+  const hasBasement = foundation.includes('basement') || !!scope.basement_type;
 
-  // Generate per-floor entries
-  for (let f = 1; f <= Math.min(floors, 8); f++) {
+  // Basement = ground level when present
+  if (hasBasement) {
     locs.push({
-      id: `floor-${f}`,
-      icon: '🏢',
-      label: `Level ${f}`,
-      sub: f === 1 ? 'Ground floor' : `Floor ${f}`,
+      id: 'basement',
+      icon: '⬇',
+      label: 'Basement',
+      sub: scope.basement_type ? `Ground level · ${scope.basement_type}` : 'Ground level',
     });
   }
 
-  // Basement if applicable
-  if (scope.foundation_type === 'basement' || scope.basement_type) {
-    locs.push({ id: 'basement', icon: '⬇', label: 'Basement', sub: scope.basement_type ?? 'Below grade' });
+  // Per-floor entries — Floor 1 is "Main Floor"
+  for (let f = 1; f <= Math.min(floors, 8); f++) {
+    const label = floorLabel(f);
+    const sub = !hasBasement && f === 1 ? `Ground level · Level ${f}` : `Level ${f}`;
+    locs.push({
+      id: `floor-${f}`,
+      icon: '🏢',
+      label,
+      sub,
+    });
+  }
+
+  // Attic
+  if (scope.attic_type || scope.has_attic) {
+    locs.push({ id: 'attic', icon: '◮', label: 'Attic', sub: scope.attic_type ?? 'Above top floor' });
   }
 
   // Roof
