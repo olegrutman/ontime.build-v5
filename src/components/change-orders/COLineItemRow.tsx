@@ -218,13 +218,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             )}
             <div className="min-w-0 flex-1">
               <p className="font-heading text-foreground leading-tight tracking-tight" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.item_name}</p>
-              {cleanDescription && (
-                <p className={cn(
-                  'text-sm text-muted-foreground mt-1.5 leading-relaxed whitespace-pre-line',
-                  item.category_name !== 'Combined scope' && 'line-clamp-3',
-                )}>{cleanDescription}</p>
-              )}
-              <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+
+              <div className="mt-2">
+                <p className="text-[0.6rem] font-bold uppercase tracking-[1.2px] text-muted-foreground mb-1">Description</p>
+                {cleanDescription ? (
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">{cleanDescription}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground/60 italic">No description provided</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
                 {item.category_name && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
                 )}
@@ -262,15 +266,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
           {/* Right side */}
           <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
-            {/* Status chip */}
+            {/* Status chip / CTA */}
             {(entryCount > 0 ? (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                 Priced
               </span>
             ) : canAddLabor ? (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                Needs Pricing
-              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded(true);
+                  setFormOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm ring-2 ring-amber-300/60 hover:bg-amber-600 hover:ring-amber-400/70 transition-all"
+              >
+                <DollarSign className="h-3.5 w-3.5" />
+                Add pricing
+              </button>
             ) : null)}
 
             {totalForRole > 0 && (

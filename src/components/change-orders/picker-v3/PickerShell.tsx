@@ -15,6 +15,7 @@ import { StepWhereAndWhy } from './StepWhereAndWhy';
 import { StepScopeCombined } from './StepScopeCombined';
 import { StepPricingAndRouting } from './StepPricingAndRouting';
 import { StepReview } from './StepReview';
+import { buildNarrativeFromItem } from './narrative';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
 interface PickerShellProps {
@@ -153,8 +154,9 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
             item.causeName ||
             'Scope item';
 
+          const narrative = item.narrative?.trim() || buildNarrativeFromItem(item);
           const descriptionParts: string[] = [];
-          if (item.narrative?.trim()) descriptionParts.push(item.narrative.trim());
+          if (narrative) descriptionParts.push(narrative);
           if (scopeNames.length > 0) {
             descriptionParts.push(
               `Scope:\n${scopeNames.map((n) => `• ${n}`).join('\n')}`
@@ -296,8 +298,9 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
             item.causeName ||
             'Scope item';
 
+          const narrative = item.narrative?.trim() || buildNarrativeFromItem(item);
           const descriptionParts: string[] = [];
-          if (item.narrative?.trim()) descriptionParts.push(item.narrative.trim());
+          if (narrative) descriptionParts.push(narrative);
           if (scopeNames.length > 0) {
             descriptionParts.push(
               `Scope:\n${scopeNames.map((n) => `• ${n}`).join('\n')}`
