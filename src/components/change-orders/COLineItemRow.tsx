@@ -218,13 +218,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             )}
             <div className="min-w-0 flex-1">
               <p className="font-heading text-foreground leading-tight tracking-tight" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.item_name}</p>
-              {cleanDescription && (
-                <p className={cn(
-                  'text-sm text-muted-foreground mt-1.5 leading-relaxed whitespace-pre-line',
-                  item.category_name !== 'Combined scope' && 'line-clamp-3',
-                )}>{cleanDescription}</p>
-              )}
-              <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+
+              <div className="mt-2">
+                <p className="text-[0.6rem] font-bold uppercase tracking-[1.2px] text-muted-foreground mb-1">Description</p>
+                {cleanDescription ? (
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">{cleanDescription}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground/60 italic">No description provided</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
                 {item.category_name && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
                 )}
