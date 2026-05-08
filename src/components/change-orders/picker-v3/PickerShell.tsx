@@ -286,37 +286,37 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           if (coError) throw coError;
           firstCreatedCoId ??= co.id;
 
-          // Insert scope line items
+          // Insert single bundled scope line item
           const workTypeEntries = Array.from(item.workTypes);
+          const scopeNames = workTypeEntries.map((wt) => item.workNames[wt] ?? wt);
 
-          if (workTypeEntries.length > 0) {
-            const lineItems = workTypeEntries.map((wt, idx) => ({
+          const itemName =
+            (item.narrative?.trim().substring(0, 120)) ||
+            scopeNames[0] ||
+            item.causeName ||
+            'Scope item';
+
+          const descriptionParts: string[] = [];
+          if (item.narrative?.trim()) descriptionParts.push(item.narrative.trim());
+          if (scopeNames.length > 0) {
+            descriptionParts.push(
+              `Scope:\n${scopeNames.map((n) => `• ${n}`).join('\n')}`
+            );
+          }
+          const description = descriptionParts.join('\n\n') || null;
+
+          const { error: liError } = await supabase
+            .from('co_line_items')
+            .insert({
               co_id: co.id,
               org_id: orgId,
               created_by_role: detectedRole,
-              item_name: item.workNames[wt] ?? wt,
-              description: item.narrative || null,
+              item_name: itemName,
+              description,
               unit: 'EA',
-              sort_order: idx + 1,
-            }));
-            const { error: liError } = await supabase
-              .from('co_line_items')
-              .insert(lineItems);
-            if (liError) console.error('Line items insert error:', liError);
-          } else {
-            const { error: liError } = await supabase
-              .from('co_line_items')
-              .insert({
-                co_id: co.id,
-                org_id: orgId,
-                created_by_role: detectedRole,
-                item_name: item.narrative?.substring(0, 120) || item.causeName || 'Scope item',
-                description: item.narrative || null,
-                unit: 'EA',
-                sort_order: 1,
-              });
-            if (liError) console.error('Line item insert error:', liError);
-          }
+              sort_order: 1,
+            });
+          if (liError) console.error('Line item insert error:', liError);
 
           // FC collaboration invite
           if (state.collaboration.requestFcInput && state.collaboration.assignedFcOrgId) {
