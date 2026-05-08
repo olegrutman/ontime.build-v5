@@ -220,11 +220,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <p className="font-heading text-foreground leading-tight tracking-tight" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.item_name}</p>
 
               <div className="mt-2">
-                <p className="text-[0.6rem] font-bold uppercase tracking-[1.2px] text-muted-foreground mb-1">Description</p>
+                <p className="text-[0.6rem] font-bold uppercase tracking-[1.2px] text-muted-foreground mb-1">Extra Notes</p>
                 {cleanDescription ? (
                   <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">{cleanDescription}</p>
                 ) : (
-                  <p className="text-sm text-muted-foreground/60 italic">No description provided</p>
+                  <p className="text-sm text-muted-foreground/60 italic">No extra notes</p>
                 )}
               </div>
 
