@@ -35,7 +35,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const canCreateCO = usePermission('canCreateChangeOrders');
   // Navigate to the new Picker v3 full-page wizard
   const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
-  const [filter, setFilter] = useState<FilterKey>('all');
+  const [filter, setFilter] = useState<FilterKey>('in_progress');
   function handleCardClick(id: string) {
     navigate(`/project/${projectId}/change-orders/${id}`);
   }

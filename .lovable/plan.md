@@ -1,19 +1,13 @@
-## Sort: action-required COs first
+## Default Change Orders view to "Active"
 
-In `src/components/change-orders/COListPage.tsx`, after computing `filteredCOs`, apply a stable sort that floats COs needing the current org's action to the top of every tab (All, Active, Approved, Withdrawn). The "Action" tab is unaffected since it already only contains those.
+In `src/components/change-orders/COListPage.tsx`, the filter state currently initializes to `'all'`. Change the initial value to `'in_progress'` so the page lands on the **Active** tab by default.
 
-**Action predicate** (same one used for the Action count):
-- `submitted` AND `co.org_id === orgId`, OR
-- `closed_for_pricing` AND (`co.org_id === orgId` OR `co.assigned_to_org_id === orgId`), OR
-- `work_in_progress` AND `co.assigned_to_org_id === orgId`
-
-**Sort:** action items first, otherwise preserve existing order (which is already newest-first from the query).
+- The "All" tab remains visible in the same row, so users can click it to see every CO (including approved and withdrawn).
+- No changes to filter logic, counts, sorting (action-required still floats to top), or styling.
+- One-line change:
 
 ```ts
-const sortedCOs = useMemo(() => {
-  const isAction = (co) => /* predicate above */;
-  return [...filteredCOs].sort((a, b) => Number(isAction(b)) - Number(isAction(a)));
-}, [filteredCOs, orgId]);
+const [filter, setFilter] = useState<FilterKey>('in_progress');
 ```
 
-Render `sortedCOs` in place of `filteredCOs`. No styling changes, no data changes, no new badges.
+That's it.
