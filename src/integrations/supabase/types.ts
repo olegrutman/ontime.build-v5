@@ -151,6 +151,7 @@ export type Database = {
         Row: {
           aliases: string[]
           applicable_reasons: string[]
+          applicable_systems: string[]
           applicable_work_types: string[]
           applicable_zone: string | null
           canonical_name: string
@@ -172,6 +173,7 @@ export type Database = {
         Insert: {
           aliases?: string[]
           applicable_reasons?: string[]
+          applicable_systems?: string[]
           applicable_work_types?: string[]
           applicable_zone?: string | null
           canonical_name: string
@@ -193,6 +195,7 @@ export type Database = {
         Update: {
           aliases?: string[]
           applicable_reasons?: string[]
+          applicable_systems?: string[]
           applicable_work_types?: string[]
           applicable_zone?: string | null
           canonical_name?: string
