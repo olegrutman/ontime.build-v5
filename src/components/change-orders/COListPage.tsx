@@ -94,6 +94,15 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     return changeOrders;
   }, [changeOrders, filter, orgId]);
 
+  // Float COs needing this org's action to the top
+  const sortedCOs = useMemo(() => {
+    const isAction = (co: typeof filteredCOs[number]) =>
+      (co.status === 'submitted' && co.org_id === orgId) ||
+      (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
+      (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId);
+    return [...filteredCOs].sort((a, b) => Number(isAction(b)) - Number(isAction(a)));
+  }, [filteredCOs, orgId]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
