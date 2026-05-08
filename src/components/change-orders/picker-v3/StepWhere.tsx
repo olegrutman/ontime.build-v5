@@ -109,16 +109,46 @@ export function StepWhere({ state, dispatch, projectId }: StepWhereProps) {
   const cur = state.items[state.currentItemIndex];
 
   const { data: scopeDetails } = useQuery({
-    queryKey: ['project-scope-details', projectId],
+    queryKey: ['picker-scope', projectId],
     enabled: !!projectId,
     staleTime: Infinity,
     queryFn: async () => {
-      const { data } = await supabase
+      // Primary: project_scope_details (T&M projects)
+      const { data: details } = await supabase
         .from('project_scope_details')
         .select('*')
         .eq('project_id', projectId)
         .maybeSingle();
-      return data;
+      if (details) return details;
+
+      // Fallback: project_setup_answers (standard wizard projects)
+      const { data: answers } = await supabase
+        .from('project_setup_answers')
+        .select('field_key, value')
+        .eq('project_id', projectId);
+      if (!answers || answers.length === 0) return null;
+
+      const map: Record<string, any> = {};
+      for (const row of answers) map[row.field_key] = row.value;
+
+      const truthy = (v: any) => v === true || v === 'yes' || v === 'true';
+      const stories = Number(map.stories) || Number(map.floors) || 1;
+      const hasBasement = truthy(map.has_basement) || !!map.basement_type;
+      const basementLabel = truthy(map.basement_walkout)
+        ? 'Walkout'
+        : (typeof map.basement_type === 'string' ? map.basement_type : null);
+
+      return {
+        floors: stories,
+        stories,
+        foundation_type: hasBasement ? 'basement' : (map.foundation_type ?? null),
+        basement_type: basementLabel,
+        roof_type: typeof map.roof_type === 'string' ? map.roof_type : null,
+        has_balconies: truthy(map.has_balconies),
+        decking_included: truthy(map.has_rooftop_deck) || truthy(map.decking_included),
+        num_buildings: Number(map.num_buildings) || 1,
+        home_type: map.home_type ?? map.building_type ?? null,
+      } as any;
     },
   });
 
