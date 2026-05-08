@@ -145,10 +145,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
               )}
             >
               {f.label}
-              <span className={cn(
-                'text-[10px] px-1 py-0.5 rounded-full',
-                filter === f.key ? 'bg-primary-foreground/20' : 'bg-muted',
-              )}>
+              <span className="text-[11px] sm:text-xs tabular-nums opacity-70 ml-0.5">
                 {f.count}
               </span>
             </button>
