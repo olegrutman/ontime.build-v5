@@ -196,7 +196,7 @@ export function PickerAside({
             onClick={onSubmit}
             className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.84rem] font-bold bg-green-600 text-white hover:bg-green-700 shadow-sm transition-all"
           >
-            ✓ Submit {cur.docType}
+            ✓ Create {cur.docType}
           </button>
         ) : (
           <button
