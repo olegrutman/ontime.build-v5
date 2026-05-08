@@ -110,11 +110,12 @@ export interface FilterContext {
   zone: Zone | null;
   reason: string | null;
   workType: string | null;
+  system: string | null;
 }
 
 export interface FilteredCatalog {
-  primary: ScopeCatalogItem[];   // matches zone + reason + workType
-  secondary: ScopeCatalogItem[]; // matches zone but fails reason or workType
+  primary: ScopeCatalogItem[];   // matches zone + reason + workType + system
+  secondary: ScopeCatalogItem[]; // matches zone but fails one of the others
   hidden: ScopeCatalogItem[];    // everything else
 }
 
