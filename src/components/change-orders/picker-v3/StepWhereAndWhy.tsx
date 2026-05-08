@@ -31,16 +31,39 @@ const SYSTEMS: SystemOption[] = [
   { id: 'other', icon: '⊞', label: 'Other', sub: 'Specify system' },
 ];
 
+function floorLabel(n: number): string {
+  switch (n) {
+    case 1: return 'Main Floor';
+    case 2: return 'Second Floor';
+    case 3: return 'Third Floor';
+    case 4: return 'Fourth Floor';
+    case 5: return 'Fifth Floor';
+    default: return `Level ${n}`;
+  }
+}
+
 function buildLocations(scope: any): { id: string; icon: string; label: string; sub: string }[] {
   if (!scope) return FALLBACK_LOCATIONS;
   const locs: { id: string; icon: string; label: string; sub: string }[] = [];
   const floors = scope.floors ?? scope.stories ?? 1;
   const numBuildings = scope.num_buildings ?? 1;
-  for (let f = 1; f <= Math.min(floors, 8); f++) {
-    locs.push({ id: `floor-${f}`, icon: '🏢', label: `Level ${f}`, sub: f === 1 ? 'Ground floor' : `Floor ${f}` });
+
+  const foundation = (scope.foundation_type ?? '').toString().toLowerCase();
+  const hasBasement = foundation.includes('basement') || !!scope.basement_type;
+
+  if (hasBasement) {
+    locs.push({
+      id: 'basement',
+      icon: '⬇',
+      label: 'Basement',
+      sub: scope.basement_type ? `Ground level · ${scope.basement_type}` : 'Ground level',
+    });
   }
-  if (scope.foundation_type === 'basement' || scope.basement_type) {
-    locs.push({ id: 'basement', icon: '⬇', label: 'Basement', sub: scope.basement_type ?? 'Below grade' });
+
+  for (let f = 1; f <= Math.min(floors, 8); f++) {
+    const label = floorLabel(f);
+    const sub = !hasBasement && f === 1 ? `Ground level · Level ${f}` : `Level ${f}`;
+    locs.push({ id: `floor-${f}`, icon: '🏢', label, sub });
   }
   if (scope.roof_type) {
     locs.push({ id: 'roof', icon: '△', label: 'Roof', sub: scope.roof_type });
@@ -137,16 +160,44 @@ export function StepWhereAndWhy({ state, dispatch, projectId }: StepWhereAndWhyP
   const cur = state.items[state.currentItemIndex];
 
   const { data: scopeDetails } = useQuery({
-    queryKey: ['project-scope-details', projectId],
+    queryKey: ['picker-scope', projectId],
     enabled: !!projectId,
     staleTime: Infinity,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: details } = await supabase
         .from('project_scope_details')
         .select('*')
         .eq('project_id', projectId)
         .maybeSingle();
-      return data;
+      if (details) return details;
+
+      const { data: answers } = await supabase
+        .from('project_setup_answers')
+        .select('field_key, value')
+        .eq('project_id', projectId);
+      if (!answers || answers.length === 0) return null;
+
+      const map: Record<string, any> = {};
+      for (const row of answers) map[row.field_key] = row.value;
+
+      const truthy = (v: any) => v === true || v === 'yes' || v === 'true';
+      const stories = Number(map.stories) || Number(map.floors) || 1;
+      const hasBasement = truthy(map.has_basement) || !!map.basement_type;
+      const basementLabel = truthy(map.basement_walkout)
+        ? 'Walkout'
+        : (typeof map.basement_type === 'string' ? map.basement_type : null);
+
+      return {
+        floors: stories,
+        stories,
+        foundation_type: hasBasement ? 'basement' : (map.foundation_type ?? null),
+        basement_type: basementLabel,
+        roof_type: typeof map.roof_type === 'string' ? map.roof_type : null,
+        has_balconies: truthy(map.has_balconies),
+        decking_included: truthy(map.has_rooftop_deck) || truthy(map.decking_included),
+        num_buildings: Number(map.num_buildings) || 1,
+        home_type: map.home_type ?? map.building_type ?? null,
+      } as any;
     },
   });
 
