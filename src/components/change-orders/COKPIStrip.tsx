@@ -149,11 +149,12 @@ function getTiles(props: COKPIStripProps): KPITile[] {
 
   if (isTC || isFC) {
     const upstream = isTC ? 'GC' : 'TC';
-    const matCost = matResp === 'TC' ? financials.materialsTotal : 0;
-    const eqCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
+    // Use viewer-scoped totals so FC collaborators don't pull TC's mats/eq
+    const matCost = financials.viewer.ownMaterialsTotal;
+    const eqCost = financials.viewer.ownEquipmentTotal;
     const matEquip = matCost + eqCost;
-    const ownLaborToUpstream = isTC ? financials.tcBillableToGC : financials.fcLaborTotal;
-    const totalToUpstream = ownLaborToUpstream + matEquip;
+    const ownLaborToUpstream = financials.viewer.ownLaborToUpstream;
+    const totalToUpstream = financials.viewer.totalToUpstream;
 
     const tiles: KPITile[] = [];
 
