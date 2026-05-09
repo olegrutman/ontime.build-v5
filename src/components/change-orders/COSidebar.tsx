@@ -54,14 +54,14 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
 
   const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
-  // Profitability calc
+  // Profitability calc — use viewer-scoped totals so FC collaborators don't pull TC's numbers
   let revenue = 0, costs = 0;
   if (isTC) {
-    revenue = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
-    costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
+    revenue = financials.viewer.totalToUpstream;
+    costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
   } else if (isFC) {
-    revenue = financials.fcLaborTotal + financials.materialsTotal + financials.equipmentTotal;
-    costs = financials.fcActualCostTotal + financials.materialsCost + financials.equipmentCost;
+    revenue = financials.viewer.totalToUpstream;
+    costs = financials.fcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
   }
   const margin = revenue - costs;
   const marginPct = revenue > 0 ? (margin / revenue) * 100 : 0;
