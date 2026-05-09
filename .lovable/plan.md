@@ -1,42 +1,110 @@
-## Bug: FC "Submit to Trade Contractor" button does nothing
+## Bug: CO PDF leaks combined-contract financials
 
 ### What's happening
-On CO `CO-FUL-IM-HA-0002` (status `draft`, owned by TC, with the FC as an active collaborator), the next-action banner shows **Submit to Trade Contractor** for the FC. Clicking it fires the banner action `'submit'`, which in `CODetailLayout.handleAction` calls `submitCO.mutateAsync(co.id)`. That mutation does:
+`supabase/functions/generate-co-pdf/index.ts` ignores who is downloading the PDF. It does:
+- `originalContractSum = sum(all project_contracts.contract_sum)` → for `CO-FUL-IM-HA-0002` that's TC↔GC ($231,651) + FC↔TC ($160,500) = **$392,151** (the number on your screenshot).
+- `subtotal = laborTotal + materialsTotal + equipmentTotal` → mixes TC's $390 labor with FC's $210 labor → $600 "Net Change" / Grand Total.
+- `Contractor:` field always uses `co.org_id` (the CO's owner org), not the contract's "from" side.
+- `Description of Work` lists every `co_line_items` row regardless of routing.
 
+So an FC opening the PDF sees the GC's contract sum and the TC's combined price — both wrong and a privacy leak (same class as the on-screen leak we just fixed for `financials.viewer.totalToUpstream`).
+
+### Target behavior
+
+The PDF must represent **one contract perspective** at a time:
+
+| Viewer | Auto perspective | Contract shown | Numbers shown |
+|---|---|---|---|
+| **FC** | FC ↔ TC (their upstream) | FC's contract sum with TC | FC's own labor + FC-owned materials/equipment |
+| **GC** | TC ↔ GC (their downstream) | GC's contract sum with TC | TC's submitted price to GC + GC-owned materials/equipment |
+| **TC** | **must pick** | upstream (TC↔GC) or downstream (TC↔FC) | matches the chosen side |
+
+### Fix plan
+
+**1. Edge function `generate-co-pdf/index.ts`**
+
+Add request param `perspective: 'upstream' | 'downstream'` (optional).
+
+```ts
+const { co_id, perspective } = await req.json();
 ```
-UPDATE change_orders SET status='submitted' WHERE id = ...
+
+Resolve the caller's org for this project:
+```ts
+// pick the participant row for this user in this project
+const { data: myParticipant } = await userClient
+  .from('project_participants')
+  .select('organization_id, role')
+  .eq('project_id', co.project_id)
+  .maybeSingle();
+const viewerOrgId = myParticipant?.organization_id;
+const viewerRole = myParticipant?.role; // 'Field Crew' | 'Trade Contractor' | 'General Contractor'
 ```
 
-Two problems:
+Decide which contract row drives the PDF:
+- FC viewer → contract where `from_org_id = viewerOrgId` (their upstream FC↔TC).
+- GC viewer → contract where `to_org_id = viewerOrgId` (downstream TC↔GC).
+- TC viewer → if `perspective='upstream'` use TC↔GC (`from_org_id=viewerOrgId AND to_role='General Contractor'`); if `'downstream'` use FC↔TC (`to_org_id=viewerOrgId AND from_role='Field Crew'`). Default to `'upstream'` if missing, log a warning.
+- Anyone else (admin, supplier) → fall back to current "all contracts" behavior or 403.
 
-1. **Wrong semantics.** The FC is a *collaborator*, not the CO owner. Collaborators submit their input via the `complete_fc_change_order_input` RPC (the existing `'submit_to_tc'` action in `CODetailLayout`), not by flipping the whole CO to `submitted`. The latter is what the TC does after receiving FC input.
-2. **Blocked by RLS / business rules.** Updating a TC-owned `change_orders` row from an FC org is rejected by row-level security, so the click silently fails (or surfaces a generic error toast).
+Then:
+- `originalContractSum = chosenContract.contract_sum` (single value, not summed).
+- `Contractor:` field = name of `chosenContract.from_org_id`'s org (not `co.org_id`).
+- New header field `Owner:` = name of `chosenContract.to_org_id`'s org.
 
-The recent edit that added `submitAction` to the draft / shared / WIP banners (in `CONextActionBanner.tsx`) used `action: 'submit'` for both TC and FC. That's correct for an FC who *owns* the CO (`created_by_role='FC'` and `org_id = myOrgId`), but wrong for an FC collaborator on a TC-owned CO — which is the most common FC scenario.
+Scope financial aggregates to the chosen contract:
 
-### Fix
+```ts
+// Determine the "billing org" (downstream / from side) and "receiving org" (upstream / to side)
+const billingOrgId = chosenContract.from_org_id;
+const receivingOrgId = chosenContract.to_org_id;
 
-Route the banner's submit button to the right handler based on whether the FC is the owner or a collaborator.
+// Labor: only entries owned by the billing side
+const laborForView = laborEntries.filter(e => e.org_id === billingOrgId);
 
-**1. `CONextActionBanner.tsx`**
-- Accept a new prop `isFCCollaborator: boolean` (FC viewer + active collaborator row exists, CO not owned by FC org).
-- When building `submitAction`:
-  - If `isFC && isFCCollaborator` → `{ label: 'Submit to {TC}', action: 'submit_to_tc' }`.
-  - Else (TC or FC owner) → existing `{ action: 'submit' }`.
-- Keep the existing `canSubmitNow = !!co.assigned_to_org_id` guard for TC; for FC collaborator the guard is "active collaborator row exists" (already true if `isFCCollaborator`).
+// Materials & equipment: only items owned by the billing side
+//   (matches the existing viewer logic in useChangeOrderDetail.ts)
+const materialsForView = materials.filter(m => m.org_id === billingOrgId);
+const equipmentForView = equipment.filter(e => e.org_id === billingOrgId);
 
-**2. `CODetailLayout.tsx`**
-- Compute `isFCCollaborator` from existing data (`isFC && isActiveCollaborator && co.org_id !== myOrgId`) and pass it to `CONextActionBanner` (both render sites: line 404 and the sticky-footer pass at 642 — verify `COStickyFooter` reuses the same banner config; if so pass it there too).
-- No change to `handleAction` needed — `'submit_to_tc'` already calls `completeFCInput` / `submitCO` correctly based on `isFCCreator`.
+// GC-perspective special case: the "labor" line should show TC's submitted price,
+// not the raw sum of TC labor entries (which is hidden from GC).
+const isGCPerspective = viewerRole === 'General Contractor';
+const laborTotal = isGCPerspective
+  ? (co.tc_submitted_price ?? sumLabor(laborForView))   // snapshot wins
+  : sumLabor(laborForView);
+```
 
-**3. `COStatusActions.tsx`** — no change needed; the existing `canSubmitFCPricing` path is for the `closed_for_pricing` status and is unrelated.
+Use these scoped totals throughout the rest of the function (`subtotal`, `tax`, `grandTotal`, `Net Change`, `Contract Sum Including this CO`).
+
+**Description of Work**: filter `co_line_items` for the perspective:
+- FC perspective → only items where `routed_to_org_id = viewerOrgId` (FC-direct items) or items the FC owns.
+- TC downstream → only FC-routed items.
+- TC upstream / GC → all top-level (non-FC-routed) items.
+
+(Verify the exact column on `co_line_items` once we touch the file — likely `routed_to_org_id` / `assigned_to_org_id`.)
+
+**2. Frontend `CODetailLayout.tsx` (`handleDownloadPdf`)**
+
+- For FC and GC: post the request as today; the function auto-resolves perspective.
+- For TC: open a small dialog **before** posting, asking *"Which contract should this PDF represent?"* with two options (`To General Contractor` / `To Field Crew`). Pass the choice as `perspective: 'upstream' | 'downstream'`.
+
+The dialog can be a simple `AlertDialog` with two action buttons; no new component file needed if we co-locate it in `CODetailLayout.tsx`.
+
+**3. Filename**
+
+Append the perspective to the filename so two TC PDFs don't collide:
+- `CO-CO-FUL-IM-HA-0002-to-GC.pdf` / `...-to-FC.pdf`.
+- For FC/GC, omit the suffix.
 
 ### Verification
-- As the FC collaborator on `CO-FUL-IM-HA-0002` (draft), click **Submit to Trade Contractor**: collaborator row flips to `completed`, `co_activity` gets an `fc_input_completed` entry, success toast appears, CO status stays `draft` (TC will submit the actual CO).
-- As an FC who *owns* a CO (`created_by_role='FC'`, `org_id = myOrgId`): button still calls `submitCO` and flips status to `submitted`.
-- TC submit flow unchanged.
+
+- As FC on `CO-FUL-IM-HA-0002`: header shows `Contractor: Pacifico Builders / Owner: IMIS, LLC`, `Original Contract Sum: $160,500.00`, `Net Change: $210.00`, Financial Summary Labor `$210.00`, Grand Total `$210.00`.
+- As GC on the same CO: `Contractor: IMIS, LLC / Owner: Fuller Residence GC`, `Original Contract Sum: $231,651.00`, `Net Change: $600.00`, Grand Total `$600.00`.
+- As TC, "To GC" PDF matches today's numbers ($231,651 / $600). "To FC" PDF matches the FC view ($160,500 / $210).
 
 ### Files touched
-- `src/components/change-orders/CONextActionBanner.tsx`
-- `src/components/change-orders/CODetailLayout.tsx`
-- (possibly) `src/components/change-orders/COStickyFooter.tsx` if it forwards `isFCCollaborator`
+- `supabase/functions/generate-co-pdf/index.ts` (perspective resolution + scoped totals + contract-from-side metadata + line-item filtering)
+- `src/components/change-orders/CODetailLayout.tsx` (TC perspective picker, pass `perspective`, filename suffix)
+
+No DB / RLS / migration changes.
