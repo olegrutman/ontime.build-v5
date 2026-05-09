@@ -138,28 +138,30 @@ export function CONextActionBanner(props: CONextActionBannerProps) {
 
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: 'hsl(var(--navy))' }}>
-      <div className="px-5 py-4 flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'hsl(var(--amber)/0.15)' }}>
-          <span style={{ color: 'hsl(var(--amber))' }}>{config.icon}</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[0.6rem] uppercase tracking-[0.1em] font-medium" style={{ color: 'hsl(220 27% 65%)' }}>
-            Next Action Required
-          </p>
-          <p className="text-sm font-bold text-white mt-0.5">{config.title}</p>
-          <p className="text-[0.7rem] mt-0.5" style={{ color: 'hsl(220 27% 60%)' }}>
-            {config.subtitle}
-          </p>
+      <div className="px-4 py-3 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-start gap-3 sm:contents">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'hsl(var(--amber)/0.15)' }}>
+            <span style={{ color: 'hsl(var(--amber))' }}>{config.icon}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.6rem] uppercase tracking-[0.1em] font-medium" style={{ color: 'hsl(220 27% 65%)' }}>
+              Next Action Required
+            </p>
+            <p className="text-sm font-bold text-white mt-0.5 break-words">{config.title}</p>
+            <p className="text-[0.7rem] mt-0.5 break-words" style={{ color: 'hsl(220 27% 60%)' }}>
+              {config.subtitle}
+            </p>
+          </div>
         </div>
         {config.actions.length > 0 && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             {config.actions.map(a => (
               <Button
                 key={a.action}
                 size="sm"
                 onClick={() => props.onAction(a.action)}
                 className={cn(
-                  'h-9 text-xs font-semibold rounded-lg',
+                  'h-9 text-xs font-semibold rounded-lg flex-1 sm:flex-none min-w-[7rem]',
                   a.primary
                     ? 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90'
                     : 'bg-white/10 text-white hover:bg-white/20 border border-white/10',
