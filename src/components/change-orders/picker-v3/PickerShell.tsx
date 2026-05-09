@@ -213,9 +213,10 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
         let assignedToOrgId: string | null = null;
         let firstCreatedCoId: string | null = null;
 
-        // Resolve FC org for collaborator insert (fall back to first project FC)
+        // Resolve FC org for collaborator insert (fall back to first project FC).
+        // FC creators have no downstream FC, so this is skipped entirely for them.
         let resolvedFcOrgId: string | null = state.collaboration.assignedFcOrgId ?? null;
-        if (state.collaboration.requestFcInput && !resolvedFcOrgId) {
+        if (detectedRole !== 'FC' && state.collaboration.requestFcInput && !resolvedFcOrgId) {
           const { data: fcParticipant } = await supabase
             .from('project_participants')
             .select('organization_id')
@@ -226,7 +227,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
             .maybeSingle();
           resolvedFcOrgId = fcParticipant?.organization_id ?? null;
         }
-        const fcInputNeeded = state.collaboration.requestFcInput && !!resolvedFcOrgId;
+        const fcInputNeeded = detectedRole !== 'FC' && state.collaboration.requestFcInput && !!resolvedFcOrgId;
 
         if (detectedRole === 'FC') {
           const { data: upstreamContract } = await supabase

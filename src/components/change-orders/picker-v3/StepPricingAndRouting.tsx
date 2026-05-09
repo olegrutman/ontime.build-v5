@@ -188,18 +188,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
         </div>
       )}
 
-      {/* FC: auto-routing info */}
-      {state.role === 'FC' && (
-        <div className="bg-background border rounded-xl p-3.5 mb-3 shadow-xs">
-          <div className="flex items-center gap-2.5 p-2.5 rounded-lg border bg-amber-50 border-amber-400">
-            <span className="w-[30px] h-[30px] rounded-full bg-green-600 text-white flex items-center justify-center text-[0.7rem] font-bold">TC</span>
-            <div className="flex-1">
-              <p className="text-[0.82rem] font-bold text-foreground">{rl.TC}</p>
-              <p className="text-[0.62rem] text-muted-foreground">Will price your hours</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* FC has no downstream party — no extra routing card here. Upstream TC is shown in Step 1 + RoutingChain below. */}
 
       <RoutingChain
         role={state.role}
