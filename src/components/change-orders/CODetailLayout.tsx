@@ -312,7 +312,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   ).length;
   const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
   const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
-  const displayBillable = isTC ? financials.grandTotal : totalLogged;
+  const displayBillable = (isTC || isFC) ? financials.grandTotal : totalLogged;
   const grossMargin = displayBillable - roleActualCost;
   const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
 
