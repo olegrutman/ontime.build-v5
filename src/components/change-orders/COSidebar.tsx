@@ -161,50 +161,60 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           )}
           {(isTC || isFC) && (() => {
             const upstream = isTC ? 'GC' : 'TC';
-            const ownLabor = isTC ? financials.tcBillableToGC : financials.fcLaborTotal;
+            const ownLabor = financials.viewer.ownLaborToUpstream;
+            const ownMats = financials.viewer.ownMaterialsTotal;
+            const ownEq = financials.viewer.ownEquipmentTotal;
+            const ownLaborTax = financials.laborTaxable ? ownLabor * (financials.taxRate / 100) : 0;
+            const ownMatsTax = ownMats * (financials.taxRate / 100);
+            const ownEqTax = ownEq * (financials.taxRate / 100);
+            const ownTotalTax = ownLaborTax + ownMatsTax + ownEqTax;
             return (
             <>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Billable to {upstream}</span>
                 <span className="font-mono font-medium">{fmtCurrency(ownLabor)}</span>
               </div>
-              {financials.equipmentTotal > 0 && (
+              {ownEq > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Equipment</span>
-                  <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>
+                  <span className="font-mono font-medium">{fmtCurrency(ownEq)}</span>
                 </div>
               )}
-              {financials.materialsTotal > 0 && (
+              {ownMats > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Materials</span>
-                  <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>
+                  <span className="font-mono font-medium">{fmtCurrency(ownMats)}</span>
                 </div>
               )}
               <div className="border-t border-border pt-2 mt-2">
                 <div className="flex justify-between text-sm font-semibold">
                   <span>Total to {upstream}</span>
-                  <span className="font-mono">{fmtCurrency(financials.grandTotal)}</span>
+                  <span className="font-mono">{fmtCurrency(financials.viewer.totalToUpstream)}</span>
                 </div>
               </div>
-              {financials.totalTax > 0 && (
+              {ownTotalTax > 0 && (
                 <div className="border-t border-border pt-2 mt-2 space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Materials tax</span>
-                    <span className="font-mono">{fmtCurrency(financials.materialsTax)}</span>
-                  </div>
-                  {financials.laborTaxable && (
+                  {ownMatsTax > 0 && (
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Labor tax</span>
-                      <span className="font-mono">{fmtCurrency(financials.laborTax)}</span>
+                      <span>Materials tax</span>
+                      <span className="font-mono">{fmtCurrency(ownMatsTax)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Equipment tax</span>
-                    <span className="font-mono">{fmtCurrency(financials.equipmentTax)}</span>
-                  </div>
+                  {financials.laborTaxable && ownLaborTax > 0 && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Labor tax</span>
+                      <span className="font-mono">{fmtCurrency(ownLaborTax)}</span>
+                    </div>
+                  )}
+                  {ownEqTax > 0 && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Equipment tax</span>
+                      <span className="font-mono">{fmtCurrency(ownEqTax)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-semibold pt-1">
-                    <span>Total (incl. {fmtCurrency(financials.totalTax)} tax)</span>
-                    <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
+                    <span>Total (incl. {fmtCurrency(ownTotalTax)} tax)</span>
+                    <span className="font-mono">{fmtCurrency(financials.viewer.totalToUpstreamWithTax)}</span>
                   </div>
                 </div>
               )}
