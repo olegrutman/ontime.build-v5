@@ -61,6 +61,10 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
 
   if (isTC || isFC) {
     const upstream = isTC ? rl.GC : rl.TC;
+    const canSubmitNow = !!co.assigned_to_org_id;
+    const submitAction = canSubmitNow
+      ? { label: `Submit to ${upstream}`, action: 'submit' }
+      : { label: `Assign ${upstream} to submit`, action: 'noop' };
     if (status === 'closed_for_pricing') {
       return {
         icon: <Send className="h-5 w-5" />,
