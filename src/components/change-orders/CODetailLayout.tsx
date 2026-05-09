@@ -401,7 +401,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
 
           {/* Next Action Banner */}
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
+          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
 
           {/* Photo nudge banner */}
           <COPhotoNudgeBanner

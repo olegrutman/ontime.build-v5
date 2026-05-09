@@ -75,7 +75,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         title: `Finalize pricing and submit ${fmtCurrency(priceToUpstream)} to ${upstream}`,
         subtitle: 'Review your pricing, then submit for approval',
         actions: [
-          { label: `Submit to ${upstream}`, action: 'submit', primary: true },
+          { label: `Submit to ${upstream}`, action: submitActionName, primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
         ],
       };
