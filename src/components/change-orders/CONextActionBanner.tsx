@@ -10,6 +10,7 @@ interface CONextActionBannerProps {
   isGC: boolean;
   isTC: boolean;
   isFC: boolean;
+  isFCCollaborator?: boolean;
   financials: COFinancials;
   fcCollabName: string;
   onAction: (action: string) => void;
@@ -28,7 +29,7 @@ function fmtCurrency(value: number) {
 }
 
 function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): BannerConfig | null {
-  const { co, isGC, isTC, isFC, financials, fcCollabName } = props;
+  const { co, isGC, isTC, isFC, isFCCollaborator, financials, fcCollabName } = props;
   const status = co.status;
   // Single source of truth: price the GC sees == price the TC submits.
   const priceToUpstream = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
@@ -61,9 +62,12 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
 
   if (isTC || isFC) {
     const upstream = isTC ? rl.GC : rl.TC;
-    const canSubmitNow = !!co.assigned_to_org_id;
+    // FC collaborators submit their input via the complete_fc_change_order_input RPC
+    // (action 'submit_to_tc'), not by flipping the entire CO to 'submitted'.
+    const submitActionName = isFC && isFCCollaborator ? 'submit_to_tc' : 'submit';
+    const canSubmitNow = (isFC && isFCCollaborator) || !!co.assigned_to_org_id;
     const submitAction = canSubmitNow
-      ? { label: `Submit to ${upstream}`, action: 'submit' }
+      ? { label: `Submit to ${upstream}`, action: submitActionName }
       : { label: `Assign ${upstream} to submit`, action: 'noop' };
     if (status === 'closed_for_pricing') {
       return {
