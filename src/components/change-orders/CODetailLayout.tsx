@@ -532,7 +532,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               </div>
 
               {/* Materials */}
-              {(co.materials_needed || materials.length > 0 || (isTC && canEdit)) && (
+              {(co.materials_needed || materials.length > 0 || ((isTC || isFC) && canEdit)) && (
                 <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
