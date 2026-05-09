@@ -291,7 +291,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               reason_note: item.causeName ?? null,
               location_tag: locationTag,
               assigned_to_org_id: assignedToOrgId,
-              fc_input_needed: state.collaboration.requestFcInput,
+              fc_input_needed: fcInputNeeded,
               materials_needed: item.materialsNeeded,
               equipment_needed: item.equipmentNeeded,
               materials_responsible: item.materialResponsible,
