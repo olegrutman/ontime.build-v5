@@ -338,14 +338,22 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           if (liError) console.error('Line item insert error:', liError);
 
           // FC collaboration invite
-          if (state.collaboration.requestFcInput && state.collaboration.assignedFcOrgId) {
-            await supabase.from('change_order_collaborators').insert({
-              co_id: co.id,
-              organization_id: state.collaboration.assignedFcOrgId,
-              collaborator_type: 'FC',
-              status: 'invited',
-              invited_by_user_id: user.id,
-            });
+          if (fcInputNeeded && resolvedFcOrgId) {
+            const { error: collabError } = await supabase
+              .from('change_order_collaborators')
+              .insert({
+                co_id: co.id,
+                organization_id: resolvedFcOrgId,
+                collaborator_type: 'FC',
+                status: 'invited',
+                invited_by_user_id: user.id,
+              });
+            if (collabError) {
+              console.error('FC collaborator insert error:', collabError);
+              toast.error('Field crew assignment failed: ' + collabError.message);
+            }
+          } else if (state.collaboration.requestFcInput && !resolvedFcOrgId) {
+            toast.warning('No field crew on this project — FC request skipped.');
           }
         }
 
