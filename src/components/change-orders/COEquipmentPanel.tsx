@@ -295,7 +295,7 @@ export function COEquipmentPanel({
                     </button>
                   </div>
 
-                  <div className={cn("grid gap-2", isFC ? "grid-cols-1" : "grid-cols-3")}>
+                  <div className="grid gap-2 grid-cols-3">
                     <div>
                       <p className="text-[10px] text-muted-foreground mb-1">Duration</p>
                       <Input
