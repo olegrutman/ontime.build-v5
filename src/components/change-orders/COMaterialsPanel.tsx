@@ -371,7 +371,7 @@ export function COMaterialsPanel({
   }, [canManageMaterials, projectId]);
 
   useEffect(() => {
-    if (!isTC || !projectId || !orgId) return;
+    if (!(isTC || isFC) || !projectId || !orgId) return;
 
     let cancelled = false;
 
