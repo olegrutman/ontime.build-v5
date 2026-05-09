@@ -548,7 +548,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Equipment */}
-              {(co.equipment_needed || equipment.length > 0 || (isTC && canEdit)) && (
+              {(co.equipment_needed || equipment.length > 0 || ((isTC || isFC) && canEdit)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
