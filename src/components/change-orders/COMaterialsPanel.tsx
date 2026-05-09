@@ -410,7 +410,7 @@ export function COMaterialsPanel({
     return () => {
       cancelled = true;
     };
-  }, [isTC, projectId, orgId]);
+  }, [isTC, isFC, projectId, orgId]);
 
   function addRow() {
     setDraftRows(rows => [...rows, newDraftRow()]);
