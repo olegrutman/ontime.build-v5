@@ -993,13 +993,13 @@ export function COMaterialsPanel({
               )}
               {showPricingColumns && !isGC && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{isTC ? 'Supplier cost' : 'Cost'}</span>
+                  <span className="text-muted-foreground">{(isTC || isFC) ? 'Supplier cost' : 'Cost'}</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
               {showPricingColumns && !isGC && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{isTC ? 'My margin' : 'Markup'}</span>
+                  <span className="text-muted-foreground">{(isTC || isFC) ? 'My margin' : 'Markup'}</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
                 </div>
               )}
