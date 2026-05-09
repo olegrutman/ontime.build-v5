@@ -784,8 +784,8 @@ export function COMaterialsPanel({
                   <th className="text-left px-4 py-2 font-medium">Description</th>
                   <th className="text-right px-2 py-2 font-medium">Qty</th>
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
-                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{isTC ? 'Supplier cost' : 'Unit cost'}</th>}
-                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{isTC ? 'My margin' : 'Markup %'}</th>}
+                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'Supplier cost' : 'Unit cost'}</th>}
+                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'My margin' : 'Markup %'}</th>}
                   {showPricingColumns && <th className="text-right px-4 py-2 font-medium">Amount</th>}
                   {canManageMaterials && <th className="w-8" />}
                 </tr>
