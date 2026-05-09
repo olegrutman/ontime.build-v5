@@ -65,8 +65,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [auditOpen, setAuditOpen] = useState(false);
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [pdfPerspectiveOpen, setPdfPerspectiveOpen] = useState(false);
 
-  async function handleDownloadPdf() {
+  async function downloadPdfWithPerspective(perspective?: 'upstream' | 'downstream') {
     if (!co) return;
     setDownloadingPdf(true);
     try {
@@ -80,7 +81,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             Authorization: `Bearer ${session?.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ co_id: co.id }),
+          body: JSON.stringify({ co_id: co.id, perspective }),
         }
       );
       if (!res.ok) {
@@ -91,7 +92,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `CO-${co.co_number ?? co.id}.pdf`;
+      const suffix = perspective === 'downstream' ? '-to-FC' : perspective === 'upstream' ? '-to-GC' : '';
+      a.download = `CO-${co.co_number ?? co.id}${suffix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success('PDF downloaded');
@@ -100,6 +102,15 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     } finally {
       setDownloadingPdf(false);
     }
+  }
+
+  function handleDownloadPdf() {
+    // TC sits between FC and GC, so they must choose which contract to render.
+    if (isTC) {
+      setPdfPerspectiveOpen(true);
+      return;
+    }
+    void downloadPdfWithPerspective();
   }
 
   const { data: auditEntries = [] } = useCOAuditLog(coId);
