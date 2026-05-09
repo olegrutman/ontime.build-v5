@@ -59,25 +59,49 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     return null;
   }
 
-  if (isTC) {
+  if (isTC || isFC) {
+    const upstream = isTC ? rl.GC : rl.TC;
     if (status === 'closed_for_pricing') {
       return {
         icon: <Send className="h-5 w-5" />,
-        title: `Finalize pricing and submit ${fmtCurrency(priceToUpstream)} to GC`,
+        title: `Finalize pricing and submit ${fmtCurrency(priceToUpstream)} to ${upstream}`,
         subtitle: 'Review your pricing, then submit for approval',
         actions: [
-          { label: 'Submit to GC', action: 'submit', primary: true },
+          { label: `Submit to ${upstream}`, action: 'submit', primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
         ],
       };
     }
     if (['shared', 'work_in_progress'].includes(status)) {
+      // TC requests FC hours; FC has no downstream FC, so just builds price directly.
+      if (isTC) {
+        return {
+          icon: <Zap className="h-5 w-5" />,
+          title: `Request hours from ${fcCollabName} and add materials`,
+          subtitle: 'Build your price — add labor, materials, then close for pricing',
+          actions: [
+            { label: 'Request FC Hours', action: 'request_fc', primary: true },
+            { label: 'Add Materials', action: 'scroll_materials' },
+          ],
+        };
+      }
       return {
         icon: <Zap className="h-5 w-5" />,
-        title: `Request hours from ${fcCollabName} and add materials`,
-        subtitle: 'Build your price — add labor, materials, then close for pricing',
+        title: 'Build your price — add labor and materials',
+        subtitle: `Log labor and materials, then close for pricing and submit to ${upstream}`,
         actions: [
-          { label: 'Request FC Hours', action: 'request_fc', primary: true },
+          { label: 'Log Hours', action: 'log_hours', primary: true },
+          { label: 'Add Materials', action: 'scroll_materials' },
+        ],
+      };
+    }
+    if (status === 'draft') {
+      return {
+        icon: <Zap className="h-5 w-5" />,
+        title: 'Build your price — add labor and materials',
+        subtitle: `Log labor and materials, then submit to ${upstream}`,
+        actions: [
+          { label: 'Log Hours', action: 'log_hours', primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
         ],
       };
@@ -85,25 +109,12 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     if (status === 'submitted') {
       return {
         icon: <Clock className="h-5 w-5" />,
-        title: `Waiting on ${rl.GC} approval`,
+        title: `Waiting on ${upstream} approval`,
         subtitle: `Submitted ${fmtCurrency(priceToUpstream)} — you'll be notified when reviewed`,
         actions: [],
       };
     }
     return null;
-  }
-
-  // FC
-  if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
-    return {
-      icon: <Clock className="h-5 w-5" />,
-      title: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hours logged — submit when ready` : 'Log your hours for this work order',
-      subtitle: `Add time entries then submit to your ${rl.TC}`,
-      actions: [
-        { label: 'Log Hours', action: 'log_hours', primary: true },
-        ...(financials.fcTotalHours > 0 ? [{ label: 'Submit to TC', action: 'submit_to_tc' }] : []),
-      ],
-    };
   }
 
   return null;
