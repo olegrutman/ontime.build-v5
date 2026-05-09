@@ -86,6 +86,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
           actions: [
             { label: 'Request FC Hours', action: 'request_fc', primary: true },
             { label: 'Add Materials', action: 'scroll_materials' },
+            submitAction,
           ],
         };
       }
@@ -96,6 +97,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         actions: [
           { label: 'Log Hours', action: 'log_hours', primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
+          submitAction,
         ],
       };
     }
@@ -107,6 +109,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         actions: [
           { label: 'Log Hours', action: 'log_hours', primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
+          submitAction,
         ],
       };
     }
