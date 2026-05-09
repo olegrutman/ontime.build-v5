@@ -257,9 +257,9 @@ export function COEquipmentPanel({
                     {item.duration_note && (<p className="text-xs text-muted-foreground">{item.duration_note}</p>)}
                   </div>
                   <div className="text-right text-sm shrink-0">
-                    {isTC && equipmentResponsible === 'TC' && (<div className="text-xs text-muted-foreground">Cost: ${fmt(item.cost ?? 0)}</div>)}
-                    {isTC && equipmentResponsible === 'TC' && item.markup_percent > 0 && (<div className="text-[10px] text-muted-foreground">+{item.markup_percent}% markup</div>)}
-                    {!isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (<div className="font-medium text-foreground">${fmt(item.billed_amount ?? 0)}</div>)}
+                    {(isTC || isFC) && equipmentResponsible !== 'GC' && (<div className="text-xs text-muted-foreground">Cost: ${fmt(item.cost ?? 0)}</div>)}
+                    {(isTC || isFC) && equipmentResponsible !== 'GC' && item.markup_percent > 0 && (<div className="text-[10px] text-muted-foreground">+{item.markup_percent}% markup</div>)}
+                    {(isGC || ((isTC || isFC) && equipmentResponsible !== 'GC')) && (<div className="font-medium text-foreground">${fmt(item.billed_amount ?? 0)}</div>)}
                   </div>
                   {rowEditable && (
                     <button onClick={() => startEdit(item)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
