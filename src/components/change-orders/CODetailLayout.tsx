@@ -446,7 +446,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </div>
 
                   {/* Totals strip */}
-                  {lineItems.length > 0 && !isFC && (
+                  {lineItems.length > 0 && (
                     <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
                       <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
                         <p className="text-muted-foreground font-medium">{isGC ? 'TC Submitted' : isTC ? 'Billable to GC' : 'Billed to TC'}</p>
