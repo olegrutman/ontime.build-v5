@@ -28,9 +28,6 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const { userOrgRoles } = useAuth();
   const { changeOrders, isLoading } = useChangeOrders(projectId);
 
-  // Determine if FC role
-  const orgType = userOrgRoles?.[0]?.organization?.type;
-  const isFC = orgType === 'FC';
 
   const canCreateCO = usePermission('canCreateChangeOrders');
   // Navigate to the new Picker v3 full-page wizard
