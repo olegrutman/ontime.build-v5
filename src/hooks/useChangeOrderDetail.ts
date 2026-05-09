@@ -220,6 +220,28 @@ export function useChangeOrderDetail(coId: string | null) {
   const retainageReleased = (co as any)?.retainage_released ?? false;
   const netPayableAmount = retainageReleased ? grandTotalWithTax : grandTotalWithTax - retainageAmount;
 
+  // ---- Viewer-scoped totals (prevents cross-org leakage) ----
+  const ownerIsViewer = !!orgId && co?.org_id === orgId;
+  const viewerLaborTotal = orgId
+    ? billableLaborEntries.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.line_total ?? 0), 0)
+    : 0;
+  const viewerOwnLaborToUpstream = ownerIsViewer ? tcBillableToGC : viewerLaborTotal;
+  const viewerMaterialsTotal = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.billed_amount ?? 0), 0) : 0;
+  const viewerMaterialsCost  = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.line_cost ?? 0), 0) : 0;
+  const viewerEquipmentTotal = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.billed_amount ?? 0), 0) : 0;
+  const viewerEquipmentCost  = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.cost ?? 0), 0) : 0;
+  // CO owner sees the full picture (mats/eq from anyone they procured); collaborators only see their own scope
+  const scopedMaterialsTotal = ownerIsViewer ? materialsTotal : viewerMaterialsTotal;
+  const scopedEquipmentTotal = ownerIsViewer ? equipmentTotal : viewerEquipmentTotal;
+  const scopedMaterialsCost  = ownerIsViewer ? materialsCost  : viewerMaterialsCost;
+  const scopedEquipmentCost  = ownerIsViewer ? equipmentCost  : viewerEquipmentCost;
+  const viewerTotalToUpstream = viewerOwnLaborToUpstream + scopedMaterialsTotal + scopedEquipmentTotal;
+  // Tax on viewer-scoped totals
+  const viewerLaborTax = laborTaxable ? viewerOwnLaborToUpstream * taxPct : 0;
+  const viewerMatTax = scopedMaterialsTotal * taxPct;
+  const viewerEqTax = scopedEquipmentTotal * taxPct;
+  const viewerTotalToUpstreamWithTax = viewerTotalToUpstream + viewerLaborTax + viewerMatTax + viewerEqTax;
+
   const financials: COFinancials = {
     laborTotal,
     fcLaborTotal,
@@ -251,6 +273,15 @@ export function useChangeOrderDetail(coId: string | null) {
     retainageAmount,
     netPayableAmount,
     retainageReleased,
+    viewer: {
+      ownLaborToUpstream: viewerOwnLaborToUpstream,
+      ownMaterialsTotal: scopedMaterialsTotal,
+      ownEquipmentTotal: scopedEquipmentTotal,
+      ownMaterialsCost: scopedMaterialsCost,
+      ownEquipmentCost: scopedEquipmentCost,
+      totalToUpstream: viewerTotalToUpstream,
+      totalToUpstreamWithTax: viewerTotalToUpstreamWithTax,
+    },
   };
 
   const addLineItem = useMutation({
