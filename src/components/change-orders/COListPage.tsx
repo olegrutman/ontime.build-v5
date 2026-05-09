@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { coLabel, coAbbrev, docTypeFromMode } from '@/lib/coLabel';
 
 import { COBoardCard } from './COBoardCard';
-import { FCHomeScreen } from './FCHomeScreen';
+
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
