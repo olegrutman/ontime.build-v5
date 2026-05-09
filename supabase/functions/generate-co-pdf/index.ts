@@ -8,6 +8,8 @@ import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+type Perspective = 'upstream' | 'downstream';
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -36,7 +38,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { co_id } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const co_id: string | undefined = body.co_id;
+    const requestedPerspective: Perspective | undefined = body.perspective;
     if (!co_id) {
       return new Response(JSON.stringify({ error: "co_id required" }), {
         status: 400,
@@ -64,58 +68,102 @@ Deno.serve(async (req) => {
       .eq("id", co.project_id)
       .single();
 
-    // Fetch org (contractor)
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("name")
-      .eq("id", co.org_id)
-      .single();
+    // Resolve viewer's participant row in this project
+    const { data: myParticipants } = await supabase
+      .from("project_participants")
+      .select("organization_id, role")
+      .eq("project_id", co.project_id)
+      .eq("user_id", user.id);
+    const viewerOrgId: string | undefined = myParticipants?.[0]?.organization_id;
+    const viewerRole: string | undefined = myParticipants?.[0]?.role;
 
-    // Fetch line items
-    const { data: lineItems = [] } = await supabase
+    // Fetch all contracts for this project
+    const { data: contracts = [] } = await supabase
+      .from("project_contracts")
+      .select("id, from_org_id, to_org_id, from_role, to_role, contract_sum")
+      .eq("project_id", co.project_id);
+
+    // Pick the contract that drives this PDF based on the viewer's role
+    let chosenContract: any = null;
+    let perspective: Perspective = requestedPerspective ?? 'upstream';
+
+    if (viewerRole === 'Field Crew' && viewerOrgId) {
+      // FC is downstream of TC: their contract has from_org_id=FC
+      chosenContract = contracts.find((c: any) => c.from_org_id === viewerOrgId) ?? null;
+      perspective = 'upstream'; // FC always shows their upstream contract with TC
+    } else if (viewerRole === 'General Contractor' && viewerOrgId) {
+      // GC is upstream of TC: their contract has to_org_id=GC
+      chosenContract = contracts.find((c: any) => c.to_org_id === viewerOrgId) ?? null;
+      perspective = 'downstream'; // GC always shows their downstream contract with TC
+    } else if (viewerRole === 'Trade Contractor' && viewerOrgId) {
+      if (perspective === 'downstream') {
+        // TC ↔ FC contract (FC bills TC)
+        chosenContract = contracts.find((c: any) => c.to_org_id === viewerOrgId && c.from_role === 'Field Crew') ?? null;
+      } else {
+        // TC ↔ GC contract (TC bills GC)
+        chosenContract = contracts.find((c: any) => c.from_org_id === viewerOrgId && c.to_role === 'General Contractor') ?? null;
+      }
+    }
+
+    // Fallback: if we couldn't resolve, fail closed for non-platform users.
+    if (!chosenContract) {
+      return new Response(JSON.stringify({ error: "No contract perspective available for this user on this change order." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const billingOrgId: string = chosenContract.from_org_id;
+    const receivingOrgId: string = chosenContract.to_org_id;
+
+    // Fetch the two parties' org names
+    const orgIds = Array.from(new Set([billingOrgId, receivingOrgId]));
+    const { data: orgs = [] } = await supabase
+      .from("organizations")
+      .select("id, name")
+      .in("id", orgIds);
+    const orgName = (id: string) => orgs.find((o: any) => o.id === id)?.name ?? "—";
+
+    // Fetch line items, labor, materials, equipment for this CO
+    const { data: allLineItems = [] } = await supabase
       .from("co_line_items")
       .select("*")
       .eq("co_id", co_id)
       .order("sort_order");
 
-    // Fetch labor
-    const { data: laborEntries = [] } = await supabase
+    const { data: allLabor = [] } = await supabase
       .from("co_labor_entries")
       .select("*")
       .eq("co_id", co_id)
       .eq("is_actual_cost", false)
       .order("entry_date");
 
-    // Fetch materials
-    const { data: materials = [] } = await supabase
+    const { data: allMaterials = [] } = await supabase
       .from("co_material_items")
       .select("*")
       .eq("co_id", co_id)
       .order("line_number");
 
-    // Fetch equipment
-    const { data: equipment = [] } = await supabase
+    const { data: allEquipment = [] } = await supabase
       .from("co_equipment_items")
       .select("*")
       .eq("co_id", co_id)
       .order("created_at");
 
-    // Fetch contracts for original contract sum
-    const { data: contracts = [] } = await supabase
-      .from("project_contracts")
-      .select("contract_sum")
-      .eq("project_id", co.project_id);
+    // Scope to billing-side ownership
+    const lineItems = allLineItems.filter((l: any) => l.org_id === billingOrgId);
+    const laborForView = allLabor.filter((e: any) => e.org_id === billingOrgId);
+    const materials = allMaterials.filter((m: any) => m.org_id === billingOrgId);
+    const equipment = allEquipment.filter((e: any) => e.org_id === billingOrgId);
 
-    // Fetch previous approved COs
-    const { data: prevCOs = [] } = await supabase
-      .from("change_orders")
-      .select("id")
-      .eq("project_id", co.project_id)
-      .in("status", ["approved", "contracted"])
-      .neq("id", co_id);
+    // Calculate financials (scoped to perspective)
+    const laborSum = laborForView.reduce((s: number, e: any) => s + (e.line_total ?? 0), 0);
+    const isGCPerspective = viewerRole === 'General Contractor';
+    // GC sees TC's submitted price for labor, not the raw TC labor entries (privacy)
+    const laborTotal = isGCPerspective && co.tc_submitted_price != null
+      ? Number(co.tc_submitted_price)
+      : laborSum;
 
-    // Calculate financials
-    const laborTotal = laborEntries.reduce((s: number, e: any) => s + (e.line_total ?? 0), 0);
     const materialsTotal = materials.reduce((s: number, m: any) => s + (m.billed_amount ?? 0), 0);
     const equipmentTotal = equipment.reduce((s: number, e: any) => s + (e.billed_amount ?? 0), 0);
     const subtotal = laborTotal + materialsTotal + equipmentTotal;
@@ -130,9 +178,9 @@ Deno.serve(async (req) => {
     const grandTotal = subtotal + totalTax;
 
     const retainagePct = project?.retainage_percent ?? 0;
-    const retainageAmt = co.retainage_amount ?? (grandTotal * retainagePct / 100);
+    const retainageAmt = grandTotal * retainagePct / 100;
 
-    const originalContractSum = contracts.reduce((s: number, c: any) => s + (c.contract_sum ?? 0), 0);
+    const originalContractSum = Number(chosenContract.contract_sum ?? 0);
 
     // Build PDF
     const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
@@ -166,8 +214,9 @@ Deno.serve(async (req) => {
     doc.setTextColor(100);
     const infoRows = [
       ["Project:", project?.name ?? "—", "CO Number:", co.co_number ?? "—"],
-      ["Contractor:", org?.name ?? "—", "Date:", new Date(co.created_at).toLocaleDateString()],
-      ["Document Type:", co.document_type === "WO" ? "Work Order" : "Change Order", "Status:", (co.status ?? "").toUpperCase()],
+      ["Contractor:", orgName(billingOrgId), "Date:", new Date(co.created_at).toLocaleDateString()],
+      ["Owner:", orgName(receivingOrgId), "Status:", (co.status ?? "").toUpperCase()],
+      ["Document Type:", co.document_type === "WO" ? "Work Order" : "Change Order", "Perspective:", perspective === 'downstream' ? `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}` : `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}`],
     ];
     for (const row of infoRows) {
       doc.setFont("helvetica", "bold");
@@ -233,14 +282,21 @@ Deno.serve(async (req) => {
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(40);
-    for (let i = 0; i < lineItems.length; i++) {
-      const li = lineItems[i];
-      if (y > 700) { doc.addPage(); y = margin; }
-      doc.text(String(i + 1), margin + 5, y);
-      doc.text((li.item_name ?? "").substring(0, 50), margin + 25, y);
-      doc.text(li.unit ?? "", margin + 280, y);
-      doc.text(String(li.qty ?? "—"), margin + 330, y);
+    if (lineItems.length === 0) {
+      doc.setTextColor(140);
+      doc.text("No scope items on this contract.", margin + 5, y);
       y += 14;
+      doc.setTextColor(40);
+    } else {
+      for (let i = 0; i < lineItems.length; i++) {
+        const li = lineItems[i];
+        if (y > 700) { doc.addPage(); y = margin; }
+        doc.text(String(i + 1), margin + 5, y);
+        doc.text((li.item_name ?? "").substring(0, 50), margin + 25, y);
+        doc.text(li.unit ?? "", margin + 280, y);
+        doc.text(String(li.qty ?? "—"), margin + 330, y);
+        y += 14;
+      }
     }
     y += 10;
 
@@ -324,10 +380,6 @@ Deno.serve(async (req) => {
     y += 20;
 
     const sigLabels = ["CONTRACTOR", "OWNER"];
-    // Check if architect approval is needed
-    if (co.architect_approval_required) {
-      sigLabels.push("ARCHITECT");
-    }
 
     const sigW = (contentW - 20 * (sigLabels.length - 1)) / sigLabels.length;
     for (let i = 0; i < sigLabels.length; i++) {
@@ -339,7 +391,6 @@ Deno.serve(async (req) => {
 
       doc.setDrawColor(180);
       doc.setLineWidth(0.5);
-      // Signature line
       doc.line(x, y + 35, x + sigW, y + 35);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
