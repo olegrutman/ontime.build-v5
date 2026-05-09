@@ -345,7 +345,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
                 co_id: co.id,
                 organization_id: resolvedFcOrgId,
                 collaborator_type: 'FC',
-                status: 'invited',
+                status: 'active',
                 invited_by_user_id: user.id,
               });
             if (collabError) {
