@@ -60,8 +60,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
     revenue = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
     costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
   } else if (isFC) {
-    revenue = financials.fcLaborTotal;
-    costs = financials.fcActualCostTotal;
+    revenue = financials.fcLaborTotal + financials.materialsTotal + financials.equipmentTotal;
+    costs = financials.fcActualCostTotal + financials.materialsCost + financials.equipmentCost;
   }
   const margin = revenue - costs;
   const marginPct = revenue > 0 ? (margin / revenue) * 100 : 0;
