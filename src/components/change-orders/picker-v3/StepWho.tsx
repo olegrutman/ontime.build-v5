@@ -245,24 +245,53 @@ export function StepWho({ state, dispatch, projectId }: StepWhoProps) {
         </>
       )}
 
-      {/* FC View */}
+      {/* FC View — mirrors TC's upstream-routing card (FC routes up to TC) */}
       {state.role === 'FC' && (
         <div className="bg-background border rounded-xl overflow-hidden mb-3.5 shadow-xs">
           <div className="px-3.5 py-3 border-b">
-            <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.5px] text-foreground/80">↑ Routes To Your {rl.TC}</p>
+            <p className="font-heading text-[0.92rem] font-extrabold uppercase tracking-[0.5px] text-foreground/80">↑ Submitting To</p>
           </div>
-          <div className="p-3.5">
-            <div className="flex items-center gap-2.5 p-2.5 rounded-lg border bg-amber-50 border-amber-400">
-              <span className="w-[34px] h-[34px] rounded-full bg-green-600 text-white flex items-center justify-center text-[0.75rem] font-bold">TC</span>
-              <div className="flex-1">
-                <p className="text-[0.85rem] font-bold text-foreground">{rl.TC}</p>
-                <p className="text-[0.65rem] text-muted-foreground">Will price your hours</p>
+          <div className="p-3.5 space-y-1.5">
+            {tcOrgs.length <= 1 ? (
+              <div className="flex items-center gap-2.5 p-2.5 rounded-lg border bg-amber-50 border-amber-400">
+                <span className="w-[34px] h-[34px] rounded-full bg-green-600 text-white flex items-center justify-center text-[0.75rem] font-bold">
+                  {tcOrgs[0]?.initials ?? 'TC'}
+                </span>
+                <div className="flex-1">
+                  <p className="text-[0.85rem] font-bold text-foreground">{tcOrgs[0]?.name ?? rl.TC}</p>
+                  <p className="text-[0.65rem] text-muted-foreground">Auto-assigned from project</p>
+                </div>
+                <span className="text-[0.6rem] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">● Active</span>
               </div>
-              <span className="text-[0.6rem] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">● Active</span>
-            </div>
-            <p className="text-[0.74rem] text-muted-foreground mt-2.5 leading-relaxed">
-              You'll log your hours and add any materials you need. Your TC will see your hours, mark them up, add their own scope, and submit the final price to the GC.
-            </p>
+            ) : (
+              tcOrgs.map(tc => (
+                <button
+                  key={tc.id}
+                  type="button"
+                  onClick={() => dispatch({ type: 'SET_ASSIGNED_TC', orgId: tc.id })}
+                  className={cn(
+                    'flex items-center gap-2.5 w-full p-2.5 rounded-lg border-[1.5px] text-left transition-all',
+                    collab.assignedTcOrgId === tc.id
+                      ? 'bg-amber-50 border-amber-400 shadow-[0_0_0_3px_rgba(245,166,35,0.12)]'
+                      : 'bg-background border-border hover:border-amber-300',
+                  )}
+                >
+                  <span className="w-[34px] h-[34px] rounded-full bg-green-600 text-white flex items-center justify-center text-[0.75rem] font-bold shrink-0">
+                    {tc.initials}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[0.85rem] font-bold text-foreground">{tc.name}</p>
+                    <p className="text-[0.65rem] text-muted-foreground">{rl.TC}</p>
+                  </div>
+                  <div className={cn(
+                    'w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0',
+                    collab.assignedTcOrgId === tc.id ? 'border-amber-500 bg-amber-500' : 'border-muted-foreground/40',
+                  )}>
+                    {collab.assignedTcOrgId === tc.id && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
       )}
