@@ -147,28 +147,39 @@ function getTiles(props: COKPIStripProps): KPITile[] {
     return tiles;
   }
 
-  if (isTC) {
-    // TC only bills GC for mat/equip when TC is the responsible party
-    const tcMatCost = matResp === 'TC' ? financials.materialsTotal : 0;
-    const tcEqCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
-    const matEquip = tcMatCost + tcEqCost;
-    const totalToGC = financials.tcBillableToGC + matEquip;
+  if (isTC || isFC) {
+    const upstream = isTC ? 'GC' : 'TC';
+    const matCost = matResp === 'TC' ? financials.materialsTotal : 0;
+    const eqCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
+    const matEquip = matCost + eqCost;
+    const ownLaborToUpstream = isTC ? financials.tcBillableToGC : financials.fcLaborTotal;
+    const totalToUpstream = ownLaborToUpstream + matEquip;
 
-    const tiles: KPITile[] = [
-      {
+    const tiles: KPITile[] = [];
+
+    if (isTC) {
+      tiles.push({
         label: 'FC Cost',
         value: fmtCurrency(financials.fcLaborTotal),
         color: '#F5A623',
         sub: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs logged` : undefined,
         badge: financials.fcLaborTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
-      },
-      {
-        label: 'My Billable',
-        value: fmtCurrency(financials.tcBillableToGC),
-        color: 'hsl(var(--primary))',
-        badge: financials.tcBillableToGC > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
-      },
-    ];
+      });
+    } else {
+      tiles.push({
+        label: 'Hours Logged',
+        value: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs` : '—',
+        color: '#F5A623',
+        sub: financials.fcTotalHours > 0 ? `${Math.ceil(financials.fcTotalHours / 8)} days` : undefined,
+      });
+    }
+
+    tiles.push({
+      label: isTC ? 'My Billable' : 'My Labor',
+      value: fmtCurrency(ownLaborToUpstream),
+      color: 'hsl(var(--primary))',
+      badge: ownLaborToUpstream > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
+    });
 
     if (matEquip > 0) {
       tiles.push({
@@ -179,12 +190,11 @@ function getTiles(props: COKPIStripProps): KPITile[] {
     }
 
     tiles.push({
-      label: 'Total to GC',
-      value: fmtCurrency(totalToGC),
+      label: `Total to ${upstream}`,
+      value: fmtCurrency(totalToUpstream),
       color: '#F5A623',
     });
 
-    // Retainage tiles for TC
     if (financials.retainagePercent > 0 && financials.retainageAmount > 0) {
       tiles.push({
         label: 'Retainage Held',
@@ -203,36 +213,7 @@ function getTiles(props: COKPIStripProps): KPITile[] {
     return tiles;
   }
 
-  // FC
-  const fcMargin = financials.fcLaborTotal - financials.fcActualCostTotal;
-  const fcMarginPct = financials.fcLaborTotal > 0 ? ((fcMargin / financials.fcLaborTotal) * 100).toFixed(0) : '0';
-  return [
-    {
-      label: 'Hours Logged',
-      value: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs` : '—',
-      color: '#F5A623',
-      sub: financials.fcTotalHours > 0 ? `${Math.ceil(financials.fcTotalHours / 8)} days` : undefined,
-    },
-    {
-      label: 'Billed to TC',
-      value: fmtCurrency(financials.fcLaborTotal),
-      color: 'hsl(var(--primary))',
-      badge: financials.fcLaborTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
-    },
-    {
-      label: 'Internal Cost',
-      value: financials.fcActualCostTotal > 0 ? fmtCurrency(financials.fcActualCostTotal) : '—',
-      color: '#DC2626',
-    },
-    {
-      label: 'Margin',
-      value: financials.fcActualCostTotal > 0 ? fmtCurrency(fcMargin) : '—',
-      color: fcMargin >= 0 ? '#059669' : '#DC2626',
-      badge: financials.fcActualCostTotal > 0
-        ? { text: `${fcMarginPct}%`, variant: fcMargin >= 0 ? 'healthy' as const : 'watch' as const }
-        : undefined,
-    },
-  ];
+  return [];
 }
 
 function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: string; onRefresh?: () => void }) {
