@@ -482,7 +482,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
                       <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">
                         {pricedCount}/{lineItems.length} priced
-                        {isTC && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
+                        {(isTC || isFC) && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
                       </span>
                     </div>
                   )}
