@@ -833,7 +833,7 @@ export function COMaterialsPanel({
                       )}
                       {showPricingColumns && !isGC && (
                         <td className="text-right px-2 py-2.5">
-                          {canEdit && isTC ? (
+                          {canEdit && (isTC || isFC) ? (
                             <MarkupEditor materialId={material.id} initialValue={material.markup_percent} onRefresh={onRefresh} />
                           ) : (
                             <span className="text-muted-foreground">{material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}</span>
