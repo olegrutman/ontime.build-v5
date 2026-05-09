@@ -63,6 +63,14 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
   const selectedTc = tcOrgs.find(o => o.id === collab.assignedTcOrgId);
   const selectedFc = fcOrgs.find(o => o.id === collab.assignedFcOrgId);
 
+  // Auto-select first FC org if FC input is requested but none selected (covers
+  // pre-toggled state and late-loading fcOrgs list).
+  useEffect(() => {
+    if (collab.requestFcInput && !collab.assignedFcOrgId && fcOrgs.length > 0) {
+      dispatch({ type: 'SET_ASSIGNED_FC', orgId: fcOrgs[0].id });
+    }
+  }, [collab.requestFcInput, collab.assignedFcOrgId, fcOrgs, dispatch]);
+
   return (
     <div>
       <div className="mb-3.5">
