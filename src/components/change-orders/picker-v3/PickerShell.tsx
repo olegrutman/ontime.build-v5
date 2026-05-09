@@ -212,6 +212,22 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
         // ─── CREATE MODE ───
         let assignedToOrgId: string | null = null;
         let firstCreatedCoId: string | null = null;
+
+        // Resolve FC org for collaborator insert (fall back to first project FC)
+        let resolvedFcOrgId: string | null = state.collaboration.assignedFcOrgId ?? null;
+        if (state.collaboration.requestFcInput && !resolvedFcOrgId) {
+          const { data: fcParticipant } = await supabase
+            .from('project_participants')
+            .select('organization_id')
+            .eq('project_id', projectId)
+            .eq('role', 'FC')
+            .eq('invite_status', 'ACCEPTED')
+            .limit(1)
+            .maybeSingle();
+          resolvedFcOrgId = fcParticipant?.organization_id ?? null;
+        }
+        const fcInputNeeded = state.collaboration.requestFcInput && !!resolvedFcOrgId;
+
         if (detectedRole === 'FC') {
           const { data: upstreamContract } = await supabase
             .from('project_contracts')
@@ -275,7 +291,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               reason_note: item.causeName ?? null,
               location_tag: locationTag,
               assigned_to_org_id: assignedToOrgId,
-              fc_input_needed: state.collaboration.requestFcInput,
+              fc_input_needed: fcInputNeeded,
               materials_needed: item.materialsNeeded,
               equipment_needed: item.equipmentNeeded,
               materials_responsible: item.materialResponsible,
@@ -322,14 +338,22 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           if (liError) console.error('Line item insert error:', liError);
 
           // FC collaboration invite
-          if (state.collaboration.requestFcInput && state.collaboration.assignedFcOrgId) {
-            await supabase.from('change_order_collaborators').insert({
-              co_id: co.id,
-              organization_id: state.collaboration.assignedFcOrgId,
-              collaborator_type: 'FC',
-              status: 'invited',
-              invited_by_user_id: user.id,
-            });
+          if (fcInputNeeded && resolvedFcOrgId) {
+            const { error: collabError } = await supabase
+              .from('change_order_collaborators')
+              .insert({
+                co_id: co.id,
+                organization_id: resolvedFcOrgId,
+                collaborator_type: 'FC',
+                status: 'active',
+                invited_by_user_id: user.id,
+              });
+            if (collabError) {
+              console.error('FC collaborator insert error:', collabError);
+              toast.error('Field crew assignment failed: ' + collabError.message);
+            }
+          } else if (state.collaboration.requestFcInput && !resolvedFcOrgId) {
+            toast.warning('No field crew on this project — FC request skipped.');
           }
         }
 
