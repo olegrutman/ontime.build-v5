@@ -60,8 +60,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
     revenue = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
     costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
   } else if (isFC) {
-    revenue = financials.fcLaborTotal;
-    costs = financials.fcActualCostTotal;
+    revenue = financials.fcLaborTotal + financials.materialsTotal + financials.equipmentTotal;
+    costs = financials.fcActualCostTotal + financials.materialsCost + financials.equipmentCost;
   }
   const margin = revenue - costs;
   const marginPct = revenue > 0 ? (margin / revenue) * 100 : 0;
@@ -159,11 +159,14 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
               )}
             </>
           )}
-          {isTC && (
+          {(isTC || isFC) && (() => {
+            const upstream = isTC ? 'GC' : 'TC';
+            const ownLabor = isTC ? financials.tcBillableToGC : financials.fcLaborTotal;
+            return (
             <>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Billable to GC</span>
-                <span className="font-mono font-medium">{fmtCurrency(financials.tcBillableToGC)}</span>
+                <span className="text-muted-foreground">Billable to {upstream}</span>
+                <span className="font-mono font-medium">{fmtCurrency(ownLabor)}</span>
               </div>
               {financials.equipmentTotal > 0 && (
                 <div className="flex justify-between text-sm">
@@ -179,7 +182,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
               )}
               <div className="border-t border-border pt-2 mt-2">
                 <div className="flex justify-between text-sm font-semibold">
-                  <span>Total to GC</span>
+                  <span>Total to {upstream}</span>
                   <span className="font-mono">{fmtCurrency(financials.grandTotal)}</span>
                 </div>
               </div>
@@ -225,21 +228,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 </div>
               )}
             </>
-          )}
-          {isFC && (
-            <>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">My Labor</span>
-                <span className="font-mono font-medium">{fmtCurrency(financials.fcLaborTotal)}</span>
-              </div>
-              <div className="border-t border-border pt-2 mt-2">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>Total</span>
-                  <span className="font-mono">{fmtCurrency(financials.fcLaborTotal)}</span>
-                </div>
-              </div>
-            </>
-          )}
+            );
+          })()}
 
           {/* TC / FC Profitability — also show to GC when detailed visibility */}
           {(isTC || isFC || (isGC && props.markupVisibility === 'detailed')) && (

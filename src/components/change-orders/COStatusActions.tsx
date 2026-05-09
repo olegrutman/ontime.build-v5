@@ -89,9 +89,7 @@ export function COStatusActions({
 
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
-  const submitAmount = isFC && co.created_by_role === 'FC'
-    ? (financials?.fcLaborTotal ?? 0)
-    : (financials?.grandTotal ?? 0);
+  const submitAmount = financials?.grandTotal ?? 0;
 
   async function logActivity(action: string, detail?: string, amount?: number) {
     if (!user) return;

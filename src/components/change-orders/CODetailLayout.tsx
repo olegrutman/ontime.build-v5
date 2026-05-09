@@ -312,7 +312,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   ).length;
   const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
   const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
-  const displayBillable = isTC ? financials.grandTotal : totalLogged;
+  const displayBillable = (isTC || isFC) ? financials.grandTotal : totalLogged;
   const grossMargin = displayBillable - roleActualCost;
   const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
 
@@ -411,7 +411,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* KPI Row */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (isTC && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || (isTC && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || ((isTC || isFC) && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || ((isTC || isFC) && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
@@ -449,7 +449,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   {lineItems.length > 0 && (
                     <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
                       <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
-                        <p className="text-muted-foreground font-medium">{isGC ? 'TC Submitted' : isTC ? 'Billable to GC' : 'Billed to TC'}</p>
+                        <p className="text-muted-foreground font-medium">{isGC ? 'TC Submitted' : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
                         <p className="font-mono font-bold text-foreground mt-0.5">
                           ${ (isGC ? financials.grandTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
                         </p>
@@ -482,7 +482,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
                       <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">
                         {pricedCount}/{lineItems.length} priced
-                        {isTC && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
+                        {(isTC || isFC) && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
                       </span>
                     </div>
                   )}
@@ -532,7 +532,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               </div>
 
               {/* Materials */}
-              {(co.materials_needed || materials.length > 0 || (isTC && canEdit)) && (
+              {(co.materials_needed || materials.length > 0 || ((isTC || isFC) && canEdit)) && (
                 <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
@@ -548,7 +548,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Equipment */}
-              {(co.equipment_needed || equipment.length > 0 || (isTC && canEdit)) && (
+              {(co.equipment_needed || equipment.length > 0 || ((isTC || isFC) && canEdit)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}

@@ -128,13 +128,13 @@ export function COEquipmentPanel({
   }
 
   async function saveDrafts() {
-    const valid = drafts.filter(d => d.description.trim() && (isFC || parseFloat(d.cost) > 0));
+    const valid = drafts.filter(d => d.description.trim() && parseFloat(d.cost) > 0);
     if (valid.length === 0) return;
 
     setSaving(true);
     try {
       const rows = valid.map(d => {
-        const costVal = isFC ? 0 : (parseFloat(d.cost) || 0);
+        const costVal = parseFloat(d.cost) || 0;
         return {
         co_id:          coId,
         org_id:         orgId,
@@ -142,7 +142,7 @@ export function COEquipmentPanel({
         description:    d.description.trim(),
         duration_note:  d.duration_note.trim() || null,
         cost:           costVal,
-        markup_percent: isFC ? 0 : (parseFloat(d.markup_percent) || 0),
+        markup_percent: parseFloat(d.markup_percent) || 0,
         notes:          d.notes.trim() || null,
       }});
 
@@ -257,9 +257,9 @@ export function COEquipmentPanel({
                     {item.duration_note && (<p className="text-xs text-muted-foreground">{item.duration_note}</p>)}
                   </div>
                   <div className="text-right text-sm shrink-0">
-                    {isTC && equipmentResponsible === 'TC' && (<div className="text-xs text-muted-foreground">Cost: ${fmt(item.cost ?? 0)}</div>)}
-                    {isTC && equipmentResponsible === 'TC' && item.markup_percent > 0 && (<div className="text-[10px] text-muted-foreground">+{item.markup_percent}% markup</div>)}
-                    {!isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (<div className="font-medium text-foreground">${fmt(item.billed_amount ?? 0)}</div>)}
+                    {(isTC || isFC) && equipmentResponsible !== 'GC' && (<div className="text-xs text-muted-foreground">Cost: ${fmt(item.cost ?? 0)}</div>)}
+                    {(isTC || isFC) && equipmentResponsible !== 'GC' && item.markup_percent > 0 && (<div className="text-[10px] text-muted-foreground">+{item.markup_percent}% markup</div>)}
+                    {(isGC || ((isTC || isFC) && equipmentResponsible !== 'GC')) && (<div className="font-medium text-foreground">${fmt(item.billed_amount ?? 0)}</div>)}
                   </div>
                   {rowEditable && (
                     <button onClick={() => startEdit(item)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
@@ -295,7 +295,7 @@ export function COEquipmentPanel({
                     </button>
                   </div>
 
-                  <div className={cn("grid gap-2", isFC ? "grid-cols-1" : "grid-cols-3")}>
+                  <div className="grid gap-2 grid-cols-3">
                     <div>
                       <p className="text-[10px] text-muted-foreground mb-1">Duration</p>
                       <Input
@@ -305,35 +305,31 @@ export function COEquipmentPanel({
                         className="h-7 text-xs"
                       />
                     </div>
-                    {!isFC && (
-                      <div>
-                        <p className="text-[10px] text-muted-foreground mb-1">Cost $</p>
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                          <Input
-                            type="number"
-                            value={draft.cost}
-                            onChange={e => updateDraft(draft.tempId, 'cost', e.target.value)}
-                            placeholder="0.00"
-                            className="h-7 text-xs pl-5"
-                          />
-                        </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Cost $</p>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          value={draft.cost}
+                          onChange={e => updateDraft(draft.tempId, 'cost', e.target.value)}
+                          placeholder="0.00"
+                          className="h-7 text-xs pl-5"
+                        />
                       </div>
-                    )}
-                    {!isFC && (
-                      <div>
-                        <p className="text-[10px] text-muted-foreground mb-1">Markup %</p>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            value={draft.markup_percent}
-                            onChange={e => updateDraft(draft.tempId, 'markup_percent', e.target.value)}
-                            className="h-7 text-xs pr-5"
-                          />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
-                        </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Markup %</p>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={draft.markup_percent}
+                          onChange={e => updateDraft(draft.tempId, 'markup_percent', e.target.value)}
+                          className="h-7 text-xs pr-5"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   {billed > 0 && (
@@ -364,15 +360,15 @@ export function COEquipmentPanel({
             </div>
           )}
 
-          {equipment.length > 0 && !isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (
+          {equipment.length > 0 && (isGC || ((isTC || isFC) && equipmentResponsible !== 'GC')) && (
             <div className="px-4 py-3 border-t border-border space-y-1">
-              {isTC && totalCost > 0 && (
+              {(isTC || isFC) && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
-              {isTC && totalBilled > totalCost && (
+              {(isTC || isFC) && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Markup</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>

@@ -188,7 +188,7 @@ export function COMaterialsPanel({
   const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
 
   const canManageMaterials = canEdit && (isTC || isGC || isFC);
-  const showPricingColumns = isFC ? false : isGC ? true : isTC && materialsResponsible === 'TC';
+  const showPricingColumns = isGC ? true : ((isTC || isFC) && materialsResponsible !== 'GC');
   const addedByRole = isGC ? 'GC' : isFC ? 'FC' : 'TC';
 
   const [editingMatId, setEditingMatId] = useState<string | null>(null);
@@ -371,7 +371,7 @@ export function COMaterialsPanel({
   }, [canManageMaterials, projectId]);
 
   useEffect(() => {
-    if (!isTC || !projectId || !orgId) return;
+    if (!(isTC || isFC) || !projectId || !orgId) return;
 
     let cancelled = false;
 
@@ -410,7 +410,7 @@ export function COMaterialsPanel({
     return () => {
       cancelled = true;
     };
-  }, [isTC, projectId, orgId]);
+  }, [isTC, isFC, projectId, orgId]);
 
   function addRow() {
     setDraftRows(rows => [...rows, newDraftRow()]);
@@ -468,8 +468,8 @@ export function COMaterialsPanel({
         supplier_sku: row.supplier_sku.trim() || null,
         quantity: parseFloat(row.quantity) || 1,
         uom: row.uom,
-        unit_cost: isFC ? null : (parseFloat(row.unit_cost) || null),
-        markup_percent: isFC ? 0 : (parseFloat(row.markup_percent) || 0),
+        unit_cost: parseFloat(row.unit_cost) || null,
+        markup_percent: parseFloat(row.markup_percent) || 0,
         notes: row.notes.trim() || null,
         is_on_site: materialsOnSite,
       }));
@@ -784,8 +784,8 @@ export function COMaterialsPanel({
                   <th className="text-left px-4 py-2 font-medium">Description</th>
                   <th className="text-right px-2 py-2 font-medium">Qty</th>
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
-                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{isTC ? 'Supplier cost' : 'Unit cost'}</th>}
-                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{isTC ? 'My margin' : 'Markup %'}</th>}
+                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'Supplier cost' : 'Unit cost'}</th>}
+                  {showPricingColumns && !isGC && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'My margin' : 'Markup %'}</th>}
                   {showPricingColumns && <th className="text-right px-4 py-2 font-medium">Amount</th>}
                   {canManageMaterials && <th className="w-8" />}
                 </tr>
@@ -833,7 +833,7 @@ export function COMaterialsPanel({
                       )}
                       {showPricingColumns && !isGC && (
                         <td className="text-right px-2 py-2.5">
-                          {canEdit && isTC ? (
+                          {canEdit && (isTC || isFC) ? (
                             <MarkupEditor materialId={material.id} initialValue={material.markup_percent} onRefresh={onRefresh} />
                           ) : (
                             <span className="text-muted-foreground">{material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}</span>
@@ -993,13 +993,13 @@ export function COMaterialsPanel({
               )}
               {showPricingColumns && !isGC && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{isTC ? 'Supplier cost' : 'Cost'}</span>
+                  <span className="text-muted-foreground">{(isTC || isFC) ? 'Supplier cost' : 'Cost'}</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
               {showPricingColumns && !isGC && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{isTC ? 'My margin' : 'Markup'}</span>
+                  <span className="text-muted-foreground">{(isTC || isFC) ? 'My margin' : 'Markup'}</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
                 </div>
               )}
@@ -1010,7 +1010,7 @@ export function COMaterialsPanel({
             </div>
           )}
 
-          {materials.length > 0 && canManageMaterials && !isFC && showPricingColumns && (
+          {materials.length > 0 && canManageMaterials && showPricingColumns && (
             <div className="px-4 py-3 border-t border-border space-y-3">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="space-y-1">
