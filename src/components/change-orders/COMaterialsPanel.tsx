@@ -188,7 +188,7 @@ export function COMaterialsPanel({
   const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
 
   const canManageMaterials = canEdit && (isTC || isGC || isFC);
-  const showPricingColumns = isFC ? false : isGC ? true : isTC && materialsResponsible === 'TC';
+  const showPricingColumns = isGC ? true : ((isTC || isFC) && materialsResponsible !== 'GC');
   const addedByRole = isGC ? 'GC' : isFC ? 'FC' : 'TC';
 
   const [editingMatId, setEditingMatId] = useState<string | null>(null);
