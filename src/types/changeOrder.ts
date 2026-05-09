@@ -237,6 +237,21 @@ export interface COFinancials {
   retainageAmount: number;
   netPayableAmount: number;
   retainageReleased: boolean;
+  /**
+   * Viewer-scoped totals. Prevents cross-org leakage:
+   * - TC owner of CO → ownLaborToUpstream === tcBillableToGC; mats/eq scoped to TC org
+   * - FC collaborator → ownLaborToUpstream === sum of FC org's billable labor; mats/eq scoped to FC org
+   * - GC viewer → mirrors the global grandTotal
+   */
+  viewer: {
+    ownLaborToUpstream: number;
+    ownMaterialsTotal: number;
+    ownEquipmentTotal: number;
+    ownMaterialsCost: number;
+    ownEquipmentCost: number;
+    totalToUpstream: number;
+    totalToUpstreamWithTax: number;
+  };
 }
 
 export interface ScopeCatalogItem {
