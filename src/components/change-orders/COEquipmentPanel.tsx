@@ -360,15 +360,15 @@ export function COEquipmentPanel({
             </div>
           )}
 
-          {equipment.length > 0 && !isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (
+          {equipment.length > 0 && (isGC || ((isTC || isFC) && equipmentResponsible !== 'GC')) && (
             <div className="px-4 py-3 border-t border-border space-y-1">
-              {isTC && totalCost > 0 && (
+              {(isTC || isFC) && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
-              {isTC && totalBilled > totalCost && (
+              {(isTC || isFC) && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Markup</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
