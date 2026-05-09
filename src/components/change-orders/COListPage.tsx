@@ -111,11 +111,6 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     );
   }
 
-  // FC gets their own home screen
-  if (isFC) {
-    return <FCHomeScreen projectId={projectId} />;
-  }
-
   return (
     <div className="space-y-4 pb-20 md:pb-0">
       {/* Page Header */}
