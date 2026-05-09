@@ -37,7 +37,7 @@ import { CORFIBlockBanner } from './CORFIBlockBanner';
 import { COExternalInviteDialog } from './COExternalInviteDialog';
 import { COExternalInvitesCard } from './COExternalInvitesCard';
 import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs';
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -675,6 +675,30 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         }}
         isTM={co.document_type === 'WO'}
       />
+
+      <Dialog open={pdfPerspectiveOpen} onOpenChange={setPdfPerspectiveOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Which contract should this PDF show?</DialogTitle>
+            <DialogDescription>
+              You sit between the General Contractor and Field Crew. Pick which side this document represents.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setPdfPerspectiveOpen(false); void downloadPdfWithPerspective('downstream'); }}
+            >
+              Field Crew → Me
+            </Button>
+            <Button
+              onClick={() => { setPdfPerspectiveOpen(false); void downloadPdfWithPerspective('upstream'); }}
+            >
+              Me → General Contractor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
