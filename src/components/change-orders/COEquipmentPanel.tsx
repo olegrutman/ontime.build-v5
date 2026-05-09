@@ -128,13 +128,13 @@ export function COEquipmentPanel({
   }
 
   async function saveDrafts() {
-    const valid = drafts.filter(d => d.description.trim() && (isFC || parseFloat(d.cost) > 0));
+    const valid = drafts.filter(d => d.description.trim() && parseFloat(d.cost) > 0);
     if (valid.length === 0) return;
 
     setSaving(true);
     try {
       const rows = valid.map(d => {
-        const costVal = isFC ? 0 : (parseFloat(d.cost) || 0);
+        const costVal = parseFloat(d.cost) || 0;
         return {
         co_id:          coId,
         org_id:         orgId,
@@ -142,7 +142,7 @@ export function COEquipmentPanel({
         description:    d.description.trim(),
         duration_note:  d.duration_note.trim() || null,
         cost:           costVal,
-        markup_percent: isFC ? 0 : (parseFloat(d.markup_percent) || 0),
+        markup_percent: parseFloat(d.markup_percent) || 0,
         notes:          d.notes.trim() || null,
       }});
 
