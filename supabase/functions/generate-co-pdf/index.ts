@@ -10,6 +10,14 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 type Perspective = 'upstream' | 'downstream';
 
+const normalizeOrgRole = (role?: string | null): 'FC' | 'TC' | 'GC' | null => {
+  const value = (role ?? '').toUpperCase();
+  if (value === 'FC' || value.includes('FIELD CREW') || value.startsWith('FC_')) return 'FC';
+  if (value === 'TC' || value.includes('TRADE CONTRACTOR') || value.startsWith('TC_') || value === 'FS') return 'TC';
+  if (value === 'GC' || value.includes('GENERAL CONTRACTOR') || value.startsWith('GC_')) return 'GC';
+  return null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -68,14 +76,32 @@ Deno.serve(async (req) => {
       .eq("id", co.project_id)
       .single();
 
-    // Resolve viewer's participant row in this project
-    const { data: myParticipants } = await supabase
+    // Resolve viewer's organization through membership, then match it to the
+    // project participant rows. project_participants is org-scoped, not user-scoped.
+    const { data: projectParticipants = [] } = await supabase
       .from("project_participants")
       .select("organization_id, role")
-      .eq("project_id", co.project_id)
+      .eq("project_id", co.project_id);
+
+    const { data: userOrgRoles = [] } = await supabase
+      .from("user_org_roles")
+      .select("organization_id, role, organization:organizations(type)")
       .eq("user_id", user.id);
-    const viewerOrgId: string | undefined = myParticipants?.[0]?.organization_id;
-    const viewerRole: string | undefined = myParticipants?.[0]?.role;
+
+    const participantByOrg = new Map(
+      projectParticipants.map((p: any) => [p.organization_id, p])
+    );
+    const participatingMemberships = userOrgRoles.filter((m: any) => participantByOrg.has(m.organization_id));
+    const activeMembership =
+      participatingMemberships.find((m: any) => m.organization_id === co.assigned_to_org_id) ??
+      participatingMemberships.find((m: any) => m.organization_id === co.org_id) ??
+      participatingMemberships[0];
+    const viewerOrgId: string | undefined = activeMembership?.organization_id;
+    const viewerRole = normalizeOrgRole(
+      participantByOrg.get(viewerOrgId)?.role ??
+      activeMembership?.organization?.type ??
+      activeMembership?.role
+    );
 
     // Fetch all contracts for this project
     const { data: contracts = [] } = await supabase
@@ -87,21 +113,21 @@ Deno.serve(async (req) => {
     let chosenContract: any = null;
     let perspective: Perspective = requestedPerspective ?? 'upstream';
 
-    if ((viewerRole === 'FC' || viewerRole === 'Field Crew') && viewerOrgId) {
+    if (viewerRole === 'FC' && viewerOrgId) {
       // FC is downstream of TC: their contract has from_org_id=FC
       chosenContract = contracts.find((c: any) => c.from_org_id === viewerOrgId) ?? null;
       perspective = 'upstream'; // FC always shows their upstream contract with TC
-    } else if ((viewerRole === 'GC' || viewerRole === 'General Contractor') && viewerOrgId) {
+    } else if (viewerRole === 'GC' && viewerOrgId) {
       // GC is upstream of TC: their contract has to_org_id=GC
       chosenContract = contracts.find((c: any) => c.to_org_id === viewerOrgId) ?? null;
       perspective = 'downstream'; // GC always shows their downstream contract with TC
-    } else if ((viewerRole === 'TC' || viewerRole === 'Trade Contractor') && viewerOrgId) {
+    } else if (viewerRole === 'TC' && viewerOrgId) {
       if (perspective === 'downstream') {
         // TC ↔ FC contract (FC bills TC)
-        chosenContract = contracts.find((c: any) => c.to_org_id === viewerOrgId && c.from_role === 'Field Crew') ?? null;
+        chosenContract = contracts.find((c: any) => c.to_org_id === viewerOrgId && normalizeOrgRole(c.from_role) === 'FC') ?? null;
       } else {
         // TC ↔ GC contract (TC bills GC)
-        chosenContract = contracts.find((c: any) => c.from_org_id === viewerOrgId && c.to_role === 'General Contractor') ?? null;
+        chosenContract = contracts.find((c: any) => c.from_org_id === viewerOrgId && normalizeOrgRole(c.to_role) === 'GC') ?? null;
       }
     }
 
@@ -158,7 +184,7 @@ Deno.serve(async (req) => {
 
     // Calculate financials (scoped to perspective)
     const laborSum = laborForView.reduce((s: number, e: any) => s + (e.line_total ?? 0), 0);
-    const isGCPerspective = viewerRole === 'General Contractor';
+    const isGCPerspective = viewerRole === 'GC';
     // GC sees TC's submitted price for labor, not the raw TC labor entries (privacy)
     const laborTotal = isGCPerspective && co.tc_submitted_price != null
       ? Number(co.tc_submitted_price)
