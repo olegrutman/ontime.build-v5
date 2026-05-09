@@ -32,7 +32,7 @@ interface COStatusActionsProps {
   isFC: boolean;
   currentOrgId: string;
   projectId: string;
-  financials?: Pick<COFinancials, 'grandTotal' | 'laborTotal' | 'fcLaborTotal' | 'fcTotalHours' | 'fcLumpSumTotal' | 'materialsTotal' | 'equipmentTotal'> | null;
+  financials?: Pick<COFinancials, 'grandTotal' | 'laborTotal' | 'fcLaborTotal' | 'fcTotalHours' | 'fcLumpSumTotal' | 'materialsTotal' | 'equipmentTotal' | 'viewer'> | null;
   collaborators?: COCollaborator[];
   assignedOrgName?: string;
   onRefresh: () => void;
