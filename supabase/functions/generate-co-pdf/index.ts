@@ -87,15 +87,15 @@ Deno.serve(async (req) => {
     let chosenContract: any = null;
     let perspective: Perspective = requestedPerspective ?? 'upstream';
 
-    if (viewerRole === 'Field Crew' && viewerOrgId) {
+    if ((viewerRole === 'FC' || viewerRole === 'Field Crew') && viewerOrgId) {
       // FC is downstream of TC: their contract has from_org_id=FC
       chosenContract = contracts.find((c: any) => c.from_org_id === viewerOrgId) ?? null;
       perspective = 'upstream'; // FC always shows their upstream contract with TC
-    } else if (viewerRole === 'General Contractor' && viewerOrgId) {
+    } else if ((viewerRole === 'GC' || viewerRole === 'General Contractor') && viewerOrgId) {
       // GC is upstream of TC: their contract has to_org_id=GC
       chosenContract = contracts.find((c: any) => c.to_org_id === viewerOrgId) ?? null;
       perspective = 'downstream'; // GC always shows their downstream contract with TC
-    } else if (viewerRole === 'Trade Contractor' && viewerOrgId) {
+    } else if ((viewerRole === 'TC' || viewerRole === 'Trade Contractor') && viewerOrgId) {
       if (perspective === 'downstream') {
         // TC ↔ FC contract (FC bills TC)
         chosenContract = contracts.find((c: any) => c.to_org_id === viewerOrgId && c.from_role === 'Field Crew') ?? null;
