@@ -468,8 +468,8 @@ export function COMaterialsPanel({
         supplier_sku: row.supplier_sku.trim() || null,
         quantity: parseFloat(row.quantity) || 1,
         uom: row.uom,
-        unit_cost: isFC ? null : (parseFloat(row.unit_cost) || null),
-        markup_percent: isFC ? 0 : (parseFloat(row.markup_percent) || 0),
+        unit_cost: parseFloat(row.unit_cost) || null,
+        markup_percent: parseFloat(row.markup_percent) || 0,
         notes: row.notes.trim() || null,
         is_on_site: materialsOnSite,
       }));
