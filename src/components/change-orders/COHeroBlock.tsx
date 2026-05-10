@@ -77,10 +77,10 @@ function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsCo
       return {
         eyebrow: 'CLOSED FOR PRICING',
         headline: 'PRICE & SUBMIT',
-        hint: 'Finalize your pricing and submit to GC',
+        hint: `Finalize your pricing and submit to ${rl.GC}`,
         cards: [
-          { variant: 'primary', icon: '🚀', title: 'Submit to GC', description: 'Send your final price for approval', amount: fmtCurrency(financials.grandTotal), fullWidth: true, action: 'submit' },
-          { variant: 'secondary', icon: '⚡', title: 'Use FC base pricing', description: `Apply ${fcCollabName} hours as base`, action: 'use_fc_base' },
+          { variant: 'primary', icon: '🚀', title: `Submit to ${rl.GC}`, description: 'Send your final price for approval', amount: fmtCurrency(financials.grandTotal), fullWidth: true, action: 'submit' },
+          { variant: 'secondary', icon: '⚡', title: `Use ${rl.FC} base pricing`, description: `Apply ${fcCollabName} hours as base`, action: 'use_fc_base' },
           { variant: 'secondary', icon: '📦', title: 'Add materials', description: 'Include material costs', action: 'scroll_materials' },
         ],
       };
