@@ -91,7 +91,7 @@ function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsCo
         headline: 'BUILD YOUR PRICE',
         hint: 'Add labor, materials, then close for pricing',
         cards: [
-          { variant: 'primary', icon: '⚒', title: 'Request hours from FC', description: `Ask ${fcCollabName} to log hours`, action: 'request_fc' },
+          { variant: 'primary', icon: '⚒', title: `Request hours from ${rl.FC}`, description: `Ask ${fcCollabName} to log hours`, action: 'request_fc' },
           { variant: 'secondary', icon: '🔒', title: 'Close for pricing', description: 'Lock scope for final price', action: 'close_for_pricing' },
           { variant: 'secondary', icon: '📦', title: 'Add materials', description: 'Include material costs', action: 'scroll_materials' },
           { variant: 'secondary', icon: '📋', title: 'Review scope', description: 'View line items', action: 'scroll_scope' },
