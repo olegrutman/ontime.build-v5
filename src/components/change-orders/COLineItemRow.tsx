@@ -15,6 +15,7 @@ import { LaborEntryForm } from './LaborEntryForm';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface COLineItemRowProps {
   item: COLineItem;
