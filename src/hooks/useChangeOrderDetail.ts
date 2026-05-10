@@ -24,6 +24,9 @@ export function useChangeOrderDetail(coId: string | null) {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
+    if (co?.project_id) {
+      queryClient.invalidateQueries({ queryKey: ['change-orders', co.project_id] });
+    }
   };
 
   const assertUpdatedChangeOrder = (
