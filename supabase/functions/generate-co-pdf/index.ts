@@ -206,7 +206,45 @@ Deno.serve(async (req) => {
     const retainagePct = project?.retainage_percent ?? 0;
     const retainageAmt = grandTotal * retainagePct / 100;
 
-    const originalContractSum = Number(chosenContract.contract_sum ?? 0);
+    // Fetch prior approved COs on the same project (excluding this one)
+    const { data: priorCOs = [] } = await supabase
+      .from("change_orders")
+      .select("id, co_number, title, approved_at, created_at, status, tc_submitted_price")
+      .eq("project_id", co.project_id)
+      .eq("status", "approved")
+      .neq("id", co_id)
+      .order("approved_at", { ascending: true, nullsFirst: false });
+
+    const priorIds = priorCOs.map((c: any) => c.id);
+    let priorLabor: any[] = [];
+    let priorMats: any[] = [];
+    let priorEquip: any[] = [];
+    if (priorIds.length > 0) {
+      const [{ data: pl = [] }, { data: pm = [] }, { data: pe = [] }] = await Promise.all([
+        supabase.from("co_labor_entries").select("co_id, org_id, line_total").in("co_id", priorIds).eq("is_actual_cost", false),
+        supabase.from("co_material_items").select("co_id, org_id, billed_amount").in("co_id", priorIds),
+        supabase.from("co_equipment_items").select("co_id, org_id, billed_amount").in("co_id", priorIds),
+      ]);
+      priorLabor = pl; priorMats = pm; priorEquip = pe;
+    }
+
+    const sumFor = (rows: any[], coId: string, field: string) =>
+      rows.filter((r) => r.co_id === coId && r.org_id === billingOrgId).reduce((s, r) => s + Number(r[field] ?? 0), 0);
+
+    const priorCOsWithTotals = priorCOs.map((p: any) => {
+      const labor = sumFor(priorLabor, p.id, "line_total");
+      const laborTotalP = isGCPerspective && p.tc_submitted_price != null ? Number(p.tc_submitted_price) : labor;
+      const mats = sumFor(priorMats, p.id, "billed_amount");
+      const equip = sumFor(priorEquip, p.id, "billed_amount");
+      return { ...p, _amount: laborTotalP + mats + equip };
+    });
+    const priorTotal = priorCOsWithTotals.reduce((s, p) => s + p._amount, 0);
+
+    const originalContractSumRaw = Number(chosenContract.contract_sum ?? 0);
+    // contract_sum already includes approved CO deltas via apply_co_contract_delta trigger.
+    // Subtract prior approved CO totals AND this CO's delta (if it's also approved) to get the true original.
+    const thisCOApproved = co.status === "approved";
+    const originalContractSum = originalContractSumRaw - priorTotal - (thisCOApproved ? subtotal : 0);
 
     // Build PDF
     const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
@@ -257,9 +295,26 @@ Deno.serve(async (req) => {
     }
     y += 10;
 
-    // Contract Summary Box
+    // Contract Summary Box (AIA G701-style)
+    const hasPriors = priorCOsWithTotals.length > 0;
+    const thisCONumber = co.co_number ?? "this Change Order";
+    const newSumLabel = thisCOApproved ? "New Contract Sum:" : "New Contract Sum (Pending Approval):";
+    const summaryRows: [string, string, boolean?][] = hasPriors
+      ? [
+          ["Original Contract Sum:", fmt(originalContractSum)],
+          ["Net Change by Previously Authorized Change Orders:", fmt(priorTotal)],
+          ["Contract Sum Prior to This Change Order:", fmt(originalContractSum + priorTotal), true],
+          [`Net Change by This Change Order (${thisCONumber}):`, fmt(subtotal)],
+          [newSumLabel, fmt(originalContractSum + priorTotal + subtotal), true],
+        ]
+      : [
+          ["Original Contract Sum:", fmt(originalContractSum)],
+          [`Net Change by This Change Order (${thisCONumber}):`, fmt(subtotal)],
+          [newSumLabel, fmt(originalContractSum + subtotal), true],
+        ];
+    const boxHeight = 28 + summaryRows.length * 15 + 10;
     doc.setFillColor(245, 247, 250);
-    doc.roundedRect(margin, y, contentW, 80, 4, 4, "F");
+    doc.roundedRect(margin, y, contentW, boxHeight, 4, 4, "F");
     y += 18;
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
@@ -268,20 +323,65 @@ Deno.serve(async (req) => {
     y += 18;
 
     doc.setFontSize(9);
-    doc.setTextColor(60);
-    const summaryRows = [
-      ["Original Contract Sum:", fmt(originalContractSum)],
-      ["Net Change by this Change Order:", fmt(subtotal)],
-      ["Contract Sum Including this Change Order:", fmt(originalContractSum + subtotal)],
-    ];
-    for (const [label, val] of summaryRows) {
+    for (const [label, val, emphasize] of summaryRows) {
       doc.setFont("helvetica", "normal");
+      doc.setTextColor(emphasize ? 30 : 60, emphasize ? 58 : 60, emphasize ? 95 : 60);
       doc.text(label, margin + 12, y);
       doc.setFont("helvetica", "bold");
       doc.text(val, pw - margin - 12, y, { align: "right" });
       y += 15;
     }
     y += 20;
+
+    // Prior Change Orders table
+    if (hasPriors) {
+      if (y > 650) { doc.addPage(); y = margin; }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("PREVIOUSLY AUTHORIZED CHANGE ORDERS", margin, y);
+      y += 5;
+      doc.setDrawColor(30, 58, 95);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pw - margin, y);
+      y += 15;
+
+      doc.setFontSize(8);
+      doc.setFillColor(235, 238, 243);
+      doc.rect(margin, y - 10, contentW, 16, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(80);
+      doc.text("#", margin + 5, y);
+      doc.text("CO NUMBER", margin + 25, y);
+      doc.text("DATE APPROVED", margin + 145, y);
+      doc.text("DESCRIPTION", margin + 230, y);
+      doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(40);
+      for (let i = 0; i < priorCOsWithTotals.length; i++) {
+        const p = priorCOsWithTotals[i];
+        if (y > 700) { doc.addPage(); y = margin; }
+        const dateStr = p.approved_at
+          ? new Date(p.approved_at).toLocaleDateString()
+          : new Date(p.created_at).toLocaleDateString();
+        doc.text(String(i + 1), margin + 5, y);
+        doc.text((p.co_number ?? "—").toString().substring(0, 22), margin + 25, y);
+        doc.text(dateStr, margin + 145, y);
+        doc.text((p.title ?? "").substring(0, 38), margin + 230, y);
+        doc.text(fmt(p._amount), pw - margin - 5, y, { align: "right" });
+        y += 14;
+      }
+
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("TOTAL PREVIOUSLY AUTHORIZED", margin + 25, y + 6);
+      doc.text(fmt(priorTotal), pw - margin - 5, y + 6, { align: "right" });
+      y += 26;
+    }
 
     // Description of Work
     doc.setFontSize(11);
