@@ -8,7 +8,7 @@ interface ProjectFinancialCommandProps {
 }
 
 export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFinancialCommandProps) {
-  const { viewerRole, contracts, upstreamContract, downstreamContract, approvedEstimateSum } = financials;
+  const { viewerRole, contracts, upstreamContract, downstreamContract, approvedCORevenue, approvedWOTotal } = financials;
 
   // T&M mode: contract value = sum of approved COs (approvedEstimateSum)
   if (isTM) {
