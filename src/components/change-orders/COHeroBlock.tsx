@@ -40,7 +40,7 @@ function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsCo
       return {
         eyebrow: 'APPROVAL REQUIRED',
         headline: 'REVIEW & APPROVE',
-        hint: 'TC submitted this CO for your approval',
+        hint: `${rl.TC} submitted this CO for your approval`,
         cards: [
           { variant: 'green', icon: '✅', title: 'Approve this CO', description: 'Accept pricing and authorize work', amount: fmtCurrency(totalToApprove), fullWidth: true, action: 'approve' },
           { variant: 'secondary', icon: '✕', title: 'Reject with note', description: 'Send back with feedback', action: 'reject' },
