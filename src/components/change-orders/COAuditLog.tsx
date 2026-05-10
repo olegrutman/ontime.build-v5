@@ -14,20 +14,22 @@ const CURRENCY_FIELDS = new Set([
   'tc_submitted_price', 'gc_budget', 'nte_cap', 'hourly_rate', 'lump_sum', 'line_total',
 ]);
 
-const FIELD_LABELS: Record<string, string> = {
-  tc_submitted_price: 'TC Submitted Price',
-  gc_budget: 'GC Budget',
-  nte_cap: 'NTE Cap',
-  status: 'Status',
-  pricing_type: 'Pricing Type',
-  assigned_to_org_id: 'Assigned Org',
-  materials_responsible: 'Materials Responsible',
-  equipment_responsible: 'Equipment Responsible',
-  hours: 'Hours',
-  hourly_rate: 'Hourly Rate',
-  lump_sum: 'Lump Sum',
-  line_total: 'Line Total',
-};
+function buildFieldLabels(rl: ReturnType<typeof useRoleLabelsContext>): Record<string, string> {
+  return {
+    tc_submitted_price: `${rl.TC} Submitted Price`,
+    gc_budget: `${rl.GC} Budget`,
+    nte_cap: 'NTE Cap',
+    status: 'Status',
+    pricing_type: 'Pricing Type',
+    assigned_to_org_id: 'Assigned Org',
+    materials_responsible: 'Materials Responsible',
+    equipment_responsible: 'Equipment Responsible',
+    hours: 'Hours',
+    hourly_rate: 'Hourly Rate',
+    lump_sum: 'Lump Sum',
+    line_total: 'Line Total',
+  };
+}
 
 const ROLE_STYLES: Record<string, string> = {
   GC: 'co-light-role-gc',
