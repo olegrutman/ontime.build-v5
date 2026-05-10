@@ -24,7 +24,7 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
 
   if (viewerRole === 'General Contractor') {
     const originalContract = upstreamContract?.contract_sum || 0;
-    const coAdds = 0;
+    const coAdds = approvedCORevenue;
     const revised = originalContract + coAdds;
     const totalCostOut = contracts
       .filter(c => c.to_org_id !== financials.userOrgIds[0])
@@ -44,7 +44,7 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
 
   if (viewerRole === 'Trade Contractor') {
     const contractIn = upstreamContract?.contract_sum || 0;
-    const coAdds = 0;
+    const coAdds = approvedCORevenue;
     const revised = contractIn + coAdds;
     const costOut = downstreamContract?.contract_sum || 0;
     const margin = revised > 0 ? ((revised - costOut) / revised) * 100 : 0;
