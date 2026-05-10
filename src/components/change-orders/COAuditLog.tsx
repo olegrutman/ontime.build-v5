@@ -92,7 +92,9 @@ export function COAuditLog({ entries, viewerRole }: COAuditLogProps) {
               ROLE_STYLES[entry.actor_role ?? ''] ?? 'bg-muted text-muted-foreground',
             )}
           >
-            {entry.actor_role ?? '?'}
+            {entry.actor_role && ['GC','TC','FC'].includes(entry.actor_role)
+              ? rl.short(entry.actor_role as RoleCode)
+              : (entry.actor_role ?? '?')}
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm text-foreground">
