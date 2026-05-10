@@ -1,47 +1,54 @@
+# Fix CO KPI Math
+
+## Problem
+
+The "CO impact" card and the "Approved CO Adds" KPI in the Project Financial Command strip both read `approvedEstimateSum`, which is sourced from the **`supplier_estimates`** table (material estimate PDFs) — not from `change_orders`. Cost is hardcoded at 72% of revenue and pending exposure is hardcoded to 0.
+
+On the current project this means 2 approved COs show as $0 across all CO KPIs.
+
 ## Goal
 
-Make the Change Order PDF read like a real-world AIA G701-style document: itemize all prior approved COs on the project, sum them as "previously authorized" change, then show this CO and the new contract sum.
+Compute CO KPIs from real `change_orders` data, mirroring the same aggregation rules the new CO PDF uses (viewer-scoped, GC privacy via `tc_submitted_price`).
 
-## Scope
+## Changes
 
-`supabase/functions/generate-co-pdf/index.ts` only. No DB schema changes. No frontend changes.
+### 1. `src/hooks/useProjectFinancials.ts`
 
-## Data fetch (added)
+Add four new fields to `ProjectFinancials` and populate them alongside the existing fetch:
 
-After the current CO is loaded, fetch every Approved CO on the same project:
+- `approvedCORevenue: number` — sum of approved CO net amounts (viewer-scoped to user's org as billing side)
+- `approvedCOCost: number` — same set, but raw cost (labor cost + material cost + equipment cost, no markup)
+- `approvedCOMargin: number` — `approvedCORevenue − approvedCOCost`
+- `pendingCOExposure: number` — sum for COs in `submitted`, `closed_for_pricing`, `shared`, `work_in_progress`
+- `approvedWOTotal: number` — same as `approvedCORevenue` but filtered to `document_type = 'WO'` (T&M mode)
 
-- Query `change_orders` where `project_id = co.project_id`, `status = 'approved'`, exclude the current `co.id`. Order by `approved_at` ascending (fallback `created_at`).
-- For each prior CO, also need its net amount on **the same contract perspective** the PDF is rendering. Aggregate per CO from its own labor + materials + equipment, scoped to `org_id = billingOrgId` (same scoping rule already used for the current CO at lines 180–195). Use the same GC privacy rule: if viewer is GC and the prior CO has `tc_submitted_price`, use that instead of summed labor.
-- Per the user's answer, scope = "all COs on the project" — but we still filter line items / labor / materials / equipment by `billingOrgId` so the running totals stay consistent with the contract this PDF represents (otherwise summing a TC↔FC CO into a TC↔GC PDF would be nonsense). In practice every approved CO on a project has rows on each side, so this gives the correct per-contract running sum while still reflecting "all COs."
+Aggregation rule (per CO):
+- If viewer is GC and CO has `tc_submitted_price` → use that as revenue, skip labor recompute
+- Else: revenue = sum(`co_labor_entries.line_total`) + sum(`co_material_items.billed_amount`) + sum(`co_equipment_items.billed_amount`), filtered to viewer's `org_id`
+- Cost = sum of the same three tables but using `line_total` minus markup for materials/equipment, and labor `line_total` (TC perspective) — no viewer markup applied
 
-## New Contract Summary block
+Keep `approvedEstimateSum` as-is — it remains valid for the material-estimate fallback in `materialEstimate`. Just stop using it for CO math.
 
-Replace the 3-line block at lines 260–284 with an AIA G701-style block:
+### 2. `src/components/project/COImpactCard.tsx`
 
+Replace hardcoded math with the new fields:
+```ts
+const revenue = financials.approvedCORevenue;
+const cost    = financials.approvedCOCost;
+const margin  = financials.approvedCOMargin;
+const pending = financials.pendingCOExposure;
 ```
-CONTRACT SUMMARY
-  Original Contract Sum ............................... $X
-  Net Change by Previously Authorized Change Orders ... $Y
-  Contract Sum Prior to This Change Order ............. $X+Y
-  Net Change by This Change Order (CO-…-0002) ......... $Z
-  New Contract Sum .................................... $X+Y+Z
-```
+Hide card when both `revenue === 0` and `pending === 0`. T&M mode uses `approvedWOTotal` for revenue and same cost/margin/pending logic.
 
-Box height auto-grows from 80pt to fit 5 rows.
+### 3. `src/components/project/ProjectFinancialCommand.tsx`
 
-## New "Prior Change Orders" table
-
-Inserted between the Contract Summary box and the Description of Work section. Only renders when prior approved COs exist.
-
-Columns: `#`, `CO NUMBER`, `DATE APPROVED`, `DESCRIPTION` (truncated), `AMOUNT` (right-aligned). Same visual style as the existing Description of Work table (gray header bar, navy section title with underline). Footer row: `TOTAL PREVIOUSLY AUTHORIZED` with the sum. If the list is long, page-break handling uses the existing `y` cursor pattern (the file already does manual page math elsewhere; add a `if (y > pageHeight - 100) doc.addPage(); y = margin;` guard before each row).
-
-## Edge cases
-
-- No prior approved COs: skip the prior-CO table entirely; Contract Summary collapses back to the original 3 lines (Original / This CO / New Sum) so single-CO projects don't get a confusing "$0.00 previously authorized" line.
-- Prior CO has zero rows on this billing side: still list it with `$0.00` so the document is faithful to the project record.
-- Current CO not yet approved (Draft/Submitted): label the last row "New Contract Sum (Pending Approval)" instead of "New Contract Sum."
+- GC + TC strips: `coAdds = financials.approvedCORevenue` (was `approvedEstimateSum`)
+- T&M strip: `tmTotal = financials.approvedWOTotal` (was `approvedEstimateSum`)
 
 ## Out of scope
 
-- No changes to invoice PDF, payment app PDF, or any frontend CO surfaces.
-- No DB triggers — `apply_co_contract_delta` already maintains `project_contracts.contract_sum`; we read it as-is for `originalContractSum` and recompute the running view client-side in the PDF.
+- No DB schema or RLS changes
+- No edits to `apply_co_contract_delta` trigger or `project_contracts.contract_sum`
+- No CO PDF changes (already correct)
+- `materialEstimate` fallback to `approvedEstimateSum` stays untouched
+- No changes to dashboard-level KPIs (`DashboardKPIs.tsx`) — those don't reference CO totals

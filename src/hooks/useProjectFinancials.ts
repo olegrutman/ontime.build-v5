@@ -36,6 +36,13 @@ export interface ProjectFinancials {
   materialEstimateTotal: number | null;
   approvedEstimateSum: number;
 
+  // Real CO/WO aggregates (sourced from change_orders, viewer-scoped)
+  approvedCORevenue: number;
+  approvedCOCost: number;
+  approvedCOMargin: number;
+  pendingCOExposure: number;
+  approvedWOTotal: number;
+
   // NEW: Financial command center fields
   totalPaid: number;
   materialDelivered: number;
@@ -106,6 +113,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
   const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
   const [approvedEstimateSum, setApprovedEstimateSum] = useState(0);
+  const [approvedCORevenue, setApprovedCORevenue] = useState(0);
+  const [approvedCOCost, setApprovedCOCost] = useState(0);
+  const [pendingCOExposure, setPendingCOExposure] = useState(0);
+  const [approvedWOTotal, setApprovedWOTotal] = useState(0);
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
   const [isTCSelfPerforming, setIsTCSelfPerforming] = useState(false);
   const [totalPaid, setTotalPaid] = useState(0);
@@ -238,6 +249,81 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         .eq('status', 'APPROVED');
       const estSum = (approvedEsts || []).reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
       setApprovedEstimateSum(estSum);
+
+      // ===== Real CO/WO aggregation from change_orders =====
+      // Determine billingOrgId per viewer (matches CO PDF logic):
+      // - GC viewer:  TC's org   (billing party of upstream TC↔GC contract)
+      // - TC viewer:  TC's org   (own org as billing party upstream)
+      // - FC viewer:  FC's org   (own org as billing party downstream)
+      const upstreamForCO = contractsWithNames.find((c: any) =>
+        ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
+         (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+        c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+      );
+      const downstreamForCO = contractsWithNames.find((c: any) =>
+        ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
+         (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+        c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+      );
+      const tcOrgId = upstreamForCO
+        ? (upstreamForCO.from_role === 'Trade Contractor' ? upstreamForCO.from_org_id : upstreamForCO.to_org_id)
+        : null;
+      const fcOrgId = downstreamForCO
+        ? (downstreamForCO.from_role === 'Field Crew' ? downstreamForCO.from_org_id : downstreamForCO.to_org_id)
+        : null;
+      const billingOrgId = detectedRole === 'Field Crew' ? fcOrgId : tcOrgId;
+      const isGCPerspective = detectedRole === 'General Contractor';
+
+      const PENDING_STATUSES = ['submitted', 'closed_for_pricing', 'shared', 'work_in_progress'];
+
+      const { data: allCOs = [] } = await supabase
+        .from('change_orders')
+        .select('id, status, document_type, tc_submitted_price')
+        .eq('project_id', projectId)
+        .in('status', ['approved', ...PENDING_STATUSES]);
+
+      const allCOIds = (allCOs || []).map((c: any) => c.id);
+      let coLabor: any[] = [];
+      let coMats: any[] = [];
+      let coEquip: any[] = [];
+      if (allCOIds.length > 0 && billingOrgId) {
+        const [{ data: l = [] }, { data: m = [] }, { data: e = [] }] = await Promise.all([
+          supabase.from('co_labor_entries').select('co_id, org_id, line_total').in('co_id', allCOIds).eq('is_actual_cost', false),
+          supabase.from('co_material_items').select('co_id, org_id, billed_amount, line_cost').in('co_id', allCOIds),
+          supabase.from('co_equipment_items').select('co_id, org_id, billed_amount, cost').in('co_id', allCOIds),
+        ]);
+        coLabor = l; coMats = m; coEquip = e;
+      }
+
+      const sumScoped = (rows: any[], coId: string, field: string) =>
+        rows.filter((r) => r.co_id === coId && r.org_id === billingOrgId)
+            .reduce((s, r) => s + Number(r[field] ?? 0), 0);
+
+      const perCOTotals = (allCOs || []).map((c: any) => {
+        const laborSum = sumScoped(coLabor, c.id, 'line_total');
+        const revLabor = isGCPerspective && c.tc_submitted_price != null
+          ? Number(c.tc_submitted_price) : laborSum;
+        const matRev = sumScoped(coMats, c.id, 'billed_amount');
+        const equipRev = sumScoped(coEquip, c.id, 'billed_amount');
+        // Cost: raw labor (TC's true cost) + material line_cost + equipment cost (no markup)
+        const matCost = sumScoped(coMats, c.id, 'line_cost');
+        const equipCost = sumScoped(coEquip, c.id, 'cost');
+        return {
+          id: c.id,
+          status: c.status,
+          document_type: c.document_type,
+          revenue: revLabor + matRev + equipRev,
+          cost: laborSum + matCost + equipCost,
+        };
+      });
+
+      const approvedRows = perCOTotals.filter((c) => c.status === 'approved');
+      const pendingRows = perCOTotals.filter((c) => c.status !== 'approved');
+      setApprovedCORevenue(approvedRows.reduce((s, c) => s + c.revenue, 0));
+      setApprovedCOCost(approvedRows.reduce((s, c) => s + c.cost, 0));
+      setPendingCOExposure(pendingRows.reduce((s, c) => s + c.revenue, 0));
+      setApprovedWOTotal(approvedRows.filter((c) => c.document_type === 'WO').reduce((s, c) => s + c.revenue, 0));
+      // ===== end CO aggregation =====
 
       // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
       const materialEstTotalFromContract = contractsWithNames.find((c: any) =>
@@ -491,6 +577,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     billedToDate, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
+    approvedCORevenue, approvedCOCost, approvedCOMargin: approvedCORevenue - approvedCOCost,
+    pendingCOExposure, approvedWOTotal,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     ownerContractValue, materialMarkupType, materialMarkupValue,

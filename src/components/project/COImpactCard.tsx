@@ -8,14 +8,12 @@ interface COImpactCardProps {
 }
 
 export function COImpactCard({ financials, isTM = false }: COImpactCardProps) {
-  const { approvedEstimateSum } = financials;
-
-  if (!approvedEstimateSum || approvedEstimateSum === 0) return null;
-
-  const revenue = approvedEstimateSum;
-  const cost = Math.round(revenue * 0.72);
+  const revenue = isTM ? financials.approvedWOTotal : financials.approvedCORevenue;
+  const cost = financials.approvedCOCost;
   const margin = revenue - cost;
-  const pending = 0;
+  const pending = financials.pendingCOExposure;
+
+  if (revenue === 0 && pending === 0) return null;
 
   const rows = [
     { label: isTM ? 'Approved WO Revenue' : 'Approved CO Revenue', value: revenue },
