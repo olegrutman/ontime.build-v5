@@ -1,117 +1,101 @@
-# CO list: stale "Submitted" status + missing $390 amount on CO-0002
+# Replace TC / FC / GC abbreviations with company names — UI sweep
 
-## Findings (confirmed against the database)
+## Goal
+Anywhere a user reads a label, badge, column header, toast, audit message, KPI title, etc., we stop showing "TC", "FC", or "GC" and instead show the actual company on the current project. Where there is no specific project context (e.g. global filters, org-creation forms), we fall back to the spelled-out role: "Trade Contractor", "Field Crew", "General Contractor".
 
-Both COs on Fuller Residence are actually `status = 'approved'` in `change_orders`. The card UI is wrong on two independent axes.
+Code identifiers, DB columns, query keys, role enums (`'TC' | 'FC' | 'GC'`), and source comments stay exactly as they are. **UI strings only.**
 
-**CO-FUL-IM-HA-0002 ("Wall System · GC Request")** — approved, but:
-- `change_orders.tc_submitted_price` = `NULL`
-- `change_orders.gc_budget` = `NULL`
-- `co_labor_entries` has the TC's $390 lump-sum row (`pricing_mode = 'lump_sum'`, `line_total = 390`, `entered_by_role = 'TC'`) and the FC's $210 row.
+## Architecture (one source of truth)
 
-So the $390 is real — it lives in `co_labor_entries`, not on the parent `change_orders` row. The list card today only reads `tc_submitted_price` from the parent row, so it renders `$0`.
+Today there is already `src/hooks/useRoleLabels.ts` that resolves per-project label overrides from `projects.role_label_overrides`. We extend it so the **default label** for each role on a project is the actual organization on `project_participants` (instead of the constant "Trade Contractor" / "Field Crew" / "General Contractor"). Manual overrides on the project still take priority.
 
-**CO-FUL-IM-HA-0001** — approved, `tc_submitted_price = 1170`, renders correctly as `$1,170`.
+### Hook contract — `useProjectOrgLabels(projectId)`
 
-### Why the status badge stays on "Submitted"
-
-`useChangeOrderDetail.invalidate()` (`src/hooks/useChangeOrderDetail.ts:25`) only invalidates `['co-detail', coId]`. The list page reads `['change-orders', projectId, orgId]` (`src/hooks/useChangeOrders.ts:59`), which is never invalidated by approve/reject/etc. Until you hard-refresh, the list shows the pre-approval snapshot.
-
-### Why the amount is wrong on CO-0002
-
-`COBoardCard.tsx:160` renders `co.tc_submitted_price ?? 0`. The list query in `useChangeOrders` only selects `change_orders.*` and never joins to `co_labor_entries` / `co_material_items` / `co_equipment_items`. Detail page logic (`useChangeOrderDetail.ts:168–184`) is the authoritative formula:
-
-```
-tcBillableToGC = use_fc_pricing_base && tc_submitted_price > 0
-                   ? tc_submitted_price
-                   : sum(billable TC labor entries)
-grandTotal     = tcBillableToGC + materialsTotal + equipmentTotal
-```
-
-For CO-0002 that yields `390 + 0 + 0 = $390`, which is what the user expects.
-
-## Fix
-
-### 1. Broaden the detail-hook invalidation (status fix)
-
-`src/hooks/useChangeOrderDetail.ts`
+New thin wrapper (or a rewrite of `useRoleLabels`) that returns:
 
 ```ts
-const invalidate = () => {
-  queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
-  if (co?.project_id) {
-    queryClient.invalidateQueries({ queryKey: ['change-orders', co.project_id] });
-  }
-};
-```
-
-`co` is already loaded in the same hook, so no signature change. Approve / reject / submit / withdraw / contract / pricing edits will now refresh the list page automatically.
-
-### 2. Compute the card amount the same way the detail page does (amount fix)
-
-In `src/hooks/useChangeOrders.ts` `queryFn`, after `allCOs` is loaded and we have the CO IDs, run two more parallel selects scoped to those IDs:
-
-```ts
-const coIds = allCOs.map(c => c.id);
-
-const [{ data: laborRows }, { data: matRows }, { data: eqRows }] = await Promise.all([
-  supabase.from('co_labor_entries')
-    .select('co_id, entered_by_role, line_total, is_actual_cost')
-    .in('co_id', coIds),
-  supabase.from('co_material_items')
-    .select('co_id, billed_amount')
-    .in('co_id', coIds),
-  supabase.from('co_equipment_items')
-    .select('co_id, billed_amount')
-    .in('co_id', coIds),
-]);
-```
-
-Build a per-CO totals map applying the detail-page formula, then attach `display_total` to each item:
-
-```ts
-const tcLaborByCo = new Map<string, number>();
-for (const r of laborRows ?? []) {
-  if (r.is_actual_cost) continue;            // billable only
-  if (r.entered_by_role !== 'TC') continue;  // matches tcLaborTotal
-  tcLaborByCo.set(r.co_id, (tcLaborByCo.get(r.co_id) ?? 0) + (r.line_total ?? 0));
+{
+  GC: string;              // "Haley Custom Homes" or "General Contractor" if none yet
+  TC: string;              // "IMIS, LLC" — if multiple TCs: "Trade Contractors"
+  FC: string;              // "Pacifico Builders" — if multiple FCs: "Field Crews"
+  GCShort: string;         // first word, e.g. "Haley"
+  TCShort: string;
+  FCShort: string;
+  label(code, opts?): string;   // resolves any RoleCode
+  short(code): string;
+  /** When you need the role *of a specific org* (CO collaborator, labor entry author) */
+  forOrg(orgId): string;
 }
-const matByCo = /* sum billed_amount per co_id */;
-const eqByCo  = /* sum billed_amount per co_id */;
-
-const computeDisplayTotal = (co) => {
-  const tcLabor = tcLaborByCo.get(co.id) ?? 0;
-  const tcBillableToGC = co.use_fc_pricing_base && co.tc_submitted_price > 0
-    ? co.tc_submitted_price
-    : tcLabor;
-  return tcBillableToGC + (matByCo.get(co.id) ?? 0) + (eqByCo.get(co.id) ?? 0);
-};
 ```
 
-Add `display_total: number` to `ChangeOrderWithMembers` (in `useChangeOrders.ts` — local extension, not touching `ChangeOrder` types). Attach it in the `.map(c => ({ ... }))`.
+Resolution order per role:
+1. Explicit override in `projects.role_label_overrides[code]` (existing).
+2. The single accepted org with that role on `project_participants` → its `organizations.name`.
+3. If 0 or multiple orgs with that role → spelled-out fallback ("Trade Contractor" / "Trade Contractors").
+4. Never the bare 2-letter code.
 
-In `src/components/change-orders/COBoardCard.tsx:160` swap:
+Implemented as one query on mount: `project_participants` joined with `organizations` for the project, cached for 5 min (matches existing TTL).
 
-```diff
-- {fmtCurrency(co.tc_submitted_price ?? 0)}
-+ {fmtCurrency((co as any).display_total ?? co.tc_submitted_price ?? 0)}
-```
+For **global, no-project context** (e.g. org settings, sign-up, admin user list), import a constant `ROLE_LONG_NAMES = { GC: 'General Contractor', TC: 'Trade Contractor', FC: 'Field Crew' }` and use it directly — never the abbreviation.
 
-(Fallback keeps it safe if a card is rendered from a code path that hasn't computed `display_total`.)
+### Where pronouns matter ("you" vs the company name)
+For toasts shown to a user *about themselves* ("You approved this CO"), we keep "you". For messages about the *other side* ("Approved by TC") we substitute the org name ("Approved by IMIS, LLC"). Most existing copy already uses passive forms — we only swap the noun.
 
-### 3. Out of scope (documenting, not fixing here)
+## Scope of the UI sweep
 
-- The CO-0002 row was approved with `tc_submitted_price = NULL`. The approval flow doesn't snapshot the labor sum back onto `change_orders.tc_submitted_price`. That's the deeper "approval should freeze the price" gap (memory: `co-wo-system-spec` / `financial-and-pricing-architecture`). Fixing that would also fix the card via path #2's fallback. If you want me to also patch the approve mutation to write `tc_submitted_price = computed total` when it's null, say the word — otherwise I'll leave the snapshot untouched and rely on the list-side aggregation.
+`rg "\b(TC|FC|GC)\b" -g '*.{ts,tsx}' src/` returns 182 files; after stripping out role-enum comparisons, identifiers, comments, and audit-payload string codes, we have **~60–80 files with user-visible strings**. Cataloged into 8 areas — full file lists in the technical appendix.
 
-## Files touched
+| Area | Examples of strings to swap |
+|---|---|
+| 1. Change Order detail/list | "TC Submitted Price", "GC Approval", "FC pricing", "TC margin", `COKPIStrip`, `COStatusActions`, `COBoardCard`, `COAuditLog`, audit log row "Approved by TC" |
+| 2. CO/WO wizards | `picker-v3/StepWho`, `StepPricingAndRouting`, `PickerShell` — "Assign to TC", "FC Pricing", "TC fixed price" |
+| 3. Invoices / Purchase Orders / Returns / Backcharges | column headers ("From TC / To GC"), filters, status toasts, PDF templates that render "TC" or "GC" inline |
+| 4. Project Overview pages | `GCProjectOverviewContent.tsx`, `TCProjectOverview.tsx`, `FCProjectOverview.tsx` headings, "TC Contract" cards, "Passed to TC", table headers |
+| 5. Project Setup wizard | `useSetupWizardV2` question copy ("GC supplies materials" → "{Owner name} supplies materials" or fallback "General Contractor supplies materials"), step titles, summary screen |
+| 6. SOV pages | "TC SOV", "GC SOV", "FC SOV" labels and tab names |
+| 7. Notifications & toasts | `lib/coNotifications.ts` body copy ("TC is requesting…", "by TC") and any `toast.success/error` strings |
+| 8. Settings, Profile, Dashboard, Team, Partners, EditProject, ProjectSettings, Quick-Capture, Estimates, Reminders | "Only GC can…", "TC pricing defaults", "Use FC input as pricing base" |
 
-- `src/hooks/useChangeOrderDetail.ts` — broaden `invalidate()`.
-- `src/hooks/useChangeOrders.ts` — fetch labor/materials/equipment for the project's COs, compute `display_total` per CO, attach to returned items.
-- `src/components/change-orders/COBoardCard.tsx` — read `display_total` with `tc_submitted_price` fallback.
+**Excluded from this sweep (per your "UI only" answer):**
+- DB columns (`tc_submitted_price`, `gc_budget`, `co_*` tables)
+- TS types / enums (`'TC' | 'FC' | 'GC'`)
+- Variable / function / file names (`useTCPricing`, `GCApprovalCard.tsx`, etc.)
+- Comments and `// TODO`s
+- `audit_log.action_payload` JSON values stored historically
+- Platform-admin-only screens that intentionally show the role classification (e.g. `PlatformQA.tsx` colored debug badges) — these are internal diagnostics, not customer copy. Confirm if you want those swept too; default I'll leave them.
 
-## Verification
+## Execution plan (sequenced PRs)
 
-1. CO-FUL-IM-HA-0002 card on `/change-orders` shows `$390` (TC's lump-sum) and the "Approved" pill.
-2. CO-FUL-IM-HA-0001 card still shows `$1,170` and "Approved".
-3. From the detail page, approve/reject another CO → switching back to the list reflects the new status without manual refresh.
-4. The Active tab drops both COs (now Approved), Approved tab shows count 2, Approved KPI ≠ $0.
+Because 60+ files is too big for one safe sweep, split into 5 batches. Each batch is independently shippable; nothing breaks if a later batch is not yet done — files just keep showing the abbreviation.
+
+1. **Batch 1 — Hook + 0 visual change.** Extend `useRoleLabels` to resolve org names from `project_participants`. Add `useProjectOrgLabels` re-export. Add `ROLE_LONG_NAMES` constant. Existing call sites unchanged.
+2. **Batch 2 — Change Orders.** All CO surfaces (detail page, list cards, wizards, audit log, notifications, KPIs). Highest-traffic, most abbreviation-heavy area. Includes `coNotifications.ts`.
+3. **Batch 3 — Project Overview, SOV, Project Setup wizard.**
+4. **Batch 4 — Invoices, POs, Returns, Backcharges, Payment Apps, PDF templates.**
+5. **Batch 5 — Settings, Profile, Dashboard, Team, Partners, Estimates, Reminders, Quick Capture, EditProject — the long tail.**
+
+## Verification per batch
+
+After each batch:
+1. Run `rg -n "(>|\"|')(TC|FC|GC)( |:|<|\"|')" src/<batch-dirs>` — should return 0 matches except known excluded files.
+2. Visually load 2–3 representative pages from that area in the preview as a GC user, then as a TC user, and confirm the substitutions read naturally and never collide (e.g., "IMIS, LLC IMIS, LLC margin").
+3. Edge case: project with **no** TC accepted → shows "Trade Contractor" fallback, never blank, never "TC".
+
+## Technical appendix (files, partial — full list generated during execution)
+
+Top files by raw `(TC|FC|GC)` count, after filtering out files that are pure code (no JSX text):
+- `src/components/project/TCProjectOverview.tsx` (and `GC*`, `FC*` siblings)
+- `src/components/change-orders/COKPIStrip.tsx`, `COStatusActions.tsx`, `COBoardCard.tsx`, `COAuditLog.tsx`
+- `src/components/change-orders/picker-v3/StepWho.tsx`, `PickerShell.tsx`, `StepPricingAndRouting.tsx`
+- `src/components/project/AddTeamMemberDialog.tsx`, `GCProjectOverviewContent.tsx`
+- `src/components/invoices/InvoicesTab.tsx`
+- `src/hooks/useSetupWizardV2.ts` (UI question copy only — not the routing/branching logic)
+- `src/lib/coNotifications.ts`
+- `src/pages/{Dashboard, EditProject, ProjectSettings, Profile, EstimateApprovals, GCProjectOverview}.tsx`
+- ~50 more lower-count files identified during Batch 1 by re-running the grep with the same exclusions
+
+## What I will NOT change without asking again
+- Any DB schema or enum value
+- File names / component names containing "GC" / "TC" / "FC"
+- Memory entries or in-source comments
+- Platform-admin debug badges in `PlatformQA.tsx`
