@@ -6,6 +6,7 @@ import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/change
 export interface ChangeOrderWithMembers extends ChangeOrder {
   collaboratorStatus?: COCollaboratorStatus;
   collaboratorOrgId?: string;
+  display_total?: number;
 }
 
 export type BoardColumnKey = 'wip' | 'pending_pricing' | 'gc_review' | 'approved' | 'invoiced';
