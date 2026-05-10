@@ -10,6 +10,7 @@ const DEFAULT_LABELS: RoleLabels = {
   FCShort: 'FC',
   label: (code: RoleCode) => ({ GC: 'General Contractor', TC: 'Trade Contractor', FC: 'Field Crew' }[code] ?? code),
   short: (code: RoleCode) => code,
+  forOrg: () => '',
 };
 
 export const RoleLabelsContext = createContext<RoleLabels>(DEFAULT_LABELS);
