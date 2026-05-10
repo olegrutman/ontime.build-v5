@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COStatus } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface FCHomeScreenProps {
   projectId: string;
@@ -49,6 +50,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
   const navigate = useNavigate();
   const { userOrgRoles } = useAuth();
   const { changeOrders } = useChangeOrders(projectId);
+  const rl = useRoleLabelsContext();
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? '';
 
@@ -157,7 +159,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                      {co.status === 'closed_for_pricing' ? 'Log hours' : 'TC is waiting'}
+                      {co.status === 'closed_for_pricing' ? 'Log hours' : `${rl.TC} is waiting`}
                     </span>
                   </div>
                   <p className="text-sm font-medium text-foreground mt-0.5 truncate">

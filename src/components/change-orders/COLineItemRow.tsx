@@ -15,6 +15,7 @@ import { LaborEntryForm } from './LaborEntryForm';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -65,6 +66,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index, markupVisibility = 'hidden',
 }, ref) {
+  const rl = useRoleLabelsContext();
   // Resolve effective pricing type: line-item override wins, else CO default
   const pricingType: COPricingType = (item.pricing_type as COPricingType) ?? coPricingType;
   const nteCap = item.nte_cap ?? coNteCap;
@@ -457,7 +459,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             <div className="px-6 py-8 text-center">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
               <p className="text-sm font-semibold text-foreground">Pricing details hidden</p>
-              <p className="text-xs text-muted-foreground mt-1">GC only sees the final submitted amount on fixed-price change orders.</p>
+              <p className="text-xs text-muted-foreground mt-1">{rl.GC} only sees the final submitted amount on fixed-price change orders.</p>
             </div>
           ) : gcSummaryOnly ? (
             <div className="px-5 py-4 space-y-2">
@@ -646,7 +648,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               {/* TC downstream costs */}
               {isTC && tcDownstreamCosts.length > 0 && (
                 <div className="border-t border-border px-5 py-2">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">FC Entries</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">{rl.FC} Entries</p>
                   {tcDownstreamCosts.map(entry => (
                     <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="w-20">{entry.entry_date}</span>
@@ -656,7 +658,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     </div>
                   ))}
                   <div className="flex justify-between text-xs font-semibold text-muted-foreground pt-1 border-t border-border/30">
-                    <span>FC total</span>
+                    <span>{rl.FC} total</span>
                     <span className="font-mono">${fmt(fcTotal)}</span>
                   </div>
                 </div>

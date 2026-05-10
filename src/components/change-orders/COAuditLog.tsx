@@ -2,6 +2,8 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { COAuditEntry } from '@/hooks/useCOAuditLog';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleCode } from '@/hooks/useRoleLabels';
 
 interface COAuditLogProps {
   entries: COAuditEntry[];
@@ -12,20 +14,22 @@ const CURRENCY_FIELDS = new Set([
   'tc_submitted_price', 'gc_budget', 'nte_cap', 'hourly_rate', 'lump_sum', 'line_total',
 ]);
 
-const FIELD_LABELS: Record<string, string> = {
-  tc_submitted_price: 'TC Submitted Price',
-  gc_budget: 'GC Budget',
-  nte_cap: 'NTE Cap',
-  status: 'Status',
-  pricing_type: 'Pricing Type',
-  assigned_to_org_id: 'Assigned Org',
-  materials_responsible: 'Materials Responsible',
-  equipment_responsible: 'Equipment Responsible',
-  hours: 'Hours',
-  hourly_rate: 'Hourly Rate',
-  lump_sum: 'Lump Sum',
-  line_total: 'Line Total',
-};
+function buildFieldLabels(rl: ReturnType<typeof useRoleLabelsContext>): Record<string, string> {
+  return {
+    tc_submitted_price: `${rl.TC} Submitted Price`,
+    gc_budget: `${rl.GC} Budget`,
+    nte_cap: 'NTE Cap',
+    status: 'Status',
+    pricing_type: 'Pricing Type',
+    assigned_to_org_id: 'Assigned Org',
+    materials_responsible: 'Materials Responsible',
+    equipment_responsible: 'Equipment Responsible',
+    hours: 'Hours',
+    hourly_rate: 'Hourly Rate',
+    lump_sum: 'Lump Sum',
+    line_total: 'Line Total',
+  };
+}
 
 const ROLE_STYLES: Record<string, string> = {
   GC: 'co-light-role-gc',
@@ -66,6 +70,8 @@ function filterEntries(entries: COAuditEntry[], viewerRole: string): COAuditEntr
 }
 
 export function COAuditLog({ entries, viewerRole }: COAuditLogProps) {
+  const rl = useRoleLabelsContext();
+  const FIELD_LABELS = buildFieldLabels(rl);
   const filtered = filterEntries(entries, viewerRole);
 
   if (filtered.length === 0) {
@@ -86,7 +92,9 @@ export function COAuditLog({ entries, viewerRole }: COAuditLogProps) {
               ROLE_STYLES[entry.actor_role ?? ''] ?? 'bg-muted text-muted-foreground',
             )}
           >
-            {entry.actor_role ?? '?'}
+            {entry.actor_role && ['GC','TC','FC'].includes(entry.actor_role)
+              ? rl.short(entry.actor_role as RoleCode)
+              : (entry.actor_role ?? '?')}
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm text-foreground">

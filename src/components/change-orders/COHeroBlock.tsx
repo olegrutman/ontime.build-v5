@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { DT } from '@/lib/design-tokens';
 import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 type CardVariant = 'primary' | 'secondary' | 'green' | 'red';
 
@@ -29,7 +30,7 @@ function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string; hint: string; cards: HeroCard[] } {
+function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsContext>): { eyebrow: string; headline: string; hint: string; cards: HeroCard[] } {
   const { co, isGC, isTC, isFC, financials, fcCollabName } = props;
   const status = co.status;
   const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
@@ -39,7 +40,7 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
       return {
         eyebrow: 'APPROVAL REQUIRED',
         headline: 'REVIEW & APPROVE',
-        hint: 'TC submitted this CO for your approval',
+        hint: `${rl.TC} submitted this CO for your approval`,
         cards: [
           { variant: 'green', icon: '✅', title: 'Approve this CO', description: 'Accept pricing and authorize work', amount: fmtCurrency(totalToApprove), fullWidth: true, action: 'approve' },
           { variant: 'secondary', icon: '✕', title: 'Reject with note', description: 'Send back with feedback', action: 'reject' },
@@ -55,7 +56,7 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
         cards: [
           { variant: 'secondary', icon: '🔒', title: 'Close for pricing', description: 'Lock scope for final pricing', action: 'close_for_pricing' },
           { variant: 'secondary', icon: '📊', title: 'Review running cost', description: 'Current labor and materials', action: 'scroll_pricing' },
-          { variant: 'secondary', icon: '👷', title: 'FC involvement', description: 'Field crew status', action: 'scroll_fc' },
+          { variant: 'secondary', icon: '👷', title: `${rl.FC} involvement`, description: `${rl.FC} status`, action: 'scroll_fc' },
           { variant: 'secondary', icon: '📋', title: 'View scope', description: 'Line items and details', action: 'scroll_scope' },
         ],
       };
@@ -76,10 +77,10 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
       return {
         eyebrow: 'CLOSED FOR PRICING',
         headline: 'PRICE & SUBMIT',
-        hint: 'Finalize your pricing and submit to GC',
+        hint: `Finalize your pricing and submit to ${rl.GC}`,
         cards: [
-          { variant: 'primary', icon: '🚀', title: 'Submit to GC', description: 'Send your final price for approval', amount: fmtCurrency(financials.grandTotal), fullWidth: true, action: 'submit' },
-          { variant: 'secondary', icon: '⚡', title: 'Use FC base pricing', description: `Apply ${fcCollabName} hours as base`, action: 'use_fc_base' },
+          { variant: 'primary', icon: '🚀', title: `Submit to ${rl.GC}`, description: 'Send your final price for approval', amount: fmtCurrency(financials.grandTotal), fullWidth: true, action: 'submit' },
+          { variant: 'secondary', icon: '⚡', title: `Use ${rl.FC} base pricing`, description: `Apply ${fcCollabName} hours as base`, action: 'use_fc_base' },
           { variant: 'secondary', icon: '📦', title: 'Add materials', description: 'Include material costs', action: 'scroll_materials' },
         ],
       };
@@ -90,7 +91,7 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
         headline: 'BUILD YOUR PRICE',
         hint: 'Add labor, materials, then close for pricing',
         cards: [
-          { variant: 'primary', icon: '⚒', title: 'Request hours from FC', description: `Ask ${fcCollabName} to log hours`, action: 'request_fc' },
+          { variant: 'primary', icon: '⚒', title: `Request hours from ${rl.FC}`, description: `Ask ${fcCollabName} to log hours`, action: 'request_fc' },
           { variant: 'secondary', icon: '🔒', title: 'Close for pricing', description: 'Lock scope for final price', action: 'close_for_pricing' },
           { variant: 'secondary', icon: '📦', title: 'Add materials', description: 'Include material costs', action: 'scroll_materials' },
           { variant: 'secondary', icon: '📋', title: 'Review scope', description: 'View line items', action: 'scroll_scope' },
@@ -100,7 +101,7 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
     return {
       eyebrow: co.status.toUpperCase().replace(/_/g, ' '),
       headline: props.co.document_type === 'WO' ? 'WORK ORDER' : 'CHANGE ORDER',
-      hint: status === 'submitted' ? 'Waiting on GC approval' : 'Review the details below',
+      hint: status === 'submitted' ? `Waiting on ${rl.GC} approval` : 'Review the details below',
       cards: [
         { variant: 'secondary', icon: '📊', title: 'Review pricing', description: 'Financial breakdown', action: 'scroll_pricing' },
         { variant: 'secondary', icon: '📋', title: 'View scope', description: 'Line items and details', action: 'scroll_scope' },
@@ -115,7 +116,7 @@ function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string;
     hint: 'Log hours or report issues',
     cards: [
       { variant: 'primary', icon: '⏱', title: 'Log my hours', description: 'Add time to this CO', action: 'log_hours' },
-      { variant: 'secondary', icon: '🚀', title: 'Submit to TC', description: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs ready` : 'No hours yet', action: 'submit_to_tc' },
+      { variant: 'secondary', icon: '🚀', title: `Submit to ${rl.TC}`, description: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs ready` : 'No hours yet', action: 'submit_to_tc' },
       { variant: 'secondary', icon: '📦', title: 'Need material', description: 'Request materials', action: 'need_material' },
       { variant: 'red', icon: '⚠️', title: 'Saw damage', description: 'Report damage by others', action: 'saw_damage' },
     ],
@@ -130,7 +131,8 @@ const VARIANT_CLASSES: Record<CardVariant, string> = {
 };
 
 export function COHeroBlock(props: COHeroBlockProps) {
-  const { eyebrow, headline, hint, cards } = getCards(props);
+  const rl = useRoleLabelsContext();
+  const { eyebrow, headline, hint, cards } = getCards(props, rl);
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: 'hsl(var(--navy))' }}>
