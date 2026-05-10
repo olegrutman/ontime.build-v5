@@ -36,6 +36,13 @@ export interface ProjectFinancials {
   materialEstimateTotal: number | null;
   approvedEstimateSum: number;
 
+  // Real CO/WO aggregates (sourced from change_orders, viewer-scoped)
+  approvedCORevenue: number;
+  approvedCOCost: number;
+  approvedCOMargin: number;
+  pendingCOExposure: number;
+  approvedWOTotal: number;
+
   // NEW: Financial command center fields
   totalPaid: number;
   materialDelivered: number;
