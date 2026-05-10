@@ -70,6 +70,8 @@ function filterEntries(entries: COAuditEntry[], viewerRole: string): COAuditEntr
 }
 
 export function COAuditLog({ entries, viewerRole }: COAuditLogProps) {
+  const rl = useRoleLabelsContext();
+  const FIELD_LABELS = buildFieldLabels(rl);
   const filtered = filterEntries(entries, viewerRole);
 
   if (filtered.length === 0) {
