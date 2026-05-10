@@ -25,9 +25,10 @@ export function RequirePermission({
   children,
   fallback = null,
 }: RequirePermissionProps) {
-  const { permissions } = useAuth();
+  const { permissions, isPlatformUser } = useAuth();
 
   const hasPermission = React.useMemo(() => {
+    if (isPlatformUser) return true;
     if (!permissions) return false;
 
     const permissionList = Array.isArray(permission) ? permission : [permission];
@@ -36,7 +37,7 @@ export function RequirePermission({
       return permissionList.every((p) => permissions[p]);
     }
     return permissionList.some((p) => permissions[p]);
-  }, [permissions, permission, requireAll]);
+  }, [permissions, permission, requireAll, isPlatformUser]);
 
   if (!hasPermission) {
     return <>{fallback}</>;
@@ -50,9 +51,10 @@ export function RequirePermission({
  * Uses the unified effective permissions from auth context.
  */
 export function usePermission(permission: PermissionKey | PermissionKey[], requireAll = false): boolean {
-  const { permissions } = useAuth();
+  const { permissions, isPlatformUser } = useAuth();
 
   return React.useMemo(() => {
+    if (isPlatformUser) return true;
     if (!permissions) return false;
 
     const permissionList = Array.isArray(permission) ? permission : [permission];
@@ -61,7 +63,7 @@ export function usePermission(permission: PermissionKey | PermissionKey[], requi
       return permissionList.every((p) => permissions[p]);
     }
     return permissionList.some((p) => permissions[p]);
-  }, [permissions, permission, requireAll]);
+  }, [permissions, permission, requireAll, isPlatformUser]);
 }
 
 /**

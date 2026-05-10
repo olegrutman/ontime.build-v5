@@ -1,62 +1,39 @@
-# Why Emily's permissions look ON but she can't approve
+# Allow platform staff to approve/reject COs
 
-## What's actually in the database
-
-Emily Stiles (`0befa074-...`) has one membership at **Haley Custom Homes** as **GC_PM**, with `is_admin = false`. Her `member_permissions` row stores:
-
-| Column | Value |
-|---|---|
-| can_view_financials | **false** |
-| can_approve_invoices | **false** |
-| can_create_work_orders | **false** |
-| can_create_pos | **false** |
-| can_manage_team | **false** |
-| can_submit_time | true |
-| can_create_rfis | true |
-
-So in the app she correctly cannot approve COs/invoices — the data is right.
-
-## Why the Platform Owner page shows every toggle ON
-
-Two layers collide:
-
-1. **`UserPermissionsCard.getEffectiveValue`** falls back to the **role defaults** in `ROLE_PERMISSIONS` whenever the `member_permissions` row is `null`. For `GC_PM`, every default is `true`.
-2. **RLS on `public.member_permissions`** only allows SELECT to users who share an organization with the target row:
-   ```
-   EXISTS (
-     user_org_roles my_role
-     JOIN user_org_roles target_role ON same organization
-     WHERE my_role.user_id = auth.uid()
-   )
-   ```
-   Oleg (Platform Owner) is **not** a member of Haley Custom Homes, so the query in `PlatformUserDetail.refreshData` returns zero rows. `permissionsMap[m.id]` becomes `null`, and the card renders the all-true GC_PM defaults.
-
-The same RLS blocks the UPDATE policy ("Admins can update member permissions"), so any toggle change Oleg attempts from this page would also silently fail or 403 — the page can neither read nor write the real values.
+## Problem
+Platform Owner viewing a CO sees "You do not have permission to approve" because:
+1. **UI**: `usePermission('canApprove')` reads org-role permissions; platform users have no org membership → returns `false`.
+2. **DB**: `change_orders` UPDATE policies are gated to `user_in_org(auth.uid(), assigned_to_org_id)`. Platform users have no membership in the assigned org, so the update returns 0 rows even if the button is forced through.
 
 ## Fix
 
-Allow platform staff to read and write `member_permissions` for any org, while preserving the existing org-scoped policies for normal users.
+### 1. Database — add platform-staff UPDATE policy on `change_orders`
+New migration adds:
+```sql
+CREATE POLICY "Platform staff can update change orders"
+ON public.change_orders FOR UPDATE
+USING (public.is_platform_staff(auth.uid()))
+WITH CHECK (public.is_platform_staff(auth.uid()));
+```
+The existing `apply_co_contract_delta` trigger handles `project_contracts.contract_sum` increments on status transitions to/from `approved` — no change there. The trigger does not consult `auth.uid()`, so it works the same for any caller.
 
-### Database
+### 2. Frontend — bypass UI permission check for platform staff
+In `src/components/auth/RequirePermission.tsx`, update both `RequirePermission` and `usePermission` to short-circuit to `true` when `useAuth().isPlatformUser` is `true`. This single change unlocks every action button gated on `usePermission` for platform staff (approve, reject, create, etc.) without per-button changes.
 
-Add two RLS policies on `public.member_permissions` using the existing `is_platform_user(uid)` / `platform_users` table pattern already used elsewhere in the project:
+Rationale: matches existing pattern where Platform Owner/Admin/Support Agent already have `canEditRecords` in `PLATFORM_ROLE_PERMISSIONS`.
 
-- `SELECT`: allow when `EXISTS (SELECT 1 FROM platform_users WHERE user_id = auth.uid() AND platform_role <> 'NONE')`
-- `UPDATE` / `INSERT`: same predicate, gated to roles with `canEditRecords` (PLATFORM_OWNER, PLATFORM_ADMIN, SUPPORT_AGENT — i.e. all non-NONE values today).
-
-This mirrors how other admin-managed tables expose data to the platform console without changing tenant-facing RLS.
-
-### Frontend (defensive only — no behavior change once RLS is fixed)
-
-In `src/components/platform/UserPermissionsCard.tsx`, when `perms === null` for a non-admin membership, render the toggles as **disabled with a small "permissions unavailable" hint** instead of silently showing role defaults. This prevents a future RLS regression from ever again displaying false-positive ON states.
+### 3. Activity log attribution
+The CO `approved_by_user_id` column will be set to the platform staff user id (Oleg). That's correct and traceable. No support_action_log entry is added in this iteration — actions taken from inside the project UI by platform staff are recorded by the normal CO activity feed via the existing audit triggers.
 
 ## Files touched
-
-- New migration: RLS policies on `public.member_permissions` for platform users (SELECT + UPDATE + INSERT).
-- `src/components/platform/UserPermissionsCard.tsx`: guard `getEffectiveValue` so a `null` perms row for a non-admin shows muted/disabled toggles with a tooltip, instead of role defaults.
+- New migration: `change_orders` SELECT-no-op + UPDATE policy for `is_platform_staff`.
+- `src/components/auth/RequirePermission.tsx`: platform-user bypass in `usePermission` and `RequirePermission`.
 
 ## Verification
+1. As Platform Owner navigate to the CO at `/project/.../change-orders/f9865ab8-...` → Approve button visible.
+2. Click Approve → DB row updates, status transitions to `approved`, contract delta applied by trigger, no toast error.
+3. Reject path works the same.
+4. As a regular GC member without `canApprove`, behavior is unchanged (still blocked).
 
-1. As Platform Owner, open Emily's profile → Permissions section should now show **View Financials / Approve Invoices / Create Work Orders / Create POs / Manage Team = OFF**, and **Submit Time / Create RFIs = ON**, matching the DB.
-2. Toggle "Approve Invoices" ON, provide a reason → row updates, page re-fetches, toggle stays ON, support log entry written.
-3. As a regular GC member of Haley Custom Homes, the existing org-scoped policies still apply (no regression).
+## Out of scope (call out only)
+Invoices and POs have their own approve/reject paths with their own RLS. The frontend bypass in #2 also unlocks their UI buttons, but the DB updates will still fail unless we add similar `is_platform_staff` UPDATE policies on `invoices` and `purchase_orders`. If you want those covered too, say the word and I'll extend the migration in this same pass.
