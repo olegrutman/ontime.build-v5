@@ -459,7 +459,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             <div className="px-6 py-8 text-center">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
               <p className="text-sm font-semibold text-foreground">Pricing details hidden</p>
-              <p className="text-xs text-muted-foreground mt-1">GC only sees the final submitted amount on fixed-price change orders.</p>
+              <p className="text-xs text-muted-foreground mt-1">{rl.GC} only sees the final submitted amount on fixed-price change orders.</p>
             </div>
           ) : gcSummaryOnly ? (
             <div className="px-5 py-4 space-y-2">
