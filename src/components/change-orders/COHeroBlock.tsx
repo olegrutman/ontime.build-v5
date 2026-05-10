@@ -131,7 +131,8 @@ const VARIANT_CLASSES: Record<CardVariant, string> = {
 };
 
 export function COHeroBlock(props: COHeroBlockProps) {
-  const { eyebrow, headline, hint, cards } = getCards(props);
+  const rl = useRoleLabelsContext();
+  const { eyebrow, headline, hint, cards } = getCards(props, rl);
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: 'hsl(var(--navy))' }}>
