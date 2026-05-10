@@ -30,7 +30,7 @@ function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function getCards(props: COHeroBlockProps): { eyebrow: string; headline: string; hint: string; cards: HeroCard[] } {
+function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsContext>): { eyebrow: string; headline: string; hint: string; cards: HeroCard[] } {
   const { co, isGC, isTC, isFC, financials, fcCollabName } = props;
   const status = co.status;
   const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
