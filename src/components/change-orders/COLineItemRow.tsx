@@ -658,7 +658,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     </div>
                   ))}
                   <div className="flex justify-between text-xs font-semibold text-muted-foreground pt-1 border-t border-border/30">
-                    <span>FC total</span>
+                    <span>{rl.FC} total</span>
                     <span className="font-mono">${fmt(fcTotal)}</span>
                   </div>
                 </div>
