@@ -56,7 +56,7 @@ function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsCo
         cards: [
           { variant: 'secondary', icon: '🔒', title: 'Close for pricing', description: 'Lock scope for final pricing', action: 'close_for_pricing' },
           { variant: 'secondary', icon: '📊', title: 'Review running cost', description: 'Current labor and materials', action: 'scroll_pricing' },
-          { variant: 'secondary', icon: '👷', title: 'FC involvement', description: 'Field crew status', action: 'scroll_fc' },
+          { variant: 'secondary', icon: '👷', title: `${rl.FC} involvement`, description: `${rl.FC} status`, action: 'scroll_fc' },
           { variant: 'secondary', icon: '📋', title: 'View scope', description: 'Line items and details', action: 'scroll_scope' },
         ],
       };
