@@ -50,6 +50,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
   const navigate = useNavigate();
   const { userOrgRoles } = useAuth();
   const { changeOrders } = useChangeOrders(projectId);
+  const rl = useRoleLabelsContext();
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? '';
 
