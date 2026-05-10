@@ -127,14 +127,20 @@ export function UserPermissionsCard({ memberships, permissionsMap, isOwner, onSa
                     {m.is_admin && (
                       <p className="text-xs text-muted-foreground italic">Admin — all permissions granted</p>
                     )}
+                    {!m.is_admin && perms === null && (
+                      <p className="text-xs text-amber-600 italic">
+                        Stored overrides not visible — showing role defaults. Toggles disabled.
+                      </p>
+                    )}
                     {PERM_LABELS.map(({ key, label }) => {
                       const effective = getEffectiveValue(key, m.role, m.is_admin, perms);
+                      const noOverrideAccess = !m.is_admin && perms === null;
                       return (
                         <div key={key} className="flex items-center justify-between">
                           <Label className="text-sm font-normal">{label}</Label>
                           <Switch
                             checked={effective}
-                            disabled={m.is_admin || !isOwner}
+                            disabled={m.is_admin || !isOwner || noOverrideAccess}
                             onCheckedChange={(val) => handleToggle(m, key, val, label)}
                           />
                         </div>
