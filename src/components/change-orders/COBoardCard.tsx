@@ -157,7 +157,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
             ))}
           </div>
           <span className="text-xs font-medium text-foreground">
-            {fmtCurrency(co.tc_submitted_price ?? 0)}
+            {fmtCurrency((co as any).display_total ?? co.tc_submitted_price ?? 0)}
           </span>
         </div>
       </div>
