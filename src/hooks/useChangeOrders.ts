@@ -87,8 +87,15 @@ export function useChangeOrders(projectId: string | null) {
         }
       }
 
-      // Fetch downstream org IDs and participant role in parallel
-      const [{ data: downstreamContracts }, { data: myParticipant }] = await Promise.all([
+      // Fetch downstream org IDs, participant role, and per-CO totals data in parallel
+      const coIds = allCOs.map(c => c.id);
+      const [
+        { data: downstreamContracts },
+        { data: myParticipant },
+        { data: laborRows },
+        { data: matRows },
+        { data: eqRows },
+      ] = await Promise.all([
         supabase
           .from('project_contracts')
           .select('from_org_id')
@@ -101,6 +108,21 @@ export function useChangeOrders(projectId: string | null) {
           .eq('organization_id', orgId!)
           .eq('invite_status', 'ACCEPTED')
           .maybeSingle(),
+        coIds.length
+          ? supabase.from('co_labor_entries')
+              .select('co_id, entered_by_role, line_total, is_actual_cost')
+              .in('co_id', coIds)
+          : Promise.resolve({ data: [] as any[] }) as any,
+        coIds.length
+          ? supabase.from('co_material_items')
+              .select('co_id, billed_amount')
+              .in('co_id', coIds)
+          : Promise.resolve({ data: [] as any[] }) as any,
+        coIds.length
+          ? supabase.from('co_equipment_items')
+              .select('co_id, billed_amount')
+              .in('co_id', coIds)
+          : Promise.resolve({ data: [] as any[] }) as any,
       ]);
 
       const downstreamOrgIds = new Set(
@@ -108,11 +130,36 @@ export function useChangeOrders(projectId: string | null) {
       );
       const isGCOnProject = myParticipant?.role === 'GC';
 
+      // Per-CO aggregates mirroring useChangeOrderDetail formulas
+      const tcLaborByCo = new Map<string, number>();
+      for (const r of (laborRows ?? []) as any[]) {
+        if (r.is_actual_cost) continue;
+        if (r.entered_by_role !== 'TC') continue;
+        tcLaborByCo.set(r.co_id, (tcLaborByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+      }
+      const matByCo = new Map<string, number>();
+      for (const r of (matRows ?? []) as any[]) {
+        matByCo.set(r.co_id, (matByCo.get(r.co_id) ?? 0) + Number(r.billed_amount ?? 0));
+      }
+      const eqByCo = new Map<string, number>();
+      for (const r of (eqRows ?? []) as any[]) {
+        eqByCo.set(r.co_id, (eqByCo.get(r.co_id) ?? 0) + Number(r.billed_amount ?? 0));
+      }
+      const computeDisplayTotal = (c: ChangeOrder) => {
+        const tcLabor = tcLaborByCo.get(c.id) ?? 0;
+        const tcSubmitted = Number((c as any).tc_submitted_price ?? 0);
+        const tcBillableToGC = (c as any).use_fc_pricing_base && tcSubmitted > 0
+          ? tcSubmitted
+          : tcLabor;
+        return tcBillableToGC + (matByCo.get(c.id) ?? 0) + (eqByCo.get(c.id) ?? 0);
+      };
+
       return {
         items: allCOs.map(c => ({
           ...c,
           collaboratorStatus: collaboratorMap.get(c.id)?.status,
           collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
+          display_total: computeDisplayTotal(c),
           _isDownstreamOrg: downstreamOrgIds.has(c.org_id),
         })) as (ChangeOrderWithMembers & { _isDownstreamOrg?: boolean })[],
         isGCOnProject,
