@@ -116,7 +116,7 @@ function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsCo
     hint: 'Log hours or report issues',
     cards: [
       { variant: 'primary', icon: '⏱', title: 'Log my hours', description: 'Add time to this CO', action: 'log_hours' },
-      { variant: 'secondary', icon: '🚀', title: 'Submit to TC', description: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs ready` : 'No hours yet', action: 'submit_to_tc' },
+      { variant: 'secondary', icon: '🚀', title: `Submit to ${rl.TC}`, description: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs ready` : 'No hours yet', action: 'submit_to_tc' },
       { variant: 'secondary', icon: '📦', title: 'Need material', description: 'Request materials', action: 'need_material' },
       { variant: 'red', icon: '⚠️', title: 'Saw damage', description: 'Report damage by others', action: 'saw_damage' },
     ],
