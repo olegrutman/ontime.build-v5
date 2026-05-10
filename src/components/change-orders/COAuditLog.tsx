@@ -2,6 +2,8 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { COAuditEntry } from '@/hooks/useCOAuditLog';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleCode } from '@/hooks/useRoleLabels';
 
 interface COAuditLogProps {
   entries: COAuditEntry[];
