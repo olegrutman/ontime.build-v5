@@ -648,7 +648,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               {/* TC downstream costs */}
               {isTC && tcDownstreamCosts.length > 0 && (
                 <div className="border-t border-border px-5 py-2">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">FC Entries</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">{rl.FC} Entries</p>
                   {tcDownstreamCosts.map(entry => (
                     <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="w-20">{entry.entry_date}</span>
