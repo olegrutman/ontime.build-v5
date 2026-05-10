@@ -113,6 +113,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
   const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
   const [approvedEstimateSum, setApprovedEstimateSum] = useState(0);
+  const [approvedCORevenue, setApprovedCORevenue] = useState(0);
+  const [approvedCOCost, setApprovedCOCost] = useState(0);
+  const [pendingCOExposure, setPendingCOExposure] = useState(0);
+  const [approvedWOTotal, setApprovedWOTotal] = useState(0);
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
   const [isTCSelfPerforming, setIsTCSelfPerforming] = useState(false);
   const [totalPaid, setTotalPaid] = useState(0);
