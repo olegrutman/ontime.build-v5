@@ -206,7 +206,45 @@ Deno.serve(async (req) => {
     const retainagePct = project?.retainage_percent ?? 0;
     const retainageAmt = grandTotal * retainagePct / 100;
 
-    const originalContractSum = Number(chosenContract.contract_sum ?? 0);
+    // Fetch prior approved COs on the same project (excluding this one)
+    const { data: priorCOs = [] } = await supabase
+      .from("change_orders")
+      .select("id, co_number, title, approved_at, created_at, status, tc_submitted_price")
+      .eq("project_id", co.project_id)
+      .eq("status", "approved")
+      .neq("id", co_id)
+      .order("approved_at", { ascending: true, nullsFirst: false });
+
+    const priorIds = priorCOs.map((c: any) => c.id);
+    let priorLabor: any[] = [];
+    let priorMats: any[] = [];
+    let priorEquip: any[] = [];
+    if (priorIds.length > 0) {
+      const [{ data: pl = [] }, { data: pm = [] }, { data: pe = [] }] = await Promise.all([
+        supabase.from("co_labor_entries").select("co_id, org_id, line_total").in("co_id", priorIds).eq("is_actual_cost", false),
+        supabase.from("co_material_items").select("co_id, org_id, billed_amount").in("co_id", priorIds),
+        supabase.from("co_equipment_items").select("co_id, org_id, billed_amount").in("co_id", priorIds),
+      ]);
+      priorLabor = pl; priorMats = pm; priorEquip = pe;
+    }
+
+    const sumFor = (rows: any[], coId: string, field: string) =>
+      rows.filter((r) => r.co_id === coId && r.org_id === billingOrgId).reduce((s, r) => s + Number(r[field] ?? 0), 0);
+
+    const priorCOsWithTotals = priorCOs.map((p: any) => {
+      const labor = sumFor(priorLabor, p.id, "line_total");
+      const laborTotalP = isGCPerspective && p.tc_submitted_price != null ? Number(p.tc_submitted_price) : labor;
+      const mats = sumFor(priorMats, p.id, "billed_amount");
+      const equip = sumFor(priorEquip, p.id, "billed_amount");
+      return { ...p, _amount: laborTotalP + mats + equip };
+    });
+    const priorTotal = priorCOsWithTotals.reduce((s, p) => s + p._amount, 0);
+
+    const originalContractSumRaw = Number(chosenContract.contract_sum ?? 0);
+    // contract_sum already includes approved CO deltas via apply_co_contract_delta trigger.
+    // Subtract prior approved CO totals AND this CO's delta (if it's also approved) to get the true original.
+    const thisCOApproved = co.status === "approved";
+    const originalContractSum = originalContractSumRaw - priorTotal - (thisCOApproved ? subtotal : 0);
 
     // Build PDF
     const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
