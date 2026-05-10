@@ -12,7 +12,7 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
 
   // T&M mode: contract value = sum of approved COs (approvedEstimateSum)
   if (isTM) {
-    const tmTotal = approvedEstimateSum || 0;
+    const tmTotal = approvedWOTotal;
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         <KPICard label="T&M Total" value={tmTotal} delay={0} className="p-3" />
@@ -24,7 +24,7 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
 
   if (viewerRole === 'General Contractor') {
     const originalContract = upstreamContract?.contract_sum || 0;
-    const coAdds = approvedEstimateSum || 0;
+    const coAdds = 0;
     const revised = originalContract + coAdds;
     const totalCostOut = contracts
       .filter(c => c.to_org_id !== financials.userOrgIds[0])
@@ -44,7 +44,7 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
 
   if (viewerRole === 'Trade Contractor') {
     const contractIn = upstreamContract?.contract_sum || 0;
-    const coAdds = approvedEstimateSum || 0;
+    const coAdds = 0;
     const revised = contractIn + coAdds;
     const costOut = downstreamContract?.contract_sum || 0;
     const margin = revised > 0 ? ((revised - costOut) / revised) * 100 : 0;
