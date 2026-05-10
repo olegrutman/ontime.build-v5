@@ -101,7 +101,7 @@ function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsCo
     return {
       eyebrow: co.status.toUpperCase().replace(/_/g, ' '),
       headline: props.co.document_type === 'WO' ? 'WORK ORDER' : 'CHANGE ORDER',
-      hint: status === 'submitted' ? 'Waiting on GC approval' : 'Review the details below',
+      hint: status === 'submitted' ? `Waiting on ${rl.GC} approval` : 'Review the details below',
       cards: [
         { variant: 'secondary', icon: '📊', title: 'Review pricing', description: 'Financial breakdown', action: 'scroll_pricing' },
         { variant: 'secondary', icon: '📋', title: 'View scope', description: 'Line items and details', action: 'scroll_scope' },
