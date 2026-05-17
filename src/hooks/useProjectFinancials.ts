@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  aggregateCOTotals,
+  resolveBillingOrgId,
+  PENDING_CO_STATUSES,
+} from '@/hooks/coAggregation';
 
 
 export type ViewerRole = 'Trade Contractor' | 'General Contractor' | 'Field Crew' | 'Supplier';
@@ -250,37 +255,14 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       const estSum = (approvedEsts || []).reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
       setApprovedEstimateSum(estSum);
 
-      // ===== Real CO/WO aggregation from change_orders =====
-      // Determine billingOrgId per viewer (matches CO PDF logic):
-      // - GC viewer:  TC's org   (billing party of upstream TC↔GC contract)
-      // - TC viewer:  TC's org   (own org as billing party upstream)
-      // - FC viewer:  FC's org   (own org as billing party downstream)
-      const upstreamForCO = contractsWithNames.find((c: any) =>
-        ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
-         (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
-        c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
-      );
-      const downstreamForCO = contractsWithNames.find((c: any) =>
-        ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
-         (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
-        c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
-      );
-      const tcOrgId = upstreamForCO
-        ? (upstreamForCO.from_role === 'Trade Contractor' ? upstreamForCO.from_org_id : upstreamForCO.to_org_id)
-        : null;
-      const fcOrgId = downstreamForCO
-        ? (downstreamForCO.from_role === 'Field Crew' ? downstreamForCO.from_org_id : downstreamForCO.to_org_id)
-        : null;
-      const billingOrgId = detectedRole === 'Field Crew' ? fcOrgId : tcOrgId;
+      const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole);
       const isGCPerspective = detectedRole === 'General Contractor';
-
-      const PENDING_STATUSES = ['submitted', 'closed_for_pricing', 'shared', 'work_in_progress'];
 
       const { data: allCOs = [] } = await supabase
         .from('change_orders')
         .select('id, status, document_type, tc_submitted_price')
         .eq('project_id', projectId)
-        .in('status', ['approved', ...PENDING_STATUSES]);
+        .in('status', ['approved', ...PENDING_CO_STATUSES]);
 
       const allCOIds = (allCOs || []).map((c: any) => c.id);
       let coLabor: any[] = [];
@@ -295,34 +277,18 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         coLabor = l; coMats = m; coEquip = e;
       }
 
-      const sumScoped = (rows: any[], coId: string, field: string) =>
-        rows.filter((r) => r.co_id === coId && r.org_id === billingOrgId)
-            .reduce((s, r) => s + Number(r[field] ?? 0), 0);
-
-      const perCOTotals = (allCOs || []).map((c: any) => {
-        const laborSum = sumScoped(coLabor, c.id, 'line_total');
-        const revLabor = isGCPerspective && c.tc_submitted_price != null
-          ? Number(c.tc_submitted_price) : laborSum;
-        const matRev = sumScoped(coMats, c.id, 'billed_amount');
-        const equipRev = sumScoped(coEquip, c.id, 'billed_amount');
-        // Cost: raw labor (TC's true cost) + material line_cost + equipment cost (no markup)
-        const matCost = sumScoped(coMats, c.id, 'line_cost');
-        const equipCost = sumScoped(coEquip, c.id, 'cost');
-        return {
-          id: c.id,
-          status: c.status,
-          document_type: c.document_type,
-          revenue: revLabor + matRev + equipRev,
-          cost: laborSum + matCost + equipCost,
-        };
-      });
-
-      const approvedRows = perCOTotals.filter((c) => c.status === 'approved');
-      const pendingRows = perCOTotals.filter((c) => c.status !== 'approved');
-      setApprovedCORevenue(approvedRows.reduce((s, c) => s + c.revenue, 0));
-      setApprovedCOCost(approvedRows.reduce((s, c) => s + c.cost, 0));
-      setPendingCOExposure(pendingRows.reduce((s, c) => s + c.revenue, 0));
-      setApprovedWOTotal(approvedRows.filter((c) => c.document_type === 'WO').reduce((s, c) => s + c.revenue, 0));
+      const agg = aggregateCOTotals(
+        (allCOs || []) as any,
+        coLabor,
+        coMats,
+        coEquip,
+        billingOrgId,
+        isGCPerspective,
+      );
+      setApprovedCORevenue(agg.approvedCORevenue);
+      setApprovedCOCost(agg.approvedCOCost);
+      setPendingCOExposure(agg.pendingCOExposure);
+      setApprovedWOTotal(agg.approvedWOTotal);
       // ===== end CO aggregation =====
 
       // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
