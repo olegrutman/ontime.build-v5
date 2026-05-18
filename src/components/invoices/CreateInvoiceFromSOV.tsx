@@ -171,7 +171,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     if (open) {
       fetchData();
     }
-  }, [open, projectId]);
+  }, [open, projectId, currentOrgId]);
+
 
   const fetchData = async () => {
     setLoading(true);
