@@ -10,6 +10,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { useSashaContext } from '@/hooks/useSashaContext';
 import { SashaMessage, type SashaChatMessage } from './SashaMessage';
 import { SashaHighlightOverlay } from './SashaHighlightOverlay';
+import { collectPageSnapshot } from '@/lib/sashaPageSnapshot';
 import { toast } from 'sonner';
 
 const SASHA_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sasha-guide`;
