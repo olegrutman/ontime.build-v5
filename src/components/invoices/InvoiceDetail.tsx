@@ -455,7 +455,14 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
                 return (
                   <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
-                    <TableCell className="font-medium">{item.description}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>{item.description}</div>
+                      {item.line_notes && (
+                        <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
+                          {item.line_notes}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">{formatCurrency(item.scheduled_value)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(item.current_billed)}</TableCell>

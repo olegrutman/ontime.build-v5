@@ -2182,6 +2182,7 @@ export type Database = {
           description: string
           id: string
           invoice_id: string
+          line_notes: string | null
           previous_billed: number
           retainage_amount: number
           retainage_percent: number
@@ -2197,6 +2198,7 @@ export type Database = {
           description: string
           id?: string
           invoice_id: string
+          line_notes?: string | null
           previous_billed?: number
           retainage_amount?: number
           retainage_percent?: number
@@ -2212,6 +2214,7 @@ export type Database = {
           description?: string
           id?: string
           invoice_id?: string
+          line_notes?: string | null
           previous_billed?: number
           retainage_amount?: number
           retainage_percent?: number
