@@ -241,6 +241,10 @@ export function SashaBubble() {
   const handleClose = () => {
     setOpen(false);
     setHighlightMode(false);
+    // Keep messages so the user can re-open and continue the same conversation.
+  };
+
+  const handleResetChat = () => {
     setMessages([INITIAL_GREETING]);
     setInput('');
   };
