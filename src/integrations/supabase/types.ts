@@ -6700,6 +6700,21 @@ export type Database = {
         Args: { _po_id: string; _user_id?: string }
         Returns: boolean
       }
+      list_billable_change_orders: {
+        Args: { p_from_org_id: string; p_project_id: string }
+        Returns: {
+          already_billed: number
+          co_id: string
+          co_number: string
+          contract_id: string
+          grand_total: number
+          remaining: number
+          title: string
+          to_org_id: string
+          to_org_name: string
+          to_role: string
+        }[]
+      }
       log_support_action: {
         Args: {
           p_action_summary?: string

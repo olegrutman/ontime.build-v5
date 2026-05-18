@@ -67,6 +67,19 @@ interface BillingItem extends SOVItem {
   maxAllowedPercent: number;
 }
 
+interface BillableCO {
+  co_id: string;
+  co_number: string | null;
+  title: string | null;
+  contract_id: string;
+  to_org_id: string | null;
+  to_org_name: string | null;
+  to_role: string | null;
+  grand_total: number;
+  already_billed: number;
+  remaining: number;
+}
+
 export interface RevisionData {
   contractId: string;
   invoiceNumber: string;
@@ -118,9 +131,13 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   const [allContracts, setAllContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [sovItems, setSovItems] = useState<SOVItem[]>([]);
-  
-  // Selection
+  const [approvedCOs, setApprovedCOs] = useState<BillableCO[]>([]);
+
+  // Selection (value format: "contract:<uuid>" or "co:<uuid>")
+  const [selectedPickerValue, setSelectedPickerValue] = useState<string>('');
   const [selectedContractId, setSelectedContractId] = useState<string>('');
+  const [selectedCOId, setSelectedCOId] = useState<string | null>(null);
+  const [coBillAmount, setCoBillAmount] = useState<number>(0);
   const [billingItems, setBillingItems] = useState<BillingItem[]>([]);
   
   // Invoice details
@@ -154,7 +171,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     if (open) {
       fetchData();
     }
-  }, [open, projectId]);
+  }, [open, projectId, currentOrgId]);
+
 
   const fetchData = async () => {
     setLoading(true);
@@ -201,6 +219,19 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         
         setSovItems((itemsData || []) as SOVItem[]);
       }
+
+      // Fetch approved Change Orders billable by this org
+      if (currentOrgId) {
+        const { data: coData, error: coErr } = await supabase.rpc('list_billable_change_orders', {
+          p_project_id: projectId,
+          p_from_org_id: currentOrgId,
+        });
+        if (coErr) {
+          console.error('Error fetching billable COs:', coErr);
+        } else {
+          setApprovedCOs((coData || []) as BillableCO[]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load SOV data');
@@ -213,13 +244,18 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   useEffect(() => {
     if (open) {
       if (isRevisionMode) {
+        setSelectedPickerValue(`contract:${revisionData.contractId}`);
         setSelectedContractId(revisionData.contractId);
+        setSelectedCOId(null);
         setInvoiceNumber(revisionData.invoiceNumber);
         setPeriodStart(new Date(revisionData.periodStart));
         setPeriodEnd(new Date(revisionData.periodEnd));
         setNotes(revisionData.notes || '');
       } else {
+        setSelectedPickerValue('');
         setSelectedContractId('');
+        setSelectedCOId(null);
+        setCoBillAmount(0);
         setInvoiceNumber('');
         setNotes('');
         setPeriodStart(startOfMonth(subMonths(new Date(), 1)));
@@ -227,6 +263,33 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       }
     }
   }, [open, isRevisionMode]);
+
+  // Apply selection from picker (contract:<id> or co:<id>)
+  const handlePickerChange = (val: string) => {
+    setSelectedPickerValue(val);
+    if (val.startsWith('co:')) {
+      const coId = val.slice(3);
+      const co = approvedCOs.find(c => c.co_id === coId);
+      if (co) {
+        setSelectedCOId(coId);
+        setSelectedContractId(co.contract_id);
+        setCoBillAmount(co.remaining);
+      }
+    } else if (val.startsWith('contract:')) {
+      setSelectedCOId(null);
+      setSelectedContractId(val.slice(9));
+      setCoBillAmount(0);
+    } else {
+      setSelectedCOId(null);
+      setSelectedContractId('');
+    }
+  };
+
+  const selectedCO = useMemo(
+    () => approvedCOs.find(c => c.co_id === selectedCOId) || null,
+    [approvedCOs, selectedCOId]
+  );
+
 
   // Helper to get initials from company name
   const getOrgInitials = (name: string | undefined): string => {
@@ -241,7 +304,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     return cleaned.substring(0, 3).toUpperCase();
   };
 
-  const generateInvoiceNumber = async (contract: Contract) => {
+  const generateInvoiceNumber = async (contract: Contract, co?: BillableCO | null) => {
     const { data: project } = await supabase
       .from('projects')
       .select('name')
@@ -251,7 +314,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     const projectCode = getProjectCode(project?.name);
     const fromInitials = getOrgInitials(contract.from_org_name);
     const toInitials = getOrgInitials(contract.to_org_name);
-    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}`;
+    const coTag = co?.co_number ? `-${co.co_number.replace(/[^A-Za-z0-9]/g, '')}` : '';
+    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}${coTag}`;
     
     const { data } = await supabase
       .from('invoices')
@@ -272,29 +336,32 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     setInvoiceNumber(`${prefix}-${(maxNumber + 1).toString().padStart(4, '0')}`);
   };
 
-  // Get the selected contract and its SOV
-  const selectedContract = useMemo(() => 
-    contracts.find(c => c.id === selectedContractId),
-    [contracts, selectedContractId]
+  // Get the selected contract and its SOV. In CO mode, fall back to allContracts
+  // because the CO's parent contract may be filtered out (e.g., contract_sum=0).
+  const selectedContract = useMemo(() =>
+    contracts.find(c => c.id === selectedContractId)
+      || (selectedCOId ? allContracts.find(c => c.id === selectedContractId) : undefined),
+    [contracts, allContracts, selectedContractId, selectedCOId]
   );
   
   const selectedSOV = useMemo(() => {
+    if (selectedCOId) return null; // CO mode bypasses SOV
     const contractSovs = sovs.filter(s => s.contract_id === selectedContractId);
-    // Prefer latest locked version; fall back to latest version (already sorted DESC)
     return contractSovs.find(s => s.is_locked) || contractSovs[0] || null;
-  }, [sovs, selectedContractId]);
+  }, [sovs, selectedContractId, selectedCOId]);
 
   const sovNotLocked = selectedSOV && !selectedSOV.is_locked;
 
-  // Generate invoice number when contract is selected (only in create mode)
+  // Generate invoice number when contract or CO is selected (only in create mode)
   useEffect(() => {
-    if (isRevisionMode) return; // Don't regenerate in revision mode
+    if (isRevisionMode) return;
     if (selectedContract) {
-      generateInvoiceNumber(selectedContract);
+      generateInvoiceNumber(selectedContract, selectedCO);
     } else {
       setInvoiceNumber('');
     }
-  }, [selectedContract, isRevisionMode]);
+  }, [selectedContract, selectedCO, isRevisionMode]);
+
 
   // Update billing items when contract changes
   useEffect(() => {
@@ -327,23 +394,28 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     }
   }, [selectedSOV, sovItems, isRevisionMode]);
 
-  // Calculate gross amount
-  const grossAmount = useMemo(() => 
-    billingItems
+  // Calculate gross amount (CO mode uses coBillAmount; SOV mode sums enabled items)
+  const grossAmount = useMemo(() => {
+    if (selectedCOId) return Math.max(0, coBillAmount);
+    return billingItems
       .filter(item => item.enabled)
-      .reduce((sum, item) => sum + item.thisBillAmount, 0),
-    [billingItems]
-  );
+      .reduce((sum, item) => sum + item.thisBillAmount, 0);
+  }, [billingItems, selectedCOId, coBillAmount]);
 
   const retainagePercent = selectedContract?.retainage_percent || 0;
   const retainageAmount = grossAmount * (retainagePercent / 100);
   const netAmount = grossAmount - retainageAmount;
 
-  const hasErrors = billingItems.some(item => 
-    item.enabled && item.thisBillPercent > item.maxAllowedPercent
-  );
-  
-  const hasSelectedItems = billingItems.some(item => item.enabled && item.thisBillPercent > 0);
+  const coOverbilling = selectedCO ? coBillAmount > selectedCO.remaining + 0.005 : false;
+
+  const hasErrors = selectedCOId
+    ? coOverbilling || coBillAmount <= 0
+    : billingItems.some(item => item.enabled && item.thisBillPercent > item.maxAllowedPercent);
+
+  const hasSelectedItems = selectedCOId
+    ? coBillAmount > 0
+    : billingItems.some(item => item.enabled && item.thisBillPercent > 0);
+
 
   const handleToggleItem = (itemId: string, enabled: boolean) => {
     setBillingItems(prev => prev.map(item => 
@@ -372,23 +444,31 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   };
 
   const handleSubmit = async () => {
-    if (!user || !selectedContract || !selectedSOV) return;
+    if (!user || !selectedContract) return;
 
-    // Block invoice creation if SOV is not locked
-    if (!selectedSOV.is_locked) {
-      toast.error('SOV must be locked before creating invoices');
-      return;
+    // CO branch needs no SOV
+    if (!selectedCOId) {
+      if (!selectedSOV) return;
+      if (!selectedSOV.is_locked) {
+        toast.error('SOV must be locked before creating invoices');
+        return;
+      }
     }
 
     if (!hasSelectedItems) {
-      toast.error('Please select at least one SOV item to bill');
+      toast.error(selectedCOId
+        ? 'Enter an amount to bill for this Change Order'
+        : 'Please select at least one SOV item to bill');
       return;
     }
 
     if (hasErrors) {
-      toast.error('Please fix overbilling errors before submitting');
+      toast.error(selectedCOId
+        ? 'Bill amount exceeds the CO\'s remaining balance'
+        : 'Please fix overbilling errors before submitting');
       return;
     }
+
 
     setSaving(true);
 
@@ -484,7 +564,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           .insert({
             project_id: projectId,
             contract_id: selectedContract.id,
-            sov_id: selectedSOV.id,
+            sov_id: selectedCOId ? null : selectedSOV!.id,
+            co_ids: selectedCOId ? [selectedCOId] : null,
             invoice_number: invoiceNumber,
             billing_period_start: format(periodStart, 'yyyy-MM-dd'),
             billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
@@ -499,19 +580,39 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 
         if (invoiceError) throw invoiceError;
 
-        const lineItemsToInsert = enabledItems.map((item, index) => ({
-          invoice_id: invoice.id,
-          sov_item_id: item.id,
-          description: item.item_name,
-          scheduled_value: item.value_amount,
-          previous_billed: item.total_billed_amount || 0,
-          current_billed: item.thisBillAmount,
-          total_billed: (item.total_billed_amount || 0) + item.thisBillAmount,
-          billed_percent: item.thisBillPercent,
-          retainage_percent: retainagePercent,
-          retainage_amount: item.thisBillAmount * (retainagePercent / 100),
-          sort_order: index,
-        }));
+        let lineItemsToInsert: any[];
+        if (selectedCOId && selectedCO) {
+          const billedPct = selectedCO.grand_total > 0
+            ? (coBillAmount / selectedCO.grand_total) * 100
+            : 0;
+          lineItemsToInsert = [{
+            invoice_id: invoice.id,
+            sov_item_id: null,
+            description: `CO ${selectedCO.co_number || ''} ${selectedCO.title || ''}`.trim() || 'Change Order',
+            scheduled_value: selectedCO.grand_total,
+            previous_billed: selectedCO.already_billed,
+            current_billed: coBillAmount,
+            total_billed: selectedCO.already_billed + coBillAmount,
+            billed_percent: Math.min(100, Math.round(billedPct * 100) / 100),
+            retainage_percent: retainagePercent,
+            retainage_amount: coBillAmount * (retainagePercent / 100),
+            sort_order: 0,
+          }];
+        } else {
+          lineItemsToInsert = enabledItems.map((item, index) => ({
+            invoice_id: invoice.id,
+            sov_item_id: item.id,
+            description: item.item_name,
+            scheduled_value: item.value_amount,
+            previous_billed: item.total_billed_amount || 0,
+            current_billed: item.thisBillAmount,
+            total_billed: (item.total_billed_amount || 0) + item.thisBillAmount,
+            billed_percent: item.thisBillPercent,
+            retainage_percent: retainagePercent,
+            retainage_amount: item.thisBillAmount * (retainagePercent / 100),
+            sort_order: index,
+          }));
+        }
 
         const { error: lineItemsError } = await supabase
           .from('invoice_line_items')
@@ -522,12 +623,15 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         await supabase.from('project_activity').insert({
           project_id: projectId,
           activity_type: 'INVOICE_CREATED',
-          description: `Invoice ${invoiceNumber} created for ${formatCurrency(grossAmount)}`,
+          description: selectedCO
+            ? `Invoice ${invoiceNumber} created for CO ${selectedCO.co_number || ''} (${formatCurrency(grossAmount)})`
+            : `Invoice ${invoiceNumber} created for ${formatCurrency(grossAmount)}`,
           actor_user_id: user.id,
         });
 
         toast.success('Invoice created successfully');
       }
+
 
       onSuccess();
       onOpenChange(false);
@@ -541,7 +645,10 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   };
 
   const resetForm = () => {
+    setSelectedPickerValue('');
     setSelectedContractId('');
+    setSelectedCOId(null);
+    setCoBillAmount(0);
     setBillingItems([]);
     setInvoiceNumber('');
     setNotes('');
@@ -575,11 +682,11 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               No contracts available for invoicing. You can only create invoices for contracts where your organization is the contractor (Trade Contractor or Field Crew). Please accept a contract first.
             </AlertDescription>
           </Alert>
-        ) : sovs.length === 0 ? (
+        ) : sovs.length === 0 && approvedCOs.length === 0 ? (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No SOV found. Please create a Schedule of Values first.
+              No SOV or approved Change Orders found. Create an SOV or get a CO approved first.
             </AlertDescription>
           </Alert>
         ) : (
@@ -602,31 +709,62 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>Select Contract to Invoice</Label>
-                <Select value={selectedContractId} onValueChange={setSelectedContractId}>
+                <Label>Select Contract or Change Order to Bill</Label>
+                <Select value={selectedPickerValue} onValueChange={handlePickerChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a contract to bill" />
+                    <SelectValue placeholder="Choose a contract or CO to bill" />
                   </SelectTrigger>
                   <SelectContent>
+                    {contracts.length > 0 && (
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Base Contracts
+                      </div>
+                    )}
                     {contracts.map(contract => {
                       const isWorkOrder = contract.trade === 'Work Order' || contract.trade === 'Work Order Labor';
                       const typeLabel = isWorkOrder ? '[Work Order]' : '[Contract]';
                       return (
-                        <SelectItem key={contract.id} value={contract.id}>
+                        <SelectItem key={`contract-${contract.id}`} value={`contract:${contract.id}`}>
                           {typeLabel} {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)} — {formatCurrency(contract.contract_sum || 0)}
+                        </SelectItem>
+                      );
+                    })}
+                    {approvedCOs.length > 0 && (
+                      <div className="px-2 py-1 mt-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t">
+                        Approved Change Orders
+                      </div>
+                    )}
+                    {approvedCOs.map(co => {
+                      const num = co.co_number || 'CO';
+                      const title = co.title ? ` ${co.title}` : '';
+                      const target = co.to_org_name ? ` → ${co.to_org_name}` : '';
+                      const fullyBilled = co.remaining <= 0.005;
+                      return (
+                        <SelectItem
+                          key={`co-${co.co_id}`}
+                          value={`co:${co.co_id}`}
+                          disabled={fullyBilled}
+                        >
+                          [{num}]{title}{target} — {formatCurrency(co.grand_total)}
+                          {fullyBilled
+                            ? ' (fully billed)'
+                            : co.already_billed > 0
+                              ? ` (remaining ${formatCurrency(co.remaining)})`
+                              : ''}
                         </SelectItem>
                       );
                     })}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Select the contract with your upstream party to create an invoice.
+                  Pick the base contract to bill against its SOV, or pick an approved Change Order to bill it directly.
                 </p>
               </div>
             )}
 
-            {/* Warning if SOV is not locked */}
-            {sovNotLocked && selectedContractId && (
+
+            {/* Warning if SOV is not locked (contract mode only) */}
+            {!selectedCOId && sovNotLocked && selectedContractId && (
               <Alert className="border-amber-500/50 bg-amber-500/10">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-700">
@@ -634,6 +772,65 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* CO Billing Card (CO mode) */}
+            {selectedCO && (
+              <Card className="border-primary/40">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">CO {selectedCO.co_number || ''}</Badge>
+                        <span className="font-medium truncate">{selectedCO.title || 'Change Order'}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Billed to {selectedCO.to_org_name || selectedCO.to_role || 'upstream party'}
+                      </p>
+                    </div>
+                    <div className="text-right text-sm shrink-0">
+                      <div>Total: <span className="font-medium">{formatCurrency(selectedCO.grand_total)}</span></div>
+                      <div className="text-muted-foreground">
+                        Previously billed: {formatCurrency(selectedCO.already_billed)}
+                      </div>
+                      <div className={cn("font-medium", selectedCO.remaining <= 0.005 && "text-green-600")}>
+                        Remaining: {formatCurrency(selectedCO.remaining)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Amount to Bill This Period</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={selectedCO.remaining}
+                        step="0.01"
+                        value={coBillAmount}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value) || 0;
+                          setCoBillAmount(Math.max(0, v));
+                        }}
+                        className={cn(coOverbilling && "border-destructive")}
+                      />
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => setCoBillAmount(selectedCO.remaining)}
+                      >
+                        Bill remaining
+                      </Button>
+                    </div>
+                    {coOverbilling && (
+                      <p className="text-xs text-destructive">
+                        Amount exceeds the {formatCurrency(selectedCO.remaining)} remaining on this CO.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
 
             {/* Invoice Details */}
             <div className="grid gap-4 md:grid-cols-3">
@@ -687,7 +884,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
             </div>
 
             {/* SOV Items */}
-            {selectedContractId && billingItems.length > 0 && (
+            {!selectedCOId && selectedContractId && billingItems.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -859,7 +1056,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </div>
             )}
 
-            {selectedContractId && billingItems.length === 0 && (
+            {!selectedCOId && selectedContractId && billingItems.length === 0 && (
               <Alert>
                 <FileText className="h-4 w-4" />
                 <AlertDescription>
