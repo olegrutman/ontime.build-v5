@@ -67,6 +67,19 @@ interface BillingItem extends SOVItem {
   maxAllowedPercent: number;
 }
 
+interface BillableCO {
+  co_id: string;
+  co_number: string | null;
+  title: string | null;
+  contract_id: string;
+  to_org_id: string | null;
+  to_org_name: string | null;
+  to_role: string | null;
+  grand_total: number;
+  already_billed: number;
+  remaining: number;
+}
+
 export interface RevisionData {
   contractId: string;
   invoiceNumber: string;
