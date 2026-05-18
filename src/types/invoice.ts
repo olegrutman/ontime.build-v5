@@ -33,6 +33,7 @@ export interface InvoiceLineItem {
   invoice_id: string;
   sov_item_id?: string | null;
   description: string;
+  line_notes?: string | null;
   scheduled_value: number;
   previous_billed: number;
   current_billed: number;
