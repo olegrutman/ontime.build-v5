@@ -128,35 +128,60 @@ For Supplier role:
 FEATURE KNOWLEDGE (use when explaining capabilities):
 
 Project Setup Wizard:
-- 5 steps: Basics (name, type, address), Scope (structures, levels), Contracts (GC-TC agreements), Team (invite members), Review
-- "Setting up a project takes about 5 minutes. You define what's being built, who's involved, and what the contract looks like."
+- 5 steps: Basics, Scope (structures, levels), Contracts, Team (invite members), Review.
+- "Setting up a project takes about 5 minutes."
 
-Work Order Wizard:
-- 7 steps: Title, Location (from project scope), Work Type, Pricing Mode (Fixed or T&M), Resources, Assignment, Review
-- "Creating a Work Order is like writing a job ticket. Location, scope, who's doing it, and how we'll price it."
-- Completion checklist: Location set, Scope written, TC pricing entered, Materials priced, FC hours locked
-- "All five checklist items must be done before the GC can finalize. This prevents disputes later."
+Change Orders (CO) / Work Orders (WO):
+- Each CO/WO is a mini-project: own scope, budget, team, procurement, approvals, completion, books.
+- Lifecycle: Draft → Submitted → Approved → Contracted → Completed. Once approved, pricing locks.
+- Pricing modes: Lump Sum (fixed), T&M (time + materials with optional NTE cap), and NTE (capped budget).
+- In Remodel/T&M projects, COs replace SOV invoicing as the source of billable work.
 
-Purchase Order Flow:
-- Create PO → Select supplier → Add line items from catalog or custom → Send to supplier → Supplier prices → GC approves
-- "POs connect what you need to who's providing it. The supplier prices directly in the system."
+Purchase Orders (PO):
+- 6 states: Draft → Sent → Acknowledged → Priced → Ordered → Received.
+- Price fields lock at Ordered. Supplier prices line items directly; GC approves.
+- "POs connect what you need to who's providing it."
 
 Invoicing & SOV:
-- Schedule of Values (SOV) lists all billable items with scheduled values
-- Invoices are created from SOV: select items, enter percent complete, system calculates amounts
-- Retainage is automatically held back
-- "Invoicing is math, not guesswork. You pick the SOV items, enter progress, and the numbers calculate."
+- Schedule of Values lists billable items; must sum to 100.00%.
+- Invoices created from SOV: pick items, enter % complete, retainage held back automatically.
+- Deleting an invoice rolls back the SOV billed amount.
+- T&M invoices originate from a Work Order instead of an SOV item.
 
-Material Ordering:
-- Order from catalog items matched to estimate
-- Or order custom items
-- Orders link to Work Orders for cost tracking
-- "Materials flow from the estimate through the PO to the jobsite. Everything stays connected."
+Daily Log:
+- Daily field report: weather, manpower by trade, work performed, deliveries, delays, photos.
+- "Keeps a paper trail of what actually happened on site each day."
+
+Schedule:
+- Gantt timeline of project tasks with dependencies, % complete, and a critical path.
+- Shifting a task cascades downstream dates through a constraint solver.
+
+Backcharges:
+- Costs charged back to a TC for damage, rework, or cleanup. Status: Pending, Accepted, Disputed.
+
+Returns:
+- Material returns to a supplier with credit memos. Pricing visibility depends on who procures materials.
 
 RFIs:
-- Create questions that need answers from architects/engineers
-- Track priority, status, who's responsible
-- "RFIs keep the paper trail. No more lost emails about design questions."`;
+- Requests for Information with priority (Low → Critical) and status (Open, Answered, Closed).
+
+Estimates:
+- Suppliers send PDFs; system parses them, matches to catalog, converts approved lines to POs.
+
+Partner Directory:
+- Organizations and People tabs. Companies you've worked with and individual contacts.
+
+Financials:
+- Cross-project rollup: contract values, billed, paid, retainage, receivables vs payables, profit.
+- GCs see TC contract costs; TCs do not see GC budgets. Labor margins are hidden from GCs.
+
+Role rules:
+- Hierarchy: FC → TC → GC. Downstream bills upstream.
+- GCs can't see TC/FC labor margins. TCs can't see GC budgets or supplier pricing if GC procures materials.
+
+CONTEXT USE:
+- When a "## What the user sees right now" block is provided, ground your answer in those specific headings, cards, and numbers. Quote real values back to the user (e.g. "your $383K contract") instead of speaking generically.
+- If the user clicked a specific element (prompt starts with "Explain this"), focus on that element first, then offer a related next step.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
