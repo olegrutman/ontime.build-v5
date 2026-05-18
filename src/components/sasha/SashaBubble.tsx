@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, MousePointer2 } from 'lucide-react';
+import { X, Send, MousePointer2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { useSashaContext } from '@/hooks/useSashaContext';
 import { SashaMessage, type SashaChatMessage } from './SashaMessage';
 import { SashaHighlightOverlay } from './SashaHighlightOverlay';
+import { collectPageSnapshot } from '@/lib/sashaPageSnapshot';
 import { toast } from 'sonner';
 
 const SASHA_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sasha-guide`;
@@ -98,44 +99,42 @@ export function SashaBubble() {
 
       if (currentProjectId) {
         const projectPath = `/project/${currentProjectId}`;
-        if (lower.includes('change order') && lower.includes('tab') || lower.includes('go to change order')) {
-          navigate(`${projectPath}/change-orders`); return;
-        }
-        if (lower.includes('purchase order') || lower.includes('go to po')) {
-          navigate(`${projectPath}/purchase-orders`); return;
-        }
-        if (lower.includes('invoice') && (lower.includes('tab') || lower.includes('view invoice'))) {
-          navigate(`${projectPath}/invoices`); return;
-        }
-        if (lower.includes('sov') || lower.includes('schedule of values')) {
-          navigate(`${projectPath}/sov`); return;
-        }
-        if (lower.includes('rfi')) {
-          navigate(`${projectPath}/rfis`); return;
-        }
-        if (lower.includes('team')) {
-          navigate(`${projectPath}/overview`); return;
-        }
-        if (lower.includes('financial')) {
-          navigate(`${projectPath}/overview`); return;
-        }
-        if (lower.includes('overview') || lower.includes('project home')) {
-          navigate(`${projectPath}/overview`); return;
-        }
-        if (lower.includes('return')) {
-          navigate(`${projectPath}/returns`); return;
+        const tabs: Array<[RegExp, string]> = [
+          [/change order|^go to co/, 'change-orders'],
+          [/purchase order|go to po/, 'purchase-orders'],
+          [/invoice/, 'invoices'],
+          [/sov|schedule of values/, 'sov'],
+          [/rfi/, 'rfis'],
+          [/daily log/, 'daily-log'],
+          [/schedule|gantt|timeline/, 'schedule'],
+          [/backcharge/, 'backcharges'],
+          [/return/, 'returns'],
+          [/team|members/, 'team'],
+          [/financial|budget|profit/, 'financials'],
+          [/scope/, 'scope'],
+          [/setup/, 'setup'],
+          [/overview|project home/, 'overview'],
+        ];
+        for (const [re, tab] of tabs) {
+          if (re.test(lower)) { navigate(`${projectPath}/${tab}`); return; }
         }
       }
 
-      // Global navigation (works from any page)
-      if (lower.includes('dashboard') || lower.includes('go home')) {
-        navigate('/dashboard'); return;
-      }
-      if (lower.includes('partner')) {
-        navigate('/partners'); return;
-      }
-      if (lower.includes('reminder')) {
-        navigate('/reminders'); return;
+      // Global navigation
+      const global: Array<[RegExp, string]> = [
+        [/dashboard|go home/, '/dashboard'],
+        [/partner/, '/partners'],
+        [/reminder/, '/reminders'],
+        [/estimate/, '/estimates'],
+        [/material order|^orders/, '/orders'],
+        [/all rfis/, '/rfis'],
+        [/all change orders/, '/change-orders'],
+        [/financial/, '/financials'],
+        [/catalog/, '/catalog'],
+        [/new project|create project/, '/create-project'],
+      ];
+      for (const [re, path] of global) {
+        if (re.test(lower)) { navigate(path); return; }
       }
 
       // Default: send as chat message
@@ -165,7 +164,7 @@ export function SashaBubble() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ messages: apiMessages, context }),
+          body: JSON.stringify({ messages: apiMessages, context, pageSnapshot: collectPageSnapshot() }),
         });
 
         if (!resp.ok) {
@@ -242,6 +241,10 @@ export function SashaBubble() {
   const handleClose = () => {
     setOpen(false);
     setHighlightMode(false);
+    // Keep messages so the user can re-open and continue the same conversation.
+  };
+
+  const handleResetChat = () => {
     setMessages([INITIAL_GREETING]);
     setInput('');
   };
@@ -287,6 +290,15 @@ export function SashaBubble() {
                 title="Highlight a card for Sasha to explain"
               >
                 <MousePointer2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleResetChat}
+                title="Reset conversation"
+              >
+                <RotateCcw className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
                 <X className="h-4 w-4" />
