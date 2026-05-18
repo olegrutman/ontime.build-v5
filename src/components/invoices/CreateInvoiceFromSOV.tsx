@@ -304,7 +304,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     return cleaned.substring(0, 3).toUpperCase();
   };
 
-  const generateInvoiceNumber = async (contract: Contract) => {
+  const generateInvoiceNumber = async (contract: Contract, co?: BillableCO | null) => {
     const { data: project } = await supabase
       .from('projects')
       .select('name')
@@ -314,7 +314,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     const projectCode = getProjectCode(project?.name);
     const fromInitials = getOrgInitials(contract.from_org_name);
     const toInitials = getOrgInitials(contract.to_org_name);
-    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}`;
+    const coTag = co?.co_number ? `-${co.co_number.replace(/[^A-Za-z0-9]/g, '')}` : '';
+    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}${coTag}`;
     
     const { data } = await supabase
       .from('invoices')
@@ -342,22 +343,23 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   );
   
   const selectedSOV = useMemo(() => {
+    if (selectedCOId) return null; // CO mode bypasses SOV
     const contractSovs = sovs.filter(s => s.contract_id === selectedContractId);
-    // Prefer latest locked version; fall back to latest version (already sorted DESC)
     return contractSovs.find(s => s.is_locked) || contractSovs[0] || null;
-  }, [sovs, selectedContractId]);
+  }, [sovs, selectedContractId, selectedCOId]);
 
   const sovNotLocked = selectedSOV && !selectedSOV.is_locked;
 
-  // Generate invoice number when contract is selected (only in create mode)
+  // Generate invoice number when contract or CO is selected (only in create mode)
   useEffect(() => {
-    if (isRevisionMode) return; // Don't regenerate in revision mode
+    if (isRevisionMode) return;
     if (selectedContract) {
-      generateInvoiceNumber(selectedContract);
+      generateInvoiceNumber(selectedContract, selectedCO);
     } else {
       setInvoiceNumber('');
     }
-  }, [selectedContract, isRevisionMode]);
+  }, [selectedContract, selectedCO, isRevisionMode]);
+
 
   // Update billing items when contract changes
   useEffect(() => {
