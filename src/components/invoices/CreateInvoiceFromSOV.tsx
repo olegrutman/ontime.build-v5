@@ -782,62 +782,111 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </Alert>
             )}
 
-            {/* CO Billing Card (CO mode) */}
+            {/* CO Billing Row (CO mode) — styled like an SOV line item */}
             {selectedCO && (
-              <Card className="border-primary/40">
-                <CardContent className="p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">CO {selectedCO.co_number || ''}</Badge>
-                        <span className="font-medium truncate">{selectedCO.title || 'Change Order'}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Billed to {selectedCO.to_org_name || selectedCO.to_role || 'upstream party'}
-                      </p>
-                    </div>
-                    <div className="text-right text-sm shrink-0">
-                      <div>Total: <span className="font-medium">{formatCurrency(selectedCO.grand_total)}</span></div>
-                      <div className="text-muted-foreground">
-                        Previously billed: {formatCurrency(selectedCO.already_billed)}
-                      </div>
-                      <div className={cn("font-medium", selectedCO.remaining <= 0.005 && "text-green-600")}>
-                        Remaining: {formatCurrency(selectedCO.remaining)}
-                      </div>
-                    </div>
-                  </div>
+              <div className="space-y-3">
+                {/* Parent contract context */}
+                <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex flex-wrap items-center gap-x-2">
+                  <span className="uppercase tracking-wide text-[10px] font-medium text-muted-foreground/80">Billing under</span>
+                  <span className="text-foreground font-medium">
+                    {selectedCO.from_org_name || 'Your company'} → {selectedCO.to_org_name || selectedCO.to_role || 'upstream party'}
+                  </span>
+                  {selectedCO.contract_sum > 0 && (
+                    <span>· Contract {formatCurrency(selectedCO.contract_sum)}</span>
+                  )}
+                </div>
 
-                  <div className="space-y-2">
-                    <Label>Amount to Bill This Period</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={selectedCO.remaining}
-                        step="0.01"
-                        value={coBillAmount}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value) || 0;
-                          setCoBillAmount(Math.max(0, v));
-                        }}
-                        className={cn(coOverbilling && "border-destructive")}
-                      />
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => setCoBillAmount(selectedCO.remaining)}
-                      >
-                        Bill remaining
-                      </Button>
+                <div className="flex items-center justify-between">
+                  <Label className="text-base">Change Order to Bill</Label>
+                  <Badge variant="secondary" className="text-[10px]">1 item</Badge>
+                </div>
+
+                <Card
+                  className={cn(
+                    'transition-colors border-primary/50',
+                    coOverbilling && 'border-destructive bg-destructive/5'
+                  )}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-1 min-w-0 space-y-3">
+                        {/* Title + scheduled value */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{selectedCO.title || 'Change Order'}</div>
+                            {selectedCO.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                {selectedCO.description}
+                              </p>
+                            )}
+                            <p className="text-[11px] text-muted-foreground/80 mt-1">
+                              Ref: {shortCONumber(selectedCO.co_number)}
+                            </p>
+                          </div>
+                          <span className="text-sm text-muted-foreground flex-shrink-0">
+                            {formatCurrency(selectedCO.grand_total)}
+                          </span>
+                        </div>
+
+                        {/* Previously billed / remaining */}
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {selectedCO.already_billed > 0
+                              ? `Previously billed: ${formatCurrency(selectedCO.already_billed)}`
+                              : 'Not yet billed'}
+                          </span>
+                          <span
+                            className={cn(
+                              'font-medium',
+                              selectedCO.remaining <= 0.005
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-muted-foreground'
+                            )}
+                          >
+                            {selectedCO.remaining <= 0.005
+                              ? 'Fully billed'
+                              : `${formatCurrency(selectedCO.remaining)} remaining`}
+                          </span>
+                        </div>
+
+                        {/* This period input */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <Label className="text-xs text-muted-foreground">This period</Label>
+                            <button
+                              type="button"
+                              onClick={() => setCoBillAmount(selectedCO.remaining)}
+                              className="text-xs text-primary hover:underline"
+                            >
+                              Bill remaining
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={selectedCO.remaining}
+                              step="0.01"
+                              value={coBillAmount}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value) || 0;
+                                setCoBillAmount(Math.max(0, v));
+                              }}
+                              className={cn('flex-1', coOverbilling && 'border-destructive')}
+                            />
+                          </div>
+                          {coOverbilling && (
+                            <p className="text-xs text-destructive">
+                              Amount exceeds the {formatCurrency(selectedCO.remaining)} remaining on this CO.
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {coOverbilling && (
-                      <p className="text-xs text-destructive">
-                        Amount exceeds the {formatCurrency(selectedCO.remaining)} remaining on this CO.
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
 
