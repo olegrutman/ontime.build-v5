@@ -131,9 +131,13 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   const [allContracts, setAllContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [sovItems, setSovItems] = useState<SOVItem[]>([]);
-  
-  // Selection
+  const [approvedCOs, setApprovedCOs] = useState<BillableCO[]>([]);
+
+  // Selection (value format: "contract:<uuid>" or "co:<uuid>")
+  const [selectedPickerValue, setSelectedPickerValue] = useState<string>('');
   const [selectedContractId, setSelectedContractId] = useState<string>('');
+  const [selectedCOId, setSelectedCOId] = useState<string | null>(null);
+  const [coBillAmount, setCoBillAmount] = useState<number>(0);
   const [billingItems, setBillingItems] = useState<BillingItem[]>([]);
   
   // Invoice details
