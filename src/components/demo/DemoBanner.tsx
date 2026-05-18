@@ -37,13 +37,21 @@ export function DemoBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-50 bg-primary text-primary-foreground px-4 py-2 flex items-center justify-between gap-3 text-sm">
-      <div className="flex items-center gap-3 min-w-0">
-        <strong className="shrink-0">Demo Mode</strong>
+    <div className="sticky top-0 z-50 bg-foreground/95 text-background px-3 h-7 flex items-center justify-between gap-3 text-[11px] backdrop-blur">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+          Demo
+        </span>
+        <span className="hidden md:inline text-background/60">
+          Read-only sample data — no real records affected
+        </span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
         <div
           role="tablist"
           aria-label="Switch demo role"
-          className="flex items-center gap-1 rounded-md bg-primary-foreground/10 p-0.5"
+          className="flex items-center gap-0.5 rounded bg-background/15 p-0.5"
         >
           {DEMO_ROLES.map(r => {
             const active = r.value === demoRole;
@@ -55,10 +63,10 @@ export function DemoBanner() {
                 aria-pressed={active}
                 onClick={() => handleSwitch(r.value)}
                 className={cn(
-                  'px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                  'px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-colors',
                   active
-                    ? 'bg-primary-foreground text-primary'
-                    : 'text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground',
+                    ? 'bg-background text-foreground'
+                    : 'text-background/70 hover:bg-background/15 hover:text-background',
                 )}
               >
                 {r.short}
@@ -66,19 +74,20 @@ export function DemoBanner() {
             );
           })}
         </div>
-        <span className="hidden md:inline text-primary-foreground/80">
-          No real data is affected.
-        </span>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <Button variant="ghost" size="sm" onClick={handleReset} className="text-primary-foreground hover:bg-primary-foreground/20 h-7 gap-1">
-          <RotateCcw className="w-3.5 h-3.5" />
+        <button
+          onClick={handleReset}
+          className="inline-flex items-center gap-1 text-background/70 hover:text-background uppercase tracking-wider text-[10px] font-semibold"
+        >
+          <RotateCcw className="w-3 h-3" />
           Reset
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleExit} className="text-primary-foreground hover:bg-primary-foreground/20 h-7 gap-1">
-          <X className="w-3.5 h-3.5" />
-          Exit Demo
-        </Button>
+        </button>
+        <button
+          onClick={handleExit}
+          className="inline-flex items-center gap-1 text-background/70 hover:text-background uppercase tracking-wider text-[10px] font-semibold"
+        >
+          <X className="w-3 h-3" />
+          Exit
+        </button>
       </div>
     </div>
   );
