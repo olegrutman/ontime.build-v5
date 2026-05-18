@@ -148,6 +148,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       store,
       enterDemo,
       exitDemo,
+      switchRole,
       resetStore,
       addWorkOrder,
       updateWorkOrderStatus,
