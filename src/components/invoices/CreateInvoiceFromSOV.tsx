@@ -562,7 +562,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           .insert({
             project_id: projectId,
             contract_id: selectedContract.id,
-            sov_id: selectedSOV.id,
+            sov_id: selectedCOId ? null : selectedSOV!.id,
+            co_ids: selectedCOId ? [selectedCOId] : null,
             invoice_number: invoiceNumber,
             billing_period_start: format(periodStart, 'yyyy-MM-dd'),
             billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
@@ -577,19 +578,39 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 
         if (invoiceError) throw invoiceError;
 
-        const lineItemsToInsert = enabledItems.map((item, index) => ({
-          invoice_id: invoice.id,
-          sov_item_id: item.id,
-          description: item.item_name,
-          scheduled_value: item.value_amount,
-          previous_billed: item.total_billed_amount || 0,
-          current_billed: item.thisBillAmount,
-          total_billed: (item.total_billed_amount || 0) + item.thisBillAmount,
-          billed_percent: item.thisBillPercent,
-          retainage_percent: retainagePercent,
-          retainage_amount: item.thisBillAmount * (retainagePercent / 100),
-          sort_order: index,
-        }));
+        let lineItemsToInsert: any[];
+        if (selectedCOId && selectedCO) {
+          const billedPct = selectedCO.grand_total > 0
+            ? (coBillAmount / selectedCO.grand_total) * 100
+            : 0;
+          lineItemsToInsert = [{
+            invoice_id: invoice.id,
+            sov_item_id: null,
+            description: `CO ${selectedCO.co_number || ''} ${selectedCO.title || ''}`.trim() || 'Change Order',
+            scheduled_value: selectedCO.grand_total,
+            previous_billed: selectedCO.already_billed,
+            current_billed: coBillAmount,
+            total_billed: selectedCO.already_billed + coBillAmount,
+            billed_percent: Math.min(100, Math.round(billedPct * 100) / 100),
+            retainage_percent: retainagePercent,
+            retainage_amount: coBillAmount * (retainagePercent / 100),
+            sort_order: 0,
+          }];
+        } else {
+          lineItemsToInsert = enabledItems.map((item, index) => ({
+            invoice_id: invoice.id,
+            sov_item_id: item.id,
+            description: item.item_name,
+            scheduled_value: item.value_amount,
+            previous_billed: item.total_billed_amount || 0,
+            current_billed: item.thisBillAmount,
+            total_billed: (item.total_billed_amount || 0) + item.thisBillAmount,
+            billed_percent: item.thisBillPercent,
+            retainage_percent: retainagePercent,
+            retainage_amount: item.thisBillAmount * (retainagePercent / 100),
+            sort_order: index,
+          }));
+        }
 
         const { error: lineItemsError } = await supabase
           .from('invoice_line_items')
@@ -600,12 +621,15 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         await supabase.from('project_activity').insert({
           project_id: projectId,
           activity_type: 'INVOICE_CREATED',
-          description: `Invoice ${invoiceNumber} created for ${formatCurrency(grossAmount)}`,
+          description: selectedCO
+            ? `Invoice ${invoiceNumber} created for CO ${selectedCO.co_number || ''} (${formatCurrency(grossAmount)})`
+            : `Invoice ${invoiceNumber} created for ${formatCurrency(grossAmount)}`,
           actor_user_id: user.id,
         });
 
         toast.success('Invoice created successfully');
       }
+
 
       onSuccess();
       onOpenChange(false);
