@@ -40,6 +40,7 @@ interface DemoContextValue extends DemoState {
   store: DemoDataStore;
   enterDemo: (role: DemoRole, projectId: string) => void;
   exitDemo: () => void;
+  switchRole: (role: DemoRole) => void;
   resetStore: () => void;
   // ── Actions ──
   addWorkOrder: (wo: DemoWorkOrder, detail?: DemoWorkOrderDetail) => void;
