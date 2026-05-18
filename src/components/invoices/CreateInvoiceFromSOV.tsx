@@ -442,23 +442,31 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   };
 
   const handleSubmit = async () => {
-    if (!user || !selectedContract || !selectedSOV) return;
+    if (!user || !selectedContract) return;
 
-    // Block invoice creation if SOV is not locked
-    if (!selectedSOV.is_locked) {
-      toast.error('SOV must be locked before creating invoices');
-      return;
+    // CO branch needs no SOV
+    if (!selectedCOId) {
+      if (!selectedSOV) return;
+      if (!selectedSOV.is_locked) {
+        toast.error('SOV must be locked before creating invoices');
+        return;
+      }
     }
 
     if (!hasSelectedItems) {
-      toast.error('Please select at least one SOV item to bill');
+      toast.error(selectedCOId
+        ? 'Enter an amount to bill for this Change Order'
+        : 'Please select at least one SOV item to bill');
       return;
     }
 
     if (hasErrors) {
-      toast.error('Please fix overbilling errors before submitting');
+      toast.error(selectedCOId
+        ? 'Bill amount exceeds the CO\'s remaining balance'
+        : 'Please fix overbilling errors before submitting');
       return;
     }
+
 
     setSaving(true);
 
