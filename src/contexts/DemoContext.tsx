@@ -71,6 +71,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setState({ isDemoMode: false, demoRole: null, demoProjectId: null });
   }, []);
 
+  const switchRole = useCallback((role: DemoRole) => {
+    setState(prev => ({ ...prev, demoRole: role }));
+  }, []);
+
   const resetStore = useCallback(() => {
     setStore(createInitialStore());
   }, []);
