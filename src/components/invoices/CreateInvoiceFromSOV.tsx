@@ -71,13 +71,23 @@ interface BillableCO {
   co_id: string;
   co_number: string | null;
   title: string | null;
+  description: string | null;
   contract_id: string;
+  contract_sum: number;
+  from_org_name: string | null;
   to_org_id: string | null;
   to_org_name: string | null;
   to_role: string | null;
   grand_total: number;
   already_billed: number;
   remaining: number;
+}
+
+// Strip project/org prefix from a CO number like "CO-FUL-IM-HA-0001" -> "CO-0001"
+function shortCONumber(coNumber: string | null | undefined): string {
+  if (!coNumber) return 'CO';
+  const m = coNumber.match(/(\d+)\s*$/);
+  return m ? `CO-${m[1]}` : coNumber;
 }
 
 export interface RevisionData {
