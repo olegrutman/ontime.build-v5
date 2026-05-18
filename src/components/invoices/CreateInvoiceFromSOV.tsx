@@ -801,136 +801,153 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                   <Badge variant="secondary" className="text-[10px]">1 item</Badge>
                 </div>
 
-                <Card
-                  className={cn(
-                    'transition-colors border-primary/50',
-                    coOverbilling && 'border-destructive bg-destructive/5'
-                  )}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-1 min-w-0 space-y-3">
-                        {/* Title + scheduled value */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-medium truncate">{selectedCO.title || 'Change Order'}</div>
-                            {selectedCO.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                {selectedCO.description}
-                              </p>
-                            )}
-                            <p className="text-[11px] text-muted-foreground/80 mt-1">
-                              Ref: {shortCONumber(selectedCO.co_number)}
-                            </p>
-                          </div>
-                          <span className="text-sm text-muted-foreground flex-shrink-0">
-                            {formatCurrency(selectedCO.grand_total)}
-                          </span>
-                        </div>
+                {(() => {
+                  const total = selectedCO.grand_total || 0;
+                  const previousPct = total > 0 ? (selectedCO.already_billed / total) * 100 : 0;
+                  const maxPct = Math.max(0, 100 - previousPct);
+                  const thisPct = total > 0 ? Math.min((coBillAmount / total) * 100, maxPct) : 0;
+                  const newTotalPct = previousPct + thisPct;
+                  const enabled = coBillAmount > 0;
+                  const fullyBilled = maxPct <= 0.005;
+                  const setPct = (pct: number) => {
+                    const clamped = Math.max(0, Math.min(pct, maxPct));
+                    setCoBillAmount((total * clamped) / 100);
+                  };
+                  return (
+                    <Card
+                      className={cn(
+                        'transition-colors',
+                        enabled ? 'border-primary/50' : 'opacity-60'
+                      )}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <Switch
+                            checked={enabled}
+                            onCheckedChange={(checked) => setCoBillAmount(checked ? selectedCO.remaining : 0)}
+                            disabled={fullyBilled}
+                            className="mt-1"
+                          />
 
-                        {/* Previously billed / remaining */}
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {selectedCO.already_billed > 0
-                              ? `Previously billed: ${formatCurrency(selectedCO.already_billed)}`
-                              : 'Not yet billed'}
-                          </span>
-                          <span
-                            className={cn(
-                              'font-medium',
-                              selectedCO.remaining <= 0.005
-                                ? 'text-green-600 dark:text-green-400'
-                                : 'text-muted-foreground'
-                            )}
-                          >
-                            {selectedCO.remaining <= 0.005
-                              ? 'Fully billed'
-                              : `${formatCurrency(selectedCO.remaining)} remaining`}
-                          </span>
-                        </div>
-
-                        {/* This period input — $ and % synced */}
-                        {(() => {
-                          const total = selectedCO.grand_total || 0;
-                          const previousPct = total > 0 ? (selectedCO.already_billed / total) * 100 : 0;
-                          const thisPct = total > 0 ? (coBillAmount / total) * 100 : 0;
-                          const totalPct = previousPct + thisPct;
-                          const maxPct = Math.max(0, 100 - previousPct);
-                          return (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between gap-2">
-                                <Label className="text-xs text-muted-foreground">This period</Label>
-                                <button
-                                  type="button"
-                                  onClick={() => setCoBillAmount(selectedCO.remaining)}
-                                  className="text-xs text-primary hover:underline"
-                                >
-                                  Bill remaining
-                                </button>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-sm text-muted-foreground">$</span>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    max={selectedCO.remaining}
-                                    step="0.01"
-                                    value={coBillAmount || ''}
-                                    onChange={(e) => {
-                                      const v = parseFloat(e.target.value) || 0;
-                                      setCoBillAmount(Math.max(0, v));
-                                    }}
-                                    placeholder="0.00"
-                                    className={cn('flex-1', coOverbilling && 'border-destructive')}
-                                  />
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    max={maxPct}
-                                    step="0.1"
-                                    value={thisPct > 0 ? Number(thisPct.toFixed(2)) : ''}
-                                    onChange={(e) => {
-                                      const pct = parseFloat(e.target.value) || 0;
-                                      const clamped = Math.max(0, pct);
-                                      setCoBillAmount((total * clamped) / 100);
-                                    }}
-                                    placeholder="0"
-                                    className={cn('flex-1', coOverbilling && 'border-destructive')}
-                                  />
-                                  <span className="text-sm text-muted-foreground">%</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                                <span>
-                                  {previousPct > 0 && (
-                                    <>Previous: {previousPct.toFixed(1)}% ({formatCurrency(selectedCO.already_billed)}) · </>
-                                  )}
-                                  This bill: <span className="text-primary font-medium">{thisPct.toFixed(1)}% ({formatCurrency(coBillAmount)})</span>
-                                </span>
-                                <span
-                                  className={cn(
-                                    'font-medium',
-                                    totalPct >= 99.95 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
-                                  )}
-                                >
-                                  {totalPct.toFixed(1)}% total
-                                </span>
-                              </div>
-                              {coOverbilling && (
-                                <p className="text-xs text-destructive">
-                                  Amount exceeds the {formatCurrency(selectedCO.remaining)} remaining on this CO.
+                          <div className="flex-1 min-w-0 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">{selectedCO.title || 'Change Order'}</div>
+                                {selectedCO.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                    {selectedCO.description}
+                                  </p>
+                                )}
+                                <p className="text-[11px] text-muted-foreground/80 mt-1">
+                                  Ref: {shortCONumber(selectedCO.co_number)}
                                 </p>
-                              )}
+                              </div>
+                              <span className="text-sm text-muted-foreground flex-shrink-0">
+                                {formatCurrency(selectedCO.grand_total)}
+                              </span>
                             </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {selectedCO.already_billed > 0
+                                  ? `Previously billed: ${formatCurrency(selectedCO.already_billed)} (${previousPct.toFixed(1)}%)`
+                                  : 'Not yet billed'}
+                              </span>
+                              <span
+                                className={cn(
+                                  'font-medium',
+                                  fullyBilled
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-muted-foreground'
+                                )}
+                              >
+                                {fullyBilled
+                                  ? 'Fully billed'
+                                  : `${formatCurrency(selectedCO.remaining)} remaining`}
+                              </span>
+                            </div>
+
+                            {enabled && !fullyBilled && (
+                              <>
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-3">
+                                      {previousPct > 0 && (
+                                        <span className="flex items-center gap-1.5">
+                                          <span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/40" />
+                                          <span className="text-muted-foreground">
+                                            Previous: {previousPct.toFixed(1)}% ({formatCurrency(selectedCO.already_billed)})
+                                          </span>
+                                        </span>
+                                      )}
+                                      {thisPct > 0 && (
+                                        <span className="flex items-center gap-1.5">
+                                          <span className="w-2.5 h-2.5 rounded-sm bg-primary" />
+                                          <span className="font-medium text-primary">
+                                            This bill: {thisPct.toFixed(1)}% ({formatCurrency(coBillAmount)})
+                                          </span>
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={cn(
+                                        'font-medium',
+                                        newTotalPct >= 99.95 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+                                      )}
+                                    >
+                                      {newTotalPct.toFixed(1)}% total
+                                    </span>
+                                  </div>
+
+                                  <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
+                                    <div
+                                      className="absolute inset-y-0 left-0 bg-muted-foreground/40 transition-all duration-300"
+                                      style={{ width: `${Math.min(previousPct, 100)}%` }}
+                                    />
+                                    <div
+                                      className="absolute inset-y-0 bg-primary transition-all duration-300"
+                                      style={{
+                                        left: `${Math.min(previousPct, 100)}%`,
+                                        width: `${Math.min(thisPct, 100 - previousPct)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                  <div className="flex-1">
+                                    <Slider
+                                      value={[thisPct]}
+                                      onValueChange={([v]) => setPct(v)}
+                                      max={maxPct}
+                                      step={1}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1 w-24">
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={maxPct}
+                                      step="0.5"
+                                      value={Number(thisPct.toFixed(2))}
+                                      onChange={(e) => setPct(parseFloat(e.target.value) || 0)}
+                                      className="h-8 w-16 text-right"
+                                    />
+                                    <span className="text-sm">%</span>
+                                  </div>
+                                </div>
+
+                                <div className="text-xs text-muted-foreground">
+                                  Max available: {maxPct.toFixed(1)}%
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
               </div>
             )}
 
