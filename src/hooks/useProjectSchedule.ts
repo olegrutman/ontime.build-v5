@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemo } from '@/contexts/DemoContext';
+import { DEMO_SCHEDULE_BY_PROJECT } from '@/data/demoOperationalData';
 
 export interface ScheduleItem {
   id: string;
@@ -33,11 +35,15 @@ export type ScheduleItemInsert = Omit<ScheduleItem, 'id' | 'created_at' | 'updat
 export function useProjectSchedule(projectId: string) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const key = ['project-schedule', projectId];
+  const { isDemoMode } = useDemo();
+  const key = ['project-schedule', projectId, isDemoMode ? 'demo' : 'live'];
 
   const query = useQuery({
     queryKey: key,
     queryFn: async () => {
+      if (isDemoMode) {
+        return (DEMO_SCHEDULE_BY_PROJECT[projectId] ?? []) as ScheduleItem[];
+      }
       const { data, error } = await supabase
         .from('project_schedule_items')
         .select(`

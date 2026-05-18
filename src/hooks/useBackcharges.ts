@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemo } from '@/contexts/DemoContext';
+import { DEMO_BACKCHARGES_BY_PROJECT } from '@/data/demoOperationalData';
 
 export interface Backcharge {
   id: string;
@@ -24,15 +26,19 @@ export interface Backcharge {
 export function useBackcharges(projectId: string | null) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isDemoMode } = useDemo();
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['backcharges', projectId] });
   };
 
   const { data: backcharges = [], isLoading } = useQuery({
-    queryKey: ['backcharges', projectId],
+    queryKey: ['backcharges', projectId, isDemoMode ? 'demo' : 'live'],
     enabled: !!projectId,
     queryFn: async () => {
+      if (isDemoMode) {
+        return (DEMO_BACKCHARGES_BY_PROJECT[projectId!] ?? []) as Backcharge[];
+      }
       const { data, error } = await supabase
         .from('backcharges')
         .select('*, source_co:change_orders(id, title, co_number), responsible_org:organizations(id, name, type)')

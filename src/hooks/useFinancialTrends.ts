@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemo } from '@/contexts/DemoContext';
+import { getDemoFinancialTrends } from '@/data/demoOperationalData';
 import { format, subMonths, startOfMonth } from 'date-fns';
 
 export interface MonthlySpend {
@@ -17,6 +19,7 @@ export interface MonthlyWorkOrders {
 
 export function useFinancialTrends() {
   const { user, userOrgRoles } = useAuth();
+  const { isDemoMode } = useDemo();
   const [spendTrend, setSpendTrend] = useState<MonthlySpend[]>([]);
   const [woTrend, setWoTrend] = useState<MonthlyWorkOrders[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +27,13 @@ export function useFinancialTrends() {
   const currentOrg = userOrgRoles[0]?.organization;
 
   useEffect(() => {
+    if (isDemoMode) {
+      const { spendTrend: s, woTrend: w } = getDemoFinancialTrends();
+      setSpendTrend(s);
+      setWoTrend(w);
+      setLoading(false);
+      return;
+    }
     if (!currentOrg?.id || !user) return;
 
     const fetchTrends = async () => {
@@ -96,7 +106,7 @@ export function useFinancialTrends() {
     };
 
     fetchTrends();
-  }, [user?.id, currentOrg?.id]);
+  }, [user?.id, currentOrg?.id, isDemoMode]);
 
   return { spendTrend, woTrend, loading };
 }

@@ -1,18 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemo } from '@/contexts/DemoContext';
+import {
+  getDemoDailyLog,
+  getDemoDailyLogManpower,
+  getDemoDailyLogDelays,
+  getDemoDailyLogPhotos,
+  getDemoDailyLogDeliveries,
+} from '@/data/demoOperationalData';
 import type { DailyLog, DailyLogManpower, DailyLogDelay, DailyLogDelivery, DailyLogPhoto, WeatherData, SafetyIncident } from '@/types/dailyLog';
 
 export function useDailyLog(projectId: string, logDate?: string) {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { isDemoMode } = useDemo();
   const date = logDate || new Date().toISOString().split('T')[0];
-  const key = ['daily-log', projectId, date];
+  const key = ['daily-log', projectId, date, isDemoMode ? 'demo' : 'live'];
 
   // Fetch or auto-create today's log
   const logQuery = useQuery({
     queryKey: key,
     queryFn: async () => {
+      if (isDemoMode) {
+        return getDemoDailyLog(projectId, date) as DailyLog;
+      }
       // Try to fetch existing
       const { data: existing } = await supabase
         .from('daily_logs')
@@ -40,15 +52,16 @@ export function useDailyLog(projectId: string, logDate?: string) {
       if (error) throw error;
       return created as unknown as DailyLog;
     },
-    enabled: !!projectId && !!user,
+    enabled: !!projectId && (isDemoMode || !!user),
   });
 
   const logId = logQuery.data?.id;
 
   // Manpower
   const manpowerQuery = useQuery({
-    queryKey: ['daily-log-manpower', logId],
+    queryKey: ['daily-log-manpower', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogManpower(logId!);
       const { data } = await supabase
         .from('daily_log_manpower')
         .select('*')
@@ -61,8 +74,9 @@ export function useDailyLog(projectId: string, logDate?: string) {
 
   // Delays
   const delaysQuery = useQuery({
-    queryKey: ['daily-log-delays', logId],
+    queryKey: ['daily-log-delays', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogDelays(logId!);
       const { data } = await supabase
         .from('daily_log_delays')
         .select('*')
@@ -75,8 +89,9 @@ export function useDailyLog(projectId: string, logDate?: string) {
 
   // Photos
   const photosQuery = useQuery({
-    queryKey: ['daily-log-photos', logId],
+    queryKey: ['daily-log-photos', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogPhotos(logId!);
       const { data } = await supabase
         .from('daily_log_photos')
         .select('*')
@@ -89,8 +104,9 @@ export function useDailyLog(projectId: string, logDate?: string) {
 
   // Deliveries
   const deliveriesQuery = useQuery({
-    queryKey: ['daily-log-deliveries', logId],
+    queryKey: ['daily-log-deliveries', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogDeliveries(logId!);
       const { data } = await supabase
         .from('daily_log_deliveries')
         .select('*')
