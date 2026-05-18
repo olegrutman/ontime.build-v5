@@ -882,7 +882,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
             </div>
 
             {/* SOV Items */}
-            {selectedContractId && billingItems.length > 0 && (
+            {!selectedCOId && selectedContractId && billingItems.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
