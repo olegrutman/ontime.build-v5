@@ -40,6 +40,7 @@ interface DemoContextValue extends DemoState {
   store: DemoDataStore;
   enterDemo: (role: DemoRole, projectId: string) => void;
   exitDemo: () => void;
+  switchRole: (role: DemoRole) => void;
   resetStore: () => void;
   // ── Actions ──
   addWorkOrder: (wo: DemoWorkOrder, detail?: DemoWorkOrderDetail) => void;
@@ -68,6 +69,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const exitDemo = useCallback(() => {
     setState({ isDemoMode: false, demoRole: null, demoProjectId: null });
+  }, []);
+
+  const switchRole = useCallback((role: DemoRole) => {
+    setState(prev => ({ ...prev, demoRole: role }));
   }, []);
 
   const resetStore = useCallback(() => {
@@ -143,6 +148,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       store,
       enterDemo,
       exitDemo,
+      switchRole,
       resetStore,
       addWorkOrder,
       updateWorkOrderStatus,

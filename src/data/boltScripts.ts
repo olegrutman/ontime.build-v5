@@ -15,6 +15,7 @@ const GC_STEPS: BoltStep[] = [
   { id: 'gc-3', pose: 'thinking', instruction: 'Open a Work Order to review details, approve pricing, or check field-crew hours.', explanation: 'GCs approve Work Order pricing before the TC can invoice. T&M orders show real-time labor logs.', targetSelector: '[data-demo-target="wo-card-0"]' },
   { id: 'gc-4', pose: 'point', instruction: 'Purchase Orders track material buys. You can create POs from estimates or from scratch.', explanation: 'POs link to suppliers in the directory. Once the supplier prices it, you approve and it becomes a committed cost.', targetTab: 'purchase-orders', targetSelector: '[data-demo-target="po-list"]' },
   { id: 'gc-5', pose: 'thumbsup', instruction: 'Invoices are generated from SOV progress or directly from Work Orders.', explanation: 'Billing flows: SOV-based for prime contracts, WO-based for subcontract pay-apps. Retainage is auto-calculated.', targetTab: 'invoices', targetSelector: '[data-demo-target="invoice-list"]' },
+  { id: 'gc-co', pose: 'point', instruction: 'The Change Order Impact card shows what COs are doing to your contract.', explanation: 'Revenue = approved CO additions to the contract sum. Cost = your true cost (TC labor + materials + equipment) — GCs see raw costs, not TC markup. Margin = revenue − cost. Pending exposure = COs submitted but not yet approved, so you know what is heading at the budget.', targetTab: 'overview', targetSelector: '[data-demo-target="co-impact-card"]' },
   { id: 'gc-6', pose: 'celebrate', instruction: 'That\'s the GC tour! Next: invite your team and create your first real project.', explanation: 'Onboarding takes 5 minutes. Add your TC partners and suppliers, then Ontime tracks everything automatically.' },
 ];
 
@@ -24,6 +25,7 @@ const TC_STEPS: BoltStep[] = [
   { id: 'tc-3', pose: 'thinking', instruction: 'Create a PO to order materials for a Work Order.', explanation: 'POs tie directly to a WO. Material costs roll up into the WO total.', targetTab: 'purchase-orders' },
   { id: 'tc-4', pose: 'point', instruction: 'When a supplier prices a PO, it shows here. You approve and commit the cost.', explanation: 'Pricing visibility depends on material responsibility set in the contract.' },
   { id: 'tc-5', pose: 'thumbsup', instruction: 'Pricing visibility protects margins. What the GC sees depends on the contract.', explanation: 'If material responsibility = TC, the GC sees the final WO price but not individual supplier costs.' },
+  { id: 'tc-co', pose: 'thinking', instruction: 'Your CO scorecard lives here — the truth about how COs hit your bottom line.', explanation: 'Revenue = the tc_submitted_price you locked in with the GC. Cost = your labor + materials + equipment on approved COs. Margin = revenue − cost. Pending exposure = COs you have sent up the chain that have not yet been approved or rejected.', targetTab: 'overview', targetSelector: '[data-demo-target="co-impact-card"]' },
   { id: 'tc-6', pose: 'celebrate', instruction: 'Tour complete! Set up your org, invite your field crews, and start building.', explanation: 'Your next step: complete your company profile and invite at least one field crew.' },
 ];
 
@@ -33,6 +35,7 @@ const FC_STEPS: BoltStep[] = [
   { id: 'fc-3', pose: 'thinking', instruction: 'Add photos and notes as you complete work in the field.', explanation: 'Documentation protects everyone. Photos are attached to the WO for the record.' },
   { id: 'fc-4', pose: 'thumbsup', instruction: 'When work is done, submit for approval. The TC reviews and locks it.', explanation: 'Once locked, labor hours and materials are finalized for billing.' },
   { id: 'fc-5', pose: 'point', instruction: 'Invoices show your billing history for completed work.', explanation: 'FC invoices are generated from locked WOs. Retainage is held per the contract.', targetTab: 'invoices' },
+  { id: 'fc-co', pose: 'point', instruction: 'COs you worked on roll up into this card so you can see what you earned.', explanation: 'Revenue = what your TC owes you for approved COs. Cost = your labor + materials. Pending exposure = COs you have submitted that are still waiting on TC approval.', targetTab: 'overview', targetSelector: '[data-demo-target="co-impact-card"]' },
   { id: 'fc-6', pose: 'celebrate', instruction: 'That\'s it! Simple and focused — just the way field work should be.', explanation: 'Your TC handles pricing and GC approvals. You focus on the work.' },
 ];
 

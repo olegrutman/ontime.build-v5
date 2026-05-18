@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { BOLT_SCRIPTS, type BoltStep } from '@/data/boltScripts';
 
@@ -15,6 +15,17 @@ export function useBoltGuide() {
   const totalSteps = steps.length;
   const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex >= totalSteps - 1;
+
+  // Reset tour to step 0 whenever the active role changes mid-demo.
+  const lastRoleRef = useRef(demoRole);
+  useEffect(() => {
+    if (lastRoleRef.current !== demoRole) {
+      lastRoleRef.current = demoRole;
+      setStepIndex(0);
+      setShowExplanation(false);
+    }
+  }, [demoRole]);
+
 
   const navigateToStep = useCallback((step: BoltStep) => {
     if (step.targetTab && demoProjectId) {
