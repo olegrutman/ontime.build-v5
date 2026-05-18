@@ -25,6 +25,7 @@ const TC_STEPS: BoltStep[] = [
   { id: 'tc-3', pose: 'thinking', instruction: 'Create a PO to order materials for a Work Order.', explanation: 'POs tie directly to a WO. Material costs roll up into the WO total.', targetTab: 'purchase-orders' },
   { id: 'tc-4', pose: 'point', instruction: 'When a supplier prices a PO, it shows here. You approve and commit the cost.', explanation: 'Pricing visibility depends on material responsibility set in the contract.' },
   { id: 'tc-5', pose: 'thumbsup', instruction: 'Pricing visibility protects margins. What the GC sees depends on the contract.', explanation: 'If material responsibility = TC, the GC sees the final WO price but not individual supplier costs.' },
+  { id: 'tc-co', pose: 'thinking', instruction: 'Your CO scorecard lives here — the truth about how COs hit your bottom line.', explanation: 'Revenue = the tc_submitted_price you locked in with the GC. Cost = your labor + materials + equipment on approved COs. Margin = revenue − cost. Pending exposure = COs you have sent up the chain that have not yet been approved or rejected.', targetTab: 'overview', targetSelector: '[data-demo-target="co-impact-card"]' },
   { id: 'tc-6', pose: 'celebrate', instruction: 'Tour complete! Set up your org, invite your field crews, and start building.', explanation: 'Your next step: complete your company profile and invite at least one field crew.' },
 ];
 
