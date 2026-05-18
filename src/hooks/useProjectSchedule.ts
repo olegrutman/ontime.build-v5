@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemo } from '@/contexts/DemoContext';
+import { DEMO_SCHEDULE_BY_PROJECT } from '@/data/demoOperationalData';
 
 export interface ScheduleItem {
   id: string;
