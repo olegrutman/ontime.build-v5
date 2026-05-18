@@ -35,6 +35,7 @@ const FC_STEPS: BoltStep[] = [
   { id: 'fc-3', pose: 'thinking', instruction: 'Add photos and notes as you complete work in the field.', explanation: 'Documentation protects everyone. Photos are attached to the WO for the record.' },
   { id: 'fc-4', pose: 'thumbsup', instruction: 'When work is done, submit for approval. The TC reviews and locks it.', explanation: 'Once locked, labor hours and materials are finalized for billing.' },
   { id: 'fc-5', pose: 'point', instruction: 'Invoices show your billing history for completed work.', explanation: 'FC invoices are generated from locked WOs. Retainage is held per the contract.', targetTab: 'invoices' },
+  { id: 'fc-co', pose: 'point', instruction: 'COs you worked on roll up into this card so you can see what you earned.', explanation: 'Revenue = what your TC owes you for approved COs. Cost = your labor + materials. Pending exposure = COs you have submitted that are still waiting on TC approval.', targetTab: 'overview', targetSelector: '[data-demo-target="co-impact-card"]' },
   { id: 'fc-6', pose: 'celebrate', instruction: 'That\'s it! Simple and focused — just the way field work should be.', explanation: 'Your TC handles pricing and GC approvals. You focus on the work.' },
 ];
 
