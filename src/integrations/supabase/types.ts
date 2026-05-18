@@ -6707,6 +6707,9 @@ export type Database = {
           co_id: string
           co_number: string
           contract_id: string
+          contract_sum: number
+          description: string
+          from_org_name: string
           grand_total: number
           remaining: number
           title: string
