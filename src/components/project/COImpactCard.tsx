@@ -23,7 +23,7 @@ export function COImpactCard({ financials, isTM = false }: COImpactCardProps) {
   ];
 
   return (
-    <SurfaceCard>
+    <SurfaceCard data-demo-target="co-impact-card">
       <SurfaceCardHeader
         title={isTM ? 'Work order impact' : 'Change order impact'}
         subtitle={isTM ? 'How work orders affected your bottom line' : 'How changes affected your bottom line'}
