@@ -164,7 +164,7 @@ export function SashaBubble() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ messages: apiMessages, context }),
+          body: JSON.stringify({ messages: apiMessages, context, pageSnapshot: collectPageSnapshot() }),
         });
 
         if (!resp.ok) {
