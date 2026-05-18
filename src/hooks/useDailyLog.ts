@@ -74,8 +74,9 @@ export function useDailyLog(projectId: string, logDate?: string) {
 
   // Delays
   const delaysQuery = useQuery({
-    queryKey: ['daily-log-delays', logId],
+    queryKey: ['daily-log-delays', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogDelays(logId!);
       const { data } = await supabase
         .from('daily_log_delays')
         .select('*')
@@ -88,8 +89,9 @@ export function useDailyLog(projectId: string, logDate?: string) {
 
   // Photos
   const photosQuery = useQuery({
-    queryKey: ['daily-log-photos', logId],
+    queryKey: ['daily-log-photos', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogPhotos(logId!);
       const { data } = await supabase
         .from('daily_log_photos')
         .select('*')
@@ -102,8 +104,9 @@ export function useDailyLog(projectId: string, logDate?: string) {
 
   // Deliveries
   const deliveriesQuery = useQuery({
-    queryKey: ['daily-log-deliveries', logId],
+    queryKey: ['daily-log-deliveries', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogDeliveries(logId!);
       const { data } = await supabase
         .from('daily_log_deliveries')
         .select('*')
