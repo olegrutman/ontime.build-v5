@@ -106,7 +106,7 @@ export function useFinancialTrends() {
     };
 
     fetchTrends();
-  }, [user?.id, currentOrg?.id]);
+  }, [user?.id, currentOrg?.id, isDemoMode]);
 
   return { spendTrend, woTrend, loading };
 }
