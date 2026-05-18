@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { X, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // eslint-disable-line @typescript-eslint/no-unused-vars
+
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { DemoRole } from '@/data/demoData';
