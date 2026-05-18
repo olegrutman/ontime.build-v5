@@ -291,6 +291,14 @@ export function SashaBubble() {
               >
                 <MousePointer2 className="h-4 w-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleResetChat}
+                title="Reset conversation"
+              >
+                <RotateCcw className="h-4 w-4" />
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
                 <X className="h-4 w-4" />
               </Button>
