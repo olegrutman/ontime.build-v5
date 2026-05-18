@@ -1,13 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDemo } from '@/contexts/DemoContext';
+import {
+  getDemoDailyLog,
+  getDemoDailyLogManpower,
+  getDemoDailyLogDelays,
+  getDemoDailyLogPhotos,
+  getDemoDailyLogDeliveries,
+} from '@/data/demoOperationalData';
 import type { DailyLog, DailyLogManpower, DailyLogDelay, DailyLogDelivery, DailyLogPhoto, WeatherData, SafetyIncident } from '@/types/dailyLog';
 
 export function useDailyLog(projectId: string, logDate?: string) {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { isDemoMode } = useDemo();
   const date = logDate || new Date().toISOString().split('T')[0];
-  const key = ['daily-log', projectId, date];
+  const key = ['daily-log', projectId, date, isDemoMode ? 'demo' : 'live'];
 
   // Fetch or auto-create today's log
   const logQuery = useQuery({
