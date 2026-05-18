@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useDemo } from '@/contexts/DemoContext';
+import { DEMO_NOTIFICATIONS } from '@/data/demoOperationalData';
 
 export interface Notification {
   id: string;
