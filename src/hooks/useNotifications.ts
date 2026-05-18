@@ -42,6 +42,7 @@ export function useNotifications() {
   }, [user]);
 
   const fetchUnreadCount = useCallback(async () => {
+    if (isDemoMode) return;
     if (!user) return;
     
     // Type assertion needed until types are regenerated
@@ -52,9 +53,14 @@ export function useNotifications() {
     } else {
       setUnreadCount((data as number) || 0);
     }
-  }, [user]);
+  }, [user, isDemoMode]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
+    if (isDemoMode) {
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      return;
+    }
     // Type assertion needed until types are regenerated
     const { error } = await (supabase.rpc as any)('mark_notification_read', {
       _notification_id: notificationId
@@ -67,9 +73,14 @@ export function useNotifications() {
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       setUnreadCount(prev => Math.max(0, prev - 1));
     }
-  }, []);
+  }, [isDemoMode]);
 
   const markAllAsRead = useCallback(async () => {
+    if (isDemoMode) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     // Type assertion needed until types are regenerated
     const { error } = await (supabase.rpc as any)('mark_all_notifications_read');
 
@@ -79,18 +90,20 @@ export function useNotifications() {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, []);
+  }, [isDemoMode]);
 
   // Initial fetch
   useEffect(() => {
+    if (isDemoMode) return;
     if (user) {
       fetchNotifications();
       fetchUnreadCount();
     }
-  }, [user, fetchNotifications, fetchUnreadCount]);
+  }, [user, fetchNotifications, fetchUnreadCount, isDemoMode]);
 
   // Subscribe to realtime updates
   useEffect(() => {
+    if (isDemoMode) return;
     if (!user) return;
 
     const channel = supabase
