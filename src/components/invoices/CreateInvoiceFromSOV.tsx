@@ -244,13 +244,18 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   useEffect(() => {
     if (open) {
       if (isRevisionMode) {
+        setSelectedPickerValue(`contract:${revisionData.contractId}`);
         setSelectedContractId(revisionData.contractId);
+        setSelectedCOId(null);
         setInvoiceNumber(revisionData.invoiceNumber);
         setPeriodStart(new Date(revisionData.periodStart));
         setPeriodEnd(new Date(revisionData.periodEnd));
         setNotes(revisionData.notes || '');
       } else {
+        setSelectedPickerValue('');
         setSelectedContractId('');
+        setSelectedCOId(null);
+        setCoBillAmount(0);
         setInvoiceNumber('');
         setNotes('');
         setPeriodStart(startOfMonth(subMonths(new Date(), 1)));
@@ -258,6 +263,33 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       }
     }
   }, [open, isRevisionMode]);
+
+  // Apply selection from picker (contract:<id> or co:<id>)
+  const handlePickerChange = (val: string) => {
+    setSelectedPickerValue(val);
+    if (val.startsWith('co:')) {
+      const coId = val.slice(3);
+      const co = approvedCOs.find(c => c.co_id === coId);
+      if (co) {
+        setSelectedCOId(coId);
+        setSelectedContractId(co.contract_id);
+        setCoBillAmount(co.remaining);
+      }
+    } else if (val.startsWith('contract:')) {
+      setSelectedCOId(null);
+      setSelectedContractId(val.slice(9));
+      setCoBillAmount(0);
+    } else {
+      setSelectedCOId(null);
+      setSelectedContractId('');
+    }
+  };
+
+  const selectedCO = useMemo(
+    () => approvedCOs.find(c => c.co_id === selectedCOId) || null,
+    [approvedCOs, selectedCOId]
+  );
+
 
   // Helper to get initials from company name
   const getOrgInitials = (name: string | undefined): string => {
