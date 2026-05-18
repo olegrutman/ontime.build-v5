@@ -1,35 +1,28 @@
 ## Goal
-Make the CO billing row behave exactly like an SOV line item: include toggle, slider, small % input, and progress bar — no separate $ input.
+Show the Change Order's description (scope/work narrative) on the invoice line — both in the app and the exported PDF.
 
-## Changes (UI only, `src/components/invoices/CreateInvoiceFromSOV.tsx`)
+## Approach
+Store the CO description on the invoice line item itself (snapshot at creation, so historical invoices stay stable), then render it below the line description.
 
-Replace the current CO row block (the $ + % grid + "This bill / Total" summary) with the same primitive used for SOV items:
+## Changes
 
-1. **Header row** — CO title + remaining $ on the right (kept).
-2. **Description + Ref** (kept, unchanged).
-3. **Toggle (Switch)** on the left:
-   - On = CO is included in this invoice; default % = 0 (or last value).
-   - Off = `coBillAmount = 0`, slider/% disabled and dimmed.
-4. **Progress bar** below the toggle row:
-   - Shows `previousPct` filled (muted) + `thisPct` filled (accent).
-   - Label left: `This bill: X.X% ($Y)`.
-   - Label right: `Z.Z% total`.
-   - Turns green at ≥99.95%.
-5. **Slider + % input** (side by side, slider flex-1, input w-20):
-   - Range `0` → `maxPct = 100 - previousPct` (clamped).
-   - Two-way bound to `thisPct`; `coBillAmount = (grand_total * thisPct) / 100`.
-   - Step `0.1`.
-6. **"Max available: N%"** helper line under the slider (matches SOV).
+### 1. DB migration — `invoice_line_items.line_notes`
+Add a nullable `text` column:
+```sql
+ALTER TABLE public.invoice_line_items ADD COLUMN line_notes text;
+```
+No backfill needed (existing rows show no subtitle).
 
-Remove:
-- The dollar `$` input field.
-- The "Bill remaining" link (slider-to-max replaces it; user drags to end or types 100−prev).
-- The destructive overbilling border (slider clamp prevents it).
+### 2. CO invoice creation — `src/components/invoices/CreateInvoiceFromSOV.tsx`
+In the CO branch (~line 597), populate `line_notes: selectedCO.description || null` on the inserted line item. SOV branch stays `null`.
 
-Keep:
-- `coBillAmount` as the single source of truth in state (derived from `thisPct`).
-- All existing submit logic — `billed_percent` and amount already computed from `coBillAmount / grand_total`.
-- Gross Amount footer.
+### 3. App invoice view — `src/components/invoices/InvoiceDetail.tsx`
+In the line items table cell (line 458), render `item.line_notes` (when present) as a 2-line-clamped muted paragraph under `item.description`.
+
+### 4. PDF — `supabase/functions/invoice-download/index.ts`
+In `itemRows` (~line 199), when `item.line_notes` is present append a small muted `<div class="line-notes">…</div>` under the description cell, and add a `.line-notes { font-size: 10px; color: #6b7280; margin-top: 2px; }` style to the existing `<style>` block.
 
 ## Out of scope
-No DB, RPC, migration, or SOV-mode changes.
+- No changes to SOV line item rendering.
+- No retroactive update of existing invoices (no backfill).
+- No UI to edit `line_notes` after invoice creation (description is snapshot-only).
