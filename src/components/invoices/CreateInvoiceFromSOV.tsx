@@ -597,7 +597,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           lineItemsToInsert = [{
             invoice_id: invoice.id,
             sov_item_id: null,
-            description: `CO ${selectedCO.co_number || ''} ${selectedCO.title || ''}`.trim() || 'Change Order',
+            description: `${selectedCO.title || 'Change Order'} (${shortCONumber(selectedCO.co_number)})`,
             scheduled_value: selectedCO.grand_total,
             previous_billed: selectedCO.already_billed,
             current_billed: coBillAmount,
