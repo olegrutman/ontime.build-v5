@@ -22,6 +22,9 @@ export function useDailyLog(projectId: string, logDate?: string) {
   const logQuery = useQuery({
     queryKey: key,
     queryFn: async () => {
+      if (isDemoMode) {
+        return getDemoDailyLog(projectId, date) as DailyLog;
+      }
       // Try to fetch existing
       const { data: existing } = await supabase
         .from('daily_logs')
@@ -49,15 +52,16 @@ export function useDailyLog(projectId: string, logDate?: string) {
       if (error) throw error;
       return created as unknown as DailyLog;
     },
-    enabled: !!projectId && !!user,
+    enabled: !!projectId && (isDemoMode || !!user),
   });
 
   const logId = logQuery.data?.id;
 
   // Manpower
   const manpowerQuery = useQuery({
-    queryKey: ['daily-log-manpower', logId],
+    queryKey: ['daily-log-manpower', logId, isDemoMode ? 'demo' : 'live'],
     queryFn: async () => {
+      if (isDemoMode) return getDemoDailyLogManpower(logId!);
       const { data } = await supabase
         .from('daily_log_manpower')
         .select('*')
