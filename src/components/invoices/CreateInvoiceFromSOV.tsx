@@ -643,7 +643,10 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   };
 
   const resetForm = () => {
+    setSelectedPickerValue('');
     setSelectedContractId('');
+    setSelectedCOId(null);
+    setCoBillAmount(0);
     setBillingItems([]);
     setInvoiceNumber('');
     setNotes('');
