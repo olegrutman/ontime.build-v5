@@ -1,0 +1,1 @@
+ALTER TABLE public.invoice_line_items ADD COLUMN IF NOT EXISTS line_notes text;
