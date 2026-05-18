@@ -219,6 +219,19 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         
         setSovItems((itemsData || []) as SOVItem[]);
       }
+
+      // Fetch approved Change Orders billable by this org
+      if (currentOrgId) {
+        const { data: coData, error: coErr } = await supabase.rpc('list_billable_change_orders', {
+          p_project_id: projectId,
+          p_from_org_id: currentOrgId,
+        });
+        if (coErr) {
+          console.error('Error fetching billable COs:', coErr);
+        } else {
+          setApprovedCOs((coData || []) as BillableCO[]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load SOV data');
