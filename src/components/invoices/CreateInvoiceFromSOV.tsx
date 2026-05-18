@@ -324,8 +324,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     const projectCode = getProjectCode(project?.name);
     const fromInitials = getOrgInitials(contract.from_org_name);
     const toInitials = getOrgInitials(contract.to_org_name);
-    const coTag = co?.co_number ? `-${co.co_number.replace(/[^A-Za-z0-9]/g, '')}` : '';
-    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}${coTag}`;
+    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}`;
     
     const { data } = await supabase
       .from('invoices')
