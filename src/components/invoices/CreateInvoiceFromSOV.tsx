@@ -680,11 +680,11 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               No contracts available for invoicing. You can only create invoices for contracts where your organization is the contractor (Trade Contractor or Field Crew). Please accept a contract first.
             </AlertDescription>
           </Alert>
-        ) : sovs.length === 0 ? (
+        ) : sovs.length === 0 && approvedCOs.length === 0 ? (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No SOV found. Please create a Schedule of Values first.
+              No SOV or approved Change Orders found. Create an SOV or get a CO approved first.
             </AlertDescription>
           </Alert>
         ) : (
@@ -707,28 +707,59 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>Select Contract to Invoice</Label>
-                <Select value={selectedContractId} onValueChange={setSelectedContractId}>
+                <Label>Select Contract or Change Order to Bill</Label>
+                <Select value={selectedPickerValue} onValueChange={handlePickerChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose a contract to bill" />
+                    <SelectValue placeholder="Choose a contract or CO to bill" />
                   </SelectTrigger>
                   <SelectContent>
+                    {contracts.length > 0 && (
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Base Contracts
+                      </div>
+                    )}
                     {contracts.map(contract => {
                       const isWorkOrder = contract.trade === 'Work Order' || contract.trade === 'Work Order Labor';
                       const typeLabel = isWorkOrder ? '[Work Order]' : '[Contract]';
                       return (
-                        <SelectItem key={contract.id} value={contract.id}>
+                        <SelectItem key={`contract-${contract.id}`} value={`contract:${contract.id}`}>
                           {typeLabel} {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)} — {formatCurrency(contract.contract_sum || 0)}
+                        </SelectItem>
+                      );
+                    })}
+                    {approvedCOs.length > 0 && (
+                      <div className="px-2 py-1 mt-1 text-[10px] uppercase tracking-wide text-muted-foreground border-t">
+                        Approved Change Orders
+                      </div>
+                    )}
+                    {approvedCOs.map(co => {
+                      const num = co.co_number || 'CO';
+                      const title = co.title ? ` ${co.title}` : '';
+                      const target = co.to_org_name ? ` → ${co.to_org_name}` : '';
+                      const fullyBilled = co.remaining <= 0.005;
+                      return (
+                        <SelectItem
+                          key={`co-${co.co_id}`}
+                          value={`co:${co.co_id}`}
+                          disabled={fullyBilled}
+                        >
+                          [{num}]{title}{target} — {formatCurrency(co.grand_total)}
+                          {fullyBilled
+                            ? ' (fully billed)'
+                            : co.already_billed > 0
+                              ? ` (remaining ${formatCurrency(co.remaining)})`
+                              : ''}
                         </SelectItem>
                       );
                     })}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Select the contract with your upstream party to create an invoice.
+                  Pick the base contract to bill against its SOV, or pick an approved Change Order to bill it directly.
                 </p>
               </div>
             )}
+
 
             {/* Warning if SOV is not locked */}
             {sovNotLocked && selectedContractId && (
