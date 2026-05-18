@@ -189,12 +189,15 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, context } = await req.json();
+    const { messages, context, pageSnapshot } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const contextLine = context
       ? `\n\nThe user is currently viewing: ${context}. Tailor your response to this context.`
+      : "";
+    const snapshotLine = pageSnapshot
+      ? `\n\n## What the user sees right now\n${pageSnapshot}\n\nGround your answer in these specific headings, cards, and numbers when relevant.`
       : "";
 
     const response = await fetch(
