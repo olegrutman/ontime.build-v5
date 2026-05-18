@@ -744,8 +744,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                       </div>
                     )}
                     {approvedCOs.map(co => {
-                      const num = co.co_number || 'CO';
-                      const title = co.title ? ` ${co.title}` : '';
+                      const num = shortCONumber(co.co_number);
+                      const label = co.title || 'Change Order';
                       const target = co.to_org_name ? ` → ${co.to_org_name}` : '';
                       const fullyBilled = co.remaining <= 0.005;
                       return (
@@ -754,7 +754,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                           value={`co:${co.co_id}`}
                           disabled={fullyBilled}
                         >
-                          [{num}]{title}{target} — {formatCurrency(co.grand_total)}
+                          {num} · {label}{target} — {formatCurrency(co.grand_total)}
                           {fullyBilled
                             ? ' (fully billed)'
                             : co.already_billed > 0
