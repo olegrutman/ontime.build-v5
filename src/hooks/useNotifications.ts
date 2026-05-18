@@ -18,11 +18,13 @@ export interface Notification {
 
 export function useNotifications() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { isDemoMode } = useDemo();
+  const [notifications, setNotifications] = useState<Notification[]>(isDemoMode ? DEMO_NOTIFICATIONS : []);
+  const [unreadCount, setUnreadCount] = useState(isDemoMode ? DEMO_NOTIFICATIONS.length : 0);
+  const [loading, setLoading] = useState(!isDemoMode);
 
   const fetchNotifications = useCallback(async () => {
+    if (isDemoMode) return;
     if (!user) return;
     
     // Type assertion needed until types are regenerated
