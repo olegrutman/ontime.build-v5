@@ -761,8 +761,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
             )}
 
 
-            {/* Warning if SOV is not locked */}
-            {sovNotLocked && selectedContractId && (
+            {/* Warning if SOV is not locked (contract mode only) */}
+            {!selectedCOId && sovNotLocked && selectedContractId && (
               <Alert className="border-amber-500/50 bg-amber-500/10">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-700">
@@ -770,6 +770,65 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* CO Billing Card (CO mode) */}
+            {selectedCO && (
+              <Card className="border-primary/40">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">CO {selectedCO.co_number || ''}</Badge>
+                        <span className="font-medium truncate">{selectedCO.title || 'Change Order'}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Billed to {selectedCO.to_org_name || selectedCO.to_role || 'upstream party'}
+                      </p>
+                    </div>
+                    <div className="text-right text-sm shrink-0">
+                      <div>Total: <span className="font-medium">{formatCurrency(selectedCO.grand_total)}</span></div>
+                      <div className="text-muted-foreground">
+                        Previously billed: {formatCurrency(selectedCO.already_billed)}
+                      </div>
+                      <div className={cn("font-medium", selectedCO.remaining <= 0.005 && "text-green-600")}>
+                        Remaining: {formatCurrency(selectedCO.remaining)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Amount to Bill This Period</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={selectedCO.remaining}
+                        step="0.01"
+                        value={coBillAmount}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value) || 0;
+                          setCoBillAmount(Math.max(0, v));
+                        }}
+                        className={cn(coOverbilling && "border-destructive")}
+                      />
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => setCoBillAmount(selectedCO.remaining)}
+                      >
+                        Bill remaining
+                      </Button>
+                    </div>
+                    {coOverbilling && (
+                      <p className="text-xs text-destructive">
+                        Amount exceeds the {formatCurrency(selectedCO.remaining)} remaining on this CO.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
 
             {/* Invoice Details */}
             <div className="grid gap-4 md:grid-cols-3">
