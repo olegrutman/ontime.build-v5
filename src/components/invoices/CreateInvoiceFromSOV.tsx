@@ -1054,7 +1054,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </div>
             )}
 
-            {selectedContractId && billingItems.length === 0 && (
+            {!selectedCOId && selectedContractId && billingItems.length === 0 && (
               <Alert>
                 <FileText className="h-4 w-4" />
                 <AlertDescription>
