@@ -19,6 +19,7 @@ export interface MonthlyWorkOrders {
 
 export function useFinancialTrends() {
   const { user, userOrgRoles } = useAuth();
+  const { isDemoMode } = useDemo();
   const [spendTrend, setSpendTrend] = useState<MonthlySpend[]>([]);
   const [woTrend, setWoTrend] = useState<MonthlyWorkOrders[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +27,13 @@ export function useFinancialTrends() {
   const currentOrg = userOrgRoles[0]?.organization;
 
   useEffect(() => {
+    if (isDemoMode) {
+      const { spendTrend: s, woTrend: w } = getDemoFinancialTrends();
+      setSpendTrend(s);
+      setWoTrend(w);
+      setLoading(false);
+      return;
+    }
     if (!currentOrg?.id || !user) return;
 
     const fetchTrends = async () => {
