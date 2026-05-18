@@ -1,70 +1,71 @@
-## Goal
+# Make the demo feel real
 
-Make the in-app demo more powerful in two ways:
-1. Let the viewer flip between GC / TC / FC / Supplier instantly without leaving the project.
-2. Add tour steps that walk through the newly rebuilt CO/WO financial card (revenue, cost, margin, pending exposure) per role.
+Two tracks executed together: deeper seed data + demo adapters so every sidebar tab has content instead of empty states.
 
----
+## Track 1 — Seed data overhaul (`src/data/demoData.ts`)
 
-## Part 1 — In-demo role switcher
+Replace round demo numbers with realistic, reconciled data spread over a 90-day timeline.
 
-**Where:** `src/components/demo/DemoBanner.tsx` (sticky banner, already shown in every demo route).
+- **Project shell**
+  - Real-sounding address, lot size, sqft, permit #, owner name, architect.
+  - Cover photo (Unsplash construction image) + GC company logo placeholder.
+  - Start date 75 days ago, projected completion 120 days out.
+- **Financials that reconcile**
+  - Contract $1,847,500 (not $185k — that's a kitchen reno, not a custom home).
+  - SOV: 22 line items across 7 phases, weighted per industry standards, sums to 100.00%.
+  - Billed-to-date derived from invoices, not hardcoded. Retainage = 10% of billed.
+- **Activity volume**
+  - 8–12 attention items per role with varied ages (2h, 1d, 3d, 1w).
+  - 35+ activity feed entries spread over 90 days (CO approved, PO sent, invoice paid, RFI answered, daily log submitted, photo uploaded).
+  - 6 team members with names, titles, avatar initials, phone, email.
+  - 4 partner orgs (TC, supplier, architect, inspector).
+- **Operational data**
+  - 14 days of daily logs (weather, crew count, hours, notes, 2–3 photo refs each).
+  - Schedule: 18 Gantt tasks across phases with dependencies, % complete, baseline vs current dates.
+  - 6 RFIs (mix of open/answered/closed) with full Q&A threads.
+  - 3 backcharges, 2 returns, 4 payment applications (1 paid, 2 approved, 1 pending).
 
-**What changes:**
-- Replace the static "Viewing as {role}" text with a compact pill-style segmented control: `GC | TC | FC | Supplier`.
-- The active role highlights; clicking another role calls a new `switchRole(role)` action.
-- Keep `Reset` and `Exit Demo` buttons unchanged.
+## Track 2 — Demo adapters for empty hooks
 
-**New context action in `src/contexts/DemoContext.tsx`:**
-- Add `switchRole(role: DemoRole)` that only updates `demoRole` (no store reset, no nav change) so the same demo project stays open and any in-progress work survives.
-- Expose it through `DemoContextValue`.
+Each hook below currently queries Supabase and returns `[]` in demo mode. Add a demo-mode short-circuit that pulls from `useDemoProjectData()` / new store slices.
 
-**Bolt tour interaction (`src/hooks/useBoltGuide.ts`, `src/data/boltScripts.ts`):**
-- When role changes mid-tour, auto-load the new role's script from step 0 and surface a toast: "Tour switched to {role}".
-- The script lookup is already keyed by role in `BOLT_SCRIPTS[role]`, so only the trigger needs wiring.
+| Hook | What it feeds |
+|---|---|
+| `useProjectSchedule.ts` | Schedule tab Gantt |
+| `useDailyLog.ts` | Daily Log tab list + detail |
+| `useProjectQuickStats.ts` | Overview KPI strip (crew today, open RFIs, etc.) |
+| `useFinancialTrends.ts` | Overview trend mini-charts |
+| `useOrgTeam.ts` / `usePartnerDirectory.ts` | My Team + Partners tabs |
+| `useBackcharges.ts` | Backcharges tab |
+| `useProjectRFIs.ts` | RFI list (already partial — finish it) |
+| `useNotifications.ts` | Bell icon dropdown (seed 8 demo notifications) |
 
-**Routing:** No route changes. The existing demo project id stays in `demoProjectId`; each page already reads `demoRole` from context to pick the right dashboard view.
+Pattern: add `if (isDemoMode) return { data: demoSlice, isLoading: false };` at the top of each hook, mirroring how `useProjectFinancials` already does it.
 
----
+## Track 3 — Visual polish
 
-## Part 2 — Extend Bolt tour to cover the CO KPI card
-
-**Where:** `src/data/boltScripts.ts` — append one step to GC, TC, and FC scripts (Supplier gets none — suppliers don't see CO financials).
-
-**Target element:** add `data-demo-target="co-impact-card"` to `src/components/project/COImpactCard.tsx` root.
-
-**Steps to add (1 per role, slotted before the closing "celebrate" step):**
-
-- **GC** — "Approved COs add scope and dollars to the contract. Here you see CO revenue, your true cost (no TC markup hidden from you per privacy rules), the resulting margin, and pending exposure from COs still in flight."
-  - `targetTab: 'overview'`, `targetSelector: '[data-demo-target="co-impact-card"]'`, pose `point`.
-
-- **TC** — "Your CO scorecard: revenue is what you billed the GC via `tc_submitted_price`, cost is your labor + materials + equipment, margin is the spread. Pending exposure = COs you've submitted but not yet approved."
-  - same target, pose `thinking`.
-
-- **FC** — "COs you've worked on roll up here. Revenue is what your TC pays you, cost is your labor + materials. Pending exposure shows COs awaiting TC approval."
-  - same target, pose `point`.
-
-**Step count update:** Bolt step counters (e.g. "3 of 6") will auto-bump to 7 — no hardcoded totals to fix (verified via `useBoltGuide.ts` length-based logic).
-
----
+- **Demo banner**: shrink to a 24px-tall strip; move role pills + Reset/Exit to right side. Less orange, more subtle.
+- **Project header**: render the cover photo + logo + owner name so it looks like a real configured project.
+- **Numbers formatting**: use `IBM Plex Mono` consistently on all financial figures per design system.
 
 ## Out of scope
 
-- No write-enabled "create your first CO" sandbox (separate, larger effort).
-- No backend / RLS changes — purely UI + demo context.
-- No changes to the actual CO math (already shipped & unit-tested).
+- No write-enabled CO/PO/Invoice wizards (still next tier).
+- No backend/RLS changes.
+- No multi-project portfolio (single demo project stays).
+- No real photo uploads — placeholder Unsplash URLs only.
 
----
+## Files touched
 
-## Technical details
+- `src/data/demoData.ts` (major expansion, ~500 → ~1500 lines)
+- `src/contexts/DemoContext.tsx` (add store slices for schedule, dailyLogs, team, partners, notifications, backcharges)
+- `src/hooks/useDemoData.ts` (expose new slices)
+- `src/hooks/useProjectSchedule.ts`, `useDailyLog.ts`, `useProjectQuickStats.ts`, `useFinancialTrends.ts`, `useOrgTeam.ts`, `usePartnerDirectory.ts`, `useBackcharges.ts`, `useNotifications.ts` (demo-mode short-circuit)
+- `src/components/demo/DemoBanner.tsx` (slimmer style)
+- `src/components/project/ProjectHeader.tsx` or equivalent (cover photo + logo)
 
-- `DemoContext.switchRole` is a pure state update: `setState(prev => ({ ...prev, demoRole: role }))`. Does not touch `store`, so demo mutations persist across role flips.
-- Segmented control in `DemoBanner` uses existing `Button` ghost variants with `aria-pressed` for the active role to avoid pulling in a new shadcn component.
-- `COImpactCard` already hides when revenue+pending are both zero; tour step will still spotlight the empty-state card so the explanation lands even on a quiet demo project. Alternative: seed one approved CO in `DEMO_WORK_ORDERS` so the card is non-empty for GC/TC/FC roles. Recommended — add 1 approved CO and 1 submitted CO to `src/data/demoData.ts`.
-- Files touched:
-  - `src/contexts/DemoContext.tsx` (+ `switchRole`)
-  - `src/components/demo/DemoBanner.tsx` (segmented control)
-  - `src/hooks/useBoltGuide.ts` (reset to step 0 on role change)
-  - `src/data/boltScripts.ts` (+3 CO steps)
-  - `src/components/project/COImpactCard.tsx` (+ `data-demo-target`)
-  - `src/data/demoData.ts` (seed 2 demo COs so card is populated)
+## Validation
+
+- Walk every sidebar tab as GC, TC, FC, Supplier — no empty states except where intentional (locked features).
+- Confirm SOV % billed × contract = invoice total (±$1 rounding).
+- Bolt tour still completes without selector misses.
