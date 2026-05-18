@@ -849,39 +849,84 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                           </span>
                         </div>
 
-                        {/* This period input */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <Label className="text-xs text-muted-foreground">This period</Label>
-                            <button
-                              type="button"
-                              onClick={() => setCoBillAmount(selectedCO.remaining)}
-                              className="text-xs text-primary hover:underline"
-                            >
-                              Bill remaining
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">$</span>
-                            <Input
-                              type="number"
-                              min={0}
-                              max={selectedCO.remaining}
-                              step="0.01"
-                              value={coBillAmount}
-                              onChange={(e) => {
-                                const v = parseFloat(e.target.value) || 0;
-                                setCoBillAmount(Math.max(0, v));
-                              }}
-                              className={cn('flex-1', coOverbilling && 'border-destructive')}
-                            />
-                          </div>
-                          {coOverbilling && (
-                            <p className="text-xs text-destructive">
-                              Amount exceeds the {formatCurrency(selectedCO.remaining)} remaining on this CO.
-                            </p>
-                          )}
-                        </div>
+                        {/* This period input — $ and % synced */}
+                        {(() => {
+                          const total = selectedCO.grand_total || 0;
+                          const previousPct = total > 0 ? (selectedCO.already_billed / total) * 100 : 0;
+                          const thisPct = total > 0 ? (coBillAmount / total) * 100 : 0;
+                          const totalPct = previousPct + thisPct;
+                          const maxPct = Math.max(0, 100 - previousPct);
+                          return (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <Label className="text-xs text-muted-foreground">This period</Label>
+                                <button
+                                  type="button"
+                                  onClick={() => setCoBillAmount(selectedCO.remaining)}
+                                  className="text-xs text-primary hover:underline"
+                                >
+                                  Bill remaining
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm text-muted-foreground">$</span>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={selectedCO.remaining}
+                                    step="0.01"
+                                    value={coBillAmount || ''}
+                                    onChange={(e) => {
+                                      const v = parseFloat(e.target.value) || 0;
+                                      setCoBillAmount(Math.max(0, v));
+                                    }}
+                                    placeholder="0.00"
+                                    className={cn('flex-1', coOverbilling && 'border-destructive')}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={maxPct}
+                                    step="0.1"
+                                    value={thisPct > 0 ? Number(thisPct.toFixed(2)) : ''}
+                                    onChange={(e) => {
+                                      const pct = parseFloat(e.target.value) || 0;
+                                      const clamped = Math.max(0, pct);
+                                      setCoBillAmount((total * clamped) / 100);
+                                    }}
+                                    placeholder="0"
+                                    className={cn('flex-1', coOverbilling && 'border-destructive')}
+                                  />
+                                  <span className="text-sm text-muted-foreground">%</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                                <span>
+                                  {previousPct > 0 && (
+                                    <>Previous: {previousPct.toFixed(1)}% ({formatCurrency(selectedCO.already_billed)}) · </>
+                                  )}
+                                  This bill: <span className="text-primary font-medium">{thisPct.toFixed(1)}% ({formatCurrency(coBillAmount)})</span>
+                                </span>
+                                <span
+                                  className={cn(
+                                    'font-medium',
+                                    totalPct >= 99.95 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+                                  )}
+                                >
+                                  {totalPct.toFixed(1)}% total
+                                </span>
+                              </div>
+                              {coOverbilling && (
+                                <p className="text-xs text-destructive">
+                                  Amount exceeds the {formatCurrency(selectedCO.remaining)} remaining on this CO.
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </CardContent>
