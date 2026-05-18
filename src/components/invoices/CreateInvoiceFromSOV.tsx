@@ -336,10 +336,12 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     setInvoiceNumber(`${prefix}-${(maxNumber + 1).toString().padStart(4, '0')}`);
   };
 
-  // Get the selected contract and its SOV
-  const selectedContract = useMemo(() => 
-    contracts.find(c => c.id === selectedContractId),
-    [contracts, selectedContractId]
+  // Get the selected contract and its SOV. In CO mode, fall back to allContracts
+  // because the CO's parent contract may be filtered out (e.g., contract_sum=0).
+  const selectedContract = useMemo(() =>
+    contracts.find(c => c.id === selectedContractId)
+      || (selectedCOId ? allContracts.find(c => c.id === selectedContractId) : undefined),
+    [contracts, allContracts, selectedContractId, selectedCOId]
   );
   
   const selectedSOV = useMemo(() => {
