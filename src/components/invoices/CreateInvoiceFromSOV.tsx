@@ -392,23 +392,28 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     }
   }, [selectedSOV, sovItems, isRevisionMode]);
 
-  // Calculate gross amount
-  const grossAmount = useMemo(() => 
-    billingItems
+  // Calculate gross amount (CO mode uses coBillAmount; SOV mode sums enabled items)
+  const grossAmount = useMemo(() => {
+    if (selectedCOId) return Math.max(0, coBillAmount);
+    return billingItems
       .filter(item => item.enabled)
-      .reduce((sum, item) => sum + item.thisBillAmount, 0),
-    [billingItems]
-  );
+      .reduce((sum, item) => sum + item.thisBillAmount, 0);
+  }, [billingItems, selectedCOId, coBillAmount]);
 
   const retainagePercent = selectedContract?.retainage_percent || 0;
   const retainageAmount = grossAmount * (retainagePercent / 100);
   const netAmount = grossAmount - retainageAmount;
 
-  const hasErrors = billingItems.some(item => 
-    item.enabled && item.thisBillPercent > item.maxAllowedPercent
-  );
-  
-  const hasSelectedItems = billingItems.some(item => item.enabled && item.thisBillPercent > 0);
+  const coOverbilling = selectedCO ? coBillAmount > selectedCO.remaining + 0.005 : false;
+
+  const hasErrors = selectedCOId
+    ? coOverbilling || coBillAmount <= 0
+    : billingItems.some(item => item.enabled && item.thisBillPercent > item.maxAllowedPercent);
+
+  const hasSelectedItems = selectedCOId
+    ? coBillAmount > 0
+    : billingItems.some(item => item.enabled && item.thisBillPercent > 0);
+
 
   const handleToggleItem = (itemId: string, enabled: boolean) => {
     setBillingItems(prev => prev.map(item => 
