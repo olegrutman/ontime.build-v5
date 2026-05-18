@@ -89,6 +89,8 @@ const PlatformQA = lazy(() => import("./pages/platform/PlatformQA"));
 // 4. Route protection wrapper
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const { isDemoMode } = useDemo();
+  if (isDemoMode) return <>{children}</>;
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-screen">
