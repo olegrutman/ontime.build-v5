@@ -24,6 +24,22 @@ import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
 import { useNudge } from '@/hooks/useNudge';
 
+function extractScopeOfWork(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
+  const m = desc.match(re);
+  if (!m || m.index === undefined) {
+    const trimmed = desc.trim();
+    return trimmed || null;
+  }
+  const start = m.index + m[0].length;
+  const rest = desc.slice(start);
+  const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
+  const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
+  return body.trim() || null;
+}
+
+
 interface InvoiceDetailProps {
   invoiceId: string;
   projectId: string;
