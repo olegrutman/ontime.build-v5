@@ -210,8 +210,9 @@ const handler = async (req: Request): Promise<Response> => {
     const itemRows = items.map((item: any, i: number) => {
       const pct = item.scheduled_value > 0 ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1) : '0.0';
       const remaining = item.scheduled_value - item.total_billed;
-      const notes = item.line_notes
-        ? `<div style="font-size:9px;color:#6b7280;margin-top:2px;white-space:pre-wrap;">${String(item.line_notes).replace(/</g, '&lt;')}</div>`
+      const scope = extractScopeOfWork(item.line_notes);
+      const notes = scope
+        ? `<div style="font-size:9px;color:#6b7280;margin-top:2px;white-space:pre-wrap;">${scope.replace(/</g, '&lt;')}</div>`
         : '';
       return `<tr>
         <td class="item-num">${i + 1}</td>
