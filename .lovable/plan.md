@@ -1,28 +1,24 @@
-## Goal
-Show the Change Order's description (scope/work narrative) on the invoice line — both in the app and the exported PDF.
+## Strip CO description to scope-only on invoice line
 
-## Approach
-Store the CO description on the invoice line item itself (snapshot at creation, so historical invoices stay stable), then render it below the line description.
+The CO description contains multiple markdown sections (Work Order title, Scope of Work, Execution Details, Compliance). Currently the entire blob is snapshotted into `invoice_line_items.line_notes`. We will extract only the Scope of Work section before saving and rendering.
 
-## Changes
+### Changes
 
-### 1. DB migration — `invoice_line_items.line_notes`
-Add a nullable `text` column:
-```sql
-ALTER TABLE public.invoice_line_items ADD COLUMN line_notes text;
-```
-No backfill needed (existing rows show no subtitle).
+**1. `src/components/invoices/CreateInvoiceFromSOV.tsx`**
+- Add a small helper `extractScopeOfWork(desc: string | null): string | null` that:
+  - Returns `null` if input is empty.
+  - Finds a `**Scope of Work` heading (case-insensitive, tolerant of `:`/`:**` variations).
+  - Captures text from the end of that heading until the next `**…**` heading (e.g. `**Execution Details`, `**Compliance`, `**Notes`) or end of string.
+  - Trims whitespace; returns `null` if the result is empty.
+  - If no Scope heading is found, falls back to returning the original description (so older COs without that structure still show something).
+- Line 601: replace `line_notes: selectedCO.description || null` with `line_notes: extractScopeOfWork(selectedCO.description)`.
+- Line 837–839 preview block: render the extracted scope instead of the raw description so the UI matches what gets saved.
 
-### 2. CO invoice creation — `src/components/invoices/CreateInvoiceFromSOV.tsx`
-In the CO branch (~line 597), populate `line_notes: selectedCO.description || null` on the inserted line item. SOV branch stays `null`.
+**2. No DB / PDF changes**
+- `invoice-download/index.ts` already renders whatever is in `line_notes` — no edit needed.
+- No migration; existing invoices keep their stored notes. (Optional backfill is out of scope unless requested.)
 
-### 3. App invoice view — `src/components/invoices/InvoiceDetail.tsx`
-In the line items table cell (line 458), render `item.line_notes` (when present) as a 2-line-clamped muted paragraph under `item.description`.
-
-### 4. PDF — `supabase/functions/invoice-download/index.ts`
-In `itemRows` (~line 199), when `item.line_notes` is present append a small muted `<div class="line-notes">…</div>` under the description cell, and add a `.line-notes { font-size: 10px; color: #6b7280; margin-top: 2px; }` style to the existing `<style>` block.
-
-## Out of scope
-- No changes to SOV line item rendering.
-- No retroactive update of existing invoices (no backfill).
-- No UI to edit `line_notes` after invoice creation (description is snapshot-only).
+### Out of scope
+- Editing already-created invoices' `line_notes`.
+- Changing the CO description itself.
+- Adding execution details as a separate collapsible section.
