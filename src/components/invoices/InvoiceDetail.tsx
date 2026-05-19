@@ -473,11 +473,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                   <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
                     <TableCell className="font-medium">
                       <div>{item.description}</div>
-                      {item.line_notes && (
-                        <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
-                          {item.line_notes}
-                        </div>
-                      )}
+                      {(() => {
+                        const scope = extractScopeOfWork(item.line_notes);
+                        return scope ? (
+                          <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
+                            {scope}
+                          </div>
+                        ) : null;
+                      })()}
+
                     </TableCell>
                     <TableCell className="text-right">{formatCurrency(item.scheduled_value)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
