@@ -114,6 +114,24 @@ interface CreateInvoiceFromSOVProps {
   revisionData?: RevisionData;
 }
 
+function extractScopeOfWork(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  // Find "Scope of Work" heading (markdown ** optional, case-insensitive)
+  const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
+  const m = desc.match(re);
+  if (!m || m.index === undefined) {
+    const trimmed = desc.trim();
+    return trimmed || null;
+  }
+  const start = m.index + m[0].length;
+  const rest = desc.slice(start);
+  // Stop at next bold heading like **Something:** or **Something**
+  const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
+  const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
+  const cleaned = body.trim();
+  return cleaned || null;
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -598,7 +616,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
             invoice_id: invoice.id,
             sov_item_id: null,
             description: `${selectedCO.title || 'Change Order'} (${shortCONumber(selectedCO.co_number)})`,
-            line_notes: selectedCO.description || null,
+            line_notes: extractScopeOfWork(selectedCO.description),
             scheduled_value: selectedCO.grand_total,
             previous_billed: selectedCO.already_billed,
             current_billed: coBillAmount,
@@ -834,9 +852,9 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="font-medium truncate">{selectedCO.title || 'Change Order'}</div>
-                                {selectedCO.description && (
+                                {extractScopeOfWork(selectedCO.description) && (
                                   <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                    {selectedCO.description}
+                                    {extractScopeOfWork(selectedCO.description)}
                                   </p>
                                 )}
                                 <p className="text-[11px] text-muted-foreground/80 mt-1">
