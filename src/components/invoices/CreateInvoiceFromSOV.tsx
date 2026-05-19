@@ -852,9 +852,9 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="font-medium truncate">{selectedCO.title || 'Change Order'}</div>
-                                {selectedCO.description && (
+                                {extractScopeOfWork(selectedCO.description) && (
                                   <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                    {selectedCO.description}
+                                    {extractScopeOfWork(selectedCO.description)}
                                   </p>
                                 )}
                                 <p className="text-[11px] text-muted-foreground/80 mt-1">
