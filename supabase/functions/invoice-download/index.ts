@@ -19,6 +19,20 @@ function fmtDateLong(d: string): string {
   return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+function extractScopeOfWork(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
+  const m = desc.match(re);
+  if (!m || m.index === undefined) {
+    const trimmed = desc.trim();
+    return trimmed || null;
+  }
+  const start = m.index + m[0].length;
+  const rest = desc.slice(start);
+  const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
+  const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
+  return body.trim() || null;
+
 function statusClass(s: string): string {
   const map: Record<string, string> = { DRAFT: 'st-draft', SUBMITTED: 'st-submitted', APPROVED: 'st-approved', REJECTED: 'st-rejected', PAID: 'st-paid' };
   return map[s] || 'st-draft';
@@ -196,8 +210,9 @@ const handler = async (req: Request): Promise<Response> => {
     const itemRows = items.map((item: any, i: number) => {
       const pct = item.scheduled_value > 0 ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1) : '0.0';
       const remaining = item.scheduled_value - item.total_billed;
-      const notes = item.line_notes
-        ? `<div style="font-size:9px;color:#6b7280;margin-top:2px;white-space:pre-wrap;">${String(item.line_notes).replace(/</g, '&lt;')}</div>`
+      const scope = extractScopeOfWork(item.line_notes);
+      const notes = scope
+        ? `<div style="font-size:9px;color:#6b7280;margin-top:2px;white-space:pre-wrap;">${scope.replace(/</g, '&lt;')}</div>`
         : '';
       return `<tr>
         <td class="item-num">${i + 1}</td>

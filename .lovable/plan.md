@@ -1,24 +1,25 @@
-## Strip CO description to scope-only on invoice line
+## Problem
 
-The CO description contains multiple markdown sections (Work Order title, Scope of Work, Execution Details, Compliance). Currently the entire blob is snapshotted into `invoice_line_items.line_notes`. We will extract only the Scope of Work section before saving and rendering.
+The invoice shown (INV-FUL-IM-HA-0004) was created before the Scope-only fix landed, so its `line_notes` still contain the full CO description (Work Order title, Scope of Work, Execution Details, Compliance). New invoices already store only Scope of Work, but existing rows render the old blob.
 
-### Changes
+## Fix
 
-**1. `src/components/invoices/CreateInvoiceFromSOV.tsx`**
-- Add a small helper `extractScopeOfWork(desc: string | null): string | null` that:
-  - Returns `null` if input is empty.
-  - Finds a `**Scope of Work` heading (case-insensitive, tolerant of `:`/`:**` variations).
-  - Captures text from the end of that heading until the next `**…**` heading (e.g. `**Execution Details`, `**Compliance`, `**Notes`) or end of string.
-  - Trims whitespace; returns `null` if the result is empty.
-  - If no Scope heading is found, falls back to returning the original description (so older COs without that structure still show something).
-- Line 601: replace `line_notes: selectedCO.description || null` with `line_notes: extractScopeOfWork(selectedCO.description)`.
-- Line 837–839 preview block: render the extracted scope instead of the raw description so the UI matches what gets saved.
+Apply the same `extractScopeOfWork` logic at render time so both legacy and new invoices show only the Scope of Work section.
 
-**2. No DB / PDF changes**
-- `invoice-download/index.ts` already renders whatever is in `line_notes` — no edit needed.
-- No migration; existing invoices keep their stored notes. (Optional backfill is out of scope unless requested.)
+### 1. `src/components/invoices/InvoiceDetail.tsx`
+- Add a local `extractScopeOfWork(text)` helper mirroring the one in `CreateInvoiceFromSOV.tsx`:
+  - Find `**Scope of Work**` (case-insensitive, optional `**`/`:`).
+  - Capture until the next `**Heading**` (Execution Details, Compliance, Notes, etc.).
+  - Fall back to the raw value if no Scope heading is present.
+- Wrap the `{item.line_notes}` render at line 462 with `extractScopeOfWork(item.line_notes)` and only render the block when the result is non-empty.
 
-### Out of scope
-- Editing already-created invoices' `line_notes`.
-- Changing the CO description itself.
-- Adding execution details as a separate collapsible section.
+### 2. `supabase/functions/invoice-download/index.ts`
+- Add the same helper at the top of the file.
+- At line 199-200, run `line_notes` through it before injecting into the PDF HTML.
+
+### 3. `src/components/invoices/CreateInvoiceFromSOV.tsx`
+- No change needed — already strips on insert and preview.
+
+## Out of scope
+- No DB migration / backfill. Render-time extraction handles legacy rows uniformly.
+- No changes to the CO description itself or to PDF styling.

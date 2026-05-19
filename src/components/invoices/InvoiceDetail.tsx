@@ -24,6 +24,22 @@ import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
 import { useNudge } from '@/hooks/useNudge';
 
+function extractScopeOfWork(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
+  const m = desc.match(re);
+  if (!m || m.index === undefined) {
+    const trimmed = desc.trim();
+    return trimmed || null;
+  }
+  const start = m.index + m[0].length;
+  const rest = desc.slice(start);
+  const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
+  const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
+  return body.trim() || null;
+}
+
+
 interface InvoiceDetailProps {
   invoiceId: string;
   projectId: string;
@@ -457,11 +473,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                   <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
                     <TableCell className="font-medium">
                       <div>{item.description}</div>
-                      {item.line_notes && (
-                        <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
-                          {item.line_notes}
-                        </div>
-                      )}
+                      {(() => {
+                        const scope = extractScopeOfWork(item.line_notes);
+                        return scope ? (
+                          <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
+                            {scope}
+                          </div>
+                        ) : null;
+                      })()}
+
                     </TableCell>
                     <TableCell className="text-right">{formatCurrency(item.scheduled_value)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
