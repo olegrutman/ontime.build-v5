@@ -1,15 +1,28 @@
 import { Link } from 'react-router-dom';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 
-const footerCols = {
-  Product: ['Purchase Orders', 'Change Orders', 'Invoicing', 'Returns', 'Project Budget', 'Sasha AI'],
-  Company: ['About Us', 'Customers', 'Blog', 'Careers', 'Contact'],
-  Resources: ['Help Center', 'API Reference', 'Integrations', 'Case Studies', 'Community'],
+const footerCols: Record<string, { label: string; href: string }[]> = {
+  Product: [
+    { label: 'Features', href: '#features' },
+    { label: 'How It Works', href: '#how' },
+    { label: 'Roles', href: '#roles' },
+    { label: 'Pricing', href: '#pricing' },
+    { label: 'T&M / Remodel Mode', href: '#how' },
+  ],
+  Company: [
+    { label: 'Contact', href: 'mailto:hello@ontime.build' },
+    { label: 'Talk to Sales', href: 'mailto:hello@ontime.build?subject=Sales%20inquiry' },
+  ],
+  Resources: [
+    { label: 'Sign In', href: '/auth' },
+    { label: 'Create Account', href: '/signup' },
+    { label: 'FAQ', href: '#proof' },
+  ],
 };
 
 export function Footer() {
   return (
-    <footer className="text-white/[0.45] pt-16 pb-9 px-[5%]" style={{ background: 'hsl(var(--navy-d))' }}>
+    <footer className="text-white/70 pt-16 pb-9 px-[5%]" style={{ background: 'hsl(var(--navy-d))' }}>
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-[52px] mb-[52px]">
         {/* Brand */}
         <div>
@@ -19,26 +32,27 @@ export function Footer() {
               Ontime<span style={{ color: 'hsl(var(--amber))' }}>.build</span>
             </span>
           </div>
-          <p className="text-[0.85rem] leading-[1.75] max-w-[270px]">
+          <p className="text-[0.85rem] leading-[1.75] max-w-[270px] text-white/60">
             Construction operations software that connects General Contractors, Trade Contractors, Field Crews, and Suppliers in one real-time platform.
           </p>
-          <div className="flex gap-2.5 mt-[22px]">
-            {['LinkedIn', 'Twitter/X', 'YouTube'].map((s) => (
-              <a key={s} href="#" className="px-3.5 py-[7px] border border-white/[0.08] text-white/30 text-[0.78rem] rounded no-underline transition-all" onMouseOver={e => { (e.target as HTMLElement).style.borderColor = 'hsl(var(--amber))'; (e.target as HTMLElement).style.color = 'hsl(var(--amber))'; }} onMouseOut={e => { (e.target as HTMLElement).style.borderColor = 'rgba(255,255,255,.08)'; (e.target as HTMLElement).style.color = 'rgba(255,255,255,.3)'; }}>
-                {s}
-              </a>
-            ))}
-          </div>
         </div>
 
         {/* Link columns */}
         {Object.entries(footerCols).map(([title, links]) => (
           <div key={title}>
-            <h4 className="text-[0.65rem] font-bold tracking-[1.8px] uppercase text-white/[0.18] mb-[18px]">{title}</h4>
+            <h4 className="text-[0.65rem] font-bold tracking-[1.8px] uppercase text-white/50 mb-[18px]">{title}</h4>
             <ul className="flex flex-col gap-2.5">
               {links.map((l) => (
-                <li key={l}>
-                  <a href="#" className="text-white/[0.38] text-[0.84rem] no-underline hover:text-white transition-colors">{l}</a>
+                <li key={l.label}>
+                  {l.href.startsWith('/') ? (
+                    <Link to={l.href} className="text-white/70 text-[0.84rem] no-underline hover:text-white transition-colors">
+                      {l.label}
+                    </Link>
+                  ) : (
+                    <a href={l.href} className="text-white/70 text-[0.84rem] no-underline hover:text-white transition-colors">
+                      {l.label}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -46,13 +60,8 @@ export function Footer() {
         ))}
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-center pt-7 gap-3" style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
-        <div className="text-[0.78rem] text-white/[0.18]">© {new Date().getFullYear()} Ontime.Build — All rights reserved.</div>
-        <div className="flex gap-5">
-          {['Privacy Policy', 'Terms of Service', 'Security', 'Status'].map((l) => (
-            <a key={l} href="#" className="text-[0.78rem] text-white/[0.18] no-underline hover:text-white/60 transition-colors">{l}</a>
-          ))}
-        </div>
+      <div className="flex flex-col md:flex-row justify-between items-center pt-7 gap-3" style={{ borderTop: '1px solid rgba(255,255,255,.08)' }}>
+        <div className="text-[0.78rem] text-white/50">© {new Date().getFullYear()} Ontime.Build — All rights reserved.</div>
       </div>
     </footer>
   );

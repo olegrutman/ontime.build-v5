@@ -31,7 +31,7 @@ export function RolesSection() {
       <h2 className="font-heading text-[clamp(2.4rem,5vw,3.8rem)] font-black leading-[0.95] tracking-[-1.5px] uppercase text-white">
         Built for Every Company<br /><em className="not-italic" style={{ color: 'hsl(var(--amber))' }}>On the Project.</em>
       </h2>
-      <p className="text-white/[0.35] max-w-[500px] text-base leading-[1.75] mt-3">
+      <p className="text-white/70 max-w-[500px] text-base leading-[1.75] mt-3">
         Each role gets a view built for what they actually own — not a one-size-fits-all screen that nobody uses correctly.
       </p>
 
@@ -54,10 +54,10 @@ export function RolesSection() {
               {role.icon}
             </div>
             <div className="font-heading text-[1.15rem] font-extrabold uppercase text-white mb-2">{role.name}</div>
-            <p className="text-[0.84rem] text-white/[0.36] leading-[1.72] mb-3.5">{role.desc}</p>
+            <p className="text-[0.84rem] text-white/65 leading-[1.72] mb-3.5">{role.desc}</p>
             <div className="flex flex-wrap gap-1">
               {role.tags.map((tag) => (
-                <span key={tag} className="text-[0.62rem] text-white/[0.26] border border-white/[0.07] px-2 py-[2px] rounded-[3px]">{tag}</span>
+                <span key={tag} className="text-[0.62rem] text-white/55 border border-white/15 px-2 py-[2px] rounded-[3px]">{tag}</span>
               ))}
             </div>
           </div>
