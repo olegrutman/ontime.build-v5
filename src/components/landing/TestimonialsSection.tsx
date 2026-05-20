@@ -1,19 +1,17 @@
 const testimonials = [
   {
-    quote: 'We used to chase invoices for weeks. Now our TCs submit, we approve in the platform, and we both have a clear record. The first time we avoided a billing dispute, it paid for the software for the next five years.',
-    name: 'Derek Kowalski', role: 'VP Construction — Baywood Hotels', initials: 'DK', bg: 'hsl(var(--amber-d))',
+    quote: 'We used to chase invoices for weeks. With a clean submit-approve loop and a shared record, billing disputes essentially disappeared.',
+    name: 'General Contractor', role: 'Hospitality projects · Pacific NW', initials: 'GC', bg: 'hsl(var(--amber-d))',
   },
   {
-    quote: "My biggest problem was material waste — we'd order too much, returns were a mess, nobody tracked it. Ontime made that problem disappear. Every return is documented. Every restocking fee is captured. It's a real closed loop now.",
-    name: 'Maria Linden', role: 'Project Executive — Silverton GC', initials: 'ML', bg: 'hsl(153, 82%, 31%)',
+    quote: "Material waste was our biggest leak — over-ordering, messy returns, nothing tracked. Closed-loop returns with restocking fees captured changed how we run procurement.",
+    name: 'Trade Contractor', role: 'Framing · Mountain West', initials: 'TC', bg: 'hsl(153, 82%, 31%)',
   },
   {
-    quote: "I could never tell where the job stood financially until the end of the month. Now I look at the dashboard and I know exactly what's committed, what's paid, and what's still open. That visibility changed how I run every project.",
-    name: 'Andre Torres', role: 'Senior PM — Phillips Consultant Group', initials: 'AT', bg: 'hsl(var(--navy))',
+    quote: "Used to wait until month-end to see where a job stood. Now I can see what's committed, what's paid, and what's still open in one screen — every day.",
+    name: 'Project Manager', role: 'Multi-family GC · Southwest', initials: 'PM', bg: 'hsl(var(--navy))',
   },
 ];
-
-const logos = ['Baywood Hotels', 'Silverton GC', 'Mesa Pacific', 'Ironclad Dev', 'Apex Structures', 'RidgeLine Build', 'ClearSpan', 'Summit CM'];
 
 export function TestimonialsSection() {
   return (
@@ -50,19 +48,6 @@ export function TestimonialsSection() {
         ))}
       </div>
 
-      {/* Logos */}
-      <div className="mt-14 pt-10" style={{ borderTop: '1px solid hsl(var(--border))' }}>
-        <div className="text-center text-[0.7rem] uppercase tracking-[1.5px] mb-6" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          Trusted by teams building across the country
-        </div>
-        <div className="flex gap-9 flex-wrap justify-center items-center">
-          {logos.map((l) => (
-            <div key={l} className="font-heading text-[1.05rem] font-bold tracking-[0.5px] uppercase cursor-default transition-colors" style={{ color: 'hsl(var(--border))' }}>
-              {l}
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }

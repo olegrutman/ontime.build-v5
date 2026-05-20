@@ -1,21 +1,21 @@
 const plans = [
   {
     tier: 'Essentials',
-    price: '$89',
+    price: '$49',
     period: '/mo',
     desc: 'For small trade contractors starting to bring operations into one platform.',
     features: [
       { text: 'Unlimited projects' },
       { text: 'Unlimited users' },
       { text: 'Purchase orders' },
-      { text: 'Change orders' },
       { text: 'Invoicing & approvals' },
       { text: 'Material returns tracking' },
       { text: 'Change orders', dim: true },
-      { text: 'Project budget dashboard', dim: true },
-      { text: 'Supplier portal', dim: true },
+      { text: 'Live project budget dashboard', dim: true },
+      { text: 'Supplier collaboration portal', dim: true },
+      { text: 'Sasha AI onboarding assistant', dim: true },
     ],
-    cta: 'Start Free Demo',
+    cta: 'Create an Account',
     featured: false,
   },
   {
@@ -25,7 +25,7 @@ const plans = [
     desc: 'Full platform access for GCs and TCs running complex multi-trade projects.',
     features: [
       { text: 'Everything in Essentials' },
-      { text: 'Change orders' },
+      { text: 'Change orders & work orders' },
       { text: 'Live project budget dashboard' },
       { text: 'Supplier collaboration portal' },
       { text: 'Role-based crew access' },
@@ -34,7 +34,7 @@ const plans = [
       { text: 'Cost code tracking' },
       { text: 'Priority support' },
     ],
-    cta: 'Start Free Demo',
+    cta: 'Create an Account',
     featured: true,
     badge: 'Most Popular',
   },
@@ -134,7 +134,7 @@ export function PricingSection() {
               </a>
             ) : (
               <a
-                href={plan.cta === 'Talk to Sales' ? '#' : '/signup'}
+                href={plan.cta === 'Talk to Sales' ? 'mailto:hello@ontime.build?subject=Ontime.Build%20Enterprise%20inquiry' : '/signup'}
                 className="block text-center py-3 px-6 border-[1.5px] rounded-[5px] text-[0.88rem] font-medium transition-all no-underline"
                 style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--ink2))' }}
               >

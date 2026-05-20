@@ -1,8 +1,8 @@
 const stats = [
-  { num: '2,400+', label: 'Active Construction Projects' },
-  { num: '$18B', label: 'Project Value Managed' },
+  { num: '4', label: 'Roles — GC · TC · Crew · Supplier' },
+  { num: '1', label: 'Connected Financial Loop' },
   { num: '$89', label: 'Per Company / Month — Flat' },
-  { num: '4', label: 'Roles — One Connected Platform' },
+  { num: '∞', label: 'Projects & Users Included' },
 ];
 
 export function StatsStrip() {
