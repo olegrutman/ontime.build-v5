@@ -72,6 +72,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
+  const [showFullNotes, setShowFullNotes] = useState(false);
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
