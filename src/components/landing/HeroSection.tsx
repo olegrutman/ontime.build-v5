@@ -32,10 +32,11 @@ export function HeroSection() {
       </h1>
 
       {/* Sub */}
-      <p className="animate-fade-up-delay-2 text-[clamp(0.95rem,1.8vw,1.12rem)] max-w-[540px] leading-[1.78] mt-6 mb-10 font-normal" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        Ontime.Build connects General Contractors, Trade Contractors, Field Crews, and Suppliers
-        in one unified platform — eliminating the spreadsheets, phone calls, and disconnected
-        tools that cost you money every day.
+      <p className="animate-fade-up-delay-2 text-[clamp(0.95rem,1.8vw,1.12rem)] max-w-[560px] leading-[1.78] mt-6 mb-10 font-normal" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        Stop reconciling SOVs by hand, chasing change-order approvals over text,
+        and discovering $40k of unreturned material at closeout. Ontime.Build connects
+        GCs, Trade Contractors, Field Crews, and Suppliers in one financial loop —
+        with role-based privacy baked in.
       </p>
 
       {/* Actions */}
@@ -45,14 +46,16 @@ export function HeroSection() {
           className="px-8 py-3.5 rounded-[5px] text-[0.98rem] font-bold shadow-amber-lg hover:brightness-110 hover:-translate-y-px transition-all no-underline"
           style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy-d))' }}
         >
-          Start Free Demo
+          Create an Account
         </a>
         <a href="#how" className="flex items-center gap-2.5 text-[0.9rem] font-medium no-underline transition-colors group" style={{ color: 'hsl(var(--ink2))' }}>
-          <div className="w-[44px] h-[44px] rounded-full border-[1.5px] flex items-center justify-center text-[0.8rem] bg-white shadow-sm transition-all flex-shrink-0"
+          <span
+            aria-hidden="true"
+            className="w-[44px] h-[44px] rounded-full border-[1.5px] flex items-center justify-center text-[0.8rem] bg-white shadow-sm transition-all flex-shrink-0"
             style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--amber-d))' }}
           >
             ▶
-          </div>
+          </span>
           See How It Works
         </a>
       </div>
@@ -61,10 +64,10 @@ export function HeroSection() {
       <div className="animate-fade-up-delay-4 flex items-center gap-4 mt-11">
         <div className="flex">
           {[
-            { initials: 'DK', bg: 'hsl(var(--amber-d))' },
-            { initials: 'ML', bg: 'hsl(var(--navy))' },
-            { initials: 'AT', bg: 'hsl(153, 82%, 31%)' },
-            { initials: 'SR', bg: 'hsl(210, 76%, 44%)' },
+            { initials: 'GC', bg: 'hsl(var(--amber-d))' },
+            { initials: 'TC', bg: 'hsl(var(--navy))' },
+            { initials: 'FC', bg: 'hsl(153, 82%, 31%)' },
+            { initials: 'SUP', bg: 'hsl(210, 76%, 44%)' },
           ].map((a, i) => (
             <div
               key={a.initials}
@@ -76,7 +79,7 @@ export function HeroSection() {
           ))}
         </div>
         <div className="text-[0.82rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          Trusted across <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>2,400+ active projects</strong> — $18B in construction value managed
+          Built with input from working <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>GCs, Trade Contractors, Field Crews, and Suppliers</strong>
         </div>
       </div>
 
