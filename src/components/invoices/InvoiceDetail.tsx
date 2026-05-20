@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +72,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
+  const [showFullNotes, setShowFullNotes] = useState(false);
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -444,8 +447,14 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
       {/* Line Items */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Line Items</CardTitle>
+          <div className="flex items-center gap-2">
+            <Switch id="show-full-notes" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
+            <Label htmlFor="show-full-notes" className="text-sm text-muted-foreground cursor-pointer">
+              {showFullNotes ? 'Full notes' : 'Scope only'}
+            </Label>
+          </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
@@ -474,10 +483,10 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                     <TableCell className="font-medium">
                       <div>{item.description}</div>
                       {(() => {
-                        const scope = extractScopeOfWork(item.line_notes);
-                        return scope ? (
+                        const text = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
+                        return text ? (
                           <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
-                            {scope}
+                            {text}
                           </div>
                         ) : null;
                       })()}
