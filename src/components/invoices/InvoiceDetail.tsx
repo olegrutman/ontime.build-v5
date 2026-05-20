@@ -483,10 +483,10 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                     <TableCell className="font-medium">
                       <div>{item.description}</div>
                       {(() => {
-                        const scope = extractScopeOfWork(item.line_notes);
-                        return scope ? (
+                        const text = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
+                        return text ? (
                           <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
-                            {scope}
+                            {text}
                           </div>
                         ) : null;
                       })()}
