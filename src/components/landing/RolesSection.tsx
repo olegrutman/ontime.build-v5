@@ -31,7 +31,7 @@ export function RolesSection() {
       <h2 className="font-heading text-[clamp(2.4rem,5vw,3.8rem)] font-black leading-[0.95] tracking-[-1.5px] uppercase text-white">
         Built for Every Company<br /><em className="not-italic" style={{ color: 'hsl(var(--amber))' }}>On the Project.</em>
       </h2>
-      <p className="text-white/[0.35] max-w-[500px] text-base leading-[1.75] mt-3">
+      <p className="text-white/70 max-w-[500px] text-base leading-[1.75] mt-3">
         Each role gets a view built for what they actually own — not a one-size-fits-all screen that nobody uses correctly.
       </p>
 
