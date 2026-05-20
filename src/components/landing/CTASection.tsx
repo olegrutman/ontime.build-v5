@@ -25,10 +25,10 @@ export function CTASection() {
           Create an Account
         </a>
         <a
-          href="#"
-          className="px-9 py-4 text-base font-semibold bg-transparent text-white/55 border-[1.5px] border-white/[0.14] rounded-[5px] no-underline hover:border-white/35 hover:text-white transition-all"
+          href="mailto:hello@ontime.build?subject=Ontime.Build%20demo%20request"
+          className="px-9 py-4 text-base font-semibold bg-transparent text-white/70 border-[1.5px] border-white/[0.14] rounded-[5px] no-underline hover:border-white/35 hover:text-white transition-all"
         >
-          Book a Live Demo
+          Talk to Sales
         </a>
       </div>
       <div className="mt-[22px] flex justify-center gap-6 flex-wrap relative">
