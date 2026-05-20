@@ -134,7 +134,7 @@ export function PricingSection() {
               </a>
             ) : (
               <a
-                href={plan.cta === 'Talk to Sales' ? '#' : '/signup'}
+                href={plan.cta === 'Talk to Sales' ? 'mailto:hello@ontime.build?subject=Ontime.Build%20Enterprise%20inquiry' : '/signup'}
                 className="block text-center py-3 px-6 border-[1.5px] rounded-[5px] text-[0.88rem] font-medium transition-all no-underline"
                 style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--ink2))' }}
               >
