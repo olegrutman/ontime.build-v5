@@ -48,19 +48,6 @@ export function TestimonialsSection() {
         ))}
       </div>
 
-      {/* Logos */}
-      <div className="mt-14 pt-10" style={{ borderTop: '1px solid hsl(var(--border))' }}>
-        <div className="text-center text-[0.7rem] uppercase tracking-[1.5px] mb-6" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          Trusted by teams building across the country
-        </div>
-        <div className="flex gap-9 flex-wrap justify-center items-center">
-          {logos.map((l) => (
-            <div key={l} className="font-heading text-[1.05rem] font-bold tracking-[0.5px] uppercase cursor-default transition-colors" style={{ color: 'hsl(var(--border))' }}>
-              {l}
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }
