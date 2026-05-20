@@ -90,7 +90,7 @@ export function PricingSection() {
                 {plan.badge}
               </div>
             )}
-            <div className={`text-[0.7rem] font-bold tracking-[2px] uppercase mb-3.5 ${plan.featured ? 'text-white/[0.38]' : ''}`}
+            <div className={`text-[0.7rem] font-bold tracking-[2px] uppercase mb-3.5 ${plan.featured ? 'text-white/70' : ''}`}
               style={!plan.featured ? { color: 'hsl(var(--muted-foreground))' } : {}}
             >
               {plan.tier}
@@ -101,9 +101,9 @@ export function PricingSection() {
               style={!plan.featured ? { color: 'hsl(var(--ink))' } : {}}
             >
               {plan.price}
-              {plan.period && <span className={`text-[1.3rem] font-normal ${plan.featured ? 'text-white/[0.32]' : ''}`} style={!plan.featured ? { color: 'hsl(var(--muted-foreground))' } : {}}>{plan.period}</span>}
+              {plan.period && <span className={`text-[1.3rem] font-normal ${plan.featured ? 'text-white/60' : ''}`} style={!plan.featured ? { color: 'hsl(var(--muted-foreground))' } : {}}>{plan.period}</span>}
             </div>
-            <div className={`text-[0.83rem] mb-6 pb-6 border-b ${plan.featured ? 'text-white/[0.38] border-white/[0.08]' : ''}`}
+            <div className={`text-[0.83rem] mb-6 pb-6 border-b ${plan.featured ? 'text-white/70 border-white/15' : ''}`}
               style={!plan.featured ? { color: 'hsl(var(--muted-foreground))', borderColor: 'hsl(var(--border))' } : {}}
             >
               {plan.desc}
