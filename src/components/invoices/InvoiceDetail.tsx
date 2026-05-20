@@ -447,8 +447,14 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
       {/* Line Items */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Line Items</CardTitle>
+          <div className="flex items-center gap-2">
+            <Switch id="show-full-notes" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
+            <Label htmlFor="show-full-notes" className="text-sm text-muted-foreground cursor-pointer">
+              {showFullNotes ? 'Full notes' : 'Scope only'}
+            </Label>
+          </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
