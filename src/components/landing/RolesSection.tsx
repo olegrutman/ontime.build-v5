@@ -54,10 +54,10 @@ export function RolesSection() {
               {role.icon}
             </div>
             <div className="font-heading text-[1.15rem] font-extrabold uppercase text-white mb-2">{role.name}</div>
-            <p className="text-[0.84rem] text-white/[0.36] leading-[1.72] mb-3.5">{role.desc}</p>
+            <p className="text-[0.84rem] text-white/65 leading-[1.72] mb-3.5">{role.desc}</p>
             <div className="flex flex-wrap gap-1">
               {role.tags.map((tag) => (
-                <span key={tag} className="text-[0.62rem] text-white/[0.26] border border-white/[0.07] px-2 py-[2px] rounded-[3px]">{tag}</span>
+                <span key={tag} className="text-[0.62rem] text-white/55 border border-white/15 px-2 py-[2px] rounded-[3px]">{tag}</span>
               ))}
             </div>
           </div>
