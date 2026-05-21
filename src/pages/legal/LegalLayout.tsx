@@ -1,5 +1,4 @@
-import { ReactNode } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { ReactNode, useEffect } from 'react';
 import { LandingHeader, Footer } from '@/components/landing';
 
 interface LegalLayoutProps {
@@ -11,17 +10,32 @@ interface LegalLayoutProps {
 }
 
 export function LegalLayout({ title, description, path, updated, children }: LegalLayoutProps) {
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = `${title} — Ontime.Build`;
+
+    const metaDesc = document.querySelector('meta[name="description"]');
+    const prevDesc = metaDesc?.getAttribute('content') ?? '';
+    metaDesc?.setAttribute('content', description);
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    const prevCanonical = canonical?.href ?? '';
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `https://pm.ontime.build${path}`;
+
+    return () => {
+      document.title = prevTitle;
+      if (metaDesc && prevDesc) metaDesc.setAttribute('content', prevDesc);
+      if (canonical && prevCanonical) canonical.href = prevCanonical;
+    };
+  }, [title, description, path]);
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Helmet>
-        <title>{title} — Ontime.Build</title>
-        <meta name="description" content={description} />
-        <link rel="canonical" href={`https://pm.ontime.build${path}`} />
-        <meta property="og:title" content={`${title} — Ontime.Build`} />
-        <meta property="og:description" content={description} />
-        <meta property="og:url" content={`https://pm.ontime.build${path}`} />
-        <meta property="og:type" content="website" />
-      </Helmet>
       <LandingHeader />
       <main className="flex-1 px-[5%] py-16 md:py-24">
         <article className="mx-auto max-w-3xl">
@@ -34,7 +48,7 @@ export function LegalLayout({ title, description, path, updated, children }: Leg
             </h1>
             <div className="mt-4 text-[0.82rem] text-slate-500">Last updated: {updated}</div>
           </div>
-          <div className="legal-prose text-slate-700 text-[0.95rem] leading-[1.78] space-y-6">
+          <div className="text-slate-700 text-[0.95rem] leading-[1.78] space-y-6 [&_h2]:font-heading [&_h2]:text-[1.4rem] [&_h2]:font-extrabold [&_h2]:uppercase [&_h2]:tracking-[0.3px] [&_h2]:text-slate-900 [&_h2]:mt-10 [&_h2]:mb-3 [&_h3]:font-heading [&_h3]:text-[1.05rem] [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-[0.5px] [&_h3]:text-slate-900 [&_h3]:mt-6 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_a]:underline [&_a]:text-slate-900 hover:[&_a]:opacity-70 [&_strong]:text-slate-900">
             {children}
           </div>
         </article>
