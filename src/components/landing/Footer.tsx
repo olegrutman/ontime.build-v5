@@ -28,7 +28,7 @@ const footerCols: Record<string, { label: string; href: string }[]> = {
 export function Footer() {
   return (
     <footer className="text-white/70 pt-16 pb-9 px-[5%]" style={{ background: 'hsl(var(--navy-d))' }}>
-      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-[52px] mb-[52px]">
+      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-[52px] mb-[52px]">
         {/* Brand */}
         <div>
           <div className="flex items-center gap-2.5 mb-3">
