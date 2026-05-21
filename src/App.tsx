@@ -56,6 +56,9 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Install = lazy(() => import("./pages/Install"));
+const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
+const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
 
@@ -185,6 +188,9 @@ function AppRoutes() {
             <Route path="/signup" element={<AuthPage />} />
             <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/security" element={<SecurityPage />} />
             <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
             <Route path="/external/co/:token" element={<COExternalView />} />
 
