@@ -18,6 +18,11 @@ const footerCols: Record<string, { label: string; href: string }[]> = {
     { label: 'Create Account', href: '/signup' },
     { label: 'FAQ', href: '#proof' },
   ],
+  Legal: [
+    { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Terms of Service', href: '/terms' },
+    { label: 'Security', href: '/security' },
+  ],
 };
 
 export function Footer() {
