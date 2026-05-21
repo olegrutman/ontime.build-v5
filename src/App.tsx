@@ -188,6 +188,9 @@ function AppRoutes() {
             <Route path="/signup" element={<AuthPage />} />
             <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/security" element={<SecurityPage />} />
             <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
             <Route path="/external/co/:token" element={<COExternalView />} />
 
