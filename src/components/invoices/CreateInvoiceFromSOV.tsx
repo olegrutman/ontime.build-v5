@@ -612,11 +612,26 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           const billedPct = selectedCO.grand_total > 0
             ? (coBillAmount / selectedCO.grand_total) * 100
             : 0;
+          // Build a meaningful line description. The CO's auto-title is often just
+          // "CO-XXX · <date>" (no scope). Prefer the first non-empty line of the
+          // scope of work; otherwise fall back to the title; otherwise the CO number.
+          const scopeText = extractScopeOfWork(selectedCO.description);
+          const scopeFirstLine = scopeText
+            ? scopeText.split('\n').map(l => l.replace(/^[*\-\s]+/, '').trim()).find(Boolean)
+            : null;
+          const rawTitle = (selectedCO.title || '').trim();
+          const looksLikeAutoTitle = /^CO-[A-Z0-9-]+(\s+·\s+.*)?$/i.test(rawTitle) || !rawTitle;
+          const labelBase = (!looksLikeAutoTitle && rawTitle)
+            ? rawTitle
+            : (scopeFirstLine && scopeFirstLine.length > 4 ? scopeFirstLine : (rawTitle || 'Change Order'));
+          const coRef = shortCONumber(selectedCO.co_number);
+          const label = coRef ? `${labelBase} (${coRef})` : labelBase;
           lineItemsToInsert = [{
             invoice_id: invoice.id,
             sov_item_id: null,
-            description: `${selectedCO.title || 'Change Order'} (${shortCONumber(selectedCO.co_number)})`,
-            line_notes: extractScopeOfWork(selectedCO.description),
+            description: label.length > 240 ? label.slice(0, 237) + '…' : label,
+            // Keep the full reason_note so the renderer can show scope OR full notes.
+            line_notes: selectedCO.description || null,
             scheduled_value: selectedCO.grand_total,
             previous_billed: selectedCO.already_billed,
             current_billed: coBillAmount,

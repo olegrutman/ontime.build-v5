@@ -32,6 +32,19 @@ function extractScopeOfWork(desc: string | null | undefined): string | null {
   const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
   const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
   return body.trim() || null;
+}
+
+function renderNotesMarkdown(raw: string): string {
+  // Minimal markdown → HTML for invoice line notes:
+  // - escape HTML
+  // - **bold** → <strong>bold</strong>
+  // - leading "* " / "- " bullets → "• "
+  // - preserve newlines via white-space:pre-wrap on the container
+  const escaped = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return escaped
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/^[ \t]*[*\-][ \t]+/gm, '• ');
+}
 
 function statusClass(s: string): string {
   const map: Record<string, string> = { DRAFT: 'st-draft', SUBMITTED: 'st-submitted', APPROVED: 'st-approved', REJECTED: 'st-rejected', PAID: 'st-paid' };
@@ -212,7 +225,7 @@ const handler = async (req: Request): Promise<Response> => {
       const remaining = item.scheduled_value - item.total_billed;
       const scope = extractScopeOfWork(item.line_notes);
       const notes = scope
-        ? `<div style="font-size:9px;color:#6b7280;margin-top:2px;white-space:pre-wrap;">${scope.replace(/</g, '&lt;')}</div>`
+        ? `<div style="font-size:9px;color:#6b7280;margin-top:3px;white-space:pre-wrap;line-height:1.4;">${renderNotesMarkdown(scope)}</div>`
         : '';
       return `<tr>
         <td class="item-num">${i + 1}</td>

@@ -27,6 +27,7 @@ interface ApprovedCO {
   co_number: string | null;
   location_tag: string | null;
   reason: string | null;
+  reason_note: string | null;
   pricing_type: string;
 }
 
@@ -71,7 +72,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
           .from('change_orders')
-          .select('id, title, co_number, location_tag, reason, pricing_type, org_id, assigned_to_org_id, completion_acknowledged_at')
+          .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
           .order('created_at', { ascending: false });
@@ -273,18 +274,26 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
       if (invErr) throw invErr;
 
-      // Create line items
-      const invoiceLineItems = lineItems.map((li, i) => ({
-        invoice_id: invoice.id,
-        description: li.description,
-        scheduled_value: li.amount,
-        previous_billed: 0,
-        current_billed: li.amount,
-        total_billed: li.amount,
-        retainage_percent: retainagePercent,
-        retainage_amount: li.amount * (retainagePercent / 100),
-        sort_order: i + 1,
-      }));
+      // Create line items. Attach the parent CO's reason_note as line_notes on the
+      // FIRST line for each CO so the scope/description is preserved on the invoice.
+      const seenCoIds = new Set<string>();
+      const coNotesMap = new Map(approvedCOs.map(co => [co.id, co.reason_note]));
+      const invoiceLineItems = lineItems.map((li, i) => {
+        const isFirstForCO = !seenCoIds.has(li.coId);
+        if (isFirstForCO) seenCoIds.add(li.coId);
+        return {
+          invoice_id: invoice.id,
+          description: li.description,
+          line_notes: isFirstForCO ? (coNotesMap.get(li.coId) || null) : null,
+          scheduled_value: li.amount,
+          previous_billed: 0,
+          current_billed: li.amount,
+          total_billed: li.amount,
+          retainage_percent: retainagePercent,
+          retainage_amount: li.amount * (retainagePercent / 100),
+          sort_order: i + 1,
+        };
+      });
 
       const { error: liErr } = await supabase
         .from('invoice_line_items')
