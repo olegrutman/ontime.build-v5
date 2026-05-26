@@ -225,7 +225,7 @@ const handler = async (req: Request): Promise<Response> => {
       const remaining = item.scheduled_value - item.total_billed;
       const scope = extractScopeOfWork(item.line_notes);
       const notes = scope
-        ? `<div style="font-size:9px;color:#6b7280;margin-top:2px;white-space:pre-wrap;">${scope.replace(/</g, '&lt;')}</div>`
+        ? `<div style="font-size:9px;color:#6b7280;margin-top:3px;white-space:pre-wrap;line-height:1.4;">${renderNotesMarkdown(scope)}</div>`
         : '';
       return `<tr>
         <td class="item-num">${i + 1}</td>
