@@ -27,6 +27,7 @@ interface ApprovedCO {
   co_number: string | null;
   location_tag: string | null;
   reason: string | null;
+  reason_note: string | null;
   pricing_type: string;
 }
 
