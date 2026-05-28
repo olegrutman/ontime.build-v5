@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell, Pencil, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,6 +74,61 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
   const [showFullNotes, setShowFullNotes] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  const startEditLine = (item: InvoiceLineItem) => {
+    setEditingItemId(item.id);
+    setEditDescription(item.description || '');
+    setEditNotes(item.line_notes || '');
+  };
+
+  const cancelEditLine = () => {
+    setEditingItemId(null);
+    setEditDescription('');
+    setEditNotes('');
+  };
+
+  const saveEditLine = async (itemId: string) => {
+    const desc = editDescription.trim();
+    if (!desc) {
+      toast.error('Description is required');
+      return;
+    }
+    if (desc.length > 500) {
+      toast.error('Description must be 500 characters or less');
+      return;
+    }
+    if (editNotes.length > 5000) {
+      toast.error('Scope notes must be 5000 characters or less');
+      return;
+    }
+    if (invoice && (invoice.status === 'APPROVED' || invoice.status === 'PAID')) {
+      toast.error('This invoice is locked and can no longer be edited');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from('invoice_line_items')
+        .update({ description: desc, line_notes: editNotes.trim() || null })
+        .eq('id', itemId);
+      if (error) throw error;
+      setLineItems((prev) =>
+        prev.map((li) =>
+          li.id === itemId ? { ...li, description: desc, line_notes: editNotes.trim() || null } : li
+        )
+      );
+      toast.success('Line item updated');
+      cancelEditLine();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update line item');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -480,17 +536,61 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
                 return (
                   <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
-                    <TableCell className="font-medium">
-                      <div>{item.description}</div>
-                      {(() => {
-                        const text = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
-                        return text ? (
-                          <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
-                            {text}
+                    <TableCell className="font-medium align-top">
+                      {editingItemId === item.id ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            maxLength={500}
+                            placeholder="Description"
+                            className="text-sm"
+                          />
+                          <Textarea
+                            value={editNotes}
+                            onChange={(e) => setEditNotes(e.target.value)}
+                            maxLength={5000}
+                            placeholder="Scope of work / notes (optional)"
+                            rows={4}
+                            className="text-xs font-normal"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" onClick={() => saveEditLine(item.id)} disabled={editSaving}>
+                              {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                              <span className="ml-1">Save</span>
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={cancelEditLine} disabled={editSaving}>
+                              <X className="h-3 w-3" />
+                              <span className="ml-1">Cancel</span>
+                            </Button>
                           </div>
-                        ) : null;
-                      })()}
-
+                        </div>
+                      ) : (
+                        <div className="group">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1">{item.description}</div>
+                            {status !== 'APPROVED' && status !== 'PAID' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => startEditLine(item)}
+                                title="Edit description"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                          {(() => {
+                            const text = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
+                            return text ? (
+                              <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
+                                {text}
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">{formatCurrency(item.scheduled_value)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
