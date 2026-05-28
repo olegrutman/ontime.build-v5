@@ -74,6 +74,61 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
   const [showFullNotes, setShowFullNotes] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  const startEditLine = (item: InvoiceLineItem) => {
+    setEditingItemId(item.id);
+    setEditDescription(item.description || '');
+    setEditNotes(item.line_notes || '');
+  };
+
+  const cancelEditLine = () => {
+    setEditingItemId(null);
+    setEditDescription('');
+    setEditNotes('');
+  };
+
+  const saveEditLine = async (itemId: string) => {
+    const desc = editDescription.trim();
+    if (!desc) {
+      toast.error('Description is required');
+      return;
+    }
+    if (desc.length > 500) {
+      toast.error('Description must be 500 characters or less');
+      return;
+    }
+    if (editNotes.length > 5000) {
+      toast.error('Scope notes must be 5000 characters or less');
+      return;
+    }
+    if (invoice && (invoice.status === 'APPROVED' || invoice.status === 'PAID')) {
+      toast.error('This invoice is locked and can no longer be edited');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const { error } = await supabase
+        .from('invoice_line_items')
+        .update({ description: desc, line_notes: editNotes.trim() || null })
+        .eq('id', itemId);
+      if (error) throw error;
+      setLineItems((prev) =>
+        prev.map((li) =>
+          li.id === itemId ? { ...li, description: desc, line_notes: editNotes.trim() || null } : li
+        )
+      );
+      toast.success('Line item updated');
+      cancelEditLine();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update line item');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
