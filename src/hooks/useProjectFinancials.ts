@@ -486,6 +486,25 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const retainageAmount = billedToDate * (retainagePercent / 100);
   const outstanding = contractValue - billedToDate;
 
+  // Realized / running margin to date — role-aware, uses already-fetched state
+  // Earned revenue = money actually invoiced to upstream (recognized)
+  // Incurred cost  = money actually invoiced by downstream + materials ordered + actual labor + approved CO costs
+  let earnedRevenueToDate = 0;
+  let incurredCostToDate = 0;
+  if (viewerRole === 'Trade Contractor') {
+    earnedRevenueToDate = receivablesInvoiced + approvedCORevenue;
+    incurredCostToDate = payablesInvoiced + materialOrdered + actualLaborCost + approvedCOCost;
+  } else if (viewerRole === 'General Contractor') {
+    // GC: billed to owner approximated by billedToDate (incoming SOV billings); costs = invoices paid out + materials + COs
+    earnedRevenueToDate = billedToDate + approvedCORevenue;
+    incurredCostToDate = totalPaid + materialOrdered + approvedCOCost;
+  } else if (viewerRole === 'Field Crew') {
+    earnedRevenueToDate = billedToDate;
+    incurredCostToDate = actualLaborCost;
+  }
+  const marginToDateAmount = earnedRevenueToDate - incurredCostToDate;
+  const marginToDatePct = earnedRevenueToDate > 0 ? (marginToDateAmount / earnedRevenueToDate) * 100 : 0;
+
   const updateContract = async (id: string, sum: number, retainage: number): Promise<boolean> => {
     if (viewerRole === 'Field Crew') return false;
     const { error } = await supabase.from('project_contracts').update({ contract_sum: sum, retainage_percent: retainage }).eq('id', id);
