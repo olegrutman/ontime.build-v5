@@ -497,6 +497,30 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </KpiCard>
 
+        {/* Card 3b — Margin to Date (realized) */}
+        {(() => {
+          const earned = financials.earnedRevenueToDate ?? 0;
+          const incurred = financials.incurredCostToDate ?? 0;
+          const m2d = financials.marginToDateAmount ?? 0;
+          const m2dPct = financials.marginToDatePct ?? 0;
+          const pctRounded = Math.round(m2dPct);
+          const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
+          return (
+            <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · invoiced vs paid out + labor` : 'No revenue earned yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
+              <div style={{ padding: 12 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <THead cols={['Metric', 'Value']} />
+                  <tbody>
+                    <TRow cells={[<TdN>Earned Revenue (invoiced upstream)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                    <TRow cells={[<TdN>Incurred Cost (paid FC + labor + materials + CO)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                    <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
+                  </tbody>
+                </table>
+              </div>
+            </KpiCard>
+          );
+        })()}
+
         {/* Card 4 — CO Net Margin */}
         <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={coRevenue > 0 ? (isTM ? `Revenue ${fmt(coRevenue)} · Labor Cost ${fmt(coCost)}` : `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}`) : `No approved ${isTM ? 'work orders' : 'change orders'}`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} ${isTM ? 'WOs' : 'COs'}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>

@@ -397,6 +397,30 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               );
             })()}
 
+            {/* Card 3b — Margin to Date (realized, T&M) */}
+            {(() => {
+              const earned = financials.earnedRevenueToDate ?? 0;
+              const incurred = financials.incurredCostToDate ?? 0;
+              const m2d = financials.marginToDateAmount ?? 0;
+              const m2dPct = financials.marginToDatePct ?? 0;
+              const pctRounded = Math.round(m2dPct);
+              const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
+              return (
+                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · approved WOs vs incurred cost` : 'No revenue earned yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
+                  <div style={{ padding: 12 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <THead cols={['Metric', 'Value']} />
+                      <tbody>
+                        <TRow cells={[<TdN>Earned Revenue (approved WOs)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                        <TRow cells={[<TdN>Incurred Cost (paid + materials + labor)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                        <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
+                      </tbody>
+                    </table>
+                  </div>
+                </KpiCard>
+              );
+            })()}
+
             {/* Card 4 — Work Orders (list + create) */}
             <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="WORK ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} WOs` : '0 WOs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
               <div style={{ padding: 12 }}>
@@ -495,6 +519,30 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                 </table>
               </div>
             </KpiCard>
+
+            {/* Card 3b — Margin to Date (realized) */}
+            {(() => {
+              const earned = financials.earnedRevenueToDate ?? 0;
+              const incurred = financials.incurredCostToDate ?? 0;
+              const m2d = financials.marginToDateAmount ?? 0;
+              const m2dPct = financials.marginToDatePct ?? 0;
+              const pctRounded = Math.round(m2dPct);
+              const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
+              return (
+                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · billed vs costs incurred` : 'No revenue earned yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
+                  <div style={{ padding: 12 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <THead cols={['Metric', 'Value']} />
+                      <tbody>
+                        <TRow cells={[<TdN>Earned Revenue (billed to Owner)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                        <TRow cells={[<TdN>Incurred Cost (paid + materials + CO)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                        <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
+                      </tbody>
+                    </table>
+                  </div>
+                </KpiCard>
+              );
+            })()}
 
             {/* Card 4 — Change Orders */}
             <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="CHANGE ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} COs` : '0 COs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
