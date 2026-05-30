@@ -1,68 +1,54 @@
-# Add "Profit Margin to Date" KPI
+# Why the tile is missing
 
-## What's missing today
+My previous change added a "Margin to Date" card to `DashboardKPIs.tsx` and `ProjectFinancialCommand.tsx`, but those components are **not** what renders the tiles you see in the screenshots.
 
-The current KPIs show **projected** margin (Revenue − planned costs) but never a **realized / running** margin: i.e. what we've actually billed and collected vs. what we've actually spent so far. Users want a live "how am I doing right now" number that updates as invoices, POs, and labor costs accumulate.
+The screenshots show the expandable KPI grid, which is rendered by:
 
-## Definitions (role-aware)
+- **Dashboard** (`src/pages/Dashboard.tsx`) → `GCDashboardView.tsx` / `TCDashboardView.tsx` / `FCDashboardView.tsx` / `SupplierDashboardView.tsx`. `DashboardKPIs` is only a fallback that never runs for GC/TC/FC/Supplier.
+- **Project Overview** (`src/pages/ProjectHome.tsx`) → `GCProjectOverviewContent.tsx` / `TCProjectOverview.tsx` (plus FC variant). `ProjectFinancialCommand` is not the card grid you're looking at.
 
-Margin to date = `(Earned Revenue to Date − Incurred Cost to Date) / Earned Revenue to Date`
+The data (`marginToDate`, `marginToDatePct`, `marginToDateAmount`) is already computed in `useDashboardData.ts` and `useProjectFinancials.ts` — only the UI wiring is missing.
 
-Where:
+# Plan
 
-**Earned Revenue to Date** (money in/billed, excluding retainage held):
-- **GC viewer**: subtotal of submitted+approved+paid invoices *received from TCs is not revenue* — instead, revenue earned = GC's billed amount to Owner (upstream contract billings). If no Owner invoicing, fall back to `% SOV complete × revised contract`.
-- **TC viewer**: subtotal of submitted/approved/paid invoices on upstream (TC→GC) contract. Plus approved CO revenue billed.
-- **FC viewer**: subtotal of submitted/approved/paid invoices on FC's upstream contract.
+## 1. Dashboard tiles (portfolio level)
 
-**Incurred Cost to Date** (money out, actual):
-- Approved/paid invoices on downstream contracts (subs/FCs bills to you)
-- Paid + delivered PO totals (materials)
-- Actual labor cost (`actualLaborCost` already in hook)
-- Approved CO cost portion (`approvedCOCost`)
+Add a "Margin to Date" expandable `KpiCard` to each role view, matching the existing card style (icon, accent color, pills, drill-down table):
 
-All these values already exist in `useProjectFinancials` — we just need to derive the ratio.
+- **`TCDashboardView.tsx`** — add as a 9th card (or replace "Gross Margin" projected with side-by-side projected + realized). Value: `financials.marginToDate`. Sub: `${pct}% realized · cash basis`. Drill-down table: per-project `earnedRevenueToDate` / `incurredCostToDate` / margin %.
+- **`GCDashboardView.tsx`** — same treatment, GC-flavored copy ("Realized margin from billings vs. costs incurred").
+- **`FCDashboardView.tsx`** — show as "Collected vs Labor Cost" (FC has no upstream cost data); value = `receivablesCollected − actualLaborCost`.
+- **`SupplierDashboardView.tsx`** — skip (not applicable).
 
-## Approach
+Threshold colors: ≥15% emerald, ≥5% amber, else red (matches existing margin pill convention).
 
-### 1. Extend `useProjectFinancials.ts`
-Add three computed fields to `ProjectFinancials`:
-- `earnedRevenueToDate: number`
-- `incurredCostToDate: number`
-- `marginToDate: number` (percent; 0 if revenue=0)
-- `marginToDateAmount: number` (dollars)
+## 2. Project Overview tiles (single project)
 
-Compute role-aware at the bottom of `fetchData` using existing state (no new queries needed for v1). For GC, use `receivablesCollected + receivablesInvoiced` patterns already used elsewhere; for TC reuse `receivablesInvoiced/payablesInvoiced`; for FC use `receivablesCollected`.
+Add a "Margin to Date" expandable `KpiCard` to:
 
-### 2. Aggregate across projects in `Dashboard.tsx`
-The dashboard's `financials` aggregate sums `totalRevenue`, `totalCosts`, `paidByYou`, `paidToYou` across all projects. Add two new aggregates:
-- `earnedToDate` = Σ project.earnedRevenueToDate
-- `incurredToDate` = Σ project.incurredCostToDate
-- `runningMargin` = (earned − incurred) / earned
+- **`GCProjectOverviewContent.tsx`** — sits next to "Your Gross Margin" (projected). Value: `financials.marginToDateAmount`, suffix `${pct}%`. Drill-down: earned revenue rows (billed/collected) − incurred cost rows (paid invoices, delivered POs, labor, approved CO cost).
+- **`TCProjectOverview.tsx`** — same, next to "Your Gross Margin" card. Handles T&M mode (uses `approvedWOTotal` as earned, sum of WO costs as incurred — logic already in `useProjectFinancials`).
+- **FC overview** (if present) — show "Collected / Contract" only, no realized margin.
 
-### 3. Add KPI tile
+Empty state: when `earnedRevenueToDate === 0`, show "—" with sub "No revenue earned yet".
 
-**Dashboard (`DashboardKPIs.tsx`)**: replace or supplement the "Projected Margin" tile with a second one "Margin to Date" so users see both projected vs realized side-by-side. Use existing `KPICard`, color-code with the same thresholds (≥15 emerald, ≥5 amber, else red). FC view: skip (no cost data on their side) or show simple "Collected vs Outstanding" only.
+## 3. Cleanup
 
-**Project Overview (`ProjectFinancialCommand.tsx`)**: add a 6th KPI card in the GC and TC grids: **"Margin to Date"** with value = `marginToDateAmount` and suffix = `${pct}%`. Subtitle: "Realized · live". Keep the existing "Projected Gross Margin" so users can compare plan vs actual at a glance.
+Remove the now-unused additions from `DashboardKPIs.tsx` and `ProjectFinancialCommand.tsx` so we don't have two sources of truth, OR keep them as the fallback path (decision below).
 
-### 4. Edge cases
-- Revenue = 0 → show "—" instead of `0%` / `NaN`.
-- T&M mode: use `approvedWOTotal` as earned revenue, sum of WO costs as incurred.
-- Supplier role: not applicable, hide.
-- FC role: cost data is mostly off-platform, so show "Collected / Contract" instead of a true margin (already the case).
+# Open question
 
-## Files to change
+Do you want the new tile to **replace** the existing "Gross Margin" (projected) tile, or **sit alongside** it so you can compare plan vs actual at a glance?
 
-- `src/hooks/useProjectFinancials.ts` — add 4 computed fields
-- `src/pages/Dashboard.tsx` — aggregate the new fields across projects
-- `src/components/dashboard/DashboardKPIs.tsx` — add "Margin to Date" tile for GC + TC
-- `src/components/project/ProjectFinancialCommand.tsx` — add 6th KPI card for GC + TC, plus T&M variant
+Default in this plan: **sit alongside**, because plan-vs-actual comparison is exactly the value of having "to date" data.
 
-## Out of scope
-- New DB columns or migrations (all data already in the hook)
-- Historical trend chart of margin over time (could be a follow-up)
-- Per-CO margin breakdown (already on CO detail page)
+# Files to change
 
-## Open question
-Do you want to **replace** the existing "Projected Margin" tile with "Margin to Date", or **show both** so users can compare plan vs actual? Default in this plan: show both.
+- `src/components/dashboard/GCDashboardView.tsx`
+- `src/components/dashboard/TCDashboardView.tsx`
+- `src/components/dashboard/FCDashboardView.tsx`
+- `src/components/project/GCProjectOverviewContent.tsx`
+- `src/components/project/TCProjectOverview.tsx`
+- (optional) revert/trim `DashboardKPIs.tsx` + `ProjectFinancialCommand.tsx`
+
+No hook/data/migration changes needed — values already exist.
