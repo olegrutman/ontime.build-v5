@@ -140,6 +140,10 @@ export function useDashboardData(): DashboardData {
     paidToYou: 0,
     outstandingBilling: 0,
     potentialProfit: 0,
+    earnedToDate: 0,
+    incurredToDate: 0,
+    marginToDate: 0,
+    marginToDatePct: 0,
   });
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
