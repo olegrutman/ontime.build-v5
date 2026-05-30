@@ -61,6 +61,10 @@ interface FinancialSummary {
   paidToYou: number;
   outstandingBilling: number;
   potentialProfit: number;
+  earnedToDate: number;
+  incurredToDate: number;
+  marginToDate: number;
+  marginToDatePct: number;
 }
 
 export interface RecentDoc {
