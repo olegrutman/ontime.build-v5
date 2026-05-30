@@ -723,7 +723,8 @@ export function useDashboardData(): DashboardData {
       // TC: earned = collected from GCs (paidToYou), incurred = paid to FCs/suppliers (paidByYou)
       // FC: earned = collected (paidToYou), incurred ~ 0 (off-platform labor costs)
       // GC: earned = approximated via totalBilled (own billings), incurred = paidByYou to TCs
-      const earnedToDate = orgType === 'GC' ? totalBilled : paidToYou;
+      // GC owner billings aren't tracked in-platform → leave 0 (KPI tile will degrade gracefully)
+      const earnedToDate = orgType === 'GC' ? 0 : paidToYou;
       const incurredToDate = paidByYou;
       const marginToDate = earnedToDate - incurredToDate;
       const marginToDatePct = earnedToDate > 0 ? (marginToDate / earnedToDate) * 100 : 0;
