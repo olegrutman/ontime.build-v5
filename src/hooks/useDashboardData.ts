@@ -61,6 +61,10 @@ interface FinancialSummary {
   paidToYou: number;
   outstandingBilling: number;
   potentialProfit: number;
+  earnedToDate: number;
+  incurredToDate: number;
+  marginToDate: number;
+  marginToDatePct: number;
 }
 
 export interface RecentDoc {
@@ -136,6 +140,10 @@ export function useDashboardData(): DashboardData {
     paidToYou: 0,
     outstandingBilling: 0,
     potentialProfit: 0,
+    earnedToDate: 0,
+    incurredToDate: 0,
+    marginToDate: 0,
+    marginToDatePct: 0,
   });
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
@@ -711,6 +719,16 @@ export function useDashboardData(): DashboardData {
         : 0;
       const outstandingBilling = totalRevenue - totalBilled;
 
+      // Realized margin to date (cash-basis rollup across all projects)
+      // TC: earned = collected from GCs (paidToYou), incurred = paid to FCs/suppliers (paidByYou)
+      // FC: earned = collected (paidToYou), incurred ~ 0 (off-platform labor costs)
+      // GC: earned = approximated via totalBilled (own billings), incurred = paidByYou to TCs
+      // GC owner billings aren't tracked in-platform → leave 0 (KPI tile will degrade gracefully)
+      const earnedToDate = orgType === 'GC' ? 0 : paidToYou;
+      const incurredToDate = paidByYou;
+      const marginToDate = earnedToDate - incurredToDate;
+      const marginToDatePct = earnedToDate > 0 ? (marginToDate / earnedToDate) * 100 : 0;
+
       setFinancials({
         totalContracts: totalContractValue,
         totalRevenue,
@@ -721,6 +739,10 @@ export function useDashboardData(): DashboardData {
         paidToYou,
         outstandingBilling,
         potentialProfit,
+        earnedToDate,
+        incurredToDate,
+        marginToDate,
+        marginToDatePct,
       });
 
       // Build per-project financial details
