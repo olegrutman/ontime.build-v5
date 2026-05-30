@@ -52,12 +52,13 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
     const margin = revised > 0 ? ((revised - costOut) / revised) * 100 : 0;
 
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
         <KPICard label="Original Contract" value={contractIn} delay={0} className="p-3" />
         <KPICard label="Approved CO Adds" value={coAdds} delay={40} className="p-3" />
         <KPICard label="Revised Contract" value={revised} delay={80} className="p-3" />
         <KPICard label="Estimated Total Cost" value={costOut} delay={120} className="p-3" />
         <KPICard label="Projected Gross Margin" value={revised - costOut} delay={160} suffix={`${Math.round(margin)}%`} className="p-3" />
+        <KPICard label="Margin to Date" value={marginToDateAmount} delay={200} suffix={marginToDateSuffix} className="p-3" />
       </div>
     );
   }
