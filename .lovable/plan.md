@@ -1,39 +1,68 @@
-## Goal
-Let any user with access to an invoice edit the line item **description** and **scope notes** while the invoice is in `DRAFT`, `SUBMITTED`, or `REJECTED` status. Lock editing once the invoice reaches `APPROVED` or `PAID`.
+# Add "Profit Margin to Date" KPI
 
-## Scope
-- Edit only: `invoice_line_items.description` and `invoice_line_items.line_notes`.
-- No changes to amounts, totals, billing periods, or status flow.
-- No changes to PDF generation — it already reads `description` + `line_notes`, so edits flow through automatically.
+## What's missing today
 
-## UI changes (`src/components/invoices/InvoiceDetail.tsx`)
-1. Add a small **pencil icon** in each line item's Description cell, visible only when `status !== 'APPROVED' && status !== 'PAID'`.
-2. Clicking opens an inline editor inside the same cell with:
-   - Single-line `Input` for `description`
-   - Multi-line `Textarea` for `line_notes` (full raw text, including any `**Scope of Work:**` markdown)
-   - `Save` / `Cancel` buttons
-3. On save: update the row via Supabase, refresh local `lineItems` state, toast success. On cancel: revert.
-4. Keep the existing `Scope only` / `Full notes` toggle for read mode.
+The current KPIs show **projected** margin (Revenue − planned costs) but never a **realized / running** margin: i.e. what we've actually billed and collected vs. what we've actually spent so far. Users want a live "how am I doing right now" number that updates as invoices, POs, and labor costs accumulate.
 
-## Data layer
-- Direct `supabase.from('invoice_line_items').update({ description, line_notes }).eq('id', item.id)`.
-- Existing RLS on `invoice_line_items` already gates by project participation, so any project participant can edit — matches your "anyone with access until Approved" choice.
-- Add a lightweight client-side guard that re-checks `invoice.status` right before the update and refuses if it's `APPROVED` / `PAID` (defense in depth; the real lock is the conditional UI).
+## Definitions (role-aware)
 
-## Validation
-- `description`: trimmed, required, max 500 chars (zod).
-- `line_notes`: optional, max 5000 chars.
-- Show inline error messages; disable Save while invalid.
+Margin to date = `(Earned Revenue to Date − Incurred Cost to Date) / Earned Revenue to Date`
 
-## Activity log (optional, low-risk)
-- After a successful edit, append an activity row `invoice.line_edited` with the invoice id and item id so there's an audit trail. Skip if it adds noise — happy to drop this if you prefer.
+Where:
+
+**Earned Revenue to Date** (money in/billed, excluding retainage held):
+- **GC viewer**: subtotal of submitted+approved+paid invoices *received from TCs is not revenue* — instead, revenue earned = GC's billed amount to Owner (upstream contract billings). If no Owner invoicing, fall back to `% SOV complete × revised contract`.
+- **TC viewer**: subtotal of submitted/approved/paid invoices on upstream (TC→GC) contract. Plus approved CO revenue billed.
+- **FC viewer**: subtotal of submitted/approved/paid invoices on FC's upstream contract.
+
+**Incurred Cost to Date** (money out, actual):
+- Approved/paid invoices on downstream contracts (subs/FCs bills to you)
+- Paid + delivered PO totals (materials)
+- Actual labor cost (`actualLaborCost` already in hook)
+- Approved CO cost portion (`approvedCOCost`)
+
+All these values already exist in `useProjectFinancials` — we just need to derive the ratio.
+
+## Approach
+
+### 1. Extend `useProjectFinancials.ts`
+Add three computed fields to `ProjectFinancials`:
+- `earnedRevenueToDate: number`
+- `incurredCostToDate: number`
+- `marginToDate: number` (percent; 0 if revenue=0)
+- `marginToDateAmount: number` (dollars)
+
+Compute role-aware at the bottom of `fetchData` using existing state (no new queries needed for v1). For GC, use `receivablesCollected + receivablesInvoiced` patterns already used elsewhere; for TC reuse `receivablesInvoiced/payablesInvoiced`; for FC use `receivablesCollected`.
+
+### 2. Aggregate across projects in `Dashboard.tsx`
+The dashboard's `financials` aggregate sums `totalRevenue`, `totalCosts`, `paidByYou`, `paidToYou` across all projects. Add two new aggregates:
+- `earnedToDate` = Σ project.earnedRevenueToDate
+- `incurredToDate` = Σ project.incurredCostToDate
+- `runningMargin` = (earned − incurred) / earned
+
+### 3. Add KPI tile
+
+**Dashboard (`DashboardKPIs.tsx`)**: replace or supplement the "Projected Margin" tile with a second one "Margin to Date" so users see both projected vs realized side-by-side. Use existing `KPICard`, color-code with the same thresholds (≥15 emerald, ≥5 amber, else red). FC view: skip (no cost data on their side) or show simple "Collected vs Outstanding" only.
+
+**Project Overview (`ProjectFinancialCommand.tsx`)**: add a 6th KPI card in the GC and TC grids: **"Margin to Date"** with value = `marginToDateAmount` and suffix = `${pct}%`. Subtitle: "Realized · live". Keep the existing "Projected Gross Margin" so users can compare plan vs actual at a glance.
+
+### 4. Edge cases
+- Revenue = 0 → show "—" instead of `0%` / `NaN`.
+- T&M mode: use `approvedWOTotal` as earned revenue, sum of WO costs as incurred.
+- Supplier role: not applicable, hide.
+- FC role: cost data is mostly off-platform, so show "Collected / Contract" instead of a true margin (already the case).
+
+## Files to change
+
+- `src/hooks/useProjectFinancials.ts` — add 4 computed fields
+- `src/pages/Dashboard.tsx` — aggregate the new fields across projects
+- `src/components/dashboard/DashboardKPIs.tsx` — add "Margin to Date" tile for GC + TC
+- `src/components/project/ProjectFinancialCommand.tsx` — add 6th KPI card for GC + TC, plus T&M variant
 
 ## Out of scope
-- No editing of scheduled_value / current_billed / retainage.
-- No edit history UI beyond the activity row.
-- No changes to CO-generation paths (`CreateInvoiceFromSOV`, `CreateInvoiceFromCOs`); those already populate `line_notes` correctly from the previous fix.
+- New DB columns or migrations (all data already in the hook)
+- Historical trend chart of margin over time (could be a follow-up)
+- Per-CO margin breakdown (already on CO detail page)
 
-## Files touched
-- `src/components/invoices/InvoiceDetail.tsx` — add edit state, inline editor, save handler.
-
-That's the entire change.
+## Open question
+Do you want to **replace** the existing "Projected Margin" tile with "Margin to Date", or **show both** so users can compare plan vs actual? Default in this plan: show both.
