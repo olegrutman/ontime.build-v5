@@ -719,6 +719,15 @@ export function useDashboardData(): DashboardData {
         : 0;
       const outstandingBilling = totalRevenue - totalBilled;
 
+      // Realized margin to date (cash-basis rollup across all projects)
+      // TC: earned = collected from GCs (paidToYou), incurred = paid to FCs/suppliers (paidByYou)
+      // FC: earned = collected (paidToYou), incurred ~ 0 (off-platform labor costs)
+      // GC: earned = approximated via totalBilled (own billings), incurred = paidByYou to TCs
+      const earnedToDate = orgType === 'GC' ? totalBilled : paidToYou;
+      const incurredToDate = paidByYou;
+      const marginToDate = earnedToDate - incurredToDate;
+      const marginToDatePct = earnedToDate > 0 ? (marginToDate / earnedToDate) * 100 : 0;
+
       setFinancials({
         totalContracts: totalContractValue,
         totalRevenue,
@@ -729,6 +738,10 @@ export function useDashboardData(): DashboardData {
         paidToYou,
         outstandingBilling,
         potentialProfit,
+        earnedToDate,
+        incurredToDate,
+        marginToDate,
+        marginToDatePct,
       });
 
       // Build per-project financial details
