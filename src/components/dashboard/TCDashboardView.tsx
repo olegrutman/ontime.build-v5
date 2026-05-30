@@ -193,6 +193,31 @@ export function TCDashboardView({
             </table>
           </KpiCard>
 
+          {/* Card 3b: Margin to Date (realized) */}
+          {(() => {
+            const earned = financials.earnedToDate ?? 0;
+            const incurred = financials.incurredToDate ?? 0;
+            const m2d = financials.marginToDate ?? 0;
+            const m2dPct = financials.marginToDatePct ?? 0;
+            const pctRounded = Math.round(m2dPct);
+            const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
+            return (
+              <KpiCard idx={2} accent={C.green} icon={<TrendingUp size={18} color={C.green} />} iconBg={C.greenBg}
+                label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'}
+                sub={earned > 0 ? `${pctRounded}% realized · billed vs incurred` : 'No revenue earned yet'}
+                pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <THead cols={['Metric', 'Value']} />
+                  <tbody>
+                    <TRow cells={[<TdN>Earned Revenue (invoiced)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                    <TRow cells={[<TdN>Incurred Cost (paid + labor + CO)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                    <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
+                  </tbody>
+                </table>
+              </KpiCard>
+            );
+          })()}
+
           {/* Card 4: Change Orders */}
           <KpiCard idx={3} accent={C.blue} icon={<FileText size={18} color={C.blue} />} iconBg={C.blueBg}
             label="CHANGE ORDERS" value={coCount > 0 ? `${coCount} COs` : '—'}
