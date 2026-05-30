@@ -48,6 +48,12 @@ export interface ProjectFinancials {
   pendingCOExposure: number;
   approvedWOTotal: number;
 
+  // Running / realized margin to date (role-aware)
+  earnedRevenueToDate: number;
+  incurredCostToDate: number;
+  marginToDateAmount: number;
+  marginToDatePct: number;
+
   // NEW: Financial command center fields
   totalPaid: number;
   materialDelivered: number;
