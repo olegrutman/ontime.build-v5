@@ -20,6 +20,7 @@ interface ProjectWithDetails {
 interface FinancialSummary {
   totalContracts: number; totalRevenue: number; totalCosts: number; profitMargin: number;
   totalBilled: number; paidByYou: number; paidToYou: number; outstandingBilling: number; potentialProfit: number;
+  earnedToDate?: number; incurredToDate?: number; marginToDate?: number; marginToDatePct?: number;
 }
 interface AttentionItem { id: string; type: 'invoice' | 'invite' | 'sent_invite'; title: string; projectName: string; projectId: string; }
 interface PendingInvite { id: string; projectId: string; projectName: string; invitedByOrgName: string; role: string; }
