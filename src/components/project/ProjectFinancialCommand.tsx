@@ -8,7 +8,8 @@ interface ProjectFinancialCommandProps {
 }
 
 export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFinancialCommandProps) {
-  const { viewerRole, contracts, upstreamContract, downstreamContract, approvedCORevenue, approvedWOTotal } = financials;
+  const { viewerRole, contracts, upstreamContract, downstreamContract, approvedCORevenue, approvedWOTotal, marginToDateAmount, marginToDatePct, earnedRevenueToDate } = financials;
+  const marginToDateSuffix = earnedRevenueToDate > 0 ? `${Math.round(marginToDatePct)}%` : '—';
 
   // T&M mode: contract value = sum of approved COs (approvedEstimateSum)
   if (isTM) {
