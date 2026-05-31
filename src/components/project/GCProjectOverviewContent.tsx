@@ -13,6 +13,7 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
+import { OwnerBillingsPanel } from '@/components/project/gc/OwnerBillingsPanel';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -529,13 +530,22 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               const pctRounded = Math.round(m2dPct);
               const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
               return (
-                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · billed vs costs incurred` : 'No revenue earned yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
+                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? (financials.ownerBillingsTotal > 0 ? `${pctRounded}% realized · owner billings basis` : `${pctRounded}% realized · upstream proxy (add owner billings below)`) : 'Add owner billings below to start tracking'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
                   <div style={{ padding: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <THead cols={['Metric', 'Value']} />
+                      <THead cols={['Component', 'Amount']} />
                       <tbody>
-                        <TRow cells={[<TdN>Earned Revenue (billed to Owner)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                        <TRow cells={[<TdN>Incurred Cost (paid + materials + CO)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                        {financials.ownerBillingsTotal > 0 ? (
+                          <TRow cells={[<TdN>Earned: Billed to Owner</TdN>, <TdM>{fmt(financials.ownerBillingsTotal)}</TdM>]} />
+                        ) : (
+                          <TRow cells={[<TdN>Earned: Upstream invoices (proxy)</TdN>, <TdM>{fmt(financials.gcPayablesInvoiced)}</TdM>]} />
+                        )}
+                        <TRow cells={[<TdN>Earned: Approved CO revenue</TdN>, <TdM>{fmt(financials.approvedCORevenue)}</TdM>]} />
+                        <TRow isTotal cells={[<TdN>Earned Revenue</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                        <TRow cells={[<TdN>Cost: TC & supplier invoices</TdN>, <TdM>{fmt(financials.gcPayablesInvoiced)}</TdM>]} />
+                        <TRow cells={[<TdN>Cost: Open PO commitment (not yet invoiced)</TdN>, <TdM>{fmt(financials.openMaterialCommitment)}</TdM>]} />
+                        <TRow cells={[<TdN>Cost: Approved CO cost</TdN>, <TdM>{fmt(financials.approvedCOCost)}</TdM>]} />
+                        <TRow isTotal cells={[<TdN>Incurred Cost</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
                         <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
                       </tbody>
                     </table>
@@ -723,6 +733,15 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           </div>
         </KpiCard>
       </KpiGrid>
+
+      {/* Owner Billings ledger — GC only, drives Margin to Date */}
+      {financials.userOrgIds.length > 0 && (
+        <OwnerBillingsPanel
+          projectId={projectId}
+          gcOrgId={financials.userOrgIds[0]}
+          onChanged={financials.refetch}
+        />
+      )}
 
       {/* Buyer Materials Analytics — only when GC handles materials */}
       {financials.isGCMaterialResponsible && (

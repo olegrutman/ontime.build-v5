@@ -53,6 +53,13 @@ export interface ProjectFinancials {
   incurredCostToDate: number;
   marginToDateAmount: number;
   marginToDatePct: number;
+  // Components used in the realized-margin drilldown
+  materialInvoiced: number;
+  openMaterialCommitment: number;
+  gcPayablesInvoiced: number;
+  // GC owner billings ledger (Phase 2)
+  ownerBillingsTotal: number;
+  ownerBillingsCollected: number;
 
   // NEW: Financial command center fields
   totalPaid: number;
@@ -145,6 +152,17 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [payablesInvoiced, setPayablesInvoiced] = useState(0);
   const [payablesPaid, setPayablesPaid] = useState(0);
   const [payablesRetainage, setPayablesRetainage] = useState(0);
+  // Subtotal of submitted/paid invoices linked to POs the viewer owns.
+  // Used to avoid double-counting materials (PO commitment + supplier invoice).
+  const [materialInvoiced, setMaterialInvoiced] = useState(0);
+  // GC view: subtotal of submitted/paid contract invoices where GC org is to_org
+  // (TC → GC billings = GC's accrued cost). Used for GC realized margin.
+  const [gcPayablesInvoiced, setGcPayablesInvoiced] = useState(0);
+  // GC view: amounts the GC has invoiced / collected from the project owner.
+  // Sourced from the new gc_owner_billings ledger (Phase 2). When > 0 these
+  // replace the legacy upstream-invoice proxy in the realized margin formula.
+  const [ownerBillingsTotal, setOwnerBillingsTotal] = useState(0);
+  const [ownerBillingsCollected, setOwnerBillingsCollected] = useState(0);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -366,6 +384,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           (inv.contract_id && downstreamContractIds.has(inv.contract_id)) ||
           (inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!))
         );
+        // Materials portion of payables (PO-linked supplier invoices owned by TC).
+        const materialPayableInvs = payableInvs.filter((inv: any) => inv.po_id);
 
         setReceivablesInvoiced(receivableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setReceivablesCollected(receivableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
@@ -373,7 +393,50 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setPayablesInvoiced(payableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setPayablesPaid(payableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        setMaterialInvoiced(materialPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
       }
+
+      // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
+      // Used by the realized margin block below to avoid double-counting materials.
+      if (detectedRole === 'General Contractor' && orgIds.length > 0) {
+        const gcContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id))
+            .map(c => c.id)
+        );
+        const gcContractInvs = submitted.filter((inv: any) => inv.contract_id && gcContractIds.has(inv.contract_id));
+
+        const poLinkedInvs = submitted.filter((inv: any) => inv.po_id);
+        const poIds = [...new Set(poLinkedInvs.map((inv: any) => inv.po_id as string))];
+        let poOwnerMap = new Map<string, string>();
+        if (poIds.length > 0) {
+          const { data: poOwners } = await supabase
+            .from('purchase_orders')
+            .select('id, pricing_owner_org_id')
+            .in('id', poIds);
+          poOwnerMap = new Map((poOwners || []).map(po => [po.id, po.pricing_owner_org_id || '']));
+        }
+        const gcPoInvs = poLinkedInvs.filter((inv: any) =>
+          inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!)
+        );
+
+        const gcPayables = gcContractInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0)
+          + gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
+        setGcPayablesInvoiced(gcPayables);
+        setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+
+        // Owner billings (Phase 2) — only the GC org can read these via RLS.
+        const { data: ownerBillings } = await supabase
+          .from('gc_owner_billings')
+          .select('billed_amount, collected_amount')
+          .eq('project_id', projectId)
+          .in('gc_org_id', orgIds);
+        const billed = (ownerBillings || []).reduce((s: number, b: any) => s + Number(b.billed_amount || 0), 0);
+        const collected = (ownerBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
+        setOwnerBillingsTotal(billed);
+        setOwnerBillingsCollected(collected);
+      }
+
 
       // Use material_estimate_total from the material-responsible contract (GC or TC) if set
       const materialContract = (contractsRes.data || []).find((c: any) =>
@@ -486,18 +549,33 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const retainageAmount = billedToDate * (retainagePercent / 100);
   const outstanding = contractValue - billedToDate;
 
-  // Realized / running margin to date — role-aware, uses already-fetched state
-  // Earned revenue = money actually invoiced to upstream (recognized)
-  // Incurred cost  = money actually invoiced by downstream + materials ordered + actual labor + approved CO costs
+  // Realized / running margin to date — role-aware, non-overlapping cost components.
+  //
+  // Earned revenue = revenue recognized (accrual) from upstream billings
+  // Incurred cost  = payables already invoiced by downstream + remaining open
+  //                  PO commitment not yet invoiced + approved CO cost
+  //
+  // We DO NOT add `actualLaborCost` on top of payables (FC labor flows through
+  // payables via FC invoices) and we DO NOT add full `materialOrdered` on top
+  // of payables (supplier PO invoices are already inside payables). The open-PO
+  // add-on is `max(0, materialOrdered - materialInvoiced)` so each PO dollar is
+  // counted exactly once.
+  const openMaterialCommitment = Math.max(0, materialOrdered - materialInvoiced);
+
   let earnedRevenueToDate = 0;
   let incurredCostToDate = 0;
   if (viewerRole === 'Trade Contractor') {
     earnedRevenueToDate = receivablesInvoiced + approvedCORevenue;
-    incurredCostToDate = payablesInvoiced + materialOrdered + actualLaborCost + approvedCOCost;
+    incurredCostToDate = payablesInvoiced + openMaterialCommitment + approvedCOCost;
   } else if (viewerRole === 'General Contractor') {
-    // GC: billed to owner approximated by billedToDate (incoming SOV billings); costs = invoices paid out + materials + COs
-    earnedRevenueToDate = billedToDate + approvedCORevenue;
-    incurredCostToDate = totalPaid + materialOrdered + approvedCOCost;
+    // Pure accrual (variant A): incurred = TC → GC invoices + supplier PO invoices
+    // owned by GC (both rolled into gcPayablesInvoiced) + remaining open PO
+    // commitment + approved CO cost.
+    // Earned revenue prefers actual owner billings (Phase 2). When no owner
+    // billings are recorded yet, fall back to the upstream-invoice proxy so the
+    // tile still renders something meaningful.
+    earnedRevenueToDate = (ownerBillingsTotal > 0 ? ownerBillingsTotal : gcPayablesInvoiced) + approvedCORevenue;
+    incurredCostToDate = gcPayablesInvoiced + openMaterialCommitment + approvedCOCost;
   } else if (viewerRole === 'Field Crew') {
     earnedRevenueToDate = billedToDate;
     incurredCostToDate = actualLaborCost;
@@ -571,6 +649,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     approvedCORevenue, approvedCOCost, approvedCOMargin: approvedCORevenue - approvedCOCost,
     pendingCOExposure, approvedWOTotal,
     earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
+    materialInvoiced, openMaterialCommitment, gcPayablesInvoiced,
+    ownerBillingsTotal, ownerBillingsCollected,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     ownerContractValue, materialMarkupType, materialMarkupValue,

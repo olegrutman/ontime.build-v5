@@ -722,9 +722,17 @@ export function useDashboardData(): DashboardData {
       // Realized margin to date (cash-basis rollup across all projects)
       // TC: earned = collected from GCs (paidToYou), incurred = paid to FCs/suppliers (paidByYou)
       // FC: earned = collected (paidToYou), incurred ~ 0 (off-platform labor costs)
-      // GC: earned = approximated via totalBilled (own billings), incurred = paidByYou to TCs
-      // GC owner billings aren't tracked in-platform → leave 0 (KPI tile will degrade gracefully)
-      const earnedToDate = orgType === 'GC' ? 0 : paidToYou;
+      // GC: earned = collected from owners via gc_owner_billings ledger (Phase 2).
+      //     When no owner billings exist yet the tile stays at 0 / "No data".
+      let earnedToDate = orgType === 'GC' ? 0 : paidToYou;
+      if (orgType === 'GC' && projectIds.length > 0) {
+        const { data: gcBillings } = await supabase
+          .from('gc_owner_billings')
+          .select('collected_amount')
+          .eq('gc_org_id', currentOrg.id)
+          .in('project_id', projectIds);
+        earnedToDate = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
+      }
       const incurredToDate = paidByYou;
       const marginToDate = earnedToDate - incurredToDate;
       const marginToDatePct = earnedToDate > 0 ? (marginToDate / earnedToDate) * 100 : 0;

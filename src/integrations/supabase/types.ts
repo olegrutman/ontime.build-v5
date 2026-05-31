@@ -2174,6 +2174,66 @@ export type Database = {
           },
         ]
       }
+      gc_owner_billings: {
+        Row: {
+          billed_amount: number
+          billed_at: string
+          billing_number: string | null
+          collected_amount: number
+          collected_at: string | null
+          created_at: string
+          created_by_user_id: string | null
+          gc_org_id: string
+          id: string
+          notes: string | null
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          billed_amount?: number
+          billed_at?: string
+          billing_number?: string | null
+          collected_amount?: number
+          collected_at?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          gc_org_id: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          billed_amount?: number
+          billed_at?: string
+          billing_number?: string | null
+          collected_amount?: number
+          collected_at?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          gc_org_id?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gc_owner_billings_gc_org_id_fkey"
+            columns: ["gc_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gc_owner_billings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_line_items: {
         Row: {
           billed_percent: number | null
@@ -6983,6 +7043,10 @@ export type Database = {
         Returns: boolean
       }
       user_in_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_is_gc_in_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
