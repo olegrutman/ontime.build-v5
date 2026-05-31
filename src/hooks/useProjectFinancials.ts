@@ -145,6 +145,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [payablesInvoiced, setPayablesInvoiced] = useState(0);
   const [payablesPaid, setPayablesPaid] = useState(0);
   const [payablesRetainage, setPayablesRetainage] = useState(0);
+  // Subtotal of submitted/paid invoices linked to POs the viewer owns.
+  // Used to avoid double-counting materials (PO commitment + supplier invoice).
+  const [materialInvoiced, setMaterialInvoiced] = useState(0);
+  // GC view: subtotal of submitted/paid contract invoices where GC org is to_org
+  // (TC → GC billings = GC's accrued cost). Used for GC realized margin.
+  const [gcPayablesInvoiced, setGcPayablesInvoiced] = useState(0);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
