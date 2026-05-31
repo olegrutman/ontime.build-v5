@@ -567,9 +567,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   } else if (viewerRole === 'General Contractor') {
     // Pure accrual (variant A): incurred = TC → GC invoices + supplier PO invoices
     // owned by GC (both rolled into gcPayablesInvoiced) + remaining open PO
-    // commitment + approved CO cost. Owner-side revenue is captured in Phase 2;
-    // until then GC earned revenue uses upstream billings as a temporary proxy.
-    earnedRevenueToDate = gcPayablesInvoiced + approvedCORevenue;
+    // commitment + approved CO cost.
+    // Earned revenue prefers actual owner billings (Phase 2). When no owner
+    // billings are recorded yet, fall back to the upstream-invoice proxy so the
+    // tile still renders something meaningful.
+    earnedRevenueToDate = (ownerBillingsTotal > 0 ? ownerBillingsTotal : gcPayablesInvoiced) + approvedCORevenue;
     incurredCostToDate = gcPayablesInvoiced + openMaterialCommitment + approvedCOCost;
   } else if (viewerRole === 'Field Crew') {
     earnedRevenueToDate = billedToDate;
