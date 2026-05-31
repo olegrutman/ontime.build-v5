@@ -421,6 +421,17 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           + gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
         setGcPayablesInvoiced(gcPayables);
         setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+
+        // Owner billings (Phase 2) — only the GC org can read these via RLS.
+        const { data: ownerBillings } = await supabase
+          .from('gc_owner_billings')
+          .select('billed_amount, collected_amount')
+          .eq('project_id', projectId)
+          .in('gc_org_id', orgIds);
+        const billed = (ownerBillings || []).reduce((s: number, b: any) => s + Number(b.billed_amount || 0), 0);
+        const collected = (ownerBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
+        setOwnerBillingsTotal(billed);
+        setOwnerBillingsCollected(collected);
       }
 
 
