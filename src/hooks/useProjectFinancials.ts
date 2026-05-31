@@ -372,6 +372,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           (inv.contract_id && downstreamContractIds.has(inv.contract_id)) ||
           (inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!))
         );
+        // Materials portion of payables (PO-linked supplier invoices owned by TC).
+        const materialPayableInvs = payableInvs.filter((inv: any) => inv.po_id);
 
         setReceivablesInvoiced(receivableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setReceivablesCollected(receivableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
@@ -379,7 +381,39 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setPayablesInvoiced(payableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setPayablesPaid(payableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        setMaterialInvoiced(materialPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
       }
+
+      // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
+      // Used by the realized margin block below to avoid double-counting materials.
+      if (detectedRole === 'General Contractor' && orgIds.length > 0) {
+        const gcContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id))
+            .map(c => c.id)
+        );
+        const gcContractInvs = submitted.filter((inv: any) => inv.contract_id && gcContractIds.has(inv.contract_id));
+
+        const poLinkedInvs = submitted.filter((inv: any) => inv.po_id);
+        const poIds = [...new Set(poLinkedInvs.map((inv: any) => inv.po_id as string))];
+        let poOwnerMap = new Map<string, string>();
+        if (poIds.length > 0) {
+          const { data: poOwners } = await supabase
+            .from('purchase_orders')
+            .select('id, pricing_owner_org_id')
+            .in('id', poIds);
+          poOwnerMap = new Map((poOwners || []).map(po => [po.id, po.pricing_owner_org_id || '']));
+        }
+        const gcPoInvs = poLinkedInvs.filter((inv: any) =>
+          inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!)
+        );
+
+        const gcPayables = gcContractInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0)
+          + gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
+        setGcPayablesInvoiced(gcPayables);
+        setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+      }
+
 
       // Use material_estimate_total from the material-responsible contract (GC or TC) if set
       const materialContract = (contractsRes.data || []).find((c: any) =>
