@@ -53,6 +53,10 @@ export interface ProjectFinancials {
   incurredCostToDate: number;
   marginToDateAmount: number;
   marginToDatePct: number;
+  // Components used in the realized-margin drilldown
+  materialInvoiced: number;
+  openMaterialCommitment: number;
+  gcPayablesInvoiced: number;
 
   // NEW: Financial command center fields
   totalPaid: number;
