@@ -155,6 +155,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // GC view: subtotal of submitted/paid contract invoices where GC org is to_org
   // (TC → GC billings = GC's accrued cost). Used for GC realized margin.
   const [gcPayablesInvoiced, setGcPayablesInvoiced] = useState(0);
+  // GC view: amounts the GC has invoiced / collected from the project owner.
+  // Sourced from the new gc_owner_billings ledger (Phase 2). When > 0 these
+  // replace the legacy upstream-invoice proxy in the realized margin formula.
+  const [ownerBillingsTotal, setOwnerBillingsTotal] = useState(0);
+  const [ownerBillingsCollected, setOwnerBillingsCollected] = useState(0);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
