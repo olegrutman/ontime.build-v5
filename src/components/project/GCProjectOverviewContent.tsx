@@ -530,12 +530,16 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               const pctRounded = Math.round(m2dPct);
               const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
               return (
-                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · accrual basis (owner billings pending)` : 'Owner billings not yet tracked'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
+                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? (financials.ownerBillingsTotal > 0 ? `${pctRounded}% realized · owner billings basis` : `${pctRounded}% realized · upstream proxy (add owner billings below)`) : 'Add owner billings below to start tracking'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
                   <div style={{ padding: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <THead cols={['Component', 'Amount']} />
                       <tbody>
-                        <TRow cells={[<TdN>Earned: Upstream invoices (proxy)</TdN>, <TdM>{fmt(financials.gcPayablesInvoiced)}</TdM>]} />
+                        {financials.ownerBillingsTotal > 0 ? (
+                          <TRow cells={[<TdN>Earned: Billed to Owner</TdN>, <TdM>{fmt(financials.ownerBillingsTotal)}</TdM>]} />
+                        ) : (
+                          <TRow cells={[<TdN>Earned: Upstream invoices (proxy)</TdN>, <TdM>{fmt(financials.gcPayablesInvoiced)}</TdM>]} />
+                        )}
                         <TRow cells={[<TdN>Earned: Approved CO revenue</TdN>, <TdM>{fmt(financials.approvedCORevenue)}</TdM>]} />
                         <TRow isTotal cells={[<TdN>Earned Revenue</TdN>, <TdM>{fmt(earned)}</TdM>]} />
                         <TRow cells={[<TdN>Cost: TC & supplier invoices</TdN>, <TdM>{fmt(financials.gcPayablesInvoiced)}</TdM>]} />
