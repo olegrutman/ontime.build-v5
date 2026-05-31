@@ -526,18 +526,31 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const retainageAmount = billedToDate * (retainagePercent / 100);
   const outstanding = contractValue - billedToDate;
 
-  // Realized / running margin to date — role-aware, uses already-fetched state
-  // Earned revenue = money actually invoiced to upstream (recognized)
-  // Incurred cost  = money actually invoiced by downstream + materials ordered + actual labor + approved CO costs
+  // Realized / running margin to date — role-aware, non-overlapping cost components.
+  //
+  // Earned revenue = revenue recognized (accrual) from upstream billings
+  // Incurred cost  = payables already invoiced by downstream + remaining open
+  //                  PO commitment not yet invoiced + approved CO cost
+  //
+  // We DO NOT add `actualLaborCost` on top of payables (FC labor flows through
+  // payables via FC invoices) and we DO NOT add full `materialOrdered` on top
+  // of payables (supplier PO invoices are already inside payables). The open-PO
+  // add-on is `max(0, materialOrdered - materialInvoiced)` so each PO dollar is
+  // counted exactly once.
+  const openMaterialCommitment = Math.max(0, materialOrdered - materialInvoiced);
+
   let earnedRevenueToDate = 0;
   let incurredCostToDate = 0;
   if (viewerRole === 'Trade Contractor') {
     earnedRevenueToDate = receivablesInvoiced + approvedCORevenue;
-    incurredCostToDate = payablesInvoiced + materialOrdered + actualLaborCost + approvedCOCost;
+    incurredCostToDate = payablesInvoiced + openMaterialCommitment + approvedCOCost;
   } else if (viewerRole === 'General Contractor') {
-    // GC: billed to owner approximated by billedToDate (incoming SOV billings); costs = invoices paid out + materials + COs
-    earnedRevenueToDate = billedToDate + approvedCORevenue;
-    incurredCostToDate = totalPaid + materialOrdered + approvedCOCost;
+    // Pure accrual (variant A): incurred = TC → GC invoices + supplier PO invoices
+    // owned by GC (both rolled into gcPayablesInvoiced) + remaining open PO
+    // commitment + approved CO cost. Owner-side revenue is captured in Phase 2;
+    // until then GC earned revenue uses upstream billings as a temporary proxy.
+    earnedRevenueToDate = gcPayablesInvoiced + approvedCORevenue;
+    incurredCostToDate = gcPayablesInvoiced + openMaterialCommitment + approvedCOCost;
   } else if (viewerRole === 'Field Crew') {
     earnedRevenueToDate = billedToDate;
     incurredCostToDate = actualLaborCost;
