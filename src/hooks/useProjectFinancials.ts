@@ -57,6 +57,9 @@ export interface ProjectFinancials {
   materialInvoiced: number;
   openMaterialCommitment: number;
   gcPayablesInvoiced: number;
+  // GC owner billings ledger (Phase 2)
+  ownerBillingsTotal: number;
+  ownerBillingsCollected: number;
 
   // NEW: Financial command center fields
   totalPaid: number;
