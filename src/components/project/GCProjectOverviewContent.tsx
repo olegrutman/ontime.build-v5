@@ -730,6 +730,15 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         </KpiCard>
       </KpiGrid>
 
+      {/* Owner Billings ledger — GC only, drives Margin to Date */}
+      {financials.userOrgIds.length > 0 && (
+        <OwnerBillingsPanel
+          projectId={projectId}
+          gcOrgId={financials.userOrgIds[0]}
+          onChanged={financials.refetch}
+        />
+      )}
+
       {/* Buyer Materials Analytics — only when GC handles materials */}
       {financials.isGCMaterialResponsible && (
         <BuyerMaterialsAnalyticsSection
