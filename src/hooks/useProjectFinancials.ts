@@ -628,6 +628,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     approvedCORevenue, approvedCOCost, approvedCOMargin: approvedCORevenue - approvedCOCost,
     pendingCOExposure, approvedWOTotal,
     earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
+    materialInvoiced, openMaterialCommitment, gcPayablesInvoiced,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     ownerContractValue, materialMarkupType, materialMarkupValue,
