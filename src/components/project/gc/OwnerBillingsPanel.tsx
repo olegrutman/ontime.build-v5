@@ -143,7 +143,7 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
   };
 
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16 }}>
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
           <div style={{ ...fontLabel, fontSize: '0.72rem', letterSpacing: '0.06em', color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>
