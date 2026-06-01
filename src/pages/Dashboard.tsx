@@ -26,6 +26,7 @@ import { ProjectSnapshotList } from '@/components/dashboard/ProjectSnapshotList'
 import { DashboardActionQueue } from '@/components/dashboard/DashboardActionQueue';
 import { RemindersTile } from '@/components/dashboard/RemindersTile';
 import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
+import { TodayBar } from '@/components/dashboard/TodayBar';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
 import { GCDashboardView } from '@/components/dashboard/GCDashboardView';
 import { TCDashboardView } from '@/components/dashboard/TCDashboardView';
