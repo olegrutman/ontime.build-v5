@@ -14,6 +14,7 @@ import { BoltGuide } from "@/components/bolt";
 import { RequirePlatformRole } from "@/components/platform/RequirePlatformRole";
 import { ImpersonationBanner } from "@/components/platform/ImpersonationBanner";
 import { Button } from "@/components/ui/button";
+import { RoleThemeBridge } from "@/contexts/RoleThemeContext";
 
 // 1. QueryClient with sensible defaults
 const queryClient = new QueryClient({
@@ -264,6 +265,7 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <RoleThemeBridge />
       <DemoProvider>
         <TooltipProvider>
           <Toaster />

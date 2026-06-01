@@ -58,6 +58,10 @@
 
     /* Ink */
     --ink: 210 33% 10%;
+
+    /* Role-accent tokens (set per role via [data-role] on <html>) */
+    --role-accent: 216 56% 14%;            /* default: navy (GC) */
+    --role-accent-foreground: 0 0% 100%;
     --ink2: 212 33% 18%;
 
     /* Work Item State Colors */
@@ -631,3 +635,9 @@
   animation: fadeUp 400ms ease-out forwards;
   opacity: 0;
 }
+
+/* Role accent — applied via [data-role] on <html> */
+:root[data-role="gc"]       { --role-accent: 216 56% 14%; --role-accent-foreground: 0 0% 100%; }
+:root[data-role="tc"]       { --role-accent: 38 91% 45%;  --role-accent-foreground: 216 56% 14%; }
+:root[data-role="fc"]       { --role-accent: 152 60% 32%; --role-accent-foreground: 0 0% 100%; }
+:root[data-role="supplier"] { --role-accent: 263 60% 52%; --role-accent-foreground: 0 0% 100%; }

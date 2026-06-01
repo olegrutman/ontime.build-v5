@@ -51,6 +51,10 @@ export default {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))'
   			},
+  			'role-accent': {
+  				DEFAULT: 'hsl(var(--role-accent))',
+  				foreground: 'hsl(var(--role-accent-foreground))'
+  			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
   				foreground: 'hsl(var(--secondary-foreground))'
