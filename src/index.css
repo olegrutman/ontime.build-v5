@@ -58,6 +58,10 @@
 
     /* Ink */
     --ink: 210 33% 10%;
+
+    /* Role-accent tokens (set per role via [data-role] on <html>) */
+    --role-accent: 216 56% 14%;            /* default: navy (GC) */
+    --role-accent-foreground: 0 0% 100%;
     --ink2: 212 33% 18%;
 
     /* Work Item State Colors */
