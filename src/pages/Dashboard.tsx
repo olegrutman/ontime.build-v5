@@ -334,6 +334,17 @@ export default function Dashboard() {
       <div className="flex gap-0">
         <div className="flex-1 min-w-0 space-y-4 px-0 sm:px-1 lg:px-5">
 
+        {/* Today bar — role-aware one-sentence summary */}
+        <TodayBar
+          orgType={orgType}
+          attentionCount={attentionItems.length}
+          pendingInviteCount={pendingInvites.length}
+          activeProjects={statusCounts.active}
+          outstandingToPay={billing?.outstandingToPay}
+          outstandingToCollect={billing?.outstandingToCollect}
+          firstName={profile?.first_name || null}
+        />
+
         {/* Greeting */}
         <DashboardWelcome
           firstName={profile?.first_name || null}
