@@ -264,6 +264,7 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <RoleThemeBridge />
       <DemoProvider>
         <TooltipProvider>
           <Toaster />
