@@ -552,8 +552,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                       ]} />
                     );
                   })}
-                  {approvedCOs.length > 0 && (
-                    <TRow cells={[<TdN>{approvedCOs.length} {isTM ? 'WOs' : 'COs'}</TdN>, '—', <TdM>+{fmt(coRevenue)}</TdM>, <TdM>{fmt(coCost)}</TdM>, <TdM>+{fmt(coNetMargin)}</TdM>, '—']} isTotal />
+                  {countedCOs.length > 0 && (
+                    <TRow cells={[<TdN>{countedCOs.length} {isTM ? 'WOs' : 'COs'} (incl. pending)</TdN>, '—', <TdM>{fmt(coRevenue)}</TdM>, <TdM>{fmt(coCost)}</TdM>, <TdM>{coNetMargin >= 0 ? '+' : ''}{fmt(coNetMargin)}</TdM>, '—']} isTotal />
                   )}
                 </tbody>
               </table>
