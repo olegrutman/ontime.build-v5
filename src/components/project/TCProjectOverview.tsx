@@ -514,18 +514,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           const pctRounded = Math.round(m2dPct);
           const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
           return (
-            <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · accrual basis` : 'No revenue earned yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
+            <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · cash basis` : 'No revenue collected yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
               <div style={{ padding: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Component', 'Amount']} />
                   <tbody>
-                    <TRow cells={[<TdN>Earned: Invoiced to {gcName}</TdN>, <TdM>{fmt(financials.receivablesInvoiced)}</TdM>]} />
-                    <TRow cells={[<TdN>Earned: Approved CO revenue</TdN>, <TdM>{fmt(financials.approvedCORevenue)}</TdM>]} />
-                    <TRow isTotal cells={[<TdN>Earned Revenue</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                    <TRow cells={[<TdN>Cost: Payables invoiced (FC + supplier)</TdN>, <TdM>{fmt(financials.payablesInvoiced)}</TdM>]} />
-                    <TRow cells={[<TdN>Cost: Open PO commitment (not yet invoiced)</TdN>, <TdM>{fmt(financials.openMaterialCommitment)}</TdM>]} />
-                    <TRow cells={[<TdN>Cost: Approved CO cost</TdN>, <TdM>{fmt(financials.approvedCOCost)}</TdM>]} />
-                    <TRow isTotal cells={[<TdN>Incurred Cost</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                    <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(financials.receivablesCollected)}</TdM>]} />
+                    <TRow isTotal cells={[<TdN>Earned (cash)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                    <TRow cells={[<TdN>Paid to {fcName || 'Field Crew'} / suppliers</TdN>, <TdM>{fmt(financials.payablesPaid)}</TdM>]} />
+                    <TRow isTotal cells={[<TdN>Incurred (cash)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
                     <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
                   </tbody>
                 </table>
