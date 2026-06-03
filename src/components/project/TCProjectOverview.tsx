@@ -263,9 +263,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
   const approvedCOs = changeOrders.filter(co => ['approved', 'completed', 'contracted'].includes(co.status));
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'contracted', 'rejected'].includes(co.status));
-  const coRevenue = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  const coCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
+  // Net CO margin counts all non-rejected COs (approved + pending)
+  const countedCOs = changeOrders.filter(co => co.status !== 'rejected');
+  const coRevenue = countedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
+  const coCost = countedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
   const coNetMargin = coRevenue - coCost;
+  // Approved-only rollups (for revised contract totals)
+  const approvedCoRevenue = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
+  const approvedCoCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
 
   // ─── T&M: derive "contract" values from WOs when no project_contracts exist ───
   const effectiveGCVal = isTM && gcContractVal === 0 ? coRevenue : gcContractVal;
