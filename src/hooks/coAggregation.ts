@@ -34,6 +34,9 @@ export interface AggregatedCOTotals {
   approvedCOCost: number;
   approvedCOMargin: number;
   pendingCOExposure: number;
+  pendingCORevenue: number;
+  pendingCOCost: number;
+  pendingCONetAtRisk: number;
   approvedWOTotal: number;
 }
 
