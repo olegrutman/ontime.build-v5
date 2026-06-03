@@ -161,6 +161,13 @@ export function GCDashboardView({
           <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />
         )}
 
+        {/* Portfolio Overview — Hero + 3-zone summary (Command Center) */}
+        <PortfolioOverviewHeader
+          orgType="GC"
+          financials={financials as any}
+          activeProjectCount={activeProjects.length}
+        />
+
         {/* Materials Pulse — at-a-glance portfolio materials health */}
         <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
 
