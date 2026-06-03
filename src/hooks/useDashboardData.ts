@@ -65,6 +65,19 @@ interface FinancialSummary {
   incurredToDate: number;
   marginToDate: number;
   marginToDatePct: number;
+  // New — portfolio-revised / split metrics
+  cashPosition: number;
+  pendingInvoiced: number;
+  pendingToPay: number;
+  pendingUnbilled: number;
+  revisedRevenue: number;
+  revisedCosts: number;
+  projectedMarginRevised: number;
+  projectedMarginRevisedPct: number;
+  coApprovedCount: number;
+  coPendingCount: number;
+  coApprovedNet: number;
+  coPendingNetAtRisk: number;
 }
 
 export interface RecentDoc {
