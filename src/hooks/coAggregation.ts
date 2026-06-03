@@ -107,6 +107,9 @@ export function aggregateCOTotals(
     approvedCOCost: 0,
     approvedCOMargin: 0,
     pendingCOExposure: 0,
+    pendingCORevenue: 0,
+    pendingCOCost: 0,
+    pendingCONetAtRisk: 0,
     approvedWOTotal: 0,
   };
   if (!billingOrgId || cos.length === 0) return empty;
@@ -139,12 +142,17 @@ export function aggregateCOTotals(
 
   const approvedCORevenue = approved.reduce((s, c) => s + c.revenue, 0);
   const approvedCOCost = approved.reduce((s, c) => s + c.cost, 0);
+  const pendingCORevenue = pending.reduce((s, c) => s + c.revenue, 0);
+  const pendingCOCost = pending.reduce((s, c) => s + c.cost, 0);
 
   return {
     approvedCORevenue,
     approvedCOCost,
     approvedCOMargin: approvedCORevenue - approvedCOCost,
-    pendingCOExposure: pending.reduce((s, c) => s + c.revenue, 0),
+    pendingCOExposure: pendingCORevenue,
+    pendingCORevenue,
+    pendingCOCost,
+    pendingCONetAtRisk: pendingCORevenue - pendingCOCost,
     approvedWOTotal: approved
       .filter((c) => c.document_type === 'WO')
       .reduce((s, c) => s + c.revenue, 0),
