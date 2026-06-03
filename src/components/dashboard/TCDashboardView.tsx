@@ -10,6 +10,7 @@ import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData
 import { C, fontVal, fontMono, fontLabel, fmt, fmtSigned, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
+import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
 import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
 
 /* ─── Types ─── */
@@ -124,6 +125,13 @@ export function TCDashboardView({
         <OrgInviteBanner />
 
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
+
+        {/* Portfolio Overview — Hero + 3-zone summary */}
+        <PortfolioOverviewHeader
+          orgType="TC"
+          financials={financials as any}
+          activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+        />
 
         {/* Materials Pulse — at-a-glance portfolio materials health */}
         <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />

@@ -65,6 +65,19 @@ interface FinancialSummary {
   incurredToDate: number;
   marginToDate: number;
   marginToDatePct: number;
+  // New — portfolio-revised / split metrics
+  cashPosition: number;
+  pendingInvoiced: number;
+  pendingToPay: number;
+  pendingUnbilled: number;
+  revisedRevenue: number;
+  revisedCosts: number;
+  projectedMarginRevised: number;
+  projectedMarginRevisedPct: number;
+  coApprovedCount: number;
+  coPendingCount: number;
+  coApprovedNet: number;
+  coPendingNetAtRisk: number;
 }
 
 export interface RecentDoc {
@@ -144,6 +157,18 @@ export function useDashboardData(): DashboardData {
     incurredToDate: 0,
     marginToDate: 0,
     marginToDatePct: 0,
+    cashPosition: 0,
+    pendingInvoiced: 0,
+    pendingToPay: 0,
+    pendingUnbilled: 0,
+    revisedRevenue: 0,
+    revisedCosts: 0,
+    projectedMarginRevised: 0,
+    projectedMarginRevisedPct: 0,
+    coApprovedCount: 0,
+    coPendingCount: 0,
+    coApprovedNet: 0,
+    coPendingNetAtRisk: 0,
   });
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
@@ -737,6 +762,55 @@ export function useDashboardData(): DashboardData {
       const marginToDate = earnedToDate - incurredToDate;
       const marginToDatePct = earnedToDate > 0 ? (marginToDate / earnedToDate) * 100 : 0;
 
+      // Cash position — true working capital, NOT margin.
+      const cashPosition = paidToYou - paidByYou;
+
+      // Pending invoiced (you've billed, not yet paid) vs unbilled remaining.
+      const pendingInvoiced = outstandingToCollect;
+      const pendingToPayAll = outstandingToPay;
+
+      // ---- Portfolio CO rollup (lightweight, contract-impact $) ----
+      let coApprovedCount = 0;
+      let coPendingCount = 0;
+      let coApprovedNet = 0;
+      let coPendingNetAtRisk = 0;
+      if (projectIds.length > 0) {
+        const { data: allCOs } = await supabase
+          .from('change_orders')
+          .select('id, status, document_type, tc_submitted_price, gc_budget, org_id, project_id')
+          .in('project_id', projectIds);
+        const cos = (allCOs || []) as any[];
+        const valueForViewer = (co: any): number => {
+          // GC sees contract impact via tc_submitted_price (locked submitted), else gc_budget
+          if (orgType === 'GC') return Number(co.tc_submitted_price ?? co.gc_budget ?? 0);
+          // TC/FC: their own org's CO line = tc_submitted_price (what they bill upstream)
+          if (co.org_id === currentOrg.id) return Number(co.tc_submitted_price ?? co.gc_budget ?? 0);
+          return 0;
+        };
+        for (const co of cos) {
+          const v = valueForViewer(co);
+          if (co.status === 'approved') {
+            coApprovedCount += 1;
+            coApprovedNet += v;
+          } else if (['submitted', 'closed_for_pricing', 'shared', 'work_in_progress'].includes(co.status)) {
+            coPendingCount += 1;
+            coPendingNetAtRisk += v;
+          }
+        }
+      }
+
+      // Revised totals — original contract value + approved CO impact on revenue side.
+      // For costs, we don't have CO cost without line items, so use the same delta as a
+      // conservative neutral assumption (margin stays flat from approved COs at portfolio level).
+      const revisedRevenue = totalRevenue + coApprovedNet;
+      const revisedCosts = totalCosts + coApprovedNet; // neutral; per-project view shows true margin
+      const projectedMarginRevised = revisedRevenue - revisedCosts + (potentialProfit > 0 ? 0 : 0);
+      // Until line-item CO cost is rolled up at portfolio level, fall back to original margin.
+      const effectiveProjectedMargin = totalRevenue > 0 ? potentialProfit : 0;
+      const effectiveMarginPct = totalRevenue > 0 ? (effectiveProjectedMargin / totalRevenue) * 100 : 0;
+
+      const pendingUnbilled = Math.max(0, revisedRevenue - paidToYou - pendingInvoiced);
+
       setFinancials({
         totalContracts: totalContractValue,
         totalRevenue,
@@ -751,6 +825,18 @@ export function useDashboardData(): DashboardData {
         incurredToDate,
         marginToDate,
         marginToDatePct,
+        cashPosition,
+        pendingInvoiced,
+        pendingToPay: pendingToPayAll,
+        pendingUnbilled,
+        revisedRevenue,
+        revisedCosts,
+        projectedMarginRevised: effectiveProjectedMargin,
+        projectedMarginRevisedPct: effectiveMarginPct,
+        coApprovedCount,
+        coPendingCount,
+        coApprovedNet,
+        coPendingNetAtRisk,
       });
 
       // Build per-project financial details

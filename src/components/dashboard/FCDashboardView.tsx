@@ -8,6 +8,7 @@ import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -154,8 +155,16 @@ export function FCDashboardView({
           </button>
         )}
 
+        {/* Portfolio Overview — Hero + 3-zone summary */}
+        <PortfolioOverviewHeader
+          orgType="FC"
+          financials={financials as any}
+          activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+        />
+
         {/* ═══ 6 KPI Cards — 3-column grid ═══ */}
         <KpiGrid>
+
 
           {/* Card 1 — Contract with TC */}
           <KpiCard

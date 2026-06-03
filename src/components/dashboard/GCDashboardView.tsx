@@ -11,6 +11,7 @@ import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, T
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
 import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
+import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -160,6 +161,13 @@ export function GCDashboardView({
         {pendingInvites.length > 0 && (
           <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />
         )}
+
+        {/* Portfolio Overview — Hero + 3-zone summary (Command Center) */}
+        <PortfolioOverviewHeader
+          orgType="GC"
+          financials={financials as any}
+          activeProjectCount={activeProjects.length}
+        />
 
         {/* Materials Pulse — at-a-glance portfolio materials health */}
         <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
