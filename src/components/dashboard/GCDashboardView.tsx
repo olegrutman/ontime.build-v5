@@ -11,6 +11,7 @@ import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, T
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
 import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
+import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
