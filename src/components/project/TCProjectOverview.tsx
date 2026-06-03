@@ -13,6 +13,8 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
+import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
+import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
