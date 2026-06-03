@@ -46,6 +46,9 @@ export interface ProjectFinancials {
   approvedCOCost: number;
   approvedCOMargin: number;
   pendingCOExposure: number;
+  pendingCORevenue: number;
+  pendingCOCost: number;
+  pendingCONetAtRisk: number;
   approvedWOTotal: number;
 
   // Running / realized margin to date (role-aware)
