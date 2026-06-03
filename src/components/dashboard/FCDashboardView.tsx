@@ -8,6 +8,7 @@ import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
