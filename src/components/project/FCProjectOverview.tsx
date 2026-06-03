@@ -58,6 +58,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
   const totalPaid = financials.totalPaid;
   const totalPendingSubmitted = pendingInvoices.reduce((s, i) => s + i.total_amount, 0);
+  // totalPending is set after revisedTotal is computed below (cash-basis: contract minus paid)
   const totalInvoiced = financials.billedToDate;
 
   // Change orders / Work orders — FC sees WOs they own OR collaborate on
