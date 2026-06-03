@@ -155,8 +155,16 @@ export function FCDashboardView({
           </button>
         )}
 
+        {/* Portfolio Overview — Hero + 3-zone summary */}
+        <PortfolioOverviewHeader
+          orgType="FC"
+          financials={financials as any}
+          activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+        />
+
         {/* ═══ 6 KPI Cards — 3-column grid ═══ */}
         <KpiGrid>
+
 
           {/* Card 1 — Contract with TC */}
           <KpiCard
