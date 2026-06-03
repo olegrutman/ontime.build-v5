@@ -171,6 +171,64 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
         </div>
       </div>
 
+      {/* ─── Project Health Hero + 3-zone Summary ─── */}
+      {(() => {
+        const approvedNet = approvedCOs.reduce((s, co) => s + ((co.tc_submitted_price || co.gc_budget || 0) - 0), 0); // FC: revenue side only; cost = labor budget pool
+        const pendingNetAtRisk = financials.pendingCONetAtRisk;
+        const projectedMargin = revisedTotal - laborBudget;
+        const projectedMarginPct = revisedTotal > 0 ? (projectedMargin / revisedTotal) * 100 : 0;
+        const cashPosition = totalPaid - 0; // FC has no payables in this hook
+        const hasContract = revisedTotal > 0;
+        const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
+        const summary = buildHealthSummary({
+          projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
+          roleLabel: tcName,
+        });
+        return (
+          <>
+            <ProjectHealthHero
+              status={status}
+              projectedMargin={projectedMargin}
+              projectedMarginPct={projectedMarginPct}
+              summary={summary}
+              miniStats={[
+                { label: 'Collected', value: fmt(totalPaid), tone: totalPaid > 0 ? 'pos' : 'neutral' },
+                { label: 'Labor Budget', value: laborBudget > 0 ? fmt(laborBudget) : '—', tone: 'neutral' },
+                { label: 'Approved COs', value: fmt(coTotal), tone: coTotal > 0 ? 'pos' : 'neutral' },
+              ]}
+            />
+            <OverviewSummaryStrip
+              receivablePartyLabel={tcName}
+              payablePartyLabel="labor"
+              contract={{
+                label: 'Field Crew Contract',
+                revisedIn: revisedTotal,
+                revisedOut: laborBudget,
+                margin: projectedMargin,
+                marginPct: projectedMarginPct,
+              }}
+              cashFlow={{
+                received: totalPaid,
+                paid: 0,
+                cashPosition: totalPaid,
+                owedToYou: Math.max(0, revisedTotal - totalPaid),
+              }}
+              changeOrders={{
+                approvedCount: approvedCOs.length,
+                pendingCount: pendingCOs.length,
+                approvedNet,
+                pendingNetAtRisk,
+              }}
+            />
+          </>
+        );
+      })()}
+
+      {/* ─── Detailed KPI Cards ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Detail
+      </div>
+
       {/* 6 KPI Cards */}
       <KpiGrid>
 
