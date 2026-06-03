@@ -1,0 +1,1 @@
+UPDATE public.invoices SET status = 'APPROVED', paid_at = NULL, updated_at = now() WHERE invoice_number = 'INV-FUL-IM-HA-0002';
