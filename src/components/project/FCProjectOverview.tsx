@@ -132,6 +132,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
   // Derived
   const revisedTotal = isTM ? coTotal : contractSum + coTotal;
+  const totalPending = Math.max(0, revisedTotal - totalPaid);
   const netMargin = revisedTotal - laborBudget;
   const marginPct = revisedTotal > 0 ? ((netMargin / revisedTotal) * 100).toFixed(1) : '0';
   const progressPct = isTM
