@@ -89,6 +89,9 @@ describe('aggregateCOTotals', () => {
       approvedCOCost: 0,
       approvedCOMargin: 0,
       pendingCOExposure: 0,
+      pendingCORevenue: 0,
+      pendingCOCost: 0,
+      pendingCONetAtRisk: 0,
       approvedWOTotal: 0,
     });
   });
