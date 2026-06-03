@@ -125,6 +125,13 @@ export function TCDashboardView({
 
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
 
+        {/* Portfolio Overview — Hero + 3-zone summary */}
+        <PortfolioOverviewHeader
+          orgType="TC"
+          financials={financials as any}
+          activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+        />
+
         {/* Materials Pulse — at-a-glance portfolio materials health */}
         <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
 
