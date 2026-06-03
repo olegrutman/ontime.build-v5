@@ -20,8 +20,8 @@ interface DashboardKPIsProps {
 
 export function DashboardKPIs({ financials, orgType }: DashboardKPIsProps) {
   const margin = financials.profitMargin;
-  const marginToDatePct = financials.marginToDatePct;
-  const realizedSuffix = financials.earnedToDate > 0 ? `${Math.round(marginToDatePct)}%` : '—';
+  const cashPosition = (financials as any).cashPosition ?? (financials.paidToYou - financials.paidByYou);
+  const cashLabel = cashPosition >= 0 ? 'positive' : 'negative';
 
   if (orgType === 'GC') {
     return (
