@@ -30,7 +30,7 @@ export function DashboardKPIs({ financials, orgType }: DashboardKPIsProps) {
         <KPICard label="Paid Out" value={financials.paidByYou} subtitle="Outgoing payments" delay={40} suffix={financials.totalRevenue > 0 ? `${Math.round((financials.paidByYou / financials.totalRevenue) * 100)}%` : '0%'} />
         <KPICard label="Received" value={financials.paidToYou} subtitle="Incoming payments" delay={80} suffix={financials.totalRevenue > 0 ? `${Math.round((financials.paidToYou / financials.totalRevenue) * 100)}%` : '0%'} />
         <KPICard label="Projected Margin" value={financials.potentialProfit} subtitle="Revenue minus costs" delay={120} suffix={`${Math.round(margin)}%`} />
-        <KPICard label="Margin to Date" value={financials.marginToDate} subtitle="Realized · cash basis" delay={160} suffix={realizedSuffix} />
+        <KPICard label="Cash Position" value={Math.abs(cashPosition)} subtitle={`Received minus paid · ${cashLabel}`} delay={160} />
       </div>
     );
   }
@@ -42,7 +42,7 @@ export function DashboardKPIs({ financials, orgType }: DashboardKPIsProps) {
         <KPICard label="Cost Out" value={financials.totalCosts} subtitle="Labor + materials + subs" delay={40} />
         <KPICard label="Projected Margin" value={financials.potentialProfit} subtitle={margin > 0 ? `+${Math.round(margin)}% margin` : 'Net after costs'} delay={80} suffix={`${Math.round(margin)}%`} />
         <KPICard label="Billed" value={financials.totalBilled} subtitle="Payments received" delay={120} suffix={financials.totalRevenue > 0 ? `${Math.round((financials.totalBilled / financials.totalRevenue) * 100)}%` : '0%'} />
-        <KPICard label="Margin to Date" value={financials.marginToDate} subtitle="Realized · cash basis" delay={160} suffix={realizedSuffix} />
+        <KPICard label="Cash Position" value={Math.abs(cashPosition)} subtitle={`Received minus paid · ${cashLabel}`} delay={160} />
       </div>
     );
   }
@@ -54,7 +54,7 @@ export function DashboardKPIs({ financials, orgType }: DashboardKPIsProps) {
       <KPICard label="Collected" value={financials.paidToYou} subtitle="Payments received" delay={40} />
       <KPICard label="Outstanding" value={financials.totalRevenue - financials.paidToYou} subtitle="Remaining to collect" delay={80} />
       <KPICard label="Pending" value={financials.totalBilled - financials.paidToYou} subtitle="Billed but not yet received" delay={120} />
-      <KPICard label="Margin to Date" value={financials.marginToDate} subtitle="Realized · cash basis" delay={160} suffix={realizedSuffix} />
+      <KPICard label="Cash Position" value={Math.abs(cashPosition)} subtitle={`Received minus paid · ${cashLabel}`} delay={160} />
     </div>
   );
 }
