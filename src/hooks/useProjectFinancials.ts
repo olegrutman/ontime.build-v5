@@ -317,6 +317,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setApprovedCORevenue(agg.approvedCORevenue);
       setApprovedCOCost(agg.approvedCOCost);
       setPendingCOExposure(agg.pendingCOExposure);
+      setPendingCORevenue(agg.pendingCORevenue);
+      setPendingCOCost(agg.pendingCOCost);
       setApprovedWOTotal(agg.approvedWOTotal);
       // ===== end CO aggregation =====
 
