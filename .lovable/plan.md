@@ -1,41 +1,69 @@
-## Fixes to financial formulas
+# Project Overview KPI Redesign + Formula Fixes
 
-### 1. Margin to Date → cash basis (received − paid)
-In `src/hooks/useProjectFinancials.ts` (~line 552-584), replace the role-aware accrual computation with a single cash-basis formula for all roles:
+Rebuild the Project Overview KPI grid as a 3-zone command center and correct the financial formulas behind it. Scope: Project Overview page only (TC, GC, FC variants). Dashboard portfolio rollups, invoices page, and DB triggers are out of scope.
 
-- `earnedRevenueToDate = receivablesCollected` (sum of PAID receivable invoices)
-- `incurredCostToDate  = payablesPaid` (sum of PAID payable invoices)
-- `marginToDateAmount  = receivablesCollected − payablesPaid`
-- `marginToDatePct     = receivablesCollected > 0 ? marginToDateAmount / receivablesCollected * 100 : 0`
+## New layout
 
-Remove the `openMaterialCommitment`, `approvedCORevenue/Cost`, `gcPayablesInvoiced`, `ownerBillingsTotal` branches from the margin-to-date calc (still used elsewhere). Update the tile subtitle/breakdown on `TCProjectOverview.tsx` (line ~509-520) so the expanded rows show: Received from GC, Paid to FC, Net (cash). Apply the same simplification on GC and FC overview cards where Margin to Date is shown.
-
-### 2. Pending = everything not paid
-For each "Pending from X" / "Pending to X" tile, swap the SUBMITTED-only sum for `total − paid`:
-
-- TC `TCProjectOverview.tsx` (~line 296-302):
-  - `totalPendingFromGC = revisedGCTotal − receivablesCollected` (or `receivablesInvoiced + draft − collected`; we use contract-minus-collected so drafts and un-billed remainder both count as "not paid")
-  - `fcPendingAmount   = revisedFCTotal − payablesPaid`
-- Apply same swap on GC (`GCProjectOverviewContent.tsx`) and FC (`FCProjectOverview.tsx`) "Pending" tiles.
-- Keep "warnings" banner trigger using SUBMITTED-awaiting-approval count so the chase-action UX still fires on submitted-only invoices.
-
-### 3. CO Net Margin includes pending COs
-In `TCProjectOverview.tsx` (~line 264-268):
-
-```ts
-const countedCOs = changeOrders.filter(co => co.status !== 'rejected');
-const coRevenue   = countedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-const coCost      = countedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
-const coNetMargin = coRevenue - coCost;
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  HERO — PROJECT HEALTH                                       │
+│  Big projected margin $ + % + status pill (green/amber/red)  │
+│  One-sentence summary ("On track · 31% projected margin")    │
+├───────────────────┬──────────────────┬──────────────────────┤
+│  CONTRACT         │  CASH FLOW       │  CHANGE ORDERS       │
+│  Revised in       │  Received        │  Approved net        │
+│  Revised out      │  Paid out        │  Pending net (risk)  │
+│  Projected margin │  Cash position   │  Count + $ at risk   │
+│                   │  Owed to you     │                      │
+│                   │  You owe         │                      │
+├──────────────────────────────────────────────────────────────┤
+│  THIN STRIP: Team · Docs · Activity (small, low-weight)      │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-Update the CO Net Margin tile label/sub to "X COs (incl. pending)" and the count to `countedCOs.length`. Keep `approvedCOs` available for any place that explicitly needs the approved-only subset (revenue rollup into revised contract should still use approved only — only the Net CO tile changes).
+Each of the 3 main cards is expandable for the existing drilldown detail. Hero is non-expandable, always-on summary.
 
-### Files touched
-- `src/hooks/useProjectFinancials.ts` — margin-to-date formula
-- `src/components/project/TCProjectOverview.tsx` — pending, Net CO, margin breakdown rows
-- `src/components/project/GCProjectOverviewContent.tsx` — pending tile, margin breakdown rows
-- `src/components/project/FCProjectOverview.tsx` — pending tile, margin breakdown rows
+## Formula corrections
 
-### Out of scope
-Dashboard portfolio rollups, invoices page logic, schema/triggers, contract math. Memory note `mem://features/financials/realized-margin-to-date` will be updated to reflect the cash-basis simplification once implemented.
+| Metric | Before | After |
+|---|---|---|
+| Projected margin | Original contracts only | Revised contracts (original + approved COs) on both sides |
+| CO Net Margin (single tile) | Mixes approved revenue with pending cost → false negatives | Split: **Approved Net** (approved rev − approved cost) and **Pending Net at Risk** (pending rev − pending cost). Never blended |
+| "Margin to Date" label | Says "realized margin" but is cash | Rename to **Cash Position** (collected − paid). True realized margin = `%complete × revisedContract − incurredCost` shown inside Hero card tooltip |
+| Pending from GC | Contract − collected (blob) | Split: **Invoiced & awaiting payment** vs **Unbilled remaining** |
+| Pending to FC | Same flaw mirrored | Same split |
+| Retainage | Hidden inside contract math | Surfaced as its own line in Cash Flow card |
+
+## Status pill thresholds (Hero card)
+
+- Green: projected margin ≥ target (default 20%) AND cash position ≥ 0
+- Amber: margin 5–20% OR cash position negative but recoverable
+- Red: margin < 5% OR pending-at-risk > approved-net
+
+Thresholds read from existing role rules JSON (no new admin UI in this scope).
+
+## Role variants
+
+- **TC**: Hero = projected margin between GC-in and FC+materials-out. Contract card shows both contracts (Haley / Pacifico style).
+- **GC**: Hero = projected margin between owner-in and all-subs-out. Contract card shows owner contract + subs total.
+- **FC**: Hero = projected margin between TC/GC-in and labor cost. Contract card single contract.
+
+## Technical notes
+
+**Files to edit**
+- `src/hooks/useProjectFinancials.ts` — add `revisedGCTotal`, `revisedFCTotal`, `projectedMarginRevised`, split `pendingInvoiced` vs `pendingUnbilled`, split `coApprovedNet` vs `coPendingNetAtRisk`, keep `cashPosition` (rename of current marginToDate cash calc), add `realizedMarginAccrual` for tooltip.
+- `src/components/project/TCProjectOverview.tsx` — replace 10-tile grid with 3-zone layout. Reuse existing expand-drilldown pattern.
+- `src/components/project/GCProjectOverviewContent.tsx` — same 3-zone layout, GC variant.
+- `src/components/project/FCProjectOverview.tsx` — same 3-zone layout, FC variant.
+- New `src/components/project/overview/HeroHealthCard.tsx`, `ContractCard.tsx`, `CashFlowCard.tsx`, `ChangeOrdersCard.tsx` — shared primitives, role-aware via props.
+- `src/components/project/overview/TeamDocsStrip.tsx` — thin strip for team/docs/activity tiles that previously had equal weight.
+
+**Design tokens**: Reuse Command Center language — `Barlow Condensed` headings, `IBM Plex Mono` financials, `rounded-2xl`. Status pill uses semantic tokens (`--success`, `--warning`, `--destructive`).
+
+**Out of scope**: dashboard portfolio cards, invoices page, DB triggers, schema changes, admin threshold config UI.
+
+## Validation
+
+- Snapshot the 3 hero cards against a TC project with mixed approved + pending COs to confirm no negative-margin false alarms.
+- Confirm GC view does not leak TC margin (existing privacy rules unchanged).
+- Confirm FC view shows labor-vs-contract margin and hides upstream pricing.
