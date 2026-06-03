@@ -46,6 +46,9 @@ export interface ProjectFinancials {
   approvedCOCost: number;
   approvedCOMargin: number;
   pendingCOExposure: number;
+  pendingCORevenue: number;
+  pendingCOCost: number;
+  pendingCONetAtRisk: number;
   approvedWOTotal: number;
 
   // Running / realized margin to date (role-aware)
@@ -134,6 +137,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [approvedCORevenue, setApprovedCORevenue] = useState(0);
   const [approvedCOCost, setApprovedCOCost] = useState(0);
   const [pendingCOExposure, setPendingCOExposure] = useState(0);
+  const [pendingCORevenue, setPendingCORevenue] = useState(0);
+  const [pendingCOCost, setPendingCOCost] = useState(0);
   const [approvedWOTotal, setApprovedWOTotal] = useState(0);
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
   const [isTCSelfPerforming, setIsTCSelfPerforming] = useState(false);
@@ -312,6 +317,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setApprovedCORevenue(agg.approvedCORevenue);
       setApprovedCOCost(agg.approvedCOCost);
       setPendingCOExposure(agg.pendingCOExposure);
+      setPendingCORevenue(agg.pendingCORevenue);
+      setPendingCOCost(agg.pendingCOCost);
       setApprovedWOTotal(agg.approvedWOTotal);
       // ===== end CO aggregation =====
 
@@ -621,7 +628,9 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     approvedCORevenue, approvedCOCost, approvedCOMargin: approvedCORevenue - approvedCOCost,
-    pendingCOExposure, approvedWOTotal,
+    pendingCOExposure, pendingCORevenue, pendingCOCost,
+    pendingCONetAtRisk: pendingCORevenue - pendingCOCost,
+    approvedWOTotal,
     earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
     materialInvoiced, openMaterialCommitment: Math.max(0, materialOrdered - materialInvoiced), gcPayablesInvoiced,
     ownerBillingsTotal, ownerBillingsCollected,

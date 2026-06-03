@@ -14,6 +14,8 @@ import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
 import { OwnerBillingsPanel } from '@/components/project/gc/OwnerBillingsPanel';
+import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
+import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -303,6 +305,69 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     <div className="space-y-4">
       {/* Needs Attention — TOP placement, compact horizontal chips */}
       <OverviewAttentionStrip warnings={warnings} projectName={projectName} onNavigate={onNavigate} />
+
+      {/* ─── Project Health Hero + 3-zone Summary ─── */}
+      {(() => {
+        const approvedNet = coRevenueTotal - coCostTotal;
+        const pendingNetAtRisk = financials.pendingCONetAtRisk;
+        const revisedIn = ownerBudget + coRevenueTotal;
+        const revisedOut = draftContractVal + coCostTotal;
+        const projectedMargin = revisedIn - revisedOut;
+        const projectedMarginPct = revisedIn > 0 ? (projectedMargin / revisedIn) * 100 : 0;
+        const cashPosition = financials.marginToDateAmount;
+        const hasContract = revisedIn > 0;
+        const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
+        const summary = buildHealthSummary({
+          projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
+          roleLabel: 'owner',
+        });
+        const received = financials.ownerBillingsCollected || financials.receivablesCollected;
+        const paid = financials.payablesPaid;
+        return (
+          <>
+            <ProjectHealthHero
+              status={status}
+              projectedMargin={projectedMargin}
+              projectedMarginPct={projectedMarginPct}
+              summary={summary}
+              miniStats={[
+                { label: 'Cash Position', value: fmt(received - paid), tone: (received - paid) >= 0 ? 'pos' : 'neg' },
+                { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
+                { label: 'Pending at Risk', value: fmt(pendingNetAtRisk), tone: pendingNetAtRisk >= 0 ? 'neutral' : 'neg' },
+              ]}
+            />
+            <OverviewSummaryStrip
+              receivablePartyLabel="owner"
+              payablePartyLabel={tcName}
+              contract={{
+                label: 'Owner Contract',
+                revisedIn,
+                revisedOut,
+                margin: projectedMargin,
+                marginPct: projectedMarginPct,
+              }}
+              cashFlow={{
+                received,
+                paid,
+                cashPosition: received - paid,
+                owedToYou: Math.max(0, revisedIn - received),
+                youOwe: Math.max(0, revisedOut - paid),
+              }}
+              changeOrders={{
+                approvedCount: approvedCOs.length,
+                pendingCount: pendingCOs.length,
+                approvedNet,
+                pendingNetAtRisk,
+              }}
+            />
+          </>
+        );
+      })()}
+
+      {/* ─── Detailed KPI Cards — drilldown grid ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Detail
+      </div>
 
       {/* KPI Cards — 4-col grid */}
       <KpiGrid>

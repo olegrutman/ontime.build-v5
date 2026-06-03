@@ -13,6 +13,8 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
+import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
+import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -381,6 +383,66 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
       {/* Needs Attention — TOP placement, compact horizontal chips */}
       <OverviewAttentionStrip warnings={warnings} projectName={projectName} onNavigate={onNavigate} />
+
+      {/* ─── Project Health Hero + 3-zone Summary ─── */}
+      {(() => {
+        const approvedNet = approvedCoRevenue - approvedCoCost;
+        const pendingNetAtRisk = financials.pendingCONetAtRisk;
+        const projectedMargin = revisedGCTotal - revisedFCTotal;
+        const projectedMarginPct = revisedGCTotal > 0 ? (projectedMargin / revisedGCTotal) * 100 : 0;
+        const cashPosition = financials.marginToDateAmount;
+        const hasContract = revisedGCTotal > 0;
+        const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
+        const summary = buildHealthSummary({
+          projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
+          roleLabel: gcName,
+        });
+        return (
+          <>
+            <ProjectHealthHero
+              status={status}
+              projectedMargin={projectedMargin}
+              projectedMarginPct={projectedMarginPct}
+              summary={summary}
+              miniStats={[
+                { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
+                { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
+                { label: 'Pending at Risk', value: fmt(pendingNetAtRisk), tone: pendingNetAtRisk >= 0 ? 'neutral' : 'neg' },
+              ]}
+            />
+            <OverviewSummaryStrip
+              receivablePartyLabel={gcName}
+              payablePartyLabel={fcName || 'Field Crew'}
+              contract={{
+                label: 'Trade Contract',
+                revisedIn: revisedGCTotal,
+                revisedOut: revisedFCTotal,
+                margin: projectedMargin,
+                marginPct: projectedMarginPct,
+              }}
+              cashFlow={{
+                received: totalReceivedFromGC,
+                paid: totalPaidToFC,
+                cashPosition,
+                owedToYou: Math.max(0, revisedGCTotal - totalReceivedFromGC),
+                youOwe: Math.max(0, revisedFCTotal - totalPaidToFC),
+                retainage: financials.receivablesRetainage,
+              }}
+              changeOrders={{
+                approvedCount: approvedCOs.length,
+                pendingCount: pendingCOs.length,
+                approvedNet,
+                pendingNetAtRisk,
+              }}
+            />
+          </>
+        );
+      })()}
+
+      {/* ─── Detailed KPI Cards — drilldown grid ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Detail
+      </div>
 
       {/* 8 KPI Cards — 4-col grid */}
       <KpiGrid>

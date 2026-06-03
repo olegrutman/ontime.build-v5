@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, cellStyle, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
+import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -167,6 +169,64 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
           <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice to {tcName}</button>
           <button onClick={() => onNavigate(isTM ? 'change-orders' : 'daily-log')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>{isTM ? 'View Work Orders' : 'View My Tasks'}</button>
         </div>
+      </div>
+
+      {/* ─── Project Health Hero + 3-zone Summary ─── */}
+      {(() => {
+        const approvedNet = approvedCOs.reduce((s, co) => s + ((co.tc_submitted_price || co.gc_budget || 0) - 0), 0); // FC: revenue side only; cost = labor budget pool
+        const pendingNetAtRisk = financials.pendingCONetAtRisk;
+        const projectedMargin = revisedTotal - laborBudget;
+        const projectedMarginPct = revisedTotal > 0 ? (projectedMargin / revisedTotal) * 100 : 0;
+        const cashPosition = totalPaid - 0; // FC has no payables in this hook
+        const hasContract = revisedTotal > 0;
+        const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
+        const summary = buildHealthSummary({
+          projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
+          roleLabel: tcName,
+        });
+        return (
+          <>
+            <ProjectHealthHero
+              status={status}
+              projectedMargin={projectedMargin}
+              projectedMarginPct={projectedMarginPct}
+              summary={summary}
+              miniStats={[
+                { label: 'Collected', value: fmt(totalPaid), tone: totalPaid > 0 ? 'pos' : 'neutral' },
+                { label: 'Labor Budget', value: laborBudget > 0 ? fmt(laborBudget) : '—', tone: 'neutral' },
+                { label: 'Approved COs', value: fmt(coTotal), tone: coTotal > 0 ? 'pos' : 'neutral' },
+              ]}
+            />
+            <OverviewSummaryStrip
+              receivablePartyLabel={tcName}
+              payablePartyLabel="labor"
+              contract={{
+                label: 'Field Crew Contract',
+                revisedIn: revisedTotal,
+                revisedOut: laborBudget,
+                margin: projectedMargin,
+                marginPct: projectedMarginPct,
+              }}
+              cashFlow={{
+                received: totalPaid,
+                paid: 0,
+                cashPosition: totalPaid,
+                owedToYou: Math.max(0, revisedTotal - totalPaid),
+              }}
+              changeOrders={{
+                approvedCount: approvedCOs.length,
+                pendingCount: pendingCOs.length,
+                approvedNet,
+                pendingNetAtRisk,
+              }}
+            />
+          </>
+        );
+      })()}
+
+      {/* ─── Detailed KPI Cards ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Detail
       </div>
 
       {/* 6 KPI Cards */}
