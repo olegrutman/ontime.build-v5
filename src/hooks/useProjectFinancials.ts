@@ -137,6 +137,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [approvedCORevenue, setApprovedCORevenue] = useState(0);
   const [approvedCOCost, setApprovedCOCost] = useState(0);
   const [pendingCOExposure, setPendingCOExposure] = useState(0);
+  const [pendingCORevenue, setPendingCORevenue] = useState(0);
+  const [pendingCOCost, setPendingCOCost] = useState(0);
   const [approvedWOTotal, setApprovedWOTotal] = useState(0);
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
   const [isTCSelfPerforming, setIsTCSelfPerforming] = useState(false);
