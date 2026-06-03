@@ -143,7 +143,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   // Warnings
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (pendingInvoices.length > 0) {
-    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${tcName} Approval`, sub: `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} submitted`, value: fmt(totalPending), pill: 'Pending', pillType: 'pw', tab: 'invoices' });
+    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${tcName} Approval`, sub: `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} submitted`, value: fmt(totalPendingSubmitted), pill: 'Pending', pillType: 'pw', tab: 'invoices' });
   }
   if (!isTM && remainingToEarn > 0 && progressPct < 100) {
     warnings.push({ color: C.blue, icon: '📅', title: 'Work Remaining', sub: `${100 - progressPct}% of scope not yet invoiced`, value: fmt(remainingToEarn), pill: 'Upcoming', pillType: 'pb', tab: 'invoices' });
