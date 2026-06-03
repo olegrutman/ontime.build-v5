@@ -407,13 +407,13 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               const pctRounded = Math.round(m2dPct);
               const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
               return (
-                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · approved WOs vs incurred cost` : 'No revenue earned yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
+                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · cash basis` : 'No revenue collected yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
                   <div style={{ padding: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <THead cols={['Metric', 'Value']} />
                       <tbody>
-                        <TRow cells={[<TdN>Earned Revenue (approved WOs)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                        <TRow cells={[<TdN>Incurred Cost (paid + materials + labor)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                        <TRow cells={[<TdN>Received (from owner / upstream)</TdN>, <TdM>{fmt(financials.receivablesCollected)}</TdM>]} />
+                        <TRow cells={[<TdN>Paid (to TC + suppliers)</TdN>, <TdM>{fmt(financials.payablesPaid)}</TdM>]} />
                         <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
                       </tbody>
                     </table>
