@@ -532,7 +532,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         })()}
 
         {/* Card 4 — CO Net Margin */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={coRevenue > 0 ? `+${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={coRevenue > 0 ? (isTM ? `Revenue ${fmt(coRevenue)} · Labor Cost ${fmt(coCost)}` : `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'}`) : `No approved ${isTM ? 'work orders' : 'change orders'}`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} ${isTM ? 'WOs' : 'COs'}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={countedCOs.length > 0 ? `${coNetMargin >= 0 ? '+' : ''}${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={countedCOs.length > 0 ? (isTM ? `Revenue ${fmt(coRevenue)} · Labor Cost ${fmt(coCost)} · incl. pending` : `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'} · incl. pending`) : `No ${isTM ? 'work orders' : 'change orders'}`} pills={countedCOs.length > 0 ? [{ type: 'pb', text: `${countedCOs.length} ${isTM ? 'WOs' : 'COs'}${pendingCOs.length > 0 ? ` · ${pendingCOs.length} pending` : ''}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
