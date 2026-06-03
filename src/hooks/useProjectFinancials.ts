@@ -549,37 +549,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const retainageAmount = billedToDate * (retainagePercent / 100);
   const outstanding = contractValue - billedToDate;
 
-  // Realized / running margin to date — role-aware, non-overlapping cost components.
-  //
-  // Earned revenue = revenue recognized (accrual) from upstream billings
-  // Incurred cost  = payables already invoiced by downstream + remaining open
-  //                  PO commitment not yet invoiced + approved CO cost
-  //
-  // We DO NOT add `actualLaborCost` on top of payables (FC labor flows through
-  // payables via FC invoices) and we DO NOT add full `materialOrdered` on top
-  // of payables (supplier PO invoices are already inside payables). The open-PO
-  // add-on is `max(0, materialOrdered - materialInvoiced)` so each PO dollar is
-  // counted exactly once.
-  const openMaterialCommitment = Math.max(0, materialOrdered - materialInvoiced);
-
-  let earnedRevenueToDate = 0;
-  let incurredCostToDate = 0;
-  if (viewerRole === 'Trade Contractor') {
-    earnedRevenueToDate = receivablesInvoiced + approvedCORevenue;
-    incurredCostToDate = payablesInvoiced + openMaterialCommitment + approvedCOCost;
-  } else if (viewerRole === 'General Contractor') {
-    // Pure accrual (variant A): incurred = TC → GC invoices + supplier PO invoices
-    // owned by GC (both rolled into gcPayablesInvoiced) + remaining open PO
-    // commitment + approved CO cost.
-    // Earned revenue prefers actual owner billings (Phase 2). When no owner
-    // billings are recorded yet, fall back to the upstream-invoice proxy so the
-    // tile still renders something meaningful.
-    earnedRevenueToDate = (ownerBillingsTotal > 0 ? ownerBillingsTotal : gcPayablesInvoiced) + approvedCORevenue;
-    incurredCostToDate = gcPayablesInvoiced + openMaterialCommitment + approvedCOCost;
-  } else if (viewerRole === 'Field Crew') {
-    earnedRevenueToDate = billedToDate;
-    incurredCostToDate = actualLaborCost;
-  }
+  // Margin to date — pure cash basis for all roles: received minus paid.
+  // Earned = sum of PAID receivable invoices (collected).
+  // Incurred = sum of PAID payable invoices.
+  const earnedRevenueToDate = receivablesCollected;
+  const incurredCostToDate = viewerRole === 'Field Crew' ? 0 : payablesPaid;
   const marginToDateAmount = earnedRevenueToDate - incurredCostToDate;
   const marginToDatePct = earnedRevenueToDate > 0 ? (marginToDateAmount / earnedRevenueToDate) * 100 : 0;
 
@@ -649,7 +623,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     approvedCORevenue, approvedCOCost, approvedCOMargin: approvedCORevenue - approvedCOCost,
     pendingCOExposure, approvedWOTotal,
     earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
-    materialInvoiced, openMaterialCommitment, gcPayablesInvoiced,
+    materialInvoiced, openMaterialCommitment: Math.max(0, materialOrdered - materialInvoiced), gcPayablesInvoiced,
     ownerBillingsTotal, ownerBillingsCollected,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
