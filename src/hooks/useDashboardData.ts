@@ -157,6 +157,18 @@ export function useDashboardData(): DashboardData {
     incurredToDate: 0,
     marginToDate: 0,
     marginToDatePct: 0,
+    cashPosition: 0,
+    pendingInvoiced: 0,
+    pendingToPay: 0,
+    pendingUnbilled: 0,
+    revisedRevenue: 0,
+    revisedCosts: 0,
+    projectedMarginRevised: 0,
+    projectedMarginRevisedPct: 0,
+    coApprovedCount: 0,
+    coPendingCount: 0,
+    coApprovedNet: 0,
+    coPendingNetAtRisk: 0,
   });
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
