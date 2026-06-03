@@ -273,8 +273,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const approvedCoCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
 
   // ─── T&M: derive "contract" values from WOs when no project_contracts exist ───
-  const effectiveGCVal = isTM && gcContractVal === 0 ? coRevenue : gcContractVal;
-  const effectiveFCVal = isTM && draftFcVal === 0 ? coCost : draftFcVal;
+  const effectiveGCVal = isTM && gcContractVal === 0 ? approvedCoRevenue : gcContractVal;
+  const effectiveFCVal = isTM && draftFcVal === 0 ? approvedCoCost : draftFcVal;
 
   // ─── Margins ───
   const tcGrossMargin = effectiveGCVal - effectiveFCVal;
@@ -300,16 +300,19 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const paidInvoicesUp = financials.recentInvoices.filter(i => i.status === 'PAID');
   const pendingInvoicesUp = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
   const totalReceivedFromGC = financials.receivablesCollected;
-  const totalPendingFromGC = pendingInvoicesUp.reduce((s, i) => s + i.total_amount, 0);
+  const totalPendingSubmittedFromGC = pendingInvoicesUp.reduce((s, i) => s + i.total_amount, 0);
 
   // FC invoices (payables)
   const totalPaidToFC = financials.payablesPaid;
-  const fcPendingAmount = financials.payablesInvoiced - financials.payablesPaid;
+  const fcPendingSubmitted = financials.payablesInvoiced - financials.payablesPaid;
 
-  // ─── Totals ───
-  const revisedGCTotal = isTM ? coRevenue : gcContractVal + coRevenue;
-  const revisedFCTotal = isTM ? coCost : draftFcVal + coCost;
+  // ─── Totals (revised contracts use approved-only COs) ───
+  const revisedGCTotal = isTM ? approvedCoRevenue : gcContractVal + approvedCoRevenue;
+  const revisedFCTotal = isTM ? approvedCoCost : draftFcVal + approvedCoCost;
   const netTCMargin = isTM ? coNetMargin : tcGrossMargin + coNetMargin;
+  // Pending = everything not paid (contract total minus collected)
+  const totalPendingFromGC = Math.max(0, revisedGCTotal - totalReceivedFromGC);
+  const fcPendingAmount = Math.max(0, revisedFCTotal - totalPaidToFC);
   const gcReceivedPct = revisedGCTotal > 0 ? Math.round((totalReceivedFromGC / revisedGCTotal) * 100) : 0;
   const fcPaidPct = revisedFCTotal > 0 ? Math.round((totalPaidToFC / revisedFCTotal) * 100) : 0;
 
