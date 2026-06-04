@@ -164,18 +164,37 @@ export function GCDashboardView({
           <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />
         )}
 
-        {/* Portfolio Overview — Hero + 3-zone summary (Command Center) */}
+        {/* Compact portfolio health hero — single row */}
         <PortfolioOverviewHeader
           orgType="GC"
           financials={financials as any}
           activeProjectCount={activeProjects.length}
+          variant="compact-hero"
         />
 
-        {/* Materials Pulse — at-a-glance portfolio materials health */}
-        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+        {/* PROJECTS — focal point of the dashboard */}
+        <MyProjectsHero
+          projects={projects}
+          projectFinancials={projectFinancials}
+          recentDocs={recentDocs}
+          attentionItems={attentionItems}
+          orgType="GC"
+        />
 
-        {/* KPI Grid */}
-        <KpiGrid>
+        {/* Portfolio Insights — strip + materials + KPI grid (collapsible) */}
+        <PortfolioInsightsSection>
+          <PortfolioOverviewHeader
+            orgType="GC"
+            financials={financials as any}
+            activeProjectCount={activeProjects.length}
+            variant="strip"
+          />
+
+          {/* Materials Pulse */}
+          <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+
+          {/* KPI Grid */}
+          <KpiGrid>
           {/* Card 1: Total Owner Budget / Revenue */}
           <KpiCard idx={0} accent={C.amber} icon={<Briefcase size={18} color={C.amberD} />} iconBg={C.amberPale}
             label="TOTAL OWNER BUDGET" value={financials.totalRevenue > 0 ? fmt(financials.totalRevenue) : '—'}
