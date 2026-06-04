@@ -360,6 +360,7 @@ export function FCDashboardView({
             </table>
           </KpiCard>
         </KpiGrid>
+        </PortfolioInsightsSection>
 
         {/* ═══ Attention Items ═══ */}
         {(attentionItems.length > 0 || pendingInvoiceDocs.length > 0) && (
@@ -390,32 +391,6 @@ export function FCDashboardView({
                 onClick={() => navigate(`/project/${item.projectId}`)}
               />
             ))}
-          </div>
-        )}
-
-        {/* ═══ My Projects ═══ */}
-        {projects.length > 0 && (
-          <div className="-order-1 md:order-last" style={{ ...fontLabel }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink }}>📂 My Projects</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: projects.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {projects.map((p, i) => {
-                const ppf = projectFinancials.find(pff => pff.projectId === p.id);
-                const rev = ppf?.revenue || p.contractValue || 0;
-                const cost = ppf?.costs || 0;
-                return (
-                  <ProjectCard
-                    key={p.id}
-                    name={p.name}
-                    status={p.status}
-                    budget={rev}
-                    costs={cost}
-                    onClick={() => navigate(`/project/${p.id}`)}
-                  />
-                );
-              })}
-            </div>
           </div>
         )}
 
