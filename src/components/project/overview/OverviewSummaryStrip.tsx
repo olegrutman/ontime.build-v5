@@ -112,14 +112,8 @@ export function OverviewSummaryStrip({
 }: OverviewSummaryStripProps) {
   const pctRounded = Math.round(contract.marginPct);
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: 12,
-      }}
-      className="max-lg:grid-cols-1"
-    >
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+
       <SummaryCard
         title="Contract"
         accent={C.amber}
