@@ -1,99 +1,66 @@
-# Dashboard Redesign — Projects as the Hero
+# Mobile Dashboard Optimization
 
-## Goal
-Make projects the focal point of the dashboard. The user opens the dashboard to *go to a project*, not to study aggregates. Aggregates stay, but move below.
+## The problem (from your screenshot at 390px)
 
-## New layout (top → bottom)
+Looking at the preview, the dashboard *works* on mobile but has a few clear pain points:
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Compact Health Hero (1 row)                                  │
-│ ● On Track · Projected Margin $X (Y%) · "summary sentence"   │
-├──────────────────────────────────────────────────────────────┤
-│ MY PROJECTS (4)                          [+ New Project]     │
-│ ┌──────────────────────┐ ┌──────────────────────┐            │
-│ │ ● Henderson  On Track│ │ ● Fuller     Watch   │            │
-│ │ 45% complete ▓▓▓▓░░  │ │ 72% complete ▓▓▓▓▓▓░ │  ← RICH    │
-│ │ Contract Cost Margin │ │ Contract Cost Margin │   CARDS    │
-│ │ $233K  $160K  $72K   │ │ $X     $X     $X     │            │
-│ │ → Review CO-003      │ │ → Approve invoice    │            │
-│ └──────────────────────┘ └──────────────────────┘            │
-├──────────────────────────────────────────────────────────────┤
-│ Action Required (1) · Needs Attention (1)   [inline strip]   │
-├──────────────────────────────────────────────────────────────┤
-│ PORTFOLIO INSIGHTS                                           │
-│ ┌──────────────────────────────────────────────────────────┐ │
-│ │ Contracts │ Cash Flow │ Change Orders   (summary strip)  │ │
-│ ├──────────────────────────────────────────────────────────┤ │
-│ │ COs · Received · Pending · Materials  (existing KPIs)    │ │
-│ └──────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-```
+1. **Portfolio Insights strip is broken on mobile.** The 3 cards (Contract / Cash Flow / Change Orders) are squished into 3 narrow columns. Numbers are clipping (`$122…`, `$1.2…`, `$2.6K` truncating), labels wrap to 3–4 lines, and the footer text is unreadable. Root cause: `OverviewSummaryStrip` uses an inline `gridTemplateColumns: repeat(3, ...)` which **overrides** the `max-lg:grid-cols-1` className that was supposed to stack them.
+2. **Project cards are decent but dense.** 3-column financial row (Contract / Cost / Margin) gets tight on 390px when the numbers are 6 digits.
+3. **Compact Health Hero + Summary Strip** stack vertically but together they push the project cards (the focal point) below the fold.
+4. **Top header is busy** — logo, bell w/ badge, big yellow `+`, avatar all on one row. Fine, but the `+` button could be smaller.
+5. **Bottom nav** eats screen real-estate; content needs the right `pb-` offset (already there in most views, worth verifying).
 
-## Changes
+---
 
-### 1. Compact the Health Hero
-- Current `ProjectHealthHero` is tall (status + big margin + summary stack).
-- New `CompactHealthHero` variant: single row — status pill · projected margin $/% · one-line summary. ~80px tall vs current ~180px.
-- Keep the full hero on individual Project Overview pages.
+## What I'd change
 
-### 2. Rich Project Cards (new component)
-Replace today's slim `Contract/Cost/Margin` card with `RichProjectCard`:
-- **Header**: project name + status pill (Active/Paused) + **health pill** (On Track / Watch / At Risk) using same `computeHealthStatus` we built for Project Overview.
-- **Progress row**: % complete bar (derived from SOV billed % — already in `useProjectSOV`).
-- **Financials row**: Revised Contract · Cost to Date · Projected Margin (with margin %).
-- **Next action footer**: smart CTA pulled from existing data:
-  - Pending CO → "Review CO-XXX"
-  - Invoice awaiting approval → "Approve INV-XXX"
-  - Action Required item for this project → that action
-  - Else: "View project →"
-- 2-column grid on desktop, 1-column on mobile. ~220px tall cards.
+### 1. Fix the Portfolio Insights cards (highest impact)
+- Make `OverviewSummaryStrip` *actually* responsive: switch from inline grid → CSS class + media query, or detect viewport. On `< 640px` stack to **1 column**, on `640–1024` use 2 cols, ≥1024 use 3.
+- Inside each card on mobile: reduce label font, allow numbers to wrap to a second line if needed, drop the footer to a smaller muted line (or hide behind a "Why?" tap on mobile).
+- Result: numbers stop clipping, labels read in 1–2 lines.
 
-### 3. Reorder the dashboard view files
-For `GCDashboardView`, `TCDashboardView`, `FCDashboardView`:
-- **Old order**: PortfolioOverviewHeader (full hero + summary strip) → KPI grid → Action Required → My Projects
-- **New order**: CompactHealthHero → My Projects (rich cards) → Action Required (slim inline strip) → Portfolio Insights section containing the existing `OverviewSummaryStrip` + `DashboardKPIs` grid
+### 2. Move Portfolio Insights into a true accordion on mobile
+- It's already collapsible, but **default it to collapsed on mobile** (open on desktop). The mobile user came for projects, not aggregate KPIs — keep them one tap away, not always rendered.
 
-### 4. Inline "Action Required" strip
-Today it's a full card section. Compact it to a 1-line strip with counts + chevron to expand. Saves ~120px above the fold.
+### 3. Tighten the Rich Project Cards on mobile
+- On `< 400px`, switch the financial row from 3 columns to a **2-row layout**: top row = Contract + Margin (the two that matter), second row = Cost as a muted sub-line. (For FC with `hideCost`, it's already 2-col.)
+- Shrink card padding from `14px 16px` → `12px 14px` on mobile.
+- Keep the next-action CTA full width (already good).
 
-### 5. Portfolio Insights wrapper
-Wrap the existing summary strip + KPI grid in a labeled section ("Portfolio Insights") so the visual hierarchy reads: *project-level → portfolio-level*. No data changes, just framing.
+### 4. Compact Health Hero — make it even more compact on mobile
+- Currently it's a single row but the summary sentence wraps to 3 lines. On mobile, show only **status pill + projected margin $/%**, hide the summary sentence (or truncate to 1 line with `…`). Tap the pill to expand.
 
-## Files
+### 5. Small polish
+- Header `+` button: reduce to icon-only at `< 400px`, keep "New Project" label on desktop.
+- Bottom nav: confirm `pb-24` (or your existing offset) is applied on every dashboard view so the last card isn't hidden behind it.
 
-**New**
-- `src/components/dashboard/CompactHealthHero.tsx` — 1-row variant of ProjectHealthHero
-- `src/components/dashboard/projects/RichProjectCard.tsx` — new card with health pill, progress, financials, next-action CTA
-- `src/components/dashboard/projects/useProjectNextAction.ts` — small hook that resolves the smart CTA per project from existing pending COs / invoices / attention items
-- `src/components/dashboard/PortfolioInsightsSection.tsx` — collapsible wrapper around existing summary strip + KPI grid (default expanded on desktop, collapsed on mobile)
+---
 
-**Edited**
-- `src/components/dashboard/GCDashboardView.tsx` — reorder
-- `src/components/dashboard/TCDashboardView.tsx` — reorder
-- `src/components/dashboard/FCDashboardView.tsx` — reorder
-- `src/components/dashboard/overview/PortfolioOverviewHeader.tsx` — split into `CompactHealthHero` + standalone `OverviewSummaryStrip` so each can be placed independently
+## Files I'll touch
 
-**Untouched**
-- `useDashboardData.ts` formulas (already correct from previous pass)
-- `DashboardKPIs.tsx` (kept as-is inside Portfolio Insights)
-- Project Overview page (already redesigned)
-- Mobile dashboards (cards stack 1-col, same order)
+- `src/components/project/overview/OverviewSummaryStrip.tsx` — replace inline 3-col grid with responsive CSS class; mobile-aware row sizes/footer.
+- `src/components/dashboard/PortfolioInsightsSection.tsx` — default `defaultOpen={!isMobile}` using `useIsMobile`.
+- `src/components/dashboard/projects/RichProjectCard.tsx` — responsive 2-row financial layout on narrow widths; tighter mobile padding.
+- `src/components/dashboard/overview/CompactHealthHero.tsx` — hide/truncate summary line on mobile.
+- `src/components/dashboard/projects/MyProjectsHero.tsx` — shrink "+ New Project" button to icon on narrow.
+- (Optional) Spot-check `GCDashboardView` / `TCDashboardView` / `FCDashboardView` for `pb-` offsets.
 
-## Role variants
-- **GC**: rich cards show owner contract / cost / margin · CTA priorities: pending CO from TC, owner invoice to send
-- **TC**: rich cards show GC contract / FC+materials cost / margin · CTA priorities: pending CO awaiting submit, FC invoice to approve
-- **FC**: rich cards show TC/GC contract / labor cost / margin · CTA priorities: invoice awaiting TC approval, pending CO assignment
-- Role-based privacy preserved — no upstream pricing leaks on FC cards.
+**Untouched**: data hooks, formulas, role privacy logic, desktop layout (changes are additive via breakpoints).
 
-## Out of scope
-- Split-screen layout (Option A) — rejected for scalability reasons
-- Changing project data, contract logic, or formulas
-- Project Overview redesign (already shipped)
-- Mobile navigation changes
+---
 
-## Validation
-- Visually confirm projects-first hierarchy on GC/TC/FC test accounts
-- Confirm health pill + next-action CTA appears on each card
-- Confirm Portfolio Insights section still shows all current KPI data
-- Confirm no regression in mobile stacking order
+## Out of scope (ask if you want these)
+- Redesigning the top header / bottom nav structure.
+- Adding a horizontal-swipe carousel for project cards.
+- Mobile-specific KPI selection (different KPIs on mobile vs desktop).
+- Changing any formulas or business logic.
+
+---
+
+## How you'll know it's better
+- Open dashboard at 390px → no clipped numbers anywhere.
+- Portfolio Insights collapsed by default; expanding shows a clean stacked list.
+- Project cards visible above the fold (after Compact Health Hero one-liner).
+- Tap-targets ≥ 40px, no horizontal scroll.
+
+Approve to build, or tell me which of the 5 items to skip.
