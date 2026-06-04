@@ -11,6 +11,8 @@ import { C, fontVal, fontMono, fontLabel, fmt, fmtSigned, KpiCard, Pill, Bar, TH
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
 import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
+import { MyProjectsHero } from '@/components/dashboard/projects/MyProjectsHero';
+import { PortfolioInsightsSection } from '@/components/dashboard/PortfolioInsightsSection';
 import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
 
 /* ─── Types ─── */
@@ -126,15 +128,34 @@ export function TCDashboardView({
 
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
 
-        {/* Portfolio Overview — Hero + 3-zone summary */}
+        {/* Compact portfolio health hero — single row */}
         <PortfolioOverviewHeader
           orgType="TC"
           financials={financials as any}
-          activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+          activeProjectCount={activeProjects.length}
+          variant="compact-hero"
         />
 
-        {/* Materials Pulse — at-a-glance portfolio materials health */}
-        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+        {/* PROJECTS — focal point of the dashboard */}
+        <MyProjectsHero
+          projects={projects}
+          projectFinancials={projectFinancials}
+          recentDocs={recentDocs}
+          attentionItems={attentionItems}
+          orgType="TC"
+        />
+
+        {/* Portfolio Insights — aggregate strip + materials + KPI grid (collapsible) */}
+        <PortfolioInsightsSection>
+          <PortfolioOverviewHeader
+            orgType="TC"
+            financials={financials as any}
+            activeProjectCount={activeProjects.length}
+            variant="strip"
+          />
+
+          {/* Materials Pulse — at-a-glance portfolio materials health */}
+          <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
 
         {/* KPI Grid — 3 cols for TC */}
         <KpiGrid>
@@ -341,8 +362,9 @@ export function TCDashboardView({
             </table>
           </KpiCard>
         </KpiGrid>
+        </PortfolioInsightsSection>
 
-        {/* Needs Attention */}
+        {/* Action Required — kept after projects */}
         {attentionItems.length > 0 && (
           <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>
@@ -355,26 +377,6 @@ export function TCDashboardView({
                 pill={item.type === 'invoice' ? 'Chasing' : 'Action'} pillType={item.type === 'invoice' ? 'pw' : 'pb'}
                 onClick={() => navigate(`/project/${item.projectId}`)} />
             ))}
-          </div>
-        )}
-
-        {/* My Projects Grid */}
-        {activeProjects.length > 0 && (
-          <div className="-order-1 md:order-last" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 My Projects ({activeProjects.length})</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-              {activeProjects.slice(0, 6).map((p, i) => {
-                const ppf = projectFinancials.find(pf => pf.projectId === p.id);
-                const costs = ppf?.costs || 0;
-                return (
-                  <ProjectCard key={p.id} name={p.name} status={p.status}
-                    budget={p.contractValue || 0} costs={costs}
-                    onClick={() => navigate(`/project/${p.id}`)} />
-                );
-              })}
-            </div>
           </div>
         )}
     </div>

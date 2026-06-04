@@ -12,6 +12,8 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
 import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
 import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
+import { MyProjectsHero } from '@/components/dashboard/projects/MyProjectsHero';
+import { PortfolioInsightsSection } from '@/components/dashboard/PortfolioInsightsSection';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -162,18 +164,37 @@ export function GCDashboardView({
           <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />
         )}
 
-        {/* Portfolio Overview — Hero + 3-zone summary (Command Center) */}
+        {/* Compact portfolio health hero — single row */}
         <PortfolioOverviewHeader
           orgType="GC"
           financials={financials as any}
           activeProjectCount={activeProjects.length}
+          variant="compact-hero"
         />
 
-        {/* Materials Pulse — at-a-glance portfolio materials health */}
-        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+        {/* PROJECTS — focal point of the dashboard */}
+        <MyProjectsHero
+          projects={projects}
+          projectFinancials={projectFinancials}
+          recentDocs={recentDocs}
+          attentionItems={attentionItems}
+          orgType="GC"
+        />
 
-        {/* KPI Grid */}
-        <KpiGrid>
+        {/* Portfolio Insights — strip + materials + KPI grid (collapsible) */}
+        <PortfolioInsightsSection>
+          <PortfolioOverviewHeader
+            orgType="GC"
+            financials={financials as any}
+            activeProjectCount={activeProjects.length}
+            variant="strip"
+          />
+
+          {/* Materials Pulse */}
+          <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+
+          {/* KPI Grid */}
+          <KpiGrid>
           {/* Card 1: Total Owner Budget / Revenue */}
           <KpiCard idx={0} accent={C.amber} icon={<Briefcase size={18} color={C.amberD} />} iconBg={C.amberPale}
             label="TOTAL OWNER BUDGET" value={financials.totalRevenue > 0 ? fmt(financials.totalRevenue) : '—'}
@@ -369,37 +390,38 @@ export function GCDashboardView({
               </tbody>
             </table>
           </KpiCard>
-        </KpiGrid>
+          </KpiGrid>
 
-        {/* Portfolio Metrics Table */}
-        {projects.length > 0 && (
-          <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>
-              📊 Portfolio Metrics
+          {/* Portfolio Metrics Table */}
+          {projects.length > 0 && (
+            <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>
+                📊 Portfolio Metrics
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+                  <THead cols={['Project', 'Contract Value', 'Status', 'Actions', '']} />
+                  <tbody>
+                    {projects.slice(0, 15).map((p, i) => (
+                      <TRow key={p.id} onClick={() => navigate(`/project/${p.id}`)} cells={[
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: getProjectColor(i) }} />
+                          <TdN>{p.name}</TdN>
+                        </div>,
+                        <TdM>{p.contractValue ? fmt(p.contractValue) : '—'}</TdM>,
+                        <Pill type={p.status === 'active' ? 'pg' : p.status === 'setup' ? 'pm' : p.status === 'on_hold' ? 'pw' : p.status === 'completed' ? 'pb' : 'pm'}>{p.status}</Pill>,
+                        <>{p.pendingActions > 0 ? <Pill type="pr">{p.pendingActions} pending</Pill> : <span style={{ color: C.faint }}>—</span>}</>,
+                        <span style={{ color: C.blue, fontSize: '0.7rem', fontWeight: 600 }}>View →</span>,
+                      ]} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
-                <THead cols={['Project', 'Contract Value', 'Status', 'Actions', '']} />
-                <tbody>
-                  {projects.slice(0, 15).map((p, i) => (
-                    <TRow key={p.id} onClick={() => navigate(`/project/${p.id}`)} cells={[
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: getProjectColor(i) }} />
-                        <TdN>{p.name}</TdN>
-                      </div>,
-                      <TdM>{p.contractValue ? fmt(p.contractValue) : '—'}</TdM>,
-                      <Pill type={p.status === 'active' ? 'pg' : p.status === 'setup' ? 'pm' : p.status === 'on_hold' ? 'pw' : p.status === 'completed' ? 'pb' : 'pm'}>{p.status}</Pill>,
-                      <>{p.pendingActions > 0 ? <Pill type="pr">{p.pendingActions} pending</Pill> : <span style={{ color: C.faint }}>—</span>}</>,
-                      <span style={{ color: C.blue, fontSize: '0.7rem', fontWeight: 600 }}>View →</span>,
-                    ]} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+          )}
+        </PortfolioInsightsSection>
 
-        {/* Needs Attention */}
+        {/* Action Required */}
         {attentionItems.length > 0 && (
           <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>
@@ -418,31 +440,6 @@ export function GCDashboardView({
                 onClick={() => navigate(`/project/${item.projectId}`)}
               />
             ))}
-          </div>
-        )}
-
-        {/* All Projects Grid */}
-        {activeProjects.length > 0 && (
-          <div className="-order-1 md:order-last" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 All Projects</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 p-4">
-              {activeProjects.slice(0, 10).map((p, i) => {
-                const ppf = projectFinancials.find(pf => pf.projectId === p.id);
-                const costs = ppf?.costs || 0;
-                return (
-                  <ProjectCard
-                    key={p.id}
-                    name={p.name}
-                    status={p.status}
-                    budget={p.contractValue || 0}
-                    costs={costs}
-                    onClick={() => navigate(`/project/${p.id}`)}
-                  />
-                );
-              })}
-            </div>
           </div>
         )}
     </div>

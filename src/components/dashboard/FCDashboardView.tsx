@@ -9,6 +9,8 @@ import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
+import { MyProjectsHero } from '@/components/dashboard/projects/MyProjectsHero';
+import { PortfolioInsightsSection } from '@/components/dashboard/PortfolioInsightsSection';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -155,12 +157,31 @@ export function FCDashboardView({
           </button>
         )}
 
-        {/* Portfolio Overview — Hero + 3-zone summary */}
+        {/* Compact portfolio health hero — single row */}
         <PortfolioOverviewHeader
           orgType="FC"
           financials={financials as any}
           activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+          variant="compact-hero"
         />
+
+        {/* PROJECTS — focal point */}
+        <MyProjectsHero
+          projects={projects}
+          projectFinancials={projectFinancials}
+          recentDocs={recentDocs}
+          attentionItems={attentionItems}
+          orgType="FC"
+        />
+
+        {/* Portfolio Insights — collapsible */}
+        <PortfolioInsightsSection>
+          <PortfolioOverviewHeader
+            orgType="FC"
+            financials={financials as any}
+            activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+            variant="strip"
+          />
 
         {/* ═══ 6 KPI Cards — 3-column grid ═══ */}
         <KpiGrid>
@@ -339,6 +360,7 @@ export function FCDashboardView({
             </table>
           </KpiCard>
         </KpiGrid>
+        </PortfolioInsightsSection>
 
         {/* ═══ Attention Items ═══ */}
         {(attentionItems.length > 0 || pendingInvoiceDocs.length > 0) && (
@@ -369,32 +391,6 @@ export function FCDashboardView({
                 onClick={() => navigate(`/project/${item.projectId}`)}
               />
             ))}
-          </div>
-        )}
-
-        {/* ═══ My Projects ═══ */}
-        {projects.length > 0 && (
-          <div className="-order-1 md:order-last" style={{ ...fontLabel }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink }}>📂 My Projects</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: projects.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {projects.map((p, i) => {
-                const ppf = projectFinancials.find(pff => pff.projectId === p.id);
-                const rev = ppf?.revenue || p.contractValue || 0;
-                const cost = ppf?.costs || 0;
-                return (
-                  <ProjectCard
-                    key={p.id}
-                    name={p.name}
-                    status={p.status}
-                    budget={rev}
-                    costs={cost}
-                    onClick={() => navigate(`/project/${p.id}`)}
-                  />
-                );
-              })}
-            </div>
           </div>
         )}
 
