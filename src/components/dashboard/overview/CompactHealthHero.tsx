@@ -69,9 +69,13 @@ export function CompactHealthHero({
         </span>
       </div>
 
-      <p style={{ fontSize: '0.76rem', color: C.muted, lineHeight: 1.4, margin: 0, flex: 1, minWidth: 220 }}>
+      <p
+        className="hidden sm:block"
+        style={{ fontSize: '0.76rem', color: C.muted, lineHeight: 1.4, margin: 0, flex: 1, minWidth: 220 }}
+      >
         {summary}
       </p>
+
     </div>
   );
 }

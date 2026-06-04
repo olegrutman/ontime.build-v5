@@ -76,12 +76,15 @@ export function MyProjectsHero({
             background: C.navy, color: '#FFF',
             fontSize: '0.72rem', fontWeight: 700, ...fontLabel,
             border: 'none', cursor: 'pointer',
+            flexShrink: 0,
           }}
           className="hover:brightness-110"
+          aria-label="New Project"
         >
           <Plus size={13} />
-          New Project
+          <span className="hidden sm:inline">New Project</span>
         </button>
+
       </header>
 
       {projects.length === 0 ? (
