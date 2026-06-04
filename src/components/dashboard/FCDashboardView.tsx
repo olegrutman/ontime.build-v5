@@ -157,12 +157,31 @@ export function FCDashboardView({
           </button>
         )}
 
-        {/* Portfolio Overview — Hero + 3-zone summary */}
+        {/* Compact portfolio health hero — single row */}
         <PortfolioOverviewHeader
           orgType="FC"
           financials={financials as any}
           activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+          variant="compact-hero"
         />
+
+        {/* PROJECTS — focal point */}
+        <MyProjectsHero
+          projects={projects}
+          projectFinancials={projectFinancials}
+          recentDocs={recentDocs}
+          attentionItems={attentionItems}
+          orgType="FC"
+        />
+
+        {/* Portfolio Insights — collapsible */}
+        <PortfolioInsightsSection>
+          <PortfolioOverviewHeader
+            orgType="FC"
+            financials={financials as any}
+            activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+            variant="strip"
+          />
 
         {/* ═══ 6 KPI Cards — 3-column grid ═══ */}
         <KpiGrid>
