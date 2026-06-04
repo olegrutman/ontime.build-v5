@@ -40,20 +40,17 @@ export function ProjectHealthHero({
 
   return (
     <div
+      className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 md:gap-6 items-center"
       style={{
         background: C.surface,
         borderRadius: 16,
         border: `1px solid ${C.border}`,
         borderLeft: `4px solid ${s.border}`,
-        padding: '20px 24px',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) auto',
-        gap: 24,
-        alignItems: 'center',
+        padding: '16px 18px',
         ...fontLabel,
       }}
-      className="max-md:grid-cols-1"
     >
+
       {/* Left: status + value */}
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
