@@ -362,8 +362,9 @@ export function TCDashboardView({
             </table>
           </KpiCard>
         </KpiGrid>
+        </PortfolioInsightsSection>
 
-        {/* Needs Attention */}
+        {/* Action Required — kept after projects */}
         {attentionItems.length > 0 && (
           <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>
@@ -376,26 +377,6 @@ export function TCDashboardView({
                 pill={item.type === 'invoice' ? 'Chasing' : 'Action'} pillType={item.type === 'invoice' ? 'pw' : 'pb'}
                 onClick={() => navigate(`/project/${item.projectId}`)} />
             ))}
-          </div>
-        )}
-
-        {/* My Projects Grid */}
-        {activeProjects.length > 0 && (
-          <div className="-order-1 md:order-last" style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 My Projects ({activeProjects.length})</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-              {activeProjects.slice(0, 6).map((p, i) => {
-                const ppf = projectFinancials.find(pf => pf.projectId === p.id);
-                const costs = ppf?.costs || 0;
-                return (
-                  <ProjectCard key={p.id} name={p.name} status={p.status}
-                    budget={p.contractValue || 0} costs={costs}
-                    onClick={() => navigate(`/project/${p.id}`)} />
-                );
-              })}
-            </div>
           </div>
         )}
     </div>
