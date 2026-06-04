@@ -136,22 +136,27 @@ export function RichProjectCard({
       )}
 
       {/* Financials row */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: hideCost ? 'repeat(2, minmax(0,1fr))' : 'repeat(3, minmax(0,1fr))',
-        gap: 8,
-        paddingTop: 6,
-        borderTop: `1px solid ${C.border}`,
-      }}>
+      <div
+        className={hideCost ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-2 sm:grid-cols-3 gap-2'}
+        style={{
+          paddingTop: 6,
+          borderTop: `1px solid ${C.border}`,
+        }}
+      >
         <Cell label={contractLabel} value={fmt(revenue)} />
-        {!hideCost && <Cell label={costLabel} value={fmt(costs)} tone="muted" />}
         <Cell
           label="Margin"
           value={fmt(margin)}
           tone={margin >= 0 ? 'pos' : 'neg'}
           suffix={hasContract ? `${marginPct >= 0 ? '+' : ''}${Math.round(marginPct)}%` : undefined}
         />
+        {!hideCost && (
+          <div className="col-span-2 sm:col-span-1">
+            <Cell label={costLabel} value={fmt(costs)} tone="muted" />
+          </div>
+        )}
       </div>
+
 
       {/* Next action footer */}
       <div
