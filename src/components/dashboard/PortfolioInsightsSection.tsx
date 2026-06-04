@@ -39,9 +39,10 @@ export function PortfolioInsightsSection({ children, defaultOpen }: PortfolioIns
           }}>
             Portfolio Insights
           </span>
-          <span style={{ fontSize: '0.68rem', color: C.faint, fontWeight: 600 }}>
+          <span className="hidden sm:inline" style={{ fontSize: '0.68rem', color: C.faint, fontWeight: 600 }}>
             Aggregate KPIs across all projects
           </span>
+
         </div>
         <ChevronDown
           size={16}
