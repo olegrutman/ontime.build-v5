@@ -12,6 +12,8 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
 import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
 import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
+import { MyProjectsHero } from '@/components/dashboard/projects/MyProjectsHero';
+import { PortfolioInsightsSection } from '@/components/dashboard/PortfolioInsightsSection';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
