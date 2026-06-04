@@ -128,15 +128,34 @@ export function TCDashboardView({
 
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefresh} />}
 
-        {/* Portfolio Overview — Hero + 3-zone summary */}
+        {/* Compact portfolio health hero — single row */}
         <PortfolioOverviewHeader
           orgType="TC"
           financials={financials as any}
-          activeProjectCount={projects.filter(p => !['archived', 'completed'].includes(p.status)).length}
+          activeProjectCount={activeProjects.length}
+          variant="compact-hero"
         />
 
-        {/* Materials Pulse — at-a-glance portfolio materials health */}
-        <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
+        {/* PROJECTS — focal point of the dashboard */}
+        <MyProjectsHero
+          projects={projects}
+          projectFinancials={projectFinancials}
+          recentDocs={recentDocs}
+          attentionItems={attentionItems}
+          orgType="TC"
+        />
+
+        {/* Portfolio Insights — aggregate strip + materials + KPI grid (collapsible) */}
+        <PortfolioInsightsSection>
+          <PortfolioOverviewHeader
+            orgType="TC"
+            financials={financials as any}
+            activeProjectCount={activeProjects.length}
+            variant="strip"
+          />
+
+          {/* Materials Pulse — at-a-glance portfolio materials health */}
+          <MaterialsPulseStrip pulse={materialsPulse} loading={pulseLoading} />
 
         {/* KPI Grid — 3 cols for TC */}
         <KpiGrid>
