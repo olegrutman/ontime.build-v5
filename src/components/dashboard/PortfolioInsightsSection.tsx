@@ -1,15 +1,18 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, BarChart3 } from 'lucide-react';
 import { C, fontLabel, fontVal } from '@/components/shared/KpiCard';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PortfolioInsightsSectionProps {
   children: ReactNode;
-  /** Default open state. Defaults to true on desktop. */
+  /** Default open state. If omitted, defaults to true on desktop and false on mobile. */
   defaultOpen?: boolean;
 }
 
-export function PortfolioInsightsSection({ children, defaultOpen = true }: PortfolioInsightsSectionProps) {
-  const [open, setOpen] = useState(defaultOpen);
+export function PortfolioInsightsSection({ children, defaultOpen }: PortfolioInsightsSectionProps) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(defaultOpen ?? !isMobile);
+
 
   return (
     <section
