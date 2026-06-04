@@ -50,12 +50,13 @@ function SummaryCard({ title, accent, icon, rows, footer }: SummaryCardProps) {
             <div
               key={`${r.label}-${i}`}
               style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                gap: 8, flexWrap: 'wrap',
                 paddingTop: r.emphasis ? 6 : 0,
                 borderTop: r.emphasis ? `1px solid ${C.border}` : 'none',
               }}
             >
-              <span style={{ fontSize: '0.72rem', color: C.muted, fontWeight: r.emphasis ? 700 : 500 }}>
+              <span style={{ fontSize: '0.72rem', color: C.muted, fontWeight: r.emphasis ? 700 : 500, minWidth: 0, flex: '1 1 auto' }}>
                 {r.label}
               </span>
               <span
@@ -64,11 +65,14 @@ function SummaryCard({ title, accent, icon, rows, footer }: SummaryCardProps) {
                   color: toneColor,
                   ...fontMono,
                   fontWeight: r.emphasis ? 700 : 600,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 {valueStr}
               </span>
             </div>
+
           );
         })}
       </div>
