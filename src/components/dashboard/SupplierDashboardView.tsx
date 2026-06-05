@@ -139,6 +139,11 @@ export function SupplierDashboardView({
   const receivedPct = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0;
   const overCount = dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).length;
   const onTrackCount = dp.filter(p => p.risk === 'On Track' && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
+  const activeProjectCount = dp.filter(p => !['archived', 'completed'].includes(p.status)).length;
+  const daysVals = dp.map(p => p.daysSinceLastPayment).filter((d): d is number => d !== null);
+  const avgDaysSincePayment = daysVals.length > 0
+    ? Math.round(daysVals.reduce((s, d) => s + d, 0) / daysVals.length)
+    : null;
 
   // Active = any supplier activity OR not archived/completed
   const projectsWithActivity = dp.filter(p =>
@@ -167,8 +172,41 @@ export function SupplierDashboardView({
         <OrgInviteBanner />
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={handleRefresh} />}
 
+        {/* ─── NEW HERO: Cash Pipeline ─── */}
+        <SupplierCashPipeline
+          totalEstimate={totalEstimate}
+          totalOrdered={totalOrdered}
+          totalBilled={totalBilled}
+          totalReceived={totalReceived}
+          totalOutstanding={totalOutstanding}
+          totalOver={totalOver}
+          orderedPct={orderedPct}
+          billedPct={billedPct}
+          receivedPct={receivedPct}
+          activeProjects={activeProjectCount}
+        />
+
+        {/* ─── Secondary metric strip ─── */}
+        <SupplierMetricStrip
+          activeProjects={activeProjectCount}
+          overBudgetCount={overCount}
+          upcomingDeliveries={upcomingDeliveries.length}
+          avgDaysSincePayment={avgDaysSincePayment}
+        />
+
+        {/* ─── Drill into each stage ─── */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, paddingTop: 4 }}>
+          <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: C.muted, ...fontLabel }}>
+            Drill into each stage
+          </span>
+          <span style={{ fontSize: '0.7rem', color: C.faint, ...fontLabel }}>
+            Click any card to expand the full breakdown
+          </span>
+        </div>
+
         {/* ─── 6 KPI Cards: 3-col grid × 2 rows ─── */}
         <KpiGrid>
+
 
           {/* Card 1 — Total Estimate Value */}
           <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="TOTAL ESTIMATE VALUE" value={fmt(totalEstimate)} sub={`Across ${dp.filter(p => p.estimate > 0).length} active projects`}
