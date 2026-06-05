@@ -8,6 +8,8 @@ import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import { useSupplierDashboardData } from '@/hooks/useSupplierDashboardData';
 import { C, fontVal, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCashPipeline';
+import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
