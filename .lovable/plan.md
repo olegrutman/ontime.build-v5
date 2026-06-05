@@ -1,50 +1,46 @@
-## What changes
+## Goal
+On every dashboard and project-overview screen, the KPI card grid should never leave a half-empty last row (e.g. 6 cards in a 4-col grid → row of 4 + row of 2 with gap). Always pack rows fully.
 
-Today the Supplier dashboard opens with a 50/50 wall of six identical KPI tiles. Every number is equally loud, the at-risk projects are buried below the fold, and there's no visual story tying ordered → billed → received together. The new layout leads with a single "where the money is right now" picture and pushes risk + deliveries above the drill-downs.
+## Approach
+Upgrade the shared `KpiGrid` so it picks a column count based on the actual number of visible children, instead of hardcoding 4. All call sites already use `<KpiGrid>` so a single change cascades everywhere.
 
-## New page order
+### Logic
+Count React children at render time, then choose `lg` columns from a divisor table that produces a full final row:
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  Hero (navy)  ·  Good morning, Greg  ·  status chips    │
-├─────────────────────────────────────────────────────────┤
-│  CASH PIPELINE  (the new hero)                          │
-│  [Estimated] → [Ordered⚠+$6.2K] → [Billed] →            │
-│      [Received] → [Outstanding]                         │
-├─────────────────────────────────────────────────────────┤
-│  Metric strip · Active · Over-budget · Deliveries · Avg │
-│                                                         │
-│  Project Budget Forecast  (promoted up)                 │
-│  Scheduled Deliveries     (promoted up)                 │
-├─────────────────────────────────────────────────────────┤
-│  Drill down into each stage                             │
-│  [Estimate] [Ordered] [Over] [Billed] [Received] [AR]   │
-│  (existing 6 expandable KPI cards, unchanged)           │
-│                                                         │
-│  Active Projects grid (unchanged)                       │
-└─────────────────────────────────────────────────────────┘
+1 child  → 1 col
+2        → 2
+3        → 3
+4        → 4
+5        → 5 (single full row at lg)
+6        → 3   (2 rows of 3, no gap)
+7        → 4   (4 + 3, last row stretches via auto-fit fallback)
+8        → 4
+9        → 3
+10       → 5
+11–12    → 4
+default  → 4
 ```
 
-## Components to add
+For counts that don't divide cleanly (5, 7, 11…), apply a CSS fallback: the last row's items use `flex: 1` via a `grid-template-columns: repeat(auto-fit, minmax(0, 1fr))` wrapper on the last row only — implemented by giving the final orphan card(s) `col-span` adjustments so they stretch to fill the row.
 
-1. **`src/components/dashboard/supplier/SupplierCashPipeline.tsx`** — 5-stage horizontal pipeline. Each stage shows label, count-up animated value, sub-line (% conversion to previous stage), and an inline flag chip when something's off (e.g. "+$6.2K over" on Ordered). Stages are visually connected by a small chevron between cells. Tone per stage: Estimated neutral, Ordered amber if over-ordered, Billed navy (primary emphasis), Received green, Outstanding red if > 0 else green. Stacks 1-col on mobile, 2-col on small, 5-col on lg.
+Simplest implementation that matches user intent (no empty space):
+- Compute `cols` from child count using the table above.
+- If `childCount % cols !== 0`, give the last `(childCount % cols)` children an inline `gridColumn: span Math.floor(cols / remainder)` so they expand to fill the trailing row.
 
-2. **`src/components/dashboard/supplier/SupplierMetricStrip.tsx`** — Compact 4-up secondary KPIs that *don't* fit the pipeline narrative: Active Projects, Over-Budget count, Upcoming Deliveries, Avg Days Since Payment. Smaller cards, no expand affordance.
+### Responsive behavior (unchanged ladder)
+- mobile: 1 col
+- sm: 2 cols
+- lg: computed cols (capped at child count)
 
-## Component to edit
+### Files to change
+- `src/components/shared/KpiGrid.tsx` — add child-count logic + last-row stretch.
 
-**`src/components/dashboard/SupplierDashboardView.tsx`** — reorder the JSX below the hero/onboarding to: `<SupplierCashPipeline />` → `<SupplierMetricStrip />` → Project Budget Forecast block → Scheduled Deliveries block → existing `<KpiGrid>` with a small "Drill into each stage" section label → Active Projects grid. Add a derived `avgDaysSincePayment` from `dp` (mean of non-null `daysSinceLastPayment`). All existing data math is reused unchanged.
+No call-site changes needed. The 10 existing `<KpiGrid>` usages (GC/TC/FC/Supplier dashboards + project overviews + analytics sections) automatically get balanced rows.
 
-## Out of scope
+### Out of scope
+- `OverviewSummaryStrip.tsx` and other grids that aren't `KpiGrid` — leave alone unless they exhibit the same issue (they currently use 3-col which already fits their content).
+- No business logic, data, or card content changes.
 
-- No changes to `useSupplierDashboardData`, business logic, or data shape.
-- No changes to GC/TC/FC dashboards.
-- Sidebar, topbar, and DashboardHero stay as is.
-- The 6 expandable KPI cards keep their full tables — just demoted below the pipeline as drill-downs.
-
-## Technical notes
-
-- Uses existing design tokens from `@/components/shared/KpiCard` (`C`, `fontVal`, `fontMono`, `fontLabel`, `fmt`) — no new color values.
-- Count-up via `requestAnimationFrame` with easeOutCubic, ~700ms, no library.
-- Pipeline cell hover = subtle `-translate-y-0.5` lift; connector dots between cells hidden below `md`.
-- Fully responsive: 1 → 2 → 5 cols, no inline `gridTemplateColumns` overrides (lesson from prior mobile fixes).
+### Verification
+After the change, screenshot the Supplier project overview (6 cards → 3×2 grid, no empty space) and Supplier dashboard analytics sections at desktop width to confirm the last row is full.
