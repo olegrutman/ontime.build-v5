@@ -8,6 +8,8 @@ import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import { useSupplierDashboardData } from '@/hooks/useSupplierDashboardData';
 import { C, fontVal, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCashPipeline';
+import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -137,6 +139,11 @@ export function SupplierDashboardView({
   const receivedPct = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0;
   const overCount = dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).length;
   const onTrackCount = dp.filter(p => p.risk === 'On Track' && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
+  const activeProjectCount = dp.filter(p => !['archived', 'completed'].includes(p.status)).length;
+  const daysVals = dp.map(p => p.daysSinceLastPayment).filter((d): d is number => d !== null);
+  const avgDaysSincePayment = daysVals.length > 0
+    ? Math.round(daysVals.reduce((s, d) => s + d, 0) / daysVals.length)
+    : null;
 
   // Active = any supplier activity OR not archived/completed
   const projectsWithActivity = dp.filter(p =>
@@ -165,8 +172,135 @@ export function SupplierDashboardView({
         <OrgInviteBanner />
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={handleRefresh} />}
 
+        {/* ─── NEW HERO: Cash Pipeline ─── */}
+        <SupplierCashPipeline
+          totalEstimate={totalEstimate}
+          totalOrdered={totalOrdered}
+          totalBilled={totalBilled}
+          totalReceived={totalReceived}
+          totalOutstanding={totalOutstanding}
+          totalOver={totalOver}
+          orderedPct={orderedPct}
+          billedPct={billedPct}
+          receivedPct={receivedPct}
+          activeProjects={activeProjectCount}
+        />
+
+        {/* ─── Secondary metric strip ─── */}
+        <SupplierMetricStrip
+          activeProjects={activeProjectCount}
+          overBudgetCount={overCount}
+          upcomingDeliveries={upcomingDeliveries.length}
+          avgDaysSincePayment={avgDaysSincePayment}
+        />
+
+        {/* ─── Scheduled Deliveries ─── */}
+        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
+            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>🚚 Scheduled Deliveries</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: C.amber }}>{upcomingDeliveries.length} upcoming</span>
+          </div>
+          {upcomingDeliveries.length === 0 ? (
+            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.78rem', color: C.muted }}>No scheduled deliveries</span>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+                <THead cols={['PO #', 'Project', 'Delivery Date', 'Status', 'Total']} />
+                <tbody>
+                  {upcomingDeliveries.map((d, i) => (
+                    <TRow key={i} onClick={() => goToProject(d.projectId)} cells={[
+                      <TdN>{d.poNumber}</TdN>,
+                      <span>{d.projectName}</span>,
+                      <span style={{ fontSize: '0.74rem' }}>{format(new Date(d.deliveryDate), 'MMM d, yyyy')}</span>,
+                      <Pill type="pa">{d.status}</Pill>,
+                      <TdM>{d.total !== null ? fmt(d.total) : '—'}</TdM>,
+                    ]} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Project Budget Forecast ─── */}
+        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
+          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
+            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>⚠️ Project Budget Forecast</span>
+          </div>
+          {forecastRows.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>
+              No active projects with supplier activity yet
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+                <THead cols={['Project', 'Estimate', 'Total Ordered', 'Extra / Over', 'Billed', 'Received', 'AR Outstanding', 'Risk']} />
+                <tbody>
+                  {(() => {
+                    let fEst = 0, fOrd = 0, fBilled = 0, fRec = 0, fOver = 0, fOut = 0;
+                    const rows = forecastRows.map((p, i) => {
+                      const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
+                      const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
+                      const outBal = Math.max(0, p.billed - p.received);
+                      const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
+                      fEst += p.estimate; fOrd += p.ordered; fBilled += p.billed;
+                      fRec += p.received; fOver += overAmt; fOut += outBal;
+                      const riskPill: PillType =
+                        p.risk === 'Over Budget' ? 'pr' : p.risk === 'Watch' ? 'pa' : 'pg';
+                      const tip = p.packOverDetails.length > 0
+                        ? `Packs over budget: ${p.packOverDetails.slice(0, 4).map(d => `${d.packName} +${Math.round(d.overPct)}%`).join(', ')}`
+                        : '';
+                      return (
+                        <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
+                          <TdN>{p.name}</TdN>,
+                          <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
+                          <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
+                          overAmt > 0
+                            ? <span style={{ color: C.red, fontWeight: 700 }} title={tip}>
+                                +{fmt(overAmt)}{p.packsOverCount > 0 ? ` (${p.packsOverCount} pack${p.packsOverCount > 1 ? 's' : ''})` : ''}
+                              </span>
+                            : <span>—</span>,
+                          p.billed > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={bPct} color={C.blue} /><TdM>{fmt(p.billed)}</TdM></div> : <span>—</span>,
+                          p.received > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={rPct} color={C.green} /><TdM>{fmt(p.received)}</TdM></div> : <span>—</span>,
+                          <TdM>{outBal > 0 ? fmt(outBal) : '—'}</TdM>,
+                          <span title={tip}><Pill type={riskPill}>{p.risk}</Pill></span>,
+                        ]} />
+                      );
+                    });
+                    rows.push(
+                      <TRow key="total" isTotal cells={[
+                        '—',
+                        <TdM>{fmt(fEst)}</TdM>,
+                        <TdM>{fmt(fOrd)}</TdM>,
+                        fOver > 0 ? <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(fOver)}</span> : <span>—</span>,
+                        <TdM>{fmt(fBilled)}</TdM>,
+                        <TdM>{fmt(fRec)}</TdM>,
+                        <TdM>{fmt(fOut)}</TdM>,
+                        '—',
+                      ]} />
+                    );
+                    return rows;
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        {/* ─── Drill into each stage ─── */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, paddingTop: 4 }}>
+          <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: C.muted, ...fontLabel }}>
+            Drill into each stage
+          </span>
+          <span style={{ fontSize: '0.7rem', color: C.faint, ...fontLabel }}>
+            Click any card to expand the full breakdown
+          </span>
+        </div>
+
         {/* ─── 6 KPI Cards: 3-col grid × 2 rows ─── */}
         <KpiGrid>
+
 
           {/* Card 1 — Total Estimate Value */}
           <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="TOTAL ESTIMATE VALUE" value={fmt(totalEstimate)} sub={`Across ${dp.filter(p => p.estimate > 0).length} active projects`}
@@ -330,100 +464,7 @@ export function SupplierDashboardView({
           </KpiCard>
         </KpiGrid>
 
-        {/* ─── Scheduled Deliveries ─── */}
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>🚚 Scheduled Deliveries</span>
-            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: C.amber }}>{upcomingDeliveries.length} upcoming</span>
-          </div>
-          {upcomingDeliveries.length === 0 ? (
-            <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-              <span style={{ fontSize: '0.78rem', color: C.muted }}>No scheduled deliveries</span>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
-                <THead cols={['PO #', 'Project', 'Delivery Date', 'Status', 'Total']} />
-                <tbody>
-                  {upcomingDeliveries.map((d, i) => (
-                    <TRow key={i} onClick={() => goToProject(d.projectId)} cells={[
-                      <TdN>{d.poNumber}</TdN>,
-                      <span>{d.projectName}</span>,
-                      <span style={{ fontSize: '0.74rem' }}>{format(new Date(d.deliveryDate), 'MMM d, yyyy')}</span>,
-                      <Pill type="pa">{d.status}</Pill>,
-                      <TdM>{d.total !== null ? fmt(d.total) : '—'}</TdM>,
-                    ]} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
 
-        {/* ─── Project Budget Forecast ─── */}
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>⚠️ Project Budget Forecast</span>
-          </div>
-          {forecastRows.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>
-              No active projects with supplier activity yet
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
-                <THead cols={['Project', 'Estimate', 'Total Ordered', 'Extra / Over', 'Billed', 'Received', 'AR Outstanding', 'Risk']} />
-                <tbody>
-                  {(() => {
-                    let fEst = 0, fOrd = 0, fBilled = 0, fRec = 0, fOver = 0, fOut = 0;
-                    const rows = forecastRows.map((p, i) => {
-                      const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
-                      const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
-                      const outBal = Math.max(0, p.billed - p.received);
-                      const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
-                      fEst += p.estimate; fOrd += p.ordered; fBilled += p.billed;
-                      fRec += p.received; fOver += overAmt; fOut += outBal;
-                      const riskPill: PillType =
-                        p.risk === 'Over Budget' ? 'pr' : p.risk === 'Watch' ? 'pa' : 'pg';
-                      const tip = p.packOverDetails.length > 0
-                        ? `Packs over budget: ${p.packOverDetails.slice(0, 4).map(d => `${d.packName} +${Math.round(d.overPct)}%`).join(', ')}`
-                        : '';
-                      return (
-                        <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
-                          <TdN>{p.name}</TdN>,
-                          <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
-                          <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
-                          overAmt > 0
-                            ? <span style={{ color: C.red, fontWeight: 700 }} title={tip}>
-                                +{fmt(overAmt)}{p.packsOverCount > 0 ? ` (${p.packsOverCount} pack${p.packsOverCount > 1 ? 's' : ''})` : ''}
-                              </span>
-                            : <span>—</span>,
-                          p.billed > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={bPct} color={C.blue} /><TdM>{fmt(p.billed)}</TdM></div> : <span>—</span>,
-                          p.received > 0 ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Bar pct={rPct} color={C.green} /><TdM>{fmt(p.received)}</TdM></div> : <span>—</span>,
-                          <TdM>{outBal > 0 ? fmt(outBal) : '—'}</TdM>,
-                          <span title={tip}><Pill type={riskPill}>{p.risk}</Pill></span>,
-                        ]} />
-                      );
-                    });
-                    rows.push(
-                      <TRow key="total" isTotal cells={[
-                        '—',
-                        <TdM>{fmt(fEst)}</TdM>,
-                        <TdM>{fmt(fOrd)}</TdM>,
-                        fOver > 0 ? <span style={{ color: C.red, fontWeight: 700 }}>+{fmt(fOver)}</span> : <span>—</span>,
-                        <TdM>{fmt(fBilled)}</TdM>,
-                        <TdM>{fmt(fRec)}</TdM>,
-                        <TdM>{fmt(fOut)}</TdM>,
-                        '—',
-                      ]} />
-                    );
-                    return rows;
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
 
         {/* ─── Active Projects Grid ─── */}
         <div>
