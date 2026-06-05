@@ -1,8 +1,8 @@
-import { Children, cloneElement, isValidElement, type ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 
 interface KpiGridProps {
   children: ReactNode;
-  /** Optional cap for lg+ columns. Defaults to 4. */
+  /** Optional cap for lg+ columns. Defaults to auto-balance based on child count. */
   columns?: 3 | 4 | 5;
 }
 
@@ -21,34 +21,35 @@ const LG_CLASS: Record<number, string> = {
   5: 'lg:grid-cols-5',
 };
 
+// Static class strings so Tailwind keeps them in the build.
+const SPAN_CLASS: Record<number, string> = {
+  2: 'lg:col-span-2',
+  3: 'lg:col-span-3',
+  4: 'lg:col-span-4',
+  5: 'lg:col-span-5',
+};
+
 export function KpiGrid({ children, columns }: KpiGridProps) {
   const items = Children.toArray(children).filter(Boolean);
   const count = items.length;
 
-  // Resolve column count: explicit prop wins (clamped), otherwise auto-balance.
   let cols = columns ?? COL_MAP[count] ?? 4;
   if (count > 0 && cols > count) cols = count;
 
   const remainder = count % cols;
   const stretch = remainder > 0 ? Math.floor(cols / remainder) : 1;
+  const spanClass = stretch > 1 ? SPAN_CLASS[stretch] : '';
 
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 ${LG_CLASS[cols] ?? 'lg:grid-cols-4'}`}>
       {items.map((child, i) => {
-        // Stretch trailing orphan cards to fill the final row on lg+ only.
         const isOrphan = remainder > 0 && i >= count - remainder;
-        if (!isOrphan || stretch <= 1) return child;
-
-        const wrapperClass = `lg:col-span-${stretch}`;
-        // Wrap to avoid mutating arbitrary children; keep contents identical.
-        if (isValidElement(child)) {
-          return (
-            <div key={(child as any).key ?? i} className={wrapperClass} style={{ display: 'contents' }}>
-              <div className={wrapperClass}>{child}</div>
-            </div>
-          );
-        }
-        return <div key={i} className={wrapperClass}>{child}</div>;
+        if (!isOrphan || !spanClass) return child;
+        return (
+          <div key={i} className={spanClass}>
+            {child}
+          </div>
+        );
       })}
     </div>
   );
