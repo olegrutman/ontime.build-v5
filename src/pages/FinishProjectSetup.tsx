@@ -111,6 +111,14 @@ export default function FinishProjectSetup() {
     }));
   }, [ctx?.scope]);
 
+  // Keep the SOV wizard's buildingType in sync with the Building Info step,
+  // since the standalone Building Type step has been removed.
+  useEffect(() => {
+    if (tmScope.buildingType && tmScope.buildingType !== wizard.buildingType) {
+      wizard.selectBuildingType(tmScope.buildingType as any);
+    }
+  }, [tmScope.buildingType, wizard.buildingType, wizard.selectBuildingType]);
+
   // Supplier contract (locked, displayed when buyer is material-responsible)
   const supplierContract = useMemo(() => {
     const row = (ctx?.contracts || []).find(c =>
