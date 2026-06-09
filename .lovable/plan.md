@@ -1,46 +1,55 @@
-## Goal
-On every dashboard and project-overview screen, the KPI card grid should never leave a half-empty last row (e.g. 6 cards in a 4-col grid → row of 4 + row of 2 with gap). Always pack rows fully.
+# Sasha Popup Redesign
 
-## Approach
-Upgrade the shared `KpiGrid` so it picks a column count based on the actual number of visible children, instead of hardcoding 4. All call sites already use `<KpiGrid>` so a single change cascades everywhere.
+## Problems in current popup
+- Greeting bubble uses a dark muted brown/olive surface that looks broken and low-contrast against the white panel.
+- Header icons (cursor, refresh, X) are unlabeled — users can't tell what they do.
+- Quick-action chips are flat orange outlines with no icons, hierarchy, or grouping.
+- On mobile, the panel anchors `bottom-48 right-2` with a 300px width, leaving the input cramped and the bubble overlapping the bottom nav.
+- Floating bubble has no clear "chat with me" affordance once the welcome label dismisses.
 
-### Logic
-Count React children at render time, then choose `lg` columns from a divisor table that produces a full final row:
+## Goals
+1. Make it feel friendly and inviting (not a dark debug box).
+2. Make every control self-explanatory.
+3. Make it obviously interactive — Sasha invites the next tap.
+4. First-class mobile layout.
 
-```text
-1 child  → 1 col
-2        → 2
-3        → 3
-4        → 4
-5        → 5 (single full row at lg)
-6        → 3   (2 rows of 3, no gap)
-7        → 4   (4 + 3, last row stretches via auto-fit fallback)
-8        → 4
-9        → 3
-10       → 5
-11–12    → 4
-default  → 4
-```
+## Changes
 
-For counts that don't divide cleanly (5, 7, 11…), apply a CSS fallback: the last row's items use `flex: 1` via a `grid-template-columns: repeat(auto-fit, minmax(0, 1fr))` wrapper on the last row only — implemented by giving the final orphan card(s) `col-span` adjustments so they stretch to fill the row.
+### 1. SashaBubble — Header (`SashaBubble.tsx`)
+- Soft gradient header (`bg-gradient-to-r from-primary/10 via-background to-background`) with avatar in a ring + a small green "online" dot.
+- Replace icon-only buttons with **icon + label** pill buttons that collapse to icon-only under `sm:` for mobile:
+  - `MousePointer2` → "Point" (highlight a card)
+  - `RotateCcw` → "Reset"
+  - `X` → "Close"
+- Each button keeps a tooltip via `Tooltip` for hover, but the visible label removes ambiguity.
 
-Simplest implementation that matches user intent (no empty space):
-- Compute `cols` from child count using the table above.
-- If `childCount % cols !== 0`, give the last `(childCount % cols)` children an inline `gridColumn: span Math.floor(cols / remainder)` so they expand to fill the trailing row.
+### 2. Assistant message bubble (`SashaMessage.tsx`)
+- Replace `bg-muted` (the dark olive) with `bg-primary/5 border border-primary/15 text-foreground`.
+- Add subtle `rounded-2xl` and a small avatar tail.
+- User bubble keeps `bg-primary text-primary-foreground` but switches to `rounded-2xl` for consistency.
 
-### Responsive behavior (unchanged ladder)
-- mobile: 1 col
-- sm: 2 cols
-- lg: computed cols (capped at child count)
+### 3. Quick action chips (`SashaQuickActions.tsx`)
+- Two-tier visual:
+  - **Suggested next step** (first action) = filled primary button with arrow icon → looks like a CTA.
+  - Remaining actions = soft chips `bg-primary/10 text-primary hover:bg-primary/20 border-0 rounded-full`, each prefixed with a small contextual icon based on a keyword map (`Sparkles`, `Play`, `FileText`, `ShoppingCart`, `HelpCircle`, fallback `MessageCircle`).
+- Add a tiny "Try one:" label above the chips so users know they're tappable suggestions.
 
-### Files to change
-- `src/components/shared/KpiGrid.tsx` — add child-count logic + last-row stretch.
+### 4. Input row
+- Larger 44px input with rounded-full styling and inline send button (mic-style) — bigger tap target on mobile.
+- Placeholder rotates between examples ("Ask about change orders…", "How do I invite a contractor?") — pick one at mount, no animation lib needed.
 
-No call-site changes needed. The 10 existing `<KpiGrid>` usages (GC/TC/FC/Supplier dashboards + project overviews + analytics sections) automatically get balanced rows.
+### 5. Mobile layout
+- Panel:
+  - Mobile (`<sm`): full-width sheet anchored to bottom — `inset-x-2 bottom-24 w-auto max-h-[70vh]` so it doesn't overlap the bottom nav (currently `bottom-32` for the bubble).
+  - Desktop unchanged width (400px) but raise `max-h` to `min(560px,75vh)`.
+- Floating bubble: keep position, but add a permanent small "Sasha" chip beside it on desktop (replacing the auto-dismissing label) and a subtle breathing glow instead of bounce so it doesn't feel like a notification.
 
-### Out of scope
-- `OverviewSummaryStrip.tsx` and other grids that aren't `KpiGrid` — leave alone unless they exhibit the same issue (they currently use 3-col which already fits their content).
-- No business logic, data, or card content changes.
+### 6. Empty/loading polish
+- "Sasha is thinking…" becomes 3 animated dots in a chip matching the new assistant bubble style.
 
-### Verification
-After the change, screenshot the Supplier project overview (6 cards → 3×2 grid, no empty space) and Supplier dashboard analytics sections at desktop width to confirm the last row is full.
+## Files touched
+- `src/components/sasha/SashaBubble.tsx` — header, panel sizing, input, bubble label.
+- `src/components/sasha/SashaMessage.tsx` — bubble colors/shape, loading dots.
+- `src/components/sasha/SashaQuickActions.tsx` — CTA + chips with icons, "Try one" label.
+
+No backend, hook, or routing changes. All colors use existing semantic tokens (`primary`, `background`, `foreground`, `muted-foreground`).

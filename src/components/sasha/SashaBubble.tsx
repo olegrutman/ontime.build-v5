@@ -8,10 +8,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { useSashaContext } from '@/hooks/useSashaContext';
-import { SashaMessage, type SashaChatMessage } from './SashaMessage';
+import { SashaMessage, SashaThinking, type SashaChatMessage } from './SashaMessage';
 import { SashaHighlightOverlay } from './SashaHighlightOverlay';
 import { collectPageSnapshot } from '@/lib/sashaPageSnapshot';
 import { toast } from 'sonner';
+
 
 const SASHA_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sasha-guide`;
 
@@ -271,43 +272,55 @@ export function SashaBubble() {
 
       {/* Chat Panel */}
       {open && (
-        <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-48 lg:bottom-20 right-2 left-auto w-[min(300px,calc(100vw-5rem))] sm:w-[min(400px,calc(100vw-2rem))] sm:right-4 max-h-[45vh] sm:max-h-[min(500px,70vh)]">
+        <div className="fixed z-50 shadow-2xl rounded-2xl border border-primary/10 bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-44 lg:bottom-24 right-2 left-2 sm:left-auto sm:right-4 sm:w-[400px] max-h-[70vh] sm:max-h-[min(560px,75vh)]">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <div className="flex items-center gap-2">
-              <img src={sashaAvatar} alt="Sasha" className="h-8 w-8 rounded-full object-cover" />
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-background">
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <img src={sashaAvatar} alt="Sasha" className="h-9 w-9 rounded-full object-cover ring-2 ring-primary/30" />
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+              </div>
               <div>
-                <p className="text-sm font-semibold">Sasha</p>
+                <p className="text-sm font-semibold leading-tight">Sasha</p>
                 <p className="text-[11px] text-muted-foreground">Your Ontime.Build guide</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
               <Button
                 variant={highlightMode ? 'default' : 'ghost'}
-                size="icon"
-                className="h-8 w-8"
+                size="sm"
+                className="h-8 gap-1.5 px-2.5 text-xs"
                 onClick={() => setHighlightMode((h) => !h)}
-                title="Highlight a card for Sasha to explain"
+                title="Tap a card on the page for Sasha to explain"
               >
-                <MousePointer2 className="h-4 w-4" />
+                <MousePointer2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Point</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 px-2.5 text-xs"
+                onClick={handleResetChat}
+                title="Start a new conversation"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Reset</span>
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={handleResetChat}
-                title="Reset conversation"
+                onClick={handleClose}
+                title="Close"
+                aria-label="Close Sasha"
               >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
+          <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-b from-background to-primary/[0.02]" ref={scrollRef}>
             <div className="space-y-3 p-4">
               {messages.map((msg, i) => (
                 <SashaMessage
@@ -319,18 +332,14 @@ export function SashaBubble() {
                 />
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-xl px-3.5 py-2.5 text-sm text-muted-foreground">
-                    Sasha is thinking…
-                  </div>
-                </div>
+                <SashaThinking />
               )}
             </div>
           </div>
 
           {/* Input */}
           <form
-            className="flex items-center gap-2 px-3 py-2.5 border-t"
+            className="flex items-center gap-2 px-3 py-2.5 border-t bg-background"
             onSubmit={(e) => {
               e.preventDefault();
               sendMessage(input);
@@ -341,16 +350,23 @@ export function SashaBubble() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask Sasha anything…"
-              className="flex-1 h-9 text-sm"
+              className="flex-1 h-11 text-sm rounded-full px-4 bg-muted/40 border-primary/15 focus-visible:ring-primary/30"
               type="text"
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={isLoading || !input.trim()}>
+            <Button
+              type="submit"
+              size="icon"
+              className="h-11 w-11 shrink-0 rounded-full"
+              disabled={isLoading || !input.trim()}
+              aria-label="Send message"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </form>
         </div>
       )}
+
 
       {/* Floating Bubble */}
       <div className="fixed bottom-32 lg:bottom-4 right-4 z-50 flex items-center gap-2">
