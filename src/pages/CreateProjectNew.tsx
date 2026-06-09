@@ -52,6 +52,12 @@ const TM_STEPS: StepDef[] = [
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
 
+const SUPPLIER_STEPS: StepDef[] = [
+  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'building_info', label: 'Building Info', description: 'Structure & size' },
+  { id: 'review', label: 'Review', description: 'Review and create' },
+];
+
 const initialBasics: ProjectBasics = {
   name: '',
   projectType: '',
@@ -118,8 +124,8 @@ export default function CreateProjectNew() {
   const isTM = contractMode === 'tm';
   const isSupplier = creatorOrgType === 'SUPPLIER';
   const activeSteps = useMemo(() => {
-    const base = isTM ? TM_STEPS : FIXED_STEPS;
-    return isSupplier ? base.filter(s => s.id !== 'contracts') : base;
+    if (isSupplier) return SUPPLIER_STEPS;
+    return isTM ? TM_STEPS : FIXED_STEPS;
   }, [isTM, isSupplier]);
 
   // Clamp draft-restored step if it now points past the filtered step list
@@ -190,7 +196,7 @@ export default function CreateProjectNew() {
         .from('projects')
         .insert({
           name: basics.name,
-          project_type: isTM ? 'Remodel / T&M' : (wizard.buildingType || ''),
+          project_type: isSupplier ? (tmScope.buildingType || '') : (isTM ? 'Remodel / T&M' : (wizard.buildingType || '')),
           address: { street: basics.address } as any,
           city: basics.city,
           state: basics.state,
@@ -199,7 +205,7 @@ export default function CreateProjectNew() {
           created_by: user.id,
           created_by_org_id: currentOrg.id,
           organization_id: currentOrg.id,
-          status: isTM ? 'active' : 'setup',
+          status: (isTM || isSupplier) ? 'active' : 'setup',
           contract_mode: contractMode,
         })
         .select('id')
@@ -236,11 +242,9 @@ export default function CreateProjectNew() {
         }),
       ]);
 
-      // Save wizard answers + contract(s) + SOV(s) — skip for T&M
-      if (!isTM) {
-        await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
-      } else {
-        // Save T&M building info to project_scope_details
+      // Save wizard answers + contract(s) + SOV(s) — skip for T&M and Supplier
+      if (isSupplier || isTM) {
+        // Save building info to project_scope_details
         const { error: scopeErr } = await supabase.from('project_scope_details').insert({
           project_id: pid,
           home_type: tmScope.buildingType,
@@ -258,6 +262,8 @@ export default function CreateProjectNew() {
           console.error('Failed to save scope details:', scopeErr);
           toast({ title: 'Project created', description: 'Building info could not be saved. You can update it later.', variant: 'destructive' });
         }
+      } else {
+        await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
       }
 
       // Save team members
@@ -336,6 +342,9 @@ export default function CreateProjectNew() {
           <TMBuildingInfoStep
             data={tmScope}
             onChange={(updates) => setTmScope(prev => ({ ...prev, ...updates }))}
+            hideMaterialResponsibility={isSupplier}
+            title={isSupplier ? 'Project Structure' : undefined}
+            description={isSupplier ? 'Tell us about the building so you can scope materials. You\'ll send an estimate to the GC or TC handling materials later — that becomes the contract.' : undefined}
           />
         );
       case 'contracts':
@@ -377,16 +386,16 @@ export default function CreateProjectNew() {
         return (
           <UnifiedReviewStep
             basics={basics}
-            buildingType={isTM ? null : wizard.buildingType}
-            answers={isTM ? {} : wizard.answers}
-            visibleQuestions={isTM ? [] : wizard.visibleQuestions}
-            sovLines={isTM ? [] : wizard.sovLines}
+            buildingType={(isTM || isSupplier) ? null : wizard.buildingType}
+            answers={(isTM || isSupplier) ? {} : wizard.answers}
+            visibleQuestions={(isTM || isSupplier) ? [] : wizard.visibleQuestions}
+            sovLines={(isTM || isSupplier) ? [] : wizard.sovLines}
             team={team}
             creatorOrgName={currentOrg?.name}
             creatorRole={creatorRole}
             creatorOrgType={creatorOrgType}
             contractMode={contractMode}
-            tmBuildingInfo={isTM ? tmScope : undefined}
+            tmBuildingInfo={(isTM || isSupplier) ? tmScope : undefined}
           />
         );
       default:
