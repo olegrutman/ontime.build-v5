@@ -342,6 +342,9 @@ export default function CreateProjectNew() {
           <TMBuildingInfoStep
             data={tmScope}
             onChange={(updates) => setTmScope(prev => ({ ...prev, ...updates }))}
+            hideMaterialResponsibility={isSupplier}
+            title={isSupplier ? 'Project Structure' : undefined}
+            description={isSupplier ? 'Tell us about the building so you can scope materials. You\'ll send an estimate to the GC or TC handling materials later — that becomes the contract.' : undefined}
           />
         );
       case 'contracts':
