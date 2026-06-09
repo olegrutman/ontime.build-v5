@@ -52,6 +52,12 @@ const TM_STEPS: StepDef[] = [
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
 
+const SUPPLIER_STEPS: StepDef[] = [
+  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'building_info', label: 'Building Info', description: 'Structure & size' },
+  { id: 'review', label: 'Review', description: 'Review and create' },
+];
+
 const initialBasics: ProjectBasics = {
   name: '',
   projectType: '',
