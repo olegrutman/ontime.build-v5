@@ -78,7 +78,7 @@ export default function FinishProjectSetup() {
       basementFinish: (ctx.scope!.basement_finish as any) || prev.basementFinish,
       garageType: (ctx.scope!.garage_type as any) || prev.garageType,
       sidingIncluded: ctx.scope!.siding_included ?? prev.sidingIncluded,
-      sidingMaterials: ctx.scope!.siding_materials || prev.sidingMaterials,
+      sidingMaterials: Array.isArray(ctx.scope!.siding_materials) ? (ctx.scope!.siding_materials as string[]) : prev.sidingMaterials,
       totalSqft: ctx.scope!.total_sqft || prev.totalSqft,
     }));
   }, [ctx?.scope]);
