@@ -242,11 +242,9 @@ export default function CreateProjectNew() {
         }),
       ]);
 
-      // Save wizard answers + contract(s) + SOV(s) — skip for T&M
-      if (!isTM) {
-        await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
-      } else {
-        // Save T&M building info to project_scope_details
+      // Save wizard answers + contract(s) + SOV(s) — skip for T&M and Supplier
+      if (isSupplier || isTM) {
+        // Save building info to project_scope_details
         const { error: scopeErr } = await supabase.from('project_scope_details').insert({
           project_id: pid,
           home_type: tmScope.buildingType,
@@ -264,6 +262,8 @@ export default function CreateProjectNew() {
           console.error('Failed to save scope details:', scopeErr);
           toast({ title: 'Project created', description: 'Building info could not be saved. You can update it later.', variant: 'destructive' });
         }
+      } else {
+        await wizard.saveAll(pid, currentOrg.id, currentOrg.type, user.id);
       }
 
       // Save team members
