@@ -1104,13 +1104,18 @@ export function useSetupWizardV2(
   // Internal save logic — can be called with an explicit project ID
   const _saveToDb = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string, userId?: string) => {
     if (!buildingType) throw new Error('No building type selected');
+    const isSupplier = creatorOrgType === 'SUPPLIER';
     const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
     const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
     const isTC = creatorOrgType === 'TC';
 
+    // Suppliers don't have a setup-time contract value — strip those fields so no
+    // phantom number gets persisted and picked up by downstream KPI / contract logic.
+    const SUPPLIER_STRIP_KEYS = new Set(['contract_value', 'fc_contract_value', 'material_responsibility']);
+
     // Save answers
     const answerRows = Object.entries(answers)
-      .filter(([, value]) => value !== null && value !== undefined)
+      .filter(([key, value]) => value !== null && value !== undefined && !(isSupplier && SUPPLIER_STRIP_KEYS.has(key)))
       .map(([field_key, value]) => ({
         project_id: pid,
         field_key,
