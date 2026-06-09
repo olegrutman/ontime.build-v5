@@ -1181,6 +1181,12 @@ export function useSetupWizardV2(
     // ── Create contract(s) + SOV(s) ──
     const isGC = creatorOrgType === 'GC';
 
+    // Suppliers skip contract/SOV creation entirely. Their contract value comes
+    // from the accepted estimate sent to the material-responsible party (GC or TC).
+    if (isSupplier) {
+      return { contractId: '', sovId: '', fcResult: null as { contractId: string; sovId: string } | null };
+    }
+
     let primaryResult: { contractId: string; sovId: string };
 
     if (isGC) {
