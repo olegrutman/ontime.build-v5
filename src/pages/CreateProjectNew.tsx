@@ -447,6 +447,19 @@ export default function CreateProjectNew() {
 
           {/* Main content */}
           <div className="col-span-12 md:col-span-10">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-xl font-semibold font-heading">New Project</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={saving}
+                className="text-muted-foreground hover:text-destructive h-9 px-3"
+              >
+                <X className="h-4 w-4 mr-1.5" />
+                Cancel
+              </Button>
+            </div>
             <Card className="overflow-hidden">
               <CardContent className="p-6">
                 {renderStep()}
