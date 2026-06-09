@@ -393,7 +393,8 @@ export default function FinishProjectSetup() {
             {!selfPerform && (
               <TeamStep
                 team={[]}
-                onChange={() => {
+                onChange={() => {}}
+                onTeamChange={() => {
                   refetchTeam();
                   refetchCtx();
                 }}
