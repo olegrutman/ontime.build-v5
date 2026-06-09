@@ -40,6 +40,7 @@ import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
+import { ResetSetupDialog } from '@/components/project/ResetSetupDialog';
 
 // New redesigned overview components
 import { ProjectFinancialCommand } from '@/components/project/ProjectFinancialCommand';
