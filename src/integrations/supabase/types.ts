@@ -6820,6 +6820,10 @@ export type Database = {
         Args: { _org_id: string }
         Returns: boolean
       }
+      project_buyer_setup_complete: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
       recent_catalog_items: {
         Args: {
           p_days?: number
