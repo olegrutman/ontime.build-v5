@@ -528,7 +528,8 @@ export function AddTeamMemberDialog({
           created_by_user_id: user.id,
         };
 
-        await supabase.from('project_contracts').insert(contractPayload);
+        const { error: contractErr } = await supabase.from('project_contracts').insert(contractPayload);
+        if (contractErr) throw contractErr;
       }
 
       // Log activity
