@@ -190,12 +190,7 @@ export default function FinishProjectSetup() {
     }
   }, [ctx?.project, navigate, projectId]);
 
-  // Fallback: also accept downstream project_team rows in case the contracts row briefly lags.
-  const hasDownstreamTeamMember = useMemo(() => {
-    if (!downstreamRoleLabel) return false;
-    return (teamData || []).some(t => (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase());
-  }, [teamData, downstreamRoleLabel]);
-  const hasInvitedDownstream = downstreamContracts.length > 0 || hasDownstreamTeamMember;
+  const hasInvitedDownstream = downstreamContracts.length > 0;
 
   const canProceed = (): boolean => {
     const stepId = activeSteps[currentStep]?.id;
@@ -208,9 +203,10 @@ export default function FinishProjectSetup() {
         return selfPerform || hasInvitedDownstream;
       case 'contracts': {
         if (selfPerform) return true;
-        // Every downstream row must have a value > 0
         if (downstreamContracts.length === 0) return false;
-        return downstreamContracts.every(r => (r.contract_sum || 0) > 0);
+        // Require a value > 0 only for Accepted partners. Invited-only members
+        // may be left at $0 (to be negotiated after they accept).
+        return downstreamContracts.every(r => r.invited_only || (r.contract_sum || 0) > 0);
       }
       case 'building_type':
         return !!wizard.buildingType;
@@ -222,45 +218,9 @@ export default function FinishProjectSetup() {
     }
   };
 
-  const ensureDownstreamContractRows = useCallback(async () => {
-    if (!projectId || !currentOrgId || !user?.id || !downstreamRoleLabel) return;
-    const myToRole = isGC ? 'General Contractor' : isTC ? 'Trade Contractor' : null;
-    if (!myToRole) return;
-    const downstreamMembers = (teamData || []).filter(
-      t => (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase(),
-    );
-    const existingTeamIds = new Set(
-      (ctx?.contracts || [])
-        .filter(c => c.to_org_id === currentOrgId)
-        .map(c => c.to_project_team_id)
-        .filter(Boolean),
-    );
-    const missing = downstreamMembers.filter(m => !existingTeamIds.has(m.id));
-    if (missing.length === 0) return;
-    await supabase.from('project_contracts').insert(
-      missing.map(m => ({
-        project_id: projectId,
-        from_org_id: m.org_id,
-        from_role: m.role,
-        to_org_id: currentOrgId,
-        to_role: myToRole,
-        to_project_team_id: m.id,
-        contract_sum: 0,
-        status: 'Pending',
-        created_by_user_id: user.id,
-      })),
-    );
-    await refetchCtx();
-  }, [projectId, currentOrgId, user?.id, downstreamRoleLabel, isGC, isTC, teamData, ctx?.contracts, refetchCtx]);
-
-  const nextStep = async () => {
-    const stepId = activeSteps[currentStep]?.id;
-    if (stepId === 'invite_team' && !selfPerform) {
-      await ensureDownstreamContractRows();
-    }
-    setCurrentStep(p => Math.min(p + 1, activeSteps.length - 1));
-  };
+  const nextStep = () => setCurrentStep(p => Math.min(p + 1, activeSteps.length - 1));
   const prevStep = () => setCurrentStep(p => Math.max(p - 1, 0));
+
 
   const finish = async () => {
     if (!projectId || !currentOrgId || !user?.id) return;
