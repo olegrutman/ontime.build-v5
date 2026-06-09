@@ -365,7 +365,7 @@ export default function ProjectHome() {
                   <SupplierProjectOverview projectId={id!} projectName={project.name} financials={financials} onNavigate={handleTabChange} />
                 ) : (
                   <div className="space-y-3 mt-3">
-                    {project.setup_completion_required && !isSupplier && (
+                    {showAdoptionBanner && (
                       <div
                         className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-5 cursor-pointer hover:border-primary/60 transition-colors"
                         onClick={() => navigate(`/project/${id}/setup`)}
