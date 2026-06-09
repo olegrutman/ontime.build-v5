@@ -90,6 +90,8 @@ interface Project {
   created_at: string;
   organization_id: string;
   contract_mode: string;
+  setup_completion_required?: boolean;
+  adopted_from_supplier_org_id?: string | null;
 }
 
 export default function ProjectHome() {
