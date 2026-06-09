@@ -70,6 +70,7 @@ export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgTyp
 
   const handleMemberAdded = () => {
     fetchTeamMembers();
+    onTeamChange?.();
   };
 
   const handleRemoveMember = async (member: ProjectTeamMember) => {
