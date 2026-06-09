@@ -196,7 +196,7 @@ export default function CreateProjectNew() {
         .from('projects')
         .insert({
           name: basics.name,
-          project_type: isTM ? 'Remodel / T&M' : (wizard.buildingType || ''),
+          project_type: isSupplier ? (tmScope.buildingType || '') : (isTM ? 'Remodel / T&M' : (wizard.buildingType || '')),
           address: { street: basics.address } as any,
           city: basics.city,
           state: basics.state,
@@ -205,7 +205,7 @@ export default function CreateProjectNew() {
           created_by: user.id,
           created_by_org_id: currentOrg.id,
           organization_id: currentOrg.id,
-          status: isTM ? 'active' : 'setup',
+          status: (isTM || isSupplier) ? 'active' : 'setup',
           contract_mode: contractMode,
         })
         .select('id')
