@@ -124,8 +124,8 @@ export default function CreateProjectNew() {
   const isTM = contractMode === 'tm';
   const isSupplier = creatorOrgType === 'SUPPLIER';
   const activeSteps = useMemo(() => {
-    const base = isTM ? TM_STEPS : FIXED_STEPS;
-    return isSupplier ? base.filter(s => s.id !== 'contracts') : base;
+    if (isSupplier) return SUPPLIER_STEPS;
+    return isTM ? TM_STEPS : FIXED_STEPS;
   }, [isTM, isSupplier]);
 
   // Clamp draft-restored step if it now points past the filtered step list
