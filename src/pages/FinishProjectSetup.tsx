@@ -131,36 +131,35 @@ export default function FinishProjectSetup() {
     if (ownerContractRow) setOwnerContractValue(Number(ownerContractRow.contract_sum || 0));
   }, [ownerContractRow]);
 
-  // Downstream contracts: those WHERE I am the payer (to_org_id = me).
-  // The TeamStep / AddTeamMemberDialog flow auto-creates these rows with contract_sum=0
-  // and to_project_team_id linking to the invited member.
+  // Downstream rows: driven by project_team (source of truth). Merge in any existing
+  // project_contracts row to surface a previously saved contract_sum.
+  // Row id = project_team.id (NOT project_contracts.id) so the list is stable even
+  // before any contract row exists.
   const downstreamContracts: DownstreamContractRow[] = useMemo(() => {
-    if (!currentOrgId) return [];
-    return (ctx?.contracts || [])
-      .filter(c =>
-        c.to_org_id === currentOrgId &&
-        (c.from_role || '').toLowerCase() !== 'owner' &&
-        !(c.from_role || '').toLowerCase().includes('supplier'),
-      )
-      .map(c => {
-        const name = c.from_org?.name
-          || (teamData || []).find(t => t.id === c.to_project_team_id)?.invited_org_name
-          || 'Pending invite';
-        const status = (teamData || []).find(t => t.id === c.to_project_team_id)?.status;
-        return {
-          id: c.id as string,
-          org_name: name,
-          role: String(c.from_role || ''),
-          trade: c.trade,
-          contract_sum: downstreamEdits[c.id as string] ?? Number(c.contract_sum || 0),
-          invited_only: status !== 'Accepted',
-        };
-      });
-  }, [ctx?.contracts, teamData, currentOrgId, downstreamEdits]);
+    if (!currentOrgId || !downstreamRoleLabel) return [];
+    const members = (teamData || []).filter(
+      t => (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase(),
+    );
+    return members.map(m => {
+      const existing = (ctx?.contracts || []).find(
+        c => c.to_project_team_id === m.id && c.to_org_id === currentOrgId,
+      );
+      const savedSum = existing ? Number(existing.contract_sum || 0) : 0;
+      return {
+        id: m.id,
+        org_name: m.invited_org_name || 'Pending invite',
+        role: m.role,
+        trade: existing?.trade ?? null,
+        contract_sum: downstreamEdits[m.id] ?? savedSum,
+        invited_only: m.status !== 'Accepted',
+      };
+    });
+  }, [ctx?.contracts, teamData, currentOrgId, downstreamRoleLabel, downstreamEdits]);
 
   const handleDownstreamChange = useCallback((id: string, contractSum: number) => {
     setDownstreamEdits(prev => ({ ...prev, [id]: contractSum }));
   }, []);
+
 
   // Sync wizard.answers.contract_value so SOV generation uses a sane number.
   // Use owner contract for GC; sum of downstream as fallback / for TC use TC's incoming GC contract value.
@@ -191,12 +190,7 @@ export default function FinishProjectSetup() {
     }
   }, [ctx?.project, navigate, projectId]);
 
-  // Fallback: also accept downstream project_team rows in case the contracts row briefly lags.
-  const hasDownstreamTeamMember = useMemo(() => {
-    if (!downstreamRoleLabel) return false;
-    return (teamData || []).some(t => (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase());
-  }, [teamData, downstreamRoleLabel]);
-  const hasInvitedDownstream = downstreamContracts.length > 0 || hasDownstreamTeamMember;
+  const hasInvitedDownstream = downstreamContracts.length > 0;
 
   const canProceed = (): boolean => {
     const stepId = activeSteps[currentStep]?.id;
@@ -209,9 +203,10 @@ export default function FinishProjectSetup() {
         return selfPerform || hasInvitedDownstream;
       case 'contracts': {
         if (selfPerform) return true;
-        // Every downstream row must have a value > 0
         if (downstreamContracts.length === 0) return false;
-        return downstreamContracts.every(r => (r.contract_sum || 0) > 0);
+        // Require a value > 0 only for Accepted partners. Invited-only members
+        // may be left at $0 (to be negotiated after they accept).
+        return downstreamContracts.every(r => r.invited_only || (r.contract_sum || 0) > 0);
       }
       case 'building_type':
         return !!wizard.buildingType;
@@ -223,45 +218,9 @@ export default function FinishProjectSetup() {
     }
   };
 
-  const ensureDownstreamContractRows = useCallback(async () => {
-    if (!projectId || !currentOrgId || !user?.id || !downstreamRoleLabel) return;
-    const myToRole = isGC ? 'General Contractor' : isTC ? 'Trade Contractor' : null;
-    if (!myToRole) return;
-    const downstreamMembers = (teamData || []).filter(
-      t => (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase(),
-    );
-    const existingTeamIds = new Set(
-      (ctx?.contracts || [])
-        .filter(c => c.to_org_id === currentOrgId)
-        .map(c => c.to_project_team_id)
-        .filter(Boolean),
-    );
-    const missing = downstreamMembers.filter(m => !existingTeamIds.has(m.id));
-    if (missing.length === 0) return;
-    await supabase.from('project_contracts').insert(
-      missing.map(m => ({
-        project_id: projectId,
-        from_org_id: m.org_id,
-        from_role: m.role,
-        to_org_id: currentOrgId,
-        to_role: myToRole,
-        to_project_team_id: m.id,
-        contract_sum: 0,
-        status: 'Pending',
-        created_by_user_id: user.id,
-      })),
-    );
-    await refetchCtx();
-  }, [projectId, currentOrgId, user?.id, downstreamRoleLabel, isGC, isTC, teamData, ctx?.contracts, refetchCtx]);
-
-  const nextStep = async () => {
-    const stepId = activeSteps[currentStep]?.id;
-    if (stepId === 'invite_team' && !selfPerform) {
-      await ensureDownstreamContractRows();
-    }
-    setCurrentStep(p => Math.min(p + 1, activeSteps.length - 1));
-  };
+  const nextStep = () => setCurrentStep(p => Math.min(p + 1, activeSteps.length - 1));
   const prevStep = () => setCurrentStep(p => Math.max(p - 1, 0));
+
 
   const finish = async () => {
     if (!projectId || !currentOrgId || !user?.id) return;
@@ -308,13 +267,42 @@ export default function FinishProjectSetup() {
         }
       }
 
-      // 3. Update downstream contract sums
-      for (const [id, sum] of Object.entries(downstreamEdits)) {
-        await supabase
-          .from('project_contracts')
-          .update({ contract_sum: sum })
-          .eq('id', id);
+      // 3. Upsert downstream contracts (one row per invited team member).
+      const myToRole = isGC ? 'General Contractor' : isTC ? 'Trade Contractor' : null;
+      if (myToRole && !selfPerform) {
+        const downstreamMembers = (teamData || []).filter(
+          t => downstreamRoleLabel && (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase(),
+        );
+        for (const m of downstreamMembers) {
+          const sum = downstreamEdits[m.id] ?? 0;
+          const existing = (ctx?.contracts || []).find(
+            c => c.to_project_team_id === m.id && c.to_org_id === currentOrgId,
+          );
+          if (existing) {
+            if (sum !== Number(existing.contract_sum || 0)) {
+              const { error } = await supabase
+                .from('project_contracts')
+                .update({ contract_sum: sum })
+                .eq('id', existing.id);
+              if (error) throw error;
+            }
+          } else {
+            const { error } = await supabase.from('project_contracts').insert({
+              project_id: projectId,
+              from_org_id: m.org_id,
+              from_role: m.role,
+              to_org_id: currentOrgId,
+              to_role: myToRole,
+              to_project_team_id: m.id,
+              contract_sum: sum,
+              retainage_percent: 0,
+              created_by_user_id: user.id,
+            });
+            if (error) throw error;
+          }
+        }
       }
+
 
       // 4. For fixed mode: run wizard save (creates SOV + placeholder primary contract record)
       if (!isTM && wizard.buildingType) {
