@@ -2,10 +2,20 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { cn } from '@/lib/utils';
 import { ProjectBasics, TeamMember } from '@/types/projectWizard';
