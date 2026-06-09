@@ -1,73 +1,43 @@
-## Problem
+# Make "Finish project setup" reliable for buyers
 
-A supplier-created project is a "shell": name, address, building structure (type, stories, foundation, sqft) — no contract, no SOV, no scope, no team beyond the supplier. When a GC or TC accepts the supplier's estimate, the project needs to become a real PM project without forcing the supplier to know anything about contracts they aren't party to.
+## Why your project shows no banner
+`Oleg Rutman` was created by a Supplier and the GC joined through a team invite. No `supplier_estimate` was ever submitted or accepted, so the DB trigger that sets `projects.setup_completion_required = true` never ran. The banner is gated on that flag, so it stays hidden — even though the project is exactly the kind of shell that needs buyer completion.
 
-## Concept: Two-Stage Project Lifecycle
+The current adoption model assumes *every* buyer arrives by approving an estimate. In reality, a buyer may:
+1. Approve a supplier estimate (already handled).
+2. Accept a direct project invite from a supplier (not handled).
+3. Be added later, after the supplier already submitted an estimate (race-condition).
 
-```text
-[Supplier Shell]  ──estimate accepted──▶  [Adopted]  ──completion wizard──▶  [Fully Set Up]
-   structure only        + buyer joins       + supplier↔buyer contract       + buyer's own contract,
-                         + first contract     scope, SOV, team, mode
-```
+## Fix
 
-Two key moments:
-1. **Adoption** (automatic on estimate accept) — minimum data so the project works for materials/PO/billing between supplier and buyer.
-2. **Completion** (buyer-driven, optional but prompted) — fills the rest if the buyer wants full PM features.
+### 1. Flag projects at creation time, not only at estimate approval
+Update the `projects` insert trigger (or add one): when `created_by_org` is a Supplier, set `setup_completion_required = true` and stamp `adopted_from_supplier_org_id = created_by_org_id`. This guarantees every supplier-originated project is flagged the moment it exists.
 
-## Stage 1 — Adoption (automatic, on first estimate acceptance)
+### 2. Keep estimate-approval trigger but make it idempotent
+The existing `adopt_project_on_estimate_approval` trigger stays — it still creates the `project_participants` + `project_contracts` rows on first estimate acceptance. It just no-ops the flag flip (already true).
 
-Triggered when a GC or TC clicks "Accept" on a supplier estimate.
+### 3. Auto-clear the flag when buyer has a contract + scope
+Add a guard so the flag auto-clears when both exist for the viewing buyer org:
+- `project_contracts` where `to_role` = the buyer's role, and
+- `project_scope_details` row present and `home_type` not null.
 
-What happens server-side in one transaction:
-- Insert `project_participants` row for the accepting org (role = GC or TC, status = ACCEPTED).
-- Create a `project_contracts` row: `from_role = Supplier`, `from_org_id = supplier`, `to_role = GC|TC`, `to_org_id = buyer`, `contract_sum = estimate.total`, `status = active`. This is the "contract" the supplier never had to enter.
-- Set a new flag on `projects`, e.g. `setup_completion_required = true`, owned by the buyer org. Status stays `active` (project remains usable for materials immediately).
-- Notify the buyer: "You've adopted [Project] from [Supplier]. Add your contract & scope to unlock dashboards."
+That way if a buyer completed the wizard manually elsewhere, the banner disappears without manual intervention.
 
-At this point the buyer can already: issue POs against the supplier's estimate, log deliveries, post invoices on the supplier↔buyer contract. They just don't have their own SOV or upstream contract yet.
+### 4. Frontend: broaden banner visibility
+In `ProjectHome.tsx` the gate becomes: show the banner when **either** of these is true for the viewing org:
+- `project.setup_completion_required === true`, OR
+- viewer org is GC/TC AND project was created by a Supplier AND viewer has no `project_contracts` row as `to_role`.
 
-If a second buyer later accepts a different supplier estimate on the same project, only an additional supplier↔buyer contract row is created — no second promotion. (Edge case, rare.)
+The second clause is a safety net so any pre-existing supplier shell (like `Oleg Rutman`) lights up immediately without a backfill migration.
 
-## Stage 2 — Completion Wizard (buyer-driven)
+### 5. Backfill (one-shot migration)
+`UPDATE projects SET setup_completion_required = true, adopted_from_supplier_org_id = created_by_org_id WHERE created_by_org_id IN (SELECT id FROM organizations WHERE type = 'SUPPLIER') AND setup_completion_required IS NOT TRUE;` — then immediately apply the auto-clear logic from step 3 so already-completed projects don't get falsely re-flagged.
 
-First time the buyer opens the adopted project, show a persistent **"Finish project setup"** banner at the top of `ProjectOverview` (dismissible but not removable until completed). Banner CTA opens a focused wizard that reuses pieces of `CreateProjectNew` but skips what the supplier already provided.
-
-Wizard steps for the buyer:
-
-| Step | Notes |
-|---|---|
-| Confirm Basics | Name + address pre-filled, read-only (supplier-provided). Building info pre-filled but editable. |
-| Contract Mode | Fixed vs T&M (buyer's choice). |
-| Contracts | Buyer's upstream contract value (GC↔Owner if GC; GC↔TC if TC, plus optional TC↔FC). Supplier↔buyer contract is already created — shown as a read-only summary row. |
-| Scope | Standard SOV wizard, seeded by the building info the supplier already entered (skip foundation/stories/sqft questions). |
-| Team | Invite teammates, downstream contractors, FCs. |
-| Review | Same as today. |
-
-On finish: `setup_completion_required = false`, normal project flow resumes.
-
-## What "fully functional" means for each role
-
-- **Supplier** (creator): never loses access; sees the project, its estimates, POs, returns, invoices — only the supplier↔buyer slice. Doesn't see the buyer's upstream contract, SOV, or labor.
-- **Buyer** (GC/TC who accepted): gets full PM features once completion wizard runs. Can edit scope/SOV/team. Becomes the project's "primary" contractor.
-- **Other roles invited later** (TC, FC, other suppliers): added through normal team flow inside the completed project.
-
-## Data & schema changes
-
-- `projects.setup_completion_required boolean default false` — flips to `true` on adoption, `false` after completion wizard finishes.
-- `projects.adopted_from_supplier_org_id uuid null` — provenance, lets the buyer see "Adopted from [Supplier]".
-- Reuse existing `project_contracts`, `project_participants`, `project_sov`, `project_scope_details`. No new tables.
-- DB trigger or edge function on `supplier_estimates` status transitioning to `accepted` performs the adoption insert atomically.
-- RLS: buyer's full read access kicks in via the new `project_participants` row (existing `is_project_participant` already covers this). Supplier's pre-existing access stays scoped via the supplier-visibility policies.
-
-## UI surfaces
-
-- **Adoption banner** on `ProjectOverview` while `setup_completion_required = true`: amber, with "Finish setup" CTA and a "Materials only — skip for now" secondary link.
-- **Read-only ribbon** on the basics/building-info cards while in adopted-but-incomplete state: "Provided by [Supplier]. You can edit after finishing setup."
-- **Sidebar gating**: SOV, Invoices (non-supplier), CO/WO, Schedule tabs show a small lock chip with tooltip "Complete project setup to unlock" until the wizard finishes. Materials/POs/Estimates are unlocked from day one.
-- **Empty-state dashboards**: KPIs that depend on a contract sum show "—" with a hint linking to the completion wizard.
+## Files to touch
+- `supabase/migrations/*` — new migration with creation-time trigger, auto-clear helper, backfill.
+- `src/pages/ProjectHome.tsx` — broaden banner condition (~line 343).
+- No changes needed to `FinishProjectSetup.tsx` (the wizard already clears the flag on finish).
 
 ## Out of scope
-
-- Multi-buyer competitive estimate flows.
-- Automatic SOV generation from a supplier's line-item estimate (future: AI could seed scope from estimate items, but that's a separate effort).
-- Migrating already-existing supplier shells created before this change — handled by a one-time backfill if needed.
+- Changing supplier UI / restricting what suppliers can configure (handled previously).
+- SOV auto-generation from supplier estimates.
