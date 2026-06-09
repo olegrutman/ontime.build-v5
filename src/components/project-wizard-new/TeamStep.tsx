@@ -149,6 +149,7 @@ export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgTyp
       }
       
       toast.success('Invitation resent');
+      onTeamChange?.();
     } catch (error: any) {
       console.error('Error resending invite:', error);
       toast.error(error.message || 'Failed to resend invitation');
