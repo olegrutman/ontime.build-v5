@@ -16,6 +16,8 @@ interface TeamStepProps {
   creatorRole: string | null;
   projectId?: string;
   creatorOrgType?: OrgType | null;
+  /** Fires after any successful team mutation (add/remove/resend) so parents can refetch related data. */
+  onTeamChange?: () => void;
 }
 
 interface ProjectTeamMember {
@@ -33,7 +35,7 @@ interface ProjectTeamMember {
   created_at: string;
 }
 
-export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgType }: TeamStepProps) {
+export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgType, onTeamChange }: TeamStepProps) {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<ProjectTeamMember[]>([]);
@@ -68,6 +70,7 @@ export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgTyp
 
   const handleMemberAdded = () => {
     fetchTeamMembers();
+    onTeamChange?.();
   };
 
   const handleRemoveMember = async (member: ProjectTeamMember) => {
@@ -100,6 +103,7 @@ export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgTyp
       
       toast.success('Team member removed');
       fetchTeamMembers();
+      onTeamChange?.();
     } catch (error: any) {
       console.error('Error removing team member:', error);
       toast.error(error.message || 'Failed to remove team member');
@@ -145,6 +149,7 @@ export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgTyp
       }
       
       toast.success('Invitation resent');
+      onTeamChange?.();
     } catch (error: any) {
       console.error('Error resending invite:', error);
       toast.error(error.message || 'Failed to resend invitation');
