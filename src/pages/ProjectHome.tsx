@@ -165,6 +165,31 @@ export default function ProjectHome() {
   });
   const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
+  // Safety net: show "Finish setup" banner whenever viewer is GC/TC, the project was started
+  // by a supplier, and the viewer's org has no upstream contract yet — even if the
+  // setup_completion_required flag was never flipped (e.g. invite-only joins, legacy data).
+  const { data: buyerHasContract } = useQuery({
+    queryKey: ['buyer-has-contract', id, currentOrg?.id],
+    enabled: !!id && !!currentOrg?.id && !isSupplier && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC'),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('project_contracts')
+        .select('id')
+        .eq('project_id', id!)
+        .eq('to_org_id', currentOrg!.id)
+        .limit(1);
+      return (data?.length ?? 0) > 0;
+    },
+  });
+  const showAdoptionBanner =
+    !isSupplier &&
+    (currentOrg?.type === 'GC' || currentOrg?.type === 'TC') &&
+    (
+      project?.setup_completion_required === true ||
+      (!!project?.adopted_from_supplier_org_id && buyerHasContract === false) ||
+      (!!projectSupplierOrgId && buyerHasContract === false)
+    );
+
   useEffect(() => {
     if (activeTab !== 'work-orders') return;
     navigate(`/project/${id}/${changeOrdersEnabled ? 'change-orders' : 'overview'}`, { replace: true });
@@ -340,7 +365,7 @@ export default function ProjectHome() {
                   <SupplierProjectOverview projectId={id!} projectName={project.name} financials={financials} onNavigate={handleTabChange} />
                 ) : (
                   <div className="space-y-3 mt-3">
-                    {project.setup_completion_required && !isSupplier && (
+                    {showAdoptionBanner && (
                       <div
                         className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-5 cursor-pointer hover:border-primary/60 transition-colors"
                         onClick={() => navigate(`/project/${id}/setup`)}
