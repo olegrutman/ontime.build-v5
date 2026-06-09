@@ -62,6 +62,7 @@ const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
 const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
+const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
 
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
@@ -199,6 +200,7 @@ function AppRoutes() {
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/create-project" element={<RequireAuth><CreateProjectNew /></RequireAuth>} />
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
+            <Route path="/project/:id/setup" element={<RequireAuth><FinishProjectSetup /></RequireAuth>} />
             <Route path="/project/:id/contracts" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
             <Route path="/project/:projectId/change-orders/quick" element={<RequireAuth><QuickCapture /></RequireAuth>} />
             
