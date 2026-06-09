@@ -35,7 +35,7 @@ interface ProjectTeamMember {
   created_at: string;
 }
 
-export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgType }: TeamStepProps) {
+export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgType, onTeamChange }: TeamStepProps) {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<ProjectTeamMember[]>([]);
