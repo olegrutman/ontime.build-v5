@@ -6515,6 +6515,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_project_adoption: {
+        Args: {
+          p_contract_mode: string
+          p_owner_org_id: string
+          p_project_id: string
+          p_project_type: string
+        }
+        Returns: undefined
+      }
       complete_signup:
         | {
             Args: {
