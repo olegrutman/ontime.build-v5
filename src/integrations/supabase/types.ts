@@ -6890,6 +6890,10 @@ export type Database = {
         Args: { _project_id: string; _team_member_id: string }
         Returns: Json
       }
+      reset_project_setup: {
+        Args: { p_project_id: string }
+        Returns: undefined
+      }
       search_catalog: {
         Args: {
           category_filter?: string

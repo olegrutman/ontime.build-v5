@@ -40,6 +40,7 @@ import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
+import { ResetSetupDialog } from '@/components/project/ResetSetupDialog';
 
 // New redesigned overview components
 import { ProjectFinancialCommand } from '@/components/project/ProjectFinancialCommand';
@@ -380,8 +381,17 @@ export default function ProjectHome() {
                               This project was created by a supplier. Add your contract, scope, and team to unlock dashboards, SOV, invoicing, and reporting. You can keep using materials and POs in the meantime.
                             </p>
                           </div>
+                          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                            <ResetSetupDialog projectId={id!} variant="link" label="Start over" />
+                          </div>
                           <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
                         </div>
+                      </div>
+                    )}
+
+                    {!showAdoptionBanner && !showSetupBanner && !isFC && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC') && (
+                      <div className="flex justify-end">
+                        <ResetSetupDialog projectId={id!} />
                       </div>
                     )}
 
