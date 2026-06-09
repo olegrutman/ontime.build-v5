@@ -191,7 +191,12 @@ export default function FinishProjectSetup() {
     }
   }, [ctx?.project, navigate, projectId]);
 
-  const hasInvitedDownstream = downstreamContracts.length > 0;
+  // Fallback: also accept downstream project_team rows in case the contracts row briefly lags.
+  const hasDownstreamTeamMember = useMemo(() => {
+    if (!downstreamRoleLabel) return false;
+    return (teamData || []).some(t => (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase());
+  }, [teamData, downstreamRoleLabel]);
+  const hasInvitedDownstream = downstreamContracts.length > 0 || hasDownstreamTeamMember;
 
   const canProceed = (): boolean => {
     const stepId = activeSteps[currentStep]?.id;
