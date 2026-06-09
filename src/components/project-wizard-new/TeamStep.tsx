@@ -103,6 +103,7 @@ export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgTyp
       
       toast.success('Team member removed');
       fetchTeamMembers();
+      onTeamChange?.();
     } catch (error: any) {
       console.error('Error removing team member:', error);
       toast.error(error.message || 'Failed to remove team member');
