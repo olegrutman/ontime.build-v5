@@ -1,55 +1,50 @@
-# Sasha Popup Redesign
+# Skip contract-value step for Suppliers; let estimates become the contract
 
-## Problems in current popup
-- Greeting bubble uses a dark muted brown/olive surface that looks broken and low-contrast against the white panel.
-- Header icons (cursor, refresh, X) are unlabeled — users can't tell what they do.
-- Quick-action chips are flat orange outlines with no icons, hierarchy, or grouping.
-- On mobile, the panel anchors `bottom-48 right-2` with a 300px width, leaving the input cramped and the bubble overlapping the bottom nav.
-- Floating bubble has no clear "chat with me" affordance once the welcome label dismisses.
+## Problem
+The Create-Project wizard currently asks every org — including SUPPLIER — for a "Contract Value" on the Contracts step. For a supplier this is meaningless because:
+- A supplier doesn't have one upstream counterparty at setup time. They will eventually sell materials to whichever party is "material responsible" (GC or TC), and there can be more than one buyer over the life of the project.
+- The real contract value between a supplier and a material-responsible party is the **accepted estimate total**, not a number guessed at project creation.
+- Forcing a number creates a fake `project_contracts` row with the supplier as a party, which then pollutes financial KPIs, SOV billed totals, and margin math.
 
-## Goals
-1. Make it feel friendly and inviting (not a dark debug box).
-2. Make every control self-explanatory.
-3. Make it obviously interactive — Sasha invites the next tap.
-4. First-class mobile layout.
+## Fix
 
-## Changes
+### 1. Wizard flow — drop Contracts step for SUPPLIER
+**`src/pages/CreateProjectNew.tsx`**
+- Compute `isSupplier = creatorOrgType === 'SUPPLIER'`.
+- Build the step list by filtering `'contracts'` out of `FIXED_STEPS` (and the T&M list if applicable) when `isSupplier`. So a supplier sees: Basics → Mode → Building Type → Scope → Review (no Contracts).
+- In `canProceed()` the `'contracts'` case becomes unreachable for suppliers; no change needed beyond the filter.
+- In `createProject()` pass a flag/skip into `wizard.saveAll(...)` so the contract/SOV block does not run for suppliers.
 
-### 1. SashaBubble — Header (`SashaBubble.tsx`)
-- Soft gradient header (`bg-gradient-to-r from-primary/10 via-background to-background`) with avatar in a ring + a small green "online" dot.
-- Replace icon-only buttons with **icon + label** pill buttons that collapse to icon-only under `sm:` for mobile:
-  - `MousePointer2` → "Point" (highlight a card)
-  - `RotateCcw` → "Reset"
-  - `X` → "Close"
-- Each button keeps a tooltip via `Tooltip` for hover, but the visible label removes ambiguity.
+### 2. Wizard save — no contracts/SOV for SUPPLIER
+**`src/hooks/useSetupWizardV2.ts`** — inside `_saveToDb`:
+- Add an `isSupplier = creatorOrgType === 'SUPPLIER'` branch.
+- Still save `project_setup_answers`, `project_scope_details`, and `projects.project_type` (the scope info is real and useful).
+- **Skip** the `_saveContractAndSov(...)` calls entirely for suppliers — no `project_contracts` row, no SOV, no upstream/downstream placeholders.
+- Don't persist `contract_value` / `fc_contract_value` answers for suppliers (filter them out of `answerRows`) so nothing downstream picks up a phantom value.
 
-### 2. Assistant message bubble (`SashaMessage.tsx`)
-- Replace `bg-muted` (the dark olive) with `bg-primary/5 border border-primary/15 text-foreground`.
-- Add subtle `rounded-2xl` and a small avatar tail.
-- User bubble keeps `bg-primary text-primary-foreground` but switches to `rounded-2xl` for consistency.
+### 3. ContractsStep — defensive guard
+**`src/components/project-wizard-new/ContractsStep.tsx`**
+- Add an early return at the top: if `creatorOrgType === 'SUPPLIER'`, render nothing (in case the step is ever reached via a stale draft / deep-link). This keeps the component safe even though step 1 already removes it from the flow.
 
-### 3. Quick action chips (`SashaQuickActions.tsx`)
-- Two-tier visual:
-  - **Suggested next step** (first action) = filled primary button with arrow icon → looks like a CTA.
-  - Remaining actions = soft chips `bg-primary/10 text-primary hover:bg-primary/20 border-0 rounded-full`, each prefixed with a small contextual icon based on a keyword map (`Sparkles`, `Play`, `FileText`, `ShoppingCart`, `HelpCircle`, fallback `MessageCircle`).
-- Add a tiny "Try one:" label above the chips so users know they're tappable suggestions.
+### 4. Review step — hide contract summary for SUPPLIER
+**`src/components/project-wizard-new/ReviewStep.tsx`** and **`UnifiedReviewStep.tsx`**
+- When `creatorOrgType === 'SUPPLIER'`, suppress the "Contract Value" summary card and instead show a small info note: *"Contracts are created automatically when you send an estimate to the GC/TC handling materials. The accepted estimate total becomes the contract value."*
 
-### 4. Input row
-- Larger 44px input with rounded-full styling and inline send button (mic-style) — bigger tap target on mobile.
-- Placeholder rotates between examples ("Ask about change orders…", "How do I invite a contractor?") — pick one at mount, no animation lib needed.
+### 5. Draft persistence
+**`CreateProjectNew.tsx`** sessionStorage rehydration — if `creatorOrgType === 'SUPPLIER'` and the saved `currentStep` points at the (now-removed) Contracts step index, clamp it to the next valid step. Prevents a stuck wizard for users with an in-progress draft.
 
-### 5. Mobile layout
-- Panel:
-  - Mobile (`<sm`): full-width sheet anchored to bottom — `inset-x-2 bottom-24 w-auto max-h-[70vh]` so it doesn't overlap the bottom nav (currently `bottom-32` for the bubble).
-  - Desktop unchanged width (400px) but raise `max-h` to `min(560px,75vh)`.
-- Floating bubble: keep position, but add a permanent small "Sasha" chip beside it on desktop (replacing the auto-dismissing label) and a subtle breathing glow instead of bounce so it doesn't feel like a notification.
+### 6. (Future, not in this change) Estimate → Contract bridge
+The supplier estimate acceptance flow already produces an estimate total per project per buyer org. The natural follow-up is to have estimate-acceptance create/update a `project_contracts` row with:
+- `from_role = 'Supplier'`, `from_org_id = supplier org`
+- `to_role` / `to_org_id` = the material-responsible party that accepted (GC or TC)
+- `contract_sum = accepted estimate total`
 
-### 6. Empty/loading polish
-- "Sasha is thinking…" becomes 3 animated dots in a chip matching the new assistant bubble style.
+I'm **not** wiring that here — it's a separate change and depends on the estimate-acceptance UX. This plan just stops asking the wrong question; the estimate→contract creation can be its own follow-up so we don't conflate two flows.
 
 ## Files touched
-- `src/components/sasha/SashaBubble.tsx` — header, panel sizing, input, bubble label.
-- `src/components/sasha/SashaMessage.tsx` — bubble colors/shape, loading dots.
-- `src/components/sasha/SashaQuickActions.tsx` — CTA + chips with icons, "Try one" label.
+- `src/pages/CreateProjectNew.tsx` — filter steps, pass supplier flag, draft clamp.
+- `src/hooks/useSetupWizardV2.ts` — skip contract/SOV + drop contract_value answers for SUPPLIER.
+- `src/components/project-wizard-new/ContractsStep.tsx` — defensive null render.
+- `src/components/project-wizard-new/ReviewStep.tsx` + `UnifiedReviewStep.tsx` — hide contract card, show explainer for supplier.
 
-No backend, hook, or routing changes. All colors use existing semantic tokens (`primary`, `background`, `foreground`, `muted-foreground`).
+No DB migration required. No changes to RLS or financial triggers — we're just not inserting a bogus contract row.
