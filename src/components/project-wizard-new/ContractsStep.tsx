@@ -26,6 +26,10 @@ export function ContractsStep({
   setAnswer,
   creatorOrgType,
 }: ContractsStepProps) {
+  // Suppliers don't have a setup-time contract — their contract value is the
+  // accepted estimate sent to the material-responsible party. Render nothing.
+  if (creatorOrgType === 'SUPPLIER') return null;
+
   const isTC = creatorOrgType === 'TC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
   const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
