@@ -36,9 +36,12 @@ export const initialTMBuildingInfo: TMBuildingInfo = {
 interface Props {
   data: TMBuildingInfo;
   onChange: (updates: Partial<TMBuildingInfo>) => void;
+  hideMaterialResponsibility?: boolean;
+  title?: string;
+  description?: string;
 }
 
-export function TMBuildingInfoStep({ data, onChange }: Props) {
+export function TMBuildingInfoStep({ data, onChange, hideMaterialResponsibility, title, description }: Props) {
   const toggleSidingMaterial = (mat: string) => {
     const current = data.sidingMaterials;
     onChange({
@@ -51,36 +54,38 @@ export function TMBuildingInfoStep({ data, onChange }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Building Info</h2>
+        <h2 className="text-lg font-semibold">{title ?? 'Building Info'}</h2>
         <p className="text-sm text-muted-foreground">
-          Describe the building so Work Orders have proper context — no SOV is generated for T&M projects.
+          {description ?? 'Describe the building so Work Orders have proper context — no SOV is generated for T&M projects.'}
         </p>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Material Responsibility
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={data.materialResponsibility}
-            onValueChange={(v) => onChange({ materialResponsibility: v as TMBuildingInfo['materialResponsibility'] })}
-            className="flex gap-4"
-          >
-            {(['GC', 'TC', 'SPLIT'] as const).map((val) => (
-              <div key={val} className="flex items-center gap-2">
-                <RadioGroupItem value={val} id={`mat-${val}`} />
-                <Label htmlFor={`mat-${val}`} className="cursor-pointer">
-                  {val === 'SPLIT' ? 'Split' : val}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </CardContent>
-      </Card>
+      {!hideMaterialResponsibility && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Material Responsibility
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={data.materialResponsibility}
+              onValueChange={(v) => onChange({ materialResponsibility: v as TMBuildingInfo['materialResponsibility'] })}
+              className="flex gap-4"
+            >
+              {(['GC', 'TC', 'SPLIT'] as const).map((val) => (
+                <div key={val} className="flex items-center gap-2">
+                  <RadioGroupItem value={val} id={`mat-${val}`} />
+                  <Label htmlFor={`mat-${val}`} className="cursor-pointer">
+                    {val === 'SPLIT' ? 'Split' : val}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
