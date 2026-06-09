@@ -4847,6 +4847,7 @@ export type Database = {
       projects: {
         Row: {
           address: Json | null
+          adopted_from_supplier_org_id: string | null
           architect_approval_email: string | null
           architect_approval_required: boolean
           build_type: string | null
@@ -4871,6 +4872,7 @@ export type Database = {
           role_label_overrides: Json
           sales_tax_rate: number
           scope: Json | null
+          setup_completion_required: boolean
           start_date: string | null
           state: string | null
           status: string
@@ -4882,6 +4884,7 @@ export type Database = {
         }
         Insert: {
           address?: Json | null
+          adopted_from_supplier_org_id?: string | null
           architect_approval_email?: string | null
           architect_approval_required?: boolean
           build_type?: string | null
@@ -4906,6 +4909,7 @@ export type Database = {
           role_label_overrides?: Json
           sales_tax_rate?: number
           scope?: Json | null
+          setup_completion_required?: boolean
           start_date?: string | null
           state?: string | null
           status?: string
@@ -4917,6 +4921,7 @@ export type Database = {
         }
         Update: {
           address?: Json | null
+          adopted_from_supplier_org_id?: string | null
           architect_approval_email?: string | null
           architect_approval_required?: boolean
           build_type?: string | null
@@ -4941,6 +4946,7 @@ export type Database = {
           role_label_overrides?: Json
           sales_tax_rate?: number
           scope?: Json | null
+          setup_completion_required?: boolean
           start_date?: string | null
           state?: string | null
           status?: string
@@ -4951,6 +4957,13 @@ export type Database = {
           zip?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_adopted_from_supplier_org_id_fkey"
+            columns: ["adopted_from_supplier_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_created_by_org_id_fkey"
             columns: ["created_by_org_id"]

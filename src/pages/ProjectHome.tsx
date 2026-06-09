@@ -90,6 +90,8 @@ interface Project {
   created_at: string;
   organization_id: string;
   contract_mode: string;
+  setup_completion_required?: boolean;
+  adopted_from_supplier_org_id?: string | null;
 }
 
 export default function ProjectHome() {
@@ -338,6 +340,26 @@ export default function ProjectHome() {
                   <SupplierProjectOverview projectId={id!} projectName={project.name} financials={financials} onNavigate={handleTabChange} />
                 ) : (
                   <div className="space-y-3 mt-3">
+                    {project.setup_completion_required && !isSupplier && (
+                      <div
+                        className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-5 cursor-pointer hover:border-primary/60 transition-colors"
+                        onClick={() => navigate(`/project/${id}/setup`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                            <ClipboardList className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm">Finish project setup</p>
+                            <p className="text-xs text-muted-foreground">
+                              This project was created by a supplier. Add your contract, scope, and team to unlock dashboards, SOV, invoicing, and reporting. You can keep using materials and POs in the meantime.
+                            </p>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
+                        </div>
+                      </div>
+                    )}
+
                     {showSetupBanner && (
                       <div
                         className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
