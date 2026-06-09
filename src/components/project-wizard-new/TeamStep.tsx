@@ -16,6 +16,8 @@ interface TeamStepProps {
   creatorRole: string | null;
   projectId?: string;
   creatorOrgType?: OrgType | null;
+  /** Fires after any successful team mutation (add/remove/resend) so parents can refetch related data. */
+  onTeamChange?: () => void;
 }
 
 interface ProjectTeamMember {
