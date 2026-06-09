@@ -2,10 +2,20 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { cn } from '@/lib/utils';
 import { ProjectBasics, TeamMember } from '@/types/projectWizard';
@@ -73,6 +83,7 @@ export default function CreateProjectNew() {
   const [saving, setSaving] = useState(false);
   const [contractMode, setContractMode] = useState<ContractMode>(draft?.contractMode ?? 'fixed');
   const [tmScope, setTmScope] = useState<TMBuildingInfo>(draft?.tmScope ?? initialTMBuildingInfo);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
@@ -159,6 +170,12 @@ export default function CreateProjectNew() {
   const handleModeChange = (mode: ContractMode) => {
     setContractMode(mode);
     // Keep on mode step — user clicks Next to proceed
+  };
+
+  const handleCancel = () => {
+    sessionStorage.removeItem(DRAFT_KEY);
+    setShowCancelDialog(false);
+    navigate('/dashboard');
   };
 
   const createProject = async () => {
@@ -430,6 +447,19 @@ export default function CreateProjectNew() {
 
           {/* Main content */}
           <div className="col-span-12 md:col-span-10">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-xl font-semibold font-heading">New Project</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={saving}
+                className="text-muted-foreground hover:text-destructive h-9 px-3"
+              >
+                <X className="h-4 w-4 mr-1.5" />
+                Cancel
+              </Button>
+            </div>
             <Card className="overflow-hidden">
               <CardContent className="p-6">
                 {renderStep()}
@@ -470,6 +500,23 @@ export default function CreateProjectNew() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel project setup?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your progress will be discarded. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep working</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Discard and exit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
