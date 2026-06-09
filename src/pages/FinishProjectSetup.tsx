@@ -131,36 +131,35 @@ export default function FinishProjectSetup() {
     if (ownerContractRow) setOwnerContractValue(Number(ownerContractRow.contract_sum || 0));
   }, [ownerContractRow]);
 
-  // Downstream contracts: those WHERE I am the payer (to_org_id = me).
-  // The TeamStep / AddTeamMemberDialog flow auto-creates these rows with contract_sum=0
-  // and to_project_team_id linking to the invited member.
+  // Downstream rows: driven by project_team (source of truth). Merge in any existing
+  // project_contracts row to surface a previously saved contract_sum.
+  // Row id = project_team.id (NOT project_contracts.id) so the list is stable even
+  // before any contract row exists.
   const downstreamContracts: DownstreamContractRow[] = useMemo(() => {
-    if (!currentOrgId) return [];
-    return (ctx?.contracts || [])
-      .filter(c =>
-        c.to_org_id === currentOrgId &&
-        (c.from_role || '').toLowerCase() !== 'owner' &&
-        !(c.from_role || '').toLowerCase().includes('supplier'),
-      )
-      .map(c => {
-        const name = c.from_org?.name
-          || (teamData || []).find(t => t.id === c.to_project_team_id)?.invited_org_name
-          || 'Pending invite';
-        const status = (teamData || []).find(t => t.id === c.to_project_team_id)?.status;
-        return {
-          id: c.id as string,
-          org_name: name,
-          role: String(c.from_role || ''),
-          trade: c.trade,
-          contract_sum: downstreamEdits[c.id as string] ?? Number(c.contract_sum || 0),
-          invited_only: status !== 'Accepted',
-        };
-      });
-  }, [ctx?.contracts, teamData, currentOrgId, downstreamEdits]);
+    if (!currentOrgId || !downstreamRoleLabel) return [];
+    const members = (teamData || []).filter(
+      t => (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase(),
+    );
+    return members.map(m => {
+      const existing = (ctx?.contracts || []).find(
+        c => c.to_project_team_id === m.id && c.to_org_id === currentOrgId,
+      );
+      const savedSum = existing ? Number(existing.contract_sum || 0) : 0;
+      return {
+        id: m.id,
+        org_name: m.invited_org_name || 'Pending invite',
+        role: m.role,
+        trade: existing?.trade ?? null,
+        contract_sum: downstreamEdits[m.id] ?? savedSum,
+        invited_only: m.status !== 'Accepted',
+      };
+    });
+  }, [ctx?.contracts, teamData, currentOrgId, downstreamRoleLabel, downstreamEdits]);
 
   const handleDownstreamChange = useCallback((id: string, contractSum: number) => {
     setDownstreamEdits(prev => ({ ...prev, [id]: contractSum }));
   }, []);
+
 
   // Sync wizard.answers.contract_value so SOV generation uses a sane number.
   // Use owner contract for GC; sum of downstream as fallback / for TC use TC's incoming GC contract value.
