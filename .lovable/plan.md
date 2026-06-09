@@ -1,43 +1,77 @@
-# Make "Finish project setup" reliable for buyers
+# Finish Setup: party-aware contracts + TC invite gate
 
-## Why your project shows no banner
-`Oleg Rutman` was created by a Supplier and the GC joined through a team invite. No `supplier_estimate` was ever submitted or accepted, so the DB trigger that sets `projects.setup_completion_required = true` never ran. The banner is gated on that flag, so it stays hidden — even though the project is exactly the kind of shell that needs buyer completion.
+## Problem
+Current "Your Contract" step shows one unlabeled "Total contract value" input. It doesn't say *which* contract or *between whom*, doesn't surface the locked supplier contract, and lets a GC enter a GC↔TC value before any TC exists on the project.
 
-The current adoption model assumes *every* buyer arrives by approving an estimate. In reality, a buyer may:
-1. Approve a supplier estimate (already handled).
-2. Accept a direct project invite from a supplier (not handled).
-3. Be added later, after the supplier already submitted an estimate (race-condition).
+## Revised step order (GC adopting from supplier)
 
-## Fix
+```
+1. Building Info        (confirm structure)
+2. Contract Mode        (Fixed / T&M)
+3. Invite Team          ← NEW — invite TCs (or "self-perform")
+4. Contracts            ← rebuilt — multi-party, party-labeled
+5. Building Type        (scope generation)
+6. Scope                (SOV)
+7. Review
+```
 
-### 1. Flag projects at creation time, not only at estimate approval
-Update the `projects` insert trigger (or add one): when `created_by_org` is a Supplier, set `setup_completion_required = true` and stamp `adopted_from_supplier_org_id = created_by_org_id`. This guarantees every supplier-originated project is flagged the moment it exists.
+TC adopting uses the same order but step 3 invites FCs.
 
-### 2. Keep estimate-approval trigger but make it idempotent
-The existing `adopt_project_on_estimate_approval` trigger stays — it still creates the `project_participants` + `project_contracts` rows on first estimate acceptance. It just no-ops the flag flip (already true).
+## Step 3 — Invite Team (new)
 
-### 3. Auto-clear the flag when buyer has a contract + scope
-Add a guard so the flag auto-clears when both exist for the viewing buyer org:
-- `project_contracts` where `to_role` = the buyer's role, and
-- `project_scope_details` row present and `home_type` not null.
+Reuses the existing project-invite UI (`InviteSearchInput` / partner directory). Behavior:
+- GC view: shows list of TCs currently on the project, "Invite TC" button, and a "Self-perform — no TCs needed" checkbox.
+- TC view: same but for FCs.
+- "Next" disabled until **either** at least one downstream party exists **or** self-perform is checked.
+- Invitations save immediately to `project_invites` / `project_participants` as today — no separate persistence.
 
-That way if a buyer completed the wizard manually elsewhere, the banner disappears without manual intervention.
+## Step 4 — Contracts (rebuilt `ContractsStep`)
 
-### 4. Frontend: broaden banner visibility
-In `ProjectHome.tsx` the gate becomes: show the banner when **either** of these is true for the viewing org:
-- `project.setup_completion_required === true`, OR
-- viewer org is GC/TC AND project was created by a Supplier AND viewer has no `project_contracts` row as `to_role`.
+Three party-labeled sections, each with explicit "Party A → Party B" titles.
 
-The second clause is a safety net so any pre-existing supplier shell (like `Oleg Rutman`) lights up immediately without a backfill migration.
+### a. Supplier → You  *(read-only, only if buyer is material-responsible)*
+```
+Supplier → You    ·    {supplierName}    ·    $X    ·    Locked (from accepted estimate)
+```
+Pulled from `project_contracts` where `from_role = 'Supplier'` and `to_role` = current org's role. Hidden entirely if material responsibility ≠ this buyer.
 
-### 5. Backfill (one-shot migration)
-`UPDATE projects SET setup_completion_required = true, adopted_from_supplier_org_id = created_by_org_id WHERE created_by_org_id IN (SELECT id FROM organizations WHERE type = 'SUPPLIER') AND setup_completion_required IS NOT TRUE;` — then immediately apply the auto-clear logic from step 3 so already-completed projects don't get falsely re-flagged.
+### b. Owner → GC  *(GC view, optional)*  /  GC → TC  *(TC view, required)*
+- **GC**: card title `Owner → You (Prime contract)`, helper "Optional — your contract with the property owner. You can add this later."
+- **TC**: card title `General Contractor → You`, helper "What is the GC paying you for this project?" (required).
 
-## Files to touch
-- `supabase/migrations/*` — new migration with creation-time trigger, auto-clear helper, backfill.
-- `src/pages/ProjectHome.tsx` — broaden banner condition (~line 343).
-- No changes needed to `FinishProjectSetup.tsx` (the wizard already clears the flag on finish).
+### c. Downstream contracts  *(required if downstream parties were invited in step 3)*
+Renders one row per invited downstream org pulled from `project_participants`:
+- **GC view**: `You → {TC name}` — input "What you're paying this TC". One per TC.
+- **TC view**: `You → {FC name}` — input "What you're paying this FC". One per FC.
+If user selected "self-perform" in step 3, this section is hidden.
+
+### Material Responsibility
+Stays where it is (top of step 4). Drives whether section (a) shows.
+
+## Data model touches
+
+No schema changes. Writes go to existing `project_contracts` rows with explicit `from_role`/`to_role`/`from_org_id`/`to_org_id`:
+
+| Contract | from_role | to_role | from_org | to_org |
+|---|---|---|---|---|
+| Owner → GC (optional) | `Owner` | `GC` | null | GC org |
+| GC → TC (per TC) | `GC` | `TC` | GC org | TC org |
+| TC → FC (per FC) | `TC` | `FC` | TC org | FC org |
+| Supplier → buyer | (existing, untouched) | | | |
+
+`useSetupWizardV2.saveAll` already creates the upstream contract row; extend it to:
+- accept an optional `ownerContractValue` (GC mode) and write Owner→GC only when > 0,
+- iterate `downstreamContracts: Array<{ org_id, role, amount }>` instead of a single `fc_contract_value`.
+
+## Files touched
+
+- `src/pages/FinishProjectSetup.tsx` — add `invite_team` step, fetch invited TCs/FCs, pass into `ContractsStep`, pass supplier contract context, extend `finish()` to write multi-row contracts.
+- `src/components/project-wizard-new/ContractsStep.tsx` — accept new props (`supplierContract`, `downstreamParties`, `viewerRole`, `ownerContractValue`, `onOwnerContractChange`), render the three labeled sections, drop the generic unlabeled input.
+- `src/hooks/useSetupWizardV2.ts` — extend `saveAll` to handle multiple downstream contracts + optional owner contract.
+- New small component `src/components/project-wizard-new/InviteTeamStep.tsx` — wraps existing invite UI with the self-perform toggle and "at least one" gate.
 
 ## Out of scope
-- Changing supplier UI / restricting what suppliers can configure (handled previously).
-- SOV auto-generation from supplier estimates.
+- Changing the regular (non-adoption) `CreateProjectNew` flow.
+- Supplier invoicing changes.
+- Editing the locked supplier contract.
+- Schema/migration changes.
