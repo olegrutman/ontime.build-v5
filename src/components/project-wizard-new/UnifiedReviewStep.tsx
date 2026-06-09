@@ -190,7 +190,23 @@ export function UnifiedReviewStep({
       )}
 
       {/* Contracts & SOV */}
-      {contractMode !== 'tm' && (
+      {contractMode !== 'tm' && creatorOrgType === 'SUPPLIER' && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Contract
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Contracts are created automatically when you send an estimate to the GC or TC handling materials.
+              The accepted estimate total becomes the contract value — no need to enter one here.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      {contractMode !== 'tm' && creatorOrgType !== 'SUPPLIER' && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">

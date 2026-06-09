@@ -105,7 +105,18 @@ export default function CreateProjectNew() {
   }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType]);
 
   const isTM = contractMode === 'tm';
-  const activeSteps = useMemo(() => isTM ? TM_STEPS : FIXED_STEPS, [isTM]);
+  const isSupplier = creatorOrgType === 'SUPPLIER';
+  const activeSteps = useMemo(() => {
+    const base = isTM ? TM_STEPS : FIXED_STEPS;
+    return isSupplier ? base.filter(s => s.id !== 'contracts') : base;
+  }, [isTM, isSupplier]);
+
+  // Clamp draft-restored step if it now points past the filtered step list
+  useEffect(() => {
+    if (currentStep > activeSteps.length - 1) {
+      setCurrentStep(Math.max(0, activeSteps.length - 1));
+    }
+  }, [activeSteps.length, currentStep]);
 
   useEffect(() => {
     if (!authLoading && (!user || !currentOrg)) {
