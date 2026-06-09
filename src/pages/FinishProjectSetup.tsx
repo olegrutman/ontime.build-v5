@@ -28,7 +28,6 @@ const FIXED_STEPS: StepDef[] = [
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'invite_team', label: 'Invite Team', description: 'Add downstream crews' },
   { id: 'contracts', label: 'Contracts', description: 'Owner + downstream values' },
-  { id: 'building_type', label: 'Building Type', description: 'For scope generation' },
   { id: 'scope', label: 'Scope', description: 'Scope & SOV' },
   { id: 'review', label: 'Review', description: 'Finalize' },
 ];
@@ -111,6 +110,14 @@ export default function FinishProjectSetup() {
       totalSqft: ctx.scope!.total_sqft || prev.totalSqft,
     }));
   }, [ctx?.scope]);
+
+  // Keep the SOV wizard's buildingType in sync with the Building Info step,
+  // since the standalone Building Type step has been removed.
+  useEffect(() => {
+    if (tmScope.buildingType && tmScope.buildingType !== wizard.buildingType) {
+      wizard.selectBuildingType(tmScope.buildingType as any);
+    }
+  }, [tmScope.buildingType, wizard.buildingType, wizard.selectBuildingType]);
 
   // Supplier contract (locked, displayed when buyer is material-responsible)
   const supplierContract = useMemo(() => {
