@@ -267,13 +267,42 @@ export default function FinishProjectSetup() {
         }
       }
 
-      // 3. Update downstream contract sums
-      for (const [id, sum] of Object.entries(downstreamEdits)) {
-        await supabase
-          .from('project_contracts')
-          .update({ contract_sum: sum })
-          .eq('id', id);
+      // 3. Upsert downstream contracts (one row per invited team member).
+      const myToRole = isGC ? 'General Contractor' : isTC ? 'Trade Contractor' : null;
+      if (myToRole && !selfPerform) {
+        const downstreamMembers = (teamData || []).filter(
+          t => downstreamRoleLabel && (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase(),
+        );
+        for (const m of downstreamMembers) {
+          const sum = downstreamEdits[m.id] ?? 0;
+          const existing = (ctx?.contracts || []).find(
+            c => c.to_project_team_id === m.id && c.to_org_id === currentOrgId,
+          );
+          if (existing) {
+            if (sum !== Number(existing.contract_sum || 0)) {
+              const { error } = await supabase
+                .from('project_contracts')
+                .update({ contract_sum: sum })
+                .eq('id', existing.id);
+              if (error) throw error;
+            }
+          } else {
+            const { error } = await supabase.from('project_contracts').insert({
+              project_id: projectId,
+              from_org_id: m.org_id,
+              from_role: m.role,
+              to_org_id: currentOrgId,
+              to_role: myToRole,
+              to_project_team_id: m.id,
+              contract_sum: sum,
+              retainage_percent: 0,
+              created_by_user_id: user.id,
+            });
+            if (error) throw error;
+          }
+        }
       }
+
 
       // 4. For fixed mode: run wizard save (creates SOV + placeholder primary contract record)
       if (!isTM && wizard.buildingType) {
