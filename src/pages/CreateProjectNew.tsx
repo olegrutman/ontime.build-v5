@@ -172,6 +172,12 @@ export default function CreateProjectNew() {
     // Keep on mode step — user clicks Next to proceed
   };
 
+  const handleCancel = () => {
+    sessionStorage.removeItem(DRAFT_KEY);
+    setShowCancelDialog(false);
+    navigate('/dashboard');
+  };
+
   const createProject = async () => {
     if (!currentOrg?.id || !user?.id) {
       toast({ title: 'Error', description: 'Organization not found', variant: 'destructive' });
