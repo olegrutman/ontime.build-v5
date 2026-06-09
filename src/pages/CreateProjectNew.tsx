@@ -386,16 +386,16 @@ export default function CreateProjectNew() {
         return (
           <UnifiedReviewStep
             basics={basics}
-            buildingType={isTM ? null : wizard.buildingType}
-            answers={isTM ? {} : wizard.answers}
-            visibleQuestions={isTM ? [] : wizard.visibleQuestions}
-            sovLines={isTM ? [] : wizard.sovLines}
+            buildingType={(isTM || isSupplier) ? null : wizard.buildingType}
+            answers={(isTM || isSupplier) ? {} : wizard.answers}
+            visibleQuestions={(isTM || isSupplier) ? [] : wizard.visibleQuestions}
+            sovLines={(isTM || isSupplier) ? [] : wizard.sovLines}
             team={team}
             creatorOrgName={currentOrg?.name}
             creatorRole={creatorRole}
             creatorOrgType={creatorOrgType}
             contractMode={contractMode}
-            tmBuildingInfo={isTM ? tmScope : undefined}
+            tmBuildingInfo={(isTM || isSupplier) ? tmScope : undefined}
           />
         );
       default:
