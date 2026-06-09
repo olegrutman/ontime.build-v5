@@ -200,6 +200,7 @@ function AppRoutes() {
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/create-project" element={<RequireAuth><CreateProjectNew /></RequireAuth>} />
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
+            <Route path="/project/:id/setup" element={<RequireAuth><FinishProjectSetup /></RequireAuth>} />
             <Route path="/project/:id/contracts" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
             <Route path="/project/:projectId/change-orders/quick" element={<RequireAuth><QuickCapture /></RequireAuth>} />
             
