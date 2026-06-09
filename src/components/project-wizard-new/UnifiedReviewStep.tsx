@@ -97,7 +97,7 @@ export function UnifiedReviewStep({
       </Card>
 
       {/* T&M mode info */}
-      {contractMode === 'tm' && (
+      {contractMode === 'tm' && creatorOrgType !== 'SUPPLIER' && (
         <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/10 dark:border-amber-800">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-start gap-3">
@@ -113,21 +113,23 @@ export function UnifiedReviewStep({
         </Card>
       )}
 
-      {/* T&M Building Info */}
-      {contractMode === 'tm' && tmBuildingInfo && (
+      {/* Building Info (T&M or Supplier) */}
+      {(contractMode === 'tm' || creatorOrgType === 'SUPPLIER') && tmBuildingInfo && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Hammer className="h-4 w-4" />
-              Building Info
+              {creatorOrgType === 'SUPPLIER' ? 'Project Structure' : 'Building Info'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Material Responsibility</p>
-                <p className="font-medium">{tmBuildingInfo.materialResponsibility === 'SPLIT' ? 'Split' : tmBuildingInfo.materialResponsibility}</p>
-              </div>
+              {creatorOrgType !== 'SUPPLIER' && (
+                <div>
+                  <p className="text-muted-foreground">Material Responsibility</p>
+                  <p className="font-medium">{tmBuildingInfo.materialResponsibility === 'SPLIT' ? 'Split' : tmBuildingInfo.materialResponsibility}</p>
+                </div>
+              )}
               <div>
                 <p className="text-muted-foreground">Building Type</p>
                 <p className="font-medium">{tmBuildingInfo.buildingType || '—'}</p>
