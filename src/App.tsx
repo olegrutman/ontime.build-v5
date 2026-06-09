@@ -62,6 +62,7 @@ const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
 const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
+const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
 
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
