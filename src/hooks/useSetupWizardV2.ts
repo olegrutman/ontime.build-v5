@@ -1215,6 +1215,11 @@ export function useSetupWizardV2(
           contract_id: ownerLeg.id,
           sov_name: 'Framing SOV',
           scope_snapshot: scopeData,
+          // Owner→GC SOV is the GC's internal owner-billing schedule.
+          // GC owns both sides, so auto-lock so readiness can complete.
+          is_locked: true,
+          locked_at: new Date().toISOString(),
+          locked_by: userId || null,
         }).select('id').single();
         if (sErr) throw sErr;
 
