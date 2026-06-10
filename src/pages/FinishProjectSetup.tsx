@@ -575,6 +575,7 @@ export default function FinishProjectSetup() {
     );
   }
 
+  return (
     <AppLayout title="Finish Project Setup" fullWidth>
       <div className="mx-auto p-6 w-full">
         <div className="grid grid-cols-12 gap-6">
