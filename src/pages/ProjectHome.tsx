@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { ChevronDown as _CD } from 'lucide-react';
+
 import { ChevronDown, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
