@@ -16,6 +16,8 @@ interface ProjectHealthHeroProps {
   detail?: ReactNode;
   /** Optional right-side mini stats (label + value pairs). */
   miniStats?: { label: string; value: string; tone?: 'pos' | 'neg' | 'neutral' }[];
+  /** When true the upstream contract is unset, so margin numbers are meaningless. */
+  awaitingUpstream?: boolean;
 }
 
 const STATUS_STYLE: Record<HealthStatus, { bg: string; color: string; border: string; label: string }> = {
@@ -33,6 +35,7 @@ export function ProjectHealthHero({
   summary,
   detail,
   miniStats = [],
+  awaitingUpstream = false,
 }: ProjectHealthHeroProps) {
   const s = STATUS_STYLE[status];
   const Icon = status === 'green' ? TrendingUp : status === 'red' ? TrendingDown : Minus;
@@ -71,12 +74,18 @@ export function ProjectHealthHero({
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '2.4rem', color: C.ink, lineHeight: 1, ...fontVal }}>
-            {fmtSigned(projectedMargin)}
-          </span>
-          <span style={{ fontSize: '1rem', color: s.color, ...fontMono }}>
-            {pctRounded >= 0 ? '+' : ''}{pctRounded}%
-          </span>
+          {awaitingUpstream ? (
+            <span style={{ fontSize: '2.4rem', color: C.muted, lineHeight: 1, ...fontVal }}>—</span>
+          ) : (
+            <>
+              <span style={{ fontSize: '2.4rem', color: C.ink, lineHeight: 1, ...fontVal }}>
+                {fmtSigned(projectedMargin)}
+              </span>
+              <span style={{ fontSize: '1rem', color: s.color, ...fontMono }}>
+                {pctRounded >= 0 ? '+' : ''}{pctRounded}%
+              </span>
+            </>
+          )}
         </div>
         <p style={{ fontSize: '0.82rem', color: C.muted, marginTop: 8, lineHeight: 1.4 }}>
           {summary}
