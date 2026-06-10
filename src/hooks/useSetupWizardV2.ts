@@ -1022,6 +1022,7 @@ export function useSetupWizardV2(
     setAnswers(prev => ({
       contract_value: prev.contract_value,
       fc_contract_value: prev.fc_contract_value,
+      gc_tc_contract_value: prev.gc_tc_contract_value,
       material_responsibility: prev.material_responsibility,
     }));
   }, []);
