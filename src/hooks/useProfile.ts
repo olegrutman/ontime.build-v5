@@ -91,7 +91,7 @@ export function useProfile() {
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (profileData) {
         setProfile(profileData as ProfileData);
@@ -103,7 +103,7 @@ export function useProfile() {
           .from('organizations')
           .select('*')
           .eq('id', currentOrg.id)
-          .single();
+          .maybeSingle();
         
         if (orgData) {
           setOrganization(orgData as unknown as OrganizationData);
@@ -114,7 +114,7 @@ export function useProfile() {
           .from('org_settings')
           .select('*')
           .eq('organization_id', currentOrg.id)
-          .single();
+          .maybeSingle();
         
         if (orgSettingsData) {
           setOrgSettings(orgSettingsData as unknown as OrgSettings);
@@ -137,7 +137,7 @@ export function useProfile() {
         .from('user_settings')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (userSettingsData) {
         setUserSettings(userSettingsData as unknown as UserSettings);
