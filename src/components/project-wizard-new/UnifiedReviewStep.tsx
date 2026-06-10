@@ -48,13 +48,20 @@ export function UnifiedReviewStep({
   tmBuildingInfo,
 }: UnifiedReviewStepProps) {
   const isTC = creatorOrgType === 'TC';
+  const isGC = creatorOrgType === 'GC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
   const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
+  const gcTcContractValue = typeof answers.gc_tc_contract_value === 'number' ? answers.gc_tc_contract_value : 0;
 
   const fcSovLines = useMemo(() => {
     if (!isTC || !buildingType || fcContractValue <= 0) return [];
     return generateSOVLines(buildingType, { ...answers, contract_value: fcContractValue });
   }, [isTC, buildingType, answers, fcContractValue]);
+
+  const gcTcSovLines = useMemo(() => {
+    if (!isGC || !buildingType || gcTcContractValue <= 0) return [];
+    return generateSOVLines(buildingType, { ...answers, contract_value: gcTcContractValue });
+  }, [isGC, buildingType, answers, gcTcContractValue]);
 
   return (
     <div className="space-y-6">
@@ -213,15 +220,15 @@ export function UnifiedReviewStep({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
-            {isTC ? 'Contracts & SOV' : 'Contract & SOV'}
+            {isTC ? 'Contracts & SOV' : isGC ? 'Contracts & SOV' : 'Contract & SOV'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className={isTC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
-            {/* GC / Primary contract */}
+          <div className={isTC || isGC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+            {/* Upstream / primary contract */}
             <div className="space-y-2">
               <div className="text-sm">
-                <p className="text-muted-foreground">{isTC ? 'General Contractor → Trade Contractor Contract' : 'Contract Value'}</p>
+                <p className="text-muted-foreground">{isTC ? 'General Contractor → Trade Contractor Contract' : isGC ? 'Owner → General Contractor Contract' : 'Contract Value'}</p>
                 <p className="font-medium text-lg">{contractValue > 0 ? formatCurrency(contractValue) : '—'}</p>
               </div>
               {sovLines.length > 0 && (
@@ -241,6 +248,21 @@ export function UnifiedReviewStep({
                 {fcSovLines.length > 0 && (
                   <div className="border rounded-lg overflow-hidden max-h-[300px]">
                     <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TC contract (GC only) */}
+            {isGC && gcTcContractValue > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm">
+                  <p className="text-muted-foreground">General Contractor → Trade Contractor Contract</p>
+                  <p className="font-medium text-lg">{formatCurrency(gcTcContractValue)}</p>
+                </div>
+                {gcTcSovLines.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden max-h-[300px]">
+                    <SOVLivePreview lines={gcTcSovLines} buildingType={buildingType} />
                   </div>
                 )}
               </div>
