@@ -1293,7 +1293,7 @@ export function useSetupWizardV2(
         .select('organization_id')
         .eq('project_id', pid)
         .eq('role', 'TC')
-        .order('joined_at', { ascending: true, nullsFirst: false })
+        .order('invited_at', { ascending: true, nullsFirst: false })
         .limit(1)
         .maybeSingle();
 
