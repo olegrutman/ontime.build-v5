@@ -57,7 +57,7 @@ export interface PackVariance {
   delivered: number;
   variance: number;
   variancePct: number | null;
-  status: 'ok' | 'watch' | 'over';
+  status: 'ok' | 'watch' | 'over' | 'pending';
 }
 
 export interface BuyerMaterialsAnalytics {
