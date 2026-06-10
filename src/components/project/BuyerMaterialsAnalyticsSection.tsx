@@ -49,18 +49,24 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
   );
 
   // ── Card 1: Forecast at Completion ──
-  const facPill: PillType = a.variancePct <= 0 ? 'pg' : a.variancePct <= 5 ? 'pa' : 'pr';
-  const facLabel = a.variancePct <= 0 ? 'On Budget' : a.variancePct <= 5 ? 'Watch' : 'Over';
+  const facHasData = a.estimateTotal > 0 || a.committedTotal > 0;
+  const facPill: PillType = !facHasData ? 'pm' : a.variancePct <= 0 ? 'pg' : a.variancePct <= 5 ? 'pa' : 'pr';
+  const facLabel = !facHasData ? 'No data' : a.variancePct <= 0 ? 'On Budget' : a.variancePct <= 5 ? 'Watch' : 'Over';
 
   // ── Card 2: Pipeline funnel — find bottleneck ──
   // Bug fix 2.2: READY_FOR_DELIVERY also signals a stall (yard pickup never happened).
+  const totalPipelineCount = a.pipeline.reduce((s, p) => s + p.count, 0);
   const stuck = a.pipeline.find(s => {
     if (!s.count || !s.oldestDays) return false;
     if ((s.key === 'SUBMITTED' || s.key === 'PRICED') && s.oldestDays > 5) return true;
     if (s.key === 'READY_FOR_DELIVERY' && s.oldestDays > 10) return true;
     return false;
   });
-  const pipelinePill: PillType = stuck ? 'pa' : 'pg';
+  const pipelinePill: PillType = totalPipelineCount === 0 ? 'pm' : stuck ? 'pa' : 'pg';
+  const pipelinePillLabel = totalPipelineCount === 0 ? 'No POs' : stuck ? 'Bottleneck' : 'Flowing';
+  const pipelineSub = totalPipelineCount === 0
+    ? 'No purchase orders yet'
+    : stuck ? `$${fmt(stuck.total).slice(1)} stuck in ${stuck.label.toLowerCase()} ${stuck.oldestDays}d` : 'Flow healthy across all stages';
 
   // ── Card 3: Supplier price adjustments (renamed from "drift vs estimate")
   // Bug fix 3.1: math is supplier-quote vs final-quote, NOT vs estimate. Renamed.
@@ -71,17 +77,28 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
     : `No supplier adjustments on ${a.priceVariance.totalLineCount} lines`;
 
   // ── Card 4: Delivery Risk ──
-  const drPill: PillType = a.deliveryRisk.lateCount > 0 ? 'pr'
+  const drHasData = a.deliveryRisk.avgLeadTimeDays != null || a.deliveryRisk.lateCount > 0 || a.deliveryRisk.onTimeRatePct != null;
+  const drPill: PillType = !drHasData ? 'pm'
+    : a.deliveryRisk.lateCount > 0 ? 'pr'
     : (a.deliveryRisk.onTimeRatePct ?? 100) >= 90 ? 'pg' : 'pa';
+  const drPillLabel = !drHasData ? 'No data' : a.deliveryRisk.lateCount > 0 ? 'Late' : 'On Time';
 
   // ── Card 5: Returns Impact ──
   // Bug fix 5.3: tighter, industry-aligned thresholds (1-3% normal range).
-  const riPill: PillType = a.returnsImpact.returnRatePct > 3 ? 'pr'
+  const riHasData = a.deliveredTotal > 0;
+  const riPill: PillType = !riHasData ? 'pm'
+    : a.returnsImpact.returnRatePct > 3 ? 'pr'
     : a.returnsImpact.returnRatePct > 1 ? 'pa' : 'pg';
+  const riPillLabel = !riHasData ? 'No data' : `${a.returnsImpact.returnRatePct}%`;
 
   // ── Card 6: Cash Exposure ──
-  const cePill: PillType = a.cashExposure.aging.d60_plus > 0 ? 'pr'
+  const ceTotal = a.cashExposure.openCommitments + a.cashExposure.unpaidInvoicesTotal;
+  const cePill: PillType = ceTotal === 0 ? 'pm'
+    : a.cashExposure.aging.d60_plus > 0 ? 'pr'
     : a.cashExposure.aging.d31_60 > 0 ? 'pa' : 'pg';
+  const cePillLabel = ceTotal === 0 ? 'No data'
+    : a.cashExposure.aging.d60_plus > 0 ? '60d+'
+    : a.cashExposure.aging.d31_60 > 0 ? '30-60d' : 'Current';
 
   return (
     <div className="space-y-4">
@@ -130,8 +147,8 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           iconBg={C.blueBg}
           label="PO PIPELINE"
           value={`${a.pipeline.reduce((s, p) => s + p.count, 0)}`}
-          sub={stuck ? `$${fmt(stuck.total).slice(1)} stuck in ${stuck.label.toLowerCase()} ${stuck.oldestDays}d` : 'Flow healthy across all stages'}
-          pills={[{ type: pipelinePill, text: stuck ? 'Bottleneck' : 'Flowing' }]}
+          sub={pipelineSub}
+          pills={[{ type: pipelinePill, text: pipelinePillLabel }]}
           idx={1}
         >
           <div style={{ padding: 12 }}>
@@ -207,7 +224,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           label="DELIVERY RISK"
           value={a.deliveryRisk.lateCount > 0 ? `${a.deliveryRisk.lateCount} late` : (a.deliveryRisk.onTimeRatePct != null ? `${a.deliveryRisk.onTimeRatePct}%` : '—')}
           sub={a.deliveryRisk.avgLeadTimeDays != null ? `Avg ~${a.deliveryRisk.avgLeadTimeDays}d order→delivery · ${fmt(a.deliveryRisk.lateTotal)} at risk` : 'No lead time data yet'}
-          pills={[{ type: drPill, text: a.deliveryRisk.lateCount > 0 ? 'Late' : 'On Time' }]}
+          pills={[{ type: drPill, text: drPillLabel }]}
           idx={3}
         >
           <div style={{ padding: 12 }}>
@@ -245,7 +262,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           label="RETURNS & WASTE"
           value={fmt(a.returnsImpact.netCredit)}
           sub={`${a.returnsImpact.returnRatePct}% of delivered · restocking ${fmt(a.returnsImpact.restockingTotal)}`}
-          pills={[{ type: riPill, text: `${a.returnsImpact.returnRatePct}%` }]}
+          pills={[{ type: riPill, text: riPillLabel }]}
           idx={4}
         >
           <div style={{ padding: 12 }}>
@@ -274,7 +291,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           label="CASH EXPOSURE (PAYABLES)"
           value={fmt(a.cashExposure.openCommitments + a.cashExposure.unpaidInvoicesTotal)}
           sub={`${fmt(a.cashExposure.openCommitments)} committed · ${fmt(a.cashExposure.unpaidInvoicesTotal)} invoiced unpaid`}
-          pills={[{ type: cePill, text: a.cashExposure.aging.d60_plus > 0 ? '60d+' : a.cashExposure.aging.d31_60 > 0 ? '30-60d' : 'Current' }]}
+          pills={[{ type: cePill, text: cePillLabel }]}
           idx={5}
         >
           <div style={{ padding: 12 }}>

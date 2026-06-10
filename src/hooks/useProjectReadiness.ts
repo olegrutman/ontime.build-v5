@@ -176,7 +176,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
 
         if (materialResp === 'TC' || !hasMaterialResp) {
-          items.push({ key: 'supplier', label: hasSupplier ? 'Supplier assigned' : 'Supplier not yet assigned', complete: hasSupplier });
+          items.push({ key: 'supplier', label: hasSupplier ? 'Supplier invited' : 'Supplier not yet invited', complete: hasSupplier });
         }
 
         if (hasGCRole) {
@@ -235,7 +235,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
 
         if (hasMaterialResp) {
-          items.push({ key: 'supplier', label: hasSupplier ? 'Supplier assigned' : 'Supplier not yet assigned', complete: hasSupplier });
+          items.push({ key: 'supplier', label: hasSupplier ? 'Supplier invited' : 'Supplier not yet invited', complete: hasSupplier });
         }
 
         if (hasSupplier) {
