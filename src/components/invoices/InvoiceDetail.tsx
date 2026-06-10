@@ -170,10 +170,19 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       if (invoiceRes.data.po_id) {
         const { data: poData } = await supabase
           .from('purchase_orders')
-          .select('po_number, status')
+          .select('po_number, status, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
           .eq('id', invoiceRes.data.po_id)
           .single();
-        setLinkedPO(poData);
+        if (poData) {
+          setLinkedPO({
+            po_number: poData.po_number,
+            status: poData.status,
+            pricing_owner_org_id: poData.pricing_owner_org_id ?? null,
+            supplier_org_id: (poData as any).supplier?.organization_id ?? null,
+          });
+        } else {
+          setLinkedPO(null);
+        }
       } else {
         setLinkedPO(null);
       }
