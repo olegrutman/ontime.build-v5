@@ -47,7 +47,7 @@ export function useCORoleContext(
         .from('organizations')
         .select('name')
         .eq('id', fcCreatorOrgId!)
-        .single();
+        .maybeSingle();
       return data;
     },
   });
