@@ -631,8 +631,10 @@ export default function FinishProjectSetup() {
               </CardContent>
             </Card>
           )}
+            </div>
+          </main>
         </div>
-      </AppLayout>
+      </ProjectShell>
     );
   }
 
