@@ -119,6 +119,7 @@ export default function ProjectHome() {
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
+  const isTM = project?.contract_mode === 'tm';
 
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
@@ -384,7 +385,7 @@ export default function ProjectHome() {
                       </div>
                     )}
 
-                    {!showAdoptionBanner && !showSetupBanner && !isFC && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC') && (
+                    {!showAdoptionBanner && !isFC && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC') && (
                       <div className="flex justify-end">
                         <ResetSetupDialog projectId={id!} />
                       </div>
