@@ -142,6 +142,7 @@ export function MyProjectsHero({
                 revenue={revenue}
                 costs={costs}
                 paidToYou={paidToYou}
+                paidByYou={paidByYou}
                 pendingToCollect={pendingToCollect}
                 contractLabel={labels.contract}
                 costLabel={labels.cost}
