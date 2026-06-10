@@ -103,10 +103,15 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     setDirtyOwner(false);
   }, [ownerBudgetReal]);
 
+  const ownerGcContract = financials.contracts?.find(
+    (c: any) => c.from_role === 'Owner' && c.to_role === 'General Contractor'
+  );
+
   const saveOwnerBudget = async () => {
-    if (!upContract?.id) return;
+    const targetId = ownerGcContract?.id || upContract?.id;
+    if (!targetId) return;
     setSavingOwner(true);
-    const ok = await financials.updateOwnerContract(upContract.id, draftOwnerBudget);
+    const ok = await financials.updateOwnerContract(targetId, draftOwnerBudget);
     setSavingOwner(false);
     if (ok) {
       financials.refetch();
