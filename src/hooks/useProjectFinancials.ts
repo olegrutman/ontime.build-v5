@@ -497,8 +497,19 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setLaborBudget((primaryC as any)?.labor_budget ?? null);
       }
 
-      // Extract owner_contract_value and material markup from primary contract
-      setOwnerContractValue((primaryC as any)?.owner_contract_value ?? null);
+      // Extract owner_contract_value — prefer the explicit Owner→GC contract row
+      // (created by the GC setup wizard), then fall back to the GC↔TC primary row.
+      const ownerGcContract = contractsWithNames.find((c: any) =>
+        c.from_role === 'Owner' && c.to_role === 'General Contractor'
+      );
+      const ownerVal =
+        (ownerGcContract as any)?.owner_contract_value ??
+        ((ownerGcContract as any)?.contract_sum && (ownerGcContract as any).contract_sum > 0
+          ? (ownerGcContract as any).contract_sum
+          : null) ??
+        (primaryC as any)?.owner_contract_value ??
+        null;
+      setOwnerContractValue(ownerVal);
       setMaterialMarkupType((primaryC as any)?.material_markup_type ?? null);
       setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
 
