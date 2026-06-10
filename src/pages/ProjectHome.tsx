@@ -119,16 +119,6 @@ export default function ProjectHome() {
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
-  const isTM = project?.contract_mode === 'tm';
-  // Rebased on V2 readiness signals — the legacy V1 tables (project_profiles,
-  // project_scope_selections) are no longer written by the V2 setup wizard.
-  // Hide the banner once the readiness checklist is complete or the project is active.
-  const showSetupBanner =
-    !isTM &&
-    (project?.status === 'setup' || project?.status === 'draft') &&
-    !readiness.isActive &&
-    !readiness.loading &&
-    readiness.percent < 100;
 
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
@@ -398,29 +388,6 @@ export default function ProjectHome() {
                       <div className="flex justify-end">
                         <ResetSetupDialog projectId={id!} />
                       </div>
-                    )}
-
-                    {showSetupBanner && (
-                      <button
-                        type="button"
-                        className="relative z-10 w-full text-left rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (id) navigate(`/project/${id}/setup`);
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                            <ClipboardList className="h-5 w-5 text-amber-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm">Define Scope & Details</p>
-                            <p className="text-xs text-muted-foreground">Set up project type, structure, and scope of work</p>
-                          </div>
-                          <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
-                        </div>
-                      </button>
                     )}
 
                     {(project.status === 'setup' || project.status === 'draft') && !isFC && (
