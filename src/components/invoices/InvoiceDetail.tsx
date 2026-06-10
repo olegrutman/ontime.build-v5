@@ -67,7 +67,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string } | null>(null);
+  const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string; pricing_owner_org_id: string | null; supplier_org_id: string | null } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
