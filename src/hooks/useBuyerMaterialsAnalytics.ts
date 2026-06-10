@@ -407,6 +407,11 @@ export function useBuyerMaterialsAnalytics({
       const packs = Array.from(normalizedMap.values())
         .filter(p => p.estimate > 0 || p.ordered > 0)
         .map(p => {
+          // For packs with nothing ordered yet, variance is not meaningful —
+          // showing "-100%" would falsely suggest a problem. Treat as Pending.
+          if (p.ordered === 0 && p.estimate > 0) {
+            return { ...p, variance: 0, variancePct: null, status: 'pending' as const };
+          }
           const variance = p.ordered - p.estimate;
           const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
           let status: PackVariance['status'];
