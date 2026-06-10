@@ -87,7 +87,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           .from('organizations')
           .select('type')
           .eq('id', creatorOrgId)
-          .single();
+          .maybeSingle();
         if (orgData?.type === 'GC' || orgData?.type === 'TC') {
           detectedCreatorType = orgData.type;
         }
