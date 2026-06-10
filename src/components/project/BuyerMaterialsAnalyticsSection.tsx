@@ -325,11 +325,11 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           {/* Mobile: stacked card per pack */}
           <div className="sm:hidden">
             {a.packs.map((p, idx) => {
-              const pill: PillType = p.status === 'over' ? 'pr' : p.status === 'watch' ? 'pa' : 'pg';
-              const label = p.status === 'over' ? 'Over' : p.status === 'watch' ? 'Watch' : 'OK';
-              const varColor = p.status === 'over' ? C.red : p.status === 'watch' ? C.amber : C.green;
-              const varText = p.variance >= 0 ? `+${fmt(p.variance)}` : `-${fmt(Math.abs(p.variance))}`;
-              const pctText = p.variancePct == null ? 'no estimate' : pctLabel(p.variancePct);
+              const pill: PillType = p.status === 'over' ? 'pr' : p.status === 'watch' ? 'pa' : p.status === 'pending' ? 'pm' : 'pg';
+              const label = p.status === 'over' ? 'Over' : p.status === 'watch' ? 'Watch' : p.status === 'pending' ? 'Pending' : 'OK';
+              const varColor = p.status === 'over' ? C.red : p.status === 'watch' ? C.amber : p.status === 'pending' ? C.muted : C.green;
+              const varText = p.status === 'pending' ? '—' : (p.variance >= 0 ? `+${fmt(p.variance)}` : `-${fmt(Math.abs(p.variance))}`);
+              const pctText = p.status === 'pending' ? 'not ordered yet' : (p.variancePct == null ? 'no estimate' : pctLabel(p.variancePct));
               return (
                 <button
                   key={p.packName}
