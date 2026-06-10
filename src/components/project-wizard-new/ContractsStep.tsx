@@ -215,9 +215,22 @@ export function ContractsStep({
     );
   }
 
-  /* ════════════════════════ STANDARD MODE (unchanged) ════════════════════════ */
+  /* ════════════════════════ STANDARD MODE ════════════════════════ */
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
   const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
+  const gcTcContractValue = typeof answers.gc_tc_contract_value === 'number' ? answers.gc_tc_contract_value : 0;
+
+  // Role-aware labeling for the upstream "what you are paid" card
+  const upstreamCardTitle = isGC
+    ? 'Owner → You (Prime contract)'
+    : isTC
+    ? 'General Contractor → You (Upstream)'
+    : 'Contract Value';
+  const upstreamFieldLabel = isGC
+    ? "Owner contract value — your revenue from the property owner"
+    : isTC
+    ? 'What is the GC paying you?'
+    : 'Total contract value';
 
   return (
     <div className="space-y-6">
@@ -232,6 +245,8 @@ export function ContractsStep({
         <p className="text-sm text-muted-foreground">
           {isTC
             ? 'These become the official upstream (GC) and downstream (FC) contracts for this project.'
+            : isGC
+            ? 'These become the official upstream (Owner) and downstream (Trade Contractor) contracts for this project.'
             : 'This becomes the official contract record for this project.'}
         </p>
       </div>
@@ -257,26 +272,24 @@ export function ContractsStep({
         </CardContent>
       </Card>
 
-      <div className={isTC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+      <div className={isTC || isGC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              {isTC ? (
-                <>
-                   <ArrowDown className="h-4 w-4 text-primary" />
-                  General Contractor → You (Upstream)
-                </>
+              {isTC || isGC ? (
+                <ArrowDown className="h-4 w-4 text-primary" />
               ) : (
-                <>
-                  <DollarSign className="h-4 w-4 text-primary" />
-                  Contract Value
-                </>
+                <DollarSign className="h-4 w-4 text-primary" />
+              )}
+              {upstreamCardTitle}
+              {isGC && (
+                <span className="ml-1 text-xs font-normal text-muted-foreground">Optional</span>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Label htmlFor="contract_value" className="text-sm text-muted-foreground">
-              {isTC ? 'What is the GC paying you?' : 'Total contract value'}
+              {upstreamFieldLabel}
             </Label>
             <div className="relative mt-1.5">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -303,7 +316,7 @@ export function ContractsStep({
             </CardHeader>
             <CardContent>
               <Label htmlFor="fc_contract_value" className="text-sm text-muted-foreground">
-                What are you paying your field crew?
+                Field Crew contract value — what you'll pay your FC
               </Label>
               <div className="relative mt-1.5">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -315,6 +328,34 @@ export function ContractsStep({
                   placeholder="0.00"
                   value={fcContractValue || ''}
                   onChange={(e) => setAnswer('fc_contract_value', e.target.value ? Number(e.target.value) : 0)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isGC && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ArrowUp className="h-4 w-4 text-accent-foreground" />
+                You → Trade Contractor (Downstream)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label htmlFor="gc_tc_contract_value" className="text-sm text-muted-foreground">
+                Trade Contractor contract value — what you'll pay your TC
+              </Label>
+              <div className="relative mt-1.5">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <Input
+                  id="gc_tc_contract_value"
+                  type="number"
+                  min={0}
+                  className="pl-7"
+                  placeholder="0.00"
+                  value={gcTcContractValue || ''}
+                  onChange={(e) => setAnswer('gc_tc_contract_value', e.target.value ? Number(e.target.value) : 0)}
                 />
               </div>
             </CardContent>

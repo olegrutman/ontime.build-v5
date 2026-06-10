@@ -22,7 +22,7 @@ const SCOPE_STEPS = [
   { key: 'exterior', label: 'Exterior' },
 ] as const;
 
-const CONTRACT_FIELD_KEYS = ['contract_value', 'fc_contract_value', 'material_responsibility'];
+const CONTRACT_FIELD_KEYS = ['contract_value', 'fc_contract_value', 'gc_tc_contract_value', 'material_responsibility'];
 
 interface ScopeQuestionsPanelProps {
   buildingType: BuildingType;
