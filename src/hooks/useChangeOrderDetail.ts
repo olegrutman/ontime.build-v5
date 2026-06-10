@@ -50,8 +50,9 @@ export function useChangeOrderDetail(coId: string | null) {
         .from('change_orders')
         .select('*')
         .eq('id', coId!)
-        .single();
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error('Change order not found');
       return data as ChangeOrder;
     },
   });
