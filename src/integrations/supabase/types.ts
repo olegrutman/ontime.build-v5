@@ -4189,7 +4189,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string | null
-          created_by: string
+          created_by: string | null
           dependency_ids: string[] | null
           end_date: string | null
           id: string
@@ -4205,7 +4205,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string | null
-          created_by: string
+          created_by?: string | null
           dependency_ids?: string[] | null
           end_date?: string | null
           id?: string
@@ -4221,7 +4221,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string | null
-          created_by?: string
+          created_by?: string | null
           dependency_ids?: string[] | null
           end_date?: string | null
           id?: string
@@ -4744,7 +4744,7 @@ export type Database = {
           trade: string | null
           trade_custom: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -4765,7 +4765,7 @@ export type Database = {
           trade?: string | null
           trade_custom?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -4786,7 +4786,7 @@ export type Database = {
           trade?: string | null
           trade_custom?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
