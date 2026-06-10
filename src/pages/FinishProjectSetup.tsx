@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronLeft, ChevronRight, Loader2, X, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { ProjectShell } from '@/components/app-shell/ProjectShell';
+import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { cn } from '@/lib/utils';
 import { OrgType } from '@/types/organization';
 import { useSetupWizardV2 } from '@/hooks/useSetupWizardV2';
@@ -487,17 +489,18 @@ export default function FinishProjectSetup() {
     );
 
     return (
-      <AppLayout title="Project Info" fullWidth>
-        <div className="mx-auto p-6 w-full max-w-5xl space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold font-heading">Project Information</h1>
-              <p className="text-sm text-muted-foreground mt-1">Read-only summary of this project's configuration.</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}`)} className="text-muted-foreground hover:text-foreground h-9 px-3">
-              <X className="h-4 w-4 mr-1.5" /> Close
-            </Button>
-          </div>
+      <ProjectShell projectName={p.name || 'Project'} projectId={projectId!} projectStatus={p.status || 'active'}>
+        <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
+          <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} />
+          <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
+            <div className="max-w-5xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-6 pb-36 lg:pb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold font-heading">Project Information</h1>
+                  <p className="text-sm text-muted-foreground mt-1">Read-only summary of this project's configuration.</p>
+                </div>
+              </div>
+
 
           <Card>
             <CardContent className="p-5">
@@ -628,8 +631,10 @@ export default function FinishProjectSetup() {
               </CardContent>
             </Card>
           )}
+            </div>
+          </main>
         </div>
-      </AppLayout>
+      </ProjectShell>
     );
   }
 
