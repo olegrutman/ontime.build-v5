@@ -1108,11 +1108,12 @@ export function useSetupWizardV2(
     const isSupplier = creatorOrgType === 'SUPPLIER';
     const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
     const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
+    const gcTcContractValue = typeof answers.gc_tc_contract_value === 'number' ? answers.gc_tc_contract_value : 0;
     const isTC = creatorOrgType === 'TC';
 
     // Suppliers don't have a setup-time contract value — strip those fields so no
     // phantom number gets persisted and picked up by downstream KPI / contract logic.
-    const SUPPLIER_STRIP_KEYS = new Set(['contract_value', 'fc_contract_value', 'material_responsibility']);
+    const SUPPLIER_STRIP_KEYS = new Set(['contract_value', 'fc_contract_value', 'gc_tc_contract_value', 'material_responsibility']);
 
     // Save answers
     const answerRows = Object.entries(answers)
@@ -1279,6 +1280,30 @@ export function useSetupWizardV2(
         'Trade Contractor', // to_role: TC is the client paying
         creatorOrgId || null, // to_org_id: TC's org (the payer)
         'TC → FC SOV',
+        scopeData, answers, userId,
+      );
+    }
+
+    // If GC, also create downstream TC contract + SOV when a value was entered.
+    // TC bills GC: from=TC (invited TC org if any), to=GC (creator).
+    if (isGC && gcTcContractValue > 0) {
+      // Look up an invited/accepted TC participant org to attach as from_org_id.
+      const { data: tcParticipant } = await supabase
+        .from('project_participants')
+        .select('organization_id')
+        .eq('project_id', pid)
+        .eq('role', 'TC')
+        .order('joined_at', { ascending: true, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      fcResult = await _saveContractAndSov(
+        pid, gcTcContractValue,
+        'Trade Contractor',                  // from_role: TC bills GC
+        tcParticipant?.organization_id || null, // from_org_id: invited TC if known
+        'General Contractor',                // to_role: GC is the payer
+        creatorOrgId || null,                // to_org_id: GC's org
+        'GC → TC SOV',
         scopeData, answers, userId,
       );
     }
