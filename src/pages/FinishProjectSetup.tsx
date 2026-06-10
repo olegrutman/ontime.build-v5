@@ -190,20 +190,14 @@ export default function FinishProjectSetup() {
     if (currentStep > activeSteps.length - 1) setCurrentStep(activeSteps.length - 1);
   }, [activeSteps.length, currentStep]);
 
-  // If project is already fully active, redirect away from the setup wizard.
-  // While the project is still in 'setup' or 'draft' (regardless of the
-  // legacy setup_completion_required flag) the GC/TC must be able to open
-  // this page from the sidebar "Project Info" link and the banner.
-  useEffect(() => {
-    if (
-      ctx?.project &&
-      !ctx.project.setup_completion_required &&
-      ctx.project.status !== 'setup' &&
-      ctx.project.status !== 'draft'
-    ) {
-      navigate(`/project/${projectId}`, { replace: true });
-    }
-  }, [ctx?.project, navigate, projectId]);
+  // When the project is already active, show the read-only Project Summary
+  // instead of the setup wizard. The wizard is shown only while the project
+  // is still in 'setup' or 'draft'.
+  const isActiveProject =
+    !!ctx?.project &&
+    !ctx.project.setup_completion_required &&
+    ctx.project.status !== 'setup' &&
+    ctx.project.status !== 'draft';
 
   const hasInvitedDownstream = downstreamContracts.length > 0;
 
@@ -467,6 +461,119 @@ export default function FinishProjectSetup() {
   };
 
   const isLastStep = currentStep === activeSteps.length - 1;
+
+  // ----- Read-only Project Summary (shown for already-active projects) -----
+  if (isActiveProject && ctx?.project) {
+    const p = ctx.project as any;
+    const s = ctx.scope as any | null;
+    const addr = (p.address && typeof p.address === 'object') ? p.address : null;
+    const addressLine = [
+      addr?.street,
+      [p.city, p.state].filter(Boolean).join(', '),
+      p.zip,
+    ].filter(Boolean).join(' • ');
+
+    const ownerRow = (ctx.contracts || []).find((c: any) => (c.from_role || '').toLowerCase() === 'owner');
+    const supplierRow = (ctx.contracts || []).find((c: any) => (c.from_role || '').toLowerCase().includes('supplier'));
+    const downstreamRows = (ctx.contracts || []).filter(
+      (c: any) => c.to_org_id === currentOrgId && (c.from_role || '').toLowerCase() !== 'owner' && !(c.from_role || '').toLowerCase().includes('supplier'),
+    );
+    const fmt$ = (n: number | null | undefined) => `$${Number(n || 0).toLocaleString()}`;
+    const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+      <div className="flex items-baseline justify-between gap-4 py-1.5 border-b border-border/40 last:border-0">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="text-sm font-medium text-right">{value || <span className="text-muted-foreground">—</span>}</span>
+      </div>
+    );
+
+    return (
+      <AppLayout title="Project Info" fullWidth>
+        <div className="mx-auto p-6 w-full max-w-5xl space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold font-heading">Project Information</h1>
+              <p className="text-sm text-muted-foreground mt-1">Read-only summary of this project's configuration.</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}`)} className="text-muted-foreground hover:text-foreground h-9 px-3">
+              <X className="h-4 w-4 mr-1.5" /> Close
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold font-heading uppercase tracking-wide mb-3">Project</h2>
+              <Row label="Name" value={p.name} />
+              <Row label="Status" value={<span className="capitalize">{p.status}</span>} />
+              <Row label="Contract Mode" value={p.contract_mode === 'tm' ? 'T&M / Remodel' : 'Fixed Price'} />
+              <Row label="Project Type" value={p.project_type} />
+              <Row label="Address" value={addressLine} />
+              <Row label="Start Date" value={p.start_date ? new Date(p.start_date).toLocaleDateString() : null} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold font-heading uppercase tracking-wide mb-3">Building Info</h2>
+              <Row label="Building Type" value={s?.home_type} />
+              <Row label="Stories" value={s?.stories ?? s?.floors} />
+              <Row label="Foundation" value={s?.foundation_type} />
+              {s?.foundation_type === 'Basement' && (
+                <>
+                  <Row label="Basement Type" value={s?.basement_type} />
+                  <Row label="Basement Finish" value={s?.basement_finish} />
+                </>
+              )}
+              <Row label="Garage" value={s?.garage_type} />
+              <Row label="Total Sqft" value={s?.total_sqft ? Number(s.total_sqft).toLocaleString() : null} />
+              {s?.siding_included && (
+                <Row label="Siding" value={Array.isArray(s?.siding_materials) ? s.siding_materials.join(', ') : 'Included'} />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold font-heading uppercase tracking-wide mb-3">Contracts</h2>
+              {ownerRow && <Row label={`Owner → ${ownerRow.to_org?.name || 'You'}`} value={<span className="font-mono">{fmt$(ownerRow.contract_sum)}</span>} />}
+              {supplierRow && <Row label={`Supplier (${supplierRow.from_org?.name || 'Supplier'})`} value={<span className="font-mono">{fmt$(supplierRow.contract_sum)}</span>} />}
+              {downstreamRows.length === 0 && !ownerRow && !supplierRow && (
+                <p className="text-sm text-muted-foreground py-2">No contracts recorded.</p>
+              )}
+              {downstreamRows.map((c: any) => (
+                <Row
+                  key={c.id}
+                  label={`${c.from_org?.name || c.from_role || 'Downstream'} → ${c.to_org?.name || 'You'}`}
+                  value={<span className="font-mono">{fmt$(c.contract_sum)}</span>}
+                />
+              ))}
+            </CardContent>
+          </Card>
+
+          {(teamData || []).length > 0 && (
+            <Card>
+              <CardContent className="p-5">
+                <h2 className="text-sm font-semibold font-heading uppercase tracking-wide mb-3">Team</h2>
+                {(teamData || []).map((m: any) => (
+                  <Row
+                    key={m.id}
+                    label={m.role || 'Member'}
+                    value={
+                      <span>
+                        {m.invited_org_name || '—'}
+                        {m.status && (
+                          <span className="ml-2 text-xs text-muted-foreground">({m.status})</span>
+                        )}
+                      </span>
+                    }
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Finish Project Setup" fullWidth>
