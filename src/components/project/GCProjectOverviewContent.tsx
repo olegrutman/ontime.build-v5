@@ -706,7 +706,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         </KpiCard>
 
         {/* Card 8 — Team */}
-        <KpiCard accent={C.blue} icon="👥" iconBg={C.blueBg} label="PROJECT TEAM" value={team.length === acceptedTeam.length ? `${team.length} Members` : `${acceptedTeam.length}/${team.length} Members`} sub={materialResp ? `Materials: ${materialResp === 'GC' ? myOrgName : tcName}` : 'Material owner not set'} pills={designatedSupplier ? [{ type: 'pa', text: 'Supplier set' }] : [{ type: 'pm', text: 'No supplier' }]} idx={7}>
+        <KpiCard accent={C.blue} icon="👥" iconBg={C.blueBg} label="PROJECT TEAM" value={team.length === acceptedTeam.length ? `${team.length} Members` : `${acceptedTeam.length}/${team.length} Members`} sub={team.length === 0 ? 'No team members yet' : team.length === acceptedTeam.length ? 'All members accepted' : `${acceptedTeam.length} accepted · ${team.length - acceptedTeam.length} pending`} pills={designatedSupplier ? [{ type: 'pa', text: 'Supplier set' }] : [{ type: 'pm', text: 'No supplier' }]} idx={7}>
           <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ marginBottom: 12 }}>
               {team.map(member => {

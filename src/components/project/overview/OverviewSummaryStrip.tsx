@@ -125,8 +125,8 @@ export function OverviewSummaryStrip({
         rows={[
           { label: `Revised in (from ${receivablePartyLabel})`, value: contract.revisedIn },
           { label: `Revised out (to ${payablePartyLabel})`, value: contract.revisedOut, tone: 'muted' },
-          { label: 'Projected margin', value: contract.margin, tone: contract.margin >= 0 ? 'pos' : 'neg', emphasis: true, signed: true },
-          { label: 'Margin %', value: `${pctRounded >= 0 ? '+' : ''}${pctRounded}%`, tone: pctRounded >= 20 ? 'pos' : pctRounded >= 5 ? 'neutral' : 'neg' },
+          { label: 'Projected margin', value: contract.margin, tone: contract.margin > 0 ? 'pos' : contract.margin < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
+          { label: 'Margin %', value: `${pctRounded >= 0 ? '+' : ''}${pctRounded}%`, tone: pctRounded >= 20 ? 'pos' : pctRounded > 0 ? 'neutral' : pctRounded === 0 ? 'muted' : 'neg' },
         ]}
         footer={`Original + approved change orders on both sides`}
       />
@@ -136,9 +136,9 @@ export function OverviewSummaryStrip({
         accent={C.green}
         icon="💵"
         rows={[
-          { label: `Received from ${receivablePartyLabel}`, value: cashFlow.received, tone: 'pos' },
-          { label: `Paid out to ${payablePartyLabel}`, value: cashFlow.paid, tone: 'neg' },
-          { label: 'Cash position', value: cashFlow.cashPosition, tone: cashFlow.cashPosition >= 0 ? 'pos' : 'neg', emphasis: true, signed: true },
+          { label: `Received from ${receivablePartyLabel}`, value: cashFlow.received, tone: cashFlow.received > 0 ? 'pos' : 'muted' },
+          { label: `Paid out to ${payablePartyLabel}`, value: cashFlow.paid, tone: cashFlow.paid > 0 ? 'neg' : 'muted' },
+          { label: 'Cash position', value: cashFlow.cashPosition, tone: cashFlow.cashPosition > 0 ? 'pos' : cashFlow.cashPosition < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
           { label: `Owed to you (unpaid)`, value: cashFlow.owedToYou, tone: cashFlow.owedToYou > 0 ? 'neutral' : 'muted' },
           ...(cashFlow.youOwe !== undefined ? [{ label: 'You owe (unpaid)', value: cashFlow.youOwe, tone: cashFlow.youOwe > 0 ? ('neutral' as const) : ('muted' as const) }] : []),
           ...(cashFlow.retainage && cashFlow.retainage > 0 ? [{ label: 'Retainage held', value: cashFlow.retainage, tone: 'muted' as const }] : []),

@@ -138,7 +138,10 @@ export function buildHealthSummary(opts: {
   roleLabel: string;
 }): string {
   const { projectedMarginPct, cashPosition, pendingNetAtRisk, hasContract, roleLabel } = opts;
-  if (!hasContract) return `Set a ${roleLabel} contract to see your projected margin and health.`;
+  if (!hasContract) {
+    const article = /^[aeiou]/i.test(roleLabel) ? 'an' : 'a';
+    return `Set ${article} ${roleLabel} contract to see your projected margin and health.`;
+  }
   const pct = Math.round(projectedMarginPct);
   const parts: string[] = [];
   if (projectedMarginPct >= 20) parts.push(`Healthy ${pct}% projected margin.`);
