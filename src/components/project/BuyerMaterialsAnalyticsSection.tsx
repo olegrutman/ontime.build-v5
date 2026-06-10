@@ -147,8 +147,8 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           iconBg={C.blueBg}
           label="PO PIPELINE"
           value={`${a.pipeline.reduce((s, p) => s + p.count, 0)}`}
-          sub={stuck ? `$${fmt(stuck.total).slice(1)} stuck in ${stuck.label.toLowerCase()} ${stuck.oldestDays}d` : 'Flow healthy across all stages'}
-          pills={[{ type: pipelinePill, text: stuck ? 'Bottleneck' : 'Flowing' }]}
+          sub={pipelineSub}
+          pills={[{ type: pipelinePill, text: pipelinePillLabel }]}
           idx={1}
         >
           <div style={{ padding: 12 }}>
@@ -224,7 +224,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           label="DELIVERY RISK"
           value={a.deliveryRisk.lateCount > 0 ? `${a.deliveryRisk.lateCount} late` : (a.deliveryRisk.onTimeRatePct != null ? `${a.deliveryRisk.onTimeRatePct}%` : '—')}
           sub={a.deliveryRisk.avgLeadTimeDays != null ? `Avg ~${a.deliveryRisk.avgLeadTimeDays}d order→delivery · ${fmt(a.deliveryRisk.lateTotal)} at risk` : 'No lead time data yet'}
-          pills={[{ type: drPill, text: a.deliveryRisk.lateCount > 0 ? 'Late' : 'On Time' }]}
+          pills={[{ type: drPill, text: drPillLabel }]}
           idx={3}
         >
           <div style={{ padding: 12 }}>
@@ -262,7 +262,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           label="RETURNS & WASTE"
           value={fmt(a.returnsImpact.netCredit)}
           sub={`${a.returnsImpact.returnRatePct}% of delivered · restocking ${fmt(a.returnsImpact.restockingTotal)}`}
-          pills={[{ type: riPill, text: `${a.returnsImpact.returnRatePct}%` }]}
+          pills={[{ type: riPill, text: riPillLabel }]}
           idx={4}
         >
           <div style={{ padding: 12 }}>
@@ -291,7 +291,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           label="CASH EXPOSURE (PAYABLES)"
           value={fmt(a.cashExposure.openCommitments + a.cashExposure.unpaidInvoicesTotal)}
           sub={`${fmt(a.cashExposure.openCommitments)} committed · ${fmt(a.cashExposure.unpaidInvoicesTotal)} invoiced unpaid`}
-          pills={[{ type: cePill, text: a.cashExposure.aging.d60_plus > 0 ? '60d+' : a.cashExposure.aging.d31_60 > 0 ? '30-60d' : 'Current' }]}
+          pills={[{ type: cePill, text: cePillLabel }]}
           idx={5}
         >
           <div style={{ padding: 12 }}>
