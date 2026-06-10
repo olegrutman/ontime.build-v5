@@ -97,3 +97,10 @@ Next: fix C1, C2, C3, H1 (top files), H4, H5 in code; re-test the GC dashboard c
 - M7: Enabled React Router v7 future flags (`v7_startTransition`, `v7_relativeSplatPath`).
 - L4: `RichProjectCard` cashPosition now = `paidToYou - paidByYou` (was positive-bias `paidToYou`).
 - Deferred: M1 (setTimeout race — keeping per Supabase recommended pattern), M5 (217 role-string refactor — large surface), M6 (paid vs approved semantics — needs product call), L1/L2/L3/L5 (cosmetic).
+
+---
+## M5 — Role-string consolidation
+- Added `src/hooks/useOrgType.ts`: canonical `useOrgType()` hook returning `{ orgType, isGC, isTC, isFC, isSupplier, isDownstream }`, plus pure helpers `isGC/isTC/isFC/isSupplier(value)` for rows fetched from the DB.
+- Re-audited the 217 hits: the vast majority are local uses of a single `orgType` variable already derived from `currentOrg?.type` (e.g. `useDashboardData`, `Dashboard.tsx`, `useProjectQuickStats`), or props passed down through one component tree. Not the brittle scatter the report implied.
+- Going forward: any new code that needs the current user's org type MUST import `useOrgType()` instead of re-deriving from `userOrgRoles[0]`. Per-CO membership still uses `useCORoleContext` (different lookup target).
+- Deferred: bulk find/replace of existing `orgType === 'GC'` callsites — low risk, high churn; can be done opportunistically as files are touched.
