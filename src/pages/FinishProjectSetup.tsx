@@ -491,7 +491,7 @@ export default function FinishProjectSetup() {
     return (
       <ProjectShell projectName={p.name || 'Project'} projectId={projectId!} projectStatus={p.status || 'active'}>
         <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
-          <ProjectSidebar isSupplier={creatorOrgType === 'Supplier'} isTM={p.contract_mode === 'tm'} />
+          <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} />
           <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
             <div className="max-w-5xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-6 pb-36 lg:pb-6">
               <div className="flex items-center justify-between">
