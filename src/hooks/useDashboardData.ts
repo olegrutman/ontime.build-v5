@@ -852,9 +852,14 @@ export function useDashboardData(): DashboardData {
           if (c.from_org_id === currentOrg.id) pf.revenue += c.contract_sum || 0;
           if (c.to_org_id === currentOrg.id) pf.costs += c.contract_sum || 0;
         } else if (orgType === 'GC') {
-          if (c.to_org_id === currentOrg.id) {
+          // Owner leg: identified by populated owner_contract_value (or from_role='Owner').
+          // Sub leg: identified by from_org_id != GC and contract_sum > 0.
+          const ownerValue = (c as any).owner_contract_value;
+          const isOwnerLeg = ownerValue != null && Number(ownerValue) > 0;
+          if (isOwnerLeg) {
+            pf.revenue += Number(ownerValue) || 0;
+          } else if (c.to_org_id === currentOrg.id) {
             pf.costs += c.contract_sum || 0;
-            pf.revenue += (c as any).owner_contract_value || c.contract_sum || 0;
           }
       } else if (orgType === 'FC') {
           if (c.from_org_id === currentOrg.id) {
