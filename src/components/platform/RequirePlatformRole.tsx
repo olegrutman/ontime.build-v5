@@ -12,6 +12,7 @@ interface RequirePlatformRoleProps {
 
 export function RequirePlatformRole({ children }: RequirePlatformRoleProps) {
   const { user, loading, platformRole, twoFactorVerified } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
