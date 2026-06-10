@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronLeft, ChevronRight, Loader2, X, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { ProjectShell } from '@/components/app-shell/ProjectShell';
+import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { cn } from '@/lib/utils';
 import { OrgType } from '@/types/organization';
 import { useSetupWizardV2 } from '@/hooks/useSetupWizardV2';
