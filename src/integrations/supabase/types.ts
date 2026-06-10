@@ -1381,7 +1381,7 @@ export type Database = {
           co_line_item_id: string
           confidence: number | null
           created_at: string
-          created_by: string | null
+          created_by: string
           id: string
           kind: string
           photo_path: string | null
@@ -1393,7 +1393,7 @@ export type Database = {
           co_line_item_id: string
           confidence?: number | null
           created_at?: string
-          created_by?: string | null
+          created_by: string
           id?: string
           kind: string
           photo_path?: string | null
@@ -1405,7 +1405,7 @@ export type Database = {
           co_line_item_id?: string
           confidence?: number | null
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           id?: string
           kind?: string
           photo_path?: string | null
@@ -2890,7 +2890,7 @@ export type Database = {
           address: Json | null
           allow_join_requests: boolean
           created_at: string
-          created_by: string | null
+          created_by: string
           default_equipment_markup_pct: number
           default_materials_markup_pct: number
           id: string
@@ -2910,7 +2910,7 @@ export type Database = {
           address?: Json | null
           allow_join_requests?: boolean
           created_at?: string
-          created_by?: string | null
+          created_by: string
           default_equipment_markup_pct?: number
           default_materials_markup_pct?: number
           id?: string
@@ -2930,7 +2930,7 @@ export type Database = {
           address?: Json | null
           allow_join_requests?: boolean
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           default_equipment_markup_pct?: number
           default_materials_markup_pct?: number
           id?: string
@@ -3506,7 +3506,7 @@ export type Database = {
           po_email: string | null
           project_id: string
           status: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -3517,7 +3517,7 @@ export type Database = {
           po_email?: string | null
           project_id: string
           status?: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -3528,7 +3528,7 @@ export type Database = {
           po_email?: string | null
           project_id?: string
           status?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -4189,7 +4189,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string | null
-          created_by: string | null
+          created_by: string
           dependency_ids: string[] | null
           end_date: string | null
           id: string
@@ -4205,7 +4205,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by: string
           dependency_ids?: string[] | null
           end_date?: string | null
           id?: string
@@ -4221,7 +4221,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string | null
-          created_by?: string | null
+          created_by?: string
           dependency_ids?: string[] | null
           end_date?: string | null
           id?: string
@@ -4744,7 +4744,7 @@ export type Database = {
           trade: string | null
           trade_custom: string | null
           updated_at: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           accepted_at?: string | null
@@ -4765,7 +4765,7 @@ export type Database = {
           trade?: string | null
           trade_custom?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           accepted_at?: string | null
@@ -4786,7 +4786,7 @@ export type Database = {
           trade?: string | null
           trade_custom?: string | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -4854,7 +4854,7 @@ export type Database = {
           city: string | null
           contract_mode: string
           created_at: string
-          created_by: string | null
+          created_by: string
           created_by_org_id: string | null
           description: string | null
           id: string
@@ -4891,7 +4891,7 @@ export type Database = {
           city?: string | null
           contract_mode?: string
           created_at?: string
-          created_by?: string | null
+          created_by: string
           created_by_org_id?: string | null
           description?: string | null
           id?: string
@@ -4928,7 +4928,7 @@ export type Database = {
           city?: string | null
           contract_mode?: string
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           created_by_org_id?: string | null
           description?: string | null
           id?: string
