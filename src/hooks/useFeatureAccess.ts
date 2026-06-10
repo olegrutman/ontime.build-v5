@@ -36,8 +36,8 @@ export function useFeatureAccess(featureKey: FeatureKey) {
   const feature = features?.find((f) => f.feature_key === featureKey);
 
   return {
-    // default open while loading (graceful degradation — don't lock users out during load)
-    enabled: isLoading ? true : (feature?.enabled ?? true),
+    // default-deny while loading — safer than flashing gated UI before lockout
+    enabled: isLoading ? false : (feature?.enabled ?? true),
     limit: feature?.limit_value ?? null,
     loading: isLoading,
     source: feature?.source ?? 'none',

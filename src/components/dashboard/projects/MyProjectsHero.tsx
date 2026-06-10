@@ -130,6 +130,7 @@ export function MyProjectsHero({
             const revenue = pf?.revenue ?? p.contractValue ?? 0;
             const costs = pf?.costs ?? 0;
             const paidToYou = pf?.paidToYou ?? 0;
+            const paidByYou = pf?.paidByYou ?? 0;
             const pendingToCollect = pf?.pendingToCollect ?? 0;
             const action = resolveProjectNextAction(p.id, recentDocs, attentionItems);
             return (
@@ -141,6 +142,7 @@ export function MyProjectsHero({
                 revenue={revenue}
                 costs={costs}
                 paidToYou={paidToYou}
+                paidByYou={paidByYou}
                 pendingToCollect={pendingToCollect}
                 contractLabel={labels.contract}
                 costLabel={labels.cost}

@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ShieldAlert, Lock } from 'lucide-react';
@@ -12,6 +12,7 @@ interface RequirePlatformRoleProps {
 
 export function RequirePlatformRole({ children }: RequirePlatformRoleProps) {
   const { user, loading, platformRole, twoFactorVerified } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -33,7 +34,7 @@ export function RequirePlatformRole({ children }: RequirePlatformRoleProps) {
             <p className="text-muted-foreground text-sm">
               You do not have platform admin privileges. This area is restricted to Ontime.Build staff only.
             </p>
-            <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
+            <Button variant="outline" onClick={() => navigate('/dashboard')}>
               Go to Dashboard
             </Button>
           </CardContent>
@@ -52,7 +53,7 @@ export function RequirePlatformRole({ children }: RequirePlatformRoleProps) {
             <p className="text-muted-foreground text-sm">
               Platform admin access requires two-factor authentication. Please contact your Platform Owner to verify your 2FA setup.
             </p>
-            <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
+            <Button variant="outline" onClick={() => navigate('/dashboard')}>
               Go to Dashboard
             </Button>
           </CardContent>
