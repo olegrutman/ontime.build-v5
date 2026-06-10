@@ -11,6 +11,7 @@ interface RichProjectCardProps {
   revenue: number;
   costs: number;
   paidToYou: number;
+  paidByYou?: number;
   pendingToCollect: number;
   /** Role-aware label for the "Contract" column. */
   contractLabel?: string;
