@@ -1,39 +1,64 @@
-Targeted fixes for the bugs found on `/project/:id/overview` (GC view). All scoped to presentation; no business-logic changes.
+## Goal
 
-## Fixes
+When a GC sets up a project, the wizard must capture **both** contract legs with unambiguous labels and write **both** rows to `project_contracts`. Also make the "Define Scope & Details" banner reliably navigate.
 
-1. **Grammar** — `src/components/project/overview/ProjectHealthHero.tsx` line 141: change `"Set a ${roleLabel} contract…"` → `"Set ${roleLabel === 'owner' ? 'an' : 'a'} ${roleLabel} contract…"` (handles "an owner" / "a GC" / "a TC/GC" cleanly).
+## Why
 
-2. **Confusing supplier/TC dual rows** — `src/hooks/useProjectReadiness.ts`: relabel the "assigned" / "contract sum entered" rows so they don't read as contradictions with the "Awaiting…" rows.
-   - "Supplier assigned" → "Supplier invited"
-   - "Contract sum with TC entered" stays (it's a different concept than acceptance), but the "Awaiting TC" row is fine paired with it.
+Project `Oleg Rutman` shows the symptoms:
+- One contract row exists: `Owner → GC`, `owner_contract_value=$1,500,000`, `contract_sum=0`. No `GC → TC` row, despite a TC participant being invited.
+- The wizard only asks one ambiguous question — "What is the total contract value?" — and for GC creators silently routes it to `owner_contract_value`. The user thought they were entering the TC contract.
+- Overview's "TC Contract" card therefore shows $0 with no indication of which TC the contract is with.
+- Banner is a `<div onClick>`; click is not firing for the user.
 
-3. **Misleading red on zero / cosmetic tone** — `src/components/project/overview/OverviewSummaryStrip.tsx`:
-   - "Paid out to {payable}" row: tone `neg` → `muted` when value is 0, keep `neg` only when > 0.
-   - "Margin %" row: when `pctRounded === 0`, force tone `muted` (was `neg` because 0 < 5).
+## Changes
 
-4. **False-positive "healthy" badges with no data** — `src/components/project/BuyerMaterialsAnalyticsSection.tsx`:
-   - Card 1 (Forecast at Completion): if `estimateTotal === 0 && committedTotal === 0` → neutral pill "No data" instead of green "On Budget".
-   - Card 2 (PO Pipeline): if total POs across pipeline === 0 → neutral pill "No POs" + subtitle "No purchase orders yet" instead of green "Flowing".
-   - Card 4 (Delivery Risk): if `avgLeadTimeDays == null && lateCount === 0` → neutral "No data" instead of green "On Time".
-   - Card 5 (Returns): if `returnsImpact.deliveredTotal` (or returnRatePct denominator) === 0 → neutral "No data" instead of green 0%.
-   - Card 6 (Cash Exposure): if total open commitments + unpaid invoices === 0 → neutral "No data" instead of green "Current".
+### 1. Wizard questions (`src/hooks/useSetupWizardV2.ts`)
 
-5. **Project Team subtitle** — `src/components/project/GCProjectOverviewContent.tsx` line 709 (PROJECT TEAM card): drop `Materials: …` from the team-card subtitle. Show member count summary instead (`acceptedTeam.length} accepted · ${pendingTeam.length} invited` or similar). Materials responsibility is already surfaced on its own card.
+Re-label and split S0 by creator role at render time (via the visibility filter), without changing the question schema for non-GC paths:
 
-6. **Apple meta deprecation** — `index.html` line 14: add the modern `<meta name="mobile-web-app-capable" content="yes" />` alongside the legacy apple tag so the deprecation warning clears (keep the apple one for older iOS).
+- For **GC** creators show two questions:
+  - `S0_owner` — label: "Owner contract value — your revenue from the property owner" → fieldKey `contract_value`
+  - `S0_gc_tc` — label: "Trade Contractor contract value — what you'll pay your TC" → fieldKey `gc_tc_contract_value`
+- For **TC** creators show:
+  - `S0` relabeled: "GC contract value — what the GC is paying you" → fieldKey `contract_value`
+  - existing `fc_contract_value` question relabeled: "Field Crew contract value — what you'll pay your FC"
+- For **FC** creators: existing S0 relabeled: "TC contract value — what the TC is paying you".
 
-## Out of scope (already correct / non-issues)
+Labels are computed from `creatorOrgType` already available in `saveAll`; I'll thread it (or a `roleContext` prop) into the question list builder so `visibleQuestions` picks the right copy.
 
-- GC Setup % math is accurate (2/7 ≈ 29%). Visual bar uses Radix `Progress` and tracks the value correctly; on re-inspection the visual matches 29% on this viewport.
-- Owner Billings form already validates `billed > 0` server-side path.
-- Top KPI strip already renders values inside the pills.
-- React "Select uncontrolled → controlled" warning origin isn't on this page's main components; deferring to a separate sweep.
+### 2. Persist the GC→TC leg (`_saveToDb`, GC branch)
 
-## Verification
+After updating `owner_contract_value` on the existing Owner→GC row, also write a GC→TC contract when `gc_tc_contract_value > 0`:
 
-Re-open `/project/f2d61694-…/overview` in the browser tool after edits, screenshot, and confirm:
-- "Set an owner contract…" copy.
-- Cash Flow "Paid out … $0" not red.
-- Material Buyer Analytics cards show neutral pills (no green) for empty data.
-- Project Team subtitle no longer says "Materials: GC_Test".
+```text
+INSERT project_contracts
+  from_role        = 'Trade Contractor'
+  from_org_id      = <invited TC participant org_id, or null>
+  to_role          = 'General Contractor'
+  to_org_id        = <creator GC org>
+  contract_sum     = gc_tc_contract_value
+  material_responsibility = (inherit from Owner→GC row)
+  status           = 'Active'
+```
+
+Lookup the TC org via `project_participants` (role=TC, latest). If none exists yet, still insert with `from_org_id=null` (placeholder), matching the existing TC→FC pattern used for unknown FC orgs.
+
+Generate a downstream "GC → TC SOV" mirroring the TC→FC SOV logic already in place at lines 1273-1283 of `useSetupWizardV2.ts`.
+
+### 3. Overview labeling (`ProjectHealthHero.tsx` / TC Contract card)
+
+Ensure the TC Contract card subtitle reads `with <TC org name>` (resolved from the GC→TC row's `from_org_id`). Owner card shows `with <Owner name>` (already partially handled). Pure presentation change.
+
+### 4. Banner navigation (`src/pages/ProjectHome.tsx` lines 398-414)
+
+Replace the clickable `<div>` with a `<button type="button">`, add `relative z-10`, and use a fresh navigate call with the resolved id. This rules out pointer-events / overlay interception and the rare event-bubbling issue.
+
+### 5. Verify
+
+After edits, run the preview at `/project/f2d61694-16fe-464f-a2d7-c6df61b8e0ba/overview`, click the banner, confirm navigation to `/project/<id>/setup`. Then walk through the wizard as a GC: confirm two clearly-labeled contract fields appear; on save, query `project_contracts` to confirm both legs exist with the correct `contract_sum` values.
+
+## Out of scope
+
+- Re-flowing existing projects (`Oleg Rutman` already has its Owner row; user can enter the TC value via the Overview inline editor or by re-running setup once the wizard supports both fields).
+- Changing GC↔TC SOV templates beyond mirroring the existing TC→FC structure.
+- T&M / Remodel projects (wizard already skips contract creation in TM mode).
