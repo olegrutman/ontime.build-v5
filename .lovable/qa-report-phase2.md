@@ -89,3 +89,11 @@ Phase 1 corrected the 2 invalid SOVs by hand. Without code fix, the next AI-gene
 
 ---
 Next: fix C1, C2, C3, H1 (top files), H4, H5 in code; re-test the GC dashboard card; defer M/L to user prioritization.
+
+---
+## Phase 2 fixes — Medium/Low batch
+- M2: `RequirePlatformRole` now uses `useNavigate` instead of `window.location.href`.
+- M3: `useFeatureAccess` switched to default-deny during load (was default-open, flashed gated UI).
+- M7: Enabled React Router v7 future flags (`v7_startTransition`, `v7_relativeSplatPath`).
+- L4: `RichProjectCard` cashPosition now = `paidToYou - paidByYou` (was positive-bias `paidToYou`).
+- Deferred: M1 (setTimeout race — keeping per Supabase recommended pattern), M5 (217 role-string refactor — large surface), M6 (paid vs approved semantics — needs product call), L1/L2/L3/L5 (cosmetic).
