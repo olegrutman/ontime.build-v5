@@ -1190,16 +1190,71 @@ export function useSetupWizardV2(
     let primaryResult: { contractId: string; sovId: string };
 
     if (isGC) {
-      // GC is the CLIENT (payer). Contract = future TC → GC
-      primaryResult = await _saveContractAndSov(
-        pid, contractValue,
-        'Trade Contractor',      // from_role: TC bills (TBD)
-        null,                    // from_org_id: TC not yet known
-        'General Contractor',    // to_role: GC pays
-        creatorOrgId || null,    // to_org_id: GC's org
-        'Framing SOV',
-        scopeData, answers, userId,
-      );
+      // GC is the CLIENT (payer). The Owner → GC contract is created by
+      // FinishProjectSetup before this runs. Find it and attach the SOV to it
+      // so we don't create a phantom "TC → GC" leg that double-counts revenue.
+      const { data: ownerLeg } = await supabase
+        .from('project_contracts')
+        .select('id')
+        .eq('project_id', pid)
+        .eq('to_org_id', creatorOrgId || '')
+        .eq('from_role', 'Owner')
+        .maybeSingle();
+
+      if (ownerLeg?.id) {
+        // Attach SOV to the existing owner leg + persist contract_value as owner_contract_value
+        await supabase
+          .from('project_contracts')
+          .update({ owner_contract_value: contractValue })
+          .eq('id', ownerLeg.id);
+
+        const { data: newSov, error: sErr } = await supabase.from('project_sov').insert({
+          project_id: pid,
+          contract_id: ownerLeg.id,
+          sov_name: 'Framing SOV',
+          scope_snapshot: scopeData,
+        }).select('id').single();
+        if (sErr) throw sErr;
+
+        const currentSovLines = generateSOVLines(buildingType!, { ...answers, contract_value: contractValue });
+        const sovItems = currentSovLines.map((line) => ({
+          project_id: pid,
+          sov_id: newSov.id,
+          item_name: line.description,
+          item_group: SOV_PHASE_LABELS[line.phase],
+          sort_order: line.lineNumber,
+          percent_of_contract: line.suggested_pct,
+          value_amount: line.amount,
+          scheduled_value: line.amount,
+          remaining_amount: line.amount,
+          source: 'template',
+          scope_section_slug: line.conditionalKey,
+          ai_original_pct: line.suggested_pct,
+          default_enabled: true,
+        }));
+        if (sovItems.length > 0) {
+          const { error: iErr } = await supabase.from('project_sov_items').insert(sovItems);
+          if (iErr) throw iErr;
+        }
+        primaryResult = { contractId: ownerLeg.id, sovId: newSov.id };
+      } else {
+        // No owner contract yet (skipped) — create a placeholder Owner → GC leg
+        // tagged correctly so financial queries don't misroute it.
+        primaryResult = await _saveContractAndSov(
+          pid, 0,
+          'Owner',                 // from_role: prime contract from property owner
+          null,                    // from_org_id: owner is external
+          'General Contractor',    // to_role: GC receives
+          creatorOrgId || null,    // to_org_id: GC's org
+          'Framing SOV',
+          scopeData, { ...answers, contract_value: contractValue }, userId,
+        );
+        // Move contractValue into owner_contract_value (keep contract_sum=0)
+        await supabase
+          .from('project_contracts')
+          .update({ owner_contract_value: contractValue, contract_sum: 0 })
+          .eq('id', primaryResult.contractId);
+      }
     } else {
       // TC (or FC) is the contractor billing upstream
       const fromRole = isTC ? 'Trade Contractor' : 'Field Crew';

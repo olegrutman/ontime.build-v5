@@ -41,7 +41,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         estimatesRes,
         designatedSupplierRes,
       ] = await Promise.all([
-        supabase.from('projects').select('status, created_by_org_id, organization_id').eq('id', projectId).single(),
+        supabase.from('projects').select('status, created_by_org_id, organization_id').eq('id', projectId).maybeSingle(),
         supabase.from('project_contracts').select('id, contract_sum, material_responsibility, from_org_id, to_org_id, from_role, to_role, status').eq('project_id', projectId),
         supabase.from('project_sov').select('id, contract_id, is_locked').eq('project_id', projectId),
         supabase.from('project_participants').select('id, role, invite_status, no_estimate_confirmed, organization_id, organizations:organization_id(name, type)').eq('project_id', projectId),
@@ -87,7 +87,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           .from('organizations')
           .select('type')
           .eq('id', creatorOrgId)
-          .single();
+          .maybeSingle();
         if (orgData?.type === 'GC' || orgData?.type === 'TC') {
           detectedCreatorType = orgData.type;
         }
