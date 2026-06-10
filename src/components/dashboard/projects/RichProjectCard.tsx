@@ -55,7 +55,7 @@ export function RichProjectCard({
   const marginPct = revenue > 0 ? (margin / revenue) * 100 : 0;
   const hasContract = revenue > 0;
   // Reuse the project-overview health logic; portfolio CO data isn't per-project here, so pass 0/0.
-  const cashPosition = paidToYou; // dashboard-level; treat as positive working capital
+  const cashPosition = paidToYou - paidByYou; // net working capital on this project
   const health: HealthStatus = computeHealthStatus(marginPct, cashPosition, 0, 0, hasContract);
 
   const completionPct = revenue > 0 ? Math.min(Math.round(((paidToYou + pendingToCollect) / revenue) * 100), 100) : 0;
