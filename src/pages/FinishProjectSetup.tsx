@@ -506,8 +506,11 @@ export default function FinishProjectSetup() {
               <Row label="Status" value={<span className="capitalize">{p.status}</span>} />
               <Row label="Contract Mode" value={p.contract_mode === 'tm' ? 'T&M / Remodel' : 'Fixed Price'} />
               <Row label="Project Type" value={p.project_type} />
+              <Row label="Build Type" value={p.build_type} />
               <Row label="Address" value={addressLine} />
               <Row label="Start Date" value={p.start_date ? new Date(p.start_date).toLocaleDateString() : null} />
+              <Row label="Created" value={p.created_at ? new Date(p.created_at).toLocaleDateString() : null} />
+              {p.description && <Row label="Description" value={<span className="whitespace-pre-wrap">{p.description}</span>} />}
             </CardContent>
           </Card>
 
@@ -523,11 +526,66 @@ export default function FinishProjectSetup() {
                   <Row label="Basement Finish" value={s?.basement_finish} />
                 </>
               )}
+              <Row label="Construction Type" value={s?.construction_type || s?.construction_type_other} />
+              <Row label="Framing Method" value={s?.framing_method} />
+              <Row label="Roof Type" value={s?.roof_type} />
+              <Row label="Stairs Type" value={s?.stairs_type} />
+              <Row label="# Buildings" value={s?.num_buildings} />
+              <Row label="# Units" value={s?.num_units} />
+              <Row label="Stories per Unit" value={s?.stories_per_unit} />
+              <Row label="Shared Walls" value={typeof s?.has_shared_walls === 'boolean' ? (s.has_shared_walls ? 'Yes' : 'No') : null} />
+              <Row label="Bedrooms" value={s?.bedrooms} />
+              <Row label="Bathrooms" value={s?.bathrooms} />
               <Row label="Garage" value={s?.garage_type} />
+              <Row label="Garage Cars" value={s?.garage_cars} />
               <Row label="Total Sqft" value={s?.total_sqft ? Number(s.total_sqft).toLocaleString() : null} />
-              {s?.siding_included && (
-                <Row label="Siding" value={Array.isArray(s?.siding_materials) ? s.siding_materials.join(', ') : 'Included'} />
+              <Row label="Lot Size (acres)" value={s?.lot_size_acres} />
+              {s?.scope_description && (
+                <Row label="Scope Notes" value={<span className="whitespace-pre-wrap">{s.scope_description}</span>} />
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold font-heading uppercase tracking-wide mb-3">Building Features</h2>
+              <Row label="Elevator" value={typeof s?.has_elevator === 'boolean' ? (s.has_elevator ? `Yes${s.shaft_type ? ` (${s.shaft_type})` : ''}` : 'No') : null} />
+              <Row label="Roof Deck" value={typeof s?.has_roof_deck === 'boolean' ? (s.has_roof_deck ? `Yes${s.roof_deck_type ? ` (${s.roof_deck_type})` : ''}` : 'No') : null} />
+              <Row label="Covered Porches" value={typeof s?.has_covered_porches === 'boolean' ? (s.has_covered_porches ? 'Yes' : 'No') : null} />
+              <Row label="Balconies" value={typeof s?.has_balconies === 'boolean' ? (s.has_balconies ? `Yes${s.balcony_type ? ` (${s.balcony_type})` : ''}` : 'No') : null} />
+              <Row label="Decking" value={s?.decking_included ? (s.decking_type || s.decking_type_other || 'Included') : (s?.decking_included === false ? 'No' : null)} />
+              <Row label="Siding" value={s?.siding_included ? (Array.isArray(s.siding_materials) && s.siding_materials.length ? s.siding_materials.join(', ') : (s.siding_material_other || 'Included')) : (s?.siding_included === false ? 'No' : null)} />
+              <Row label="Fascia" value={typeof s?.fascia_included === 'boolean' ? (s.fascia_included ? 'Yes' : 'No') : null} />
+              <Row label="Soffit" value={typeof s?.soffit_included === 'boolean' ? (s.soffit_included ? 'Yes' : 'No') : null} />
+              <Row label="Fascia/Soffit Material" value={s?.fascia_soffit_material || s?.fascia_soffit_material_other} />
+              <Row label="Windows" value={typeof s?.windows_included === 'boolean' ? (s.windows_included ? 'Yes' : 'No') : null} />
+              <Row label="Exterior Doors" value={typeof s?.ext_doors_included === 'boolean' ? (s.ext_doors_included ? 'Yes' : 'No') : null} />
+              <Row label="WRB / Housewrap" value={typeof s?.wrb_included === 'boolean' ? (s.wrb_included ? 'Yes' : 'No') : null} />
+              <Row label="Decorative Items" value={s?.decorative_included ? (Array.isArray(s.decorative_items) && s.decorative_items.length ? s.decorative_items.join(', ') : (s.decorative_item_other || 'Included')) : (s?.decorative_included === false ? 'No' : null)} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold font-heading uppercase tracking-wide mb-3">Financial Settings</h2>
+              <Row label="Sales Tax Rate" value={p.sales_tax_rate != null ? `${Number(p.sales_tax_rate).toFixed(3)}%` : null} />
+              <Row label="Tax Jurisdiction" value={p.tax_jurisdiction_label} />
+              <Row label="Labor Taxable" value={typeof p.labor_taxable === 'boolean' ? (p.labor_taxable ? 'Yes' : 'No') : null} />
+              <Row label="Retainage" value={p.retainage_percent != null ? `${Number(p.retainage_percent)}%` : null} />
+              <Row label="Retainage Release" value={p.retainage_release_trigger} />
+              <Row label="Mobilization" value={typeof p.mobilization_enabled === 'boolean' ? (p.mobilization_enabled ? 'Enabled' : 'Disabled') : null} />
+              <Row label="TC Markup Visibility" value={p.tc_markup_visibility} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold font-heading uppercase tracking-wide mb-3">Approvals & Compliance</h2>
+              <Row label="Owner Approval Threshold" value={p.owner_approval_threshold != null ? <span className="font-mono">{fmt$(p.owner_approval_threshold)}</span> : null} />
+              <Row label="Owner Approval Email" value={p.owner_approval_email} />
+              <Row label="Architect Approval" value={typeof p.architect_approval_required === 'boolean' ? (p.architect_approval_required ? 'Required' : 'Not required') : null} />
+              <Row label="Architect Approval Email" value={p.architect_approval_email} />
+              <Row label="Require Photos on Submit" value={typeof p.require_photos_on_submit === 'boolean' ? (p.require_photos_on_submit ? 'Yes' : 'No') : null} />
             </CardContent>
           </Card>
 
@@ -574,6 +632,7 @@ export default function FinishProjectSetup() {
       </AppLayout>
     );
   }
+
 
   return (
     <AppLayout title="Finish Project Setup" fullWidth>
