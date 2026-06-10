@@ -489,7 +489,11 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-heading text-sm font-bold line-clamp-2">{sov.sov_name || 'Unnamed SOV'}</span>
+                          <span className="font-heading text-sm font-bold line-clamp-2">
+                            {contract
+                              ? getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)
+                              : (sov.sov_name || 'Unnamed SOV')}
+                          </span>
                           <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs shrink-0">
                             {sovSourceLabel}
                           </Badge>
@@ -497,6 +501,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         <p className="font-mono text-xs text-muted-foreground tabular-nums">
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </p>
+
         {totals.totalValue > 0 && (
                           <div className="mt-2 w-48">
                             <SOVProgressBar

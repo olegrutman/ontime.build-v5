@@ -330,6 +330,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               projectedMargin={projectedMargin}
               projectedMarginPct={projectedMarginPct}
               summary={summary}
+              awaitingUpstream={!hasContract}
               miniStats={[
                 { label: 'Cash Position', value: fmt(received - paid), tone: (received - paid) >= 0 ? 'pos' : 'neg' },
                 { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
@@ -339,6 +340,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             <OverviewSummaryStrip
               receivablePartyLabel="owner"
               payablePartyLabel={tcName}
+              awaitingUpstream={!hasContract}
               contract={{
                 label: 'Owner Contract',
                 revisedIn,
@@ -351,7 +353,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                 paid,
                 cashPosition: received - paid,
                 owedToYou: Math.max(0, revisedIn - received),
-                youOwe: Math.max(0, revisedOut - paid),
+                youOwe: hasContract ? Math.max(0, revisedOut - paid) : Math.max(0, financials.gcPayablesInvoiced - paid),
+
               }}
               changeOrders={{
                 approvedCount: approvedCOs.length,

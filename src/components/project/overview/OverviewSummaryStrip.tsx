@@ -105,6 +105,8 @@ interface OverviewSummaryStripProps {
   };
   receivablePartyLabel?: string;
   payablePartyLabel?: string;
+  /** Hide margin & "owed to you" numbers when upstream contract is unset. */
+  awaitingUpstream?: boolean;
 }
 
 export function OverviewSummaryStrip({
@@ -113,8 +115,10 @@ export function OverviewSummaryStrip({
   changeOrders,
   receivablePartyLabel = 'upstream',
   payablePartyLabel = 'downstream',
+  awaitingUpstream = false,
 }: OverviewSummaryStripProps) {
   const pctRounded = Math.round(contract.marginPct);
+  const dash = '—';
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
 
@@ -123,12 +127,18 @@ export function OverviewSummaryStrip({
         accent={C.amber}
         icon="📜"
         rows={[
-          { label: `Revised in (from ${receivablePartyLabel})`, value: contract.revisedIn },
+          { label: `Revised in (from ${receivablePartyLabel})`, value: awaitingUpstream ? dash : contract.revisedIn },
           { label: `Revised out (to ${payablePartyLabel})`, value: contract.revisedOut, tone: 'muted' },
-          { label: 'Projected margin', value: contract.margin, tone: contract.margin > 0 ? 'pos' : contract.margin < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
-          { label: 'Margin %', value: `${pctRounded >= 0 ? '+' : ''}${pctRounded}%`, tone: pctRounded >= 20 ? 'pos' : pctRounded > 0 ? 'neutral' : pctRounded === 0 ? 'muted' : 'neg' },
+          awaitingUpstream
+            ? { label: 'Projected margin', value: dash, tone: 'muted', emphasis: true }
+            : { label: 'Projected margin', value: contract.margin, tone: contract.margin > 0 ? 'pos' : contract.margin < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
+          awaitingUpstream
+            ? { label: 'Margin %', value: dash, tone: 'muted' }
+            : { label: 'Margin %', value: `${pctRounded >= 0 ? '+' : ''}${pctRounded}%`, tone: pctRounded >= 20 ? 'pos' : pctRounded > 0 ? 'neutral' : pctRounded === 0 ? 'muted' : 'neg' },
         ]}
-        footer={`Original + approved change orders on both sides`}
+        footer={awaitingUpstream
+          ? `Set the ${receivablePartyLabel} contract value to see projected margin`
+          : `Original + approved change orders on both sides`}
       />
 
       <SummaryCard
@@ -139,7 +149,9 @@ export function OverviewSummaryStrip({
           { label: `Received from ${receivablePartyLabel}`, value: cashFlow.received, tone: cashFlow.received > 0 ? 'pos' : 'muted' },
           { label: `Paid out to ${payablePartyLabel}`, value: cashFlow.paid, tone: cashFlow.paid > 0 ? 'neg' : 'muted' },
           { label: 'Cash position', value: cashFlow.cashPosition, tone: cashFlow.cashPosition > 0 ? 'pos' : cashFlow.cashPosition < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
-          { label: `Owed to you (unpaid)`, value: cashFlow.owedToYou, tone: cashFlow.owedToYou > 0 ? 'neutral' : 'muted' },
+          awaitingUpstream
+            ? { label: `Owed to you (unpaid)`, value: dash, tone: 'muted' }
+            : { label: `Owed to you (unpaid)`, value: cashFlow.owedToYou, tone: cashFlow.owedToYou > 0 ? 'neutral' : 'muted' },
           ...(cashFlow.youOwe !== undefined ? [{ label: 'You owe (unpaid)', value: cashFlow.youOwe, tone: cashFlow.youOwe > 0 ? ('neutral' as const) : ('muted' as const) }] : []),
           ...(cashFlow.retainage && cashFlow.retainage > 0 ? [{ label: 'Retainage held', value: cashFlow.retainage, tone: 'muted' as const }] : []),
         ]}
@@ -161,3 +173,4 @@ export function OverviewSummaryStrip({
     </div>
   );
 }
+
