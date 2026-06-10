@@ -67,7 +67,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string } | null>(null);
+  const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string; pricing_owner_org_id: string | null; supplier_org_id: string | null } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -133,10 +133,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
-  // Determine user's role in this invoice's contract
-  // Contract direction: from_org (contractor) → to_org (client)
-  const isInvoiceCreator = contract?.from_org_id === currentOrgId; // from_org creates invoices
-  const isInvoiceReceiver = contract?.to_org_id === currentOrgId; // to_org receives/approves
+  // Determine user's role in this invoice.
+  // - Contract-based invoices: from_org (contractor) creates, to_org (client) approves.
+  // - PO-based supplier invoices (no contract): supplier org creates, pricing-owner org approves.
+  const isInvoiceCreator =
+    (contract?.from_org_id === currentOrgId) ||
+    (!contract && !!linkedPO?.supplier_org_id && linkedPO.supplier_org_id === currentOrgId);
+  const isInvoiceReceiver =
+    (contract?.to_org_id === currentOrgId) ||
+    (!contract && !!linkedPO?.pricing_owner_org_id && linkedPO.pricing_owner_org_id === currentOrgId);
 
   useEffect(() => {
     fetchInvoice();
@@ -170,10 +175,19 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       if (invoiceRes.data.po_id) {
         const { data: poData } = await supabase
           .from('purchase_orders')
-          .select('po_number, status')
+          .select('po_number, status, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
           .eq('id', invoiceRes.data.po_id)
           .single();
-        setLinkedPO(poData);
+        if (poData) {
+          setLinkedPO({
+            po_number: poData.po_number,
+            status: poData.status,
+            pricing_owner_org_id: poData.pricing_owner_org_id ?? null,
+            supplier_org_id: (poData as any).supplier?.organization_id ?? null,
+          });
+        } else {
+          setLinkedPO(null);
+        }
       } else {
         setLinkedPO(null);
       }
