@@ -120,10 +120,16 @@ export default function ProjectHome() {
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
-  const { data: projectProfile } = useProjectProfile(id);
-  const { data: scopeSelections } = useScopeSelections(id);
   const isTM = project?.contract_mode === 'tm';
-  const showSetupBanner = !isTM && (project?.status === 'setup' || project?.status === 'draft') && (!projectProfile || !scopeSelections || scopeSelections.length === 0);
+  // Rebased on V2 readiness signals — the legacy V1 tables (project_profiles,
+  // project_scope_selections) are no longer written by the V2 setup wizard.
+  // Hide the banner once the readiness checklist is complete or the project is active.
+  const showSetupBanner =
+    !isTM &&
+    (project?.status === 'setup' || project?.status === 'draft') &&
+    !readiness.isActive &&
+    !readiness.loading &&
+    readiness.percent < 100;
 
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
