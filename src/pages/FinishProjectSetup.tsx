@@ -190,9 +190,17 @@ export default function FinishProjectSetup() {
     if (currentStep > activeSteps.length - 1) setCurrentStep(activeSteps.length - 1);
   }, [activeSteps.length, currentStep]);
 
-  // If project doesn't need setup, redirect
+  // If project is already fully active, redirect away from the setup wizard.
+  // While the project is still in 'setup' or 'draft' (regardless of the
+  // legacy setup_completion_required flag) the GC/TC must be able to open
+  // this page from the sidebar "Project Info" link and the banner.
   useEffect(() => {
-    if (ctx?.project && !ctx.project.setup_completion_required) {
+    if (
+      ctx?.project &&
+      !ctx.project.setup_completion_required &&
+      ctx.project.status !== 'setup' &&
+      ctx.project.status !== 'draft'
+    ) {
       navigate(`/project/${projectId}`, { replace: true });
     }
   }, [ctx?.project, navigate, projectId]);
