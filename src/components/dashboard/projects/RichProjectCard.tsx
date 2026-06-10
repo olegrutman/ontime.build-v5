@@ -44,6 +44,7 @@ export function RichProjectCard({
   revenue,
   costs,
   paidToYou,
+  paidByYou = 0,
   pendingToCollect,
   contractLabel = 'Contract',
   costLabel = 'Cost',
