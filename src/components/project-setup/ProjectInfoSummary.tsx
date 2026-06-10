@@ -139,7 +139,7 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
 
   // Group answers by section
   const grouped = new Map<string, { key: string; value: unknown }[]>();
-  const skipKeys = new Set(['contract_value', 'fc_contract_value', 'material_responsibility', 'building_type']);
+  const skipKeys = new Set(['contract_value', 'fc_contract_value', 'gc_tc_contract_value', 'material_responsibility', 'building_type']);
   for (const a of answers) {
     if (skipKeys.has(a.field_key)) continue;
     // Derive section from key prefix
