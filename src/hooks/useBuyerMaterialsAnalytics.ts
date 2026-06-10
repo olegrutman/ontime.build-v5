@@ -57,7 +57,7 @@ export interface PackVariance {
   delivered: number;
   variance: number;
   variancePct: number | null;
-  status: 'ok' | 'watch' | 'over';
+  status: 'ok' | 'watch' | 'over' | 'pending';
 }
 
 export interface BuyerMaterialsAnalytics {
@@ -407,6 +407,11 @@ export function useBuyerMaterialsAnalytics({
       const packs = Array.from(normalizedMap.values())
         .filter(p => p.estimate > 0 || p.ordered > 0)
         .map(p => {
+          // For packs with nothing ordered yet, variance is not meaningful —
+          // showing "-100%" would falsely suggest a problem. Treat as Pending.
+          if (p.ordered === 0 && p.estimate > 0) {
+            return { ...p, variance: 0, variancePct: null, status: 'pending' as const };
+          }
           const variance = p.ordered - p.estimate;
           const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
           let status: PackVariance['status'];
@@ -426,7 +431,7 @@ export function useBuyerMaterialsAnalytics({
         // Bug fix 7.3: sort by status priority (over → watch → ok), then by size,
         // so small high-risk packs aren't buried under big on-budget ones.
         .sort((a, b) => {
-          const rank = (s: PackVariance['status']) => (s === 'over' ? 0 : s === 'watch' ? 1 : 2);
+          const rank = (s: PackVariance['status']) => (s === 'over' ? 0 : s === 'watch' ? 1 : s === 'ok' ? 2 : 3);
           const r = rank(a.status) - rank(b.status);
           if (r !== 0) return r;
           return Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered);
