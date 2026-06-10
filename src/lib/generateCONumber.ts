@@ -1,14 +1,14 @@
 import { supabase } from '@/integrations/supabase/client';
 
-function getProjectCode(name: string | undefined): string {
-  if (!name) return 'XXX';
+function getProjectCode(name: string | undefined | null, fallbackId: string): string {
+  if (!name) return fallbackId.replace(/-/g, '').substring(0, 3).toUpperCase();
   const cleaned = name.replace(/^(the\s+)/i, '').trim();
-  return cleaned.substring(0, 3).toUpperCase();
+  return cleaned.substring(0, 3).toUpperCase() || fallbackId.substring(0, 3).toUpperCase();
 }
 
-function getOrgInitials(name: string | undefined): string {
-  if (!name) return 'XX';
-  return name.replace(/^(the\s+)/i, '').trim().substring(0, 2).toUpperCase();
+function getOrgInitials(name: string | undefined | null, fallbackId: string | null): string {
+  if (!name) return (fallbackId ?? 'XX').replace(/-/g, '').substring(0, 2).toUpperCase();
+  return name.replace(/^(the\s+)/i, '').trim().substring(0, 2).toUpperCase() || (fallbackId ?? 'XX').substring(0, 2).toUpperCase();
 }
 
 export async function generateCONumber({
@@ -22,18 +22,20 @@ export async function generateCONumber({
   assignedToOrgId: string | null;
   isTM: boolean;
 }): Promise<string> {
-  // Fetch project name + org names in parallel
+  // Fetch project name + org names in parallel (maybeSingle to avoid throw)
   const [projectRes, creatorRes, upstreamRes] = await Promise.all([
-    supabase.from('projects').select('name').eq('id', projectId).single(),
-    supabase.from('organizations').select('name').eq('id', creatorOrgId).single(),
+    supabase.from('projects').select('name').eq('id', projectId).maybeSingle(),
+    supabase.from('organizations').select('name').eq('id', creatorOrgId).maybeSingle(),
     assignedToOrgId
-      ? supabase.from('organizations').select('name').eq('id', assignedToOrgId).single()
+      ? supabase.from('organizations').select('name').eq('id', assignedToOrgId).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
-  const projCode = getProjectCode(projectRes.data?.name);
-  const creatorInit = getOrgInitials(creatorRes.data?.name);
-  const upstreamInit = assignedToOrgId ? getOrgInitials(upstreamRes.data?.name) : 'XX';
+  const projCode = getProjectCode(projectRes.data?.name, projectId);
+  const creatorInit = getOrgInitials(creatorRes.data?.name, creatorOrgId);
+  const upstreamInit = assignedToOrgId
+    ? getOrgInitials(upstreamRes.data?.name, assignedToOrgId)
+    : 'NA';
 
   const typePrefix = isTM ? 'WO' : 'CO';
   const prefix = `${typePrefix}-${projCode}-${creatorInit}-${upstreamInit}`;

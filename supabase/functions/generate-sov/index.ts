@@ -332,14 +332,16 @@ IMPORTANT: Generate SOV lines grouped by floor. Each line must have a floor_labe
       return new Response(JSON.stringify({ error: "AI returned empty result" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Normalize percentages to sum to exactly 100.00%
+    // Normalize percentages to sum to exactly 100.00% — always run absorption,
+    // not only when off by >0.001, otherwise rounding leftovers leak through (e.g. 99.99 / 100.01).
     const rawTotal = lines.reduce((s, l) => s + l.percent, 0);
-    if (Math.abs(rawTotal - 100) > 0.001) {
+    if (lines.length > 0 && rawTotal > 0) {
       const scale = 100 / rawTotal;
       for (const line of lines) {
         line.percent = Math.round(line.percent * scale * 100) / 100;
       }
       const adjusted = lines.slice(0, -1).reduce((s, l) => s + l.percent, 0);
+      // Force last item to absorb any rounding residue so SUM(percent) === 100.00 exactly.
       lines[lines.length - 1].percent = Math.round((100 - adjusted) * 100) / 100;
     }
 
