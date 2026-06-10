@@ -431,7 +431,7 @@ export function useBuyerMaterialsAnalytics({
         // Bug fix 7.3: sort by status priority (over → watch → ok), then by size,
         // so small high-risk packs aren't buried under big on-budget ones.
         .sort((a, b) => {
-          const rank = (s: PackVariance['status']) => (s === 'over' ? 0 : s === 'watch' ? 1 : 2);
+          const rank = (s: PackVariance['status']) => (s === 'over' ? 0 : s === 'watch' ? 1 : s === 'ok' ? 2 : 3);
           const r = rank(a.status) - rank(b.status);
           if (r !== 0) return r;
           return Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered);
