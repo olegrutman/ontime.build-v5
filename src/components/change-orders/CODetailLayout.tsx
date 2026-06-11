@@ -327,13 +327,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const grossMargin = displayBillable - roleActualCost;
   const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
 
-  // Responsibility-aware billable-to-GC total. When GC procures materials/equipment,
-  // those buckets are billed by the supplier directly to the GC and must NOT be part
-  // of the TC's billable headline. Otherwise the page shows "TC Labor $1,110" while
-  // the breakdown reads Labor $747.50 + Materials/Equipment (by GC), confusing users.
-  const gcBillableMaterials = responsibility.materialResponsible === 'GC' ? 0 : financials.materialsTotal;
-  const gcBillableEquipment = responsibility.equipmentResponsible === 'GC' ? 0 : financials.equipmentTotal;
-  const tcBillableTotal = financials.tcBillableToGC + gcBillableMaterials + gcBillableEquipment;
+  // Responsibility-aware billable-to-GC total. Centralized in useChangeOrderDetail
+  // so every consumer (KPI strip, scope strip, sidebar, sticky footer, hero block,
+  // banner) reads the same headline number. See COFinancials.billableGrandTotal.
+  const tcBillableTotal = financials.billableGrandTotal;
+
 
 
   const sidebarProps = {

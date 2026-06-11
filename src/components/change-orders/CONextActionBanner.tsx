@@ -31,8 +31,8 @@ function fmtCurrency(value: number) {
 function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): BannerConfig | null {
   const { co, isGC, isTC, isFC, isFCCollaborator, financials, fcCollabName } = props;
   const status = co.status;
-  // Single source of truth: price the GC sees == price the TC submits.
-  const priceToUpstream = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+  // Single source of truth: price the GC sees == price the TC submits (responsibility-aware).
+  const priceToUpstream = financials.billableGrandTotal;
 
   if (isGC) {
     if (status === 'submitted') {

@@ -149,25 +149,39 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         equipmentQuery = equipmentQuery.eq('added_by_role', invoicingRole);
       }
 
-      const [laborRes, lineItemsRes, materialsRes, equipmentRes] = await Promise.all([
+      const [laborRes, lineItemsRes, materialsRes, equipmentRes, cosRes] = await Promise.all([
         laborQuery,
         supabase.from('co_line_items').select('*').in('co_id', ids).order('sort_order'),
         materialsQuery,
         equipmentQuery,
+        supabase.from('change_orders')
+          .select('id, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
+          .in('id', ids),
       ]);
 
       if (laborRes.error) throw laborRes.error;
       if (lineItemsRes.error) throw lineItemsRes.error;
       if (materialsRes.error) throw materialsRes.error;
       if (equipmentRes.error) throw equipmentRes.error;
+      if (cosRes.error) throw cosRes.error;
 
       const labor = (laborRes.data ?? []) as COLaborEntry[];
       const scopeItems = (lineItemsRes.data ?? []) as COLineItem[];
       const materials = (materialsRes.data ?? []) as COMaterialItem[];
       const equipment = (equipmentRes.data ?? []) as COEquipmentItem[];
 
+      // Per-CO procurement responsibility — when GC procures, the supplier bills GC
+      // directly via PO. The TC must NOT invoice GC for those buckets or it double-charges.
+      const matRespByCo = new Map<string, 'GC' | 'TC'>();
+      const eqRespByCo = new Map<string, 'GC' | 'TC'>();
+      for (const c of (cosRes.data ?? [])) {
+        matRespByCo.set(c.id, ((c as any).co_material_responsible_override ?? (c as any).materials_responsible ?? 'TC') as 'GC' | 'TC');
+        eqRespByCo.set(c.id, ((c as any).co_equipment_responsible_override ?? (c as any).equipment_responsible ?? 'TC') as 'GC' | 'TC');
+      }
+
       const scopeMap = new Map(scopeItems.map(s => [s.id, s]));
       const generated: GeneratedLineItem[] = [];
+
 
       // Labor entries → line items
       for (const entry of labor) {
@@ -191,8 +205,9 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         });
       }
 
-      // Materials → line items
+      // Materials → line items. Skip when GC procures (supplier bills GC directly).
       for (const mat of materials) {
+        if (matRespByCo.get(mat.co_id) === 'GC') continue;
         let desc = mat.description;
         if (mat.quantity && mat.unit_cost) {
           desc += ` – ${mat.quantity} ${mat.uom} × $${mat.unit_cost.toFixed(2)}`;
@@ -207,8 +222,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         });
       }
 
-      // Equipment → line items
+      // Equipment → line items. Skip when GC procures.
       for (const eq of equipment) {
+        if (eqRespByCo.get(eq.co_id) === 'GC') continue;
+
         let desc = eq.description;
         if (eq.duration_note) desc += ` – ${eq.duration_note}`;
         if (eq.markup_percent > 0) desc += ` + ${eq.markup_percent}% markup`;

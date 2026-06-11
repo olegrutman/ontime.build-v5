@@ -219,6 +219,16 @@ export interface COFinancials {
   equipmentCost: number;
   equipmentMarkup: number;
   grandTotal: number;
+  /** Responsibility-aware billable subtotal (TC labor + TC-procured M&E only). Use this for any "what GC will be billed" headline. */
+  billableGrandTotal: number;
+  billableGrandTotalWithTax: number;
+  billableMaterialsTotal: number;
+  billableEquipmentTotal: number;
+  billableMaterialsTax: number;
+  billableEquipmentTax: number;
+  billableTotalTax: number;
+  materialResponsible: 'GC' | 'TC';
+  equipmentResponsible: 'GC' | 'TC';
   actualCostTotal: number;
   tcActualCostTotal: number;
   fcActualCostTotal: number;

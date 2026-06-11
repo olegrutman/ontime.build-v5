@@ -33,7 +33,7 @@ interface FooterConfig {
 
 function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConfig | null {
   const { status, isGC, isTC, isFC, financials, fcCollabName } = props;
-  const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+  const totalToApprove = financials.billableGrandTotal;
 
   if (isFC) {
     if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
@@ -50,7 +50,7 @@ function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConf
 
   if (isTC) {
     if (status === 'closed_for_pricing') {
-      return { label: `Submit ${fmtCurrency(financials.grandTotal)} to ${rl.GC} →`, className: 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90', disabled: false, action: 'submit' };
+      return { label: `Submit ${fmtCurrency(financials.billableGrandTotal)} to ${rl.GC} →`, className: 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90', disabled: false, action: 'submit' };
     }
     if (['shared', 'work_in_progress'].includes(status)) {
       return { label: `Waiting on ${fcCollabName || rl.FC} hours`, className: 'bg-muted text-muted-foreground', disabled: true, action: '' };

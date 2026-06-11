@@ -22,9 +22,14 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
   let label = '';
 
   if (isTC) {
-    revenue = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
-    costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
+    // Revenue = what TC actually invoices to GC (excludes GC-procured M&E).
+    // Costs = TC's own internal costs for the buckets they're responsible for.
+    revenue = financials.billableGrandTotal;
+    const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
+    const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
+    costs = financials.fcLaborTotal + financials.tcActualCostTotal + ownMatCost + ownEqCost;
     label = 'TC Profitability';
+
   } else {
     revenue = financials.fcLaborTotal;
     costs = financials.fcActualCostTotal;

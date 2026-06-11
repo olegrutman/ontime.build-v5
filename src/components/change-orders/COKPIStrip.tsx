@@ -105,9 +105,11 @@ function getTiles(props: COKPIStripProps): KPITile[] {
         : undefined,
     });
 
-    // Detailed mode: show TC margin
+    // Detailed mode: show TC margin (revenue & cost both restricted to TC-responsible buckets)
     if (markupVisibility === 'detailed') {
-      const tcInternalCost = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
+      const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
+      const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
+      const tcInternalCost = financials.fcLaborTotal + financials.tcActualCostTotal + ownMatCost + ownEqCost;
       const tcMargin = tcSubmitted - tcInternalCost;
       const tcMarginPct = tcSubmitted > 0 ? (tcMargin / tcSubmitted) * 100 : 0;
       tiles.push({
@@ -118,15 +120,16 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       });
     }
 
-    // Tax tile when there's tax
-    if (financials.totalTax > 0) {
+    // Tax tile when there's tax (responsibility-aware — exclude tax on GC-procured M&E)
+    if (financials.billableTotalTax > 0) {
       tiles.push({
         label: financials.taxJurisdictionLabel ?? 'Tax',
-        value: fmtCurrency(financials.totalTax),
+        value: fmtCurrency(financials.billableTotalTax),
         color: '#8B5CF6',
         sub: `${financials.taxRate}%`,
       });
     }
+
 
     // Retainage tiles
     if (financials.retainagePercent > 0 && financials.retainageAmount > 0) {
