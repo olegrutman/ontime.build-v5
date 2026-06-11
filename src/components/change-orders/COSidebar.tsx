@@ -151,28 +151,33 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
               </div>
 
 
-              {financials.totalTax > 0 && (
+              {financials.billableTotalTax > 0 && (
                 <div className="border-t border-border pt-2 mt-2 space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Materials tax</span>
-                    <span className="font-mono">{fmtCurrency(financials.materialsTax)}</span>
-                  </div>
+                  {financials.billableMaterialsTax > 0 && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Materials tax</span>
+                      <span className="font-mono">{fmtCurrency(financials.billableMaterialsTax)}</span>
+                    </div>
+                  )}
                   {financials.laborTaxable && (
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Labor tax</span>
                       <span className="font-mono">{fmtCurrency(financials.laborTax)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Equipment tax</span>
-                    <span className="font-mono">{fmtCurrency(financials.equipmentTax)}</span>
-                  </div>
+                  {financials.billableEquipmentTax > 0 && (
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Equipment tax</span>
+                      <span className="font-mono">{fmtCurrency(financials.billableEquipmentTax)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-semibold pt-1">
-                    <span>Total (incl. {fmtCurrency(financials.totalTax)} tax)</span>
-                    <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
+                    <span>Total (incl. {fmtCurrency(financials.billableTotalTax)} tax)</span>
+                    <span className="font-mono">{fmtCurrency(financials.billableGrandTotalWithTax)}</span>
                   </div>
                 </div>
               )}
+
               {financials.retainagePercent > 0 && financials.retainageAmount > 0 && (
                 <div className="border-t border-border pt-2 mt-2 space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
