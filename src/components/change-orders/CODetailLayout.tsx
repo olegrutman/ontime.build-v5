@@ -347,6 +347,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     markupVisibility,
     materialResponsible: responsibility.materialResponsible,
     equipmentResponsible: responsibility.equipmentResponsible,
+    tcBillableTotal,
   };
 
   return (
