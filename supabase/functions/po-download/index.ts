@@ -125,6 +125,8 @@ function buildHtml(po: any, items: any[]): string {
       <td>${item.description}</td>
       <td class="r mono">${item.quantity}</td>
       <td>${item.uom}</td>
+      <td class="r mono">${item.pieces != null && item.pieces !== '' ? item.pieces : '—'}</td>
+      <td class="r mono">${item.length_ft != null && item.length_ft !== '' ? `${item.length_ft}'` : '—'}</td>
       <td class="r mono">${item.unit_price != null ? fmt(item.unit_price) : '—'}</td>
       <td class="r mono">${item.line_total != null ? fmt(item.line_total) : (item.unit_price != null ? fmt(item.quantity * item.unit_price) : '—')}</td>
     </tr>
@@ -170,7 +172,7 @@ ${V3_CSS}
       <div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Order Items</div>
       <div class="sec-content" style="padding:0;">
         <table class="line-table">
-          <thead><tr><th style="width:22px;">#</th><th style="width:68px;">SKU</th><th>Description</th><th class="r">Qty</th><th>Unit</th><th class="r">Unit Price</th><th class="r">Amount</th></tr></thead>
+          <thead><tr><th style="width:22px;">#</th><th style="width:68px;">SKU</th><th>Description</th><th class="r">Qty</th><th>Unit</th><th class="r">Pcs</th><th class="r">Length</th><th class="r">Unit Price</th><th class="r">Amount</th></tr></thead>
           <tbody>${itemRows}</tbody>
         </table>
       </div>
