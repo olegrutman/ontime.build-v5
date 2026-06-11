@@ -482,6 +482,15 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const handleDownload = async () => {
     setExportLoading(true);
     try {
+      // Prefer the public download_token (validated server-side) so any user
+      // who can view the PO in-app can also download it — avoids RLS edge
+      // cases on the embedded select used by the edge function.
+      if (po?.download_token) {
+        const tokenUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
+        window.open(tokenUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         toast.error('Please log in to download');
