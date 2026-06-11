@@ -21,8 +21,7 @@ const PO_SELECT = `
   *,
   organization:organizations!purchase_orders_organization_id_fkey(name, org_code, logo_url, address, phone),
   supplier:suppliers(name, supplier_code, contact_info),
-  project:projects(name, address, city, state),
-  work_item:work_items(title)
+  project:projects(name, address, city, state)
 `;
 
 function statusClass(s: string): string {
