@@ -489,7 +489,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                                   : 'TC Submitted')
                           : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
                         <p className="font-mono font-bold text-foreground mt-0.5">
-                          ${ (isGC ? financials.grandTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
+                          ${ (isGC ? tcBillableTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
                         </p>
                       </div>
 
