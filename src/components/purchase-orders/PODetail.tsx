@@ -482,31 +482,34 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const handleDownload = async () => {
     setExportLoading(true);
     try {
-      // Prefer the public download_token (validated server-side) so any user
-      // who can view the PO in-app can also download it — avoids RLS edge
-      // cases on the embedded select used by the edge function.
+      let url: string | null = null;
+      let headers: Record<string, string> = {};
+
       if (po?.download_token) {
-        const tokenUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
-        window.open(tokenUrl, '_blank', 'noopener,noreferrer');
-        return;
+        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          toast.error('Please log in to download');
+          return;
+        }
+        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${poId}&format=pdf`;
+        headers = { Authorization: `Bearer ${session.access_token}` };
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Please log in to download');
-        return;
-      }
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${poId}&format=pdf`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const res = await fetch(url, { headers });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Download failed' }));
         throw new Error(err.error || `Download failed (${res.status})`);
       }
       const html = await res.text();
-      const blob = new Blob([html], { type: 'text/html' });
-      window.open(URL.createObjectURL(blob), '_blank');
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      // Auto-trigger print dialog so user gets a real PDF
+      if (win) {
+        win.addEventListener('load', () => setTimeout(() => win.print(), 400));
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to download PO');
     } finally {
