@@ -619,7 +619,7 @@ export function COStatusActions({
           {canSendToWIP && (
             <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmitToWIP} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              Send to {assignedOrgName ?? 'TC'} (Work in Progress)
+              Send to {assignedOrgName ?? 'TC'} for pricing
             </Button>
           )}
           {canCloseForPricing && (
@@ -667,7 +667,7 @@ export function COStatusActions({
           {canWithdraw && (
             <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-muted-foreground border-muted-foreground/30" onClick={() => setWithdrawOpen(true)} disabled={acting}>
               <Trash2 className="h-3 w-3" />
-              Withdraw permanently
+              Cancel {co.document_type === 'WO' ? 'work order' : 'change order'}
             </Button>
           )}
         </div>
@@ -776,9 +776,9 @@ export function COStatusActions({
       <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Withdraw {co.document_type === 'WO' ? 'work order' : 'change order'} permanently</AlertDialogTitle>
+            <AlertDialogTitle>Cancel {co.document_type === 'WO' ? 'work order' : 'change order'}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The {co.document_type === 'WO' ? 'work order' : 'change order'} will be permanently closed and cannot be resubmitted.
+              This action can't be undone. The {co.document_type === 'WO' ? 'work order' : 'change order'} will be permanently closed and can't be resubmitted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
@@ -790,20 +790,20 @@ export function COStatusActions({
               id="withdraw-reason"
               value={withdrawReason}
               onChange={e => setWithdrawReason(e.target.value)}
-              placeholder="Why is this being withdrawn?"
+              placeholder="Why is this being cancelled?"
               rows={3}
               className="mt-1.5 resize-none"
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={acting}>Keep open</AlertDialogCancel>
             <AlertDialogAction
               onClick={doWithdraw}
               disabled={acting || !withdrawReason.trim()}
               className="bg-destructive hover:bg-destructive/90"
             >
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Withdraw permanently
+              Cancel {co.document_type === 'WO' ? 'WO' : 'CO'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

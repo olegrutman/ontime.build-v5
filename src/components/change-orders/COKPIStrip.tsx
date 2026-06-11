@@ -46,44 +46,38 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   const eqResp = props.equipmentResponsible ?? 'TC';
 
   if (isGC) {
-    const laborCost = financials.tcBillableToGC;
+    // Canonical headline number = what the GC will be billed (matches scope strip + financials sidebar)
+    const tcSubmitted = financials.grandTotal;
     const gcBudget = (props.co as any).gc_budget as number | null;
 
     // Only count mat/equip in TC cost when TC is the responsible party
     const tcMaterialCost = matResp === 'TC' ? financials.materialsTotal : 0;
     const tcEquipmentCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
-    const totalTCCost = laborCost + tcMaterialCost + tcEquipmentCost;
 
     const tiles: KPITile[] = [
       {
-        label: 'TC Labor',
-        value: fmtCurrency(laborCost),
+        label: 'TC Submitted',
+        value: fmtCurrency(tcSubmitted),
         color: 'hsl(var(--primary))',
+        sub: 'What you will be billed',
       },
     ];
 
-    // Only show mat/equip tiles if TC is responsible for them
-    if (matResp === 'TC') {
+    // Show mat/equip breakdown tiles only when TC is responsible AND there's a value
+    if (matResp === 'TC' && tcMaterialCost > 0) {
       tiles.push({
         label: 'Material Cost',
-        value: fmtCurrency(financials.materialsTotal),
+        value: fmtCurrency(tcMaterialCost),
         color: '#059669',
       });
     }
-    if (eqResp === 'TC') {
+    if (eqResp === 'TC' && tcEquipmentCost > 0) {
       tiles.push({
         label: 'Equipment Cost',
-        value: fmtCurrency(financials.equipmentTotal),
+        value: fmtCurrency(tcEquipmentCost),
         color: '#F59E0B',
       });
     }
-
-    tiles.push({
-      label: 'Total TC Cost',
-      value: fmtCurrency(totalTCCost),
-      color: '#F5A623',
-      badge: totalTCCost > 0 ? { text: 'Final', variant: 'healthy' } : undefined,
-    });
 
     tiles.push({
       label: 'GC Budget',
@@ -91,25 +85,17 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       color: '#6366F1',
       editable: true,
       editValue: gcBudget,
-      badge: gcBudget && totalTCCost > 0
-        ? { text: `${((totalTCCost / gcBudget) * 100).toFixed(0)}%`, variant: totalTCCost <= gcBudget ? 'healthy' as const : 'watch' as const }
+      sub: gcBudget ? undefined : 'Your internal cap (click to set)',
+      badge: gcBudget && tcSubmitted > 0
+        ? { text: `${((tcSubmitted / gcBudget) * 100).toFixed(0)}% used`, variant: tcSubmitted <= gcBudget ? 'healthy' as const : 'watch' as const }
         : undefined,
     });
-
-    // Summary mode: show labor + material totals
-    if (markupVisibility === 'summary') {
-      tiles.push({
-        label: 'Labor',
-        value: fmtCurrency(laborCost),
-        color: '#7C3AED',
-      });
-    }
 
     // Detailed mode: show TC margin
     if (markupVisibility === 'detailed') {
       const tcInternalCost = financials.fcLaborTotal + financials.tcActualCostTotal + financials.materialsCost + financials.equipmentCost;
-      const tcMargin = totalTCCost - tcInternalCost;
-      const tcMarginPct = totalTCCost > 0 ? (tcMargin / totalTCCost) * 100 : 0;
+      const tcMargin = tcSubmitted - tcInternalCost;
+      const tcMarginPct = tcSubmitted > 0 ? (tcMargin / tcSubmitted) * 100 : 0;
       tiles.push({
         label: 'TC Margin',
         value: fmtCurrency(tcMargin),

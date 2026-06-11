@@ -16,13 +16,13 @@ const ROLE_PILL_COLORS: Record<string, string> = {
   FC: 'bg-amber-500',
 };
 
-// Pipeline steps
+// Pipeline steps — labels match the status pill / action button vocabulary
 const PIPELINE_STEPS = [
-  { key: 'created', label: 'Created' },
+  { key: 'draft', label: 'Draft' },
   { key: 'pricing', label: 'Pricing' },
-  { key: 'review', label: 'Review' },
-  { key: 'submitted', label: 'Submitted' },
+  { key: 'review', label: 'GC Review' },
   { key: 'approved', label: 'Approved' },
+  { key: 'invoiced', label: 'Invoiced' },
 ] as const;
 
 function getActiveStep(status: string): number {
@@ -30,11 +30,11 @@ function getActiveStep(status: string): number {
     case 'draft': return 0;
     case 'shared':
     case 'work_in_progress':
-    case 'closed_for_pricing': return 1;
-    case 'submitted': return 3;
-    case 'approved':
+    case 'closed_for_pricing':
+    case 'rejected': return 1;
+    case 'submitted': return 2;
+    case 'approved': return 3;
     case 'contracted': return 4;
-    case 'rejected': return 2;
     default: return 0;
   }
 }
