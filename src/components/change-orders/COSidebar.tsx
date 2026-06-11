@@ -55,7 +55,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
   } = props;
   const rl = useRoleLabelsContext();
 
-  const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+
 
   // Profitability calc — use viewer-scoped totals so FC collaborators don't pull TC's numbers
   let revenue = 0, costs = 0;
