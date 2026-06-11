@@ -184,8 +184,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
 
-  // Strip markdown asterisks from description
-  const cleanDescription = item.description?.replace(/\*+/g, '') ?? '';
+  // Strip markdown asterisks AND any trailing "Scope:" bullet list
+  // (the AI narrative already covers what's in the bullets — showing both reads as duplicate)
+  const cleanDescription = (item.description ?? '')
+    .replace(/\*+/g, '')
+    .split(/\n\s*Scope\s*:/i)[0]
+    .trim();
+
+  // Friendly unit label — "EA" reads as jargon to non-technical users
+  const friendlyUnit = (() => {
+    if (!item.unit) return null;
+    const u = item.unit.trim().toUpperCase();
+    if (u === 'EA') return 'each';
+    if (u === 'LF') return 'linear ft';
+    if (u === 'SF') return 'sq ft';
+    if (u === 'CY') return 'cu yd';
+    if (u === 'LS') return 'lump sum';
+    return item.unit;
+  })();
 
   async function handleGCApproval(entryId: string, approved: boolean) {
     try {
@@ -234,8 +250,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 {item.category_name && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
                 )}
-                {item.unit && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.unit}</span>
+                {friendlyUnit && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{friendlyUnit}</span>
                 )}
                 {item.qty != null && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium font-mono">qty {item.qty}</span>
