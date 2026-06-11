@@ -469,11 +469,20 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   {lineItems.length > 0 && (
                     <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
                       <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
-                        <p className="text-muted-foreground font-medium">{isGC ? 'TC Submitted' : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
+                        <p className="text-muted-foreground font-medium">{isGC
+                          ? (responsibility.materialResponsible === 'GC' && responsibility.equipmentResponsible === 'GC'
+                              ? 'TC Labor'
+                              : responsibility.materialResponsible === 'GC'
+                                ? 'TC Labor + Equipment'
+                                : responsibility.equipmentResponsible === 'GC'
+                                  ? 'TC Labor + Materials'
+                                  : 'TC Submitted')
+                          : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
                         <p className="font-mono font-bold text-foreground mt-0.5">
                           ${ (isGC ? financials.grandTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
                         </p>
                       </div>
+
                       {(isTC || isFC) && (
                         <>
                           <div className="flex-1 px-3 py-2 text-center border-r border-border">
