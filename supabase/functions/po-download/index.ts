@@ -112,7 +112,7 @@ body{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background
 </style>`;
 
 function buildHtml(po: any, items: any[]): string {
-  const projectName = po.project?.name || po.work_item?.title || "";
+  const projectName = po.project?.name || "";
   const projectLocation = projectAddr(po.project);
   const org = po.organization;
   const supplier = po.supplier;
@@ -214,7 +214,7 @@ function buildCsv(po: any, items: any[]): string {
       `"${(item.notes || '').replace(/"/g, '""')}"`
     ].join(",")
   );
-  const projectName = po.project?.name || po.work_item?.title || "";
+  const projectName = po.project?.name || "";
   return [
     `# Purchase Order: ${po.po_number}`,
     `# Name: ${po.po_name}`,
