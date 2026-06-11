@@ -445,6 +445,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: 'hsl(var(--navy)/0.08)', color: 'hsl(var(--navy))' }}>
                         {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
                       </span>
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground" title="Who procures materials for this change order">
+                        Materials: {responsibility.materialResponsible} procures
+                      </span>
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground" title="Who provides equipment for this change order">
+                        Equipment: {responsibility.equipmentResponsible} procures
+                      </span>
+
                     </div>
                     {canEdit && !nteBlocked && co && (
                       <Button
