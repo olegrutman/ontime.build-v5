@@ -125,6 +125,8 @@ function buildHtml(po: any, items: any[]): string {
       <td>${item.description}</td>
       <td class="r mono">${item.quantity}</td>
       <td>${item.uom}</td>
+      <td class="r mono">${item.pieces != null && item.pieces !== '' ? item.pieces : '—'}</td>
+      <td class="r mono">${item.length_ft != null && item.length_ft !== '' ? `${item.length_ft}'` : '—'}</td>
       <td class="r mono">${item.unit_price != null ? fmt(item.unit_price) : '—'}</td>
       <td class="r mono">${item.line_total != null ? fmt(item.line_total) : (item.unit_price != null ? fmt(item.quantity * item.unit_price) : '—')}</td>
     </tr>
