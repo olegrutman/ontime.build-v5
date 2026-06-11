@@ -172,7 +172,7 @@ ${V3_CSS}
       <div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Order Items</div>
       <div class="sec-content" style="padding:0;">
         <table class="line-table">
-          <thead><tr><th style="width:22px;">#</th><th style="width:68px;">SKU</th><th>Description</th><th class="r">Qty</th><th>Unit</th><th class="r">Unit Price</th><th class="r">Amount</th></tr></thead>
+          <thead><tr><th style="width:22px;">#</th><th style="width:68px;">SKU</th><th>Description</th><th class="r">Qty</th><th>Unit</th><th class="r">Pcs</th><th class="r">Length</th><th class="r">Unit Price</th><th class="r">Amount</th></tr></thead>
           <tbody>${itemRows}</tbody>
         </table>
       </div>
