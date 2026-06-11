@@ -205,8 +205,9 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         });
       }
 
-      // Materials → line items
+      // Materials → line items. Skip when GC procures (supplier bills GC directly).
       for (const mat of materials) {
+        if (matRespByCo.get(mat.co_id) === 'GC') continue;
         let desc = mat.description;
         if (mat.quantity && mat.unit_cost) {
           desc += ` – ${mat.quantity} ${mat.uom} × $${mat.unit_cost.toFixed(2)}`;
@@ -221,8 +222,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         });
       }
 
-      // Equipment → line items
+      // Equipment → line items. Skip when GC procures.
       for (const eq of equipment) {
+        if (eqRespByCo.get(eq.co_id) === 'GC') continue;
+
         let desc = eq.description;
         if (eq.duration_note) desc += ` – ${eq.duration_note}`;
         if (eq.markup_percent > 0) desc += ` + ${eq.markup_percent}% markup`;
