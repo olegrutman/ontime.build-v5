@@ -50,7 +50,7 @@ function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConf
 
   if (isTC) {
     if (status === 'closed_for_pricing') {
-      return { label: `Submit ${fmtCurrency(financials.grandTotal)} to ${rl.GC} →`, className: 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90', disabled: false, action: 'submit' };
+      return { label: `Submit ${fmtCurrency(financials.billableGrandTotal)} to ${rl.GC} →`, className: 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90', disabled: false, action: 'submit' };
     }
     if (['shared', 'work_in_progress'].includes(status)) {
       return { label: `Waiting on ${fcCollabName || rl.FC} hours`, className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
