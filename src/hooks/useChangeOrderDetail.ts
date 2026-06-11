@@ -218,11 +218,32 @@ export function useChangeOrderDetail(coId: string | null) {
   const totalTax = materialsTax + laborTax + equipmentTax;
   const grandTotalWithTax = grandTotal + totalTax;
 
-  // Retainage
+  // ---- Responsibility-aware billable totals (what the TC actually invoices to GC) ----
+  // When the GC procures materials and/or equipment, the supplier bills the GC directly
+  // (with their own tax + retainage). Those amounts MUST be excluded from the TC's
+  // billable headline, tax, retainage, and net-payable calculations or the page will
+  // show inflated numbers (e.g. headline shows $1,110 when the TC only bills $747.50).
+  const matResp: 'GC' | 'TC' = ((co as any)?.co_material_responsible_override
+    ?? (co as any)?.materials_responsible
+    ?? 'TC') as 'GC' | 'TC';
+  const eqResp: 'GC' | 'TC' = ((co as any)?.co_equipment_responsible_override
+    ?? (co as any)?.equipment_responsible
+    ?? 'TC') as 'GC' | 'TC';
+  const billableMaterialsTotal = matResp === 'TC' ? materialsTotal : 0;
+  const billableEquipmentTotal = eqResp === 'TC' ? equipmentTotal : 0;
+  const billableGrandTotal = tcBillableToGC + billableMaterialsTotal + billableEquipmentTotal;
+  const billableMaterialsTax = billableMaterialsTotal * taxPct;
+  const billableEquipmentTax = billableEquipmentTotal * taxPct;
+  const billableTotalTax = laborTax + billableMaterialsTax + billableEquipmentTax;
+  const billableGrandTotalWithTax = billableGrandTotal + billableTotalTax;
+
+  // Retainage — computed off the billable subtotal (NOT the raw grand total) so the
+  // TC isn't asked to withhold retainage on amounts the GC owes the supplier directly.
   const retainagePercent = projectTaxSettings?.retainage_percent ?? 0;
-  const retainageAmount = (co as any)?.retainage_amount ?? (grandTotalWithTax * retainagePercent / 100);
+  const retainageAmount = (co as any)?.retainage_amount ?? (billableGrandTotalWithTax * retainagePercent / 100);
   const retainageReleased = (co as any)?.retainage_released ?? false;
-  const netPayableAmount = retainageReleased ? grandTotalWithTax : grandTotalWithTax - retainageAmount;
+  const netPayableAmount = retainageReleased ? billableGrandTotalWithTax : billableGrandTotalWithTax - retainageAmount;
+
 
   // ---- Viewer-scoped totals (prevents cross-org leakage) ----
   const ownerIsViewer = !!orgId && co?.org_id === orgId;
