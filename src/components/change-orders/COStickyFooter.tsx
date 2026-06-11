@@ -33,7 +33,7 @@ interface FooterConfig {
 
 function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConfig | null {
   const { status, isGC, isTC, isFC, financials, fcCollabName } = props;
-  const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+  const totalToApprove = financials.billableGrandTotal;
 
   if (isFC) {
     if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
