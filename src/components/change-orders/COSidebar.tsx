@@ -188,7 +188,9 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 </div>
               )}
             </>
-          )}
+            );
+          })()}
+
           {(isTC || isFC) && (() => {
             const upstream = isTC ? 'GC' : 'TC';
             const ownLabor = financials.viewer.ownLaborToUpstream;
