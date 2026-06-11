@@ -281,6 +281,15 @@ export function useChangeOrderDetail(coId: string | null) {
     equipmentMarkup,
     tcBillableToGC,
     grandTotal,
+    billableGrandTotal,
+    billableGrandTotalWithTax,
+    billableMaterialsTotal,
+    billableEquipmentTotal,
+    billableMaterialsTax,
+    billableEquipmentTax,
+    billableTotalTax,
+    materialResponsible: matResp,
+    equipmentResponsible: eqResp,
     actualCostTotal,
     tcActualCostTotal,
     fcActualCostTotal,
@@ -298,6 +307,7 @@ export function useChangeOrderDetail(coId: string | null) {
     retainageAmount,
     netPayableAmount,
     retainageReleased,
+
     viewer: {
       ownLaborToUpstream: viewerOwnLaborToUpstream,
       ownMaterialsTotal: scopedMaterialsTotal,
