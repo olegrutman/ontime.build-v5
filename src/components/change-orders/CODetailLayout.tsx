@@ -336,6 +336,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     onRefresh: refreshDetail,
     lineItemCount: lineItems.length,
     markupVisibility,
+    materialResponsible: responsibility.materialResponsible,
+    equipmentResponsible: responsibility.equipmentResponsible,
   };
 
   return (
