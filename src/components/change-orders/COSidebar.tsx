@@ -265,7 +265,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 <div className="border-t border-border pt-2 mt-2 space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Subtotal</span>
-                    <span className="font-mono">{fmtCurrency(financials.grandTotalWithTax)}</span>
+                    <span className="font-mono">{fmtCurrency(financials.billableGrandTotalWithTax)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-red-600 dark:text-red-400">
                     <span>Less retainage ({financials.retainagePercent}%)</span>
