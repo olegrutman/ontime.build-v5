@@ -37,6 +37,7 @@ interface COSidebarProps {
   markupVisibility?: MarkupVisibility;
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
+  tcBillableTotal?: number;
 }
 
 function fmtCurrency(value: number) {
