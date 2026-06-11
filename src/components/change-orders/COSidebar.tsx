@@ -35,6 +35,8 @@ interface COSidebarProps {
   onRefresh: () => void;
   lineItemCount?: number;
   markupVisibility?: MarkupVisibility;
+  materialResponsible?: 'GC' | 'TC';
+  equipmentResponsible?: 'GC' | 'TC';
 }
 
 function fmtCurrency(value: number) {
