@@ -508,14 +508,36 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
   };
 
-  const handleDownload = (po: PurchaseOrder) => {
-    if (!po.download_token) {
-      toast.error('Download not available');
-      return;
+  const handleDownload = async (po: PurchaseOrder) => {
+    try {
+      let url: string;
+      let headers: Record<string, string> = {};
+      if (po.download_token) {
+        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          toast.error('Please log in to download');
+          return;
+        }
+        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${po.id}&format=pdf`;
+        headers = { Authorization: `Bearer ${session.access_token}` };
+      }
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Download failed' }));
+        throw new Error(err.error || `Download failed (${res.status})`);
+      }
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      if (win) {
+        win.addEventListener('load', () => setTimeout(() => win.print(), 400));
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to download PO');
     }
-
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
-    window.open(url, '_blank');
   };
 
   const handleEditPO = async (po: PurchaseOrder) => {
