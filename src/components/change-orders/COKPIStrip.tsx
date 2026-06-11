@@ -54,14 +54,24 @@ function getTiles(props: COKPIStripProps): KPITile[] {
     const tcMaterialCost = matResp === 'TC' ? financials.materialsTotal : 0;
     const tcEquipmentCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
 
+    const headlineLabel = matResp === 'GC' && eqResp === 'GC'
+      ? 'TC Labor'
+      : matResp === 'GC' ? 'TC Labor + Equipment'
+      : eqResp === 'GC' ? 'TC Labor + Materials'
+      : 'TC Submitted';
+    const headlineSub = (matResp === 'GC' || eqResp === 'GC')
+      ? `${matResp === 'GC' && eqResp === 'GC' ? 'Materials & equipment' : matResp === 'GC' ? 'Materials' : 'Equipment'} procured by GC — billed separately`
+      : 'What you will be billed';
+
     const tiles: KPITile[] = [
       {
-        label: 'TC Submitted',
+        label: headlineLabel,
         value: fmtCurrency(tcSubmitted),
         color: 'hsl(var(--primary))',
-        sub: 'What you will be billed',
+        sub: headlineSub,
       },
     ];
+
 
     // Show mat/equip breakdown tiles only when TC is responsible AND there's a value
     if (matResp === 'TC' && tcMaterialCost > 0) {

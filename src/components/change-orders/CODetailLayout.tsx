@@ -336,6 +336,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     onRefresh: refreshDetail,
     lineItemCount: lineItems.length,
     markupVisibility,
+    materialResponsible: responsibility.materialResponsible,
+    equipmentResponsible: responsibility.equipmentResponsible,
   };
 
   return (
@@ -443,6 +445,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: 'hsl(var(--navy)/0.08)', color: 'hsl(var(--navy))' }}>
                         {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
                       </span>
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground" title="Who procures materials for this change order">
+                        Materials: {responsibility.materialResponsible} procures
+                      </span>
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground" title="Who provides equipment for this change order">
+                        Equipment: {responsibility.equipmentResponsible} procures
+                      </span>
+
                     </div>
                     {canEdit && !nteBlocked && co && (
                       <Button
@@ -460,11 +469,20 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   {lineItems.length > 0 && (
                     <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
                       <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
-                        <p className="text-muted-foreground font-medium">{isGC ? 'TC Submitted' : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
+                        <p className="text-muted-foreground font-medium">{isGC
+                          ? (responsibility.materialResponsible === 'GC' && responsibility.equipmentResponsible === 'GC'
+                              ? 'TC Labor'
+                              : responsibility.materialResponsible === 'GC'
+                                ? 'TC Labor + Equipment'
+                                : responsibility.equipmentResponsible === 'GC'
+                                  ? 'TC Labor + Materials'
+                                  : 'TC Submitted')
+                          : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
                         <p className="font-mono font-bold text-foreground mt-0.5">
                           ${ (isGC ? financials.grandTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
                         </p>
                       </div>
+
                       {(isTC || isFC) && (
                         <>
                           <div className="flex-1 px-3 py-2 text-center border-r border-border">
