@@ -15,6 +15,7 @@ interface COKPIStripProps {
   hasEquipment?: boolean;
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
+  tcBillableTotal?: number;
   onRefresh?: () => void;
   markupVisibility?: MarkupVisibility;
 }
