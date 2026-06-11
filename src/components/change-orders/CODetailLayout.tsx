@@ -327,6 +327,15 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const grossMargin = displayBillable - roleActualCost;
   const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
 
+  // Responsibility-aware billable-to-GC total. When GC procures materials/equipment,
+  // those buckets are billed by the supplier directly to the GC and must NOT be part
+  // of the TC's billable headline. Otherwise the page shows "TC Labor $1,110" while
+  // the breakdown reads Labor $747.50 + Materials/Equipment (by GC), confusing users.
+  const gcBillableMaterials = responsibility.materialResponsible === 'GC' ? 0 : financials.materialsTotal;
+  const gcBillableEquipment = responsibility.equipmentResponsible === 'GC' ? 0 : financials.equipmentTotal;
+  const tcBillableTotal = financials.tcBillableToGC + gcBillableMaterials + gcBillableEquipment;
+
+
   const sidebarProps = {
     co, isGC, isTC, isFC, role, myOrgId, projectId,
     financials, collaborators, fcOrgOptions, fcCollabName,
@@ -338,6 +347,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     markupVisibility,
     materialResponsible: responsibility.materialResponsible,
     equipmentResponsible: responsibility.equipmentResponsible,
+    tcBillableTotal,
   };
 
   return (
@@ -424,7 +434,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* KPI Row */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || ((isTC || isFC) && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || ((isTC || isFC) && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || ((isTC || isFC) && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || ((isTC || isFC) && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
@@ -479,7 +489,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                                   : 'TC Submitted')
                           : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
                         <p className="font-mono font-bold text-foreground mt-0.5">
-                          ${ (isGC ? financials.grandTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
+                          ${ (isGC ? tcBillableTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
                         </p>
                       </div>
 

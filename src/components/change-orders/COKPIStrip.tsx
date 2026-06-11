@@ -15,6 +15,7 @@ interface COKPIStripProps {
   hasEquipment?: boolean;
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
+  tcBillableTotal?: number;
   onRefresh?: () => void;
   markupVisibility?: MarkupVisibility;
 }
@@ -46,8 +47,11 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   const eqResp = props.equipmentResponsible ?? 'TC';
 
   if (isGC) {
-    // Canonical headline number = what the GC will be billed (matches scope strip + financials sidebar)
-    const tcSubmitted = financials.grandTotal;
+    // Canonical headline number = what the GC will be billed. Excludes M&E when GC procures them.
+    const tcSubmitted = props.tcBillableTotal ?? (financials.tcBillableToGC
+      + (matResp === 'TC' ? financials.materialsTotal : 0)
+      + (eqResp === 'TC' ? financials.equipmentTotal : 0));
+
     const gcBudget = (props.co as any).gc_budget as number | null;
 
     // Only count mat/equip in TC cost when TC is the responsible party

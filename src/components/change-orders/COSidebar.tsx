@@ -37,6 +37,7 @@ interface COSidebarProps {
   markupVisibility?: MarkupVisibility;
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
+  tcBillableTotal?: number;
 }
 
 function fmtCurrency(value: number) {
@@ -122,6 +123,9 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 : eqResp === 'GC'
                   ? 'TC Labor + Materials'
                   : 'TC Submitted';
+            const billableTotal = props.tcBillableTotal ?? (financials.tcBillableToGC
+              + (matResp === 'TC' ? financials.materialsTotal : 0)
+              + (eqResp === 'TC' ? financials.equipmentTotal : 0));
             return (
             <>
               {/* Breakdown — explicit lines so a GC always sees who owns Materials & Equipment */}
@@ -143,8 +147,9 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
               </div>
               <div className="border-t border-border pt-2 mt-2 flex justify-between text-sm font-semibold">
                 <span>{headline}</span>
-                <span className="font-mono">{fmtCurrency(financials.grandTotal)}</span>
+                <span className="font-mono">{fmtCurrency(billableTotal)}</span>
               </div>
+
 
               {financials.totalTax > 0 && (
                 <div className="border-t border-border pt-2 mt-2 space-y-1">
