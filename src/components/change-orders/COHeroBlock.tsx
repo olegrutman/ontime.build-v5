@@ -33,7 +33,7 @@ function fmtCurrency(value: number) {
 function getCards(props: COHeroBlockProps, rl: ReturnType<typeof useRoleLabelsContext>): { eyebrow: string; headline: string; hint: string; cards: HeroCard[] } {
   const { co, isGC, isTC, isFC, financials, fcCollabName } = props;
   const status = co.status;
-  const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+  const totalToApprove = financials.billableGrandTotal;
 
   if (isGC) {
     if (status === 'submitted') {
