@@ -80,7 +80,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       try {
         // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
-          .from('change_orders')
+          .from(t.co)
           .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
