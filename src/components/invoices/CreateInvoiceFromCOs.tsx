@@ -143,27 +143,27 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const ids = Array.from(selectedIds);
 
       // Fetch labor, materials, equipment for selected COs — filtered by invoicing role
-      let laborQuery = supabase.from('co_labor_entries').select('*').in('co_id', ids).eq('is_actual_cost', false).order('entry_date');
+      let laborQuery = supabase.from(t.labor).select('*').in('co_id', ids).eq('is_actual_cost', false).order('entry_date');
       if (invoicingRole) {
         laborQuery = laborQuery.eq('entered_by_role', invoicingRole);
       }
 
-      let materialsQuery = supabase.from('co_material_items').select('*').in('co_id', ids).order('line_number');
+      let materialsQuery = supabase.from(t.mats).select('*').in('co_id', ids).order('line_number');
       if (invoicingRole) {
         materialsQuery = materialsQuery.eq('added_by_role', invoicingRole);
       }
 
-      let equipmentQuery = supabase.from('co_equipment_items').select('*').in('co_id', ids).order('created_at');
+      let equipmentQuery = supabase.from(t.eq).select('*').in('co_id', ids).order('created_at');
       if (invoicingRole) {
         equipmentQuery = equipmentQuery.eq('added_by_role', invoicingRole);
       }
 
       const [laborRes, lineItemsRes, materialsRes, equipmentRes, cosRes] = await Promise.all([
         laborQuery,
-        supabase.from('co_line_items').select('*').in('co_id', ids).order('sort_order'),
+        supabase.from(t.line).select('*').in('co_id', ids).order('sort_order'),
         materialsQuery,
         equipmentQuery,
-        supabase.from('change_orders')
+        supabase.from(t.co)
           .select('id, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
           .in('id', ids),
       ]);
