@@ -655,6 +655,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "change_orders_ai_intake_fk"
+            columns: ["ai_intake_id"]
+            isOneToOne: false
+            referencedRelation: "co_ai_intakes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "change_orders_assigned_to_org_id_fkey"
             columns: ["assigned_to_org_id"]
             isOneToOne: false
@@ -756,6 +763,79 @@ export type Database = {
           },
           {
             foreignKeyName: "co_activity_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_ai_intakes: {
+        Row: {
+          created_at: string
+          created_by: string
+          error_message: string | null
+          finalized_co_id: string | null
+          id: string
+          model: string | null
+          org_id: string
+          output_json: Json | null
+          project_id: string
+          raw_text: string | null
+          source_kind: string
+          status: string
+          updated_at: string
+          voice_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          finalized_co_id?: string | null
+          id?: string
+          model?: string | null
+          org_id: string
+          output_json?: Json | null
+          project_id: string
+          raw_text?: string | null
+          source_kind: string
+          status?: string
+          updated_at?: string
+          voice_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          finalized_co_id?: string | null
+          id?: string
+          model?: string | null
+          org_id?: string
+          output_json?: Json | null
+          project_id?: string
+          raw_text?: string | null
+          source_kind?: string
+          status?: string
+          updated_at?: string
+          voice_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_ai_intakes_finalized_co_id_fkey"
+            columns: ["finalized_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_ai_intakes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_ai_intakes_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1394,6 +1474,138 @@ export type Database = {
           },
         ]
       }
+      co_scenario_builder_map: {
+        Row: {
+          child_scenario_ids: string[]
+          id: string
+          prompt: string
+          scenario_id: string
+          step_no: number
+        }
+        Insert: {
+          child_scenario_ids?: string[]
+          id?: string
+          prompt: string
+          scenario_id: string
+          step_no: number
+        }
+        Update: {
+          child_scenario_ids?: string[]
+          id?: string
+          prompt?: string
+          scenario_id?: string
+          step_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_scenario_builder_map_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "co_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_scenario_lines: {
+        Row: {
+          catalog_slug: string | null
+          default_unit: string | null
+          description: string
+          id: string
+          line_no: number
+          notes: string | null
+          qty_expr: string | null
+          role_hint: string | null
+          scenario_id: string
+        }
+        Insert: {
+          catalog_slug?: string | null
+          default_unit?: string | null
+          description: string
+          id?: string
+          line_no: number
+          notes?: string | null
+          qty_expr?: string | null
+          role_hint?: string | null
+          scenario_id: string
+        }
+        Update: {
+          catalog_slug?: string | null
+          default_unit?: string | null
+          description?: string
+          id?: string
+          line_no?: number
+          notes?: string | null
+          qty_expr?: string | null
+          role_hint?: string | null
+          scenario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_scenario_lines_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "co_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_scenarios: {
+        Row: {
+          created_at: string
+          default_qty_formula: string | null
+          default_unit: string | null
+          description: string | null
+          id: string
+          is_platform: boolean
+          name: string
+          org_id: string | null
+          problem_tags: string[]
+          project_types: string[]
+          sort_order: number
+          system_tag: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_qty_formula?: string | null
+          default_unit?: string | null
+          description?: string | null
+          id: string
+          is_platform?: boolean
+          name: string
+          org_id?: string | null
+          problem_tags?: string[]
+          project_types?: string[]
+          sort_order?: number
+          system_tag?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_qty_formula?: string | null
+          default_unit?: string | null
+          description?: string | null
+          id?: string
+          is_platform?: boolean
+          name?: string
+          org_id?: string | null
+          problem_tags?: string[]
+          project_types?: string[]
+          sort_order?: number
+          system_tag?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_scenarios_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_scope_evidence: {
         Row: {
           ai_model: string | null
@@ -1448,6 +1660,45 @@ export type Database = {
           },
         ]
       }
+      co_sov_invoice_links: {
+        Row: {
+          amount: number
+          co_sov_line_id: string
+          created_at: string
+          id: string
+          invoice_line_item_id: string
+        }
+        Insert: {
+          amount?: number
+          co_sov_line_id: string
+          created_at?: string
+          id?: string
+          invoice_line_item_id: string
+        }
+        Update: {
+          amount?: number
+          co_sov_line_id?: string
+          created_at?: string
+          id?: string
+          invoice_line_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_sov_invoice_links_co_sov_line_id_fkey"
+            columns: ["co_sov_line_id"]
+            isOneToOne: false
+            referencedRelation: "co_sov_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_invoice_links_invoice_line_item_id_fkey"
+            columns: ["invoice_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_line_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_sov_items: {
         Row: {
           amount: number
@@ -1495,6 +1746,80 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_sov_lines: {
+        Row: {
+          billed_to_date: number
+          contract_id: string | null
+          created_at: string
+          id: string
+          project_id: string
+          retainage_pct: number
+          scheduled_value: number
+          sort_order: number
+          source_co_id: string
+          source_co_line_item_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          billed_to_date?: number
+          contract_id?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          retainage_pct?: number
+          scheduled_value?: number
+          sort_order?: number
+          source_co_id: string
+          source_co_line_item_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          billed_to_date?: number
+          contract_id?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          retainage_pct?: number
+          scheduled_value?: number
+          sort_order?: number
+          source_co_id?: string
+          source_co_line_item_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_sov_lines_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_source_co_line_item_id_fkey"
+            columns: ["source_co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items"
             referencedColumns: ["id"]
           },
         ]
@@ -6444,6 +6769,33 @@ export type Database = {
       }
     }
     Views: {
+      co_sov_contract_rollup: {
+        Row: {
+          approved_co_count: number | null
+          contract_id: string | null
+          line_count: number | null
+          project_id: string | null
+          total_billed_to_date: number | null
+          total_remaining: number | null
+          total_scheduled_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_sov_lines_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_quotes_public: {
         Row: {
           created_at: string | null
