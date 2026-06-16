@@ -46,6 +46,14 @@ function fmtCurrency(value: number) {
 export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess, isTM = false }: CreateInvoiceFromCOsProps) {
   const { user, userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization_id;
+  const coV4 = useCoV4Flag();
+  const t = {
+    co: (coV4 ? 'change_orders_role_view' : 'change_orders') as 'change_orders',
+    line: (coV4 ? 'co_line_items_role_view' : 'co_line_items') as 'co_line_items',
+    labor: (coV4 ? 'co_labor_entries_role_view' : 'co_labor_entries') as 'co_labor_entries',
+    mats: (coV4 ? 'co_material_items_role_view' : 'co_material_items') as 'co_material_items',
+    eq: (coV4 ? 'co_equipment_items_role_view' : 'co_equipment_items') as 'co_equipment_items',
+  };
 
   const [step, setStep] = useState<'select' | 'review'>('select');
   const [approvedCOs, setApprovedCOs] = useState<ApprovedCO[]>([]);
