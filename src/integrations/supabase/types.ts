@@ -145,6 +145,13 @@ export type Database = {
             referencedRelation: "change_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "backcharges_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       catalog_definitions: {
@@ -399,6 +406,13 @@ export type Database = {
             columns: ["co_id"]
             isOneToOne: false
             referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
           },
           {
@@ -683,6 +697,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "change_orders_combined_co_id_fkey"
+            columns: ["combined_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "change_orders_created_by_user_id_fkey"
             columns: ["created_by_user_id"]
             isOneToOne: false
@@ -701,6 +722,13 @@ export type Database = {
             columns: ["parent_co_id"]
             isOneToOne: false
             referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_parent_co_id_fkey"
+            columns: ["parent_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
           },
           {
@@ -759,6 +787,13 @@ export type Database = {
             columns: ["co_id"]
             isOneToOne: false
             referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_activity_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
           },
           {
@@ -828,6 +863,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_ai_intakes_finalized_co_id_fkey"
+            columns: ["finalized_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_ai_intakes_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -888,6 +930,13 @@ export type Database = {
             referencedRelation: "change_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "co_audit_log_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       co_combined_members: {
@@ -918,10 +967,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_combined_members_combined_co_id_fkey"
+            columns: ["combined_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_combined_members_member_co_id_fkey"
             columns: ["member_co_id"]
             isOneToOne: false
             referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_combined_members_member_co_id_fkey"
+            columns: ["member_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
           },
         ]
@@ -978,6 +1041,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_equipment_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_equipment_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -1026,10 +1096,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_evidence_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_evidence_co_line_item_id_fkey"
             columns: ["co_line_item_id"]
             isOneToOne: false
             referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_evidence_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items_role_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1083,6 +1167,13 @@ export type Database = {
             columns: ["co_id"]
             isOneToOne: false
             referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_external_invites_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1154,10 +1245,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_labor_entries_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_labor_entries_co_line_item_id_fkey"
             columns: ["co_line_item_id"]
             isOneToOne: false
             referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items_role_view"
             referencedColumns: ["id"]
           },
           {
@@ -1270,6 +1375,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_line_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_line_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -1345,6 +1457,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_material_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_material_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -1412,6 +1531,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_nte_log_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_nte_log_requested_by_user_id_fkey"
             columns: ["requested_by_user_id"]
             isOneToOne: false
@@ -1466,10 +1592,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_photos_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_photos_co_line_item_id_fkey"
             columns: ["co_line_item_id"]
             isOneToOne: false
             referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_photos_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items_role_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1652,10 +1792,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_scope_evidence_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_scope_evidence_co_line_item_id_fkey"
             columns: ["co_line_item_id"]
             isOneToOne: false
             referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_scope_evidence_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items_role_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1742,6 +1896,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_sov_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_sov_items_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -1816,10 +1977,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "co_sov_lines_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "co_sov_lines_source_co_line_item_id_fkey"
             columns: ["source_co_line_item_id"]
             isOneToOne: false
             referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_source_co_line_item_id_fkey"
+            columns: ["source_co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items_role_view"
             referencedColumns: ["id"]
           },
         ]
@@ -3652,6 +3827,13 @@ export type Database = {
             columns: ["source_co_material_item_id"]
             isOneToOne: false
             referencedRelation: "co_material_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_line_items_source_co_material_item_id_fkey"
+            columns: ["source_co_material_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_material_items_role_view"
             referencedColumns: ["id"]
           },
           {
@@ -5535,6 +5717,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_orders_source_change_order_id_fkey"
+            columns: ["source_change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchase_orders_source_estimate_id_fkey"
             columns: ["source_estimate_id"]
             isOneToOne: false
@@ -6769,6 +6958,663 @@ export type Database = {
       }
     }
     Views: {
+      change_orders_role_view: {
+        Row: {
+          ai_intake_id: string | null
+          approved_at: string | null
+          architect_approval_status: string | null
+          architect_approved_at: string | null
+          architect_approver_name: string | null
+          architect_rejection_note: string | null
+          assembly_state: string | null
+          assigned_to_org_id: string | null
+          blocked_by_rfi_id: string | null
+          closed_for_pricing_at: string | null
+          co_equipment_responsible_override: string | null
+          co_material_responsible_override: string | null
+          co_number: string | null
+          combined_at: string | null
+          combined_co_id: string | null
+          completed_at: string | null
+          completion_acknowledged_at: string | null
+          contracted_at: string | null
+          created_at: string | null
+          created_by_role: string | null
+          created_by_user_id: string | null
+          document_type: string | null
+          draft_shared_with_next: boolean | null
+          entry_source: Database["public"]["Enums"]["co_entry_source"] | null
+          equipment_needed: boolean | null
+          equipment_responsible: string | null
+          equipment_tax: number | null
+          fc_input_needed: boolean | null
+          fc_pricing_submitted_at: string | null
+          gc_budget: number | null
+          id: string | null
+          labor_tax: number | null
+          labor_taxable_snapshot: boolean | null
+          location_tag: string | null
+          materials_needed: boolean | null
+          materials_on_site: boolean | null
+          materials_responsible: string | null
+          materials_tax: number | null
+          nte_cap: number | null
+          nte_increase_approved: boolean | null
+          nte_increase_requested: number | null
+          org_id: string | null
+          owner_approval_status: string | null
+          owner_approved_at: string | null
+          owner_approver_name: string | null
+          owner_rejection_note: string | null
+          parent_co_id: string | null
+          pricing_type: string | null
+          problem_summary: string | null
+          problem_voice_url: string | null
+          project_id: string | null
+          reason: string | null
+          reason_note: string | null
+          rejected_at: string | null
+          rejection_note: string | null
+          retainage_amount: number | null
+          retainage_released: boolean | null
+          retainage_released_at: string | null
+          shared_at: string | null
+          status: string | null
+          submitted_at: string | null
+          tax_rate_snapshot: number | null
+          tc_snapshot_hourly_rate: number | null
+          tc_snapshot_markup_percent: number | null
+          tc_submitted_price: number | null
+          title: string | null
+          total_tax: number | null
+          trigger_code: string | null
+          updated_at: string | null
+          use_fc_pricing_base: boolean | null
+          withdrawn_at: string | null
+          withdrawn_reason: string | null
+        }
+        Insert: {
+          ai_intake_id?: string | null
+          approved_at?: string | null
+          architect_approval_status?: string | null
+          architect_approved_at?: string | null
+          architect_approver_name?: string | null
+          architect_rejection_note?: string | null
+          assembly_state?: string | null
+          assigned_to_org_id?: string | null
+          blocked_by_rfi_id?: string | null
+          closed_for_pricing_at?: string | null
+          co_equipment_responsible_override?: string | null
+          co_material_responsible_override?: string | null
+          co_number?: string | null
+          combined_at?: string | null
+          combined_co_id?: string | null
+          completed_at?: string | null
+          completion_acknowledged_at?: string | null
+          contracted_at?: string | null
+          created_at?: string | null
+          created_by_role?: string | null
+          created_by_user_id?: string | null
+          document_type?: string | null
+          draft_shared_with_next?: boolean | null
+          entry_source?: Database["public"]["Enums"]["co_entry_source"] | null
+          equipment_needed?: boolean | null
+          equipment_responsible?: string | null
+          equipment_tax?: number | null
+          fc_input_needed?: boolean | null
+          fc_pricing_submitted_at?: string | null
+          gc_budget?: never
+          id?: string | null
+          labor_tax?: number | null
+          labor_taxable_snapshot?: boolean | null
+          location_tag?: string | null
+          materials_needed?: boolean | null
+          materials_on_site?: boolean | null
+          materials_responsible?: string | null
+          materials_tax?: number | null
+          nte_cap?: number | null
+          nte_increase_approved?: boolean | null
+          nte_increase_requested?: number | null
+          org_id?: string | null
+          owner_approval_status?: string | null
+          owner_approved_at?: string | null
+          owner_approver_name?: string | null
+          owner_rejection_note?: string | null
+          parent_co_id?: string | null
+          pricing_type?: string | null
+          problem_summary?: string | null
+          problem_voice_url?: string | null
+          project_id?: string | null
+          reason?: string | null
+          reason_note?: string | null
+          rejected_at?: string | null
+          rejection_note?: string | null
+          retainage_amount?: number | null
+          retainage_released?: boolean | null
+          retainage_released_at?: string | null
+          shared_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          tax_rate_snapshot?: number | null
+          tc_snapshot_hourly_rate?: never
+          tc_snapshot_markup_percent?: never
+          tc_submitted_price?: never
+          title?: string | null
+          total_tax?: number | null
+          trigger_code?: string | null
+          updated_at?: string | null
+          use_fc_pricing_base?: boolean | null
+          withdrawn_at?: string | null
+          withdrawn_reason?: string | null
+        }
+        Update: {
+          ai_intake_id?: string | null
+          approved_at?: string | null
+          architect_approval_status?: string | null
+          architect_approved_at?: string | null
+          architect_approver_name?: string | null
+          architect_rejection_note?: string | null
+          assembly_state?: string | null
+          assigned_to_org_id?: string | null
+          blocked_by_rfi_id?: string | null
+          closed_for_pricing_at?: string | null
+          co_equipment_responsible_override?: string | null
+          co_material_responsible_override?: string | null
+          co_number?: string | null
+          combined_at?: string | null
+          combined_co_id?: string | null
+          completed_at?: string | null
+          completion_acknowledged_at?: string | null
+          contracted_at?: string | null
+          created_at?: string | null
+          created_by_role?: string | null
+          created_by_user_id?: string | null
+          document_type?: string | null
+          draft_shared_with_next?: boolean | null
+          entry_source?: Database["public"]["Enums"]["co_entry_source"] | null
+          equipment_needed?: boolean | null
+          equipment_responsible?: string | null
+          equipment_tax?: number | null
+          fc_input_needed?: boolean | null
+          fc_pricing_submitted_at?: string | null
+          gc_budget?: never
+          id?: string | null
+          labor_tax?: number | null
+          labor_taxable_snapshot?: boolean | null
+          location_tag?: string | null
+          materials_needed?: boolean | null
+          materials_on_site?: boolean | null
+          materials_responsible?: string | null
+          materials_tax?: number | null
+          nte_cap?: number | null
+          nte_increase_approved?: boolean | null
+          nte_increase_requested?: number | null
+          org_id?: string | null
+          owner_approval_status?: string | null
+          owner_approved_at?: string | null
+          owner_approver_name?: string | null
+          owner_rejection_note?: string | null
+          parent_co_id?: string | null
+          pricing_type?: string | null
+          problem_summary?: string | null
+          problem_voice_url?: string | null
+          project_id?: string | null
+          reason?: string | null
+          reason_note?: string | null
+          rejected_at?: string | null
+          rejection_note?: string | null
+          retainage_amount?: number | null
+          retainage_released?: boolean | null
+          retainage_released_at?: string | null
+          shared_at?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          tax_rate_snapshot?: number | null
+          tc_snapshot_hourly_rate?: never
+          tc_snapshot_markup_percent?: never
+          tc_submitted_price?: never
+          title?: string | null
+          total_tax?: number | null
+          trigger_code?: string | null
+          updated_at?: string | null
+          use_fc_pricing_base?: boolean | null
+          withdrawn_at?: string | null
+          withdrawn_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_orders_ai_intake_fk"
+            columns: ["ai_intake_id"]
+            isOneToOne: false
+            referencedRelation: "co_ai_intakes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_blocked_by_rfi_id_fkey"
+            columns: ["blocked_by_rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_combined_co_id_fkey"
+            columns: ["combined_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_combined_co_id_fkey"
+            columns: ["combined_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "change_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_parent_co_id_fkey"
+            columns: ["parent_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_parent_co_id_fkey"
+            columns: ["parent_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_equipment_items_role_view: {
+        Row: {
+          added_by_role: string | null
+          billed_amount: number | null
+          co_id: string | null
+          cost: number | null
+          created_at: string | null
+          description: string | null
+          duration_note: string | null
+          id: string | null
+          markup_amount: number | null
+          markup_percent: number | null
+          notes: string | null
+          org_id: string | null
+        }
+        Insert: {
+          added_by_role?: string | null
+          billed_amount?: number | null
+          co_id?: string | null
+          cost?: never
+          created_at?: string | null
+          description?: string | null
+          duration_note?: string | null
+          id?: string | null
+          markup_amount?: never
+          markup_percent?: never
+          notes?: string | null
+          org_id?: string | null
+        }
+        Update: {
+          added_by_role?: string | null
+          billed_amount?: number | null
+          co_id?: string | null
+          cost?: never
+          created_at?: string | null
+          description?: string | null
+          duration_note?: string | null
+          id?: string | null
+          markup_amount?: never
+          markup_percent?: never
+          notes?: string | null
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_equipment_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_equipment_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_equipment_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_labor_entries_role_view: {
+        Row: {
+          actual_cost_note: string | null
+          co_id: string | null
+          co_line_item_id: string | null
+          created_at: string | null
+          description: string | null
+          entered_by_role: string | null
+          entry_date: string | null
+          gc_approved: boolean | null
+          gc_approved_at: string | null
+          hourly_rate: number | null
+          hours: number | null
+          id: string | null
+          is_actual_cost: boolean | null
+          line_total: number | null
+          lump_sum: number | null
+          org_id: string | null
+          pricing_mode: string | null
+        }
+        Insert: {
+          actual_cost_note?: string | null
+          co_id?: string | null
+          co_line_item_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          entered_by_role?: string | null
+          entry_date?: string | null
+          gc_approved?: boolean | null
+          gc_approved_at?: string | null
+          hourly_rate?: never
+          hours?: never
+          id?: string | null
+          is_actual_cost?: boolean | null
+          line_total?: never
+          lump_sum?: never
+          org_id?: string | null
+          pricing_mode?: string | null
+        }
+        Update: {
+          actual_cost_note?: string | null
+          co_id?: string | null
+          co_line_item_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          entered_by_role?: string | null
+          entry_date?: string | null
+          gc_approved?: boolean | null
+          gc_approved_at?: string | null
+          hourly_rate?: never
+          hours?: never
+          id?: string | null
+          is_actual_cost?: boolean | null
+          line_total?: never
+          lump_sum?: never
+          org_id?: string | null
+          pricing_mode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_labor_entries_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_line_items_role_view: {
+        Row: {
+          ai_confidence: number | null
+          ai_reasoning: string | null
+          catalog_item_id: string | null
+          category_name: string | null
+          co_id: string | null
+          created_at: string | null
+          created_by_role: string | null
+          description: string | null
+          division: string | null
+          group_key: string | null
+          id: string | null
+          item_name: string | null
+          location_tag: string | null
+          nte_cap: number | null
+          org_id: string | null
+          pricing_mode: string | null
+          pricing_type: string | null
+          qty: number | null
+          quantity_source: string | null
+          reason: string | null
+          scenario_id: string | null
+          sort_order: number | null
+          source: Database["public"]["Enums"]["co_line_source"] | null
+          task_index: number | null
+          task_phase: string | null
+          unit: string | null
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_reasoning?: string | null
+          catalog_item_id?: string | null
+          category_name?: string | null
+          co_id?: string | null
+          created_at?: string | null
+          created_by_role?: string | null
+          description?: string | null
+          division?: string | null
+          group_key?: string | null
+          id?: string | null
+          item_name?: string | null
+          location_tag?: string | null
+          nte_cap?: number | null
+          org_id?: string | null
+          pricing_mode?: string | null
+          pricing_type?: string | null
+          qty?: number | null
+          quantity_source?: string | null
+          reason?: string | null
+          scenario_id?: string | null
+          sort_order?: number | null
+          source?: Database["public"]["Enums"]["co_line_source"] | null
+          task_index?: number | null
+          task_phase?: string | null
+          unit?: string | null
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_reasoning?: string | null
+          catalog_item_id?: string | null
+          category_name?: string | null
+          co_id?: string | null
+          created_at?: string | null
+          created_by_role?: string | null
+          description?: string | null
+          division?: string | null
+          group_key?: string | null
+          id?: string | null
+          item_name?: string | null
+          location_tag?: string | null
+          nte_cap?: number | null
+          org_id?: string | null
+          pricing_mode?: string | null
+          pricing_type?: string | null
+          qty?: number | null
+          quantity_source?: string | null
+          reason?: string | null
+          scenario_id?: string | null
+          sort_order?: number | null
+          source?: Database["public"]["Enums"]["co_line_source"] | null
+          task_index?: number | null
+          task_phase?: string | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_line_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_line_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_line_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_material_items_role_view: {
+        Row: {
+          added_by_role: string | null
+          billed_amount: number | null
+          co_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_on_site: boolean | null
+          line_cost: number | null
+          line_number: number | null
+          markup_amount: number | null
+          markup_percent: number | null
+          notes: string | null
+          org_id: string | null
+          quantity: number | null
+          supplier_sku: string | null
+          unit_cost: number | null
+          uom: string | null
+        }
+        Insert: {
+          added_by_role?: string | null
+          billed_amount?: number | null
+          co_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_on_site?: boolean | null
+          line_cost?: never
+          line_number?: number | null
+          markup_amount?: never
+          markup_percent?: never
+          notes?: string | null
+          org_id?: string | null
+          quantity?: number | null
+          supplier_sku?: string | null
+          unit_cost?: never
+          uom?: string | null
+        }
+        Update: {
+          added_by_role?: string | null
+          billed_amount?: number | null
+          co_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_on_site?: boolean | null
+          line_cost?: never
+          line_number?: number | null
+          markup_amount?: never
+          markup_percent?: never
+          notes?: string | null
+          org_id?: string | null
+          quantity?: number | null
+          supplier_sku?: string | null
+          unit_cost?: never
+          uom?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_material_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_material_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_material_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_sov_contract_rollup: {
         Row: {
           approved_co_count: number | null
@@ -6906,6 +7752,7 @@ export type Database = {
       }
       check_org_setup_needed: { Args: never; Returns: Json }
       co_grand_total: { Args: { _co_id: string }; Returns: number }
+      co_viewer_role: { Args: { _co_id: string }; Returns: string }
       complete_fc_change_order_input: {
         Args: { _co_id: string }
         Returns: {
