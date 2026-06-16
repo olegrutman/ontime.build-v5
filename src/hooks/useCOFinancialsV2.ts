@@ -11,7 +11,7 @@ import { useCoV4Flag } from "./useCoV4Flag";
  * legacy code paths keep working unchanged.
  */
 export function useCOFinancialsV2(coId: string | undefined | null) {
-  const { enabled: coV4Enabled } = useCoV4Flag();
+  const coV4Enabled = useCoV4Flag();
 
   return useQuery({
     enabled: !!coId,
