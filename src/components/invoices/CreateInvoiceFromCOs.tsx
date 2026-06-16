@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, ArrowRight, FileText, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CO_REASON_LABELS } from '@/types/changeOrder';
