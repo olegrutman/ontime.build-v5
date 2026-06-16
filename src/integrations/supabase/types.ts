@@ -426,6 +426,7 @@ export type Database = {
       }
       change_orders: {
         Row: {
+          ai_intake_id: string | null
           approved_at: string | null
           architect_approval_status: string
           architect_approval_token: string | null
@@ -449,6 +450,7 @@ export type Database = {
           created_by_user_id: string
           document_type: string
           draft_shared_with_next: boolean
+          entry_source: Database["public"]["Enums"]["co_entry_source"]
           equipment_needed: boolean
           equipment_responsible: string | null
           equipment_tax: number | null
@@ -474,6 +476,8 @@ export type Database = {
           owner_rejection_note: string | null
           parent_co_id: string | null
           pricing_type: string
+          problem_summary: string | null
+          problem_voice_url: string | null
           project_id: string
           reason: string | null
           reason_note: string | null
@@ -498,6 +502,7 @@ export type Database = {
           withdrawn_reason: string | null
         }
         Insert: {
+          ai_intake_id?: string | null
           approved_at?: string | null
           architect_approval_status?: string
           architect_approval_token?: string | null
@@ -521,6 +526,7 @@ export type Database = {
           created_by_user_id: string
           document_type?: string
           draft_shared_with_next?: boolean
+          entry_source?: Database["public"]["Enums"]["co_entry_source"]
           equipment_needed?: boolean
           equipment_responsible?: string | null
           equipment_tax?: number | null
@@ -546,6 +552,8 @@ export type Database = {
           owner_rejection_note?: string | null
           parent_co_id?: string | null
           pricing_type?: string
+          problem_summary?: string | null
+          problem_voice_url?: string | null
           project_id: string
           reason?: string | null
           reason_note?: string | null
@@ -570,6 +578,7 @@ export type Database = {
           withdrawn_reason?: string | null
         }
         Update: {
+          ai_intake_id?: string | null
           approved_at?: string | null
           architect_approval_status?: string
           architect_approval_token?: string | null
@@ -593,6 +602,7 @@ export type Database = {
           created_by_user_id?: string
           document_type?: string
           draft_shared_with_next?: boolean
+          entry_source?: Database["public"]["Enums"]["co_entry_source"]
           equipment_needed?: boolean
           equipment_responsible?: string | null
           equipment_tax?: number | null
@@ -618,6 +628,8 @@ export type Database = {
           owner_rejection_note?: string | null
           parent_co_id?: string | null
           pricing_type?: string
+          problem_summary?: string | null
+          problem_voice_url?: string | null
           project_id?: string
           reason?: string | null
           reason_note?: string | null
@@ -1088,6 +1100,7 @@ export type Database = {
           created_by_role: string
           description: string | null
           division: string | null
+          group_key: string | null
           id: string
           item_name: string
           location_tag: string | null
@@ -1098,7 +1111,9 @@ export type Database = {
           qty: number | null
           quantity_source: string | null
           reason: string | null
+          scenario_id: string | null
           sort_order: number | null
+          source: Database["public"]["Enums"]["co_line_source"]
           task_index: number | null
           task_phase: string | null
           unit: string
@@ -1113,6 +1128,7 @@ export type Database = {
           created_by_role: string
           description?: string | null
           division?: string | null
+          group_key?: string | null
           id?: string
           item_name: string
           location_tag?: string | null
@@ -1123,7 +1139,9 @@ export type Database = {
           qty?: number | null
           quantity_source?: string | null
           reason?: string | null
+          scenario_id?: string | null
           sort_order?: number | null
+          source?: Database["public"]["Enums"]["co_line_source"]
           task_index?: number | null
           task_phase?: string | null
           unit: string
@@ -1138,6 +1156,7 @@ export type Database = {
           created_by_role?: string
           description?: string | null
           division?: string | null
+          group_key?: string | null
           id?: string
           item_name?: string
           location_tag?: string | null
@@ -1148,7 +1167,9 @@ export type Database = {
           qty?: number | null
           quantity_source?: string | null
           reason?: string | null
+          scenario_id?: string | null
           sort_order?: number | null
+          source?: Database["public"]["Enums"]["co_line_source"]
           task_index?: number | null
           task_phase?: string | null
           unit?: string
@@ -1471,6 +1492,47 @@ export type Database = {
           },
           {
             foreignKeyName: "co_sov_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_v4_feature_flags: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          enabled_at: string | null
+          enabled_by: string | null
+          flag: string
+          id: string
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          flag: string
+          id?: string
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          flag?: string
+          id?: string
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_v4_feature_flags_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -6603,6 +6665,7 @@ export type Database = {
       forward_change_order_to_upstream_gc: {
         Args: { _co_id: string }
         Returns: {
+          ai_intake_id: string | null
           approved_at: string | null
           architect_approval_status: string
           architect_approval_token: string | null
@@ -6626,6 +6689,7 @@ export type Database = {
           created_by_user_id: string
           document_type: string
           draft_shared_with_next: boolean
+          entry_source: Database["public"]["Enums"]["co_entry_source"]
           equipment_needed: boolean
           equipment_responsible: string | null
           equipment_tax: number | null
@@ -6651,6 +6715,8 @@ export type Database = {
           owner_rejection_note: string | null
           parent_co_id: string | null
           pricing_type: string
+          problem_summary: string | null
+          problem_voice_url: string | null
           project_id: string
           reason: string | null
           reason_note: string | null
@@ -6735,6 +6801,10 @@ export type Database = {
       get_user_role_in_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_co_v4_flag: {
+        Args: { _flag: string; _org_id: string }
+        Returns: boolean
       }
       has_project_access: {
         Args: { _project_id: string; _user_id: string }
@@ -7113,6 +7183,13 @@ export type Database = {
         | "FramingLumber"
         | "Drywall"
         | "FramingAccessories"
+      co_entry_source: "picker_v3" | "ai_intake" | "guided_v4" | "field_pn"
+      co_line_source:
+        | "manual"
+        | "picker_v3"
+        | "ai_split"
+        | "guided_v4"
+        | "scenario_library"
       estimate_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
       notification_type:
         | "PROJECT_INVITE"
@@ -7312,6 +7389,14 @@ export const Constants = {
         "FramingLumber",
         "Drywall",
         "FramingAccessories",
+      ],
+      co_entry_source: ["picker_v3", "ai_intake", "guided_v4", "field_pn"],
+      co_line_source: [
+        "manual",
+        "picker_v3",
+        "ai_split",
+        "guided_v4",
+        "scenario_library",
       ],
       estimate_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
       notification_type: [
