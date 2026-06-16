@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import type {
   ChangeOrder,
   COCollaborator,
@@ -21,6 +22,19 @@ export function useChangeOrderDetail(coId: string | null) {
   const { userOrgRoles, user } = useAuth();
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
   const queryClient = useQueryClient();
+  const coV4 = useCoV4Flag();
+
+  // Phase 1 visibility wall: when co_v4 is on, READS go through role-scoped
+  // views that automatically mask cost/markup/budget columns the viewer isn't
+  // allowed to see. Writes/mutations stay on base tables.
+  const t = {
+    co: (coV4 ? 'change_orders_role_view' : 'change_orders') as 'change_orders',
+    line: (coV4 ? 'co_line_items_role_view' : 'co_line_items') as 'co_line_items',
+    labor: (coV4 ? 'co_labor_entries_role_view' : 'co_labor_entries') as 'co_labor_entries',
+    mats: (coV4 ? 'co_material_items_role_view' : 'co_material_items') as 'co_material_items',
+    eq: (coV4 ? 'co_equipment_items_role_view' : 'co_equipment_items') as 'co_equipment_items',
+  };
+
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
@@ -47,7 +61,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('change_orders')
+        .from(t.co)
         .select('*')
         .eq('id', coId!)
         .maybeSingle();
@@ -64,7 +78,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_line_items')
+        .from(t.line)
         .select('*')
         .eq('co_id', coId!)
         .order('sort_order');
@@ -78,7 +92,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_labor_entries')
+        .from(t.labor)
         .select('*')
         .eq('co_id', coId!)
         .order('entry_date', { ascending: false });
@@ -92,7 +106,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_material_items')
+        .from(t.mats)
         .select('*')
         .eq('co_id', coId!)
         .order('created_at', { ascending: true });
@@ -106,7 +120,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_equipment_items')
+        .from(t.eq)
         .select('*')
         .eq('co_id', coId!)
         .order('created_at');

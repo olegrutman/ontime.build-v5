@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/changeOrder';
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
@@ -51,17 +52,26 @@ export function useChangeOrders(projectId: string | null) {
   const { userOrgRoles, user } = useAuth();
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
   const queryClient = useQueryClient();
+  const coV4 = useCoV4Flag();
+
+  // Phase 1 visibility wall: read from role-scoped views when co_v4 is on.
+  const t = {
+    co: (coV4 ? 'change_orders_role_view' : 'change_orders') as 'change_orders',
+    labor: (coV4 ? 'co_labor_entries_role_view' : 'co_labor_entries') as 'co_labor_entries',
+    mats: (coV4 ? 'co_material_items_role_view' : 'co_material_items') as 'co_material_items',
+    eq: (coV4 ? 'co_equipment_items_role_view' : 'co_equipment_items') as 'co_equipment_items',
+  };
 
   const invalidateChangeOrders = () => {
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
   };
 
   const { data: queryResult, isLoading } = useQuery({
-    queryKey: ['change-orders', projectId, orgId],
+    queryKey: ['change-orders', projectId, orgId, coV4],
     enabled: !!projectId && !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('change_orders')
+        .from(t.co)
         .select('*')
         .eq('project_id', projectId!)
         .order('created_at', { ascending: false });
@@ -109,17 +119,17 @@ export function useChangeOrders(projectId: string | null) {
           .eq('invite_status', 'ACCEPTED')
           .maybeSingle(),
         coIds.length
-          ? supabase.from('co_labor_entries')
+          ? supabase.from(t.labor)
               .select('co_id, entered_by_role, line_total, is_actual_cost')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
         coIds.length
-          ? supabase.from('co_material_items')
+          ? supabase.from(t.mats)
               .select('co_id, billed_amount')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
         coIds.length
-          ? supabase.from('co_equipment_items')
+          ? supabase.from(t.eq)
               .select('co_id, billed_amount')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
