@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, ArrowRight, FileText, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CO_REASON_LABELS } from '@/types/changeOrder';
@@ -45,6 +46,14 @@ function fmtCurrency(value: number) {
 export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess, isTM = false }: CreateInvoiceFromCOsProps) {
   const { user, userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization_id;
+  const coV4 = useCoV4Flag();
+  const t = {
+    co: (coV4 ? 'change_orders_role_view' : 'change_orders') as 'change_orders',
+    line: (coV4 ? 'co_line_items_role_view' : 'co_line_items') as 'co_line_items',
+    labor: (coV4 ? 'co_labor_entries_role_view' : 'co_labor_entries') as 'co_labor_entries',
+    mats: (coV4 ? 'co_material_items_role_view' : 'co_material_items') as 'co_material_items',
+    eq: (coV4 ? 'co_equipment_items_role_view' : 'co_equipment_items') as 'co_equipment_items',
+  };
 
   const [step, setStep] = useState<'select' | 'review'>('select');
   const [approvedCOs, setApprovedCOs] = useState<ApprovedCO[]>([]);
@@ -71,7 +80,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       try {
         // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
-          .from('change_orders')
+          .from(t.co)
           .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
@@ -134,27 +143,27 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const ids = Array.from(selectedIds);
 
       // Fetch labor, materials, equipment for selected COs — filtered by invoicing role
-      let laborQuery = supabase.from('co_labor_entries').select('*').in('co_id', ids).eq('is_actual_cost', false).order('entry_date');
+      let laborQuery = supabase.from(t.labor).select('*').in('co_id', ids).eq('is_actual_cost', false).order('entry_date');
       if (invoicingRole) {
         laborQuery = laborQuery.eq('entered_by_role', invoicingRole);
       }
 
-      let materialsQuery = supabase.from('co_material_items').select('*').in('co_id', ids).order('line_number');
+      let materialsQuery = supabase.from(t.mats).select('*').in('co_id', ids).order('line_number');
       if (invoicingRole) {
         materialsQuery = materialsQuery.eq('added_by_role', invoicingRole);
       }
 
-      let equipmentQuery = supabase.from('co_equipment_items').select('*').in('co_id', ids).order('created_at');
+      let equipmentQuery = supabase.from(t.eq).select('*').in('co_id', ids).order('created_at');
       if (invoicingRole) {
         equipmentQuery = equipmentQuery.eq('added_by_role', invoicingRole);
       }
 
       const [laborRes, lineItemsRes, materialsRes, equipmentRes, cosRes] = await Promise.all([
         laborQuery,
-        supabase.from('co_line_items').select('*').in('co_id', ids).order('sort_order'),
+        supabase.from(t.line).select('*').in('co_id', ids).order('sort_order'),
         materialsQuery,
         equipmentQuery,
-        supabase.from('change_orders')
+        supabase.from(t.co)
           .select('id, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
           .in('id', ids),
       ]);
