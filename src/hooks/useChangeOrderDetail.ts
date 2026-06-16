@@ -61,7 +61,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('change_orders')
+        .from(t.co)
         .select('*')
         .eq('id', coId!)
         .maybeSingle();
@@ -78,7 +78,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_line_items')
+        .from(t.line)
         .select('*')
         .eq('co_id', coId!)
         .order('sort_order');
@@ -92,7 +92,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_labor_entries')
+        .from(t.labor)
         .select('*')
         .eq('co_id', coId!)
         .order('entry_date', { ascending: false });
@@ -106,7 +106,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_material_items')
+        .from(t.mats)
         .select('*')
         .eq('co_id', coId!)
         .order('created_at', { ascending: true });
@@ -120,7 +120,7 @@ export function useChangeOrderDetail(coId: string | null) {
     enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('co_equipment_items')
+        .from(t.eq)
         .select('*')
         .eq('co_id', coId!)
         .order('created_at');
