@@ -131,14 +131,14 @@ function getPOStatusLabel(status: string) {
   return PO_STATUS_LABELS[status as keyof typeof PO_STATUS_LABELS] ?? status;
 }
 
-function getLinkedRequestDescription(status: string, supplierName?: string | null) {
+function getLinkedRequestDescription(status: string, supplierName?: string | null, gcLabel: string = 'GC') {
   const supplierLabel = supplierName ?? 'Supplier';
 
   switch (status) {
     case 'ACTIVE':
       return `${supplierLabel} pricing draft is ready to review in the PO workflow`;
     case 'PENDING_APPROVAL':
-      return `Pricing request is waiting for ${rl.GC} approval before it can be sent`;
+      return `Pricing request is waiting for ${gcLabel} approval before it can be sent`;
     case 'SUBMITTED':
       return `${supplierLabel} has received this pricing request`;
     case 'PRICED':
@@ -1024,7 +1024,7 @@ export function COMaterialsPanel({
                         <Badge variant="outline">{getPOStatusLabel(activePricingRequest.status)}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {getLinkedRequestDescription(activePricingRequest.status, activePricingRequest.supplier?.name)}
+                        {getLinkedRequestDescription(activePricingRequest.status, activePricingRequest.supplier?.name, rl.GC)}
                         {linkedRequests.length > 1 ? ` · ${linkedRequests.length} total requests` : ''}
                       </p>
                     </div>
