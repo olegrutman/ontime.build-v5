@@ -55,6 +55,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const canApprove = usePermission('canApprove');
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const coV4 = useCoV4Flag();
 
   const scopeRef = useRef<HTMLDivElement>(null);
   const materialsRef = useRef<HTMLDivElement>(null);
@@ -668,11 +669,17 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             {!isMobile && (
               <div className="w-[300px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} />
+                {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
               </div>
             )}
           </div>
 
-          {isMobile && <COSidebar {...sidebarProps} />}
+          {isMobile && (
+            <>
+              <COSidebar {...sidebarProps} />
+              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+            </>
+          )}
         </div>
       </div>
 
