@@ -212,10 +212,6 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
                     : 'bg-[hsl(var(--navy))] hover:bg-[hsl(var(--navy))]/90'
                 }`}
               >
-                    ? 'bg-red-600 animate-pulse'
-                    : 'bg-[hsl(var(--navy))] hover:bg-[hsl(var(--navy))]/90'
-                }`}
-              >
                 {phase === 'recording' ? (
                   <Square className="h-10 w-10" fill="currentColor" />
                 ) : (
