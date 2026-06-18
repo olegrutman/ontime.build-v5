@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import type { ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import type { COStatus } from '@/types/changeOrder';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
+import { EntrySourcePill } from './EntrySourcePill';
 
 interface COBoardCardProps {
   co: ChangeOrderWithMembers;
@@ -108,9 +109,12 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
 
       <div className="pl-3 pr-3 pt-3 pb-2.5 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] text-muted-foreground truncate">
-            {co.co_number ?? '—'}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[11px] text-muted-foreground truncate">
+              {co.co_number ?? '—'}
+            </span>
+            <EntrySourcePill source={(co as any).entry_source} />
+          </div>
           {co.pricing_type && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 shrink-0">
               {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}

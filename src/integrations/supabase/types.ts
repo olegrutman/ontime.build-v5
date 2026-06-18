@@ -7642,6 +7642,47 @@ export type Database = {
           },
         ]
       }
+      co_sov_per_co_view: {
+        Row: {
+          contract_id: string | null
+          line_count: number | null
+          project_id: string | null
+          source_co_id: string | null
+          total_billed_to_date: number | null
+          total_remaining: number | null
+          total_scheduled_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_sov_lines_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_lines_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_quotes_public: {
         Row: {
           created_at: string | null
