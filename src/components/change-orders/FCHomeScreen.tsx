@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Clock, Package, Zap, ChevronRight, MapPin } from 'lucide-react';
+import { AlertTriangle, Clock, Package, Zap, ChevronRight, MapPin, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COStatus } from '@/types/changeOrder';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { useCoV4Flag } from '@/hooks/useCoV4Flag';
+import { VoicePNRecorder } from './VoicePNRecorder';
 
 interface FCHomeScreenProps {
   projectId: string;
@@ -51,6 +54,8 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
   const { userOrgRoles } = useAuth();
   const { changeOrders } = useChangeOrders(projectId);
   const rl = useRoleLabelsContext();
+  const coV4 = useCoV4Flag();
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? '';
 
@@ -134,7 +139,22 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
             );
           })}
         </div>
+
+        {coV4 && (
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              onClick={() => setVoiceOpen(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold border border-white/15 transition-all min-h-[48px]"
+            >
+              <Mic className="h-5 w-5" style={{ color: 'hsl(var(--amber))' }} />
+              <span>Voice → Problem Note</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      <VoicePNRecorder projectId={projectId} open={voiceOpen} onOpenChange={setVoiceOpen} />
 
       {/* Open COs requiring input */}
       <div className="space-y-2">
