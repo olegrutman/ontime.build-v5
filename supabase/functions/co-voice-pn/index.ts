@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         source_kind: "voice",
         voice_url: body.voice_url ?? null,
         status: "pending",
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-4o-mini-transcribe",
       })
       .select("id")
       .single();
@@ -108,28 +108,29 @@ Deno.serve(async (req) => {
       return json({ error: "intake_insert_failed" }, 500);
     }
 
-    // ── 1) Transcribe audio via Gemini multimodal ──
-    const transcribeResp = await callGateway(LOVABLE_API_KEY, {
-      model: "google/gemini-2.5-flash",
-      temperature: 0.1,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a transcription engine for construction field notes. Output ONLY the literal transcription, no prefatory words, no markdown.",
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Transcribe this voice note from a construction job site." },
-            {
-              type: "input_audio",
-              input_audio: { data: body.audio_base64, format: body.mime_type.includes("mp4") ? "mp4" : "webm" },
-            },
-          ],
-        },
-      ],
-    });
+    // ── 1) Transcribe via dedicated STT endpoint ──
+    // Decode base64 to bytes, then forward as multipart to /v1/audio/transcriptions.
+    const binary = Uint8Array.from(atob(body.audio_base64), (c) => c.charCodeAt(0));
+    const ext = body.mime_type.includes("mp4")
+      ? "mp4"
+      : body.mime_type.includes("mpeg")
+      ? "mp3"
+      : body.mime_type.includes("wav")
+      ? "wav"
+      : "webm";
+    const audioBlob = new Blob([binary], { type: body.mime_type });
+    const upstream = new FormData();
+    upstream.append("model", "openai/gpt-4o-mini-transcribe");
+    upstream.append("file", audioBlob, `recording.${ext}`);
+
+    const transcribeResp = await fetch(
+      "https://ai.gateway.lovable.dev/v1/audio/transcriptions",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
+        body: upstream,
+      },
+    );
 
     if (transcribeResp.status === 429 || transcribeResp.status === 402) {
       await supabase.from("co_ai_intakes").update({
@@ -148,16 +149,17 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: `transcribe_${transcribeResp.status}`,
       }).eq("id", intake.id);
-      return json({ error: "transcribe_failed", intake_id: intake.id }, 200);
+      return json({ error: "transcribe_failed", intake_id: intake.id, detail: t.slice(0, 200) }, 200);
     }
 
+    // Endpoint returns SSE if stream=true; we didn't pass stream, so it returns JSON.
     const transcribeData = await transcribeResp.json();
-    const transcript: string =
-      (transcribeData?.choices?.[0]?.message?.content ?? "").trim();
+    const transcript: string = (transcribeData?.text ?? "").trim();
     if (!transcript) {
       await supabase.from("co_ai_intakes").update({ status: "failed", error_message: "empty_transcript" }).eq("id", intake.id);
       return json({ error: "empty_transcript", intake_id: intake.id }, 200);
     }
+
 
     // ── 2) Summarize into a 1-3 sentence Problem Note ──
     const summaryResp = await callGateway(LOVABLE_API_KEY, {
