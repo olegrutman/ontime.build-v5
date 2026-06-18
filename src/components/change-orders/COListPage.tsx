@@ -13,7 +13,8 @@ import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Mic } from 'lucide-react';
+import { VoicePNRecorder } from './VoicePNRecorder';
 
 
 interface COListPageProps {
@@ -125,16 +126,28 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           {canCreateCO && (
             <div className="flex items-center gap-1.5 shrink-0">
               {coV4 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={openGuided}
-                  className="gap-1.5"
-                  aria-label="Guided builder"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span className="hidden sm:inline">Guided</span>
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setVoiceOpen(true)}
+                    className="gap-1.5"
+                    aria-label="Voice problem note"
+                  >
+                    <Mic className="h-4 w-4" />
+                    <span className="hidden sm:inline">Voice PN</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={openGuided}
+                    className="gap-1.5"
+                    aria-label="Guided builder"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden sm:inline">Guided</span>
+                  </Button>
+                </>
               )}
               <Button size="sm" onClick={openNewPicker} className="gap-1.5">
                 <Plus className="h-4 w-4" />
