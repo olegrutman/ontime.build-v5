@@ -12,6 +12,8 @@ import { COBoardCard } from './COBoardCard';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
+import { useCoV4Flag } from '@/hooks/useCoV4Flag';
+import { Sparkles } from 'lucide-react';
 
 
 interface COListPageProps {
@@ -30,8 +32,10 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
 
 
   const canCreateCO = usePermission('canCreateChangeOrders');
+  const coV4 = useCoV4Flag();
   // Navigate to the new Picker v3 full-page wizard
   const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
+  const openGuided = () => navigate(`/project/${projectId}/change-orders/guided`);
   const [filter, setFilter] = useState<FilterKey>('in_progress');
   function handleCardClick(id: string) {
     navigate(`/project/${projectId}/change-orders/${id}`);
@@ -119,10 +123,24 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           </div>
 
           {canCreateCO && (
-            <Button size="sm" onClick={openNewPicker} className="gap-1.5 shrink-0">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New {coAbbrev(dt)}</span>
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {coV4 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={openGuided}
+                  className="gap-1.5"
+                  aria-label="Guided builder"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span className="hidden sm:inline">Guided</span>
+                </Button>
+              )}
+              <Button size="sm" onClick={openNewPicker} className="gap-1.5">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New {coAbbrev(dt)}</span>
+              </Button>
+            </div>
           )}
         </div>
 
