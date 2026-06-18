@@ -234,6 +234,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
 
       {/* Legacy wizard removed — now using Picker v3 full-page route */}
 
+      <VoicePNRecorder projectId={projectId} open={voiceOpen} onOpenChange={setVoiceOpen} />
     </div>
   );
 }
