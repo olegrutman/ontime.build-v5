@@ -63,6 +63,7 @@ const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
 const COAiIntakePage = lazy(() => import("./pages/COAiIntake"));
+const COGuidedBuilderPage = lazy(() => import("./pages/COGuidedBuilder"));
 const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
 
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
@@ -207,6 +208,7 @@ function AppRoutes() {
             <Route path="/project/:projectId/change-orders/quick" element={<RequireAuth><QuickCapture /></RequireAuth>} />
             
             <Route path="/project/:id/change-orders/new" element={<RequireAuth><COPickerV3Page /></RequireAuth>} />
+            <Route path="/project/:id/change-orders/guided" element={<RequireAuth><COGuidedBuilderPage /></RequireAuth>} />
             <Route path="/project/:id/change-orders/intake" element={<RequireAuth><COAiIntakePage /></RequireAuth>} />
             <Route path="/project/:id/change-orders/:coId/add-items" element={<RequireAuth><COPickerV3Page /></RequireAuth>} />
             <Route path="/project/:id/change-orders/:coId" element={<RequireAuth><CODetailPage /></RequireAuth>} />
