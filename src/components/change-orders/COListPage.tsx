@@ -34,6 +34,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
 
   const canCreateCO = usePermission('canCreateChangeOrders');
   const coV4 = useCoV4Flag();
+  const [voiceOpen, setVoiceOpen] = useState(false);
   // Navigate to the new Picker v3 full-page wizard
   const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
   const openGuided = () => navigate(`/project/${projectId}/change-orders/guided`);
