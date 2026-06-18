@@ -205,10 +205,13 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
               <button
                 type="button"
                 onClick={phase === 'idle' ? startRecording : stopRecording}
-                disabled={phase === 'uploading'}
                 aria-label={phase === 'idle' ? 'Start recording' : 'Stop recording'}
                 className={`w-28 h-28 rounded-full flex items-center justify-center text-white transition-all shadow-lg ${
                   phase === 'recording'
+                    ? 'bg-red-600 animate-pulse'
+                    : 'bg-[hsl(var(--navy))] hover:bg-[hsl(var(--navy))]/90'
+                }`}
+              >
                     ? 'bg-red-600 animate-pulse'
                     : 'bg-[hsl(var(--navy))] hover:bg-[hsl(var(--navy))]/90'
                 }`}
