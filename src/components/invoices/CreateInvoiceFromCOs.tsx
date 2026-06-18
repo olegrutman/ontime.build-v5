@@ -63,6 +63,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [retainagePercent, setRetainagePercent] = useState(0);
+  const [invoiceMode, setInvoiceMode] = useState<'per_co' | 'aggregate'>('per_co');
 
   // Determine invoicing role from org type
   const orgType = userOrgRoles[0]?.organization?.type as string | undefined;
@@ -247,7 +248,34 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         });
       }
 
-      setLineItems(generated);
+      // Optional aggregation: collapse to one row per (CO × type) when 'aggregate' mode.
+      // This matches AIA-style combined CO SOV billing where the invoice references
+      // the CO bundle, not each labor/material/equipment line individually.
+      let finalItems = generated;
+      if (invoiceMode === 'aggregate') {
+        const coMeta = new Map(availableCOs.map((c) => [c.id, c]));
+        const buckets = new Map<string, GeneratedLineItem>();
+        for (const li of generated) {
+          const key = `${li.coId}::${li.type}`;
+          const existing = buckets.get(key);
+          if (existing) {
+            existing.amount += li.amount;
+          } else {
+            const co = coMeta.get(li.coId);
+            const label = co?.co_number ?? co?.title ?? 'CO';
+            const typeLabel = li.type === 'labor' ? 'Labor' : li.type === 'material' ? 'Materials' : 'Equipment';
+            buckets.set(key, {
+              description: `${label} — ${typeLabel}`,
+              amount: li.amount,
+              coId: li.coId,
+              type: li.type,
+            });
+          }
+        }
+        finalItems = Array.from(buckets.values());
+      }
+
+      setLineItems(finalItems);
       setStep('review');
     } catch (err: any) {
       toast.error(err.message || 'Failed to generate line items');
@@ -352,6 +380,46 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
             <p className="text-sm text-muted-foreground">
               Select approved {isTM ? 'work orders' : 'change orders'} to include in this invoice.
             </p>
+
+            {coV4 && (
+              <div className="rounded-lg border p-3 bg-muted/30">
+                <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Invoice Mode
+                </Label>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceMode('per_co')}
+                    className={cn(
+                      'p-2.5 rounded-lg border text-left transition-all',
+                      invoiceMode === 'per_co'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/40',
+                    )}
+                  >
+                    <div className="text-xs font-semibold">Per-CO detail</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      One line per labor / material / equipment row.
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceMode('aggregate')}
+                    className={cn(
+                      'p-2.5 rounded-lg border text-left transition-all',
+                      invoiceMode === 'aggregate'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/40',
+                    )}
+                  >
+                    <div className="text-xs font-semibold">Aggregate</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      One line per CO and cost type (combined SOV style).
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {loading ? (
               <div className="flex justify-center py-8">
