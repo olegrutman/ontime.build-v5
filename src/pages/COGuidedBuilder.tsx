@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import VisualLocationPicker from '@/components/change-orders/VisualLocationPicker';
+import { VisualLocationPicker } from '@/components/change-orders/VisualLocationPicker';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -258,7 +258,7 @@ export default function COGuidedBuilder() {
           qty: 0,
           sort_order: idx + 1,
           location_tag: location || null,
-          source: 'guided_v4',
+          source: 'guided_v4' as const,
         }));
         const { error: liErr } = await supabase.from('co_line_items').insert(rows);
         if (liErr) console.error('line items insert', liErr);
