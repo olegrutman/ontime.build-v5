@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Loader2, X, Send, RotateCcw } from 'lucide-react';
+import { Mic, Square, Loader2, X, Send, RotateCcw, Check, ArrowRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
