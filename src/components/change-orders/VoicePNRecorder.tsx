@@ -131,65 +131,89 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
     setPhase('idle');
   }
 
-  async function blobToBase64(b: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // strip data URL prefix
-        resolve(result.split(',')[1] ?? '');
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(b);
-    });
+  async function pollIntake(intakeId: string) {
+    const start = Date.now();
+    const timeoutMs = 60_000;
+    while (Date.now() - start < timeoutMs) {
+      await new Promise((r) => setTimeout(r, 1200));
+      const { data } = await supabase
+        .from('co_ai_intakes')
+        .select('status, finalized_co_id, error_message, output_json')
+        .eq('id', intakeId)
+        .maybeSingle();
+      if (!data) continue;
+      if (data.status === 'succeeded' && data.finalized_co_id) {
+        const coNumber = (data.output_json as any)?.co_number ?? 'PN';
+        toast.success(`Draft ${coNumber} ready in GC inbox`, {
+          action: {
+            label: 'Open',
+            onClick: () => navigate(`/project/${projectId}/change-orders/${data.finalized_co_id}`),
+          },
+        });
+        return;
+      }
+      if (data.status === 'failed') {
+        toast.error(`Voice → PN failed: ${data.error_message ?? 'unknown'}`);
+        return;
+      }
+    }
+    toast.message('Still processing — check Change Orders shortly.');
   }
 
   async function submit() {
     if (!blob || !user || !orgId) return;
     setPhase('uploading');
     try {
-      // 1) upload original audio for archival
+      // 1) upload original audio for archival (in parallel with the function call below)
       const ext = blob.type.includes('mp4') ? 'm4a' : 'webm';
       const path = `${orgId}/${projectId}/${Date.now()}-${user.id.substring(0, 8)}.${ext}`;
-      const { error: upErr } = await supabase
+      const uploadPromise = supabase
         .storage
         .from('co-voice-notes')
-        .upload(path, blob, { contentType: blob.type, upsert: false });
-      let voiceUrl: string | null = null;
-      if (!upErr) {
-        const { data: signed } = await supabase
-          .storage
-          .from('co-voice-notes')
-          .createSignedUrl(path, 60 * 60 * 24 * 30);
-        voiceUrl = signed?.signedUrl ?? null;
-      } else {
-        console.warn('voice upload failed, continuing with transcription only', upErr);
-      }
+        .upload(path, blob, { contentType: blob.type, upsert: false })
+        .then(async ({ error: upErr }) => {
+          if (upErr) {
+            console.warn('voice upload failed, continuing without archival url', upErr);
+            return null as string | null;
+          }
+          const { data: signed } = await supabase
+            .storage
+            .from('co-voice-notes')
+            .createSignedUrl(path, 60 * 60 * 24 * 30);
+          return signed?.signedUrl ?? null;
+        });
 
-      // 2) transcribe + draft CO
-      const base64 = await blobToBase64(blob);
-      const { data, error } = await supabase.functions.invoke('co-voice-pn', {
-        body: {
-          project_id: projectId,
-          audio_base64: base64,
-          mime_type: blob.type || 'audio/webm',
-          voice_url: voiceUrl,
-          duration_sec: seconds,
-        },
+      const voiceUrl = await uploadPromise;
+
+      // 2) send binary multipart directly (skip base64 — ~33% smaller + no FileReader wait)
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('not_authenticated');
+
+      const form = new FormData();
+      form.append('project_id', projectId);
+      form.append('audio', blob, `recording.${ext}`);
+      if (voiceUrl) form.append('voice_url', voiceUrl);
+
+      const fnUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/co-voice-pn`;
+      const resp = await fetch(fnUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
       });
-      if (error) throw error;
-      const result = data as { co_id?: string; co_number?: string; error?: string };
-      if (result?.error) {
-        toast.error(`Voice → PN failed: ${result.error}`);
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok || result?.error) {
+        toast.error(`Voice → PN failed: ${result?.error ?? resp.status}`);
         setPhase('recorded');
         return;
       }
 
+      // 3) close immediately — background job will finish and notify via toast
       setPhase('done');
-      toast.success(`Draft ${result.co_number ?? 'PN'} sent to GC inbox`);
+      toast.success('Voice note received — drafting CO in background…');
       onOpenChange(false);
-      if (result.co_id) {
-        navigate(`/project/${projectId}/change-orders/${result.co_id}`);
+      if (result.intake_id) {
+        pollIntake(result.intake_id);
       }
     } catch (e: any) {
       console.error('voice submit', e);
