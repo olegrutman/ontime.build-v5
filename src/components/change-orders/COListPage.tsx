@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, FileText } from 'lucide-react';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { usePermission } from '@/components/auth/RequirePermission';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { Sparkles, Mic } from 'lucide-react';
 import { VoicePNRecorder } from './VoicePNRecorder';
+
 
 
 interface COListPageProps {
@@ -148,6 +149,16 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
                     <Sparkles className="h-4 w-4" />
                     <span className="hidden sm:inline">Guided</span>
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/project/${projectId}/change-orders/intake`)}
+                    className="gap-1.5"
+                    aria-label="Paste or type description"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="hidden sm:inline">Describe</span>
+                  </Button>
                 </>
               )}
               <Button size="sm" onClick={openNewPicker} className="gap-1.5">
@@ -156,6 +167,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
               </Button>
             </div>
           )}
+
         </div>
 
         {/* Filter pills */}
