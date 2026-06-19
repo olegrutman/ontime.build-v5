@@ -24,6 +24,9 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
   const [seconds, setSeconds] = useState(0);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [readyCoId, setReadyCoId] = useState<string | null>(null);
+  const [readyCoNumber, setReadyCoNumber] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
