@@ -1,7 +1,7 @@
-// Step 3: Field PN Voice → Draft CO in GC inbox
-// Receives an audio file (base64) from FC/TC, transcribes via Lovable AI (Gemini),
-// extracts a short problem summary, and creates a draft change_order with
-// entry_source='field_pn' assigned upstream to the GC.
+// Field PN Voice → Draft CO in GC inbox
+// Accepts multipart/form-data (binary audio) OR legacy JSON {audio_base64}.
+// Returns 202 immediately with intake_id; transcription, summarization, and
+// CO insert run in a background task so the client isn't blocked.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -11,14 +11,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface Body {
-  project_id: string;
-  audio_base64: string;
-  mime_type: string; // e.g. audio/webm, audio/mp4
-  voice_url?: string | null;
-  duration_sec?: number | null;
-}
-
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -27,12 +19,173 @@ function json(body: unknown, status = 200) {
 }
 
 async function callGateway(apiKey: string, payload: unknown) {
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return r;
+}
+
+interface JobInput {
+  projectId: string;
+  audioBlob: Blob;
+  mimeType: string;
+  voiceUrl: string | null;
+  userId: string;
+  orgId: string;
+  role: "GC" | "TC" | "FC";
+  gcOrgId: string | null;
+  intakeId: string;
+  apiKey: string;
+  supabase: ReturnType<typeof createClient>;
+}
+
+async function runBackground(job: JobInput) {
+  const { supabase, intakeId, apiKey, audioBlob, mimeType, projectId } = job;
+  try {
+    await supabase.from("co_ai_intakes").update({ status: "processing" }).eq("id", intakeId);
+
+    const ext = mimeType.includes("mp4")
+      ? "mp4"
+      : mimeType.includes("mpeg")
+      ? "mp3"
+      : mimeType.includes("wav")
+      ? "wav"
+      : "webm";
+    const upstream = new FormData();
+    upstream.append("model", "openai/gpt-4o-mini-transcribe");
+    upstream.append("language", "en");
+    upstream.append("file", audioBlob, `recording.${ext}`);
+
+    // Kick STT and project metadata in parallel
+    const [transcribeResp, projRowRes, countRes] = await Promise.all([
+      fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: upstream,
+      }),
+      supabase.from("projects").select("name, contract_mode").eq("id", projectId).maybeSingle(),
+      supabase
+        .from("change_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("entry_source", "field_pn"),
+    ]);
+
+    if (!transcribeResp.ok) {
+      const t = await transcribeResp.text();
+      console.error("transcribe error", transcribeResp.status, t);
+      await supabase.from("co_ai_intakes").update({
+        status: "failed",
+        error_message: transcribeResp.status === 429
+          ? "rate_limited"
+          : transcribeResp.status === 402
+          ? "credits_exhausted"
+          : `transcribe_${transcribeResp.status}`,
+      }).eq("id", intakeId);
+      return;
+    }
+
+    const transcribeData = await transcribeResp.json();
+    const transcript: string = (transcribeData?.text ?? "").trim();
+    if (!transcript) {
+      await supabase.from("co_ai_intakes").update({ status: "failed", error_message: "empty_transcript" }).eq("id", intakeId);
+      return;
+    }
+
+    // Summarization (short, cheap model)
+    let problemSummary = transcript.slice(0, 280);
+    try {
+      const summaryResp = await callGateway(apiKey, {
+        model: "google/gemini-2.5-flash-lite",
+        temperature: 0.3,
+        max_tokens: 220,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You write short Problem Notes for construction change orders. Use 1-3 plain sentences derived strictly from the transcript. Never invent quantities, materials, or causes. No bullets, no markdown.",
+          },
+          { role: "user", content: `Transcript:\n"""${transcript}"""` },
+        ],
+      });
+      if (summaryResp.ok) {
+        const sd = await summaryResp.json();
+        const s = (sd?.choices?.[0]?.message?.content ?? "").trim();
+        if (s) problemSummary = s.slice(0, 1000);
+      }
+    } catch (e) {
+      console.warn("summary failed, using transcript snippet", e);
+    }
+
+    const isTM = (projRowRes.data as any)?.contract_mode === "tm";
+    const docType = isTM ? "WO" : "CO";
+    const projCode =
+      ((projRowRes.data as any)?.name ?? "PRJ")
+        .replace(/^(the\s+)/i, "")
+        .trim()
+        .substring(0, 3)
+        .toUpperCase() || "PRJ";
+    const seq = (((countRes.count ?? 0) + 1)).toString().padStart(3, "0");
+    const coNumber = `${docType}-${projCode}-PN${seq}`;
+    const title = (problemSummary.split(/[\.\?\!]/)[0]?.trim() || "Field Problem Note").substring(0, 120);
+
+    const targetOrgId = job.gcOrgId ?? job.orgId;
+    const { data: co, error: coErr } = await supabase
+      .from("change_orders")
+      .insert({
+        org_id: targetOrgId,
+        project_id: projectId,
+        created_by_user_id: job.userId,
+        created_by_role: job.role,
+        co_number: coNumber,
+        title,
+        status: "draft",
+        document_type: docType,
+        reason: "field_discovery",
+        reason_note: "Voice Problem Note from field",
+        entry_source: "field_pn",
+        assigned_to_org_id: job.gcOrgId,
+        problem_summary: problemSummary,
+        problem_voice_url: job.voiceUrl,
+        ai_intake_id: intakeId,
+        fc_input_needed: false,
+      })
+      .select("id, co_number")
+      .single();
+
+    if (coErr || !co) {
+      console.error("draft CO insert failed", coErr);
+      await supabase.from("co_ai_intakes").update({
+        status: "failed",
+        error_message: `co_insert_${coErr?.code ?? "unknown"}`,
+        output_json: { transcript, problemSummary },
+      }).eq("id", intakeId);
+      return;
+    }
+
+    await supabase.from("co_ai_intakes").update({
+      status: "succeeded",
+      raw_text: transcript,
+      output_json: { transcript, problem_summary: problemSummary, co_id: co.id, co_number: co.co_number },
+      finalized_co_id: co.id,
+    }).eq("id", intakeId);
+
+    await supabase.from("co_activity").insert({
+      co_id: co.id,
+      project_id: projectId,
+      actor_user_id: job.userId,
+      actor_role: job.role,
+      action: "created",
+      detail: `Voice Problem Note submitted to GC inbox`,
+    });
+  } catch (e) {
+    console.error("background job error", e);
+    await supabase.from("co_ai_intakes").update({
+      status: "failed",
+      error_message: `bg_${(e as Error).message ?? "unknown"}`,
+    }).eq("id", intakeId);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -56,17 +209,40 @@ Deno.serve(async (req) => {
     if (userErr || !userData?.user) return json({ error: "invalid_auth" }, 401);
     const user = userData.user;
 
-    const body = (await req.json()) as Body;
-    if (!body?.project_id || !body?.audio_base64 || !body?.mime_type) {
-      return json({ error: "bad_request" }, 400);
+    // Parse body — multipart (preferred) or legacy JSON
+    const contentType = req.headers.get("content-type") ?? "";
+    let projectId = "";
+    let mimeType = "";
+    let voiceUrl: string | null = null;
+    let audioBlob: Blob | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      projectId = String(form.get("project_id") ?? "");
+      voiceUrl = (form.get("voice_url") as string) || null;
+      const file = form.get("audio") as File | null;
+      if (file) {
+        audioBlob = file;
+        mimeType = file.type || "audio/webm";
+      }
+    } else {
+      const body = await req.json();
+      projectId = body?.project_id;
+      mimeType = body?.mime_type;
+      voiceUrl = body?.voice_url ?? null;
+      if (body?.audio_base64) {
+        if (body.audio_base64.length > 20_000_000) return json({ error: "audio_too_large" }, 413);
+        const binary = Uint8Array.from(atob(body.audio_base64), (c) => c.charCodeAt(0));
+        audioBlob = new Blob([binary], { type: mimeType || "audio/webm" });
+      }
     }
-    if (body.audio_base64.length > 20_000_000) {
-      return json({ error: "audio_too_large" }, 413);
-    }
+
+    if (!projectId || !audioBlob) return json({ error: "bad_request" }, 400);
+    if (audioBlob.size > 15_000_000) return json({ error: "audio_too_large" }, 413);
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Resolve participant — must be a member of an org on the project
+    // Resolve participant
     const { data: userOrgs } = await supabase
       .from("user_org_roles")
       .select("organization_id")
@@ -77,7 +253,7 @@ Deno.serve(async (req) => {
     const { data: membership } = await supabase
       .from("project_participants")
       .select("organization_id, role")
-      .eq("project_id", body.project_id)
+      .eq("project_id", projectId)
       .in("organization_id", orgIds)
       .eq("invite_status", "ACCEPTED")
       .maybeSingle();
@@ -86,27 +262,26 @@ Deno.serve(async (req) => {
     const orgId = membership.organization_id as string;
     const role = (membership.role ?? "FC") as "GC" | "TC" | "FC";
 
-    // Find GC participant — destination inbox
     const { data: gcPart } = await supabase
       .from("project_participants")
       .select("organization_id")
-      .eq("project_id", body.project_id)
+      .eq("project_id", projectId)
       .eq("role", "GC")
       .eq("invite_status", "ACCEPTED")
       .maybeSingle();
     const gcOrgId = gcPart?.organization_id ?? null;
 
-    // Create intake row up front
+    // Create intake row
     const { data: intake, error: intakeErr } = await supabase
       .from("co_ai_intakes")
       .insert({
-        project_id: body.project_id,
+        project_id: projectId,
         org_id: orgId,
         created_by: user.id,
         source_kind: "voice",
-        voice_url: body.voice_url ?? null,
+        voice_url: voiceUrl,
         status: "pending",
-        model: "openai/gpt-4o-transcribe",
+        model: "openai/gpt-4o-mini-transcribe",
       })
       .select("id")
       .single();
@@ -115,168 +290,25 @@ Deno.serve(async (req) => {
       return json({ error: "intake_insert_failed" }, 500);
     }
 
-    // ── 1) Transcribe via dedicated STT endpoint ──
-    // Decode base64 to bytes, then forward as multipart to /v1/audio/transcriptions.
-    const binary = Uint8Array.from(atob(body.audio_base64), (c) => c.charCodeAt(0));
-    const ext = body.mime_type.includes("mp4")
-      ? "mp4"
-      : body.mime_type.includes("mpeg")
-      ? "mp3"
-      : body.mime_type.includes("wav")
-      ? "wav"
-      : "webm";
-    const audioBlob = new Blob([binary], { type: body.mime_type });
-    const upstream = new FormData();
-    upstream.append("model", "openai/gpt-4o-transcribe");
-    upstream.append("language", "en");
-    upstream.append("file", audioBlob, `recording.${ext}`);
-
-    const transcribeResp = await fetch(
-      "https://ai.gateway.lovable.dev/v1/audio/transcriptions",
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
-        body: upstream,
-      },
+    // Kick off background processing — return immediately
+    // @ts-ignore - EdgeRuntime is provided by Supabase Edge runtime
+    EdgeRuntime.waitUntil(
+      runBackground({
+        projectId,
+        audioBlob,
+        mimeType,
+        voiceUrl,
+        userId: user.id,
+        orgId,
+        role,
+        gcOrgId,
+        intakeId: intake.id as string,
+        apiKey: LOVABLE_API_KEY,
+        supabase,
+      }),
     );
 
-    if (transcribeResp.status === 429 || transcribeResp.status === 402) {
-      await supabase.from("co_ai_intakes").update({
-        status: "failed",
-        error_message: transcribeResp.status === 429 ? "rate_limited" : "credits_exhausted",
-      }).eq("id", intake.id);
-      return json(
-        { error: transcribeResp.status === 429 ? "rate_limited" : "credits_exhausted", intake_id: intake.id },
-        transcribeResp.status,
-      );
-    }
-    if (!transcribeResp.ok) {
-      const t = await transcribeResp.text();
-      console.error("transcribe error", transcribeResp.status, t);
-      await supabase.from("co_ai_intakes").update({
-        status: "failed",
-        error_message: `transcribe_${transcribeResp.status}`,
-      }).eq("id", intake.id);
-      return json({ error: "transcribe_failed", intake_id: intake.id, detail: t.slice(0, 200) }, 200);
-    }
-
-    // Endpoint returns SSE if stream=true; we didn't pass stream, so it returns JSON.
-    const transcribeData = await transcribeResp.json();
-    const transcript: string = (transcribeData?.text ?? "").trim();
-    if (!transcript) {
-      await supabase.from("co_ai_intakes").update({ status: "failed", error_message: "empty_transcript" }).eq("id", intake.id);
-      return json({ error: "empty_transcript", intake_id: intake.id }, 200);
-    }
-
-
-    // ── 2) Summarize into a 1-3 sentence Problem Note ──
-    const summaryResp = await callGateway(LOVABLE_API_KEY, {
-      model: "google/gemini-2.5-flash",
-      temperature: 0.3,
-      max_tokens: 220,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You write short Problem Notes for construction change orders. Use 1-3 plain sentences derived strictly from the transcript. Never invent quantities, materials, or causes. No bullets, no markdown.",
-        },
-        { role: "user", content: `Transcript:\n"""${transcript}"""` },
-      ],
-    });
-
-    let problemSummary = transcript.slice(0, 280);
-    if (summaryResp.ok) {
-      const sd = await summaryResp.json();
-      const s = (sd?.choices?.[0]?.message?.content ?? "").trim();
-      if (s) problemSummary = s.slice(0, 1000);
-    }
-
-    // ── 3) Generate a CO number ──
-    const { data: projRow } = await supabase
-      .from("projects")
-      .select("name, contract_mode")
-      .eq("id", body.project_id)
-      .maybeSingle();
-    const isTM = projRow?.contract_mode === "tm";
-    const docType = isTM ? "WO" : "CO";
-
-    const projCode = (projRow?.name ?? "PRJ")
-      .replace(/^(the\s+)/i, "")
-      .trim()
-      .substring(0, 3)
-      .toUpperCase() || "PRJ";
-
-    // Count existing field_pn drafts on the project for a sequential number
-    const { count } = await supabase
-      .from("change_orders")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", body.project_id)
-      .eq("entry_source", "field_pn");
-    const seq = ((count ?? 0) + 1).toString().padStart(3, "0");
-    const coNumber = `${docType}-${projCode}-PN${seq}`;
-
-    // ── 4) Title from first sentence ──
-    const firstSentence = problemSummary.split(/[\.\?\!]/)[0]?.trim() || "Field Problem Note";
-    const title = firstSentence.substring(0, 120);
-
-    // ── 5) Insert draft CO into GC inbox (or current org if no GC) ──
-    const targetOrgId = gcOrgId ?? orgId;
-    const { data: co, error: coErr } = await supabase
-      .from("change_orders")
-      .insert({
-        org_id: targetOrgId,
-        project_id: body.project_id,
-        created_by_user_id: user.id,
-        created_by_role: role,
-        co_number: coNumber,
-        title,
-        status: "draft",
-        document_type: docType,
-        reason: "field_discovery",
-        reason_note: "Voice Problem Note from field",
-        entry_source: "field_pn",
-        assigned_to_org_id: gcOrgId, // GC owns the inbox
-        problem_summary: problemSummary,
-        problem_voice_url: body.voice_url ?? null,
-        ai_intake_id: intake.id,
-        fc_input_needed: false,
-      })
-      .select("id, co_number")
-      .single();
-
-    if (coErr || !co) {
-      console.error("draft CO insert failed", coErr);
-      await supabase.from("co_ai_intakes").update({
-        status: "failed",
-        error_message: `co_insert_${coErr?.code ?? "unknown"}`,
-        output_json: { transcript, problemSummary },
-      }).eq("id", intake.id);
-      return json({ error: "co_insert_failed", intake_id: intake.id, detail: coErr?.message }, 500);
-    }
-
-    await supabase.from("co_ai_intakes").update({
-      status: "succeeded",
-      raw_text: transcript,
-      output_json: { transcript, problem_summary: problemSummary, co_id: co.id },
-      finalized_co_id: co.id,
-    }).eq("id", intake.id);
-
-    await supabase.from("co_activity").insert({
-      co_id: co.id,
-      project_id: body.project_id,
-      actor_user_id: user.id,
-      actor_role: role,
-      action: "created",
-      detail: `Voice Problem Note submitted to GC inbox`,
-    });
-
-    return json({
-      intake_id: intake.id,
-      co_id: co.id,
-      co_number: co.co_number,
-      transcript,
-      problem_summary: problemSummary,
-    });
+    return json({ intake_id: intake.id, status: "processing" }, 202);
   } catch (e) {
     console.error("co-voice-pn error", e);
     return json({ error: "server_error", detail: (e as Error).message }, 500);
