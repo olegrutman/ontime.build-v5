@@ -127,7 +127,8 @@ Deno.serve(async (req) => {
       : "webm";
     const audioBlob = new Blob([binary], { type: body.mime_type });
     const upstream = new FormData();
-    upstream.append("model", "openai/gpt-4o-mini-transcribe");
+    upstream.append("model", "openai/gpt-4o-transcribe");
+    upstream.append("language", "en");
     upstream.append("file", audioBlob, `recording.${ext}`);
 
     const transcribeResp = await fetch(
