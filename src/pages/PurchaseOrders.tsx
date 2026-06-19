@@ -63,16 +63,19 @@ export default function PurchaseOrders() {
   };
 
   const fetchOrders = async () => {
+    if (!organizationId) return;
     const { data, error } = await supabase
       .from('purchase_orders')
       .select(`
-        *,
+        id, po_number, po_name, status, created_at, project_id, supplier_id,
+        download_token, organization_id, po_total, sales_tax_percent,
         organization:organizations(name, org_code),
         supplier:suppliers(id, name, supplier_code, contact_info),
-        project:projects(id, name),
-        work_item:work_items(id, title)
+        project:projects(id, name)
       `)
-      .order('created_at', { ascending: false });
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) {
       console.error('Error fetching POs:', error);
