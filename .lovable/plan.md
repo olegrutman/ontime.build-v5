@@ -1,69 +1,80 @@
-# CO v4 — Remaining Build Plan (locked answers)
 
-Decisions locked from your reply:
-- **Scenario library**: you have the 106-scenario workbook → upload to `/mnt/user-uploads/` and import via edge function
-- **Field PN voice**: lands directly as a draft CO in the **GC inbox** (no intermediate TC review)
-- **Combined CO SOV**: build **both** per-CO rollup *and* per-contract rollup views
+# Filter Causes by System (CO picker)
 
-## Where we are today (already shipped)
+Small, frontend-only change. No new tables, no new taxonomies, no migrations.
 
-- `co_v4` org flag + `useCoV4Flag` / `useCoV4Context`
-- Phase 1 visibility wall: `*_role_view` views + all primary read sites migrated through `useCOFinancialsV2`
-- Phase 2 AI intake: `co_ai_intakes` table, `co-ai-intake` edge fn, `/change-orders/intake` page
-- Phase 5 spine: `co_sov_lines`, `co_sov_invoice_links`, `co_sov_contract_rollup` view + sync trigger
-- Scenario tables created (empty): `co_scenarios`, `co_scenario_lines`, `co_scenario_builder_map`
-- Picker-v3 cleanup done; `index.ts` rebuilt; template-literal bug fixed
+## Goal
 
-## Build order
+When the user picks a System in Step 1 of the CO picker, only show the Causes ("Problems") that are sensible for that system. Work-type filtering already exists via `useScopeCatalog().filterByContext` — this plan does not touch it.
 
-### Step 1 — Scenario library import (unblocks Phase 3 & 4)
-- You upload the workbook to `/mnt/user-uploads/co-scenarios.xlsx`
-- New edge function `import-co-scenarios` parses the workbook and upserts into `co_scenarios` (one row per scenario), `co_scenario_lines` (pre-built line items per scenario), and `co_scenario_builder_map` (sub-element walker rows)
-- Idempotent on `co_scenarios.id` so re-runs are safe
-- One-shot admin trigger via Platform Setup page, no recurring schedule
+## Files
 
-### Step 2 — Phase 3 guided 5-step builder
-- New routes `/project/:id/change-orders/guided` and `/:coId/guided/add-line`, gated by `co_v4`
-- New folder `src/components/change-orders/guided-v4/` (picker-v3 untouched)
-- Steps: **Problem** (from `co_scenarios` filtered by project type) → **System/sub-element** (joined to `project_scope_details`, `project_framing_scope`, `contract_scope_selections`, window/door schedule) → **Where** (reuse `VisualLocationPicker`, multi-unit writes shared `group_key`) → **Fix** (`useScopeSuggestions` filtered by problem+system+zone) → **Review** (AI summary via `generate-scope-description`, temp 0.3, 1–3 sentences)
-- No pricing in the wizard — deferred to detail page (matches CO/WO wizard memory rule)
-- When problem ∈ {siding, fascia, soffit, windows, decorative, balcony}, Step 2 swaps to the recursive `co_scenario_builder_map` walker, pre-filling qty from window/door schedule
+- **Modify:** `src/components/change-orders/picker-v3/StepWhereAndWhy.tsx`
+- **Modify:** `src/components/change-orders/picker-v3/types.ts` (add one optional field to `CauseOption`)
+- **Modify:** `src/components/change-orders/picker-v3/usePickerState.ts` (clear cause when system changes if no longer allowed)
+- **Add tests:** `src/test/pickerReducer.test.ts` (one new case)
 
-### Step 3 — Field PN voice flow
-- New "Voice → PN" entry on `FCHomeScreen` *and* TC dashboard (per "TC can raise too")
-- Audio uploads to existing `co_evidence` bucket
-- Calls `co-ai-intake` with audio input (Gemini 3 Flash supports audio natively); produces a draft CO with `entry_source='field_pn'` and `problem_voice_url` set
-- **Lands directly in GC inbox** as a needs-review draft — RFI subsystem untouched
-- GC inbox surfaces with an "Entry source: Field PN" pill and inline audio player
+## Changes
 
-### Step 4 — Combined CO SOV (both granularities)
-- Keep existing `co_sov_lines` (per-CO source rows) + `co_sov_contract_rollup` view (per-contract totals)
-- Add `co_sov_per_co_view` for per-CO summaries (scheduled value, billed-to-date, retainage, status) — one row per CO
-- `CreateInvoiceFromCOs` (already routes through role views) gains a toggle: bill from one CO vs aggregate across all approved COs on the contract
-- CO Detail gets a "Combined CO SOV" mini-card linking to a new `/project/:id/change-orders/sov` page showing both lenses (per-CO list + per-contract totals)
+### 1. `types.ts` — add optional allowlist to `CauseOption`
 
-### Step 5 — Lifecycle hardening on CO Overview
-Additive tweaks to existing `CODetailLayout`:
-- Entry-source pill (Picker / AI intake / Guided / Field PN) with intake artifact link (paste text or audio playback)
-- **T&M / NTE live daily-hours strip**: FC enters → TC sees same day → GC sees same day, enforced by Phase-1 views (no cost/margin leaks)
-- **NTE gate**: warn at 80% used, hard-block submit at 100% (extend `useCORoleContext.nteBlocked` to drive banner + submit guard)
-- **Fixed-type submit guard**: block until every `co_material_items` row has `quote_status='quoted'` or better (Confidence ladder)
-- **Two-step completion handshake**: FC marks "work complete" → TC confirms → status flips to `completed`, snapshots freeze, invoice generation reads only frozen rows
+```ts
+export interface CauseOption {
+  // ...existing fields
+  /** Optional system allowlist. When omitted, the cause applies to all systems. */
+  allowedSystems?: string[];   // values from SystemOption.id
+}
+```
 
-### Step 6 — Cutover
-- `co_v4` already on for the three test orgs; flip default to `true` for all orgs once Steps 1–5 ship
-- Picker-v3 remains as `/change-orders/new-classic` for one release, then archive under `_archived/change-orders/`
+### 2. `StepWhereAndWhy.tsx` — annotate `CAUSES` and filter the grid
 
-## Technical notes
+Add `allowedSystems` to the items where it matters. Causes without the field stay global (most of them are — `GC Request`, `Owner Upgrade`, `Damaged Work`, etc. legitimately apply everywhere).
 
-- All Step 2 / Step 3 / Step 4 reads continue to route through `useCOFinancialsV2` or the new role-scoped views — no client gets cost/markup over the wire
-- Mutations stay on base tables under existing RLS; `apply_co_contract_delta` untouched
-- AI prompts follow the temp=0.3 / strict-from-selected-items rule already in memory
-- Each step ships behind `co_v4`; rollback is a single flag flip
+Proposed annotations (only the non-global ones):
 
-## What I need from you to start
+| Cause id | Allowed systems |
+|---|---|
+| `mech` Mechanical Conflict | `floor`, `wall`, `ceiling`, `roof` |
+| `plumb` Plumbing Conflict | `floor`, `wall`, `ceiling` |
+| `elec` Electrical Conflict | `floor`, `wall`, `ceiling` |
+| `frame` Framing Correction | `floor`, `wall`, `roof`, `ceiling`, `deck`, `stair`, `openings` |
+| `plan` Plan Revision | all (omit field) |
+| `unfor` Unforeseen Condition | all (omit field) |
+| `mat` Material Defect | all (omit field) |
+| `miss` Missed Scope | all (omit field) |
+| `gc`, `upg`, `ve`, `punch`, `dmg` | all (omit field) |
 
-1. Upload the 106-scenario workbook to `/mnt/user-uploads/co-scenarios.xlsx` (or confirm a different filename) — that unblocks Step 1
-2. Approve this plan and tell me to start with **Step 1 (scenario import)** or jump ahead
+Then in the render, filter each group:
 
-Recommend: ship Step 1 first (one edge function + one-shot import), then Step 2 (guided builder) — that's the biggest visible UX win and everything else stacks on it.
+```tsx
+const visibleCauses = useMemo(() => CAUSES.map(group => ({
+  ...group,
+  items: group.items.filter(c =>
+    !c.allowedSystems || !cur.system || c.allowedSystems.includes(cur.system)
+  ),
+})).filter(group => group.items.length > 0), [cur.system]);
+```
+
+Render from `visibleCauses` instead of `CAUSES`. Before a system is picked, everything shows (no system → no filter).
+
+### 3. `usePickerState.ts` — clear invalid cause on system change
+
+Update the `SET_SYSTEM` case to also clear `causeId / causeName / reason / docType / billable` if the currently selected cause is no longer allowed for the new system. Keeps the existing reset of `workTypes`, `workNames`, `narrative`.
+
+### 4. Tests
+
+Add one case to `pickerReducer.test.ts` verifying that switching System wipes a now-invalid Cause but preserves a still-valid one.
+
+## Acceptance
+
+- Picking `Stair` no longer shows `Mechanical Conflict` / `Plumbing Conflict` / `Electrical Conflict`.
+- Picking `Roof System` no longer shows `Plumbing Conflict` / `Electrical Conflict`.
+- With no system selected, all causes are visible (current behavior).
+- Changing system after picking an invalid cause clears the cause selection; valid causes stay.
+- No DB migrations; no changes to `CODetail`, SOV, pricing, or scope catalog.
+
+## Out of scope
+
+- DB-backed system/action/problem taxonomy.
+- Per-system filtering of work types — already handled by `useScopeCatalog().filterByContext`.
+- Any change to routing, pricing, or downstream CO logic.
