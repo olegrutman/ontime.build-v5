@@ -236,8 +236,38 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
   const mm = String(Math.floor(seconds / 60)).padStart(1, '0');
   const ss = String(seconds % 60).padStart(2, '0');
 
+  const isProcessing = phase === 'uploading' || phase === 'transcribing' || phase === 'drafting';
+  const steps: { key: Phase; label: string }[] = [
+    { key: 'uploading', label: 'Uploading audio' },
+    { key: 'transcribing', label: 'Transcribing speech' },
+    { key: 'drafting', label: 'Drafting change order' },
+    { key: 'ready', label: 'Draft ready' },
+  ];
+  const phaseIndex = steps.findIndex((s) => s.key === phase);
+  const progressPct =
+    phase === 'ready' ? 100 :
+    phase === 'drafting' ? 80 :
+    phase === 'transcribing' ? 50 :
+    phase === 'uploading' ? 20 : 0;
+
+  function stateFor(idx: number): StepState {
+    if (phase === 'failed') return idx === 0 ? 'failed' : 'pending';
+    if (phase === 'ready') return 'done';
+    if (phaseIndex < 0) return 'pending';
+    if (idx < phaseIndex) return 'done';
+    if (idx === phaseIndex) return 'active';
+    return 'pending';
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        // prevent accidental close while a draft is being prepared
+        if (!o && isProcessing) return;
+        onOpenChange(o);
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl font-extrabold">
@@ -273,23 +303,73 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
               <audio src={audioUrl} controls className="w-full" />
             )}
 
-            {phase === 'uploading' && (
-              <div className="flex flex-col items-center gap-2 py-6">
-                <Loader2 className="h-10 w-10 animate-spin text-[hsl(var(--navy))]" />
-                <p className="text-sm text-muted-foreground">Transcribing &amp; routing…</p>
+            {(phase === 'idle' || phase === 'recording' || phase === 'recorded') && (
+              <div className="font-mono text-2xl font-bold tabular-nums">
+                {mm}:{ss}
+                {phase === 'recording' && (
+                  <span className="ml-2 text-xs uppercase tracking-wider text-red-600">REC</span>
+                )}
               </div>
             )}
-
-            <div className="font-mono text-2xl font-bold tabular-nums">
-              {mm}:{ss}
-              {phase === 'recording' && (
-                <span className="ml-2 text-xs uppercase tracking-wider text-red-600">REC</span>
-              )}
-            </div>
             {phase === 'recording' && (
               <p className="text-xs text-muted-foreground">Max 2 minutes</p>
             )}
           </div>
+
+          {(isProcessing || phase === 'ready' || phase === 'failed') && (
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <Progress value={progressPct} className="h-2" />
+              <ul className="space-y-2">
+                {steps.map((s, idx) => {
+                  const st = stateFor(idx);
+                  return (
+                    <li key={s.key} className="flex items-center gap-2 text-sm">
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                          st === 'done'
+                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                            : st === 'active'
+                            ? 'border-[hsl(var(--navy))] text-[hsl(var(--navy))]'
+                            : st === 'failed'
+                            ? 'bg-red-600 border-red-600 text-white'
+                            : 'border-muted-foreground/40 text-muted-foreground'
+                        }`}
+                      >
+                        {st === 'done' ? (
+                          <Check className="h-3 w-3" />
+                        ) : st === 'active' ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : st === 'failed' ? (
+                          <X className="h-3 w-3" />
+                        ) : (
+                          <span className="text-[10px]">{idx + 1}</span>
+                        )}
+                      </span>
+                      <span
+                        className={
+                          st === 'active'
+                            ? 'font-medium text-foreground'
+                            : st === 'done'
+                            ? 'text-foreground'
+                            : 'text-muted-foreground'
+                        }
+                      >
+                        {s.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {phase === 'failed' && errorMsg && (
+                <p className="text-xs text-red-600">{errorMsg}</p>
+              )}
+              {isProcessing && (
+                <p className="text-xs text-muted-foreground">
+                  This usually takes 10–30 seconds. You can keep this dialog open.
+                </p>
+              )}
+            </div>
+          )}
 
           {phase === 'recorded' && (
             <div className="flex gap-2 justify-between">
@@ -298,6 +378,33 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
               </Button>
               <Button onClick={submit}>
                 <Send className="h-4 w-4 mr-1.5" /> Send to GC
+              </Button>
+            </div>
+          )}
+
+          {phase === 'ready' && readyCoId && (
+            <div className="flex gap-2 justify-between">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  navigate(`/project/${projectId}/change-orders/${readyCoId}`);
+                  onOpenChange(false);
+                }}
+              >
+                Open {readyCoNumber ?? 'draft'} <ArrowRight className="h-4 w-4 ml-1.5" />
+              </Button>
+            </div>
+          )}
+
+          {phase === 'failed' && (
+            <div className="flex gap-2 justify-between">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+              <Button onClick={resetRecording}>
+                <RotateCcw className="h-4 w-4 mr-1.5" /> Try again
               </Button>
             </div>
           )}
