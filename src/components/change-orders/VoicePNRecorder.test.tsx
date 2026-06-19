@@ -15,26 +15,36 @@ import { VoicePNRecorder } from './VoicePNRecorder';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const navigateMock = vi.fn();
+const {
+  navigateMock,
+  toastSuccessMock,
+  toastErrorMock,
+  useAuthMock,
+  uploadMock,
+  createSignedUrlMock,
+  invokeMock,
+} = vi.hoisted(() => ({
+  navigateMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  useAuthMock: vi.fn(),
+  uploadMock: vi.fn(),
+  createSignedUrlMock: vi.fn(),
+  invokeMock: vi.fn(),
+}));
+
 vi.mock('react-router-dom', () => ({
   useNavigate: () => navigateMock,
 }));
 
 vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast: { success: toastSuccessMock, error: toastErrorMock },
 }));
 
-const useAuthMock = vi.fn();
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }));
 
-const uploadMock = vi.fn();
-const createSignedUrlMock = vi.fn();
-const invokeMock = vi.fn();
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     storage: {
@@ -43,9 +53,7 @@ vi.mock('@/integrations/supabase/client', () => ({
         createSignedUrl: createSignedUrlMock,
       }),
     },
-    functions: {
-      invoke: invokeMock,
-    },
+    functions: { invoke: invokeMock },
   },
 }));
 
