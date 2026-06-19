@@ -174,10 +174,18 @@ export default function COAiIntakePage() {
             placeholder="Paste the request as you received it. Quotes, emails, transcripts — anything."
             className="mt-2 min-h-[200px]"
           />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Add a few words about the change, then click Analyze.
+          </p>
+          {runIntake.isPending && (
+            <p className="mt-2 text-sm text-amber-600 animate-pulse">
+              Analyzing… (≈10s)
+            </p>
+          )}
           <div className="mt-4 flex items-center justify-end">
             <Button
               onClick={handleAnalyze}
-              disabled={text.trim().length < 5 || runIntake.isPending}
+              disabled={text.trim().length < 1 || runIntake.isPending}
               className="gap-2"
             >
               {runIntake.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
