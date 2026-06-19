@@ -58,14 +58,28 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
 
   async function startRecording() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 48000,
+        },
+      });
       streamRef.current = stream;
-      const mime = MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : MediaRecorder.isTypeSupported('audio/mp4')
-        ? 'audio/mp4'
-        : '';
-      const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      // Prefer opus in webm; fall back to mp4 (Safari).
+      const candidates = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4;codecs=mp4a.40.2',
+        'audio/mp4',
+      ];
+      const mime = candidates.find((t) => MediaRecorder.isTypeSupported(t)) || '';
+      const mr = new MediaRecorder(
+        stream,
+        mime ? { mimeType: mime, audioBitsPerSecond: 128_000 } : { audioBitsPerSecond: 128_000 },
+      );
       chunksRef.current = [];
       mr.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
