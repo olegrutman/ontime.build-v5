@@ -13,7 +13,8 @@ interface VoicePNRecorderProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Phase = 'idle' | 'recording' | 'recorded' | 'uploading' | 'done';
+type Phase = 'idle' | 'recording' | 'recorded' | 'uploading' | 'transcribing' | 'drafting' | 'ready' | 'failed';
+type StepState = 'pending' | 'active' | 'done' | 'failed';
 
 export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecorderProps) {
   const { user, userOrgRoles } = useAuth();
