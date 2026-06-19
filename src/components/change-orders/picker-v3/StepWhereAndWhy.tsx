@@ -100,7 +100,7 @@ const CAUSES: { group: string; groupColor: string; groupLabel: string; groupMeta
     groupLabel: 'Something on site went wrong', groupMeta: '→ usually a Work Order, sometimes backcharge',
     items: [
       { id: 'dmg', group: 'site_issue', icon: '⚠', label: 'Damaged Work', sub: 'By us, others, weather, theft', docType: 'WO', billable: 'maybe', reason: 'damaged_by_others' as COReasonCode },
-      { id: 'frame', group: 'site_issue', icon: '📏', label: 'Framing Correction', sub: 'Out of plumb, wrong member', docType: 'WO', billable: 'no', reason: 'rework' as COReasonCode },
+      { id: 'frame', group: 'site_issue', icon: '📏', label: 'Framing Correction', sub: 'Out of plumb, wrong member', docType: 'WO', billable: 'no', reason: 'rework' as COReasonCode, allowedSystems: ['floor', 'wall', 'roof', 'ceiling', 'deck', 'stair', 'openings'] },
       { id: 'miss', group: 'site_issue', icon: '⊟', label: 'Missed Scope', sub: 'Gap in plans', docType: 'CO', billable: 'yes', reason: 'addition' as COReasonCode },
       { id: 'mat', group: 'site_issue', icon: '📦', label: 'Material Defect', sub: 'Wrong / defective', docType: 'WO', billable: 'maybe', reason: 'other' as COReasonCode },
     ],
