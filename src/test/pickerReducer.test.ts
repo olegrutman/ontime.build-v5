@@ -68,6 +68,28 @@ describe('pickerReducer', () => {
       expect(s.items[0].workTypes.size).toBe(0);
       expect(s.items[0].narrative).toBe('');
     });
+
+    it('clears an invalid cause when switching to an incompatible system', () => {
+      let s = state();
+      // Pick Plumbing Conflict (allowed: floor, wall, ceiling)
+      s = act(s, { type: 'SET_CAUSE', causeId: 'plumb', causeName: 'Plumbing Conflict', docType: 'CO', billable: 'yes', reason: 'gc_request' });
+      // Switch to roof — should clear the cause
+      s = act(s, { type: 'SET_SYSTEM', systemId: 'roof', systemName: 'Roof System' });
+      expect(s.items[0].causeId).toBeNull();
+      expect(s.items[0].reason).toBeNull();
+    });
+
+    it('keeps a valid cause when switching systems', () => {
+      let s = state();
+      // GC Request applies to all systems
+      s = act(s, { type: 'SET_CAUSE', causeId: 'gc', causeName: 'GC Request', docType: 'CO', billable: 'yes', reason: 'gc_request' });
+      s = act(s, { type: 'SET_SYSTEM', systemId: 'stair', systemName: 'Stair' });
+      expect(s.items[0].causeId).toBe('gc');
+      // Mechanical Conflict allowed on wall
+      s = act(s, { type: 'SET_CAUSE', causeId: 'mech', causeName: 'Mechanical Conflict', docType: 'CO', billable: 'yes', reason: 'gc_request' });
+      s = act(s, { type: 'SET_SYSTEM', systemId: 'wall', systemName: 'Wall System' });
+      expect(s.items[0].causeId).toBe('mech');
+    });
   });
 
   describe('SET_CAUSE', () => {
