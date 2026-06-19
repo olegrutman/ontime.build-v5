@@ -174,12 +174,9 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     setLoading(true);
 
     try {
-      // 1. Determine viewer role
-      const { data: memberships } = await supabase
-        .from('user_org_roles')
-        .select('organization_id')
-        .eq('user_id', user.id);
-      const orgIds = (memberships || []).map(m => m.organization_id);
+      // 1. Determine viewer role — reuse cached org roles from AuthProvider
+      // instead of hitting user_org_roles on every project page mount.
+      const orgIds = (userOrgRoles ?? []).map((r: any) => r.organization_id);
       setUserOrgIds(orgIds);
 
       let detectedRole: ViewerRole = 'Trade Contractor';
