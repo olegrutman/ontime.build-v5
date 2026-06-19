@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, FileText } from 'lucide-react';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { usePermission } from '@/components/auth/RequirePermission';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { Sparkles, Mic } from 'lucide-react';
 import { VoicePNRecorder } from './VoicePNRecorder';
+
 
 
 interface COListPageProps {
