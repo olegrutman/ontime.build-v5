@@ -66,12 +66,20 @@ Deno.serve(async (req) => {
     // Service client for DB writes that bypass RLS noise (we still gate via auth above)
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Resolve org for this project + user
+    // Resolve org for this project + user via user_org_roles → project_participants
+    const { data: userOrgs } = await supabase
+      .from("user_org_roles")
+      .select("organization_id")
+      .eq("user_id", user.id);
+    const orgIds = (userOrgs ?? []).map((r) => r.organization_id);
+    if (orgIds.length === 0) return json({ error: "no_org" }, 403);
+
     const { data: membership } = await supabase
       .from("project_participants")
       .select("organization_id")
       .eq("project_id", body.project_id)
-      .eq("user_id", user.id)
+      .in("organization_id", orgIds)
+      .eq("invite_status", "ACCEPTED")
       .maybeSingle();
 
     const orgId = membership?.organization_id;
