@@ -145,41 +145,28 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           .maybeSingle();
         let nextSort = (maxSort.data?.sort_order ?? 0) + 1;
 
-        for (const item of state.items) {
-          const workTypeEntries = Array.from(item.workTypes);
-          const scopeNames = workTypeEntries.map((wt) => item.workNames[wt] ?? wt);
+        for (let i = 0; i < state.items.length; i++) {
+          const item = state.items[i];
+          const rows = buildLineRowsFromItem(item, nextSort, i);
+          if (rows.length === 0) continue;
 
-          const itemName =
-            (item.narrative?.trim().substring(0, 120)) ||
-            scopeNames[0] ||
-            item.causeName ||
-            'Scope item';
+          const payload = rows.map((r) => ({
+            co_id: addToCoId,
+            org_id: orgId,
+            created_by_role: detectedRole,
+            item_name: r.item_name,
+            description: r.description,
+            unit: r.unit,
+            sort_order: r.sort_order,
+            location_tag: r.location_tag,
+            reason: r.reason,
+            task_phase: r.task_phase,
+            group_key: r.group_key,
+          }));
 
-          const narrative = item.narrative?.trim() || buildNarrativeFromItem(item);
-          const descriptionParts: string[] = [];
-          if (narrative) descriptionParts.push(narrative);
-          if (scopeNames.length > 0) {
-            descriptionParts.push(
-              `Scope:\n${scopeNames.map((n) => `• ${n}`).join('\n')}`
-            );
-          }
-          const description = descriptionParts.join('\n\n') || null;
-
-          const { error: liError } = await supabase
-            .from('co_line_items')
-            .insert({
-              co_id: addToCoId,
-              org_id: orgId,
-              created_by_role: detectedRole,
-              item_name: itemName,
-              description,
-              unit: 'EA',
-              sort_order: nextSort,
-              location_tag: item.locations.join(' + ') || null,
-              reason: item.reason ?? null,
-            });
+          const { error: liError } = await supabase.from('co_line_items').insert(payload);
           if (liError) console.error('Line item insert error:', liError);
-          nextSort += 1;
+          nextSort += rows.length;
 
           // Update CO flags if needs were flagged
           if (item.materialsNeeded || item.equipmentNeeded) {
