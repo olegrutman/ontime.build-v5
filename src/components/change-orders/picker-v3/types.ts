@@ -13,6 +13,24 @@ export interface CauseOption {
   billable: 'yes' | 'maybe' | 'no';
   suggested?: boolean;
   reason: COReasonCode;
+  /** Optional system allowlist. When omitted, the cause applies to all systems. */
+  allowedSystems?: string[];
+}
+
+/** System allowlist per cause id. Causes not listed apply to all systems. */
+export const CAUSE_SYSTEM_RULES: Record<string, string[]> = {
+  mech: ['floor', 'wall', 'ceiling', 'roof'],
+  plumb: ['floor', 'wall', 'ceiling'],
+  elec: ['floor', 'wall', 'ceiling'],
+  frame: ['floor', 'wall', 'roof', 'ceiling', 'deck', 'stair', 'openings'],
+};
+
+export function isCauseAllowedForSystem(causeId: string | null, systemId: string | null): boolean {
+  if (!causeId) return true;
+  const allowed = CAUSE_SYSTEM_RULES[causeId];
+  if (!allowed) return true;
+  if (!systemId) return true;
+  return allowed.includes(systemId);
 }
 
 // ─── System ──────────────────────────────────────────────────────

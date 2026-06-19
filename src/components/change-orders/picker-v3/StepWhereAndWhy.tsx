@@ -86,9 +86,9 @@ const CAUSES: { group: string; groupColor: string; groupLabel: string; groupMeta
     group: 'conflict', groupColor: 'bg-blue-600',
     groupLabel: 'Someone else changed something', groupMeta: '→ usually a Change Order, billable',
     items: [
-      { id: 'mech', group: 'conflict', icon: '🔧', label: 'Mechanical Conflict', sub: 'HVAC needs clearance', docType: 'CO', billable: 'yes', suggested: true, reason: 'gc_request' as COReasonCode },
-      { id: 'plumb', group: 'conflict', icon: '💧', label: 'Plumbing Conflict', sub: 'Waste / supply routing', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode },
-      { id: 'elec', group: 'conflict', icon: '⚡', label: 'Electrical Conflict', sub: 'Panel, conduit, fixture', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode },
+      { id: 'mech', group: 'conflict', icon: '🔧', label: 'Mechanical Conflict', sub: 'HVAC needs clearance', docType: 'CO', billable: 'yes', suggested: true, reason: 'gc_request' as COReasonCode, allowedSystems: ['floor', 'wall', 'ceiling', 'roof'] },
+      { id: 'plumb', group: 'conflict', icon: '💧', label: 'Plumbing Conflict', sub: 'Waste / supply routing', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode, allowedSystems: ['floor', 'wall', 'ceiling'] },
+      { id: 'elec', group: 'conflict', icon: '⚡', label: 'Electrical Conflict', sub: 'Panel, conduit, fixture', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode, allowedSystems: ['floor', 'wall', 'ceiling'] },
       { id: 'gc', group: 'conflict', icon: '📋', label: 'GC Request', sub: 'Field directive from GC', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode },
       { id: 'plan', group: 'conflict', icon: '📐', label: 'Plan Revision', sub: 'Architect / engineer change', docType: 'CO', billable: 'yes', reason: 'design_change' as COReasonCode },
       { id: 'unfor', group: 'conflict', icon: '❓', label: 'Unforeseen Condition', sub: 'Hidden damage, existing', docType: 'CO', billable: 'yes', reason: 'other' as COReasonCode },
@@ -99,7 +99,7 @@ const CAUSES: { group: string; groupColor: string; groupLabel: string; groupMeta
     groupLabel: 'Something on site went wrong', groupMeta: '→ usually a Work Order, sometimes backcharge',
     items: [
       { id: 'dmg', group: 'site_issue', icon: '⚠', label: 'Damaged Work', sub: 'By us, others, weather, theft', docType: 'WO', billable: 'maybe', reason: 'damaged_by_others' as COReasonCode },
-      { id: 'frame', group: 'site_issue', icon: '📏', label: 'Framing Correction', sub: 'Out of plumb, wrong member', docType: 'WO', billable: 'no', reason: 'rework' as COReasonCode },
+      { id: 'frame', group: 'site_issue', icon: '📏', label: 'Framing Correction', sub: 'Out of plumb, wrong member', docType: 'WO', billable: 'no', reason: 'rework' as COReasonCode, allowedSystems: ['floor', 'wall', 'roof', 'ceiling', 'deck', 'stair', 'openings'] },
       { id: 'miss', group: 'site_issue', icon: '⊟', label: 'Missed Scope', sub: 'Gap in plans', docType: 'CO', billable: 'yes', reason: 'addition' as COReasonCode },
       { id: 'mat', group: 'site_issue', icon: '📦', label: 'Material Defect', sub: 'Wrong / defective', docType: 'WO', billable: 'maybe', reason: 'other' as COReasonCode },
     ],
@@ -277,35 +277,44 @@ export function StepWhereAndWhy({ state, dispatch, projectId }: StepWhereAndWhyP
       {/* ── CAUSE ────────────────────────────────────────────── */}
       <SectionLabel>What Caused the Change?</SectionLabel>
 
-      {CAUSES.map(group => (
-        <div key={group.group} className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={cn('w-2 h-2 rounded-full shrink-0', group.groupColor)} />
-            <span className="text-[0.74rem] font-bold text-foreground/80">{group.groupLabel}</span>
-            <span className="text-[0.64rem] text-muted-foreground font-medium">{group.groupMeta}</span>
+      {(() => {
+        const visibleCauses = CAUSES.map(group => ({
+          ...group,
+          items: group.items.filter(c =>
+            !c.allowedSystems || !cur.system || c.allowedSystems.includes(cur.system)
+          ),
+        })).filter(g => g.items.length > 0);
+
+        return visibleCauses.map(group => (
+          <div key={group.group} className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={cn('w-2 h-2 rounded-full shrink-0', group.groupColor)} />
+              <span className="text-[0.74rem] font-bold text-foreground/80">{group.groupLabel}</span>
+              <span className="text-[0.64rem] text-muted-foreground font-medium">{group.groupMeta}</span>
+            </div>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+              {group.items.map(cause => (
+                <Tile
+                  key={cause.id}
+                  selected={cur.causeId === cause.id}
+                  onClick={() => dispatch({
+                    type: 'SET_CAUSE',
+                    causeId: cause.id,
+                    causeName: cause.label,
+                    docType: cause.docType,
+                    billable: cause.billable,
+                    reason: cause.reason,
+                  })}
+                  icon={cause.icon}
+                  label={cause.label}
+                  sub={cause.sub}
+                  badge={cause.suggested ? '★ Common' : undefined}
+                />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
-            {group.items.map(cause => (
-              <Tile
-                key={cause.id}
-                selected={cur.causeId === cause.id}
-                onClick={() => dispatch({
-                  type: 'SET_CAUSE',
-                  causeId: cause.id,
-                  causeName: cause.label,
-                  docType: cause.docType,
-                  billable: cause.billable,
-                  reason: cause.reason,
-                })}
-                icon={cause.icon}
-                label={cause.label}
-                sub={cause.sub}
-                badge={cause.suggested ? '★ Common' : undefined}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+        ));
+      })()}
 
       {/* Inference badges */}
       {cur.causeId && (
