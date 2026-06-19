@@ -87,9 +87,9 @@ const CAUSES: { group: string; groupColor: string; groupLabel: string; groupMeta
     group: 'conflict', groupColor: 'bg-blue-600',
     groupLabel: 'Someone else changed something', groupMeta: '→ usually a Change Order, billable',
     items: [
-      { id: 'mech', group: 'conflict', icon: '🔧', label: 'Mechanical Conflict', sub: 'HVAC needs clearance', docType: 'CO', billable: 'yes', suggested: true, reason: 'gc_request' as COReasonCode },
-      { id: 'plumb', group: 'conflict', icon: '💧', label: 'Plumbing Conflict', sub: 'Waste / supply routing', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode },
-      { id: 'elec', group: 'conflict', icon: '⚡', label: 'Electrical Conflict', sub: 'Panel, conduit, fixture', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode },
+      { id: 'mech', group: 'conflict', icon: '🔧', label: 'Mechanical Conflict', sub: 'HVAC needs clearance', docType: 'CO', billable: 'yes', suggested: true, reason: 'gc_request' as COReasonCode, allowedSystems: ['floor', 'wall', 'ceiling', 'roof'] },
+      { id: 'plumb', group: 'conflict', icon: '💧', label: 'Plumbing Conflict', sub: 'Waste / supply routing', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode, allowedSystems: ['floor', 'wall', 'ceiling'] },
+      { id: 'elec', group: 'conflict', icon: '⚡', label: 'Electrical Conflict', sub: 'Panel, conduit, fixture', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode, allowedSystems: ['floor', 'wall', 'ceiling'] },
       { id: 'gc', group: 'conflict', icon: '📋', label: 'GC Request', sub: 'Field directive from GC', docType: 'CO', billable: 'yes', reason: 'gc_request' as COReasonCode },
       { id: 'plan', group: 'conflict', icon: '📐', label: 'Plan Revision', sub: 'Architect / engineer change', docType: 'CO', billable: 'yes', reason: 'design_change' as COReasonCode },
       { id: 'unfor', group: 'conflict', icon: '❓', label: 'Unforeseen Condition', sub: 'Hidden damage, existing', docType: 'CO', billable: 'yes', reason: 'other' as COReasonCode },
