@@ -40,6 +40,9 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
       setPhase('idle');
       setSeconds(0);
       setBlob(null);
+      setReadyCoId(null);
+      setReadyCoNumber(null);
+      setErrorMsg(null);
       setAudioUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return null;
