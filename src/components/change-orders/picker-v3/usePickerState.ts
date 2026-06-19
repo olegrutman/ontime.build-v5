@@ -28,14 +28,21 @@ export function pickerReducer(state: PickerState, action: PickerAction): PickerS
       return updateItem({ multiLocation: multi, locations: locs });
     }
 
-    case 'SET_SYSTEM':
+    case 'SET_SYSTEM': {
+      const keepCause = isCauseAllowedForSystem(cur.causeId, action.systemId);
       return updateItem({
         system: action.systemId,
         systemName: action.systemName,
         workTypes: new Set<string>(),
         workNames: {},
         narrative: '',
+        ...(keepCause ? {} : {
+          causeId: null,
+          causeName: null,
+          reason: null,
+        }),
       });
+    }
 
     case 'SET_CAUSE':
       return updateItem({
