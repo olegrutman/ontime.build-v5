@@ -202,7 +202,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
   });
 
   it('surfaces edge-function errors and returns to the recorded phase for retry', async () => {
-    const { toast } = await import('sonner');
+    const toast = { error: toastErrorMock };
     invokeMock.mockResolvedValueOnce({
       data: { error: 'transcribe_failed' },
       error: null,
