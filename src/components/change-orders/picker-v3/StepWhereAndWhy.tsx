@@ -278,35 +278,44 @@ export function StepWhereAndWhy({ state, dispatch, projectId }: StepWhereAndWhyP
       {/* ── CAUSE ────────────────────────────────────────────── */}
       <SectionLabel>What Caused the Change?</SectionLabel>
 
-      {CAUSES.map(group => (
-        <div key={group.group} className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={cn('w-2 h-2 rounded-full shrink-0', group.groupColor)} />
-            <span className="text-[0.74rem] font-bold text-foreground/80">{group.groupLabel}</span>
-            <span className="text-[0.64rem] text-muted-foreground font-medium">{group.groupMeta}</span>
+      {(() => {
+        const visibleCauses = CAUSES.map(group => ({
+          ...group,
+          items: group.items.filter(c =>
+            !c.allowedSystems || !cur.system || c.allowedSystems.includes(cur.system)
+          ),
+        })).filter(g => g.items.length > 0);
+
+        return visibleCauses.map(group => (
+          <div key={group.group} className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={cn('w-2 h-2 rounded-full shrink-0', group.groupColor)} />
+              <span className="text-[0.74rem] font-bold text-foreground/80">{group.groupLabel}</span>
+              <span className="text-[0.64rem] text-muted-foreground font-medium">{group.groupMeta}</span>
+            </div>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+              {group.items.map(cause => (
+                <Tile
+                  key={cause.id}
+                  selected={cur.causeId === cause.id}
+                  onClick={() => dispatch({
+                    type: 'SET_CAUSE',
+                    causeId: cause.id,
+                    causeName: cause.label,
+                    docType: cause.docType,
+                    billable: cause.billable,
+                    reason: cause.reason,
+                  })}
+                  icon={cause.icon}
+                  label={cause.label}
+                  sub={cause.sub}
+                  badge={cause.suggested ? '★ Common' : undefined}
+                />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
-            {group.items.map(cause => (
-              <Tile
-                key={cause.id}
-                selected={cur.causeId === cause.id}
-                onClick={() => dispatch({
-                  type: 'SET_CAUSE',
-                  causeId: cause.id,
-                  causeName: cause.label,
-                  docType: cause.docType,
-                  billable: cause.billable,
-                  reason: cause.reason,
-                })}
-                icon={cause.icon}
-                label={cause.label}
-                sub={cause.sub}
-                badge={cause.suggested ? '★ Common' : undefined}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+        ));
+      })()}
 
       {/* Inference badges */}
       {cur.causeId && (
