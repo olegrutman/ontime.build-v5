@@ -66,12 +66,19 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Resolve participant — must be a member of the project
+    // Resolve participant — must be a member of an org on the project
+    const { data: userOrgs } = await supabase
+      .from("user_org_roles")
+      .select("organization_id")
+      .eq("user_id", user.id);
+    const orgIds = (userOrgs ?? []).map((r) => r.organization_id);
+    if (orgIds.length === 0) return json({ error: "no_org" }, 403);
+
     const { data: membership } = await supabase
       .from("project_participants")
       .select("organization_id, role")
       .eq("project_id", body.project_id)
-      .eq("user_id", user.id)
+      .in("organization_id", orgIds)
       .eq("invite_status", "ACCEPTED")
       .maybeSingle();
     if (!membership?.organization_id) return json({ error: "not_a_participant" }, 403);
