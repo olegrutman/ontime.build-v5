@@ -13,6 +13,8 @@ export interface CauseOption {
   billable: 'yes' | 'maybe' | 'no';
   suggested?: boolean;
   reason: COReasonCode;
+  /** Optional system allowlist. When omitted, the cause applies to all systems. */
+  allowedSystems?: string[];
 }
 
 // ─── System ──────────────────────────────────────────────────────
