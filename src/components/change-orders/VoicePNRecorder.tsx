@@ -141,7 +141,8 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
 
   async function pollIntake(intakeId: string) {
     const start = Date.now();
-    const timeoutMs = 60_000;
+    const timeoutMs = 90_000;
+    setPhase('drafting');
     while (Date.now() - start < timeoutMs) {
       await new Promise((r) => setTimeout(r, 1200));
       const { data } = await supabase
@@ -152,27 +153,28 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
       if (!data) continue;
       if (data.status === 'succeeded' && data.finalized_co_id) {
         const coNumber = (data.output_json as any)?.co_number ?? 'PN';
-        toast.success(`Draft ${coNumber} ready in GC inbox`, {
-          action: {
-            label: 'Open',
-            onClick: () => navigate(`/project/${projectId}/change-orders/${data.finalized_co_id}`),
-          },
-        });
+        setReadyCoId(data.finalized_co_id as string);
+        setReadyCoNumber(coNumber);
+        setPhase('ready');
+        toast.success(`Draft ${coNumber} ready in GC inbox`);
         return;
       }
       if (data.status === 'failed') {
+        setErrorMsg(data.error_message ?? 'unknown');
+        setPhase('failed');
         toast.error(`Voice → PN failed: ${data.error_message ?? 'unknown'}`);
         return;
       }
     }
-    toast.message('Still processing — check Change Orders shortly.');
+    setErrorMsg('Timed out — check Change Orders shortly.');
+    setPhase('failed');
   }
 
   async function submit() {
     if (!blob || !user || !orgId) return;
     setPhase('uploading');
+    setErrorMsg(null);
     try {
-      // 1) upload original audio for archival (in parallel with the function call below)
       const ext = blob.type.includes('mp4') ? 'm4a' : 'webm';
       const path = `${orgId}/${projectId}/${Date.now()}-${user.id.substring(0, 8)}.${ext}`;
       const uploadPromise = supabase
@@ -192,8 +194,8 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
         });
 
       const voiceUrl = await uploadPromise;
+      setPhase('transcribing');
 
-      // 2) send binary multipart directly (skip base64 — ~33% smaller + no FileReader wait)
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) throw new Error('not_authenticated');
@@ -211,22 +213,23 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
       });
       const result = await resp.json().catch(() => ({}));
       if (!resp.ok || result?.error) {
+        setErrorMsg(String(result?.error ?? resp.status));
+        setPhase('failed');
         toast.error(`Voice → PN failed: ${result?.error ?? resp.status}`);
-        setPhase('recorded');
         return;
       }
 
-      // 3) close immediately — background job will finish and notify via toast
-      setPhase('done');
-      toast.success('Voice note received — drafting CO in background…');
-      onOpenChange(false);
       if (result.intake_id) {
-        pollIntake(result.intake_id);
+        await pollIntake(result.intake_id);
+      } else {
+        setErrorMsg('No intake id returned');
+        setPhase('failed');
       }
     } catch (e: any) {
       console.error('voice submit', e);
+      setErrorMsg(e?.message ?? 'Submission failed');
+      setPhase('failed');
       toast.error(e?.message ?? 'Submission failed');
-      setPhase('recorded');
     }
   }
 
