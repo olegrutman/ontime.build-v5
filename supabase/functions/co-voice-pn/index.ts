@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         source_kind: "voice",
         voice_url: body.voice_url ?? null,
         status: "pending",
-        model: "openai/gpt-4o-mini-transcribe",
+        model: "openai/gpt-4o-transcribe",
       })
       .select("id")
       .single();
