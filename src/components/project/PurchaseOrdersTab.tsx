@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Plus, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,10 +46,10 @@ interface PurchaseOrdersTabProps {
 
 export function PurchaseOrdersTab({ projectId, projectName, projectAddress, projectStatus }: PurchaseOrdersTabProps) {
   const { userOrgRoles, user, permissions } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
   const [estimatePackTotals, setEstimatePackTotals] = useState<Map<string, { total: number; itemCount: number }>>(new Map());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -98,96 +99,101 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     updatePOSearchParam(null);
   }, [updatePOSearchParam]);
 
-  const fetchPurchaseOrders = useCallback(async () => {
-    setLoading(true);
+  const posQueryKey = useMemo(() => ['project-purchase-orders', projectId, isSupplier, currentOrgId] as const, [projectId, isSupplier, currentOrgId]);
 
-    let query = supabase
-      .from('purchase_orders')
-      .select(`
-        *,
-        supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
-        line_items:po_line_items(id, unit_price, line_total, quantity, source_estimate_item_id, source_pack_name, original_unit_price, price_adjusted_by_supplier)
-      `)
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false });
+  const { data: poData, isLoading: loading, refetch: refetchPOs } = useQuery({
+    queryKey: posQueryKey,
+    enabled: !!projectId && !!currentOrgId,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    queryFn: async () => {
+      let query = supabase
+        .from('purchase_orders')
+        .select(`
+          id, po_number, po_name, status, created_at, project_id, supplier_id,
+          notes, download_token, organization_id, created_by_org_id, pricing_owner_org_id,
+          source_estimate_id, source_pack_name, pack_modified, sales_tax_percent,
+          po_subtotal_estimate_items, po_subtotal_non_estimate_items, po_subtotal_total,
+          po_tax_total, po_total, tax_percent_applied, ready_for_delivery_at,
+          ordered_at, delivered_at, priced_at, priced_by, approved_at, approved_by,
+          supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
+          line_items:po_line_items(id, unit_price, line_total, quantity, source_estimate_item_id, source_pack_name, original_unit_price, price_adjusted_by_supplier)
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
 
-    if (isSupplier) {
-      const { data: supplierLinks } = await supabase
-        .from('suppliers')
-        .select('id')
-        .eq('organization_id', currentOrgId);
+      if (isSupplier) {
+        const { data: supplierLinks } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('organization_id', currentOrgId);
 
-      if (supplierLinks && supplierLinks.length > 0) {
-        query = query.in('supplier_id', supplierLinks.map((supplier) => supplier.id));
+        if (!supplierLinks || supplierLinks.length === 0) {
+          return { pos: [] as PurchaseOrder[], invoicedIds: new Set<string>(), packTotals: new Map() };
+        }
+        query = query.in('supplier_id', supplierLinks.map((s) => s.id));
         query = query.neq('status', 'ACTIVE');
-      } else {
-        setPurchaseOrders([]);
-        setLoading(false);
-        return;
       }
-    }
 
-    const { data, error } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
+      const pos = (data || []) as unknown as PurchaseOrder[];
 
-    if (error) {
-      console.error('Error fetching POs:', error);
-      setLoading(false);
-      return;
-    }
-
-    const pos = (data || []) as unknown as PurchaseOrder[];
-    setPurchaseOrders(pos);
-
-    const estimateIds = Array.from(new Set(pos.map((po) => po.source_estimate_id).filter(Boolean))) as string[];
-    if (estimateIds.length > 0) {
-      const { data: estItems } = await supabase
-        .from('supplier_estimate_items')
-        .select('estimate_id, pack_name, unit_price, quantity')
-        .in('estimate_id', estimateIds);
-
+      const estimateIds = Array.from(new Set(pos.map((po) => po.source_estimate_id).filter(Boolean))) as string[];
       const totals = new Map<string, { total: number; itemCount: number }>();
-      for (const item of estItems || []) {
-        const key = `${item.estimate_id}|${item.pack_name || ''}`;
-        const current = totals.get(key) || { total: 0, itemCount: 0 };
-        current.total += (item.unit_price || 0) * (item.quantity || 0);
-        current.itemCount += 1;
-        totals.set(key, current);
-      }
+      if (estimateIds.length > 0) {
+        const { data: estItems } = await supabase
+          .from('supplier_estimate_items')
+          .select('estimate_id, pack_name, unit_price, quantity')
+          .in('estimate_id', estimateIds);
 
-      for (const po of pos) {
-        if (!po.source_estimate_id || !po.source_pack_name) continue;
-        const key = `${po.source_estimate_id}|${po.source_pack_name}`;
-        const packData = totals.get(key);
-        if (packData) {
-          packData.total = packData.total * (1 + (po.sales_tax_percent || 0) / 100);
+        for (const item of estItems || []) {
+          const key = `${item.estimate_id}|${item.pack_name || ''}`;
+          const current = totals.get(key) || { total: 0, itemCount: 0 };
+          current.total += (item.unit_price || 0) * (item.quantity || 0);
+          current.itemCount += 1;
+          totals.set(key, current);
+        }
+
+        for (const po of pos) {
+          if (!po.source_estimate_id || !po.source_pack_name) continue;
+          const key = `${po.source_estimate_id}|${po.source_pack_name}`;
+          const packData = totals.get(key);
+          if (packData) {
+            packData.total = packData.total * (1 + (po.sales_tax_percent || 0) / 100);
+          }
         }
       }
 
-      setEstimatePackTotals(totals);
-    } else {
-      setEstimatePackTotals(new Map());
-    }
+      const poIds = pos.map((po) => po.id);
+      const invoicedIds = new Set<string>();
+      if (poIds.length > 0) {
+        const { data: invoicedData } = await supabase
+          .from('invoices')
+          .select('po_id')
+          .eq('project_id', projectId)
+          .in('po_id', poIds)
+          .not('po_id', 'is', null);
+        for (const inv of invoicedData || []) {
+          if (inv.po_id) invoicedIds.add(inv.po_id);
+        }
+      }
 
-    const poIds = pos.map((po) => po.id);
-    if (poIds.length > 0) {
-      const { data: invoicedData } = await supabase
-        .from('invoices')
-        .select('po_id')
-        .eq('project_id', projectId)
-        .in('po_id', poIds)
-        .not('po_id', 'is', null);
-
-      setInvoicedPOIds(new Set((invoicedData || []).map((invoice: any) => invoice.po_id)));
-    } else {
-      setInvoicedPOIds(new Set());
-    }
-
-    setLoading(false);
-  }, [currentOrgId, isSupplier, projectId]);
+      return { pos, invoicedIds, packTotals: totals };
+    },
+  });
 
   useEffect(() => {
-    fetchPurchaseOrders();
-  }, [fetchPurchaseOrders]);
+    setPurchaseOrders(poData?.pos || []);
+    setInvoicedPOIds(poData?.invoicedIds || new Set());
+    setEstimatePackTotals(poData?.packTotals || new Map());
+  }, [poData]);
+
+  const fetchPurchaseOrders = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: posQueryKey });
+    return refetchPOs();
+  }, [queryClient, posQueryKey, refetchPOs]);
+
 
   useEffect(() => {
     if (poParam && poParam !== selectedPOId) {

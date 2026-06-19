@@ -224,7 +224,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       if (error) throw error;
 
       toast.success(`PO ${newStatus.toLowerCase()}`);
-      fetchPO();
+      // Patch local state instead of full refetch
+      setPO((prev) => prev ? ({ ...prev, status: newStatus, ...additionalFields } as PurchaseOrder) : prev);
       onUpdate();
     } catch (error: unknown) {
       const typedError = (error && typeof error === 'object') ? error as { code?: string; message?: string } : null;
