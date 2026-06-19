@@ -293,38 +293,26 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
           if (coError) throw coError;
           firstCreatedCoId ??= co.id;
 
-          // Insert single bundled scope line item
-          const workTypeEntries = Array.from(item.workTypes);
-          const scopeNames = workTypeEntries.map((wt) => item.workNames[wt] ?? wt);
-
-          const itemName =
-            (item.narrative?.trim().substring(0, 120)) ||
-            scopeNames[0] ||
-            item.causeName ||
-            'Scope item';
-
-          const narrative = item.narrative?.trim() || buildNarrativeFromItem(item);
-          const descriptionParts: string[] = [];
-          if (narrative) descriptionParts.push(narrative);
-          if (scopeNames.length > 0) {
-            descriptionParts.push(
-              `Scope:\n${scopeNames.map((n) => `• ${n}`).join('\n')}`
-            );
-          }
-          const description = descriptionParts.join('\n\n') || null;
-
-          const { error: liError } = await supabase
-            .from('co_line_items')
-            .insert({
+          // Break the picker item into SOV-style line rows (Labor / Materials / Equipment per work type × location)
+          const itemIndex = state.items.indexOf(item);
+          const rows = buildLineRowsFromItem(item, 1, itemIndex);
+          if (rows.length > 0) {
+            const payload = rows.map((r) => ({
               co_id: co.id,
               org_id: orgId,
               created_by_role: detectedRole,
-              item_name: itemName,
-              description,
-              unit: 'EA',
-              sort_order: 1,
-            });
-          if (liError) console.error('Line item insert error:', liError);
+              item_name: r.item_name,
+              description: r.description,
+              unit: r.unit,
+              sort_order: r.sort_order,
+              location_tag: r.location_tag,
+              reason: r.reason,
+              task_phase: r.task_phase,
+              group_key: r.group_key,
+            }));
+            const { error: liError } = await supabase.from('co_line_items').insert(payload);
+            if (liError) console.error('Line item insert error:', liError);
+          }
 
           // FC collaboration invite
           if (fcInputNeeded && resolvedFcOrgId) {
