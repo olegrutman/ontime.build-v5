@@ -6,6 +6,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// HTML-escape helper to prevent stored XSS from DB content interpolated into templates.
+const escHtml = (s: unknown): string => String(s ?? '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+
 function fmt(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
 }
@@ -143,7 +149,7 @@ Deno.serve(async (req) => {
     const itemRows = returnableItems.map((item: any, i: number) => `
       <tr>
         <td class="item-num">${i + 1}</td>
-        <td>${item.description_snapshot}</td>
+        <td>${escHtml(item.description_snapshot)}</td>
         <td class="r mono">${item.qty_requested}</td>
         <td>${item.uom}</td>
         <td class="r mono">${fmt(item.credit_unit_price || 0)}</td>
@@ -174,7 +180,7 @@ ${V3_CSS}
   <div class="form-body">
     <div class="two-col">
       <div class="section"><div class="sec-title"><div class="dot" style="background:var(--blue)"></div>Project</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${project?.name || '—'}</div>${projectAddr(project) ? `<div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${projectAddr(project)}</div>` : ''}</div></div>
-      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Return Reason</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${ret.reason}${ret.wrong_type ? ' – ' + ret.wrong_type : ''}</div></div></div>
+      <div class="section"><div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Return Reason</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${escHtml(ret.reason)}${ret.wrong_type ? ' – ' + escHtml(ret.wrong_type) : ''}</div></div></div>
     </div>
     <div class="two-col">
       <div class="section"><div class="sec-title"><div class="dot" style="background:var(--amber)"></div>Supplier</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${supplierOrg?.name || '—'}</div></div></div>
@@ -208,7 +214,7 @@ ${V3_CSS}
       <div class="ff-powered"><span class="ff-powered-label">Powered by</span><span class="ff-ot-brand">Ontime<em>.build</em></span></div>
       <span class="ff-meta">Generated ${now} · Page 1 of 1</span>
     </div>
-    <div class="ff-right"><div class="ff-tag">${ret.return_number}</div>${project?.name ? `<div class="ff-tag">${project.name}</div>` : ''}</div>
+    <div class="ff-right"><div class="ff-tag">${escHtml(ret.return_number)}</div>${project?.name ? `<div class="ff-tag">${escHtml(project.name)}</div>` : ''}</div>
   </div>
 </div>
 </body></html>`;

@@ -9,6 +9,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// HTML-escape helper to prevent stored XSS from DB content interpolated into templates.
+const escHtml = (s: unknown): string => String(s ?? '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+
 function fmt(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
 }
@@ -229,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
         : '';
       return `<tr>
         <td class="item-num">${i + 1}</td>
-        <td>${item.description}${notes}</td>
+        <td>${escHtml(item.description)}${notes}</td>
         <td class="r mono">${fmt(item.scheduled_value)}</td>
         <td class="r mono">${fmt(item.previous_billed)}</td>
         <td class="r this-period">${fmt(item.current_billed)}</td>
@@ -291,9 +297,9 @@ ${V3_CSS}
       <div class="tot-row grand"><span>Total Due This Period</span><span class="tot-val">${fmt(invoice.total_amount)}</span></div>
     </div>
 
-    ${invoice.notes ? `<div class="notes-box"><strong style="color:var(--ink2);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Notes:</strong><br/>${invoice.notes}</div>` : ''}
+    ${invoice.notes ? `<div class="notes-box"><strong style="color:var(--ink2);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Notes:</strong><br/>${escHtml(invoice.notes)}</div>` : ''}
 
-    ${invoice.status === 'REJECTED' && invoice.rejection_reason ? `<div class="notes-box" style="border-color:var(--red);background:var(--red-bg);"><strong style="color:var(--red);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Rejection Reason:</strong><br/><span style="color:var(--red);">${invoice.rejection_reason}</span></div>` : ''}
+    ${invoice.status === 'REJECTED' && invoice.rejection_reason ? `<div class="notes-box" style="border-color:var(--red);background:var(--red-bg);"><strong style="color:var(--red);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Rejection Reason:</strong><br/><span style="color:var(--red);">${escHtml(invoice.rejection_reason)}</span></div>` : ''}
 
 
     <div class="sig-row">

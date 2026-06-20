@@ -58,27 +58,17 @@ export default function COExternalView() {
     if (!token) { setError('Invalid link'); setLoading(false); return; }
 
     async function load() {
-      // Fetch invite by token
-      const { data: inviteData, error: invErr } = await supabase
-        .from('co_external_invites')
-        .select('*')
-        .eq('token', token!)
-        .maybeSingle();
+      const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', {
+        body: { action: 'load_invite', token },
+      });
 
-      if (invErr || !inviteData) {
-        setError('This link is invalid or has expired.');
+      if (fnErr || !data || (data as any).error) {
+        setError((data as any)?.error ?? 'This link is invalid or has expired.');
         setLoading(false);
         return;
       }
 
-      const inv = inviteData as unknown as InviteData;
-
-      // Check expiry
-      if (new Date(inv.expires_at) < new Date()) {
-        setError('This invitation has expired. Please request a new link from the project team.');
-        setLoading(false);
-        return;
-      }
+      const { invite: inv, co: coData, line_items: items } = data as any;
 
       if (inv.responded_at) {
         setInvite(inv);
@@ -90,24 +80,9 @@ export default function COExternalView() {
       setInvite(inv);
       setRespondentEmail(inv.email);
 
-      // Fetch CO details
-      const { data: coData } = await supabase
-        .from('change_orders')
-        .select('id, co_number, title, status, document_type, location_tag, reason_note, pricing_type')
-        .eq('id', inv.co_id)
-        .single();
-
       if (coData) {
-        setCO(coData as unknown as COData);
-
-        // Fetch line items
-        const { data: items } = await supabase
-          .from('co_line_items')
-          .select('id, item_name, description, unit')
-          .eq('co_id', inv.co_id)
-          .order('sort_order');
-
-        if (items) {
+        setCO(coData as COData);
+        if (items && Array.isArray(items)) {
           setLineItems(items as LineItem[]);
           const initial: Record<string, { price: string; note: string }> = {};
           items.forEach((it: any) => { initial[it.id] = { price: '', note: '' }; });
@@ -121,54 +96,37 @@ export default function COExternalView() {
     load();
   }, [token]);
 
+
   const handleSubmit = async () => {
-    if (!invite || !respondentName.trim() || !respondentEmail.trim()) return;
+    if (!invite || !respondentName.trim() || !respondentEmail.trim() || !token) return;
     setSubmitting(true);
 
     try {
-      const responseData: any = {
-        purpose: invite.invite_purpose,
-        notes: notes.trim(),
-        submitted_at: new Date().toISOString(),
+      const body: any = {
+        action: 'submit_invite_response',
+        token,
+        respondent_name: respondentName.trim(),
         respondent_email: respondentEmail.trim(),
-        user_agent: navigator.userAgent,
+        notes: notes.trim(),
       };
 
       if (invite.invite_purpose === 'pricing') {
-        responseData.line_item_pricing = Object.entries(pricingItems).map(([itemId, data]) => ({
+        body.line_item_pricing = Object.entries(pricingItems).map(([itemId, data]) => ({
           line_item_id: itemId,
           price: data.price ? parseFloat(data.price) : null,
           note: data.note,
         }));
-        responseData.total_price = Object.values(pricingItems).reduce(
+        body.total_price = Object.values(pricingItems).reduce(
           (sum, d) => sum + (d.price ? parseFloat(d.price) : 0), 0
         );
       }
 
       if (invite.invite_purpose === 'scope_ack') {
-        responseData.scope_acknowledged = scopeAcknowledged;
+        body.scope_acknowledged = scopeAcknowledged;
       }
 
-      const { error: updateErr } = await supabase
-        .from('co_external_invites')
-        .update({
-          responded_at: new Date().toISOString(),
-          response_data: responseData,
-          respondent_name: respondentName.trim(),
-        } as any)
-        .eq('id', invite.id);
-
-      if (updateErr) throw updateErr;
-
-      // Log activity on the CO
-      await supabase.from('co_activity').insert({
-        co_id: invite.co_id,
-        project_id: co?.id ? undefined : undefined,
-        actor_user_id: null,
-        actor_role: 'EXT',
-        action: 'external_response',
-        detail: `External response from ${respondentName.trim()} (${respondentEmail.trim()}) — ${invite.invite_purpose}`,
-      } as any);
+      const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', { body });
+      if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed');
 
       setDone(true);
     } catch (err: any) {
@@ -178,6 +136,7 @@ export default function COExternalView() {
       setSubmitting(false);
     }
   };
+
 
   if (loading) {
     return (

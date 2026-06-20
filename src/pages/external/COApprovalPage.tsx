@@ -21,9 +21,7 @@ interface COData {
   tc_submitted_price: number | null;
   total_tax: number | null;
   owner_approval_status: string;
-  owner_approval_token: string | null;
   architect_approval_status: string;
-  architect_approval_token: string | null;
 }
 
 export default function COApprovalPage() {
@@ -43,38 +41,22 @@ export default function COApprovalPage() {
     if (!token) { setError('Invalid link'); setLoading(false); return; }
 
     async function load() {
-      // Try owner token first
-      const { data } = await (supabase as any)
-        .from('change_orders')
-        .select('id, title, co_number, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
-        .eq('owner_approval_token', token)
-        .maybeSingle();
-
-      if (data) {
-        const d = data as unknown as COData;
-        setCO({ ...d, description: null });
-        setApprovalType('owner');
-        if (d.owner_approval_status !== 'pending') {
-          setDone(d.owner_approval_status === 'approved' ? 'approved' : 'rejected');
-        }
-      } else {
-        // Try architect token
-        const { data: archData } = await (supabase as any)
-          .from('change_orders')
-          .select('id, title, co_number, tc_submitted_price, total_tax, owner_approval_status, owner_approval_token, architect_approval_status, architect_approval_token')
-          .eq('architect_approval_token', token)
-          .maybeSingle();
-
-        if (archData) {
-          const ad = archData as unknown as COData;
-          setCO({ ...ad, description: null });
-          setApprovalType('architect');
-          if (ad.architect_approval_status !== 'pending') {
-            setDone(ad.architect_approval_status === 'approved' ? 'approved' : 'rejected');
-          }
-        } else {
-          setError('This approval link is invalid or has expired.');
-        }
+      const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', {
+        body: { action: 'load_approval', token },
+      });
+      if (fnErr || !data || (data as any).error) {
+        setError((data as any)?.error ?? 'This approval link is invalid or has expired.');
+        setLoading(false);
+        return;
+      }
+      const { co: coData, approval_type } = data as any;
+      setCO({ ...coData, description: null });
+      setApprovalType(approval_type as ApprovalType);
+      const status = approval_type === 'owner'
+        ? coData.owner_approval_status
+        : coData.architect_approval_status;
+      if (status !== 'pending') {
+        setDone(status === 'approved' ? 'approved' : 'rejected');
       }
       setLoading(false);
     }
@@ -82,39 +64,18 @@ export default function COApprovalPage() {
   }, [token]);
 
   async function handleApprove() {
-    if (!co || !approvalType || !approverName.trim()) return;
+    if (!co || !approvalType || !approverName.trim() || !token) return;
     setActing(true);
     try {
-      const prefix = approvalType === 'owner' ? 'owner' : 'architect';
-      const { error: err } = await (supabase as any)
-        .from('change_orders')
-        .update({
-          [`${prefix}_approval_status`]: 'approved',
-          [`${prefix}_approved_at`]: new Date().toISOString(),
-          [`${prefix}_approver_name`]: approverName.trim(),
-        })
-        .eq('id', co.id)
-        .eq(`${prefix}_approval_token`, token);
-      if (err) throw err;
-
-      // Check if all approvals are done — transition to contracted
-      const { data: updated } = await (supabase as any)
-        .from('change_orders')
-        .select('owner_approval_status, architect_approval_status')
-        .eq('id', co.id)
-        .single();
-
-      if (updated) {
-        const ownerDone = updated.owner_approval_status === 'not_required' || updated.owner_approval_status === 'approved';
-        const archDone = updated.architect_approval_status === 'not_required' || updated.architect_approval_status === 'approved';
-        if (ownerDone && archDone) {
-          await (supabase as any)
-            .from('change_orders')
-            .update({ status: 'contracted', contracted_at: new Date().toISOString() })
-            .eq('id', co.id);
-        }
-      }
-
+      const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', {
+        body: {
+          action: 'submit_approval',
+          token,
+          decision: 'approved',
+          approver_name: approverName.trim(),
+        },
+      });
+      if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to approve');
       setDone('approved');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to approve');
@@ -123,20 +84,19 @@ export default function COApprovalPage() {
   }
 
   async function handleReject() {
-    if (!co || !approvalType || !rejectNote.trim() || !approverName.trim()) return;
+    if (!co || !approvalType || !rejectNote.trim() || !approverName.trim() || !token) return;
     setActing(true);
     try {
-      const prefix = approvalType === 'owner' ? 'owner' : 'architect';
-      const { error: err } = await (supabase as any)
-        .from('change_orders')
-        .update({
-          [`${prefix}_approval_status`]: 'rejected',
-          [`${prefix}_approver_name`]: approverName.trim(),
-          [`${prefix}_rejection_note`]: rejectNote.trim(),
-        })
-        .eq('id', co.id)
-        .eq(`${prefix}_approval_token`, token);
-      if (err) throw err;
+      const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', {
+        body: {
+          action: 'submit_approval',
+          token,
+          decision: 'rejected',
+          approver_name: approverName.trim(),
+          rejection_note: rejectNote.trim(),
+        },
+      });
+      if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to reject');
       setDone('rejected');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to reject');
@@ -203,7 +163,6 @@ export default function COApprovalPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="bg-card border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <ShieldCheck className="h-6 w-6 text-primary" />
@@ -215,7 +174,6 @@ export default function COApprovalPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-        {/* CO Summary */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <div className="flex items-center gap-2">
@@ -224,9 +182,6 @@ export default function COApprovalPage() {
               )}
             </div>
             <h2 className="text-base font-semibold text-foreground mt-2">{co.title}</h2>
-            {co.description && (
-              <p className="text-sm text-muted-foreground mt-1">{co.description}</p>
-            )}
           </div>
           <div className="px-5 py-4 space-y-2">
             <div className="flex justify-between text-sm">
@@ -246,7 +201,6 @@ export default function COApprovalPage() {
           </div>
         </div>
 
-        {/* Approval Form */}
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <div>
             <Label className="text-sm font-medium">Your Name (legal signature) *</Label>
@@ -256,64 +210,56 @@ export default function COApprovalPage() {
               placeholder="Enter your full name"
               className="mt-1.5"
             />
-            <p className="text-[10px] text-muted-foreground mt-1">
-              By typing your name, you are electronically signing this approval.
-            </p>
           </div>
 
-          {rejectMode ? (
+          {!rejectMode ? (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={handleApprove}
+                disabled={!approverName.trim() || acting}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+              >
+                {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                Approve
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setRejectMode(true)}
+                disabled={acting}
+                className="flex-1 border-destructive text-destructive hover:bg-destructive/10"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Reject
+              </Button>
+            </div>
+          ) : (
             <div className="space-y-3">
               <div>
-                <Label className="text-sm font-medium">Rejection Reason *</Label>
+                <Label className="text-sm font-medium">Reason for rejection *</Label>
                 <Textarea
                   value={rejectNote}
                   onChange={e => setRejectNote(e.target.value)}
-                  placeholder="Explain why this change order is being rejected..."
-                  rows={3}
-                  className="mt-1.5 resize-none"
+                  placeholder="Tell the team why you're rejecting this change order"
+                  rows={4}
+                  className="mt-1.5"
                 />
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="destructive"
-                  className="flex-1 h-10"
                   onClick={handleReject}
-                  disabled={acting || !approverName.trim() || !rejectNote.trim()}
+                  disabled={!approverName.trim() || !rejectNote.trim() || acting}
+                  variant="destructive"
+                  className="flex-1"
                 >
-                  {acting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <X className="h-4 w-4 mr-1" />}
-                  Confirm Rejection
+                  {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit Rejection'}
                 </Button>
-                <Button variant="outline" className="h-10" onClick={() => setRejectMode(false)} disabled={acting}>
+                <Button variant="ghost" onClick={() => setRejectMode(false)} disabled={acting}>
                   Cancel
                 </Button>
               </div>
             </div>
-          ) : (
-            <div className="flex gap-2">
-              <Button
-                className="flex-1 h-10 gap-1.5"
-                onClick={handleApprove}
-                disabled={acting || !approverName.trim()}
-              >
-                {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Approve Change Order
-              </Button>
-              <Button
-                variant="outline"
-                className="h-10 gap-1.5 text-destructive border-destructive/30"
-                onClick={() => setRejectMode(true)}
-                disabled={acting}
-              >
-                <X className="h-4 w-4" />
-                Reject
-              </Button>
-            </div>
           )}
         </div>
-
-        <p className="text-[10px] text-center text-muted-foreground">
-          Your IP address and browser information will be recorded for audit purposes.
-        </p>
       </div>
     </div>
   );

@@ -9,6 +9,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// HTML-escape helper to prevent stored XSS from DB content interpolated into templates.
+const escHtml = (s: unknown): string => String(s ?? '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+
 function fmt(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
 }
@@ -158,7 +164,7 @@ const handler = async (req: Request): Promise<Response> => {
       <tr>
         <td><div class="task-check"></div></td>
         <td class="item-num">${i + 1}</td>
-        <td>${p.description}</td>
+        <td>${escHtml(p.description)}</td>
         <td class="r mono">${p.quantity} ${p.uom}</td>
         <td class="r mono">${p.unit_price != null ? fmt(p.unit_price) : '—'}</td>
         <td class="r mono">${p.unit_price != null ? fmt(p.quantity * p.unit_price) : '—'}</td>
@@ -168,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
     const laborTableRows = laborEntries.map((e: any) => `
       <tr>
         <td>${fmtDate(e.entry_date)}</td>
-        <td>${e.description || '—'}</td>
+        <td>${escHtml(e.description || '—')}</td>
         <td class="r mono">${e.hours}</td>
         <td class="r mono">${e.hourly_rate ? fmt(e.hourly_rate) : '—'}</td>
         <td class="r mono">${e.hourly_rate ? fmt(e.hours * e.hourly_rate) : '—'}</td>
@@ -180,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
       : org?.name || '';
 
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
-<title>${typeLabel} — ${workItem.title}</title>
+<title>${escHtml(typeLabel)} — ${escHtml(workItem.title)}</title>
 ${V3_CSS}
 </head><body>
 <div class="page">
@@ -206,7 +212,7 @@ ${V3_CSS}
       <div class="section"><div class="sec-title"><div class="dot" style="background:var(--teal)"></div>Assignment</div><div class="sec-content"><div style="font-size:.82rem;font-weight:700;color:var(--ink);">${assignmentInfo}</div></div></div>
     </div>
 
-    ${workItem.description ? `<div class="section"><div class="sec-title"><div class="dot" style="background:var(--amber)"></div>Description</div><div class="sec-content"><div style="font-size:.78rem;color:var(--ink2);white-space:pre-wrap;">${workItem.description}</div></div></div>` : ''}
+    ${workItem.description ? `<div class="section"><div class="sec-title"><div class="dot" style="background:var(--amber)"></div>Description</div><div class="sec-content"><div style="font-size:.78rem;color:var(--ink2);white-space:pre-wrap;">${escHtml(workItem.description)}</div></div></div>` : ''}
 
     <div class="section">
       <div class="sec-title"><div class="dot" style="background:var(--amber)"></div>Schedule & Budget</div>
@@ -244,7 +250,7 @@ ${V3_CSS}
       </div>
     </div>` : ''}
 
-    ${workItem.rejection_notes ? `<div class="notes-box" style="border-color:var(--red);background:#FEF2F2;"><strong style="color:var(--red);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Rejection Notes:</strong><br/><span style="color:var(--red);">${workItem.rejection_notes}</span></div>` : ''}
+    ${workItem.rejection_notes ? `<div class="notes-box" style="border-color:var(--red);background:#FEF2F2;"><strong style="color:var(--red);font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;">Rejection Notes:</strong><br/><span style="color:var(--red);">${escHtml(workItem.rejection_notes)}</span></div>` : ''}
 
     <div class="sig-row">
       <div class="sig-block"><div class="sig-line"></div><div class="sig-label">GC Authorization</div><div class="sig-meta"></div></div>

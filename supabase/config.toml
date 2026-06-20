@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.seed-qa-environment]
 verify_jwt = false
+
+[functions.co-public-access]
+verify_jwt = false
