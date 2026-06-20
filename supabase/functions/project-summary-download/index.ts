@@ -9,6 +9,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// HTML-escape helper to prevent stored XSS from DB content interpolated into templates.
+const escHtml = (s: unknown): string => String(s ?? '')
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+
 function fmt(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(n);
 }
@@ -131,7 +137,7 @@ const handler = async (req: Request): Promise<Response> => {
     const now = fmtDate(new Date().toISOString());
 
     const woRows = wos.map((wo: any, i: number) => `
-      <tr><td class="item-num">${i + 1}</td><td>${wo.title}</td><td><span class="badge ${statusClass(wo.status)}">${wo.status}</span></td><td class="r mono">${wo.final_price ? fmt(wo.final_price) : '—'}</td><td>${fmtDate(wo.created_at)}</td></tr>
+      <tr><td class="item-num">${i + 1}</td><td>${escHtml(wo.title)}</td><td><span class="badge ${statusClass(wo.status)}">${wo.status}</span></td><td class="r mono">${wo.final_price ? fmt(wo.final_price) : '—'}</td><td>${fmtDate(wo.created_at)}</td></tr>
     `).join('');
 
     const invRows = invs.map((inv: any, i: number) => `
@@ -149,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
-<title>Project Summary – ${project.name}</title>
+<title>Project Summary – ${escHtml(project.name)}</title>
 ${V3_CSS}
 </head><body>
 <div class="page">
@@ -163,7 +169,7 @@ ${V3_CSS}
     </div>
     <div class="fh-right">
       <div class="fh-doc-type">Project Summary</div>
-      <div class="fh-id">${project.name}</div>
+      <div class="fh-id">${escHtml(project.name)}</div>
       <div class="fh-status ${statusClass(project.status)}">${project.status}</div>
       <div class="fh-date">Generated: ${now}</div>
     </div>
@@ -173,7 +179,7 @@ ${V3_CSS}
     <div class="section">
       <div class="sec-title"><div class="dot" style="background:var(--blue)"></div>Project Details</div>
       <div class="sec-content">
-        <div style="font-size:.82rem;font-weight:700;color:var(--ink);">${project.name}</div>
+        <div style="font-size:.82rem;font-weight:700;color:var(--ink);">${escHtml(project.name)}</div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${location}</div>
         <div style="font-size:.72rem;color:var(--muted);margin-top:2px;">${org?.name || ''} · ${org?.type || ''}</div>
       </div>
@@ -230,7 +236,7 @@ ${V3_CSS}
       <div class="ff-powered"><span class="ff-powered-label">Powered by</span><span class="ff-ot-brand">Ontime<em>.build</em></span></div>
       <span class="ff-meta">Generated ${now} · Page 1 of 1</span>
     </div>
-    <div class="ff-right"><div class="ff-tag">${project.name}</div></div>
+    <div class="ff-right"><div class="ff-tag">${escHtml(project.name)}</div></div>
   </div>
 </div>
 </body></html>`;
