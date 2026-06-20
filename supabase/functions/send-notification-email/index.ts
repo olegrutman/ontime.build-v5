@@ -78,15 +78,25 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const triggerSecret = req.headers.get("x-trigger-secret");
-    if (triggerSecret !== "internal-db-trigger") {
+    // Validate the caller holds the service_role JWT (the DB trigger sends it).
+    // No more hardcoded shared secret.
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    // Constant-time compare to mitigate timing oracles.
+    const eq = (a: string, b: string) => {
+      if (a.length !== b.length) return false;
+      let r = 0;
+      for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+      return r === 0;
+    };
+    if (!bearer || !eq(bearer, serviceRoleKey)) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const payload: NotificationPayload = await req.json();
     const { recipient_org_id, recipient_user_id, type, title, body, action_url } = payload;
