@@ -98,53 +98,35 @@ export default function COExternalView() {
 
 
   const handleSubmit = async () => {
-    if (!invite || !respondentName.trim() || !respondentEmail.trim()) return;
+    if (!invite || !respondentName.trim() || !respondentEmail.trim() || !token) return;
     setSubmitting(true);
 
     try {
-      const responseData: any = {
-        purpose: invite.invite_purpose,
-        notes: notes.trim(),
-        submitted_at: new Date().toISOString(),
+      const body: any = {
+        action: 'submit_invite_response',
+        token,
+        respondent_name: respondentName.trim(),
         respondent_email: respondentEmail.trim(),
-        user_agent: navigator.userAgent,
+        notes: notes.trim(),
       };
 
       if (invite.invite_purpose === 'pricing') {
-        responseData.line_item_pricing = Object.entries(pricingItems).map(([itemId, data]) => ({
+        body.line_item_pricing = Object.entries(pricingItems).map(([itemId, data]) => ({
           line_item_id: itemId,
           price: data.price ? parseFloat(data.price) : null,
           note: data.note,
         }));
-        responseData.total_price = Object.values(pricingItems).reduce(
+        body.total_price = Object.values(pricingItems).reduce(
           (sum, d) => sum + (d.price ? parseFloat(d.price) : 0), 0
         );
       }
 
       if (invite.invite_purpose === 'scope_ack') {
-        responseData.scope_acknowledged = scopeAcknowledged;
+        body.scope_acknowledged = scopeAcknowledged;
       }
 
-      const { error: updateErr } = await supabase
-        .from('co_external_invites')
-        .update({
-          responded_at: new Date().toISOString(),
-          response_data: responseData,
-          respondent_name: respondentName.trim(),
-        } as any)
-        .eq('id', invite.id);
-
-      if (updateErr) throw updateErr;
-
-      // Log activity on the CO
-      await supabase.from('co_activity').insert({
-        co_id: invite.co_id,
-        project_id: co?.id ? undefined : undefined,
-        actor_user_id: null,
-        actor_role: 'EXT',
-        action: 'external_response',
-        detail: `External response from ${respondentName.trim()} (${respondentEmail.trim()}) — ${invite.invite_purpose}`,
-      } as any);
+      const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', { body });
+      if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed');
 
       setDone(true);
     } catch (err: any) {
@@ -154,6 +136,7 @@ export default function COExternalView() {
       setSubmitting(false);
     }
   };
+
 
   if (loading) {
     return (
