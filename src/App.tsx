@@ -13,6 +13,7 @@ import { SashaBubble } from "@/components/sasha";
 import { BoltGuide } from "@/components/bolt";
 import { RequirePlatformRole } from "@/components/platform/RequirePlatformRole";
 import { ImpersonationBanner } from "@/components/platform/ImpersonationBanner";
+import { NativeDeepLinkHandler } from "@/components/auth/NativeDeepLinkHandler";
 import { Button } from "@/components/ui/button";
 import { RoleThemeBridge } from "@/contexts/RoleThemeContext";
 
@@ -279,6 +280,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <NativeDeepLinkHandler />
             <AppRoutes />
           </BrowserRouter>
         </TooltipProvider>
