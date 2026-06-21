@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { authCallbackUrl } from '@/lib/authRedirects';
 import { useToast } from '@/hooks/use-toast';
 import { Check, User, Briefcase, Loader2, Building2 } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
@@ -169,7 +170,7 @@ export default function Signup() {
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo: window.location.origin + '/auth/callback',
+        emailRedirectTo: authCallbackUrl(),
         data: { full_name: `${data.firstName} ${data.lastName}`.trim() },
       },
     });

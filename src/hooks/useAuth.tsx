@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { Profile, UserOrgRole, AppRole, MemberPermissions, RolePermissions, getEffectivePermissions } from '@/types/organization';
 import type { PlatformRole } from '@/types/platform';
+import { authCallbackUrl } from '@/lib/authRedirects';
 
 interface AuthContextType {
   user: User | null;
@@ -130,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin + '/auth/callback',
+        emailRedirectTo: authCallbackUrl(),
         data: { full_name: fullName },
       },
     });

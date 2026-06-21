@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# OnTime.Build — Lovable → Mobile App
 
-## Project info
+This project started life as a [Lovable](https://lovable.dev) website and is being converted into a native mobile app using [Capacitor](https://capacitorjs.com). The same React + Vite codebase ships to two targets:
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+- **Web** — built with Vite and deployed as a PWA (vite-plugin-pwa).
+- **Native** — wrapped by Capacitor so the compiled web bundle runs inside an iOS/Android WebView with access to native APIs (push notifications, file system, etc.).
 
-## How can I edit this code?
+## How the conversion works
 
-There are several ways of editing your application.
+1. The Vite build produces a static bundle in `dist/`.
+2. Capacitor (`capacitor.config.ts`) copies `dist/` into the native `android/` (and later `ios/`) projects.
+3. The native shell loads the bundle in a WebView. Web-only concerns like the service worker are gated off so they don't interfere with the native runtime — see `src/main.tsx`, where `registerSW()` only runs when `!Capacitor.isNativePlatform()`.
 
-**Use Lovable**
+## Tech stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- Vite + React + TypeScript
+- shadcn-ui + Tailwind CSS
+- vite-plugin-pwa (web only)
+- Capacitor (native shell)
 
-Changes made via Lovable will be committed automatically to this repo.
+## Local development
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requires Node.js and npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Install dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Run the web app with hot-reload
 npm run dev
+
+# Production web build
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## Building the mobile app
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+# 1. Build the web bundle
+npm run build
 
-**Use GitHub Codespaces**
+# 2. Sync the bundle into the native projects
+npx cap sync
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# 3. Open the native IDE
+npx cap open android
+# npx cap open ios   # once the iOS platform is added
+```
 
-## What technologies are used for this project?
+To add the iOS platform later:
 
-This project is built with:
+```sh
+npx cap add ios
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Lovable
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+The web app can still be edited via the original [Lovable project](https://lovable.dev). Changes made in Lovable are committed back to this repo, after which `npm run build && npx cap sync` rolls them into the native app.

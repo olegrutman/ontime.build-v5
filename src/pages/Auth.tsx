@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { authCallbackUrl, passwordResetUrl } from '@/lib/authRedirects';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -192,7 +193,7 @@ export default function Auth() {
                       type: 'signup',
                       email: unconfirmedEmail,
                       options: {
-                        emailRedirectTo: window.location.origin + '/auth/callback',
+                        emailRedirectTo: authCallbackUrl(),
                       },
                     });
                     setResendingVerification(false);
@@ -271,7 +272,7 @@ export default function Auth() {
                         }
                         setResetLoading(true);
                         await supabase.auth.resetPasswordForEmail(signInForm.email, {
-                          redirectTo: window.location.origin + '/reset-password',
+                          redirectTo: passwordResetUrl(),
                         });
                         setResetLoading(false);
                         setResetSent(true);
