@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
+import { authCallbackUrl, passwordResetUrl } from '@/lib/authRedirects';
 import { useToast } from '@/hooks/use-toast';
 import '@/styles/auth.css';
 
@@ -146,7 +147,7 @@ export default function AuthPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin + '/auth/callback',
+        emailRedirectTo: authCallbackUrl(),
         shouldCreateUser: false,
       },
     });
@@ -158,7 +159,7 @@ export default function AuthPage() {
     await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: window.location.origin + '/auth/callback' },
+      options: { emailRedirectTo: authCallbackUrl() },
     });
   };
 
@@ -185,7 +186,7 @@ export default function AuthPage() {
   /* ── Forgot Password ── */
   const handleForgotSubmit = async (email: string) => {
     await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/reset-password',
+      redirectTo: passwordResetUrl(),
     });
   };
 

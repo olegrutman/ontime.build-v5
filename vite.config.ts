@@ -18,7 +18,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      injectRegister: "auto",
+      // Registration is done manually in src/main.tsx so it can be skipped
+      // on native (Capacitor) builds.
+      injectRegister: false,
       strategies: "generateSW",
       filename: "sw.js",
       workbox: {

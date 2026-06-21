@@ -8,6 +8,7 @@ import { RoleSelector } from './RoleSelector';
 import { GoogleIcon } from './GoogleIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { authCallbackUrl } from '@/lib/authRedirects';
 import type { Database } from '@/integrations/supabase/types';
 
 type OrgType = Database['public']['Enums']['org_type'];
@@ -265,7 +266,7 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
-        options: { emailRedirectTo: window.location.origin + '/auth/callback' },
+        options: { emailRedirectTo: authCallbackUrl() },
       });
       if (error) {
         const msg = error.message?.toLowerCase() || '';

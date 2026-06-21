@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { authCallbackUrl } from '@/lib/authRedirects';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
@@ -28,7 +29,7 @@ export default function VerifyEmail() {
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: window.location.origin + '/auth/callback',
+        emailRedirectTo: authCallbackUrl(),
       },
     });
 
