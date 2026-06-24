@@ -1,40 +1,296 @@
+import { lazy, Suspense, type ReactNode, Component, type ErrorInfo } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import NewProject from "./pages/NewProject";
-import ProjectDetail from "./pages/ProjectDetail";
-import Settings from "./pages/Settings";
-import Account from "./pages/Account";
-import NotFound from "./pages/NotFound";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { DemoProvider } from "@/contexts/DemoContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDemo } from "@/contexts/DemoContext";
+import { DemoBanner } from "@/components/demo";
+import { SashaBubble } from "@/components/sasha";
+import { BoltGuide } from "@/components/bolt";
+import { RequirePlatformRole } from "@/components/platform/RequirePlatformRole";
+import { ImpersonationBanner } from "@/components/platform/ImpersonationBanner";
+import { Button } from "@/components/ui/button";
+import { RoleThemeBridge } from "@/contexts/RoleThemeContext";
 
-const queryClient = new QueryClient();
+// 1. QueryClient with sensible defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+// 5. Lazy-loaded page components
+const Landing = lazy(() => import("./pages/Landing"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Demo = lazy(() => import("./pages/Demo"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const CreateProjectNew = lazy(() => import("./pages/CreateProjectNew"));
+const ProjectHome = lazy(() => import("./pages/ProjectHome"));
+const EditProjectScope = lazy(() => import("./pages/EditProjectScope"));
+const EditProject = lazy(() => import("./pages/EditProject"));
+const PartnerDirectory = lazy(() => import("./pages/PartnerDirectory"));
+const ProjectsArchive = lazy(() => import("./pages/ProjectsArchive"));
+const OrgTeam = lazy(() => import("./pages/OrgTeam"));
+
+const CatalogPage = lazy(() => import("./pages/CatalogPage"));
+const SupplierEstimates = lazy(() => import("./pages/SupplierEstimates"));
+const MaterialOrders = lazy(() => import("./pages/MaterialOrders"));
+const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
+const Reminders = lazy(() => import("./pages/Reminders"));
+const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
+const SupplierProjectEstimates = lazy(() => import("./pages/SupplierProjectEstimates"));
+const RFIs = lazy(() => import("./pages/RFIs"));
+const RFIListPage = lazy(() => import("./pages/RFIListPage"));
+const RFIDetailPage = lazy(() => import("./pages/RFIDetailPage"));
+const CreateRFIPage = lazy(() => import("./pages/CreateRFIPage"));
+const COApprovalPage = lazy(() => import("./pages/external/COApprovalPage"));
+const COExternalView = lazy(() => import("./pages/external/COExternalView"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Install = lazy(() => import("./pages/Install"));
+const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
+const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
+const CODetailPage = lazy(() => import("./pages/CODetail"));
+const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
+const CONewIntakePage = lazy(() => import("./pages/CONewIntake"));
+const COGuidedBuilderPage = lazy(() => import("./pages/COGuidedBuilder"));
+const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+
+// Legacy wizards — routes redirect to setup flow, lazy imports removed
+const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
+const QuickCapture = lazy(() => import("./pages/QuickCapture"));
+const GCProjectOverview = lazy(() => import("./pages/GCProjectOverview"));
+const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
+const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
+const PaymentApplicationsPage = lazy(() => import("./pages/PaymentApplicationsPage"));
+const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
+const DemoV2ProjectOverview = lazy(() => import("./pages/DemoV2ProjectOverview"));
+const CatalogMatrixPreview = lazy(() => import("./pages/dev/CatalogMatrixPreview"));
+
+// Platform Admin pages
+const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
+const PlatformOrgs = lazy(() => import("./pages/platform/PlatformOrgs"));
+const PlatformOrgDetail = lazy(() => import("./pages/platform/PlatformOrgDetail"));
+const PlatformUsers = lazy(() => import("./pages/platform/PlatformUsers"));
+const PlatformUserDetail = lazy(() => import("./pages/platform/PlatformUserDetail"));
+const PlatformProjects = lazy(() => import("./pages/platform/PlatformProjects"));
+const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjectDetail"));
+const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
+const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
+const PlatformSetup = lazy(() => import("./pages/platform/PlatformSetup"));
+const PlatformRoles = lazy(() => import("./pages/platform/PlatformRoles"));
+const PlatformKPIs = lazy(() => import("./pages/platform/PlatformKPIs"));
+const PlatformQA = lazy(() => import("./pages/platform/PlatformQA"));
+const PlatformCOScenarios = lazy(() => import("./pages/platform/PlatformCOScenarios"));
+
+
+
+// 4. Route protection wrapper
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  const { isDemoMode } = useDemo();
+  if (isDemoMode) return <>{children}</>;
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Skeleton className="h-8 w-32" />
+      </div>
+    );
+  if (!user) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
+
+// 6. Error Boundary
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Application error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-6 text-center">
+          <h1 className="text-2xl font-bold">Something went wrong</h1>
+          <p className="text-muted-foreground max-w-md">
+            An unexpected error occurred. Please try refreshing the page.
+          </p>
+          <Button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+          >
+            Refresh Page
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Suspense fallback
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Skeleton className="h-8 w-32" />
+    </div>
+  );
+}
+
+function AuthenticatedSashaBubble() {
+  const { user } = useAuth();
+  const { isDemoMode } = useDemo();
+  const { pathname } = useLocation();
+  if (!user && !isDemoMode) return null;
+  // Hide on full-screen picker/wizard routes where Sasha overlaps the submit bar
+  if (/\/change-orders\/(new|[^/]+\/add)/.test(pathname)) return null;
+  return <SashaBubble />;
+}
+
+function AppRoutes() {
+  const { isDemoMode } = useDemo();
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <ImpersonationBanner />
+      <DemoBanner />
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/demo" element={<Demo />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<AuthPage />} />
+            <Route path="/verify-email" element={<AuthPage />} />
+            <Route path="/signup" element={<AuthPage />} />
+            <Route path="/reset-password" element={<AuthPage />} />
+            <Route path="/install" element={<Install />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/security" element={<SecurityPage />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
+            <Route path="/external/co/:token" element={<COExternalView />} />
+
+            {/* Protected routes */}
+            <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/create-project" element={<RequireAuth><CreateProjectNew /></RequireAuth>} />
+            <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
+            <Route path="/project/:id/setup" element={<RequireAuth><FinishProjectSetup /></RequireAuth>} />
+            <Route path="/project/:id/contracts" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
+            <Route path="/project/:projectId/change-orders/quick" element={<RequireAuth><QuickCapture /></RequireAuth>} />
+            
+            <Route path="/project/:id/change-orders/new" element={<RequireAuth><CONewIntakePage /></RequireAuth>} />
+            <Route path="/project/:id/change-orders/new/manual" element={<RequireAuth><COPickerV3Page /></RequireAuth>} />
+            <Route path="/project/:id/change-orders/guided" element={<RequireAuth><COGuidedBuilderPage /></RequireAuth>} />
+            <Route path="/project/:id/change-orders/intake" element={<RequireAuth><CONewIntakePage /></RequireAuth>} />
+            <Route path="/project/:id/change-orders/:coId/add-items" element={<RequireAuth><COPickerV3Page /></RequireAuth>} />
+            <Route path="/project/:id/change-orders/:coId" element={<RequireAuth><CODetailPage /></RequireAuth>} />
+            {/* Legacy wizard routes — redirect to unified setup flow */}
+            <Route path="/project/:id/details-wizard" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
+            <Route path="/project/:id/scope-wizard" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
+            <Route path="/project/:id/contract/:contractId/scope" element={<RequireAuth><ContractScopeWizard /></RequireAuth>} />
+            <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
+            <Route path="/project/:id/gc-overview" element={<RequireAuth><GCProjectOverview /></RequireAuth>} />
+            <Route path="/project/:id/settings" element={<RequireAuth><ProjectSettings /></RequireAuth>} />
+            <Route path="/project/:id/rfis/new" element={<RequireAuth><CreateRFIPage /></RequireAuth>} />
+            <Route path="/project/:id/rfis/:rfiId" element={<RequireAuth><RFIDetailPage /></RequireAuth>} />
+            <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
+            <Route path="/project/:id/:section" element={<RequireAuth><ProjectHome /></RequireAuth>} />
+            <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
+            <Route path="/projects/archive" element={<RequireAuth><ProjectsArchive /></RequireAuth>} />
+            
+            <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
+            <Route path="/catalog" element={<RequireAuth><CatalogPage /></RequireAuth>} />
+            <Route path="/estimates" element={<RequireAuth><SupplierEstimates /></RequireAuth>} />
+            <Route path="/orders" element={<RequireAuth><MaterialOrders /></RequireAuth>} />
+            <Route path="/purchase-orders" element={<RequireAuth><PurchaseOrders /></RequireAuth>} />
+            <Route path="/reminders" element={<RequireAuth><Reminders /></RequireAuth>} />
+            
+            <Route path="/supplier/inventory" element={<RequireAuth><SupplierInventory /></RequireAuth>} />
+            <Route path="/supplier/estimates" element={<RequireAuth><SupplierProjectEstimates /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+            <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+            <Route path="/rfis" element={<RequireAuth><RFIs /></RequireAuth>} />
+
+            {/* Platform Admin routes */}
+            <Route path="/platform" element={<RequirePlatformRole><PlatformDashboard /></RequirePlatformRole>} />
+            <Route path="/platform/orgs" element={<RequirePlatformRole><PlatformOrgs /></RequirePlatformRole>} />
+            <Route path="/platform/orgs/:orgId" element={<RequirePlatformRole><PlatformOrgDetail /></RequirePlatformRole>} />
+            <Route path="/platform/users" element={<RequirePlatformRole><PlatformUsers /></RequirePlatformRole>} />
+            <Route path="/platform/users/:userId" element={<RequirePlatformRole><PlatformUserDetail /></RequirePlatformRole>} />
+            <Route path="/platform/projects" element={<RequirePlatformRole><PlatformProjects /></RequirePlatformRole>} />
+            <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
+            <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
+            <Route path="/platform/plans" element={<RequirePlatformRole><PlatformPlans /></RequirePlatformRole>} />
+            <Route path="/platform/rules" element={<RequirePlatformRole><PlatformRoles /></RequirePlatformRole>} />
+            <Route path="/platform/kpis" element={<RequirePlatformRole><PlatformKPIs /></RequirePlatformRole>} />
+            <Route path="/platform/setup" element={<RequirePlatformRole><PlatformSetup /></RequirePlatformRole>} />
+            <Route path="/platform/qa" element={<RequirePlatformRole><PlatformQA /></RequirePlatformRole>} />
+            <Route path="/platform/co-scenarios" element={<RequirePlatformRole><PlatformCOScenarios /></RequirePlatformRole>} />
+            
+
+            {/* Demo V2 — standalone prototype */}
+            <Route path="/demo-v2" element={<DemoV2Dashboard />} />
+            <Route path="/demo-v2/project/:id" element={<DemoV2ProjectOverview />} />
+
+            {/* Dev — catalog matrix preview (CO/WO picker constraints) */}
+            <Route path="/dev/catalog-matrix" element={<CatalogMatrixPreview />} />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+      <AuthenticatedSashaBubble />
+      {!isDemoMode && <BoltGuide />}
+    </div>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner position="top-center" />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/projects/new" element={<NewProject />} />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <RoleThemeBridge />
+      <DemoProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </DemoProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

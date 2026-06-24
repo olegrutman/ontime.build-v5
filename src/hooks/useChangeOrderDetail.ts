@@ -1,0 +1,698 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useCoV4Flag } from '@/hooks/useCoV4Flag';
+import type {
+  ChangeOrder,
+  COCollaborator,
+  COLineItem,
+  COLaborEntry,
+  COMaterialItem,
+  COEquipmentItem,
+  CONTELogEntry,
+  COActivityEntry,
+  COFinancials,
+  NewCOLineItem,
+  NewCOLaborEntry,
+  NewCOMaterialItem,
+  NewCOEquipmentItem,
+} from '@/types/changeOrder';
+
+export function useChangeOrderDetail(coId: string | null) {
+  const { userOrgRoles, user } = useAuth();
+  const orgId = userOrgRoles?.[0]?.organization_id ?? null;
+  const queryClient = useQueryClient();
+  const coV4 = useCoV4Flag();
+
+  // Phase 1 visibility wall: when co_v4 is on, READS go through role-scoped
+  // views that automatically mask cost/markup/budget columns the viewer isn't
+  // allowed to see. Writes/mutations stay on base tables.
+  const t = {
+    co: (coV4 ? 'change_orders_role_view' : 'change_orders') as 'change_orders',
+    line: (coV4 ? 'co_line_items_role_view' : 'co_line_items') as 'co_line_items',
+    labor: (coV4 ? 'co_labor_entries_role_view' : 'co_labor_entries') as 'co_labor_entries',
+    mats: (coV4 ? 'co_material_items_role_view' : 'co_material_items') as 'co_material_items',
+    eq: (coV4 ? 'co_equipment_items_role_view' : 'co_equipment_items') as 'co_equipment_items',
+  };
+
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
+    if (co?.project_id) {
+      queryClient.invalidateQueries({ queryKey: ['change-orders', co.project_id] });
+    }
+  };
+
+  const assertUpdatedChangeOrder = (
+    data: ChangeOrder | null,
+    action: 'submit' | 'approve' | 'reject'
+  ) => {
+    if (data) return data;
+    const actionMessages = {
+      submit: "You don't have permission to submit this change order.",
+      approve: "You don't have permission to approve this change order.",
+      reject: "You don't have permission to reject this change order.",
+    } as const;
+    throw new Error(actionMessages[action]);
+  };
+
+  const { data: co, isLoading: isLoadingCO } = useQuery({
+    queryKey: ['co-detail', coId, 'co'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(t.co)
+        .select('*')
+        .eq('id', coId!)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('Change order not found');
+      return data as ChangeOrder;
+    },
+  });
+
+  const allCoIds = coId ? [coId] : [];
+
+  const { data: lineItems = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'line-items'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(t.line)
+        .select('*')
+        .eq('co_id', coId!)
+        .order('sort_order');
+      if (error) throw error;
+      return data as COLineItem[];
+    },
+  });
+
+  const { data: laborEntries = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'labor'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(t.labor)
+        .select('*')
+        .eq('co_id', coId!)
+        .order('entry_date', { ascending: false });
+      if (error) throw error;
+      return data as COLaborEntry[];
+    },
+  });
+
+  const { data: materials = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'materials'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(t.mats)
+        .select('*')
+        .eq('co_id', coId!)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data as COMaterialItem[];
+    },
+  });
+
+  const { data: equipment = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'equipment'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(t.eq)
+        .select('*')
+        .eq('co_id', coId!)
+        .order('created_at');
+      if (error) throw error;
+      return data as COEquipmentItem[];
+    },
+  });
+
+  const { data: nteLog = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'nte'],
+    enabled: !!coId && co?.pricing_type === 'nte',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('co_nte_log')
+        .select('*')
+        .eq('co_id', coId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as CONTELogEntry[];
+    },
+  });
+
+  const { data: activity = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'activity'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('co_activity')
+        .select('*')
+        .eq('co_id', coId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as COActivityEntry[];
+    },
+  });
+
+  const { data: collaborators = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'collaborators'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('change_order_collaborators')
+        .select('*, organization:organizations(id, name, type)')
+        .eq('co_id', coId!)
+        .neq('status', 'removed')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as COCollaborator[];
+    },
+  });
+
+  const billableLaborEntries = laborEntries.filter(entry => !entry.is_actual_cost);
+  const actualCostEntries = laborEntries.filter(entry => entry.is_actual_cost);
+
+  const fcBillableEntries = billableLaborEntries.filter(entry => entry.entered_by_role === 'FC');
+  const fcLaborTotal = fcBillableEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const fcTotalHours = fcBillableEntries
+    .filter(entry => entry.pricing_mode === 'hourly')
+    .reduce((sum, entry) => sum + (entry.hours ?? 0), 0);
+  const fcLumpSumTotal = fcBillableEntries
+    .filter(entry => entry.pricing_mode === 'lump_sum')
+    .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const tcLaborTotal = billableLaborEntries
+    .filter(entry => entry.entered_by_role === 'TC')
+    .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+
+  const laborTotal = tcLaborTotal + fcLaborTotal;
+  const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
+  const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
+  const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0);
+  const equipmentCost = equipment.reduce((sum, item) => sum + (item.cost ?? 0), 0);
+  const equipmentMarkup = equipment.reduce((sum, item) => sum + (item.markup_amount ?? 0), 0);
+  const equipmentTotal = equipment.reduce((sum, item) => sum + (item.billed_amount ?? 0), 0);
+  // Toggle OFF → only TC's own labor counts toward GC price; Toggle ON → use the calculated fc-based price
+  const tcBillableToGC = co?.use_fc_pricing_base && co?.tc_submitted_price && co.tc_submitted_price > 0
+    ? co.tc_submitted_price
+    : tcLaborTotal;
+  // Bug 2: grandTotal uses tcBillableToGC to avoid double-counting when FC pricing is base
+  const grandTotal = tcBillableToGC + materialsTotal + equipmentTotal;
+  const actualCostTotal = actualCostEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  // Bug 4: Split actual costs by role for privacy
+  const tcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'TC').reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const fcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'FC').reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
+  // Bug 3: NTE tracks labor spend only, not materials/equipment
+  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0;
+
+  // Tax computations — use snapshot if available, else project settings
+  const { data: projectTaxSettings } = useQuery({
+    queryKey: ['project-tax-settings', co?.project_id],
+    enabled: !!co?.project_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('sales_tax_rate, labor_taxable, tax_jurisdiction_label, retainage_percent')
+        .eq('id', co!.project_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const taxRate = (co as any)?.tax_rate_snapshot ?? projectTaxSettings?.sales_tax_rate ?? 0;
+  const laborTaxable = (co as any)?.labor_taxable_snapshot ?? projectTaxSettings?.labor_taxable ?? false;
+  const taxPct = taxRate / 100;
+  const materialsTax = materialsTotal * taxPct;
+  const laborTax = laborTaxable ? laborTotal * taxPct : 0;
+  const equipmentTax = equipmentTotal * taxPct;
+  const totalTax = materialsTax + laborTax + equipmentTax;
+  const grandTotalWithTax = grandTotal + totalTax;
+
+  // ---- Responsibility-aware billable totals (what the TC actually invoices to GC) ----
+  // When the GC procures materials and/or equipment, the supplier bills the GC directly
+  // (with their own tax + retainage). Those amounts MUST be excluded from the TC's
+  // billable headline, tax, retainage, and net-payable calculations or the page will
+  // show inflated numbers (e.g. headline shows $1,110 when the TC only bills $747.50).
+  const matResp: 'GC' | 'TC' = ((co as any)?.co_material_responsible_override
+    ?? (co as any)?.materials_responsible
+    ?? 'TC') as 'GC' | 'TC';
+  const eqResp: 'GC' | 'TC' = ((co as any)?.co_equipment_responsible_override
+    ?? (co as any)?.equipment_responsible
+    ?? 'TC') as 'GC' | 'TC';
+  const billableMaterialsTotal = matResp === 'TC' ? materialsTotal : 0;
+  const billableEquipmentTotal = eqResp === 'TC' ? equipmentTotal : 0;
+  const billableGrandTotal = tcBillableToGC + billableMaterialsTotal + billableEquipmentTotal;
+  const billableMaterialsTax = billableMaterialsTotal * taxPct;
+  const billableEquipmentTax = billableEquipmentTotal * taxPct;
+  const billableTotalTax = laborTax + billableMaterialsTax + billableEquipmentTax;
+  const billableGrandTotalWithTax = billableGrandTotal + billableTotalTax;
+
+  // Retainage — computed off the billable subtotal (NOT the raw grand total) so the
+  // TC isn't asked to withhold retainage on amounts the GC owes the supplier directly.
+  const retainagePercent = projectTaxSettings?.retainage_percent ?? 0;
+  const retainageAmount = (co as any)?.retainage_amount ?? (billableGrandTotalWithTax * retainagePercent / 100);
+  const retainageReleased = (co as any)?.retainage_released ?? false;
+  const netPayableAmount = retainageReleased ? billableGrandTotalWithTax : billableGrandTotalWithTax - retainageAmount;
+
+
+  // ---- Viewer-scoped totals (prevents cross-org leakage) ----
+  const ownerIsViewer = !!orgId && co?.org_id === orgId;
+  const viewerLaborTotal = orgId
+    ? billableLaborEntries.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.line_total ?? 0), 0)
+    : 0;
+  const viewerOwnLaborToUpstream = ownerIsViewer ? tcBillableToGC : viewerLaborTotal;
+  const viewerMaterialsTotal = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.billed_amount ?? 0), 0) : 0;
+  const viewerMaterialsCost  = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.line_cost ?? 0), 0) : 0;
+  const viewerEquipmentTotal = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.billed_amount ?? 0), 0) : 0;
+  const viewerEquipmentCost  = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.cost ?? 0), 0) : 0;
+  // CO owner sees the full picture (mats/eq from anyone they procured); collaborators only see their own scope
+  const scopedMaterialsTotal = ownerIsViewer ? materialsTotal : viewerMaterialsTotal;
+  const scopedEquipmentTotal = ownerIsViewer ? equipmentTotal : viewerEquipmentTotal;
+  const scopedMaterialsCost  = ownerIsViewer ? materialsCost  : viewerMaterialsCost;
+  const scopedEquipmentCost  = ownerIsViewer ? equipmentCost  : viewerEquipmentCost;
+  const viewerTotalToUpstream = viewerOwnLaborToUpstream + scopedMaterialsTotal + scopedEquipmentTotal;
+  // Tax on viewer-scoped totals
+  const viewerLaborTax = laborTaxable ? viewerOwnLaborToUpstream * taxPct : 0;
+  const viewerMatTax = scopedMaterialsTotal * taxPct;
+  const viewerEqTax = scopedEquipmentTotal * taxPct;
+  const viewerTotalToUpstreamWithTax = viewerTotalToUpstream + viewerLaborTax + viewerMatTax + viewerEqTax;
+
+  const financials: COFinancials = {
+    laborTotal,
+    fcLaborTotal,
+    fcTotalHours,
+    fcLumpSumTotal,
+    tcLaborTotal,
+    materialsTotal,
+    materialsCost,
+    materialsMarkup,
+    equipmentTotal,
+    equipmentCost,
+    equipmentMarkup,
+    tcBillableToGC,
+    grandTotal,
+    billableGrandTotal,
+    billableGrandTotalWithTax,
+    billableMaterialsTotal,
+    billableEquipmentTotal,
+    billableMaterialsTax,
+    billableEquipmentTax,
+    billableTotalTax,
+    materialResponsible: matResp,
+    equipmentResponsible: eqResp,
+    actualCostTotal,
+    tcActualCostTotal,
+    fcActualCostTotal,
+    profitMargin,
+    nteUsedPercent,
+    materialsTax,
+    laborTax,
+    equipmentTax,
+    totalTax,
+    grandTotalWithTax,
+    taxRate,
+    laborTaxable,
+    taxJurisdictionLabel: projectTaxSettings?.tax_jurisdiction_label ?? null,
+    retainagePercent,
+    retainageAmount,
+    netPayableAmount,
+    retainageReleased,
+
+    viewer: {
+      ownLaborToUpstream: viewerOwnLaborToUpstream,
+      ownMaterialsTotal: scopedMaterialsTotal,
+      ownEquipmentTotal: scopedEquipmentTotal,
+      ownMaterialsCost: scopedMaterialsCost,
+      ownEquipmentCost: scopedEquipmentCost,
+      totalToUpstream: viewerTotalToUpstream,
+      totalToUpstreamWithTax: viewerTotalToUpstreamWithTax,
+    },
+  };
+
+  const addLineItem = useMutation({
+    mutationFn: async (input: NewCOLineItem) => {
+      const { data, error } = await supabase
+        .from('co_line_items')
+        .insert(input)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as COLineItem;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteLineItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('co_line_items')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const addLaborEntry = useMutation({
+    mutationFn: async (input: NewCOLaborEntry) => {
+      const { data, error } = await supabase
+        .from('co_labor_entries')
+        .insert(input)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as COLaborEntry;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateLaborEntry = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<COLaborEntry> }) => {
+      const { data, error } = await supabase
+        .from('co_labor_entries')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as COLaborEntry;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteLaborEntry = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('co_labor_entries')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const addMaterial = useMutation({
+    mutationFn: async (input: NewCOMaterialItem) => {
+      const { data, error } = await supabase
+        .from('co_material_items')
+        .insert(input)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as COMaterialItem;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateMaterial = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<COMaterialItem> }) => {
+      const { data, error } = await supabase
+        .from('co_material_items')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as COMaterialItem;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteMaterial = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('co_material_items')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const addEquipment = useMutation({
+    mutationFn: async (input: NewCOEquipmentItem) => {
+      const { data, error } = await supabase
+        .from('co_equipment_items')
+        .insert(input)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as COEquipmentItem;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateEquipment = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<COEquipmentItem> }) => {
+      const { data, error } = await supabase
+        .from('co_equipment_items')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as COEquipmentItem;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteEquipment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('co_equipment_items')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const submitCO = useMutation({
+    mutationFn: async (changeOrderId: string) => {
+      const { data, error } = await supabase
+        .from('change_orders')
+        .update({
+          status: 'submitted',
+          submitted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', changeOrderId)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return assertUpdatedChangeOrder(data as ChangeOrder | null, 'submit');
+    },
+    onSuccess: invalidate,
+  });
+
+  const approveCO = useMutation({
+    mutationFn: async (changeOrderId: string) => {
+      const { data, error } = await supabase
+        .from('change_orders')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', changeOrderId)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return assertUpdatedChangeOrder(data as ChangeOrder | null, 'approve');
+    },
+    onSuccess: invalidate,
+  });
+
+  const rejectCO = useMutation({
+    mutationFn: async ({ coId: changeOrderId, note }: { coId: string; note: string }) => {
+      const { data, error } = await supabase
+        .from('change_orders')
+        .update({
+          status: 'rejected',
+          rejected_at: new Date().toISOString(),
+          rejection_note: note,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', changeOrderId)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return assertUpdatedChangeOrder(data as ChangeOrder | null, 'reject');
+    },
+    onSuccess: invalidate,
+  });
+
+  const requestNTEIncrease = useMutation({
+    mutationFn: async ({
+      requestedIncrease,
+      runningTotal,
+    }: {
+      requestedIncrease: number;
+      runningTotal: number;
+    }) => {
+      if (!coId || !user || !co?.nte_cap) throw new Error('Missing data');
+      const { data, error } = await supabase
+        .from('co_nte_log')
+        .insert({
+          co_id: coId,
+          requested_by_user_id: user.id,
+          requested_increase: requestedIncrease,
+          running_total_at_request: runningTotal,
+          current_cap_at_request: co.nte_cap,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      await supabase
+        .from('change_orders')
+        .update({
+          nte_increase_requested: requestedIncrease,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', coId);
+      return data as CONTELogEntry;
+    },
+    onSuccess: invalidate,
+  });
+
+  const requestFCInput = useMutation({
+    mutationFn: async (fcOrgId: string) => {
+      if (!coId) throw new Error('Missing change order');
+      const { data, error } = await supabase.rpc('request_fc_change_order_input', {
+        _co_id: coId,
+        _fc_org_id: fcOrgId,
+      });
+      if (error) throw error;
+      return data as unknown as COCollaborator;
+    },
+    onSuccess: invalidate,
+  });
+
+  const completeFCInput = useMutation({
+    mutationFn: async () => {
+      if (!coId) throw new Error('Missing change order');
+      const { data, error } = await supabase.rpc('complete_fc_change_order_input', {
+        _co_id: coId,
+      });
+      if (error) throw error;
+      return data as unknown as COCollaborator;
+    },
+    onSuccess: invalidate,
+  });
+
+  const approveNTEIncrease = useMutation({
+    mutationFn: async ({
+      nteLogId,
+      requestedIncrease,
+    }: {
+      nteLogId: string;
+      requestedIncrease: number;
+    }) => {
+      if (!coId || !user || !co?.nte_cap) throw new Error('Missing data');
+      const newCap = co.nte_cap + requestedIncrease;
+      const now = new Date().toISOString();
+
+      const { error: logError } = await supabase
+        .from('co_nte_log')
+        .update({
+          approved_by_user_id: user.id,
+          approved_at: now,
+          new_cap_after_approval: newCap,
+        })
+        .eq('id', nteLogId);
+      if (logError) throw logError;
+
+      const { data, error: coError } = await supabase
+        .from('change_orders')
+        .update({
+          nte_cap: newCap,
+          nte_increase_requested: null,
+          nte_increase_approved: true,
+          updated_at: now,
+        })
+        .eq('id', coId)
+        .select()
+        .maybeSingle();
+      if (coError) throw coError;
+      return data as ChangeOrder;
+    },
+    onSuccess: invalidate,
+  });
+
+  const closeForPricing = useMutation({
+    mutationFn: async (changeOrderId: string) => {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('change_orders')
+        .update({
+          status: 'closed_for_pricing',
+          closed_for_pricing_at: now,
+          updated_at: now,
+        })
+        .eq('id', changeOrderId)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data as ChangeOrder;
+    },
+    onSuccess: invalidate,
+  });
+
+  const rejectNTEIncrease = useMutation({
+    mutationFn: async ({
+      nteLogId,
+      note,
+    }: {
+      nteLogId: string;
+      note: string;
+    }) => {
+      if (!coId || !user) throw new Error('Missing data');
+      const { error } = await supabase
+        .from('co_nte_log')
+        .update({
+          rejected_at: new Date().toISOString(),
+          rejection_note: note,
+        })
+        .eq('id', nteLogId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return {
+    co,
+    collaborators,
+    lineItems,
+    laborEntries,
+    materials,
+    equipment,
+    nteLog,
+    activity,
+    financials,
+    isLoading: isLoadingCO,
+    addLineItem,
+    deleteLineItem,
+    addLaborEntry,
+    updateLaborEntry,
+    deleteLaborEntry,
+    addMaterial,
+    updateMaterial,
+    deleteMaterial,
+    addEquipment,
+    updateEquipment,
+    deleteEquipment,
+    submitCO,
+    approveCO,
+    rejectCO,
+    requestNTEIncrease,
+    requestFCInput,
+    completeFCInput,
+    closeForPricing,
+    approveNTEIncrease,
+    rejectNTEIncrease,
+  };
+}

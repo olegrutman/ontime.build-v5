@@ -1,0 +1,664 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  aggregateCOTotals,
+  resolveBillingOrgId,
+  PENDING_CO_STATUSES,
+} from '@/hooks/coAggregation';
+
+
+export type ViewerRole = 'Trade Contractor' | 'General Contractor' | 'Field Crew' | 'Supplier';
+
+interface Contract {
+  id: string;
+  from_role: string;
+  to_role: string;
+  contract_sum: number;
+  retainage_percent: number;
+  trade: string | null;
+  from_org_id: string | null;
+  to_org_id: string | null;
+  from_org_name?: string | null;
+  to_org_name?: string | null;
+}
+
+export interface ProjectFinancials {
+  loading: boolean;
+  viewerRole: ViewerRole;
+  contracts: Contract[];
+  upstreamContract: Contract | undefined;
+  downstreamContract: Contract | undefined;
+  userOrgIds: string[];
+
+  // Aggregated metrics
+  billedToDate: number;
+  retainageAmount: number;
+  outstanding: number;
+  materialEstimate: number;
+  materialOrdered: number;
+  totalPaidToFC: number;
+  materialEstimateTotal: number | null;
+  approvedEstimateSum: number;
+
+  // Real CO/WO aggregates (sourced from change_orders, viewer-scoped)
+  approvedCORevenue: number;
+  approvedCOCost: number;
+  approvedCOMargin: number;
+  pendingCOExposure: number;
+  pendingCORevenue: number;
+  pendingCOCost: number;
+  pendingCONetAtRisk: number;
+  approvedWOTotal: number;
+
+  // Running / realized margin to date (role-aware)
+  earnedRevenueToDate: number;
+  incurredCostToDate: number;
+  marginToDateAmount: number;
+  marginToDatePct: number;
+  // Components used in the realized-margin drilldown
+  materialInvoiced: number;
+  openMaterialCommitment: number;
+  gcPayablesInvoiced: number;
+  // GC owner billings ledger (Phase 2)
+  ownerBillingsTotal: number;
+  ownerBillingsCollected: number;
+
+  // NEW: Financial command center fields
+  totalPaid: number;
+  materialDelivered: number;
+  materialOrderedPending: number;
+  actualLaborCost: number;
+  laborBudget: number | null;
+
+  // Role-based financial overview fields
+  ownerContractValue: number | null;
+  materialMarkupType: string | null;
+  materialMarkupValue: number | null;
+
+  // Supplier-specific
+  supplierOrderValue: number;
+  supplierInvoiced: number;
+  supplierPaid: number;
+
+  // TC split billing
+  receivablesInvoiced: number;
+  receivablesCollected: number;
+  receivablesRetainage: number;
+  payablesInvoiced: number;
+  payablesPaid: number;
+  payablesRetainage: number;
+
+  // Invoices for charts/lists
+  recentInvoices: { id: string; invoice_number: string; status: string; total_amount: number; created_at: string }[];
+
+  // FC participants (for contract creation)
+  fcParticipants: { org_id: string; org_name: string }[];
+
+  // Material responsibility
+  isTCMaterialResponsible: boolean;
+  isGCMaterialResponsible: boolean;
+
+  // Designated supplier
+  isDesignatedSupplier: boolean;
+
+  // TC self-performing flag
+  isTCSelfPerforming: boolean;
+
+  // Actions
+  refetch: () => void;
+  updateContract: (id: string, sum: number, retainage: number) => Promise<boolean>;
+  createFcContract: (fcOrgId: string, sum: number, retainage: number) => Promise<boolean>;
+  updateMaterialEstimate: (contractId: string, amount: number) => Promise<boolean>;
+  updateLaborBudget: (contractId: string, amount: number) => Promise<boolean>;
+  updateOwnerContract: (contractId: string, value: number) => Promise<boolean>;
+  updateMaterialMarkup: (contractId: string, type: string, value: number) => Promise<boolean>;
+}
+
+export function useProjectFinancials(projectId: string, isSupplier?: boolean, supplierOrgId?: string | null): ProjectFinancials {
+  const { user, userOrgRoles } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [viewerRole, setViewerRole] = useState<ViewerRole>('Trade Contractor');
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
+  const [billedToDate, setBilledToDate] = useState(0);
+  const [materialEstimate, setMaterialEstimate] = useState(0);
+  const [materialOrdered, setMaterialOrdered] = useState(0);
+  const [totalPaidToFC, setTotalPaidToFC] = useState(0);
+  const [supplierOrderValue, setSupplierOrderValue] = useState(0);
+  const [supplierInvoiced, setSupplierInvoiced] = useState(0);
+  const [supplierPaid, setSupplierPaid] = useState(0);
+  const [recentInvoices, setRecentInvoices] = useState<ProjectFinancials['recentInvoices']>([]);
+  const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
+  const [materialEstimateTotal, setMaterialEstimateTotal] = useState<number | null>(null);
+  const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
+  const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
+  const [approvedEstimateSum, setApprovedEstimateSum] = useState(0);
+  const [approvedCORevenue, setApprovedCORevenue] = useState(0);
+  const [approvedCOCost, setApprovedCOCost] = useState(0);
+  const [pendingCOExposure, setPendingCOExposure] = useState(0);
+  const [pendingCORevenue, setPendingCORevenue] = useState(0);
+  const [pendingCOCost, setPendingCOCost] = useState(0);
+  const [approvedWOTotal, setApprovedWOTotal] = useState(0);
+  const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
+  const [isTCSelfPerforming, setIsTCSelfPerforming] = useState(false);
+  const [totalPaid, setTotalPaid] = useState(0);
+  const [materialDelivered, setMaterialDelivered] = useState(0);
+  const [materialOrderedPending, setMaterialOrderedPending] = useState(0);
+  const [actualLaborCost, setActualLaborCost] = useState(0);
+  const [laborBudget, setLaborBudget] = useState<number | null>(null);
+  
+  const [ownerContractValue, setOwnerContractValue] = useState<number | null>(null);
+  const [materialMarkupType, setMaterialMarkupType] = useState<string | null>(null);
+  const [materialMarkupValue, setMaterialMarkupValue] = useState<number | null>(null);
+  const [receivablesInvoiced, setReceivablesInvoiced] = useState(0);
+  const [receivablesCollected, setReceivablesCollected] = useState(0);
+  const [receivablesRetainage, setReceivablesRetainage] = useState(0);
+  const [payablesInvoiced, setPayablesInvoiced] = useState(0);
+  const [payablesPaid, setPayablesPaid] = useState(0);
+  const [payablesRetainage, setPayablesRetainage] = useState(0);
+  // Subtotal of submitted/paid invoices linked to POs the viewer owns.
+  // Used to avoid double-counting materials (PO commitment + supplier invoice).
+  const [materialInvoiced, setMaterialInvoiced] = useState(0);
+  // GC view: subtotal of submitted/paid contract invoices where GC org is to_org
+  // (TC → GC billings = GC's accrued cost). Used for GC realized margin.
+  const [gcPayablesInvoiced, setGcPayablesInvoiced] = useState(0);
+  // GC view: amounts the GC has invoiced / collected from the project owner.
+  // Sourced from the new gc_owner_billings ledger (Phase 2). When > 0 these
+  // replace the legacy upstream-invoice proxy in the realized margin formula.
+  const [ownerBillingsTotal, setOwnerBillingsTotal] = useState(0);
+  const [ownerBillingsCollected, setOwnerBillingsCollected] = useState(0);
+
+  const fetchData = async () => {
+    if (!user || !projectId) { setLoading(false); return; }
+    setLoading(true);
+
+    try {
+      // 1. Determine viewer role — reuse cached org roles from AuthProvider
+      // instead of hitting user_org_roles on every project page mount.
+      const orgIds = (userOrgRoles ?? []).map((r: any) => r.organization_id);
+      setUserOrgIds(orgIds);
+
+      let detectedRole: ViewerRole = 'Trade Contractor';
+      if (isSupplier) {
+        detectedRole = 'Supplier';
+      } else if (orgIds.length > 0) {
+        const { data: teamMembers } = await supabase
+          .from('project_team')
+          .select('role, org_id, is_self_performing')
+          .eq('project_id', projectId)
+          .in('org_id', orgIds);
+        if (teamMembers && teamMembers.length > 0) {
+          detectedRole = teamMembers[0].role as ViewerRole;
+          // Check if TC is self-performing
+          const tcRow = teamMembers.find((m: any) => m.role === 'Trade Contractor');
+          if (tcRow && (tcRow as any).is_self_performing) {
+            setIsTCSelfPerforming(true);
+          } else {
+            setIsTCSelfPerforming(false);
+          }
+        }
+      }
+      setViewerRole(detectedRole);
+
+      // 2. Supplier path
+      if (detectedRole === 'Supplier' && supplierOrgId) {
+        const { data: supplierData } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('organization_id', supplierOrgId)
+          .maybeSingle();
+        const supplierId = supplierData?.id;
+        if (supplierId) {
+          const [posRes, invRes] = await Promise.all([
+            supabase.from('purchase_orders').select('id, po_line_items(line_total)').eq('project_id', projectId).eq('supplier_id', supplierId).in('status', ['ORDERED', 'DELIVERED']),
+            supabase.from('invoices').select('id, invoice_number, status, total_amount, created_at, po_id').eq('project_id', projectId),
+          ]);
+          const pos = posRes.data || [];
+          const orderVal = pos.reduce((sum, po: any) => sum + ((po.po_line_items || []).reduce((s: number, li: any) => s + (li.line_total || 0), 0)), 0);
+          setSupplierOrderValue(orderVal);
+
+          const poIds = pos.map(p => p.id);
+          const relevantInvoices = (invRes.data || []).filter((inv: any) => inv.po_id && poIds.includes(inv.po_id));
+          setSupplierInvoiced(relevantInvoices.reduce((s, inv: any) => s + (inv.total_amount || 0), 0));
+          setSupplierPaid(relevantInvoices.filter((i: any) => i.status === 'PAID').reduce((s, inv: any) => s + (inv.total_amount || 0), 0));
+          setRecentInvoices((invRes.data || []).slice(0, 5).map((inv: any) => ({
+            id: inv.id, invoice_number: inv.invoice_number, status: inv.status, total_amount: inv.total_amount, created_at: inv.created_at,
+          })));
+        }
+        setLoading(false);
+        return;
+      }
+
+      // 3. Non-supplier: fetch all in parallel
+      const [contractsRes, invoicesRes, _woRemoved, fcParticipantsRes] = await Promise.all([
+        supabase.from('project_contracts').select(`
+          id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
+          material_responsibility, material_estimate_total, labor_budget,
+          owner_contract_value, material_markup_type, material_markup_value,
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        `).eq('project_id', projectId),
+        supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount').eq('project_id', projectId),
+        Promise.resolve({ data: [] }),
+        supabase.from('project_participants').select('organization_id, organizations:organization_id(name)').eq('project_id', projectId).eq('role', 'FC').eq('invite_status', 'ACCEPTED'),
+      ]);
+
+      // Contracts
+      const contractsWithNames = (contractsRes.data || []).map((c: any) => ({
+        ...c, from_org_name: c.from_org?.name || null, to_org_name: c.to_org?.name || null,
+      })) as Contract[];
+      setContracts(contractsWithNames);
+
+      // Detect material responsibility
+      if (detectedRole === 'Trade Contractor' && orgIds.length > 0) {
+        const tcContract = contractsWithNames.find((c: any) =>
+          c.material_responsibility === 'TC' &&
+          (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+        );
+        if (tcContract) {
+          setIsTCMaterialResponsible(true);
+          setMaterialEstimateTotal((tcContract as any).material_estimate_total ?? null);
+        }
+      }
+      if (detectedRole === 'General Contractor' && orgIds.length > 0) {
+        const gcContract = contractsWithNames.find((c: any) =>
+          c.material_responsibility === 'GC' &&
+          (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+        );
+        if (gcContract) {
+          setIsGCMaterialResponsible(true);
+          setMaterialEstimateTotal((gcContract as any).material_estimate_total ?? null);
+        }
+      }
+
+      // Fetch approved estimate sum as fallback for material budget
+      const { data: approvedEsts } = await supabase
+        .from('supplier_estimates')
+        .select('total_amount')
+        .eq('project_id', projectId)
+        .eq('status', 'APPROVED');
+      const estSum = (approvedEsts || []).reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
+      setApprovedEstimateSum(estSum);
+
+      const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole);
+      const isGCPerspective = detectedRole === 'General Contractor';
+
+      const { data: allCOs = [] } = await supabase
+        .from('change_orders')
+        .select('id, status, document_type, tc_submitted_price')
+        .eq('project_id', projectId)
+        .in('status', ['approved', ...PENDING_CO_STATUSES]);
+
+      const allCOIds = (allCOs || []).map((c: any) => c.id);
+      let coLabor: any[] = [];
+      let coMats: any[] = [];
+      let coEquip: any[] = [];
+      if (allCOIds.length > 0 && billingOrgId) {
+        const [{ data: l = [] }, { data: m = [] }, { data: e = [] }] = await Promise.all([
+          supabase.from('co_labor_entries').select('co_id, org_id, line_total').in('co_id', allCOIds).eq('is_actual_cost', false),
+          supabase.from('co_material_items').select('co_id, org_id, billed_amount, line_cost').in('co_id', allCOIds),
+          supabase.from('co_equipment_items').select('co_id, org_id, billed_amount, cost').in('co_id', allCOIds),
+        ]);
+        coLabor = l; coMats = m; coEquip = e;
+      }
+
+      const agg = aggregateCOTotals(
+        (allCOs || []) as any,
+        coLabor,
+        coMats,
+        coEquip,
+        billingOrgId,
+        isGCPerspective,
+      );
+      setApprovedCORevenue(agg.approvedCORevenue);
+      setApprovedCOCost(agg.approvedCOCost);
+      setPendingCOExposure(agg.pendingCOExposure);
+      setPendingCORevenue(agg.pendingCORevenue);
+      setPendingCOCost(agg.pendingCOCost);
+      setApprovedWOTotal(agg.approvedWOTotal);
+      // ===== end CO aggregation =====
+
+      // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
+      const materialEstTotalFromContract = contractsWithNames.find((c: any) =>
+        c.material_responsibility != null &&
+        (detectedRole === 'Trade Contractor'
+          ? (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+          : true)
+      );
+      const matEstTotalValue = (materialEstTotalFromContract as any)?.material_estimate_total ?? null;
+      if (matEstTotalValue == null && estSum > 0) {
+        // No manual override set, use estimate sum
+        setMaterialEstimate(estSum);
+      }
+
+      // Detect designated supplier
+      if (user) {
+        const { data: designatedRows } = await supabase
+          .from('project_designated_suppliers')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        setIsDesignatedSupplier(!!designatedRows);
+      }
+
+
+      const allInvoices = invoicesRes.data || [];
+      const submitted = allInvoices.filter(i => ['SUBMITTED', 'APPROVED', 'PAID'].includes(i.status));
+      setBilledToDate(submitted.reduce((sum, inv) => sum + (inv.total_amount || 0), 0));
+      // Total paid invoices
+      const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
+      setTotalPaid(paidInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0));
+      setRecentInvoices(allInvoices.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(inv => ({
+        id: inv.id, invoice_number: inv.invoice_number, status: inv.status, total_amount: inv.total_amount, created_at: inv.created_at,
+      })));
+
+      // TC split: classify invoices as receivables vs payables
+      if (detectedRole === 'Trade Contractor' && orgIds.length > 0) {
+        // Receivables = invoices on contracts where TC is from_org (TC billed GC)
+        // Payables = invoices on contracts where TC is to_org (FC billed TC) OR po_id set (supplier)
+        const upstreamContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.from_org_id && orgIds.includes(c.from_org_id))
+            .map(c => c.id)
+        );
+        const downstreamContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Field Crew')
+            .map(c => c.id)
+        );
+
+        const receivableInvs = submitted.filter((inv: any) => inv.contract_id && upstreamContractIds.has(inv.contract_id));
+
+        // Fetch PO ownership to filter supplier invoices by pricing_owner_org_id
+        const poLinkedInvs = submitted.filter((inv: any) => inv.po_id);
+        const poIds = [...new Set(poLinkedInvs.map((inv: any) => inv.po_id as string))];
+        let poOwnerMap = new Map<string, string>();
+        if (poIds.length > 0) {
+          const { data: poOwners } = await supabase
+            .from('purchase_orders')
+            .select('id, pricing_owner_org_id')
+            .in('id', poIds);
+          poOwnerMap = new Map((poOwners || []).map(po => [po.id, po.pricing_owner_org_id || '']));
+        }
+
+        const payableInvs = submitted.filter((inv: any) =>
+          (inv.contract_id && downstreamContractIds.has(inv.contract_id)) ||
+          (inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!))
+        );
+        // Materials portion of payables (PO-linked supplier invoices owned by TC).
+        const materialPayableInvs = payableInvs.filter((inv: any) => inv.po_id);
+
+        setReceivablesInvoiced(receivableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+        setReceivablesCollected(receivableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
+        setReceivablesRetainage(receivableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        setPayablesInvoiced(payableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+        setPayablesPaid(payableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
+        setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        setMaterialInvoiced(materialPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+      }
+
+      // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
+      // Used by the realized margin block below to avoid double-counting materials.
+      if (detectedRole === 'General Contractor' && orgIds.length > 0) {
+        const gcContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id))
+            .map(c => c.id)
+        );
+        const gcContractInvs = submitted.filter((inv: any) => inv.contract_id && gcContractIds.has(inv.contract_id));
+
+        const poLinkedInvs = submitted.filter((inv: any) => inv.po_id);
+        const poIds = [...new Set(poLinkedInvs.map((inv: any) => inv.po_id as string))];
+        let poOwnerMap = new Map<string, string>();
+        if (poIds.length > 0) {
+          const { data: poOwners } = await supabase
+            .from('purchase_orders')
+            .select('id, pricing_owner_org_id')
+            .in('id', poIds);
+          poOwnerMap = new Map((poOwners || []).map(po => [po.id, po.pricing_owner_org_id || '']));
+        }
+        const gcPoInvs = poLinkedInvs.filter((inv: any) =>
+          inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!)
+        );
+
+        const gcPayables = gcContractInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0)
+          + gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
+        setGcPayablesInvoiced(gcPayables);
+        setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+
+        // Owner billings (Phase 2) — only the GC org can read these via RLS.
+        const { data: ownerBillings } = await supabase
+          .from('gc_owner_billings')
+          .select('billed_amount, collected_amount')
+          .eq('project_id', projectId)
+          .in('gc_org_id', orgIds);
+        const billed = (ownerBillings || []).reduce((s: number, b: any) => s + Number(b.billed_amount || 0), 0);
+        const collected = (ownerBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
+        setOwnerBillingsTotal(billed);
+        setOwnerBillingsCollected(collected);
+      }
+
+
+      // Use material_estimate_total from the material-responsible contract (GC or TC) if set
+      const materialContract = (contractsRes.data || []).find((c: any) =>
+        c.material_responsibility != null && c.material_estimate_total != null &&
+        (detectedRole === 'Trade Contractor'
+          ? (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+          : true)
+      );
+      const contractMatEst = materialContract ? (materialContract as any).material_estimate_total : null;
+      setMaterialEstimate(contractMatEst != null ? contractMatEst : estSum);
+
+      const { data: orderedPOs } = await supabase
+        .from('purchase_orders')
+        .select('id, status, sales_tax_percent, po_line_items(line_total)')
+        .eq('project_id', projectId)
+        .in('status', ['ORDERED', 'DELIVERED']);
+
+      const calcPOTotal = (pos: any[]) => pos.reduce((sum, po: any) => {
+        const subtotal = (po.po_line_items || []).reduce((s: number, li: any) => s + (li.line_total || 0), 0);
+        const taxRate = (po.sales_tax_percent || 0) / 100;
+        return sum + subtotal * (1 + taxRate);
+      }, 0);
+
+      const allPOs = orderedPOs || [];
+      const matOrdered = calcPOTotal(allPOs);
+      setMaterialOrdered(matOrdered);
+
+      // Split by delivery status
+      const deliveredPOs = allPOs.filter((po: any) => po.status === 'DELIVERED');
+      const pendingPOs = allPOs.filter((po: any) => po.status === 'ORDERED');
+      setMaterialDelivered(calcPOTotal(deliveredPOs));
+      setMaterialOrderedPending(calcPOTotal(pendingPOs));
+
+      setActualLaborCost(0);
+
+      // Labor budget from primary contract
+      const primaryC = contractsWithNames.find(c =>
+        ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
+         (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+        c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+      );
+      // FC reads labor budget from TC↔FC contract; others from GC↔TC
+      if (detectedRole === 'Field Crew') {
+        const fcContract = contractsWithNames.find(c =>
+          ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
+           (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+          c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+        );
+        setLaborBudget((fcContract as any)?.labor_budget ?? null);
+      } else {
+        setLaborBudget((primaryC as any)?.labor_budget ?? null);
+      }
+
+      // Extract owner_contract_value — prefer the explicit Owner→GC contract row
+      // (created by the GC setup wizard), then fall back to the GC↔TC primary row.
+      const ownerGcContract = contractsWithNames.find((c: any) =>
+        c.from_role === 'Owner' && c.to_role === 'General Contractor'
+      );
+      const ownerVal =
+        (ownerGcContract as any)?.owner_contract_value ??
+        ((ownerGcContract as any)?.contract_sum && (ownerGcContract as any).contract_sum > 0
+          ? (ownerGcContract as any).contract_sum
+          : null) ??
+        (primaryC as any)?.owner_contract_value ??
+        null;
+      setOwnerContractValue(ownerVal);
+      setMaterialMarkupType((primaryC as any)?.material_markup_type ?? null);
+      setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
+
+      // Total paid to FC from invoices (TC view) — only downstream contract invoices
+      if (detectedRole === 'Trade Contractor') {
+        const downstreamIds = new Set(
+          contractsWithNames
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Field Crew')
+            .map(c => c.id)
+        );
+        const paidDownstream = allInvoices.filter(i => i.status === 'PAID' && i.contract_id && downstreamIds.has(i.contract_id));
+        setTotalPaidToFC(paidDownstream.reduce((s, i) => s + (i.total_amount || 0), 0));
+      }
+
+      // FC participants
+      setFcParticipants((fcParticipantsRes.data || []).map((p: any) => ({
+        org_id: p.organization_id, org_name: p.organizations?.name || 'Unknown',
+      })));
+
+    } catch (error) {
+      console.error('Error fetching project financials:', error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, [projectId, user, isSupplier, supplierOrgId]);
+
+  // Derived
+  // Filter out placeholder/stale contracts — prefer ones with a non-null trade and non-zero sum
+  const pickBest = (candidates: typeof contracts) => {
+    if (candidates.length === 0) return undefined;
+    const withTrade = candidates.filter(c => c.trade != null);
+    const pool = withTrade.length > 0 ? withTrade : candidates;
+    // Prefer the one with the highest contract_sum (the "real" one)
+    return pool.reduce((best, c) => (c.contract_sum || 0) > (best.contract_sum || 0) ? c : best, pool[0]);
+  };
+
+  const upstreamCandidates = contracts.filter(c =>
+    ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
+     (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+    c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+  );
+  const upstreamContract = pickBest(upstreamCandidates);
+
+  const downstreamCandidates = contracts.filter(c =>
+    ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
+     (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+    c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+  );
+  const downstreamContract = pickBest(downstreamCandidates);
+
+  const primaryContract = viewerRole === 'Field Crew' ? downstreamContract : upstreamContract;
+  const contractValue = primaryContract?.contract_sum || 0;
+  const retainagePercent = primaryContract?.retainage_percent || 0;
+  const retainageAmount = billedToDate * (retainagePercent / 100);
+  const outstanding = contractValue - billedToDate;
+
+  // Margin to date — pure cash basis for all roles: received minus paid.
+  // Earned = sum of PAID receivable invoices (collected).
+  // Incurred = sum of PAID payable invoices.
+  const earnedRevenueToDate = receivablesCollected;
+  const incurredCostToDate = viewerRole === 'Field Crew' ? 0 : payablesPaid;
+  const marginToDateAmount = earnedRevenueToDate - incurredCostToDate;
+  const marginToDatePct = earnedRevenueToDate > 0 ? (marginToDateAmount / earnedRevenueToDate) * 100 : 0;
+
+  const updateContract = async (id: string, sum: number, retainage: number): Promise<boolean> => {
+    if (viewerRole === 'Field Crew') return false;
+    const { error } = await supabase.from('project_contracts').update({ contract_sum: sum, retainage_percent: retainage }).eq('id', id);
+    if (error) return false;
+    setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: sum, retainage_percent: retainage } : c));
+    return true;
+  };
+
+  const createFcContract = async (fcOrgId: string, sum: number, retainage: number): Promise<boolean> => {
+    const currentOrgId = userOrgRoles[0]?.organization?.id;
+    if (!currentOrgId || !user) return false;
+    const { data, error } = await supabase.from('project_contracts').insert({
+      project_id: projectId, from_org_id: currentOrgId, to_org_id: fcOrgId,
+      from_role: 'Trade Contractor', to_role: 'Field Crew',
+      contract_sum: sum, retainage_percent: retainage, created_by_user_id: user.id,
+    }).select().single();
+    if (error || !data) return false;
+    const fcOrg = fcParticipants.find(p => p.org_id === fcOrgId);
+    setContracts(prev => [...prev, { ...data, from_org_name: userOrgRoles[0]?.organization?.name || null, to_org_name: fcOrg?.org_name || null }]);
+    return true;
+  };
+
+  const updateMaterialEstimate = async (contractId: string, amount: number): Promise<boolean> => {
+    const { error } = await supabase.from('project_contracts').update({ material_estimate_total: amount } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) {
+      console.error('Failed to update material estimate:', error);
+      return false;
+    }
+    setMaterialEstimateTotal(amount);
+    setMaterialEstimate(amount);
+    return true;
+  };
+
+  const updateLaborBudget = async (contractId: string, amount: number): Promise<boolean> => {
+    const { error, count } = await supabase.from('project_contracts').update({ labor_budget: amount } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) {
+      console.error('Failed to update labor budget:', error);
+      return false;
+    }
+    setLaborBudget(amount);
+    return true;
+  };
+
+  const updateOwnerContract = async (contractId: string, value: number): Promise<boolean> => {
+    const { error } = await supabase.from('project_contracts').update({ owner_contract_value: value } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) { console.error('Failed to update owner contract:', error); return false; }
+    setOwnerContractValue(value);
+    return true;
+  };
+
+  const updateMaterialMarkup = async (contractId: string, type: string, value: number): Promise<boolean> => {
+    const { error } = await supabase.from('project_contracts').update({ material_markup_type: type, material_markup_value: value } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) { console.error('Failed to update material markup:', error); return false; }
+    setMaterialMarkupType(type);
+    setMaterialMarkupValue(value);
+    return true;
+  };
+
+  return {
+    loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
+    billedToDate, retainageAmount, outstanding,
+    materialEstimate, materialOrdered, totalPaidToFC,
+    materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
+    approvedCORevenue, approvedCOCost, approvedCOMargin: approvedCORevenue - approvedCOCost,
+    pendingCOExposure, pendingCORevenue, pendingCOCost,
+    pendingCONetAtRisk: pendingCORevenue - pendingCOCost,
+    approvedWOTotal,
+    earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
+    materialInvoiced, openMaterialCommitment: Math.max(0, materialOrdered - materialInvoiced), gcPayablesInvoiced,
+    ownerBillingsTotal, ownerBillingsCollected,
+    isDesignatedSupplier, isTCSelfPerforming,
+    totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
+    ownerContractValue, materialMarkupType, materialMarkupValue,
+    supplierOrderValue, supplierInvoiced, supplierPaid,
+    receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
+    recentInvoices, fcParticipants,
+    refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
+    updateOwnerContract, updateMaterialMarkup,
+  };
+}
+
+// Helper to get counterparty name from a contract relative to user's orgs
+export function getContractCounterpartyName(contract: Contract | undefined, userOrgIds: string[]): string {
+  if (!contract) return 'Unknown';
+  const isFromOrg = contract.from_org_id && userOrgIds.includes(contract.from_org_id);
+  const isToOrg = contract.to_org_id && userOrgIds.includes(contract.to_org_id);
+  if (isFromOrg) return contract.to_org_name || contract.to_role;
+  if (isToOrg) return contract.from_org_name || contract.from_role;
+  return contract.to_org_name || contract.from_org_name || contract.to_role;
+}
