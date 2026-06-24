@@ -1,138 +1,47 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useDemo } from '@/contexts/DemoContext';
-import { DEMO_NOTIFICATIONS } from '@/data/demoOperationalData';
 
 export interface Notification {
   id: string;
+  user_id: string;
   type: string;
   title: string;
-  body: string | null;
-  entity_type: string;
-  entity_id: string;
-  action_url: string;
-  is_read: boolean;
+  body: string;
+  project_id: string | null;
+  read_at: string | null;
   created_at: string;
 }
 
 export function useNotifications() {
   const { user } = useAuth();
-  const { isDemoMode } = useDemo();
-  const [notifications, setNotifications] = useState<Notification[]>(isDemoMode ? DEMO_NOTIFICATIONS : []);
-  const [unreadCount, setUnreadCount] = useState(isDemoMode ? DEMO_NOTIFICATIONS.length : 0);
-  const [loading, setLoading] = useState(!isDemoMode);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const fetchNotifications = useCallback(async () => {
-    if (isDemoMode) return;
-    if (!user) return;
-    
-    // Type assertion needed until types are regenerated
-    const { data, error } = await (supabase.rpc as any)('get_my_notifications', {
-      _limit: 50,
-      _offset: 0
-    });
-
-    if (error) {
-      console.error('Error fetching notifications:', error);
-    } else {
-      setNotifications(((data as Notification[]) || []).filter(n => !n.is_read));
-    }
-    setLoading(false);
-  }, [user]);
-
-  const fetchUnreadCount = useCallback(async () => {
-    if (isDemoMode) return;
-    if (!user) return;
-    
-    // Type assertion needed until types are regenerated
-    const { data, error } = await (supabase.rpc as any)('get_unread_count');
-    
-    if (error) {
-      console.error('Error fetching unread count:', error);
-    } else {
-      setUnreadCount((data as number) || 0);
-    }
-  }, [user, isDemoMode]);
-
-  const markAsRead = useCallback(async (notificationId: string) => {
-    if (isDemoMode) {
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      return;
-    }
-    // Type assertion needed until types are regenerated
-    const { error } = await (supabase.rpc as any)('mark_notification_read', {
-      _notification_id: notificationId
-    });
-
-    if (error) {
-      console.error('Error marking notification as read:', error);
-    } else {
-      // Update local state
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    }
-  }, [isDemoMode]);
-
-  const markAllAsRead = useCallback(async () => {
-    if (isDemoMode) {
+  useEffect(() => {
+    if (!user) {
       setNotifications([]);
       setUnreadCount(0);
+      setLoading(false);
       return;
     }
-    // Type assertion needed until types are regenerated
-    const { error } = await (supabase.rpc as any)('mark_all_notifications_read');
 
-    if (error) {
-      console.error('Error marking all notifications as read:', error);
-    } else {
-      setNotifications([]);
-      setUnreadCount(0);
-    }
-  }, [isDemoMode]);
+    fetchNotifications();
 
-  // Initial fetch
-  useEffect(() => {
-    if (isDemoMode) return;
-    if (user) {
-      fetchNotifications();
-      fetchUnreadCount();
-    }
-  }, [user, fetchNotifications, fetchUnreadCount, isDemoMode]);
-
-  // Subscribe to realtime updates
-  useEffect(() => {
-    if (isDemoMode) return;
-    if (!user) return;
-
+    // Subscribe to realtime notifications
     const channel = supabase
-      .channel('notifications')
+      .channel('notifications-changes')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `recipient_user_id=eq.${user.id}`,
+          filter: `user_id=eq.${user.id}`,
         },
         () => {
           fetchNotifications();
-          fetchUnreadCount();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `recipient_user_id=eq.${user.id}`,
-        },
-        () => {
-          // Mark-as-read on another tab/device should refresh badge + list
-          fetchNotifications();
-          fetchUnreadCount();
         }
       )
       .subscribe();
@@ -140,7 +49,67 @@ export function useNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchNotifications, fetchUnreadCount]);
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setNotifications(data as Notification[]);
+      setUnreadCount(data.filter((n) => n.read_at === null).length);
+    }
+    setLoading(false);
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', notificationId);
+
+    if (!error) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .is('read_at', null);
+
+    if (!error) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString() })));
+      setUnreadCount(0);
+    }
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+
+    if (!error) {
+      const notification = notifications.find((n) => n.id === notificationId);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      if (notification && notification.read_at === null) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+    }
+  };
 
   return {
     notifications,
@@ -148,9 +117,7 @@ export function useNotifications() {
     loading,
     markAsRead,
     markAllAsRead,
-    refetch: () => {
-      fetchNotifications();
-      fetchUnreadCount();
-    }
+    deleteNotification,
+    refetch: fetchNotifications,
   };
 }

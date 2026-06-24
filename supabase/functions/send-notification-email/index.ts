@@ -1,264 +1,243 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@4.0.0";
 
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Notification type → user_settings column mapping (granular)
-const TYPE_TO_PREFERENCE: Record<string, string> = {
-  PROJECT_INVITE: "notify_project_invite",
-  WORK_ITEM_INVITE: "notify_project_invite",
-  WORK_ORDER_ASSIGNED: "notify_wo_assigned",
-  PROJECT_ADDED: "notify_project_invite",
-  PO_SENT: "notify_email",
-  CHANGE_SUBMITTED: "notify_wo_assigned",
-  CHANGE_APPROVED: "notify_wo_approved",
-  CHANGE_REJECTED: "notify_wo_rejected",
-  INVOICE_SUBMITTED: "notify_inv_submitted",
-  INVOICE_APPROVED: "notify_inv_approved",
-  INVOICE_REJECTED: "notify_inv_rejected",
-  NUDGE: "notify_email",
+interface EmailRequest {
+  type: 'project_invite' | 'invoice_submitted' | 'invoice_approved' | 'invoice_rejected' | 'change_order_submitted' | 'change_order_approved' | 'change_order_rejected';
+  recipientEmail: string;
+  projectName: string;
+  projectId?: string;
+  invoiceNumber?: number;
+  changeOrderLocation?: string;
+  amount?: number;
+  rejectionReason?: string;
+  senderName?: string;
+}
+
+// HTML escape function to prevent XSS/injection attacks in emails
+function escapeHtml(text: string | undefined | null): string {
+  if (text === undefined || text === null) {
+    return '';
+  }
+  const str = String(text);
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return str.replace(/[&<>"']/g, m => map[m]);
+}
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 };
 
-interface NotificationPayload {
-  notification_id: string;
-  recipient_org_id: string;
-  recipient_user_id: string | null;
-  type: string;
-  title: string;
-  body: string | null;
-  action_url: string;
-}
+const getEmailContent = (request: EmailRequest) => {
+  const baseStyles = `
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #1a1a2e;
+  `;
 
-function buildEmailHtml(title: string, body: string | null, actionUrl: string, appBaseUrl: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-        <!-- Header -->
-        <tr>
-          <td style="background-color:#18181b;padding:24px 32px;">
-            <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Ontime.Build</span>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr>
-          <td style="padding:32px;">
-            <h1 style="margin:0 0 12px;font-size:18px;font-weight:600;color:#18181b;line-height:1.4;">${title}</h1>
-            ${body ? `<p style="margin:0 0 24px;font-size:15px;color:#52525b;line-height:1.6;">${body}</p>` : '<div style="margin-bottom:24px;"></div>'}
-            <a href="${actionUrl}" style="display:inline-block;padding:12px 24px;background-color:#18181b;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">View in App</a>
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td style="padding:20px 32px;border-top:1px solid #e4e4e7;">
-            <p style="margin:0;font-size:12px;color:#a1a1aa;line-height:1.5;">
-              You're receiving this because you have email notifications enabled.
-              <a href="${appBaseUrl}/profile" style="color:#71717a;text-decoration:underline;">Manage notification preferences</a>
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-}
+  // Sanitize all user-provided inputs
+  const safeProjectName = escapeHtml(request.projectName);
+  const safeSenderName = escapeHtml(request.senderName) || 'A team member';
+  const safeRejectionReason = escapeHtml(request.rejectionReason);
+  const safeChangeOrderLocation = escapeHtml(request.changeOrderLocation);
+
+  switch (request.type) {
+    case 'project_invite':
+      return {
+        subject: `You've been invited to collaborate on ${safeProjectName}`,
+        html: `
+          <div style="${baseStyles}">
+            <h1 style="color: #1a1a2e;">Project Invitation</h1>
+            <p>Hello,</p>
+            <p><strong>${safeSenderName}</strong> has invited you to collaborate on the project <strong>${safeProjectName}</strong>.</p>
+            <p>Sign in to your account to view the project and start collaborating.</p>
+            <br/>
+            <p style="color: #666;">Best regards,<br/>The Construction App Team</p>
+          </div>
+        `
+      };
+
+    case 'invoice_submitted':
+      return {
+        subject: `Invoice #${request.invoiceNumber} submitted for ${safeProjectName}`,
+        html: `
+          <div style="${baseStyles}">
+            <h1 style="color: #1a1a2e;">Invoice Submitted for Review</h1>
+            <p>Hello,</p>
+            <p>A new invoice has been submitted for your review on project <strong>${safeProjectName}</strong>.</p>
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Invoice Number:</strong> #${request.invoiceNumber}</p>
+              ${request.amount ? `<p style="margin: 8px 0 0 0;"><strong>Amount:</strong> ${formatCurrency(request.amount)}</p>` : ''}
+            </div>
+            <p>Please log in to review and approve or reject this invoice.</p>
+            <br/>
+            <p style="color: #666;">Best regards,<br/>The Construction App Team</p>
+          </div>
+        `
+      };
+
+    case 'invoice_approved':
+      return {
+        subject: `Invoice #${request.invoiceNumber} approved for ${safeProjectName}`,
+        html: `
+          <div style="${baseStyles}">
+            <h1 style="color: #16a34a;">Invoice Approved ✓</h1>
+            <p>Hello,</p>
+            <p>Great news! Your invoice has been approved on project <strong>${safeProjectName}</strong>.</p>
+            <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #16a34a;">
+              <p style="margin: 0;"><strong>Invoice Number:</strong> #${request.invoiceNumber}</p>
+              ${request.amount ? `<p style="margin: 8px 0 0 0;"><strong>Amount:</strong> ${formatCurrency(request.amount)}</p>` : ''}
+            </div>
+            <br/>
+            <p style="color: #666;">Best regards,<br/>The Construction App Team</p>
+          </div>
+        `
+      };
+
+    case 'invoice_rejected':
+      return {
+        subject: `Invoice #${request.invoiceNumber} rejected for ${safeProjectName}`,
+        html: `
+          <div style="${baseStyles}">
+            <h1 style="color: #dc2626;">Invoice Rejected</h1>
+            <p>Hello,</p>
+            <p>Your invoice has been rejected on project <strong>${safeProjectName}</strong>.</p>
+            <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #dc2626;">
+              <p style="margin: 0;"><strong>Invoice Number:</strong> #${request.invoiceNumber}</p>
+              ${safeRejectionReason ? `<p style="margin: 8px 0 0 0;"><strong>Reason:</strong> ${safeRejectionReason}</p>` : ''}
+            </div>
+            <p>Please review the feedback and resubmit your invoice with the necessary corrections.</p>
+            <br/>
+            <p style="color: #666;">Best regards,<br/>The Construction App Team</p>
+          </div>
+        `
+      };
+
+    case 'change_order_submitted':
+      return {
+        subject: `Change Order submitted for ${safeProjectName}`,
+        html: `
+          <div style="${baseStyles}">
+            <h1 style="color: #1a1a2e;">Change Order Submitted for Review</h1>
+            <p>Hello,</p>
+            <p>A new change order has been submitted for your review on project <strong>${safeProjectName}</strong>.</p>
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Location:</strong> ${safeChangeOrderLocation}</p>
+              ${request.amount ? `<p style="margin: 8px 0 0 0;"><strong>Amount:</strong> ${formatCurrency(request.amount)}</p>` : ''}
+            </div>
+            <p>Please log in to review and approve or reject this change order.</p>
+            <br/>
+            <p style="color: #666;">Best regards,<br/>The Construction App Team</p>
+          </div>
+        `
+      };
+
+    case 'change_order_approved':
+      return {
+        subject: `Change Order approved for ${safeProjectName}`,
+        html: `
+          <div style="${baseStyles}">
+            <h1 style="color: #16a34a;">Change Order Approved ✓</h1>
+            <p>Hello,</p>
+            <p>Great news! Your change order has been approved and added to the Schedule of Values on project <strong>${safeProjectName}</strong>.</p>
+            <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #16a34a;">
+              <p style="margin: 0;"><strong>Location:</strong> ${safeChangeOrderLocation}</p>
+              ${request.amount ? `<p style="margin: 8px 0 0 0;"><strong>Amount:</strong> ${formatCurrency(request.amount)}</p>` : ''}
+            </div>
+            <br/>
+            <p style="color: #666;">Best regards,<br/>The Construction App Team</p>
+          </div>
+        `
+      };
+
+    case 'change_order_rejected':
+      return {
+        subject: `Change Order rejected for ${safeProjectName}`,
+        html: `
+          <div style="${baseStyles}">
+            <h1 style="color: #dc2626;">Change Order Rejected</h1>
+            <p>Hello,</p>
+            <p>Your change order has been rejected on project <strong>${safeProjectName}</strong>.</p>
+            <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #dc2626;">
+              <p style="margin: 0;"><strong>Location:</strong> ${safeChangeOrderLocation}</p>
+              ${safeRejectionReason ? `<p style="margin: 8px 0 0 0;"><strong>Reason:</strong> ${safeRejectionReason}</p>` : ''}
+            </div>
+            <p>Please review the feedback and make any necessary adjustments.</p>
+            <br/>
+            <p style="color: #666;">Best regards,<br/>The Construction App Team</p>
+          </div>
+        `
+      };
+
+    default:
+      throw new Error(`Unknown email type: ${request.type}`);
+  }
+};
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("send-notification-email function called");
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Validate the caller holds the service_role JWT (the DB trigger sends it).
-    // No more hardcoded shared secret.
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    // Constant-time compare to mitigate timing oracles.
-    const eq = (a: string, b: string) => {
-      if (a.length !== b.length) return false;
-      let r = 0;
-      for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-      return r === 0;
-    };
-    if (!bearer || !eq(bearer, serviceRoleKey)) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    const emailRequest: EmailRequest = await req.json();
+    console.log("Email request type:", emailRequest.type);
+
+    if (!emailRequest.recipientEmail || !emailRequest.type || !emailRequest.projectName) {
+      throw new Error("Missing required fields: recipientEmail, type, or projectName");
     }
 
-
-    const payload: NotificationPayload = await req.json();
-    const { recipient_org_id, recipient_user_id, type, title, body, action_url } = payload;
-
-    console.log(`Processing notification email: type=${type}, org=${recipient_org_id}, user=${recipient_user_id}`);
-
-    const prefColumn = TYPE_TO_PREFERENCE[type];
-    if (!prefColumn) {
-      console.log(`No email preference mapping for notification type: ${type}`);
-      return new Response(JSON.stringify({ skipped: true, reason: "unmapped_type" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    // Validate input lengths to prevent abuse
+    if (emailRequest.projectName.length > 200) {
+      throw new Error("Project name too long");
+    }
+    if (emailRequest.rejectionReason && emailRequest.rejectionReason.length > 1000) {
+      throw new Error("Rejection reason too long");
+    }
+    if (emailRequest.changeOrderLocation && emailRequest.changeOrderLocation.length > 500) {
+      throw new Error("Change order location too long");
+    }
+    if (emailRequest.senderName && emailRequest.senderName.length > 200) {
+      throw new Error("Sender name too long");
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const { subject, html } = getEmailContent(emailRequest);
 
-    let userIds: string[] = [];
-
-    if (recipient_user_id) {
-      userIds = [recipient_user_id];
-    } else {
-      const orgMembersRes = await fetch(
-        `${supabaseUrl}/rest/v1/user_org_roles?organization_id=eq.${recipient_org_id}&select=user_id`,
-        {
-          headers: {
-            apikey: serviceRoleKey,
-            Authorization: `Bearer ${serviceRoleKey}`,
-          },
-        }
-      );
-      const orgMembers = await orgMembersRes.json();
-      if (!Array.isArray(orgMembers) || orgMembers.length === 0) {
-        console.log("No org members found for org:", recipient_org_id);
-        return new Response(JSON.stringify({ skipped: true, reason: "no_members" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
-      }
-      userIds = orgMembers.map((m: any) => m.user_id);
-    }
-
-    console.log(`Found ${userIds.length} potential recipient(s)`);
-
-    const userIdFilter = userIds.map((id) => `"${id}"`).join(",");
-    const settingsRes = await fetch(
-      `${supabaseUrl}/rest/v1/user_settings?user_id=in.(${userIdFilter})&select=user_id,notify_email,${prefColumn}`,
-      {
-        headers: {
-          apikey: serviceRoleKey,
-          Authorization: `Bearer ${serviceRoleKey}`,
-        },
-      }
-    );
-    const settings = await settingsRes.json();
-
-    const settingsMap = new Map<string, any>();
-    if (Array.isArray(settings)) {
-      for (const s of settings) {
-        settingsMap.set(s.user_id, s);
-      }
-    }
-
-    const eligibleUserIds = userIds.filter((uid) => {
-      const s = settingsMap.get(uid);
-      if (!s) return true;
-      const globalEnabled = s.notify_email !== false;
-      const categoryEnabled = prefColumn === "notify_email" || s[prefColumn] !== false;
-      return globalEnabled && categoryEnabled;
+    console.log("Sending email to:", emailRequest.recipientEmail);
+    const emailResponse = await resend.emails.send({
+      from: "Construction App <onboarding@resend.dev>",
+      to: [emailRequest.recipientEmail],
+      subject,
+      html,
     });
 
-    if (eligibleUserIds.length === 0) {
-      console.log("All recipients have email notifications disabled");
-      return new Response(JSON.stringify({ skipped: true, reason: "all_disabled" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
+    console.log("Email sent successfully:", emailResponse);
 
-    const eligibleIdFilter = eligibleUserIds.map((id) => `"${id}"`).join(",");
-    const profilesRes = await fetch(
-      `${supabaseUrl}/rest/v1/profiles?user_id=in.(${eligibleIdFilter})&select=user_id,email,full_name`,
-      {
-        headers: {
-          apikey: serviceRoleKey,
-          Authorization: `Bearer ${serviceRoleKey}`,
-        },
-      }
-    );
-    const profiles = await profilesRes.json();
-
-    if (!Array.isArray(profiles) || profiles.length === 0) {
-      console.log("No profiles found for eligible users");
-      return new Response(JSON.stringify({ skipped: true, reason: "no_profiles" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    let appBaseUrl = "https://omni-work.lovable.app";
-    try {
-      const parsed = new URL(action_url);
-      appBaseUrl = parsed.origin;
-    } catch {
-      // keep fallback
-    }
-
-    const fullActionUrl = action_url.startsWith("http")
-      ? action_url
-      : `${appBaseUrl}${action_url}`;
-
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
-      return new Response(JSON.stringify({ error: "Email service not configured" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    const resend = new Resend(resendApiKey.trim());
-    const emailHtml = buildEmailHtml(title, body, fullActionUrl, appBaseUrl);
-
-    const results: { email: string; success: boolean; error?: string }[] = [];
-
-    for (const profile of profiles) {
-      if (!profile.email) continue;
-
-      try {
-        const { error: sendError } = await resend.emails.send({
-          from: "Ontime.Build <onboarding@resend.dev>",
-          to: [profile.email],
-          subject: title,
-          html: emailHtml,
-        });
-
-        if (sendError) {
-          console.error(`Failed to send to ${profile.email}:`, sendError);
-          results.push({ email: profile.email, success: false, error: sendError.message });
-        } else {
-          console.log(`Email sent to ${profile.email}`);
-          results.push({ email: profile.email, success: true });
-        }
-      } catch (err: any) {
-        console.error(`Error sending to ${profile.email}:`, err);
-        results.push({ email: profile.email, success: false, error: err.message });
-      }
-    }
-
-    const sent = results.filter((r) => r.success).length;
-    const failed = results.filter((r) => !r.success).length;
-    console.log(`Email dispatch complete: ${sent} sent, ${failed} failed`);
-
-    return new Response(
-      JSON.stringify({ sent, failed, results }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, data: emailResponse }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   } catch (error: any) {
-    console.error("Error in send-notification-email:", error);
+    console.error("Error in send-notification-email function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

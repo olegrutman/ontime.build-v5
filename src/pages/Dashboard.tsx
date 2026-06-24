@@ -1,456 +1,446 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useDashboardData } from '@/hooks/useDashboardData';
-import { SupplierDashboardView } from '@/components/dashboard/SupplierDashboardView';
-import { AppLayout } from '@/components/layout';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import {
-  ArchiveProjectDialog,
-  CompleteProjectDialog,
-  AddReminderDialog,
-} from '@/components/dashboard';
-import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
-import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
-import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
-import { useProfile } from '@/hooks/useProfile';
-import { DashboardBusinessSnapshot } from '@/components/dashboard/DashboardBusinessSnapshot';
-import { DashboardKPIs } from '@/components/dashboard/DashboardKPIs';
+import { Badge } from '@/components/ui/badge';
+import AppHeader from '@/components/AppHeader';
+import PendingApprovals from '@/components/dashboard/PendingApprovals';
+import { 
+  Building2,
+  Plus, 
+  FolderOpen, 
+  DollarSign,
+  Building,
+  MapPin,
+  FileText,
+  ClipboardList,
+  Archive,
+  ArchiveRestore,
+  Eye
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-import { DashboardMaterialsHealth } from '@/components/dashboard/DashboardMaterialsHealth';
-import { ProjectSnapshotList } from '@/components/dashboard/ProjectSnapshotList';
-import { DashboardActionQueue } from '@/components/dashboard/DashboardActionQueue';
-import { RemindersTile } from '@/components/dashboard/RemindersTile';
-import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
-import { TodayBar } from '@/components/dashboard/TodayBar';
-import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
-import { GCDashboardView } from '@/components/dashboard/GCDashboardView';
-import { TCDashboardView } from '@/components/dashboard/TCDashboardView';
-import { FCDashboardView } from '@/components/dashboard/FCDashboardView';
-import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
+interface ProjectWithBadges {
+  id: string;
+  name: string;
+  address: string;
+  created_at: string;
+  pendingCOCount: number;
+  pendingInvoiceCount: number;
+  last_activity_at: string;
+  is_archived: boolean;
+  activityScore: number;
+  creator_user_id: string;
+  hasPendingActivity: boolean;
+}
+
+interface DashboardStats {
+  totalProjects: number;
+  pendingInvoices: number;
+}
+
+type AppRole = 'FIELD_CREW' | 'TRADE_CONTRACTOR' | 'GC';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, userOrgRoles, loading: authLoading, signOut } = useAuth();
-  const {
-    projects,
-    statusCounts,
-    attentionItems,
-    pendingInvites,
-    reminders,
-    recentDocs,
-    billing,
-    financials,
-    projectFinancials,
-    loading: dataLoading,
-    refetch,
-  } = useDashboardData();
-
-  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [projectToArchive, setProjectToArchive] = useState<{ id: string; name: string } | null>(null);
-  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
-  const [projectToComplete, setProjectToComplete] = useState<{ id: string; name: string } | null>(null);
-  const [addReminderOpen, setAddReminderOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('active');
-  const hasInitialized = useRef(false);
+  const { user, signOut, loading } = useAuth();
+  const [projects, setProjects] = useState<ProjectWithBadges[]>([]);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<AppRole | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalProjects: 0,
+    pendingInvoices: 0,
+  });
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
-    if (!dataLoading && !hasInitialized.current) {
-      hasInitialized.current = true;
-      if (statusCounts.active > 0) {
-        setStatusFilter('active');
-      } else if (statusCounts.setup > 0) {
-        setStatusFilter('setup');
-      } else {
-        const order: ProjectStatusFilter[] = ['completed', 'on_hold', 'archived'];
-        const first = order.find(s => statusCounts[s] > 0);
-        if (first) setStatusFilter(first);
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchProjects();
+    }
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    // Fetch profile with company info
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, companies(name)')
+      .eq('id', user.id)
+      .single();
+    
+    if (profile) {
+      setCurrentUserRole(profile.role as AppRole);
+      const company = profile.companies as { name: string } | null;
+      if (company?.name) {
+        setCompanyName(company.name);
       }
     }
-  }, [dataLoading, statusCounts]);
-
-  const { profile, organization, userSettings, updateUserSettings } = useProfile();
-  const currentOrg = userOrgRoles[0]?.organization;
-  const orgType = currentOrg?.type || null;
-  const orgId = currentOrg?.id;
-  const [soleMember, setSoleMember] = useState(() =>
-    orgId ? localStorage.getItem(`ontime_sole_member_${orgId}`) === 'true' : false
-  );
-
-  const updateProjectStatus = useCallback(async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
-    const statusLabels = { active: 'Active', on_hold: 'On Hold', completed: 'Completed' };
-    const { error } = await supabase.from('projects').update({ status }).eq('id', projectId);
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to update project status', variant: 'destructive' });
-    } else {
-      toast({ title: 'Status Updated', description: `Project is now ${statusLabels[status]}.` });
-    }
-    refetch();
-  }, [toast, refetch]);
-
-  const confirmComplete = async () => {
-    if (!projectToComplete) return;
-    await updateProjectStatus(projectToComplete.id, 'completed');
-    setCompleteDialogOpen(false);
-    setProjectToComplete(null);
   };
 
-  const confirmArchive = async () => {
-    if (!projectToArchive) return;
-    const { error } = await supabase
-      .from('projects')
-      .update({ status: 'archived' })
-      .eq('id', projectToArchive.id);
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to archive project', variant: 'destructive' });
-    } else {
-      toast({ title: 'Project Archived', description: 'The project has been moved to Archived.' });
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('last_activity_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch pending counts for each project and calculate activity score
+      const projectsWithBadges: ProjectWithBadges[] = await Promise.all(
+        (data || []).map(async (project) => {
+          let pendingInvoiceCount = 0;
+          let pendingCOCount = 0;
+
+          if (user) {
+            const { data: counts, error: countsError } = await supabase.rpc(
+              'get_project_pending_counts',
+              {
+                _project_id: project.id,
+              }
+            );
+
+            if (!countsError && counts && counts.length > 0) {
+              pendingCOCount = Number(counts[0].pending_cos) || 0;
+              pendingInvoiceCount = Number(counts[0].pending_invoices) || 0;
+            }
+          }
+
+          // Calculate activity score for sorting
+          let activityScore = 0;
+          if (pendingInvoiceCount > 0) activityScore += 500 + pendingInvoiceCount;
+          if (pendingCOCount > 0) activityScore += 400 + pendingCOCount;
+
+          // Add recency bonus (last 7 days gets points)
+          const lastActivity = new Date(project.last_activity_at || project.created_at);
+          const daysSinceActivity = (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24);
+          if (daysSinceActivity < 7) activityScore += Math.floor((7 - daysSinceActivity) * 10);
+
+          // Track if project has pending activity (blocks archiving)
+          const hasPendingActivity = pendingInvoiceCount > 0 || pendingCOCount > 0;
+
+          return {
+            id: project.id,
+            name: project.name,
+            address: project.address,
+            created_at: project.created_at,
+            pendingCOCount,
+            pendingInvoiceCount,
+            last_activity_at: project.last_activity_at || project.created_at,
+            is_archived: project.is_archived || false,
+            activityScore,
+            creator_user_id: project.creator_user_id,
+            hasPendingActivity,
+          };
+        })
+      );
+
+      // Sort by activity score (descending), then by last_activity_at
+      projectsWithBadges.sort((a, b) => {
+        if (b.activityScore !== a.activityScore) {
+          return b.activityScore - a.activityScore;
+        }
+        return new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime();
+      });
+
+      setProjects(projectsWithBadges);
+      
+      // Only count non-archived projects for stats
+      const activeProjects = projectsWithBadges.filter(p => !p.is_archived);
+      
+      setStats({
+        totalProjects: activeProjects.length,
+        pendingInvoices: activeProjects.reduce((sum, p) => sum + p.pendingInvoiceCount, 0),
+      });
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setLoadingData(false);
     }
-    refetch();
-    setArchiveDialogOpen(false);
-    setProjectToArchive(null);
   };
 
-  const handleAddReminder = async (reminder: { title: string; due_date: string; project_id?: string }) => {
-    if (!user || !currentOrg) return;
-    const { error } = await supabase.from('reminders').insert({
-      title: reminder.title,
-      due_date: reminder.due_date,
-      project_id: reminder.project_id || null,
-      user_id: user.id,
-      org_id: currentOrg.id,
-    });
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to add reminder', variant: 'destructive' });
-    } else {
-      toast({ title: 'Reminder Added' });
-      refetch();
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const handleArchiveProject = async (e: React.MouseEvent, project: ProjectWithBadges) => {
+    e.stopPropagation();
+    
+    if (!user) return;
+    
+    if (project.creator_user_id !== user.id) {
+      toast.error('Only the project creator can archive/unarchive');
+      return;
+    }
+
+    if (!project.is_archived) {
+      if (project.hasPendingActivity) {
+        let reason = 'Cannot archive: Project has ';
+        const reasons: string[] = [];
+        if (project.pendingCOCount > 0) reasons.push('pending change orders');
+        if (project.pendingInvoiceCount > 0) reasons.push('pending invoices');
+        reason += reasons.join(', ');
+        toast.error(reason);
+        return;
+      }
+    }
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_archived: !project.is_archived })
+        .eq('id', project.id);
+      
+      if (error) throw error;
+      
+      setProjects(prev => prev.map(p => 
+        p.id === project.id ? { ...p, is_archived: !p.is_archived } : p
+      ));
+      
+      toast.success(project.is_archived ? 'Project restored' : 'Project archived');
+    } catch (error) {
+      console.error('Error toggling archive:', error);
+      toast.error('Failed to update project');
     }
   };
 
-  const loading = authLoading || dataLoading;
-
-  if (authLoading) {
+  if (loading || loadingData) {
     return (
-      <AppLayout title="Dashboard">
-        <div className="p-4 sm:p-6 space-y-6">
-          <Skeleton className="h-24 w-full rounded-2xl" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!user) {
-    return (
-      <AppLayout title="Dashboard">
-        <div className="p-6">
-          <Card className="max-w-md mx-auto rounded-2xl">
-            <CardContent className="p-6 text-center">
-              <h2 className="text-lg font-semibold mb-2">Welcome to Ontime.Build</h2>
-              <p className="text-muted-foreground mb-4">Please sign in to access your projects.</p>
-              <Button onClick={() => navigate('/auth')}>Sign In</Button>
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!currentOrg) {
-    return (
-      <AppLayout title="Dashboard">
-        <div className="p-6">
-          <Card className="max-w-md mx-auto rounded-2xl">
-            <CardContent className="p-6 text-center">
-              <h2 className="text-lg font-semibold mb-2">Account Setup Incomplete</h2>
-              <p className="text-muted-foreground mb-4">Your account is not linked to an organization.</p>
-              <Button variant="outline" onClick={() => signOut()}>Sign Out</Button>
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  const canCreateProject = orgType === 'GC' || orgType === 'TC' || orgType === 'SUPPLIER';
-  const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
-
-  // Supplier gets the expandable KPI card dashboard
-  if (orgType === 'SUPPLIER') {
-    return (
-      <AppLayout title="Dashboard" showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
-        <SupplierDashboardView
-          projects={projects}
-          attentionItems={attentionItems}
-          pendingInvites={pendingInvites}
-          statusCounts={statusCounts}
-          profile={profile}
-          organization={organization}
-          userSettings={userSettings}
-          updateUserSettings={updateUserSettings as any}
-          isOrgAdmin={isOrgAdmin}
-          userOrgRolesLength={userOrgRoles.length}
-          orgType={orgType}
-          orgId={orgId}
-          soleMember={soleMember}
-          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
-          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
-          onRefresh={refetch}
-          loading={loading}
-        />
-        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
-        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
-        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
-      </AppLayout>
-    );
-  }
-
-  // GC gets the expandable KPI card dashboard
-  if (orgType === 'GC') {
-    return (
-      <AppLayout title="Dashboard" showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
-        <GCDashboardView
-          projects={projects}
-          financials={financials}
-          projectFinancials={projectFinancials}
-          billing={billing}
-          attentionItems={attentionItems}
-          pendingInvites={pendingInvites}
-          recentDocs={recentDocs}
-          statusCounts={statusCounts}
-          profile={profile}
-          organization={organization}
-          userSettings={userSettings}
-          updateUserSettings={updateUserSettings as any}
-          isOrgAdmin={isOrgAdmin}
-          userOrgRolesLength={userOrgRoles.length}
-          orgType={orgType}
-          orgId={orgId}
-          soleMember={soleMember}
-          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
-          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
-          onRefresh={refetch}
-          loading={loading}
-        />
-        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
-        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
-        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
-      </AppLayout>
-    );
-  }
-
-  // TC gets a dedicated KPI card dashboard
-  if (orgType === 'TC') {
-    return (
-      <AppLayout title="Dashboard" showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
-        <TCDashboardView
-          projects={projects}
-          financials={financials}
-          projectFinancials={projectFinancials}
-          billing={billing}
-          attentionItems={attentionItems}
-          pendingInvites={pendingInvites}
-          recentDocs={recentDocs}
-          statusCounts={statusCounts}
-          profile={profile}
-          organization={organization}
-          userSettings={userSettings}
-          updateUserSettings={updateUserSettings as any}
-          isOrgAdmin={isOrgAdmin}
-          userOrgRolesLength={userOrgRoles.length}
-          orgType={orgType}
-          orgId={orgId}
-          soleMember={soleMember}
-          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
-          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
-          onRefresh={refetch}
-          loading={loading}
-        />
-        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
-        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
-        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
-      </AppLayout>
-    );
-  }
-
-  // FC gets a dedicated KPI card dashboard
-  if (orgType === 'FC') {
-    return (
-    <AppLayout title="Dashboard">
-        <FCDashboardView
-          projects={projects}
-          financials={financials}
-          projectFinancials={projectFinancials}
-          billing={billing}
-          attentionItems={attentionItems}
-          pendingInvites={pendingInvites}
-          recentDocs={recentDocs}
-          statusCounts={statusCounts}
-          profile={profile}
-          organization={organization}
-          userSettings={userSettings}
-          updateUserSettings={updateUserSettings as any}
-          isOrgAdmin={isOrgAdmin}
-          userOrgRolesLength={userOrgRoles.length}
-          orgType={orgType}
-          orgId={orgId}
-          soleMember={soleMember}
-          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
-          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
-          onRefresh={refetch}
-          loading={loading}
-        />
-        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
-        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
-        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
-      </AppLayout>
-    );
-  }
-
-  const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
-  const profileComplete = !!(profile?.first_name && profile?.phone);
-  const orgComplete = !!(organization?.address?.street);
-  const teamInvited = !isOrgAdmin || (userOrgRoles.length > 1) || soleMember;
-  const projectCreated = projects.length > 0;
-
-  const pendingCOCount = recentDocs.filter(d => d.type === 'change_order' && ['draft', 'shared', 'submitted'].includes(d.status)).length;
-  const openPOCount = recentDocs.filter(d => d.type === 'purchase_order' && !['DELIVERED', 'CANCELLED'].includes(d.status)).length;
-
-  return (
-    <AppLayout
-      title="Dashboard"
-      fullWidth
-      showNewButton={canCreateProject}
-      onNewClick={() => navigate('/create-project')}
-      newButtonLabel="New Project"
-    >
-      <div className="flex gap-0">
-        <div className="flex-1 min-w-0 space-y-4 px-0 sm:px-1 lg:px-5">
-
-        {/* Today bar — role-aware one-sentence summary */}
-        <TodayBar
-          orgType={orgType}
-          attentionCount={attentionItems.length}
-          pendingInviteCount={pendingInvites.length}
-          activeProjects={statusCounts.active}
-          outstandingToPay={billing?.outstandingToPay}
-          outstandingToCollect={billing?.outstandingToCollect}
-          firstName={profile?.first_name || null}
-        />
-
-        {/* Greeting */}
-        <DashboardWelcome
-          firstName={profile?.first_name || null}
-          attentionCount={attentionItems.length + pendingInvites.length}
-          activeProjects={statusCounts.active}
-        />
-
-        {showOnboarding && (
-          <OnboardingChecklist
-            profileComplete={profileComplete}
-            orgComplete={orgComplete}
-            teamInvited={teamInvited}
-            projectCreated={projectCreated}
-            orgType={orgType}
-            onDismiss={async () => updateUserSettings({ onboarding_dismissed: true })}
-            onMarkSoleMember={() => {
-              if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); }
-            }}
-            onMarkPartOfTeam={() => {
-              if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); }
-            }}
-          />
-        )}
-
-        <OrgInviteBanner />
-
-        {pendingInvites.length > 0 && (
-          <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
-        )}
-
-        {/* KPI Row */}
-        <DashboardKPIs financials={financials} orgType={orgType} />
-
-        {/* Main 8/4 Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Left column — 8 cols */}
-          <div className="lg:col-span-8 space-y-4">
-            {/* Two-col: Materials Health + Action Queue */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DashboardMaterialsHealth
-                estimate={financials.totalCosts}
-                ordered={financials.paidByYou}
-                forecast={financials.totalCosts * 1.04}
-              />
-              <DashboardActionQueue docs={recentDocs} />
-            </div>
-
-            {/* Projects list — merged with attention data */}
-            <div id="projects-list">
-            <ProjectSnapshotList
-              projects={projects}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              statusCounts={statusCounts}
-              loading={loading}
-              canCreate={canCreateProject}
-              onCreateProject={() => navigate('/create-project')}
-              orgType={orgType}
-              orgId={orgId}
-              attentionItems={attentionItems}
-            />
-            </div>
-          </div>
-
-          {/* Right column — 4 cols */}
-          <div className="lg:col-span-4 space-y-4">
-            <DashboardBusinessSnapshot
-              statusCounts={statusCounts}
-              attentionCount={attentionItems.length + pendingInvites.length}
-              billing={billing}
-              pendingCOCount={pendingCOCount}
-              openPOCount={openPOCount}
-            />
-            {/* Reminders */}
-            <RemindersTile
-              reminders={reminders.map(r => ({ ...r, completed: false }))}
-              onComplete={async (id) => {
-                await supabase.from('reminders').update({ completed: true }).eq('id', id);
-                refetch();
-              }}
-              onAdd={() => setAddReminderOpen(true)}
-            />
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse flex items-center gap-2">
+          <Building2 className="h-8 w-8 text-accent" />
+          <span className="text-xl font-semibold">Loading...</span>
         </div>
       </div>
+    );
+  }
 
-      <ArchiveProjectDialog
-        open={archiveDialogOpen}
-        onOpenChange={setArchiveDialogOpen}
-        projectName={projectToArchive?.name || ''}
-        onConfirm={confirmArchive}
-      />
-      <CompleteProjectDialog
-        open={completeDialogOpen}
-        onOpenChange={setCompleteDialogOpen}
-        projectName={projectToComplete?.name || ''}
-        onConfirm={confirmComplete}
-      />
-      <AddReminderDialog
-        open={addReminderOpen}
-        onOpenChange={setAddReminderOpen}
-        onAdd={handleAddReminder}
-        projects={projects.map(p => ({ id: p.id, name: p.name }))}
-      />
-    </AppLayout>
+  const displayedProjects = showArchived 
+    ? projects.filter(p => p.is_archived) 
+    : projects.filter(p => !p.is_archived);
+
+  const archivedCount = projects.filter(p => p.is_archived).length;
+
+  return (
+    <div className="min-h-screen bg-background pb-safe-bottom">
+      <AppHeader title="Ontime.build" />
+
+      <main className="container px-4 py-6">
+        <div className="mb-6 animate-slide-up">
+          <h1 className="text-2xl font-bold text-foreground mb-1">Dashboard</h1>
+          <p className="text-muted-foreground flex items-center gap-2">
+            <Building className="h-4 w-4" />
+            {companyName || user?.email}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card className="border-0 shadow-md animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                  <FolderOpen className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground font-mono-construction">
+                    {stats.totalProjects}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Active</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md animate-slide-up" style={{ animationDelay: '0.12s' }}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <Archive className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground font-mono-construction">
+                    {archivedCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Archived</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md animate-slide-up" style={{ animationDelay: '0.15s' }}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground font-mono-construction">
+                    {stats.pendingInvoices}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Pending Approvals Section */}
+        <div className="mb-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <PendingApprovals />
+        </div>
+
+        <div className="flex gap-3 mb-6 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+          <Button 
+            variant="accent" 
+            size="lg" 
+            className="flex-1 shadow-lg"
+            onClick={() => navigate('/projects/new')}
+          >
+            <Plus className="h-5 w-5" />
+            Create New Project
+          </Button>
+          <Button 
+            variant={showArchived ? "default" : "outline"}
+            size="lg" 
+            className="shrink-0"
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            {showArchived ? (
+              <>
+                <Eye className="h-5 w-5" />
+                <span className="hidden sm:inline">Show Active</span>
+                <span className="sm:hidden">Active</span>
+              </>
+            ) : (
+              <>
+                <Archive className="h-5 w-5" />
+                <span className="hidden sm:inline">Show Archived</span>
+                <span className="sm:hidden">
+                  {archivedCount > 0 ? `(${archivedCount})` : 'Archived'}
+                </span>
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="animate-slide-up" style={{ animationDelay: '0.25s' }}>
+          <h2 className="text-lg font-semibold text-foreground mb-4">
+            {showArchived ? 'Archived Projects' : 'Your Projects'}
+          </h2>
+          
+          {displayedProjects.length === 0 ? (
+            <Card className="border-dashed border-2 bg-transparent">
+              <CardContent className="py-12 text-center">
+                {showArchived ? (
+                  <>
+                    <Archive className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <h3 className="font-semibold text-foreground mb-2">No archived projects</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Projects with no activity can be archived
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <h3 className="font-semibold text-foreground mb-2">No projects yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Create your first project to get started
+                    </p>
+                    <Button variant="accent" onClick={() => navigate('/projects/new')}>
+                      <Plus className="h-4 w-4" />
+                      Create Project
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {displayedProjects.map((project) => (
+                <Card 
+                  key={project.id}
+                  className={`border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.99] ${
+                    project.is_archived ? 'bg-muted/50' : ''
+                  }`}
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className={`font-semibold truncate ${project.is_archived ? 'text-muted-foreground' : 'text-foreground'}`}>
+                            {project.name}
+                          </h3>
+                          {project.is_archived && (
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              <Archive className="h-3 w-3 mr-1" />
+                              Archived
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 truncate mb-2">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {project.address}
+                        </p>
+                        {!project.is_archived && (
+                          <div className="flex flex-wrap gap-1">
+                            {project.pendingCOCount > 0 && (
+                              <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                                <ClipboardList className="h-3 w-3" />
+                                CO Approval {project.pendingCOCount > 1 ? `(${project.pendingCOCount})` : ''}
+                              </Badge>
+                            )}
+                            {project.pendingInvoiceCount > 0 && (
+                              <Badge variant="warning" className="text-xs flex items-center gap-1 bg-warning/10 text-warning border-warning/20">
+                                <FileText className="h-3 w-3" />
+                                Invoice Approval {project.pendingInvoiceCount > 1 ? `(${project.pendingInvoiceCount})` : ''}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 ml-4">
+                        {project.creator_user_id === user?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => handleArchiveProject(e, project)}
+                            disabled={project.hasPendingActivity && !project.is_archived}
+                          >
+                            {project.is_archived ? (
+                              <ArchiveRestore className="h-4 w-4" />
+                            ) : (
+                              <Archive className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }

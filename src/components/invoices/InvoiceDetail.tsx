@@ -1,728 +1,694 @@
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell, Pencil, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { sendNotificationEmail } from '@/hooks/useNotificationEmail';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { InvoiceStatusBadge } from './InvoiceStatusBadge';
-import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
-import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
-import { useNudge } from '@/hooks/useNudge';
+import { 
+  ArrowLeft, 
+  Receipt,
+  CheckCircle2,
+  DollarSign,
+  Clock,
+  Send,
+  FileText,
+  Download,
+  Loader2,
+  XCircle,
+  AlertCircle,
+  User
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
 
-function extractScopeOfWork(desc: string | null | undefined): string | null {
-  if (!desc) return null;
-  const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
-  const m = desc.match(re);
-  if (!m || m.index === undefined) {
-    const trimmed = desc.trim();
-    return trimmed || null;
-  }
-  const start = m.index + m[0].length;
-  const rest = desc.slice(start);
-  const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
-  const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
-  return body.trim() || null;
+type AppRole = 'FIELD_CREW' | 'TRADE_CONTRACTOR' | 'GC';
+type ApprovalStatus = 'DRAFT' | 'NEEDS_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+interface Invoice {
+  id: string;
+  invoice_number: number;
+  status: string;
+  approval_status: ApprovalStatus;
+  approver_role: AppRole | null;
+  created_by_user_id: string;
+  submitted_at: string | null;
+  approved_at: string | null;
+  approved_by_user_id: string | null;
+  rejected_at: string | null;
+  rejected_by_user_id: string | null;
+  rejection_comments: string | null;
+  paid_at: string | null;
+  created_at: string;
+  contract_context_id: string;
 }
 
+interface InvoiceLineItem {
+  id: string;
+  description: string;
+  qty: number | null;
+  unit: string | null;
+  unit_cost: number | null;
+  amount: number;
+}
 
 interface InvoiceDetailProps {
   invoiceId: string;
   projectId: string;
-  onBack: () => void;
-  onUpdate: () => void;
+  onClose: () => void;
+  onEdit: () => void;
+  onUpdated: () => void;
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+const ROLE_LABELS: Record<string, string> = {
+  'FIELD_CREW': 'Field Crew',
+  'TRADE_CONTRACTOR': 'Trade Contractor',
+  'GC': 'General Contractor'
+};
 
-export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: InvoiceDetailProps) {
-  const { user, userOrgRoles } = useAuth();
+const APPROVAL_STATUS_CONFIG: Record<ApprovalStatus, { icon: any; color: string; bg: string; label: string }> = {
+  'DRAFT': { icon: FileText, color: 'text-muted-foreground', bg: 'bg-muted', label: 'Draft' },
+  'NEEDS_APPROVAL': { icon: Clock, color: 'text-warning', bg: 'bg-warning/10', label: 'Pending Approval' },
+  'APPROVED': { icon: CheckCircle2, color: 'text-success', bg: 'bg-success/10', label: 'Approved' },
+  'REJECTED': { icon: XCircle, color: 'text-destructive', bg: 'bg-destructive/10', label: 'Rejected' }
+};
+
+export default function InvoiceDetail({ 
+  invoiceId,
+  projectId, 
+  onClose, 
+  onEdit,
+  onUpdated 
+}: InvoiceDetailProps) {
+  const { user } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
-  const [contract, setContract] = useState<{ from_org_id: string | null; to_org_id: string | null } | null>(null);
+  const [items, setItems] = useState<InvoiceLineItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string; pricing_owner_org_id: string | null; supplier_org_id: string | null } | null>(null);
-  const [exportLoading, setExportLoading] = useState(false);
-  const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
-  const [showFullNotes, setShowFullNotes] = useState(false);
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editDescription, setEditDescription] = useState('');
-  const [editNotes, setEditNotes] = useState('');
-  const [editSaving, setEditSaving] = useState(false);
-
-  const startEditLine = (item: InvoiceLineItem) => {
-    setEditingItemId(item.id);
-    setEditDescription(item.description || '');
-    setEditNotes(item.line_notes || '');
-  };
-
-  const cancelEditLine = () => {
-    setEditingItemId(null);
-    setEditDescription('');
-    setEditNotes('');
-  };
-
-  const saveEditLine = async (itemId: string) => {
-    const desc = editDescription.trim();
-    if (!desc) {
-      toast.error('Description is required');
-      return;
-    }
-    if (desc.length > 500) {
-      toast.error('Description must be 500 characters or less');
-      return;
-    }
-    if (editNotes.length > 5000) {
-      toast.error('Scope notes must be 5000 characters or less');
-      return;
-    }
-    if (invoice && (invoice.status === 'APPROVED' || invoice.status === 'PAID')) {
-      toast.error('This invoice is locked and can no longer be edited');
-      return;
-    }
-    setEditSaving(true);
-    try {
-      const { error } = await supabase
-        .from('invoice_line_items')
-        .update({ description: desc, line_notes: editNotes.trim() || null })
-        .eq('id', itemId);
-      if (error) throw error;
-      setLineItems((prev) =>
-        prev.map((li) =>
-          li.id === itemId ? { ...li, description: desc, line_notes: editNotes.trim() || null } : li
-        )
-      );
-      toast.success('Line item updated');
-      cancelEditLine();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update line item');
-    } finally {
-      setEditSaving(false);
-    }
-  };
-
-  // Get current user's organization ID
-  const currentOrgId = userOrgRoles[0]?.organization?.id;
-
-  // Determine user's role in this invoice.
-  // - Contract-based invoices: from_org (contractor) creates, to_org (client) approves.
-  // - PO-based supplier invoices (no contract): supplier org creates, pricing-owner org approves.
-  const isInvoiceCreator =
-    (contract?.from_org_id === currentOrgId) ||
-    (!contract && !!linkedPO?.supplier_org_id && linkedPO.supplier_org_id === currentOrgId);
-  const isInvoiceReceiver =
-    (contract?.to_org_id === currentOrgId) ||
-    (!contract && !!linkedPO?.pricing_owner_org_id && linkedPO.pricing_owner_org_id === currentOrgId);
+  const [processing, setProcessing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectionComments, setRejectionComments] = useState('');
+  const [creatorProfile, setCreatorProfile] = useState<{ company_name: string; email: string } | null>(null);
+  const [retainagePercent, setRetainagePercent] = useState(0);
 
   useEffect(() => {
     fetchInvoice();
+    fetchUserRole();
   }, [invoiceId]);
 
-  const fetchInvoice = async () => {
-    setLoading(true);
-    const [invoiceRes, lineItemsRes] = await Promise.all([
-      supabase.from('invoices').select('*').eq('id', invoiceId).single(),
-      supabase
-        .from('invoice_line_items')
-        .select('*')
-        .eq('invoice_id', invoiceId)
-        .order('sort_order'),
-    ]);
-
-    if (invoiceRes.data) {
-      setInvoice(invoiceRes.data as Invoice);
-      
-      // Fetch contract to determine permissions
-      if (invoiceRes.data.contract_id) {
-        const { data: contractData } = await supabase
-          .from('project_contracts')
-          .select('from_org_id, to_org_id')
-          .eq('id', invoiceRes.data.contract_id)
-          .single();
-        setContract(contractData);
-      }
-
-      // Fetch linked PO if po_id is set
-      if (invoiceRes.data.po_id) {
-        const { data: poData } = await supabase
-          .from('purchase_orders')
-          .select('po_number, status, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
-          .eq('id', invoiceRes.data.po_id)
-          .single();
-        if (poData) {
-          setLinkedPO({
-            po_number: poData.po_number,
-            status: poData.status,
-            pricing_owner_org_id: poData.pricing_owner_org_id ?? null,
-            supplier_org_id: (poData as any).supplier?.organization_id ?? null,
-          });
-        } else {
-          setLinkedPO(null);
-        }
-      } else {
-        setLinkedPO(null);
-      }
+  const fetchUserRole = async () => {
+    if (!user || !projectId) return;
+    
+    const { data } = await supabase.rpc('get_user_project_role', {
+      _project_id: projectId,
+      _user_id: user.id
+    });
+    
+    if (data) {
+      setUserRole(data as AppRole);
     }
-    if (lineItemsRes.data) setLineItems(lineItemsRes.data as InvoiceLineItem[]);
-    setLoading(false);
   };
 
-  const updateInvoiceStatus = async (
-    newStatus: InvoiceStatus,
-    additionalFields: Record<string, any> = {}
-  ) => {
-    if (!user || !invoice) return;
+  const fetchInvoice = async () => {
+    try {
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', invoiceId)
+        .single();
 
-    setActionLoading(true);
+      if (invoiceError) throw invoiceError;
+      setInvoice(invoiceData as Invoice);
+
+      // Fetch creator profile with email
+      if (invoiceData?.created_by_user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email, company_id')
+          .eq('id', invoiceData.created_by_user_id)
+          .single();
+
+        if (profile) {
+          let companyName = 'Unknown Company';
+          if (profile.company_id) {
+            const { data: company } = await supabase
+              .from('companies')
+              .select('name')
+              .eq('id', profile.company_id)
+              .single();
+            
+            if (company) {
+              companyName = company.name;
+            }
+          }
+          setCreatorProfile({ company_name: companyName, email: profile.email });
+        }
+      }
+
+      // Fetch retainage from project
+      if (invoiceData?.contract_context_id) {
+        const { data: contextData } = await supabase
+          .from('contract_contexts')
+          .select('project_id')
+          .eq('id', invoiceData.contract_context_id)
+          .single();
+        
+        if (contextData?.project_id) {
+          const { data: projectData } = await supabase
+            .from('projects')
+            .select('retainage_percent')
+            .eq('id', contextData.project_id)
+            .single();
+          
+          if (projectData?.retainage_percent) {
+            setRetainagePercent(Number(projectData.retainage_percent));
+          }
+        }
+      }
+
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('invoice_line_items')
+        .select('*')
+        .eq('invoice_id', invoiceId);
+
+      if (itemsError) throw itemsError;
+      setItems((itemsData || []) as InvoiceLineItem[]);
+    } catch (error) {
+      console.error('Error fetching invoice:', error);
+      toast.error('Failed to load invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!invoice || !user) return;
+    setProcessing(true);
+
+    try {
+      // Use the submit_invoice RPC for proper routing and notifications
+      const { error } = await supabase.rpc('submit_invoice', {
+        _invoice_id: invoiceId
+      });
+
+      if (error) throw error;
+
+      // Send email notification to approvers
+      try {
+        // Get project info via contract context
+        const { data: contextData } = await supabase
+          .from('contract_contexts')
+          .select('project_id, projects(name)')
+          .eq('id', invoice.contract_context_id)
+          .single();
+
+        if (contextData?.projects) {
+          // Get approvers for this project (those with higher roles)
+          const { data: members } = await supabase
+            .from('project_members')
+            .select('user_id')
+            .eq('project_id', contextData.project_id);
+
+          // Send to all project members (they'll filter by role server-side)
+          for (const member of members || []) {
+            if (member.user_id !== user.id) {
+              // Fetch email for each member
+              const { data: memberProfile } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', member.user_id)
+                .single();
+              
+              if (memberProfile?.email) {
+                await sendNotificationEmail({
+                  type: 'invoice_submitted',
+                  recipientEmail: memberProfile.email,
+                  projectName: (contextData.projects as any).name || 'Unknown Project',
+                  projectId: contextData.project_id,
+                  invoiceNumber: invoice.invoice_number,
+                  amount: calculateTotal()
+                });
+              }
+            }
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send notification email:', emailError);
+      }
+
+      toast.success('Invoice submitted for approval!');
+      onUpdated();
+      onClose();
+    } catch (error) {
+      console.error('Error submitting invoice:', error);
+      toast.error('Failed to submit invoice');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!invoice || !user) return;
+    setProcessing(true);
+
     try {
       const { error } = await supabase
         .from('invoices')
         .update({
-          status: newStatus,
-          ...additionalFields,
+          approval_status: 'APPROVED',
+          approved_at: new Date().toISOString(),
+          approved_by_user_id: user.id
         })
         .eq('id', invoiceId);
 
       if (error) throw error;
 
-      // Update SOV billing totals when invoice status affects billing
-      // (SUBMITTED, APPROVED, PAID affect the billed_to_date calculation)
-      if (['SUBMITTED', 'APPROVED', 'PAID', 'REJECTED', 'DRAFT'].includes(newStatus)) {
-        await supabase.rpc('update_sov_billing_totals', { p_project_id: projectId });
+      // Send approval email to invoice creator
+      try {
+        if (creatorProfile?.email) {
+          const { data: contextData } = await supabase
+            .from('contract_contexts')
+            .select('project_id, projects(name)')
+            .eq('id', invoice.contract_context_id)
+            .single();
+
+          await sendNotificationEmail({
+            type: 'invoice_approved',
+            recipientEmail: creatorProfile.email,
+            projectName: (contextData?.projects as any)?.name || 'Unknown Project',
+            projectId: contextData?.project_id,
+            invoiceNumber: invoice.invoice_number,
+            amount: calculateTotal()
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send notification email:', emailError);
       }
 
-      // Log activity
-      const activityDescriptions: Record<InvoiceStatus, string> = {
-        DRAFT: `Invoice ${invoice.invoice_number} reverted to draft`,
-        SUBMITTED: `Invoice ${invoice.invoice_number} submitted for approval`,
-        APPROVED: `Invoice ${invoice.invoice_number} approved`,
-        REJECTED: `Invoice ${invoice.invoice_number} rejected`,
-        PAID: `Invoice ${invoice.invoice_number} marked as paid`,
-      };
-
-      await supabase.from('project_activity').insert({
-        project_id: projectId,
-        activity_type: `INVOICE_${newStatus}`,
-        description: activityDescriptions[newStatus],
-        actor_user_id: user.id,
-      });
-
-      toast.success(`Invoice ${newStatus.toLowerCase()}`);
+      toast.success('Invoice approved!');
+      onUpdated();
       fetchInvoice();
-      onUpdate();
-    } catch (error: any) {
-      console.error('Error updating invoice:', error);
-      toast.error(error.message || 'Failed to update invoice');
+    } catch (error) {
+      console.error('Error approving invoice:', error);
+      toast.error('Failed to approve invoice');
     } finally {
-      setActionLoading(false);
+      setProcessing(false);
     }
   };
 
-  const handleSubmit = () => {
-    updateInvoiceStatus('SUBMITTED', {
-      submitted_at: new Date().toISOString(),
-      submitted_by: user?.id,
-    });
-  };
-
-  const handleApprove = () => {
-    updateInvoiceStatus('APPROVED', {
-      approved_at: new Date().toISOString(),
-      approved_by: user?.id,
-    });
-  };
-
-  const handleReject = () => {
-    if (!rejectionReason.trim()) {
-      toast.error('Please provide a rejection reason');
+  const handleReject = async () => {
+    if (!invoice || !user || !rejectionComments.trim()) {
+      toast.error('Please provide rejection comments');
       return;
     }
-    updateInvoiceStatus('REJECTED', {
-      rejected_at: new Date().toISOString(),
-      rejected_by: user?.id,
-      rejection_reason: rejectionReason,
-    });
-    setRejectDialogOpen(false);
-    setRejectionReason('');
-  };
+    setProcessing(true);
 
-  const handleMarkPaid = () => {
-    updateInvoiceStatus('PAID', {
-      paid_at: new Date().toISOString(),
-    });
-  };
-
-  const handleRevise = () => {
-    setReviseDialogOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!invoice) return;
-    setDeleteLoading(true);
     try {
-      const { error: lineError } = await supabase
-        .from('invoice_line_items')
-        .delete()
-        .eq('invoice_id', invoiceId);
-      if (lineError) throw lineError;
-
-      const { error: invError } = await supabase
+      const { error } = await supabase
         .from('invoices')
-        .delete()
+        .update({
+          approval_status: 'REJECTED',
+          rejected_at: new Date().toISOString(),
+          rejected_by_user_id: user.id,
+          rejection_comments: rejectionComments.trim()
+        })
         .eq('id', invoiceId);
-      if (invError) throw invError;
 
-      toast.success(`Invoice ${invoice.invoice_number} deleted`);
-      onUpdate();
-      onBack();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete invoice');
+      if (error) throw error;
+
+      // Send rejection email to invoice creator
+      try {
+        if (creatorProfile?.email) {
+          const { data: contextData } = await supabase
+            .from('contract_contexts')
+            .select('project_id, projects(name)')
+            .eq('id', invoice.contract_context_id)
+            .single();
+
+          await sendNotificationEmail({
+            type: 'invoice_rejected',
+            recipientEmail: creatorProfile.email,
+            projectName: (contextData?.projects as any)?.name || 'Unknown Project',
+            projectId: contextData?.project_id,
+            invoiceNumber: invoice.invoice_number,
+            amount: calculateTotal(),
+            rejectionReason: rejectionComments.trim()
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send notification email:', emailError);
+      }
+
+      toast.success('Invoice rejected');
+      onUpdated();
+      fetchInvoice();
+      setShowRejectForm(false);
+    } catch (error) {
+      console.error('Error rejecting invoice:', error);
+      toast.error('Failed to reject invoice');
     } finally {
-      setDeleteLoading(false);
-      setDeleteDialogOpen(false);
+      setProcessing(false);
     }
   };
 
-  // Build revision data for the wizard
-  const revisionData: RevisionData | undefined = invoice ? {
-    contractId: invoice.contract_id || '',
-    invoiceNumber: invoice.invoice_number,
-    periodStart: invoice.billing_period_start,
-    periodEnd: invoice.billing_period_end,
-    notes: invoice.notes,
-    revisionCount: (invoice as any).revision_count || 0,
-    lineItems: lineItems
-      .filter(li => (li as any).sov_item_id)
-      .map(li => ({
-        sov_item_id: (li as any).sov_item_id,
-        billed_percent: (li as any).billed_percent || 0,
-        current_billed: li.current_billed,
-      })),
-  } : undefined;
+  const handleMarkPaid = async () => {
+    if (!invoice) return;
+    setProcessing(true);
+
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          status: 'PAID',
+          paid_at: new Date().toISOString()
+        })
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+      toast.success('Invoice marked as paid!');
+      onUpdated();
+      fetchInvoice();
+    } catch (error) {
+      console.error('Error marking invoice paid:', error);
+      toast.error('Failed to update invoice');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!invoice) return;
+    setDownloading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
+        body: { invoiceId }
+      });
+
+      if (error) throw error;
+
+      if (data?.pdf) {
+        const byteCharacters = atob(data.pdf);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = data.filename || `Invoice_${invoice.invoice_number}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast.success('PDF downloaded!');
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
+  };
+
+  const calculateTotal = () => {
+    return items.reduce((sum, item) => sum + (item.amount || 0), 0);
+  };
+
+  const calculateRetainage = () => {
+    return calculateTotal() * (retainagePercent / 100);
+  };
+
+  const calculateNetPayable = () => {
+    return calculateTotal() - calculateRetainage();
+  };
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse flex items-center gap-2">
+          <Receipt className="h-8 w-8 text-accent" />
+          <span className="text-xl font-semibold">Loading...</span>
+        </div>
       </div>
     );
   }
 
-  if (!invoice) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Invoice not found</p>
-        <Button variant="outline" onClick={onBack} className="mt-4">
-          Go Back
-        </Button>
-      </div>
-    );
-  }
+  if (!invoice) return null;
 
-  // Contract-based permissions:
-  // - isInvoiceCreator (from_org - contractor) can submit drafts
-  // - isInvoiceReceiver (to_org - client) can approve/reject/mark paid
-  const canSubmit = isInvoiceCreator;
-  const canApprove = isInvoiceReceiver;
-  const canRevise = canSubmit || invoice?.created_by === user?.id;
-  const status = invoice.status as InvoiceStatus;
+  const approvalStatus = APPROVAL_STATUS_CONFIG[invoice.approval_status] || APPROVAL_STATUS_CONFIG['DRAFT'];
+  const StatusIcon = approvalStatus.icon;
+  const isCreator = user?.id === invoice.created_by_user_id;
+  const canSubmit = invoice.approval_status === 'DRAFT' && isCreator;
+  const canApprove = invoice.approval_status === 'NEEDS_APPROVAL' && userRole === invoice.approver_role;
+  const canMarkPaid = invoice.approval_status === 'APPROVED' && invoice.status !== 'PAID';
+  const canEdit = invoice.approval_status === 'DRAFT' && isCreator;
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-background pb-safe-bottom">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
-          <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 shrink-0">
+      <header className="sticky top-0 z-50 bg-primary text-primary-foreground">
+        <div className="container flex items-center h-14 px-4">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={onClose}
+            className="text-primary-foreground hover:bg-primary-foreground/10 mr-2"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold truncate">{invoice.invoice_number}</h2>
-              <InvoiceStatusBadge status={status} />
-              {(invoice as any).revision_count > 0 && (
-                <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                  Rev {(invoice as any).revision_count}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground truncate">
-              Billing Period: {format(new Date(invoice.billing_period_start), 'MMM d')} -{' '}
-              {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
+          <div className="flex-1 min-w-0">
+            <h1 className="font-semibold">Invoice #{invoice.invoice_number}</h1>
+            <p className="text-xs text-primary-foreground/70">
+              Created {format(new Date(invoice.created_at), 'MMM d, yyyy')}
             </p>
           </div>
+          <div className={`px-3 py-1 rounded-full ${approvalStatus.bg} flex items-center gap-1`}>
+            <StatusIcon className={`h-4 w-4 ${approvalStatus.color}`} />
+            <span className={`text-xs font-medium ${approvalStatus.color}`}>{approvalStatus.label}</span>
+          </div>
         </div>
+      </header>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={exportLoading}
-            onClick={async () => {
-              setExportLoading(true);
-              try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session?.access_token) {
-                  toast.error('Please log in to export');
-                  return;
-                }
-                const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-download?invoice_id=${invoiceId}`;
-                const res = await fetch(url, {
-                  headers: { Authorization: `Bearer ${session.access_token}` },
-                });
-                if (!res.ok) {
-                  const err = await res.json().catch(() => ({ error: 'Export failed' }));
-                  throw new Error(err.error || `Export failed (${res.status})`);
-                }
-                const html = await res.text();
-                const blob = new Blob([html], { type: 'text/html' });
-                window.open(URL.createObjectURL(blob), '_blank');
-              } catch (err: any) {
-                toast.error(err.message || 'Failed to export invoice');
-              } finally {
-                setExportLoading(false);
-              }
-            }}
+      <main className="container px-4 py-6 space-y-6">
+        {/* Rejection Notice */}
+        {invoice.approval_status === 'REJECTED' && invoice.rejection_comments && (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <XCircle className="h-5 w-5 text-destructive mt-0.5" />
+                <div>
+                  <p className="font-medium text-destructive">Invoice Rejected</p>
+                  <p className="text-sm text-muted-foreground mt-1">{invoice.rejection_comments}</p>
+                  {invoice.rejected_at && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Rejected on {format(new Date(invoice.rejected_at), 'MMM d, yyyy')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Approval Pending Notice */}
+        {invoice.approval_status === 'NEEDS_APPROVAL' && canApprove && (
+          <Card className="border-warning/30 bg-warning/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
+                <div>
+                  <p className="font-medium text-warning">Approval Required</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    This invoice requires your approval
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Total Amount */}
+        <Card className="border-0 shadow-md bg-accent/5">
+          <CardContent className="p-4">
+            <div className="text-center mb-3">
+              <p className="text-3xl font-bold font-mono-construction">{formatCurrency(calculateTotal())}</p>
+              <p className="text-sm text-muted-foreground">Gross Amount</p>
+            </div>
+            
+            {retainagePercent > 0 && (
+              <div className="border-t border-border pt-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Retainage ({retainagePercent}%)</span>
+                  <span className="font-mono text-destructive">-{formatCurrency(calculateRetainage())}</span>
+                </div>
+                <div className="flex justify-between text-base font-semibold">
+                  <span>Net Payable</span>
+                  <span className="font-mono text-success">{formatCurrency(calculateNetPayable())}</span>
+                </div>
+              </div>
+            )}
+            
+            {invoice.paid_at && (
+              <div className="mt-3 pt-3 border-t border-border flex items-center justify-center gap-2 text-success">
+                <DollarSign className="h-4 w-4" />
+                <span className="text-sm font-medium">Paid on {format(new Date(invoice.paid_at), 'MMM d, yyyy')}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Creator Info */}
+        {creatorProfile && (
+          <Card className="border-0 shadow-md">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{creatorProfile.company_name}</p>
+                  <p className="text-xs text-muted-foreground">Created by</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Line Items */}
+        {items.length > 0 && (
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Line Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <div key={item.id} className="flex justify-between items-start py-2 border-b border-border last:border-0">
+                    <div>
+                      <p className="font-medium text-sm">{item.description}</p>
+                      {item.qty && item.unit && (
+                        <p className="text-xs text-muted-foreground">
+                          {item.qty} {item.unit} @ {formatCurrency(item.unit_cost || 0)}
+                        </p>
+                      )}
+                    </div>
+                    <p className="font-mono-construction font-semibold">{formatCurrency(item.amount)}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Reject Form */}
+        {showRejectForm && (
+          <Card className="border-destructive/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base text-destructive">Rejection Comments</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="rejection">Reason for rejection (required)</Label>
+                <Textarea
+                  id="rejection"
+                  value={rejectionComments}
+                  onChange={(e) => setRejectionComments(e.target.value)}
+                  placeholder="Please explain why this invoice is being rejected..."
+                  className="mt-2"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRejectForm(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleReject}
+                  disabled={processing || !rejectionComments.trim()}
+                  className="flex-1"
+                >
+                  {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Rejection'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-col gap-3">
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadPdf}
+            disabled={downloading}
           >
-            {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
-            Export PDF
+            {downloading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Download PDF
           </Button>
 
-          {status === 'DRAFT' && canSubmit && (
-            <>
-              <Button variant="outline" onClick={handleRevise}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(true)} className="text-destructive hover:bg-destructive/10">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-              <Button onClick={handleSubmit} disabled={actionLoading}>
-                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                Submit for Approval
-              </Button>
-            </>
-          )}
-
-          {status === 'SUBMITTED' && isInvoiceCreator && (
-            <Button
-              variant="outline"
-              onClick={() => sendNudge('invoice', invoiceId)}
-              disabled={nudgeLoading || wasSent('invoice', invoiceId)}
-            >
-              <Bell className="h-4 w-4 mr-2" />
-              {wasSent('invoice', invoiceId) ? 'Reminder Sent' : 'Send Reminder'}
+          {canEdit && (
+            <Button variant="outline" onClick={onEdit}>
+              Edit Invoice
             </Button>
           )}
 
-          {status === 'SUBMITTED' && canApprove && (
+          {canSubmit && (
+            <Button onClick={handleSubmit} disabled={processing}>
+              <Send className="h-4 w-4 mr-2" />
+              Submit for Approval
+            </Button>
+          )}
+
+          {canApprove && !showRejectForm && (
             <>
-              <Button variant="outline" onClick={() => setRejectDialogOpen(true)} disabled={actionLoading}>
-                <XCircle className="h-4 w-4 mr-2" />
-                Reject
+              <Button onClick={handleApprove} disabled={processing} className="bg-success hover:bg-success/90">
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Approve Invoice
               </Button>
-              <Button onClick={handleApprove} disabled={actionLoading}>
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                )}
-                Approve
+              <Button 
+                variant="outline" 
+                onClick={() => setShowRejectForm(true)} 
+                disabled={processing}
+                className="border-destructive/30 text-destructive hover:bg-destructive/10"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject Invoice
               </Button>
             </>
           )}
 
-          {status === 'APPROVED' && canApprove && (
-            <Button onClick={handleMarkPaid} disabled={actionLoading}>
-              {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <DollarSign className="h-4 w-4 mr-2" />
-              )}
+          {canMarkPaid && (
+            <Button onClick={handleMarkPaid} disabled={processing}>
+              <DollarSign className="h-4 w-4 mr-2" />
               Mark as Paid
             </Button>
           )}
         </div>
-      </div>
-
-      {/* Source PO Reference */}
-      {linkedPO && (
-        <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Package className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              <div>
-                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                  Created from Purchase Order
-                </p>
-                <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                  {linkedPO.po_number} — Status: {linkedPO.status}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Rejection Notice */}
-      {status === 'REJECTED' && invoice.rejection_reason && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
-                <p className="text-sm text-red-700 dark:text-red-300">{invoice.rejection_reason}</p>
-              </div>
-              {canRevise && (
-                <Button onClick={handleRevise} disabled={actionLoading} size="sm">
-                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-                  Revise & Resubmit
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Line Items */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Line Items</CardTitle>
-          <div className="flex items-center gap-2">
-            <Switch id="show-full-notes" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
-            <Label htmlFor="show-full-notes" className="text-sm text-muted-foreground cursor-pointer">
-              {showFullNotes ? 'Full notes' : 'Scope only'}
-            </Label>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Scheduled Value</TableHead>
-                <TableHead className="text-right">Previously Billed</TableHead>
-                <TableHead className="text-right">This Period</TableHead>
-                <TableHead className="text-right">Total Billed</TableHead>
-                <TableHead className="text-right">Remaining</TableHead>
-                <TableHead className="text-right">% Complete</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lineItems.map((item) => {
-                const percentComplete =
-                  item.scheduled_value > 0
-                    ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1)
-                    : '0';
-                const remaining = item.scheduled_value - item.total_billed;
-                const isOverbilled = remaining < 0;
-
-                return (
-                  <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
-                    <TableCell className="font-medium align-top">
-                      {editingItemId === item.id ? (
-                        <div className="space-y-2">
-                          <Input
-                            value={editDescription}
-                            onChange={(e) => setEditDescription(e.target.value)}
-                            maxLength={500}
-                            placeholder="Description"
-                            className="text-sm"
-                          />
-                          <Textarea
-                            value={editNotes}
-                            onChange={(e) => setEditNotes(e.target.value)}
-                            maxLength={5000}
-                            placeholder="Scope of work / notes (optional)"
-                            rows={4}
-                            className="text-xs font-normal"
-                          />
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" onClick={() => saveEditLine(item.id)} disabled={editSaving}>
-                              {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                              <span className="ml-1">Save</span>
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={cancelEditLine} disabled={editSaving}>
-                              <X className="h-3 w-3" />
-                              <span className="ml-1">Cancel</span>
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="group">
-                          <div className="flex items-start gap-2">
-                            <div className="flex-1">{item.description}</div>
-                            {status !== 'APPROVED' && status !== 'PAID' && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => startEditLine(item)}
-                                title="Edit description"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                          {(() => {
-                            const text = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
-                            return text ? (
-                              <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
-                                {text}
-                              </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.scheduled_value)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(item.current_billed)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.total_billed)}</TableCell>
-                    <TableCell className={`text-right font-medium ${isOverbilled ? 'text-red-600 dark:text-red-400' : ''}`}>
-                      {formatCurrency(remaining)}
-                      {isOverbilled && ' ⚠'}
-                    </TableCell>
-                    <TableCell className={`text-right ${parseFloat(percentComplete) > 100 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
-                      {percentComplete}%
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={3} className="text-right font-medium">
-                  Subtotal
-                </TableCell>
-                <TableCell className="text-right font-bold">{formatCurrency(invoice.subtotal)}</TableCell>
-                <TableCell colSpan={3}></TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={3} className="text-right font-medium">
-                  Retainage Withheld
-                </TableCell>
-                <TableCell className="text-right font-medium text-amber-600">
-                  -{formatCurrency(invoice.retainage_amount)}
-                </TableCell>
-                <TableCell colSpan={3}></TableCell>
-              </TableRow>
-              <TableRow className="bg-muted/50">
-                <TableCell colSpan={3} className="text-right font-bold">
-                  Total Due
-                </TableCell>
-                <TableCell className="text-right font-bold text-lg">{formatCurrency(invoice.total_amount)}</TableCell>
-                <TableCell colSpan={3}></TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Notes */}
-      {invoice.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{invoice.notes}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Rejection Dialog */}
-      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reject Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Please provide a reason for rejecting this invoice. This will be visible to the submitter.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Textarea
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="Enter rejection reason..."
-            rows={3}
-          />
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject} className="bg-destructive text-destructive-foreground">
-              Reject Invoice
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete invoice {invoice?.invoice_number}? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteLoading}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Delete Invoice
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Revision Wizard */}
-      {invoice && revisionData && (
-        <CreateInvoiceFromSOV
-          open={reviseDialogOpen}
-          onOpenChange={setReviseDialogOpen}
-          projectId={projectId}
-          onSuccess={() => {
-            fetchInvoice();
-            onUpdate();
-          }}
-          revisionInvoiceId={invoice.id}
-          revisionData={revisionData}
-        />
-      )}
+      </main>
     </div>
   );
 }
