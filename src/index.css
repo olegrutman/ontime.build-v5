@@ -22,9 +22,9 @@
     --primary: 38 91% 55%;
     --primary-foreground: 216 56% 14%;
 
-    /* Secondary */
-    --secondary: 216 39% 24%;
-    --secondary-foreground: 220 27% 96%;
+    /* Secondary — Orange for contrast */
+    --secondary: 24 95% 53%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 215 18% 39%;
     --muted-foreground: 215 13% 55%;
