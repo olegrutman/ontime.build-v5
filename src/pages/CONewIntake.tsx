@@ -453,9 +453,10 @@ export default function CONewIntakePage() {
                   size="sm"
                   className="h-8 gap-1.5 px-3"
                 >
-                  {runIntake.isPending ? (
+                  {isProcessing ? (
                     <>
-                      <Loader2 className="size-3.5 animate-spin" /> Extracting…
+                      <Loader2 className="size-3.5 animate-spin" />
+                      {runIntake.isPending ? 'Starting…' : 'Drafting…'}
                     </>
                   ) : (
                     <>
