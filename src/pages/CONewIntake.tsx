@@ -52,7 +52,27 @@ export default function CONewIntakePage() {
   const [materialBy, setMaterialBy] = useState<'GC' | 'TC' | null>(null);
   const [equipmentBy, setEquipmentBy] = useState<'GC' | 'TC' | null>(null);
 
-  const runIntake = useRunAiIntake();
+  const runIntake = useStartAiIntake();
+  const intakeQuery = useAiIntake(intakeId);
+
+  useEffect(() => {
+    const row = intakeQuery.data as any;
+    if (!row) return;
+    if (row.status === 'succeeded' && lines.length === 0) {
+      const parsed = linesFromIntake(row);
+      setLines(parsed);
+      if (parsed.length === 0) {
+        toast({ title: 'No scope detected', description: 'Try adding more detail about what changed.' });
+      }
+    } else if (row.status === 'failed') {
+      toast({ title: 'AI extraction failed', description: row.error_message ?? 'Unknown error', variant: 'destructive' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intakeQuery.data?.status]);
+
+  const isProcessing =
+    runIntake.isPending ||
+    (intakeId !== null && lines.length === 0 && (intakeQuery.data as any)?.status !== 'failed');
 
   const { data: contractDefault } = useQuery({
     queryKey: ['co-intake-contract-default', projectId],
