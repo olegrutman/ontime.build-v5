@@ -149,20 +149,22 @@ export default function COAiIntakePage() {
 
   const handleAnalyze = async () => {
     try {
+      setLines([]);
       const res = await runIntake.mutateAsync({
         project_id: projectId,
         source_kind: 'paste',
         raw_text: text,
       });
       setIntakeId(res.intake_id);
-      setLines(res.lines);
-      if (res.lines.length === 0) {
-        toast({ title: 'No scope detected', description: 'Try adding more detail about the change.' });
-      }
+      // Lines arrive via polling effect above.
     } catch (e: any) {
       toast({ title: 'AI intake failed', description: e?.message ?? 'Unknown error', variant: 'destructive' });
     }
   };
+
+  const isProcessing =
+    runIntake.isPending ||
+    (intakeId !== null && lines.length === 0 && (intakeQuery.data as any)?.status !== 'failed');
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
