@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
-import { useRunAiIntake, type AiIntakeLine } from '@/hooks/useAiIntake';
+import { useStartAiIntake, useAiIntake, linesFromIntake, type AiIntakeLine } from '@/hooks/useAiIntake';
 import { useOrgType } from '@/hooks/useOrgType';
 import { generateCONumber } from '@/lib/generateCONumber';
 import { Button } from '@/components/ui/button';
