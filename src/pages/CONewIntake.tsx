@@ -332,7 +332,7 @@ export default function CONewIntakePage() {
   };
 
   const charCount = text.length;
-  const canAnalyze = text.trim().length >= 5 && !runIntake.isPending;
+  const canAnalyze = text.trim().length >= 5 && !isProcessing;
 
   const docLabel = docType ?? 'CO';
   const inferredFromMode = useMemo(
