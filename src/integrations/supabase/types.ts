@@ -1181,6 +1181,8 @@ export type Database = {
       co_labor_entries: {
         Row: {
           actual_cost_note: string | null
+          base_hourly_rate: number | null
+          base_lump_sum: number | null
           co_id: string
           co_line_item_id: string
           created_at: string | null
@@ -1195,11 +1197,14 @@ export type Database = {
           is_actual_cost: boolean
           line_total: number | null
           lump_sum: number | null
+          markup_percent: number
           org_id: string
           pricing_mode: string
         }
         Insert: {
           actual_cost_note?: string | null
+          base_hourly_rate?: number | null
+          base_lump_sum?: number | null
           co_id: string
           co_line_item_id: string
           created_at?: string | null
@@ -1214,11 +1219,14 @@ export type Database = {
           is_actual_cost?: boolean
           line_total?: number | null
           lump_sum?: number | null
+          markup_percent?: number
           org_id: string
           pricing_mode?: string
         }
         Update: {
           actual_cost_note?: string | null
+          base_hourly_rate?: number | null
+          base_lump_sum?: number | null
           co_id?: string
           co_line_item_id?: string
           created_at?: string | null
@@ -1233,6 +1241,7 @@ export type Database = {
           is_actual_cost?: boolean
           line_total?: number | null
           lump_sum?: number | null
+          markup_percent?: number
           org_id?: string
           pricing_mode?: string
         }
@@ -7324,6 +7333,8 @@ export type Database = {
       co_labor_entries_role_view: {
         Row: {
           actual_cost_note: string | null
+          base_hourly_rate: number | null
+          base_lump_sum: number | null
           co_id: string | null
           co_line_item_id: string | null
           created_at: string | null
@@ -7338,11 +7349,14 @@ export type Database = {
           is_actual_cost: boolean | null
           line_total: number | null
           lump_sum: number | null
+          markup_percent: number | null
           org_id: string | null
           pricing_mode: string | null
         }
         Insert: {
           actual_cost_note?: string | null
+          base_hourly_rate?: never
+          base_lump_sum?: never
           co_id?: string | null
           co_line_item_id?: string | null
           created_at?: string | null
@@ -7351,17 +7365,20 @@ export type Database = {
           entry_date?: string | null
           gc_approved?: boolean | null
           gc_approved_at?: string | null
-          hourly_rate?: never
-          hours?: never
+          hourly_rate?: number | null
+          hours?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
-          line_total?: never
-          lump_sum?: never
+          line_total?: number | null
+          lump_sum?: number | null
+          markup_percent?: never
           org_id?: string | null
           pricing_mode?: string | null
         }
         Update: {
           actual_cost_note?: string | null
+          base_hourly_rate?: never
+          base_lump_sum?: never
           co_id?: string | null
           co_line_item_id?: string | null
           created_at?: string | null
@@ -7370,12 +7387,13 @@ export type Database = {
           entry_date?: string | null
           gc_approved?: boolean | null
           gc_approved_at?: string | null
-          hourly_rate?: never
-          hours?: never
+          hourly_rate?: number | null
+          hours?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
-          line_total?: never
-          lump_sum?: never
+          line_total?: number | null
+          lump_sum?: number | null
+          markup_percent?: never
           org_id?: string | null
           pricing_mode?: string | null
         }
