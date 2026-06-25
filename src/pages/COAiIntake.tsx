@@ -37,7 +37,24 @@ export default function COAiIntakePage() {
   const [intakeId, setIntakeId] = useState<string | null>(null);
   const [lines, setLines] = useState<AiIntakeLine[]>([]);
 
-  const runIntake = useRunAiIntake();
+  const runIntake = useStartAiIntake();
+  const intakeQuery = useAiIntake(intakeId);
+
+  // When background job finishes, populate lines.
+  useEffect(() => {
+    const row = intakeQuery.data as any;
+    if (!row) return;
+    if (row.status === 'succeeded' && lines.length === 0) {
+      const parsed = linesFromIntake(row);
+      setLines(parsed);
+      if (parsed.length === 0) {
+        toast({ title: 'No scope detected', description: 'Try adding more detail about the change.' });
+      }
+    } else if (row.status === 'failed') {
+      toast({ title: 'AI intake failed', description: row.error_message ?? 'Unknown error', variant: 'destructive' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intakeQuery.data?.status]);
 
   const { data: project } = useQuery({
     queryKey: ['project-min', projectId],
