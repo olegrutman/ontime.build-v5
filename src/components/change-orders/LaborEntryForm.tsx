@@ -118,10 +118,18 @@ export function LaborEntryForm({
 
   function getDbMode(): COPricingMode { return mode === 'lump_sum' ? 'lump_sum' : 'hourly'; }
   function getDbHours() { return mode === 'hourly' ? hoursValue : null; }
-  function getDbRate() {
-    const baseRate = mode === 'hourly' ? rateValue : null;
-    if (baseRate && isTC && markupPct > 0) return baseRate + baseRate * (markupPct / 100);
-    return baseRate;
+
+  // Base = TC internal cost, billable = post-markup amount GC sees.
+  const effectiveMarkup = isTC && markupPct > 0 ? markupPct : 0;
+  function baseHourly() { return mode === 'hourly' ? rateValue : null; }
+  function billableHourly() {
+    const b = baseHourly();
+    return b == null ? null : b + b * (effectiveMarkup / 100);
+  }
+  function baseLump() { return mode === 'lump_sum' ? lumpSumValue : null; }
+  function billableLump() {
+    const b = baseLump();
+    return b == null ? null : b + b * (effectiveMarkup / 100);
   }
 
   async function attemptSave() {
@@ -142,10 +150,11 @@ export function LaborEntryForm({
             entry_date: entryDate,
             pricing_mode: getDbMode(),
             hours: getDbHours(),
-            hourly_rate: getDbRate(),
-            lump_sum: mode === 'lump_sum'
-              ? (lumpSumValue + (isTC && markupPct > 0 ? lumpSumValue * (markupPct / 100) : 0))
-              : null,
+            base_hourly_rate: baseHourly(),
+            base_lump_sum: baseLump(),
+            markup_percent: effectiveMarkup,
+            hourly_rate: billableHourly(),
+            lump_sum: billableLump(),
             description: description.trim() || null,
           })
           .eq('id', editingEntry.id);
@@ -158,8 +167,13 @@ export function LaborEntryForm({
       const { error } = await supabase.from('co_labor_entries').insert({
         co_id: coId, co_line_item_id: lineItemId, org_id: orgId,
         entered_by_role: enteredByRole, entry_date: entryDate,
-        pricing_mode: getDbMode(), hours: getDbHours(), hourly_rate: getDbRate(),
-        lump_sum: mode === 'lump_sum' ? (lumpSumValue + (isTC && markupPct > 0 ? lumpSumValue * (markupPct / 100) : 0)) : null,
+        pricing_mode: getDbMode(),
+        hours: getDbHours(),
+        base_hourly_rate: baseHourly(),
+        base_lump_sum: baseLump(),
+        markup_percent: effectiveMarkup,
+        hourly_rate: billableHourly(),
+        lump_sum: billableLump(),
         description: description.trim() || null, is_actual_cost: isActualCost,
       });
       if (error) throw error;
@@ -168,7 +182,10 @@ export function LaborEntryForm({
         await supabase.from('co_labor_entries').insert({
           co_id: coId, co_line_item_id: lineItemId, org_id: orgId,
           entered_by_role: enteredByRole, entry_date: entryDate,
-          pricing_mode: 'lump_sum', lump_sum: internalCostValue,
+          pricing_mode: 'lump_sum',
+          base_lump_sum: internalCostValue,
+          markup_percent: 0,
+          lump_sum: internalCostValue,
           description: description.trim() ? `Internal: ${description.trim()}` : `Internal cost (${costType.replace(/_/g, ' ')})`,
           is_actual_cost: true,
         });
