@@ -1,0 +1,406 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Trash2, Loader2, Wrench, Pencil, Check, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import type { COEquipmentItem } from '@/types/changeOrder';
+
+interface COEquipmentPanelProps {
+  coId:      string;
+  orgId:     string;
+  equipment: COEquipmentItem[];
+  isTC:      boolean;
+  isGC:      boolean;
+  isFC:      boolean;
+  equipmentResponsible?: string | null;
+  canEdit:   boolean;
+  /** Inline-edit window for already-saved rows; locks once CO is submitted upstream. */
+  canEditExternal?: boolean;
+  onRefresh: () => void;
+}
+
+function fmt(n: number) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+interface DraftEquip {
+  tempId:         string;
+  description:    string;
+  duration_note:  string;
+  cost:           string;
+  markup_percent: string;
+  notes:          string;
+}
+
+function newDraft(): DraftEquip {
+  return {
+    tempId:         crypto.randomUUID(),
+    description:    '',
+    duration_note:  '',
+    cost:           '',
+    markup_percent: '0',
+    notes:          '',
+  };
+}
+
+const EQUIPMENT_SUGGESTIONS = [
+  'Forklift', 'Scissor lift', 'Boom lift / JLG', 'Skid steer / Bobcat',
+  'Generator', 'Compressor', 'Concrete mixer', 'Scaffolding (per section)',
+  'Dumpster / roll-off', 'Pressure washer', 'Welder', 'Water pump',
+  'Temporary fencing', 'Dump truck', 'Flatbed trailer',
+];
+
+export function COEquipmentPanel({
+  coId,
+  orgId,
+  equipment,
+  isTC,
+  isGC,
+  isFC,
+  equipmentResponsible,
+  canEdit,
+  canEditExternal = false,
+  onRefresh,
+}: COEquipmentPanelProps) {
+  const [drafts, setDrafts]         = useState<DraftEquip[]>([]);
+  const [saving, setSaving]         = useState(false);
+  const [deleting, setDeleting]     = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [editDraft, setEditDraft]   = useState<{ description: string; duration_note: string; cost: string; markup_percent: string; notes: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Strict responsibility: only the responsible party can add/edit equipment
+  // or enter its pricing. Everyone else sees a read-only view.
+  const isResponsibleForEquipment =
+    (equipmentResponsible === 'GC' && isGC) ||
+    (equipmentResponsible === 'TC' && (isTC || isFC)) ||
+    (!equipmentResponsible && (isTC || isGC || isFC));
+  const canManageEquipment = canEdit && isResponsibleForEquipment;
+  const responsibleLabel =
+    equipmentResponsible === 'GC' ? 'GC' : equipmentResponsible === 'TC' ? 'TC' : null;
+
+  function startEdit(item: COEquipmentItem) {
+    setEditingId(item.id);
+    setEditDraft({
+      description: item.description,
+      duration_note: item.duration_note ?? '',
+      cost: String(item.cost ?? 0),
+      markup_percent: String(item.markup_percent ?? 0),
+      notes: item.notes ?? '',
+    });
+  }
+
+  async function commitEdit() {
+    if (!editingId || !editDraft) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase.from('co_equipment_items').update({
+        description: editDraft.description.trim() || 'Equipment',
+        duration_note: editDraft.duration_note.trim() || null,
+        cost: parseFloat(editDraft.cost) || 0,
+        markup_percent: parseFloat(editDraft.markup_percent) || 0,
+        notes: editDraft.notes.trim() || null,
+      }).eq('id', editingId);
+      if (error) throw error;
+      toast.success('Equipment updated');
+      setEditingId(null);
+      setEditDraft(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  const totalCost   = equipment.reduce((s, e) => s + (e.cost ?? 0), 0);
+  const totalBilled = equipment.reduce((s, e) => s + (e.billed_amount ?? 0), 0);
+
+  function addBlank() {
+    setDrafts(d => [...d, newDraft()]);
+    setShowPicker(false);
+  }
+
+  function addFromSuggestion(name: string) {
+    setDrafts(d => [...d, { ...newDraft(), description: name }]);
+    setShowPicker(false);
+  }
+
+  function updateDraft(tempId: string, field: keyof DraftEquip, value: string) {
+    setDrafts(d => d.map(r => (r.tempId === tempId ? { ...r, [field]: value } : r)));
+  }
+
+  function removeDraft(tempId: string) {
+    setDrafts(d => d.filter(r => r.tempId !== tempId));
+  }
+
+  async function saveDrafts() {
+    const valid = drafts.filter(d => d.description.trim() && parseFloat(d.cost) > 0);
+    if (valid.length === 0) return;
+
+    setSaving(true);
+    try {
+      const rows = valid.map(d => {
+        const costVal = parseFloat(d.cost) || 0;
+        return {
+        co_id:          coId,
+        org_id:         orgId,
+        added_by_role:  isGC ? 'GC' : isFC ? 'FC' : 'TC',
+        description:    d.description.trim(),
+        duration_note:  d.duration_note.trim() || null,
+        cost:           costVal,
+        markup_percent: parseFloat(d.markup_percent) || 0,
+        notes:          d.notes.trim() || null,
+      }});
+
+      const { error } = await supabase.from('co_equipment_items').insert(rows);
+      if (error) throw error;
+
+      // Auto-enable equipment_needed flag on first add
+      if (equipment.length === 0) {
+        await supabase.from('change_orders').update({ equipment_needed: true }).eq('id', coId);
+      }
+
+      setDrafts([]);
+      toast.success(`${valid.length} equipment item${valid.length > 1 ? 's' : ''} added`);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteItem(id: string) {
+    setDeleting(id);
+    try {
+      const { error } = await supabase.from('co_equipment_items').delete().eq('id', id);
+      if (error) throw error;
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to delete');
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  return (
+    <div className="co-light-shell">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
+        <div className="flex items-center gap-2">
+          <Wrench className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
+        </div>
+        {canManageEquipment && (
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowPicker(p => !p)}>
+              Pick from list
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addBlank}>
+              <Plus className="h-3 w-3" />
+              Custom
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {!isResponsibleForEquipment && responsibleLabel && (
+        <div className="px-4 py-2 border-b border-border bg-amber-50/60 text-[11px] text-amber-900 flex items-center gap-1.5">
+          <Wrench className="h-3 w-3 shrink-0" />
+          <span>
+            <span className="font-semibold">{responsibleLabel}</span> is responsible for equipment on this order — items and pricing are entered by {responsibleLabel}.
+          </span>
+        </div>
+      )}
+
+      {showPicker && (
+        <div className="px-4 py-3 border-b border-border bg-muted/20">
+          <p className="text-xs font-medium text-muted-foreground mb-2">Common equipment</p>
+          <div className="flex flex-wrap gap-1.5">
+            {EQUIPMENT_SUGGESTIONS.map(name => (
+              <button
+                key={name}
+                onClick={() => addFromSuggestion(name)}
+                className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40 hover:bg-muted/40 transition-colors text-foreground"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {equipment.length === 0 && drafts.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm text-muted-foreground">No equipment added yet</p>
+          {canManageEquipment && (
+            <Button variant="outline" size="sm" className="mt-3 text-xs gap-1" onClick={() => setShowPicker(true)}>
+              <Plus className="h-3 w-3" />
+              Add equipment
+            </Button>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="divide-y divide-border">
+            {equipment.map(item => {
+              const isEditing = editingId === item.id;
+              const rowEditable = canEditExternal && item.org_id === orgId;
+              if (isEditing && editDraft) {
+                return (
+                  <div key={item.id} className="px-4 py-3 space-y-2 bg-muted/20">
+                    <Input value={editDraft.description} onChange={e => setEditDraft({ ...editDraft, description: e.target.value })} className="h-8 text-sm" placeholder="Description" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input value={editDraft.duration_note} onChange={e => setEditDraft({ ...editDraft, duration_note: e.target.value })} className="h-7 text-xs" placeholder="Duration" />
+                      <Input type="number" value={editDraft.cost} onChange={e => setEditDraft({ ...editDraft, cost: e.target.value })} className="h-7 text-xs" placeholder="Cost" />
+                      <Input type="number" value={editDraft.markup_percent} onChange={e => setEditDraft({ ...editDraft, markup_percent: e.target.value })} className="h-7 text-xs" placeholder="Markup %" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setEditingId(null); setEditDraft(null); }} disabled={savingEdit}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" className="h-7 text-xs" onClick={commitEdit} disabled={savingEdit}>
+                        {savingEdit ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{item.description}</p>
+                    {item.duration_note && (<p className="text-xs text-muted-foreground">{item.duration_note}</p>)}
+                  </div>
+                  <div className="text-right text-sm shrink-0">
+                    {isResponsibleForEquipment && !isGC && (<div className="text-xs text-muted-foreground">Cost: ${fmt(item.cost ?? 0)}</div>)}
+                    {isResponsibleForEquipment && !isGC && item.markup_percent > 0 && (<div className="text-[10px] text-muted-foreground">+{item.markup_percent}% markup</div>)}
+                    {isResponsibleForEquipment && (<div className="font-medium text-foreground">${fmt(item.billed_amount ?? 0)}</div>)}
+                  </div>
+                  {rowEditable && canManageEquipment && (
+                    <button onClick={() => startEdit(item)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
+                  )}
+                  {canManageEquipment && (
+                    <button onClick={() => deleteItem(item.id)} disabled={deleting === item.id} className="text-muted-foreground hover:text-destructive transition-colors ml-1 shrink-0">
+                      {deleting === item.id ? (<Loader2 className="h-3.5 w-3.5 animate-spin" />) : (<Trash2 className="h-3.5 w-3.5" />)}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            {drafts.map(draft => {
+              const cost   = parseFloat(draft.cost) || 0;
+              const markup = parseFloat(draft.markup_percent) || 0;
+              const billed = cost * (1 + markup / 100);
+
+              return (
+                <div key={draft.tempId} className="px-4 py-3 space-y-2 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={draft.description}
+                      onChange={e => updateDraft(draft.tempId, 'description', e.target.value)}
+                      placeholder="Equipment description *"
+                      className="flex-1 h-8 text-sm"
+                    />
+                    <button
+                      onClick={() => removeDraft(draft.tempId)}
+                      className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid gap-2 grid-cols-3">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Duration</p>
+                      <Input
+                        value={draft.duration_note}
+                        onChange={e => updateDraft(draft.tempId, 'duration_note', e.target.value)}
+                        placeholder="e.g. 2 days"
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Cost $</p>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          value={draft.cost}
+                          onChange={e => updateDraft(draft.tempId, 'cost', e.target.value)}
+                          placeholder="0.00"
+                          className="h-7 text-xs pl-5"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Markup %</p>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={draft.markup_percent}
+                          onChange={e => updateDraft(draft.tempId, 'markup_percent', e.target.value)}
+                          className="h-7 text-xs pr-5"
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {billed > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Billed</span>
+                      <span className="font-medium text-foreground">${fmt(billed)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {drafts.length > 0 && (
+            <div className="flex justify-end gap-2 px-4 py-3 border-t border-border">
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setDrafts([])} disabled={saving}>
+                Discard
+              </Button>
+              <Button
+                size="sm"
+                className="text-xs h-7 gap-1"
+                onClick={saveDrafts}
+                disabled={saving || drafts.every(d => !d.description.trim() || !d.cost)}
+              >
+                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                Save
+              </Button>
+            </div>
+          )}
+
+          {equipment.length > 0 && (isGC || ((isTC || isFC) && equipmentResponsible !== 'GC')) && (
+            <div className="px-4 py-3 border-t border-border space-y-1">
+              {(isTC || isFC) && totalCost > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Cost</span>
+                  <span className="text-muted-foreground">${fmt(totalCost)}</span>
+                </div>
+              )}
+              {(isTC || isFC) && totalBilled > totalCost && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Markup</span>
+                  <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm font-semibold">
+                <span className="text-foreground">Total</span>
+                <span className="text-foreground">${fmt(totalBilled)}</span>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
