@@ -183,6 +183,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['co-financials-v2', coId] });
+    queryClient.invalidateQueries({ queryKey: ['co-responsibility', coId] });
   }
 
   function handleBack() { navigate(`/project/${projectId}/change-orders`); }
