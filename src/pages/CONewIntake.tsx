@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgType } from '@/hooks/useOrgType';
-import { useRunAiIntake, type AiIntakeLine } from '@/hooks/useAiIntake';
+import { useStartAiIntake, useAiIntake, linesFromIntake, type AiIntakeLine } from '@/hooks/useAiIntake';
 import { generateCONumber } from '@/lib/generateCONumber';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
