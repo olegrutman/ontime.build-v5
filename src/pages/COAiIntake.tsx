@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
-import { useRunAiIntake, type AiIntakeLine } from '@/hooks/useAiIntake';
+import { useStartAiIntake, useAiIntake, linesFromIntake, type AiIntakeLine } from '@/hooks/useAiIntake';
 import { useOrgType } from '@/hooks/useOrgType';
 import { generateCONumber } from '@/lib/generateCONumber';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,24 @@ export default function COAiIntakePage() {
   const [intakeId, setIntakeId] = useState<string | null>(null);
   const [lines, setLines] = useState<AiIntakeLine[]>([]);
 
-  const runIntake = useRunAiIntake();
+  const runIntake = useStartAiIntake();
+  const intakeQuery = useAiIntake(intakeId);
+
+  // When background job finishes, populate lines.
+  useEffect(() => {
+    const row = intakeQuery.data as any;
+    if (!row) return;
+    if (row.status === 'succeeded' && lines.length === 0) {
+      const parsed = linesFromIntake(row);
+      setLines(parsed);
+      if (parsed.length === 0) {
+        toast({ title: 'No scope detected', description: 'Try adding more detail about the change.' });
+      }
+    } else if (row.status === 'failed') {
+      toast({ title: 'AI intake failed', description: row.error_message ?? 'Unknown error', variant: 'destructive' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intakeQuery.data?.status]);
 
   const { data: project } = useQuery({
     queryKey: ['project-min', projectId],
@@ -132,20 +149,22 @@ export default function COAiIntakePage() {
 
   const handleAnalyze = async () => {
     try {
+      setLines([]);
       const res = await runIntake.mutateAsync({
         project_id: projectId,
         source_kind: 'paste',
         raw_text: text,
       });
       setIntakeId(res.intake_id);
-      setLines(res.lines);
-      if (res.lines.length === 0) {
-        toast({ title: 'No scope detected', description: 'Try adding more detail about the change.' });
-      }
+      // Lines arrive via polling effect above.
     } catch (e: any) {
       toast({ title: 'AI intake failed', description: e?.message ?? 'Unknown error', variant: 'destructive' });
     }
   };
+
+  const isProcessing =
+    runIntake.isPending ||
+    (intakeId !== null && lines.length === 0 && (intakeQuery.data as any)?.status !== 'failed');
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -177,18 +196,18 @@ export default function COAiIntakePage() {
           <p className="mt-2 text-xs text-muted-foreground">
             Add a few words about the change, then click Analyze.
           </p>
-          {runIntake.isPending && (
+          {isProcessing && (
             <p className="mt-2 text-sm text-amber-600 animate-pulse">
-              Analyzing… (≈10s)
+              {runIntake.isPending ? 'Starting…' : 'Drafting line items…'}
             </p>
           )}
           <div className="mt-4 flex items-center justify-end">
             <Button
               onClick={handleAnalyze}
-              disabled={text.trim().length < 1 || runIntake.isPending}
+              disabled={text.trim().length < 1 || isProcessing}
               className="gap-2"
             >
-              {runIntake.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {isProcessing ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
               Analyze
             </Button>
           </div>
