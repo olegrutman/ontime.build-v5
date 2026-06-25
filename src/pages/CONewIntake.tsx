@@ -278,19 +278,14 @@ export default function CONewIntakePage() {
 
   const handleAnalyze = async () => {
     try {
+      setLines([]);
       const res = await runIntake.mutateAsync({
         project_id: projectId,
         source_kind: 'paste',
         raw_text: text,
       });
       setIntakeId(res.intake_id);
-      setLines(res.lines);
-      if (res.lines.length === 0) {
-        toast({
-          title: 'No scope detected',
-          description: 'Try adding more detail about what changed.',
-        });
-      }
+      // Lines arrive via polling effect above.
     } catch (e: any) {
       toast({
         title: 'AI extraction failed',
