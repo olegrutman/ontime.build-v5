@@ -130,11 +130,13 @@ export function VisualLocationPicker({
   onConfirm,
   savedLocation,
   compact = false,
+  lockedComponent = null,
+  lockedInsideOutside = null,
 }: VisualLocationPickerProps) {
   const { data: profile } = useProjectProfile(projectId);
   const { data: scope } = useProjectScope(projectId);
 
-  const [insideOutside, setInsideOutside] = useState<InsideOutside>(null);
+  const [insideOutside, setInsideOutside] = useState<InsideOutside>(lockedInsideOutside ?? null);
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [customArea, setCustomArea] = useState('');
@@ -143,9 +145,22 @@ export function VisualLocationPicker({
   const [customRoom, setCustomRoom] = useState('');
   const [selectedElevation, setSelectedElevation] = useState<string | null>(null);
   const [customElevation, setCustomElevation] = useState('');
-  const [selectedComponentGroup, setSelectedComponentGroup] = useState<string | null>(null);
+  const [selectedComponentGroup, setSelectedComponentGroup] = useState<string | null>(lockedComponent);
   const [selectedSubComponent, setSelectedSubComponent] = useState<string | null>(null);
   const [customComponent, setCustomComponent] = useState('');
+
+  // Sync if parent changes the locks (e.g. user goes back and picks a different scenario)
+  useEffect(() => {
+    if (lockedInsideOutside) setInsideOutside(lockedInsideOutside);
+  }, [lockedInsideOutside]);
+  useEffect(() => {
+    if (lockedComponent) {
+      setSelectedComponentGroup(lockedComponent);
+      setSelectedSubComponent(null);
+      setCustomComponent('');
+    }
+  }, [lockedComponent]);
+
 
   // Derive building characteristics
   const homeType = scope?.home_type ?? null;
