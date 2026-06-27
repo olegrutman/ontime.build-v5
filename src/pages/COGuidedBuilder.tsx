@@ -36,6 +36,42 @@ interface ScenarioLine {
 
 const STEP_LABELS = ['Problem', 'System', 'Where', 'Fix', 'Review'] as const;
 
+/**
+ * Map a scenario's `system_tag` → the Component group label used by
+ * VisualLocationPicker / buildingComponents.ts. Returning null means
+ * "let the user pick" (truly ambiguous systems).
+ */
+function systemToComponent(tag: string | null): string | null {
+  if (!tag) return null;
+  const map: Record<string, string> = {
+    'Walls': 'Wall',
+    'Floor / ceiling system': 'Floor system',
+    'Drop ceiling': 'Ceiling system',
+    'Roof trusses': 'Roof system',
+    'Stairs': 'Stairs',
+    'Siding': 'Wall (exterior)',
+    'Fascia / soffit': 'Trim',
+    'Windows / patio doors': 'Openings',
+    'Balcony / deck': 'Wall (exterior)',
+    'Decorative woodwork': 'Trim',
+    'Hardware / steel': 'Wall',
+  };
+  return map[tag] ?? null;
+}
+
+/**
+ * For systems that are unambiguously interior or exterior, auto-pick
+ * Inside/Outside so the user doesn't have to.
+ */
+function systemToInsideOutside(tag: string | null): 'inside' | 'outside' | null {
+  if (!tag) return null;
+  const outside = ['Siding', 'Fascia / soffit', 'Windows / patio doors', 'Balcony / deck', 'Roof trusses'];
+  const inside = ['Drop ceiling', 'Decorative woodwork', 'Stairs'];
+  if (outside.includes(tag)) return 'outside';
+  if (inside.includes(tag)) return 'inside';
+  return null; // Walls / Floor-ceiling / Hardware-steel can be either
+}
+
 export default function COGuidedBuilder() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -442,6 +478,8 @@ export default function COGuidedBuilder() {
               projectId={projectId}
               savedLocation={location || null}
               onConfirm={(tag) => setLocation(tag)}
+              lockedComponent={systemToComponent(scenario?.system_tag ?? null)}
+              lockedInsideOutside={systemToInsideOutside(scenario?.system_tag ?? null)}
             />
             {location && (
               <div className="mt-4 p-3 rounded-lg bg-muted text-sm">
