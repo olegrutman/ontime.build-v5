@@ -575,8 +575,8 @@ export function VisualLocationPicker({
             <p className="text-xs text-muted-foreground italic">{contextHint}</p>
           )}
 
-          {/* Component picker (REQUIRED, comes BEFORE elevation) */}
-          {componentGroups.length > 0 && (
+          {/* Component picker (REQUIRED, comes BEFORE elevation) — hidden when locked by scenario */}
+          {!lockedComponent && componentGroups.length > 0 && (
             <ComponentPicker
               groups={componentGroups}
               subOptions={subComponentOptions}
@@ -595,6 +595,7 @@ export function VisualLocationPicker({
               onCustom={setCustomComponent}
             />
           )}
+
 
           {/* Elevation (OPTIONAL — shown after component is chosen) */}
           {componentTagPart && (
