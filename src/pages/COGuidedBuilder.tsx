@@ -442,6 +442,8 @@ export default function COGuidedBuilder() {
               projectId={projectId}
               savedLocation={location || null}
               onConfirm={(tag) => setLocation(tag)}
+              lockedComponent={systemToComponent(scenario?.system_tag ?? null)}
+              lockedInsideOutside={systemToInsideOutside(scenario?.system_tag ?? null)}
             />
             {location && (
               <div className="mt-4 p-3 rounded-lg bg-muted text-sm">
