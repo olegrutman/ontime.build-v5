@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Home, Trees, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Home, Trees, ChevronRight, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useProjectProfile } from '@/hooks/useProjectProfile';
@@ -18,9 +18,14 @@ interface VisualLocationPickerProps {
   onConfirm: (tag: string) => void;
   savedLocation?: string | null;
   compact?: boolean;
+  /** Pre-lock the component group (e.g. "Wall", "Roof system") so the user doesn't re-pick what the scenario already implies. */
+  lockedComponent?: string | null;
+  /** Pre-lock Interior/Exterior when the scenario makes it unambiguous. */
+  lockedInsideOutside?: 'inside' | 'outside' | null;
 }
 
 type InsideOutside = 'inside' | 'outside' | null;
+
 
 interface ComponentPickerProps {
   groups: ReturnType<typeof getComponentGroups>;
