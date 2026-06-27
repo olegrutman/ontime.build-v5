@@ -426,9 +426,11 @@ export function VisualLocationPicker({
                     setUnitNumber('');
                     setRoomInUnit(null);
                     setCustomRoom('');
-                    setSelectedComponentGroup(null);
-                    setSelectedSubComponent(null);
-                    setCustomComponent('');
+                    if (!lockedComponent) {
+                      setSelectedComponentGroup(null);
+                      setSelectedSubComponent(null);
+                      setCustomComponent('');
+                    }
                   }}
                   className={cn(
                     'shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors min-h-[40px]',
@@ -443,8 +445,8 @@ export function VisualLocationPicker({
             </div>
           </div>
 
-          {/* Component picker (REQUIRED, comes BEFORE area) */}
-          {selectedLevel && componentGroups.length > 0 && (
+          {/* Component picker (REQUIRED, comes BEFORE area) — hidden when locked by scenario */}
+          {!lockedComponent && selectedLevel && componentGroups.length > 0 && (
             <ComponentPicker
               groups={componentGroups}
               subOptions={subComponentOptions}
@@ -463,6 +465,7 @@ export function VisualLocationPicker({
               onCustom={setCustomComponent}
             />
           )}
+
 
           {/* Area grid (OPTIONAL — shown after component is chosen) */}
           {selectedLevel && componentTagPart && (
