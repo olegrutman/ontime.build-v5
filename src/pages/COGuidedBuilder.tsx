@@ -588,13 +588,21 @@ export default function COGuidedBuilder() {
           </Card>
         )}
 
-        {/* Footer nav */}
-        <div className="flex items-center justify-between gap-3 sticky bottom-0 bg-background/95 backdrop-blur border-t -mx-4 sm:-mx-6 px-4 sm:px-6 py-3">
+        {/* Spacer so content isn't hidden behind the floating bar */}
+        <div className="h-20" aria-hidden />
+      </main>
+
+      {/* Floating bottom action bar — always visible, no scroll required */}
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <Button variant="outline" onClick={goBack} disabled={step === 1 || submitting}>
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Back
           </Button>
+          <div className="text-xs text-muted-foreground hidden sm:block">
+            Step {step} of 5 · {STEP_LABELS[step - 1]}
+          </div>
           {step < 5 ? (
-            <Button onClick={goNext} disabled={!canNext[step]}>
+            <Button onClick={goNext} disabled={!canNext[step]} className="min-w-[120px]">
               Next <ArrowRight className="h-4 w-4 ml-1.5" />
             </Button>
           ) : (
@@ -607,7 +615,7 @@ export default function COGuidedBuilder() {
             </Button>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
