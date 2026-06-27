@@ -352,37 +352,55 @@ export function VisualLocationPicker({
         </button>
       )}
 
-      {/* Inside / Outside */}
-      <div className="grid grid-cols-2 gap-2.5 max-w-md">
-      {/* Inside/Outside is binary — keep at 2 cols */}
-        <TapCard
-          label="Interior"
-          icon={<Home className="h-5 w-5" />}
-          selected={insideOutside === 'inside'}
-          onClick={() => {
-            setInsideOutside('inside');
-            setSelectedElevation(null);
-            setCustomElevation('');
-            setSelectedComponentGroup(null);
-            setSelectedSubComponent(null);
-            setCustomComponent('');
-          }}
-        />
-        <TapCard
-          label="Exterior"
-          icon={<Trees className="h-5 w-5" />}
-          selected={insideOutside === 'outside'}
-          onClick={() => {
-            setInsideOutside('outside');
-            setSelectedLevel(null);
-            setSelectedArea(null);
-            setCustomArea('');
-            setSelectedComponentGroup(null);
-            setSelectedSubComponent(null);
-            setCustomComponent('');
-          }}
-        />
-      </div>
+      {/* "Working on" chip — shown when the scenario already locks the system */}
+      {lockedComponent && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/10 border border-secondary/30">
+          <Lock className="h-3.5 w-3.5 text-secondary" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Working on</span>
+          <span className="text-sm font-semibold text-foreground">{lockedComponent}</span>
+          <span className="ml-auto text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+            from scenario
+          </span>
+        </div>
+      )}
+
+      {/* Inside / Outside — hidden when locked by scenario */}
+      {!lockedInsideOutside && (
+        <div className="grid grid-cols-2 gap-2.5 max-w-md">
+          <TapCard
+            label="Interior"
+            icon={<Home className="h-5 w-5" />}
+            selected={insideOutside === 'inside'}
+            onClick={() => {
+              setInsideOutside('inside');
+              setSelectedElevation(null);
+              setCustomElevation('');
+              if (!lockedComponent) {
+                setSelectedComponentGroup(null);
+                setSelectedSubComponent(null);
+                setCustomComponent('');
+              }
+            }}
+          />
+          <TapCard
+            label="Exterior"
+            icon={<Trees className="h-5 w-5" />}
+            selected={insideOutside === 'outside'}
+            onClick={() => {
+              setInsideOutside('outside');
+              setSelectedLevel(null);
+              setSelectedArea(null);
+              setCustomArea('');
+              if (!lockedComponent) {
+                setSelectedComponentGroup(null);
+                setSelectedSubComponent(null);
+                setCustomComponent('');
+              }
+            }}
+          />
+        </div>
+      )}
+
 
 
       {/* INSIDE PATH */}
