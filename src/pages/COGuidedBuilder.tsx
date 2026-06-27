@@ -138,6 +138,25 @@ export default function COGuidedBuilder() {
   const orgId = (myParticipant?.organization_id ?? userOrgRoles?.[0]?.organization_id) as string | undefined;
 
   const groupedScenarios = useMemo(() => {
+    // Construction sequence — walls first (most critical structural),
+    // then follow rough → exterior envelope → finishes order.
+    const SYSTEM_ORDER = [
+      'Walls',
+      'Floor / ceiling system',
+      'Roof trusses',
+      'Stairs',
+      'Hardware / steel',
+      'Fascia / soffit',
+      'Siding',
+      'Windows / patio doors',
+      'Balcony / deck',
+      'Drop ceiling',
+      'Decorative woodwork',
+    ];
+    const rank = (key: string) => {
+      const i = SYSTEM_ORDER.indexOf(key);
+      return i === -1 ? SYSTEM_ORDER.length + 1 : i;
+    };
     const groups = new Map<string, Scenario[]>();
     for (const s of filteredScenarios) {
       const key = s.system_tag ?? 'Other';
@@ -145,7 +164,10 @@ export default function COGuidedBuilder() {
       arr.push(s);
       groups.set(key, arr);
     }
-    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    return Array.from(groups.entries()).sort((a, b) => {
+      const r = rank(a[0]) - rank(b[0]);
+      return r !== 0 ? r : a[0].localeCompare(b[0]);
+    });
   }, [filteredScenarios]);
 
   const canNext: Record<Step, boolean> = {
