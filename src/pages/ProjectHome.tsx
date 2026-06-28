@@ -506,8 +506,8 @@ export default function ProjectHome() {
           </div>
         </main>
       </div>
-      {/* Mobile: project-specific bottom nav */}
-      <div className="md:hidden">
+      {/* Mobile + tablet: project-specific bottom nav */}
+      <div className="lg:hidden">
         <ProjectBottomNav isSupplier={isSupplier} isTM={isTM} />
       </div>
     </ProjectShell>
