@@ -134,6 +134,7 @@ export function VisualLocationPicker({
   compact = false,
   lockedComponent = null,
   lockedInsideOutside = null,
+  levelConstraint = 'any',
 }: VisualLocationPickerProps) {
   const { data: profile } = useProjectProfile(projectId);
   const { data: scope } = useProjectScope(projectId);
