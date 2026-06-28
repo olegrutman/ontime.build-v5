@@ -536,7 +536,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     <div className="px-6 py-10 text-center">
                       <Hammer className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
                       <p className="text-sm font-semibold text-foreground">No scope items yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">Add a scope item to start tracking work and pricing</p>
+                      <p className="text-xs text-muted-foreground mt-1 mb-4">Add a scope item to start tracking work and pricing</p>
+                      {canEdit && !nteBlocked && co && (
+                        <Button
+                          size="sm"
+                          onClick={() => navigate(`/project/${projectId}/change-orders/new?coId=${co.id}`)}
+                          className="gap-1.5"
+                        >
+                          <Plus className="h-4 w-4" /> Add scope item
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     lineItems.map((item, idx) => (
