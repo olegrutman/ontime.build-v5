@@ -100,7 +100,7 @@ export default function COGuidedBuilder() {
     queryFn: async () => {
       const q = supabase
         .from('co_scenarios')
-        .select('id, name, description, system_tag, project_types, problem_tags, default_unit')
+        .select('id, name, description, system_tag, project_types, problem_tags, default_unit, component_lock, io_lock, level_constraint, area_required, auto_fill_location')
         .order('system_tag', { ascending: true })
         .order('name', { ascending: true });
       const { data, error } = await q;
