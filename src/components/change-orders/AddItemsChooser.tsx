@@ -86,6 +86,23 @@ export function AddItemsChooser({
             </span>
           </span>
         </button>
+        <button
+          onClick={goGuided}
+          className={cn(
+            'mt-1 flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left transition-colors',
+            'hover:bg-accent hover:text-accent-foreground',
+          )}
+        >
+          <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Wand2 className="size-4" />
+          </span>
+          <span className="flex flex-col">
+            <span className="text-sm font-semibold">Guided</span>
+            <span className="text-[11px] text-muted-foreground">
+              Step-by-step picker by system & location
+            </span>
+          </span>
+        </button>
       </PopoverContent>
     </Popover>
   );
