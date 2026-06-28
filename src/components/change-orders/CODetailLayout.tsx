@@ -539,13 +539,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <p className="text-sm font-semibold text-foreground">No scope items yet</p>
                       <p className="text-xs text-muted-foreground mt-1 mb-4">Add a scope item to start tracking work and pricing</p>
                       {canEdit && !nteBlocked && co && (
-                        <Button
-                          size="sm"
-                          onClick={() => navigate(`/project/${projectId}/change-orders/new?coId=${co.id}`)}
-                          className="gap-1.5"
-                        >
-                          <Plus className="h-4 w-4" /> Add scope item
-                        </Button>
+                        <AddItemsChooser projectId={projectId} coId={co.id} />
                       )}
                     </div>
                   ) : (
