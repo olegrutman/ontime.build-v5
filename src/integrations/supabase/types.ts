@@ -8176,6 +8176,10 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: boolean
       }
+      recalc_sov_item_billing: {
+        Args: { _sov_item_id: string }
+        Returns: undefined
+      }
       recent_catalog_items: {
         Args: {
           p_days?: number
