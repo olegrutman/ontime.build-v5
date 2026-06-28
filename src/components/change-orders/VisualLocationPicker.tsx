@@ -22,6 +22,8 @@ interface VisualLocationPickerProps {
   lockedComponent?: string | null;
   /** Pre-lock Interior/Exterior when the scenario makes it unambiguous. */
   lockedInsideOutside?: 'inside' | 'outside' | null;
+  /** Restrict which levels are pickable based on the scenario (top_only for trusses/fascia, stair_run for stairs, etc.). */
+  levelConstraint?: import('@/lib/scenarioLocationRules').LevelConstraint;
 }
 
 type InsideOutside = 'inside' | 'outside' | null;
