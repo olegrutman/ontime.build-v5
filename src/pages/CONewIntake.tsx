@@ -42,6 +42,7 @@ export default function CONewIntakePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const addToCoId = searchParams.get('coId');
+  const autoStartVoice = searchParams.get('mode') === 'voice';
   const { user, userOrgRoles } = useAuth();
   const orgType = useOrgType();
 
