@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { VisualLocationPicker } from '@/components/change-orders/VisualLocationPicker';
+import { getLocationContract, autoFillLocationTag } from '@/lib/scenarioLocationRules';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -24,6 +25,11 @@ interface Scenario {
   project_types: string[] | null;
   problem_tags: string[] | null;
   default_unit: string | null;
+  component_lock: string | null;
+  io_lock: string | null;
+  level_constraint: string | null;
+  area_required: boolean | null;
+  auto_fill_location: boolean | null;
 }
 interface ScenarioLine {
   id: string;
