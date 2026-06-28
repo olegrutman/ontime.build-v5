@@ -1701,12 +1701,17 @@ export type Database = {
       }
       co_scenarios: {
         Row: {
+          area_required: boolean
+          auto_fill_location: boolean
+          component_lock: string | null
           created_at: string
           default_qty_formula: string | null
           default_unit: string | null
           description: string | null
           id: string
+          io_lock: string | null
           is_platform: boolean
+          level_constraint: string
           name: string
           org_id: string | null
           problem_tags: string[]
@@ -1716,12 +1721,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          area_required?: boolean
+          auto_fill_location?: boolean
+          component_lock?: string | null
           created_at?: string
           default_qty_formula?: string | null
           default_unit?: string | null
           description?: string | null
           id: string
+          io_lock?: string | null
           is_platform?: boolean
+          level_constraint?: string
           name: string
           org_id?: string | null
           problem_tags?: string[]
@@ -1731,12 +1741,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          area_required?: boolean
+          auto_fill_location?: boolean
+          component_lock?: string | null
           created_at?: string
           default_qty_formula?: string | null
           default_unit?: string | null
           description?: string | null
           id?: string
+          io_lock?: string | null
           is_platform?: boolean
+          level_constraint?: string
           name?: string
           org_id?: string | null
           problem_tags?: string[]

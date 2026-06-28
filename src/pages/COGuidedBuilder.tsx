@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { VisualLocationPicker } from '@/components/change-orders/VisualLocationPicker';
+import { getLocationContract, autoFillLocationTag } from '@/lib/scenarioLocationRules';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -24,6 +25,11 @@ interface Scenario {
   project_types: string[] | null;
   problem_tags: string[] | null;
   default_unit: string | null;
+  component_lock: string | null;
+  io_lock: string | null;
+  level_constraint: string | null;
+  area_required: boolean | null;
+  auto_fill_location: boolean | null;
 }
 interface ScenarioLine {
   id: string;
@@ -36,41 +42,11 @@ interface ScenarioLine {
 
 const STEP_LABELS = ['Problem', 'System', 'Where', 'Fix', 'Review'] as const;
 
-/**
- * Map a scenario's `system_tag` → the Component group label used by
- * VisualLocationPicker / buildingComponents.ts. Returning null means
- * "let the user pick" (truly ambiguous systems).
- */
-function systemToComponent(tag: string | null): string | null {
-  if (!tag) return null;
-  const map: Record<string, string> = {
-    'Walls': 'Wall',
-    'Floor / ceiling system': 'Floor system',
-    'Drop ceiling': 'Ceiling system',
-    'Roof trusses': 'Roof system',
-    'Stairs': 'Stairs',
-    'Siding': 'Wall (exterior)',
-    'Fascia / soffit': 'Trim',
-    'Windows / patio doors': 'Openings',
-    'Balcony / deck': 'Wall (exterior)',
-    'Decorative woodwork': 'Trim',
-    'Hardware / steel': 'Wall',
-  };
-  return map[tag] ?? null;
-}
-
-/**
- * For systems that are unambiguously interior or exterior, auto-pick
- * Inside/Outside so the user doesn't have to.
- */
-function systemToInsideOutside(tag: string | null): 'inside' | 'outside' | null {
-  if (!tag) return null;
-  const outside = ['Siding', 'Fascia / soffit', 'Windows / patio doors', 'Balcony / deck', 'Roof trusses'];
-  const inside = ['Drop ceiling', 'Decorative woodwork', 'Stairs'];
-  if (outside.includes(tag)) return 'outside';
-  if (inside.includes(tag)) return 'inside';
-  return null; // Walls / Floor-ceiling / Hardware-steel can be either
-}
+// Location contract is now derived from co_scenarios metadata via
+// getLocationContract() in @/lib/scenarioLocationRules. The hardcoded
+// system→component / inside-outside maps that used to live here are
+// replaced by per-scenario fields (component_lock, io_lock,
+// level_constraint, area_required, auto_fill_location).
 
 export default function COGuidedBuilder() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -124,7 +100,7 @@ export default function COGuidedBuilder() {
     queryFn: async () => {
       const q = supabase
         .from('co_scenarios')
-        .select('id, name, description, system_tag, project_types, problem_tags, default_unit')
+        .select('id, name, description, system_tag, project_types, problem_tags, default_unit, component_lock, io_lock, level_constraint, area_required, auto_fill_location')
         .order('system_tag', { ascending: true })
         .order('name', { ascending: true });
       const { data, error } = await q;
@@ -468,27 +444,54 @@ export default function COGuidedBuilder() {
         )}
 
         {/* Step 3: Where */}
-        {step === 3 && (
-          <Card className="p-5 rounded-2xl">
-            <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-              Step 3 · Where
-            </div>
-            <h2 className="font-heading text-2xl font-extrabold mb-4">Where in the project?</h2>
-            <VisualLocationPicker
-              projectId={projectId}
-              savedLocation={location || null}
-              onConfirm={(tag) => setLocation(tag)}
-              lockedComponent={systemToComponent(scenario?.system_tag ?? null)}
-              lockedInsideOutside={systemToInsideOutside(scenario?.system_tag ?? null)}
-            />
-            {location && (
-              <div className="mt-4 p-3 rounded-lg bg-muted text-sm">
-                <span className="text-muted-foreground">Selected:</span>{' '}
-                <span className="font-semibold">{location}</span>
+        {step === 3 && (() => {
+          const contract = getLocationContract(scenario);
+          const auto = scenario ? autoFillLocationTag(contract, scenario) : null;
+          // Auto-fill when the scenario is unambiguous and the user hasn't picked yet.
+          if (auto && !location) {
+            setTimeout(() => setLocation(auto), 0);
+          }
+          return (
+            <Card className="p-5 rounded-2xl">
+              <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                Step 3 · Where
               </div>
-            )}
-          </Card>
-        )}
+              <h2 className="font-heading text-2xl font-extrabold mb-2">Where in the project?</h2>
+              {auto ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    This scenario only applies to one location. We&apos;ve filled it in for you — change it
+                    only if you&apos;re working somewhere different.
+                  </p>
+                  <div className="mb-4 p-3 rounded-lg bg-secondary/15 border border-secondary/30 text-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold">
+                        Auto-detected location
+                      </div>
+                      <div className="font-semibold mt-0.5">{location || auto}</div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setLocation('')}>Edit</Button>
+                  </div>
+                </>
+              ) : (
+                <VisualLocationPicker
+                  projectId={projectId}
+                  savedLocation={location || null}
+                  onConfirm={(tag) => setLocation(tag)}
+                  lockedComponent={contract.componentLock}
+                  lockedInsideOutside={contract.ioLock}
+                  levelConstraint={contract.levelConstraint}
+                />
+              )}
+              {location && !auto && (
+                <div className="mt-4 p-3 rounded-lg bg-muted text-sm">
+                  <span className="text-muted-foreground">Selected:</span>{' '}
+                  <span className="font-semibold">{location}</span>
+                </div>
+              )}
+            </Card>
+          );
+        })()}
 
         {/* Step 4: Fix */}
         {step === 4 && scenario && (

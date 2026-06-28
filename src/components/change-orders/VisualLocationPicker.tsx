@@ -12,6 +12,7 @@ import {
   getProjectContextHint,
 } from '@/hooks/useProjectScope';
 import { getComponentGroups } from '@/lib/buildingComponents';
+import { filterLevelsForConstraint } from '@/lib/scenarioLocationRules';
 
 interface VisualLocationPickerProps {
   projectId: string;
@@ -22,6 +23,8 @@ interface VisualLocationPickerProps {
   lockedComponent?: string | null;
   /** Pre-lock Interior/Exterior when the scenario makes it unambiguous. */
   lockedInsideOutside?: 'inside' | 'outside' | null;
+  /** Restrict which levels are pickable based on the scenario (top_only for trusses/fascia, stair_run for stairs, etc.). */
+  levelConstraint?: import('@/lib/scenarioLocationRules').LevelConstraint;
 }
 
 type InsideOutside = 'inside' | 'outside' | null;
@@ -132,6 +135,7 @@ export function VisualLocationPicker({
   compact = false,
   lockedComponent = null,
   lockedInsideOutside = null,
+  levelConstraint = 'any',
 }: VisualLocationPickerProps) {
   const { data: profile } = useProjectProfile(projectId);
   const { data: scope } = useProjectScope(projectId);
@@ -169,7 +173,7 @@ export function VisualLocationPicker({
   }, [homeType]);
 
   // Level options from project scope
-  const levelOptions = useMemo(() => {
+  const allLevelOptions = useMemo(() => {
     if (scope) return getLevelOptions(scope);
     const stories = profile?.stories ?? 2;
     const levels: string[] = [];
@@ -179,6 +183,19 @@ export function VisualLocationPicker({
     if (stories > 2) levels.push('Attic');
     return levels;
   }, [scope, profile]);
+
+  // Apply scenario level constraint (top_only → only the top level/attic, etc.)
+  const levelOptions = useMemo(() => {
+    if (levelConstraint === 'any' || levelConstraint === 'exterior_face') return allLevelOptions;
+    return filterLevelsForConstraint(allLevelOptions, levelConstraint);
+  }, [allLevelOptions, levelConstraint]);
+
+  // If the constraint narrows it to exactly one level, auto-select it.
+  useEffect(() => {
+    if (levelOptions.length === 1 && !selectedLevel) {
+      setSelectedLevel(levelOptions[0]);
+    }
+  }, [levelOptions, selectedLevel]);
 
   // Dynamic area options based on selected level + scope
   const areaOptions = useMemo(() => {
