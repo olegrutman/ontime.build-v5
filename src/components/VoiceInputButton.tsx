@@ -39,6 +39,14 @@ export function VoiceInputButton({ onTranscript, className, size = 'sm', autoSta
     }
   }, [isListening, onTranscript]);
 
+  useEffect(() => {
+    if (autoStart && isSupported && !autoStartedRef.current) {
+      autoStartedRef.current = true;
+      lastTranscriptRef.current = '';
+      startListening();
+    }
+  }, [autoStart, isSupported, startListening]);
+
   if (!isSupported) return null;
 
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
