@@ -7,11 +7,14 @@ interface VoiceInputButtonProps {
   onTranscript: (text: string) => void;
   className?: string;
   size?: 'sm' | 'md';
+  /** Automatically start listening once on mount (requires a recent user gesture). */
+  autoStart?: boolean;
 }
 
-export function VoiceInputButton({ onTranscript, className, size = 'sm' }: VoiceInputButtonProps) {
+export function VoiceInputButton({ onTranscript, className, size = 'sm', autoStart = false }: VoiceInputButtonProps) {
   const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition();
   const lastTranscriptRef = useRef('');
+  const autoStartedRef = useRef(false);
 
   const handleClick = useCallback(() => {
     if (isListening) {
@@ -35,6 +38,14 @@ export function VoiceInputButton({ onTranscript, className, size = 'sm' }: Voice
       lastTranscriptRef.current = '';
     }
   }, [isListening, onTranscript]);
+
+  useEffect(() => {
+    if (autoStart && isSupported && !autoStartedRef.current) {
+      autoStartedRef.current = true;
+      lastTranscriptRef.current = '';
+      startListening();
+    }
+  }, [autoStart, isSupported, startListening]);
 
   if (!isSupported) return null;
 

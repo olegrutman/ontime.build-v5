@@ -38,6 +38,7 @@ import { useCOPhotos } from '@/hooks/useCOPhotos';
 import { CORFIBlockBanner } from './CORFIBlockBanner';
 import { COExternalInviteDialog } from './COExternalInviteDialog';
 import { COExternalInvitesCard } from './COExternalInvitesCard';
+import { AddItemsChooser } from './AddItemsChooser';
 import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
@@ -538,13 +539,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <p className="text-sm font-semibold text-foreground">No scope items yet</p>
                       <p className="text-xs text-muted-foreground mt-1 mb-4">Add a scope item to start tracking work and pricing</p>
                       {canEdit && !nteBlocked && co && (
-                        <Button
-                          size="sm"
-                          onClick={() => navigate(`/project/${projectId}/change-orders/new?coId=${co.id}`)}
-                          className="gap-1.5"
-                        >
-                          <Plus className="h-4 w-4" /> Add scope item
-                        </Button>
+                        <AddItemsChooser projectId={projectId} coId={co.id} />
                       )}
                     </div>
                   ) : (
@@ -570,14 +565,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 {/* Add another scope item row */}
                 {canEdit && !nteBlocked && lineItems.length > 0 && co && (
                   <div className="border-t border-dashed border-border p-2">
-                    <Button
-                      size="sm"
+                    <AddItemsChooser
+                      projectId={projectId}
+                      coId={co.id}
                       variant="ghost"
-                      className="h-7 text-xs gap-1 text-muted-foreground"
-                      onClick={() => navigate(`/project/${projectId}/change-orders/new?coId=${co.id}`)}
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Add another item
-                    </Button>
+                      label="Add another item"
+                    />
                   </div>
                 )}
               </div>
