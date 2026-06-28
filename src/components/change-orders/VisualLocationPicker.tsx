@@ -187,8 +187,6 @@ export function VisualLocationPicker({
   // Apply scenario level constraint (top_only → only the top level/attic, etc.)
   const levelOptions = useMemo(() => {
     if (levelConstraint === 'any' || levelConstraint === 'exterior_face') return allLevelOptions;
-    // Lazy import is fine — this is a tiny pure helper.
-    const { filterLevelsForConstraint } = require('@/lib/scenarioLocationRules');
     return filterLevelsForConstraint(allLevelOptions, levelConstraint);
   }, [allLevelOptions, levelConstraint]);
 
