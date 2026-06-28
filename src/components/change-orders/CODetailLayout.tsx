@@ -468,14 +468,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
                     </div>
                     {canEdit && !nteBlocked && co && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs gap-1"
-                        onClick={() => navigate(`/project/${projectId}/change-orders/new?coId=${co.id}`)}
-                      >
-                        <Plus className="h-3.5 w-3.5" /> Add item
-                      </Button>
+                      <AddItemsChooser
+                        projectId={projectId}
+                        coId={co.id}
+                        variant="ghost"
+                        label="Add item"
+                      />
                     )}
                   </div>
 
