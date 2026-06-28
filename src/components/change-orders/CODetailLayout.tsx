@@ -565,14 +565,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 {/* Add another scope item row */}
                 {canEdit && !nteBlocked && lineItems.length > 0 && co && (
                   <div className="border-t border-dashed border-border p-2">
-                    <Button
-                      size="sm"
+                    <AddItemsChooser
+                      projectId={projectId}
+                      coId={co.id}
                       variant="ghost"
-                      className="h-7 text-xs gap-1 text-muted-foreground"
-                      onClick={() => navigate(`/project/${projectId}/change-orders/new?coId=${co.id}`)}
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Add another item
-                    </Button>
+                      label="Add another item"
+                    />
                   </div>
                 )}
               </div>
