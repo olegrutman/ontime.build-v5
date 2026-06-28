@@ -444,27 +444,54 @@ export default function COGuidedBuilder() {
         )}
 
         {/* Step 3: Where */}
-        {step === 3 && (
-          <Card className="p-5 rounded-2xl">
-            <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-              Step 3 · Where
-            </div>
-            <h2 className="font-heading text-2xl font-extrabold mb-4">Where in the project?</h2>
-            <VisualLocationPicker
-              projectId={projectId}
-              savedLocation={location || null}
-              onConfirm={(tag) => setLocation(tag)}
-              lockedComponent={systemToComponent(scenario?.system_tag ?? null)}
-              lockedInsideOutside={systemToInsideOutside(scenario?.system_tag ?? null)}
-            />
-            {location && (
-              <div className="mt-4 p-3 rounded-lg bg-muted text-sm">
-                <span className="text-muted-foreground">Selected:</span>{' '}
-                <span className="font-semibold">{location}</span>
+        {step === 3 && (() => {
+          const contract = getLocationContract(scenario);
+          const auto = scenario ? autoFillLocationTag(contract, scenario) : null;
+          // Auto-fill when the scenario is unambiguous and the user hasn't picked yet.
+          if (auto && !location) {
+            setTimeout(() => setLocation(auto), 0);
+          }
+          return (
+            <Card className="p-5 rounded-2xl">
+              <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                Step 3 · Where
               </div>
-            )}
-          </Card>
-        )}
+              <h2 className="font-heading text-2xl font-extrabold mb-2">Where in the project?</h2>
+              {auto ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    This scenario only applies to one location. We&apos;ve filled it in for you — change it
+                    only if you&apos;re working somewhere different.
+                  </p>
+                  <div className="mb-4 p-3 rounded-lg bg-secondary/15 border border-secondary/30 text-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold">
+                        Auto-detected location
+                      </div>
+                      <div className="font-semibold mt-0.5">{location || auto}</div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setLocation('')}>Edit</Button>
+                  </div>
+                </>
+              ) : (
+                <VisualLocationPicker
+                  projectId={projectId}
+                  savedLocation={location || null}
+                  onConfirm={(tag) => setLocation(tag)}
+                  lockedComponent={contract.componentLock}
+                  lockedInsideOutside={contract.ioLock}
+                  levelConstraint={contract.levelConstraint}
+                />
+              )}
+              {location && !auto && (
+                <div className="mt-4 p-3 rounded-lg bg-muted text-sm">
+                  <span className="text-muted-foreground">Selected:</span>{' '}
+                  <span className="font-semibold">{location}</span>
+                </div>
+              )}
+            </Card>
+          );
+        })()}
 
         {/* Step 4: Fix */}
         {step === 4 && scenario && (
