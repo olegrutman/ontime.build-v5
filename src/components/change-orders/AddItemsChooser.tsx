@@ -28,6 +28,8 @@ export function AddItemsChooser({
     navigate(`/project/${projectId}/change-orders/intake?coId=${coId}&mode=voice`);
   const goDescribe = () =>
     navigate(`/project/${projectId}/change-orders/intake?coId=${coId}`);
+  const goGuided = () =>
+    navigate(`/project/${projectId}/change-orders/guided?coId=${coId}`);
 
   return (
     <Popover>
