@@ -172,7 +172,7 @@ export function VisualLocationPicker({
   }, [homeType]);
 
   // Level options from project scope
-  const levelOptions = useMemo(() => {
+  const allLevelOptions = useMemo(() => {
     if (scope) return getLevelOptions(scope);
     const stories = profile?.stories ?? 2;
     const levels: string[] = [];
@@ -182,6 +182,21 @@ export function VisualLocationPicker({
     if (stories > 2) levels.push('Attic');
     return levels;
   }, [scope, profile]);
+
+  // Apply scenario level constraint (top_only → only the top level/attic, etc.)
+  const levelOptions = useMemo(() => {
+    if (levelConstraint === 'any' || levelConstraint === 'exterior_face') return allLevelOptions;
+    // Lazy import is fine — this is a tiny pure helper.
+    const { filterLevelsForConstraint } = require('@/lib/scenarioLocationRules');
+    return filterLevelsForConstraint(allLevelOptions, levelConstraint);
+  }, [allLevelOptions, levelConstraint]);
+
+  // If the constraint narrows it to exactly one level, auto-select it.
+  useEffect(() => {
+    if (levelOptions.length === 1 && !selectedLevel) {
+      setSelectedLevel(levelOptions[0]);
+    }
+  }, [levelOptions, selectedLevel]);
 
   // Dynamic area options based on selected level + scope
   const areaOptions = useMemo(() => {
