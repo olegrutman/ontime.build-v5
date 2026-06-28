@@ -38,6 +38,7 @@ import { useCOPhotos } from '@/hooks/useCOPhotos';
 import { CORFIBlockBanner } from './CORFIBlockBanner';
 import { COExternalInviteDialog } from './COExternalInviteDialog';
 import { COExternalInvitesCard } from './COExternalInvitesCard';
+import { AddItemsChooser } from './AddItemsChooser';
 import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
