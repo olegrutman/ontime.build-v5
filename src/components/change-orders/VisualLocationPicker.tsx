@@ -12,6 +12,7 @@ import {
   getProjectContextHint,
 } from '@/hooks/useProjectScope';
 import { getComponentGroups } from '@/lib/buildingComponents';
+import { filterLevelsForConstraint } from '@/lib/scenarioLocationRules';
 
 interface VisualLocationPickerProps {
   projectId: string;
