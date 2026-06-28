@@ -135,10 +135,16 @@ export default function COGuidedBuilder() {
     },
   });
 
-  // Auto-select all lines when scenario changes
+  // Auto-select all lines when scenario changes.
+  // Key by joined ids — useQuery returns a fresh `[]` fallback on each render,
+  // so depending on the array ref directly caused an infinite setState loop.
+  const scenarioLineIdsKey = useMemo(
+    () => scenarioLines.map((l) => l.id).join('|'),
+    [scenarioLines],
+  );
   useEffect(() => {
-    setSelectedLines(new Set(scenarioLines.map((l) => l.id)));
-  }, [scenarioLines]);
+    setSelectedLines(new Set(scenarioLineIdsKey ? scenarioLineIdsKey.split('|') : []));
+  }, [scenarioLineIdsKey]);
 
   if (!projectId) return <Navigate to="/dashboard" replace />;
   if (!v4) {
