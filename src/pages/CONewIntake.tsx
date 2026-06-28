@@ -437,6 +437,7 @@ export default function CONewIntakePage() {
                   <VoiceInputButton
                     onTranscript={handleVoice}
                     size="md"
+                    autoStart={autoStartVoice}
                     className="!bg-primary !text-primary-foreground shadow-sm hover:!bg-primary/90"
                   />
                   <Button variant="ghost" size="sm" onClick={handlePaste} className="h-8 gap-1.5 text-xs">
