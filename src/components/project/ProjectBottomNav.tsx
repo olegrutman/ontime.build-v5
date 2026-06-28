@@ -97,7 +97,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t border-border"
+        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card border-t border-border"
         style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-stretch justify-around h-[56px]">
