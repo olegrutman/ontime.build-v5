@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, FileText } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
-import { Sparkles, Mic } from 'lucide-react';
+
 import { VoicePNRecorder } from './VoicePNRecorder';
 import { NewCOChooserDialog } from './NewCOChooserDialog';
 
@@ -226,6 +226,13 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       {/* Legacy wizard removed — now using Picker v3 full-page route */}
 
       <VoicePNRecorder projectId={projectId} open={voiceOpen} onOpenChange={setVoiceOpen} />
+      <NewCOChooserDialog
+        open={chooserOpen}
+        onOpenChange={setChooserOpen}
+        onPick={handlePickMode}
+        docLabel={coLabel(dt, false)}
+      />
+
     </div>
   );
 }
