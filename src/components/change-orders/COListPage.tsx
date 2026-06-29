@@ -177,7 +177,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         </div>
 
         {/* Stats row */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-3 sm:overflow-visible sm:mx-0 sm:px-0">
+        <div className="pill-row sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-3">
           {[
             { label: `Total ${coAbbrev(dt)} value`, value: `$${stats.totalValue.toLocaleString()}`, color: '#F5A623' },
             { label: 'Pending', value: String(stats.pendingApproval), color: '#F59E0B' },
