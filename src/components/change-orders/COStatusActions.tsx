@@ -480,8 +480,15 @@ export function COStatusActions({
   async function doDelete() {
     setActing(true);
     try {
-      const { error } = await supabase.from('change_orders').delete().eq('id', co.id);
+      const { data, error } = await supabase
+        .from('change_orders')
+        .delete()
+        .eq('id', co.id)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("You don't have permission to delete this, or it's already in a locked status.");
+      }
       toast.success(`${co.document_type === 'WO' ? 'Work order' : 'Change order'} deleted`);
       setDeleteOpen(false);
       navigate(`/project/${projectId}/change-orders`);
