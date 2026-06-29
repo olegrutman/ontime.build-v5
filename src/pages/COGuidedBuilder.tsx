@@ -146,11 +146,6 @@ export default function COGuidedBuilder() {
     setSelectedLines(new Set(scenarioLineIdsKey ? scenarioLineIdsKey.split('|') : []));
   }, [scenarioLineIdsKey]);
 
-  if (!projectId) return <Navigate to="/dashboard" replace />;
-  if (!v4) {
-    return <Navigate to={`/project/${projectId}/change-orders/new`} replace />;
-  }
-
   const role: COCreatedByRole =
     myParticipant?.role === 'GC' ? 'GC' : myParticipant?.role === 'FC' ? 'FC' : 'TC';
   const orgId = (myParticipant?.organization_id ?? userOrgRoles?.[0]?.organization_id) as string | undefined;
@@ -323,6 +318,11 @@ export default function COGuidedBuilder() {
       setSubmitting(false);
     }
   };
+
+  if (!projectId) return <Navigate to="/dashboard" replace />;
+  if (!v4) {
+    return <Navigate to={`/project/${projectId}/change-orders/new`} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
