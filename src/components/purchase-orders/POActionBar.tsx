@@ -41,7 +41,7 @@ export function POActionBar({ purchaseOrders, isSupplier, hidePricing = false }:
   // Mobile: compact horizontal scroll row
   if (isMobile) {
     return (
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+      <div className="action-bar">
         <Card className="p-2.5 flex items-center gap-2 border-l-2 border-l-destructive/60 shrink-0 min-w-0">
           <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
           <div className="min-w-0">
