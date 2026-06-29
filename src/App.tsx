@@ -172,7 +172,7 @@ function AuthenticatedSashaBubble() {
   const { pathname } = useLocation();
   if (!user && !isDemoMode) return null;
   // Hide on full-screen picker/wizard routes where Sasha overlaps the submit bar
-  if (/\/change-orders\/(new|[^/]+\/add)/.test(pathname)) return null;
+  if (/\/change-orders\/(new|guided|intake|[^/]+\/add)/.test(pathname)) return null;
   return <SashaBubble />;
 }
 
