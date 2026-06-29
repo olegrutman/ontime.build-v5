@@ -15,6 +15,7 @@ import { usePermission } from '@/components/auth/RequirePermission';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { Sparkles, Mic } from 'lucide-react';
 import { VoicePNRecorder } from './VoicePNRecorder';
+import { NewCOChooserDialog } from './NewCOChooserDialog';
 
 
 
@@ -36,9 +37,16 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const canCreateCO = usePermission('canCreateChangeOrders');
   const coV4 = useCoV4Flag();
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
   // Navigate to the new Picker v3 full-page wizard
   const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
   const openGuided = () => navigate(`/project/${projectId}/change-orders/guided`);
+  const handlePickMode = (mode: 'voice' | 'guided' | 'describe') => {
+    setChooserOpen(false);
+    if (mode === 'voice') setVoiceOpen(true);
+    else if (mode === 'guided') openGuided();
+    else navigate(`/project/${projectId}/change-orders/intake`);
+  };
   const [filter, setFilter] = useState<FilterKey>('in_progress');
   function handleCardClick(id: string) {
     navigate(`/project/${projectId}/change-orders/${id}`);
@@ -127,41 +135,12 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
 
           {canCreateCO && (
             <div className="flex items-center gap-1.5 shrink-0">
-              {coV4 && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setVoiceOpen(true)}
-                    className="gap-1.5"
-                    aria-label="Voice problem note"
-                  >
-                    <Mic className="h-4 w-4" />
-                    <span className="hidden sm:inline">Voice PN</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={openGuided}
-                    className="gap-1.5"
-                    aria-label="Guided builder"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    <span className="hidden sm:inline">Guided</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(`/project/${projectId}/change-orders/intake`)}
-                    className="gap-1.5"
-                    aria-label="Paste or type description"
-                  >
-                    <FileText className="h-4 w-4" />
-                    <span className="hidden sm:inline">Describe</span>
-                  </Button>
-                </>
-              )}
-              <Button size="sm" onClick={openNewPicker} className="gap-1.5">
+              <Button
+                size="sm"
+                onClick={() => (coV4 ? setChooserOpen(true) : openNewPicker())}
+                className="gap-1.5"
+                aria-label={`New ${coLabel(dt, false)}`}
+              >
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">New {coAbbrev(dt)}</span>
               </Button>
