@@ -130,7 +130,8 @@ export const WORK_ITEM_STATUS_OPTIONS: StatusOption[] = [
 ];
 
 export const INVOICE_STATUS_OPTIONS: StatusOption[] = [
-  { value: 'DRAFT', label: 'Draft', color: '#C4C4C4' },
+  { value: 'DRAFT', label: 'Draft', color: '#6B7280' },
+  { value: 'SUBMITTED', label: 'Submitted', color: '#2563EB' },
   { value: 'PENDING_REVIEW', label: 'Pending', color: '#FDAB3D' },
   { value: 'APPROVED', label: 'Approved', color: '#00C875' },
   { value: 'REJECTED', label: 'Rejected', color: '#E2445C' },
