@@ -150,7 +150,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         </div>
 
         {/* Filter pills */}
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="pill-row pb-1">
           {([
             { key: 'all', label: 'All', count: total },
             { key: 'my_action', label: 'Action', count: stats.myActionCount },
