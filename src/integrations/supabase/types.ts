@@ -7799,6 +7799,10 @@ export type Database = {
         Args: { _co_id: string; _user_id?: string }
         Returns: boolean
       }
+      can_delete_change_order: {
+        Args: { _co_id: string; _user_id?: string }
+        Returns: boolean
+      }
       can_request_fc_change_order_input: {
         Args: { _co_id: string; _fc_org_id: string; _user_id?: string }
         Returns: boolean
