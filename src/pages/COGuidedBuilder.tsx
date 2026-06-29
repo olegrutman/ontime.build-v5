@@ -319,6 +319,11 @@ export default function COGuidedBuilder() {
     }
   };
 
+  if (!projectId) return <Navigate to="/dashboard" replace />;
+  if (!v4) {
+    return <Navigate to={`/project/${projectId}/change-orders/new`} replace />;
+  }
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="bg-background border-b sticky top-0 z-10">
