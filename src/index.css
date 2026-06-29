@@ -397,9 +397,21 @@
   .action-bar > * {
     @apply min-w-0;
   }
-  /* For primary CTA groups that should grow to fill the row and wrap */
+  /* For primary CTA groups: stack full-width on mobile, wrap inline on sm+ */
   .action-bar-grow > * {
-    @apply flex-1 min-w-[140px];
+    @apply w-full sm:w-auto sm:flex-1 sm:min-w-[140px];
+  }
+  /* Adaptive Stack — primary pattern: stacked full-width buttons on mobile,
+     inline wrapping row on sm+. Apply to any cluster of primary actions. */
+  .action-stack {
+    @apply flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center;
+  }
+  .action-stack > * {
+    @apply w-full sm:w-auto min-w-0;
+  }
+  /* Stretch a single button to full width on mobile only */
+  .btn-block-mobile {
+    @apply w-full sm:w-auto;
   }
   /* Pill / chip cluster: wraps naturally, no horizontal scroll */
   .pill-row {
