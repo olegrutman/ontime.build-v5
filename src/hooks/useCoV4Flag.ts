@@ -9,10 +9,18 @@ import { useAuth } from '@/hooks/useAuth';
  * Defaults to `false` while loading so existing flows stay the default.
  */
 export function useCoV4Flag(flag: 'co_v4' = 'co_v4'): boolean {
+  return useCoV4FlagState(flag).enabled;
+}
+
+/**
+ * Full state of the CO v4 flag query — use when callers need to distinguish
+ * "still loading" from "explicitly disabled" (e.g. to avoid premature redirects).
+ */
+export function useCoV4FlagState(flag: 'co_v4' = 'co_v4') {
   const { userOrgRoles } = useAuth();
   const orgId = userOrgRoles[0]?.organization_id ?? null;
 
-  const { data } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['co-v4-flag', orgId, flag],
     enabled: !!orgId,
     staleTime: 5 * 60 * 1000,
@@ -28,7 +36,11 @@ export function useCoV4Flag(flag: 'co_v4' = 'co_v4'): boolean {
     },
   });
 
-  return !!data;
+  return {
+    enabled: !!data,
+    loading: !orgId || isLoading || (isFetching && data === undefined),
+    resolved: data !== undefined,
+  };
 }
 
 /** Convenience: also expose orgType so gated UI can mention "GC only" etc. */

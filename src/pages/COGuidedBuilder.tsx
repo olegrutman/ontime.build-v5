@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useCoV4Flag } from '@/hooks/useCoV4Flag';
+import { useCoV4FlagState } from '@/hooks/useCoV4Flag';
 import { generateCONumber } from '@/lib/generateCONumber';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -53,7 +53,7 @@ export default function COGuidedBuilder() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, userOrgRoles } = useAuth();
-  const v4 = useCoV4Flag();
+  const { enabled: v4, loading: v4Loading, resolved: v4Resolved } = useCoV4FlagState();
 
   const [step, setStep] = useState<Step>(1);
   const [scenarioId, setScenarioId] = useState<string | null>(null);
@@ -320,6 +320,13 @@ export default function COGuidedBuilder() {
   };
 
   if (!projectId) return <Navigate to="/dashboard" replace />;
+  if (v4Loading || !v4Resolved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
   if (!v4) {
     return <Navigate to={`/project/${projectId}/change-orders/new`} replace />;
   }
