@@ -412,7 +412,21 @@
   .toggle-row > * {
     @apply flex-1 min-w-[80px];
   }
+
+  /* ── Command Console action overrides ──
+     Scoped tweaks so existing COStatusActions buttons read correctly
+     on the dark navy command-console background. */
+  .co-command-actions button[variant="outline"],
+  .co-command-actions .co-cmd-outline {
+    @apply border-white/15 bg-white/[0.04] text-white/85 hover:bg-white/[0.08] hover:text-white;
+  }
+  .co-command-actions [data-destructive="true"],
+  .co-command-actions button.text-destructive,
+  .co-command-actions button.text-red-600 {
+    @apply text-red-300/80 hover:text-red-300 hover:bg-red-500/10;
+  }
 }
+
 
 /* ── PO Wizard V2 Design System ── */
 @layer components {
