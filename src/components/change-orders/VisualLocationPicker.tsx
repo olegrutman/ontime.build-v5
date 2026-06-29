@@ -58,7 +58,7 @@ function ComponentPicker({
       </p>
 
       {/* Top-level component group pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="pill-row">
         {groups.map(g => (
           <button
             key={g.label}
