@@ -230,7 +230,7 @@ export function DashboardProjectList({
       </div>
 
       {/* Status Filter Tabs */}
-      <div className="px-4 pb-2.5 flex gap-1 overflow-x-auto scrollbar-hide">
+      <div className="px-4 pb-2.5 pill-row">
         {filters.map((f) => (
           <button
             key={f.key}

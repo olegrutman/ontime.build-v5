@@ -58,7 +58,7 @@ function ComponentPicker({
       </p>
 
       {/* Top-level component group pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="pill-row">
         {groups.map(g => (
           <button
             key={g.label}
@@ -431,7 +431,7 @@ export function VisualLocationPicker({
           {/* Level pills */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Level</p>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="pill-row">
               {levelOptions.map(level => (
                 <button
                   key={level}

@@ -104,7 +104,7 @@ export default function ProjectsArchive() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+        <div className="pill-row">
           {TABS.map((t) => {
             const count = statusCounts[t.key];
             const active = tab === t.key;

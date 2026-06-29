@@ -19,7 +19,7 @@ const;
 export function StatusMenu({ currentFilter, onFilterChange, counts }: StatusMenuProps) {
   return (
     <div className="relative bg-background">
-      <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto my-3 sm:my-[22px] scrollbar-hide">
+      <div className="pill-row my-3 sm:my-[22px]">
         {STATUS_CONFIG.map(({ key, label, color }) =>
         <button
           key={key}
