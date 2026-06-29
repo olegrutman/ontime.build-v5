@@ -150,7 +150,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         </div>
 
         {/* Filter pills */}
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="pill-row pb-1">
           {([
             { key: 'all', label: 'All', count: total },
             { key: 'my_action', label: 'Action', count: stats.myActionCount },
@@ -162,7 +162,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                'shrink-0 inline-flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors border',
+                'inline-flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors border whitespace-nowrap',
                 filter === f.key
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-card text-muted-foreground border-border hover:bg-accent',

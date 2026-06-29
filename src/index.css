@@ -386,6 +386,32 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* ── Responsive wrap primitives ──
+     Make horizontal button rows / pill rows / toggle groups behave
+     identically on desktop and mobile — they just wrap instead of
+     clipping or horizontal-scrolling. */
+  .action-bar {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .action-bar > * {
+    @apply min-w-0;
+  }
+  /* For primary CTA groups that should grow to fill the row and wrap */
+  .action-bar-grow > * {
+    @apply flex-1 min-w-[140px];
+  }
+  /* Pill / chip cluster: wraps naturally, no horizontal scroll */
+  .pill-row {
+    @apply flex flex-wrap items-center gap-1.5 sm:gap-2;
+  }
+  /* Segmented toggle: stays one row when it fits, wraps to multi-row otherwise */
+  .toggle-row {
+    @apply flex flex-wrap items-center gap-1 p-1 rounded-xl bg-muted;
+  }
+  .toggle-row > * {
+    @apply flex-1 min-w-[80px];
+  }
 }
 
 /* ── PO Wizard V2 Design System ── */
