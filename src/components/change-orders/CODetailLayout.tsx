@@ -448,24 +448,21 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {/* Card header */}
                 <div className="px-5 py-4 border-b border-border">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--navy))' }}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'hsl(var(--navy))' }}>
                         <Hammer className="h-4 w-4 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground">Scope & Labor</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none">Scope & Labor</h3>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
+                          <span className="mx-1.5 text-muted-foreground/40">·</span>
+                          Materials <span className="font-semibold text-foreground/80">{responsibility.materialResponsible}</span>
+                          <span className="mx-1.5 text-muted-foreground/40">·</span>
+                          Equipment <span className="font-semibold text-foreground/80">{responsibility.equipmentResponsible}</span>
+                        </p>
                       </div>
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: 'hsl(var(--navy)/0.08)', color: 'hsl(var(--navy))' }}>
-                        {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
-                      </span>
-                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground" title="Who procures materials for this change order">
-                        Materials: {responsibility.materialResponsible} procures
-                      </span>
-                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground" title="Who provides equipment for this change order">
-                        Equipment: {responsibility.equipmentResponsible} procures
-                      </span>
-
                     </div>
                     {canEdit && !nteBlocked && co && (
                       <AddItemsChooser
@@ -476,6 +473,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       />
                     )}
                   </div>
+
 
                   {/* Totals strip */}
                   {lineItems.length > 0 && (

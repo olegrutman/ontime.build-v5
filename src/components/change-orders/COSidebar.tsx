@@ -77,18 +77,56 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
     : co.status === 'draft' ? 'Draft'
     : co.status.replace(/_/g, ' ');
 
+  // Headline financial number — single source of truth for the dark command console
+  const headlineLabel = isGC ? 'Total Billable to GC' : isTC ? 'Total to GC' : 'Total to TC';
+  const headlineValue = isGC
+    ? (props.tcBillableTotal ?? financials.tcBillableToGC)
+    : financials.viewer.totalToUpstream;
+
+  // Visibility derived from co.visibility / external_visibility flag — fall back gracefully
+  const visibilityLabel = (co as any).external_visibility ? 'External' : 'Internal Review';
+
   return (
     <div ref={ref} className="space-y-3">
-      {/* Actions Card — Navy */}
-      <div className="rounded-xl overflow-hidden" style={{ background: 'hsl(var(--navy))' }}>
-        <div className="px-4 py-3 border-b border-white/10">
-          <p className="text-[0.7rem] uppercase tracking-wider font-semibold" style={{ color: 'hsl(220 27% 65%)' }}>Actions</p>
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="w-2 h-2 rounded-full bg-[hsl(var(--amber))] animate-pulse" />
-            <span className="text-xs text-white/80 font-medium">{statusLabel}</span>
+      {/* ─── Command Console (Navy) ─── */}
+      <div className="rounded-xl overflow-hidden shadow-lg" style={{ background: 'hsl(var(--navy))' }}>
+        {/* Reference + status pills */}
+        <div className="px-5 pt-5 pb-4 border-b border-white/10">
+          <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: 'hsl(220 18% 55%)' }}>
+            Reference
+          </p>
+          <h2 className="font-heading text-2xl font-bold tracking-tight text-white leading-none mt-1">
+            {co.co_number || 'CO'}
+          </h2>
+          <div className="mt-3 flex flex-col gap-1.5">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md w-fit"
+                 style={{ background: 'hsl(38 92% 50% / 0.12)', border: '1px solid hsl(38 92% 50% / 0.25)' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--amber))] animate-pulse" />
+              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(38 92% 60%)' }}>
+                {statusLabel}
+              </span>
+            </div>
+            <div className="inline-flex items-center px-2.5 py-1 rounded-md w-fit"
+                 style={{ background: 'hsl(212 92% 50% / 0.12)', border: '1px solid hsl(212 92% 50% / 0.25)' }}>
+              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(212 92% 70%)' }}>
+                {visibilityLabel}
+              </span>
+            </div>
           </div>
         </div>
-        <div className="px-4 py-3">
+
+        {/* Hero KPI */}
+        <div className="px-5 py-4 border-b border-white/10">
+          <p className="text-[10px] uppercase tracking-[0.18em] font-bold mb-1" style={{ color: 'hsl(220 18% 55%)' }}>
+            {headlineLabel}
+          </p>
+          <div className="font-mono text-3xl font-medium text-white tracking-tight">
+            ${headlineValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        {/* Action buttons (existing component, scoped dark styling) */}
+        <div className="px-5 py-4 co-command-actions" style={{ background: 'hsl(222 47% 8%)' }}>
           <COStatusActions
             co={co} isGC={isGC} isTC={isTC} isFC={isFC}
             currentOrgId={myOrgId} projectId={projectId}
@@ -98,6 +136,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           />
         </div>
       </div>
+
 
       {/* FC Pricing Toggle — move higher so TC sees it immediately */}
       {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
