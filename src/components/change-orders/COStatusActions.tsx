@@ -70,6 +70,7 @@ export function COStatusActions({
   const [backchargeAmount, setBackchargeAmount] = useState('');
   const [backchargeNote, setBackchargeNote] = useState('');
   const [projectParticipants, setProjectParticipants] = useState<Array<{ org_id: string; org_name: string }>>([]);
+  const [canDeleteFromDb, setCanDeleteFromDb] = useState(false);
 
   const isDamagedByOthers = co.reason === 'damaged_by_others';
 
@@ -93,6 +94,26 @@ export function COStatusActions({
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
   const submitAmount = financials?.viewer?.totalToUpstream ?? financials?.grandTotal ?? 0;
+
+  useEffect(() => {
+    let cancelled = false;
+    const deleteEligibleStatuses: COStatus[] = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'rejected'];
+
+    if (!user?.id || !deleteEligibleStatuses.includes(status)) {
+      setCanDeleteFromDb(false);
+      return;
+    }
+
+    supabase
+      .rpc('can_delete_change_order', { _co_id: co.id })
+      .then(({ data, error }) => {
+        if (!cancelled) setCanDeleteFromDb(!error && data === true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [co.id, status, user?.id]);
 
   async function logActivity(action: string, detail?: string, amount?: number) {
     if (!user) return;
@@ -528,8 +549,8 @@ export function COStatusActions({
   const isWithdrawn = status === 'withdrawn';
   /* Creator can withdraw from draft/shared/rejected */
   const canWithdraw = isCreator && ['draft', 'shared', 'rejected'].includes(status);
-  /* Hard-delete pre-finalize: owner org or creator, never once approved/contracted/withdrawn */
-  const canDelete = (isOwnerOrg || isCreator) && !['approved', 'contracted', 'withdrawn'].includes(status);
+  /* Hard-delete only when the database permission function allows it. */
+  const canDelete = canDeleteFromDb;
   if (isWithdrawn) {
     return (
       <div className="co-light-shell border-muted bg-muted/30 px-4 py-3 space-y-1">
