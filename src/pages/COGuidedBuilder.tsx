@@ -111,9 +111,28 @@ export default function COGuidedBuilder() {
 
   const filteredScenarios = useMemo(() => {
     if (!project?.project_type) return scenarios;
-    return scenarios.filter(
-      (s) => !s.project_types || s.project_types.length === 0 || s.project_types.includes(project.project_type!),
+    // Normalize project_type to scenario taxonomy (e.g. "Single Family Home" -> "single_family")
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const aliasMap: Record<string, string> = {
+      single_family_home: 'single_family',
+      single_family: 'single_family',
+      apartments_mf: 'apartment',
+      apartments: 'apartment',
+      multifamily: 'apartment',
+      multi_family: 'apartment',
+      townhouse: 'townhome',
+      remodel_t_and_m: 'single_family',
+      remodel: 'single_family',
+    };
+    const key = normalize(project.project_type);
+    const mapped = aliasMap[key] ?? key;
+    const matched = scenarios.filter(
+      (s) => !s.project_types || s.project_types.length === 0 || s.project_types.includes(mapped),
     );
+    // Fallback: if the project_type doesn't map to any scenario taxonomy,
+    // show the full library rather than an empty list.
+    return matched.length > 0 ? matched : scenarios;
   }, [scenarios, project?.project_type]);
 
   const scenario = useMemo(
