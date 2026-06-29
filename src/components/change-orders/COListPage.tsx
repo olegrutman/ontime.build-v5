@@ -14,7 +14,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 
-import { VoicePNRecorder } from './VoicePNRecorder';
 import { NewCOChooserDialog } from './NewCOChooserDialog';
 
 
@@ -36,14 +35,13 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
 
   const canCreateCO = usePermission('canCreateChangeOrders');
   const coV4 = useCoV4Flag();
-  const [voiceOpen, setVoiceOpen] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
   // Navigate to the new Picker v3 full-page wizard
   const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
   const openGuided = () => navigate(`/project/${projectId}/change-orders/guided`);
   const handlePickMode = (mode: 'voice' | 'guided' | 'describe') => {
     setChooserOpen(false);
-    if (mode === 'voice') setVoiceOpen(true);
+    if (mode === 'voice') navigate(`/project/${projectId}/change-orders/intake?mode=voice`);
     else if (mode === 'guided') openGuided();
     else navigate(`/project/${projectId}/change-orders/intake`);
   };
@@ -225,7 +223,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
 
       {/* Legacy wizard removed — now using Picker v3 full-page route */}
 
-      <VoicePNRecorder projectId={projectId} open={voiceOpen} onOpenChange={setVoiceOpen} />
+      
       <NewCOChooserDialog
         open={chooserOpen}
         onOpenChange={setChooserOpen}
