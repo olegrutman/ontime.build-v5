@@ -218,7 +218,7 @@ export default function CONewIntakePage() {
           co_number: coNumber,
           title: lines[0]?.title?.slice(0, 80) ?? 'New change',
           status: 'draft',
-          pricing_type: 'fixed',
+          pricing_type: isWO ? 'tm' : pricingType,
           entry_source: 'ai_intake',
           ai_intake_id: intakeId,
           problem_summary: text.slice(0, 4000),
