@@ -62,6 +62,7 @@ export default function COGuidedBuilder() {
   const [summary, setSummary] = useState<string>('');
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
 
   // Resolve participant + project
   const { data: myParticipant } = useQuery({
