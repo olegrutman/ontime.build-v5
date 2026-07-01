@@ -290,6 +290,7 @@ export default function COGuidedBuilder() {
           title,
           status: 'draft',
           document_type: isTM ? 'WO' : 'CO',
+          pricing_type: isTM ? 'tm' : pricingType,
           reason: 'owner_request',
           reason_note: scenario.name,
           location_tag: location || null,
