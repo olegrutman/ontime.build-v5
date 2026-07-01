@@ -618,6 +618,40 @@ export default function COGuidedBuilder() {
               </div>
             </div>
 
+            {project?.contract_mode !== 'tm' && (
+              <div>
+                <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+                  Pricing model
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {([
+                    { key: 'fixed', label: 'Fixed Price', desc: 'One agreed number, signed off upfront.' },
+                    { key: 'tm', label: 'Time & Materials', desc: 'Bill hourly rates + materials.' },
+                    { key: 'nte', label: 'Not To Exceed', desc: 'T&M capped at a ceiling.' },
+                  ] as const).map(({ key, label, desc }) => {
+                    const active = pricingType === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setPricingType(key)}
+                        className={`rounded-xl border-2 p-3 text-left transition-all ${
+                          active
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-muted-foreground/40'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{label}</div>
+                        <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
