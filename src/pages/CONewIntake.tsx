@@ -50,6 +50,7 @@ export default function CONewIntakePage() {
   const [intakeId, setIntakeId] = useState<string | null>(null);
   const [lines, setLines] = useState<AiIntakeLine[]>([]);
   const [docType, setDocType] = useState<'CO' | 'WO' | null>(null);
+  const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
   const [materialBy, setMaterialBy] = useState<'GC' | 'TC' | null>(null);
   const [equipmentBy, setEquipmentBy] = useState<'GC' | 'TC' | null>(null);
 
