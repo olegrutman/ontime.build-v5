@@ -50,6 +50,7 @@ export default function CONewIntakePage() {
   const [intakeId, setIntakeId] = useState<string | null>(null);
   const [lines, setLines] = useState<AiIntakeLine[]>([]);
   const [docType, setDocType] = useState<'CO' | 'WO' | null>(null);
+  const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
   const [materialBy, setMaterialBy] = useState<'GC' | 'TC' | null>(null);
   const [equipmentBy, setEquipmentBy] = useState<'GC' | 'TC' | null>(null);
 
@@ -217,7 +218,7 @@ export default function CONewIntakePage() {
           co_number: coNumber,
           title: lines[0]?.title?.slice(0, 80) ?? 'New change',
           status: 'draft',
-          pricing_type: 'fixed',
+          pricing_type: isWO ? 'tm' : pricingType,
           entry_source: 'ai_intake',
           ai_intake_id: intakeId,
           problem_summary: text.slice(0, 4000),
@@ -566,6 +567,45 @@ export default function CONewIntakePage() {
               })}
             </div>
           </Card>
+
+          {/* Pricing model — CO only. WO is inherently T&M. */}
+          {docLabel === 'CO' && (
+            <Card className={cn('mb-4 rounded-2xl p-4', existingCO && 'opacity-70')}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Pricing model
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {([
+                  { key: 'fixed', label: 'Fixed Price', desc: 'One agreed number, signed off upfront.' },
+                  { key: 'tm', label: 'Time & Materials', desc: 'Bill hourly rates + materials.' },
+                  { key: 'nte', label: 'Not To Exceed', desc: 'T&M up to a ceiling number.' },
+                ] as const).map(({ key, label, desc }) => {
+                  const active = pricingType === key;
+                  return (
+                    <button
+                      key={key}
+                      disabled={!!existingCO}
+                      onClick={() => setPricingType(key)}
+                      className={cn(
+                        'rounded-xl border-2 p-3 text-left transition-all',
+                        active
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-muted-foreground/40',
+                        existingCO && 'cursor-default',
+                      )}
+                    >
+                      <div className="text-sm font-semibold">{label}</div>
+                      <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                You can adjust pricing details on the draft after creation.
+              </p>
+            </Card>
+          )}
+
 
           {/* Material & Equipment responsibility — hide for FC */}
           {!orgType.isFC && (
