@@ -50,6 +50,12 @@ export function SetupWizardV2({ projectId, onComplete }: Props) {
     return visibleQuestions.filter((q) => phases.includes(q.phase));
   }, [currentStep, visibleQuestions]);
 
+  // Scroll to top on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [currentStep]);
+
+
   const stepKey = WIZARD_STEPS[currentStep]?.key;
   const isTypeStep = stepKey === 'building_type';
   const isReviewStep = stepKey === 'review';
