@@ -33,6 +33,7 @@ interface ScopeQuestionsPanelProps {
   contractValue: number;
   fcContractValue: number;
   creatorOrgType?: OrgType;
+  isNonStandard?: boolean;
 }
 
 export function ScopeQuestionsPanel({
@@ -44,6 +45,7 @@ export function ScopeQuestionsPanel({
   contractValue,
   fcContractValue,
   creatorOrgType,
+  isNonStandard = false,
 }: ScopeQuestionsPanelProps) {
   const isTC = creatorOrgType === 'TC';
 
@@ -171,7 +173,7 @@ export function ScopeQuestionsPanel({
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+          <SOVLivePreview lines={sovLines} buildingType={buildingType} isNonStandard={isNonStandard} />
         </div>
       </div>
 
@@ -182,7 +184,7 @@ export function ScopeQuestionsPanel({
             <p className="text-xs font-medium text-muted-foreground">Trade Contractor → Field Crew SOV</p>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+            <SOVLivePreview lines={fcSovLines} buildingType={buildingType} isNonStandard={isNonStandard} />
           </div>
         </div>
       )}

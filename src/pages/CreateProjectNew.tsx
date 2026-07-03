@@ -402,6 +402,7 @@ export default function CreateProjectNew() {
             contractValue={typeof wizard.answers.contract_value === 'number' ? wizard.answers.contract_value : 0}
             fcContractValue={typeof wizard.answers.fc_contract_value === 'number' ? wizard.answers.fc_contract_value : 0}
             creatorOrgType={creatorOrgType}
+            isNonStandard={!!otherProjectLabel}
           />
         ) : (
           <p className="text-sm text-muted-foreground py-8 text-center">
