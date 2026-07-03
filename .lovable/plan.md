@@ -1,82 +1,89 @@
-# CO Routes & Rules — Bug Report
 
-I traced every CO entrypoint in `src/App.tsx`, the four CO pages (`COListPage`, `CONewIntake`, `COAiIntake`, `COGuidedBuilder`, `COPickerV3`), and the `AddItemsChooser`/`NewCOChooserDialog` launchers. Here is what I found, in priority order. **No code changed** — this is a report. Tell me which items to fix and I'll come back with the implementation plan.
+## Problem
 
----
+Today the Setup Wizard v2 assumes the contractor is building the whole shell. There is no way to say "exterior walls are concrete/CMU and out of my scope, but I'm doing interior partitions and roof trusses." As a result, SOV lines for exterior framing/sheathing/WRB get generated anyway and the contractor has to fight the numbers.
 
-## 🔴 P0 — Crash / runtime broken
+The same gap shows up in reverse for interior-only trims, roof-only re-roofs, and additions where the shell already exists.
 
-### 1. `COGuidedBuilder` violates Rules of Hooks → React error #310
-In `src/pages/COGuidedBuilder.tsx`:
+## Approach — "Scope Boundaries" step
 
-```text
-~141  useMemo(scenarioLineIdsKey, …)
-~146  useEffect(setSelectedLines, …)
- 150  if (!projectId) return <Navigate …/>     ← early return
- 151  if (!v4)        return <Navigate …/>     ← early return
- 160  useMemo(groupedScenarios, …)             ← hook AFTER conditional return
- …    further useMemo / useCallback below
-```
+Add one new step to the wizard, **between Building Basics and Structure**, called **"What are you actually building?"**. It captures scope inclusions/exclusions BEFORE any scope questions are asked, so downstream phases (`structure`, `envelope`, `roof`, `backout`, `exterior_finish`) can be conditionally hidden and their SOV weight redistributed.
 
-When the `v4` flag flips, the hook count changes and React throws **#310** ("Rendered fewer hooks than expected"). This matches the runtime error already in the console logs (`COGuidedBuilder-…js` in the stack). The page is unmountable for any user without the v4 flag enabled.
+### Questions asked (in order, with smart skipping)
 
-**Fix:** move every `if (…) return <Navigate />` to the top of the component, above all hooks.
+1. **Exterior walls — who's building them?**
+   - I'm building them (wood / cold-formed steel framing)
+   - Someone else — concrete / CMU / tilt-up already in place
+   - Someone else — structural steel + infill by others
+   - N/A (interior-only project)
 
----
+2. **If "someone else": what wall material is going up?** (drives finish/fastening logic — concrete, CMU, tilt-up, steel + metal panel, curtain wall)
 
-## 🟠 P1 — Routing / dead code
+3. **Interior partitions — in your scope?** Yes / No / Partial (specify floors)
 
-### 2. `src/pages/COAiIntake.tsx` is orphaned
-`App.tsx` routes both `/change-orders/new` and `/change-orders/intake` to `CONewIntakePage`. `COAiIntake` is never imported by the router; nothing reaches it. Either delete it or route `/change-orders/intake` to it as originally intended. Right now we ship two near-identical intake pages and only one is reachable.
+4. **Roof structure — in your scope?**
+   - Yes — trusses
+   - Yes — rafters / stick-framed
+   - Yes — steel joists / deck
+   - No — by others
+   
+5. **Roof covering — in your scope?** Yes / No (only asked if roof structure = yes or by others)
 
-### 3. CO list page has no top-level route
-There is no `Route path="/project/:id/change-orders"` in `App.tsx`. The list is reached only via `ProjectHome` rendering `<COListPage>` when `activeTab === 'change-orders'`. Several places `navigate('/project/.../change-orders')` (e.g. `CONewIntake` cancel, `COGuidedBuilder` cancel, `COAiIntake` cancel) — those land on `ProjectHome` which then redirects via its own tab logic. Works today, but fragile: any direct deep-link without the tab state lands on overview. Add an explicit route or normalize the back/cancel targets.
+6. **Envelope layers — sheathing / WRB / insulation / siding:** multi-select of what's in scope. Auto-unchecked and hidden when Q1 says "by others" for exterior walls.
 
-### 4. `NewCOChooserDialog` vs `AddItemsChooser` divergence
-- `NewCOChooserDialog` (new CO) → voice = opens `VoicePNRecorder` modal in-place.
-- `AddItemsChooser` (add to existing CO) → voice = `navigate('/intake?coId=…&mode=voice')` and auto-starts voice inside `CONewIntake`.
+7. **MEP backout coordination — in your scope?** (already exists for MF/commercial; move it here)
 
-Two different mental models for the same action. Pick one — preferably the in-place recorder for both, since the intake page round-trip is heavier.
+Questions 2–7 are conditionally shown based on Q1/Q4. If a contractor picks "wood framing whole shell" in Q1 + "trusses" in Q4, they only see Q3, Q6, Q7 — three taps.
 
-### 5. `hideBottomNav` regex misses guided + intake
-`App.tsx` line 175:
+### How this drives the SOV
+
+Extend `Answers` with a new `scope_boundaries` object:
+
 ```ts
-if (/\/change-orders\/(new|[^/]+\/add)/.test(pathname)) return null;
+scope_boundaries: {
+  exterior_walls: 'self' | 'by_others_concrete' | 'by_others_cmu' | 'by_others_steel' | 'na',
+  interior_partitions: 'full' | 'none' | 'partial',
+  roof_structure: 'trusses' | 'rafters' | 'steel_joist' | 'by_others',
+  roof_covering: boolean,
+  envelope_layers: ('sheathing'|'wrb'|'insulation'|'siding')[],
+  mep_backout: boolean,
+}
 ```
-It hides the mobile bottom nav on `/new` and `/:coId/add-items` but **not** on `/guided` or `/intake`. Both are full-screen wizards with their own fixed bottom action bars, so the global bottom nav stacks on top of them on mobile.
 
----
+In `useSetupWizardV2.ts`:
 
-## 🟡 P2 — Rules / data correctness
+- `getVisibleQuestions()` filters phase questions by these flags (e.g. skip all `envelope` questions when `exterior_walls !== 'self'` and no envelope layers selected).
+- `generateSOVLines()` skips excluded phases entirely and passes the excluded set to the SOV weighting engine so remaining phases absorb the freed weight proportionally (the existing `SOVWeighting` logic already normalizes to 100% — we just remove lines before normalization).
+- Add per-line tags like `by_others: true` for anything intentionally excluded, surfaced in the SOV preview as a struck-through "By others" row so the GC/TC can see it was considered and dropped (avoids confusion).
 
-### 6. `addToCoId` flow re-creates a CO instead of appending
-`CONewIntake.tsx` reads `?coId=` as `addToCoId` but the create mutation still calls `generateCONumber` + `change_orders.insert`. The "Open" navigation goes to `addToCoId` if present (line 363), but the new CO was already created and orphaned. Need to branch: when `addToCoId` is set, **append `co_line_items` to the existing CO** and skip `change_orders.insert`. (Same issue exists for the manual-picker escape route at line 330.)
+### UI changes
 
-### 7. `COListPage.openNewPicker` is unused but still wired
-`openNewPicker` navigates to `/change-orders/new`, but the visible button now opens `NewCOChooserDialog`. Dead handler; safe to remove so the entry points stay clean.
+- New `ScopeBoundariesPanel.tsx` rendered as a dedicated step in `SetupWizardV2.tsx` (before the current Scope step). Uses the same accordion-free "one card, big radio tiles" pattern as `BuildingTypeSelector`.
+- `SOVLivePreview` gains an optional "By others" section (collapsed by default, gray, no dollars) so users can verify nothing was silently dropped.
+- Summary step lists inclusions/exclusions plainly ("Exterior walls: by others — CMU · Interior partitions: full · Roof: trusses").
 
-### 8. Voice route confusion
-`COListPage.handlePickMode('voice')` opens `VoicePNRecorder` locally, but if a user hits `/change-orders/intake?mode=voice` directly (e.g. from a notification or shared link), `CONewIntake` auto-starts a different voice component. Pick a single canonical voice entry.
+### Files touched
 
-### 9. Guided builder cancel target
-`COGuidedBuilder` cancel button → `/project/:id/change-orders` (list). `CONewIntake` cancel does the same. But `COPickerV3` (full picker) cancels back to wherever it came from. Inconsistent UX. Standardize: cancel always returns to the CO list tab.
+- `src/hooks/useSetupWizardV2.ts` — extend `Answers`, add `scope_boundaries` questions to the tree, gate phase visibility, feed exclusions into `generateSOVLines`.
+- `src/components/setup-wizard-v2/SetupWizardV2.tsx` — insert the new step in `WIZARD_STEPS`, route to the new panel.
+- `src/components/setup-wizard-v2/ScopeBoundariesPanel.tsx` — new file.
+- `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` — respect exclusions when computing `nonEmptySteps`; empty phases just don't render.
+- `src/components/setup-wizard-v2/SOVLivePreview.tsx` — render "By others" ghost rows.
+- `src/components/setup-wizard-v2/WizardSummary.tsx` — show scope boundaries block.
+- `src/lib/sovWeighting.ts` (or wherever `generateSOVLines` re-normalizes) — accept excluded-phase set and re-normalize to 100%.
 
----
+### Edge cases handled
 
-## 🟢 P3 — Smaller cleanups
+- **Interior-only remodel**: Q1=`na`, Q3=`full`, Q4=`by_others` → SOV shows only interior partitions + backout + finishes.
+- **Roof-only**: Q3=`none`, Q4=`trusses`, Q5=`yes`, envelope layers=[] → SOV is roof structure + covering only.
+- **Concrete shell + wood interior + wood trusses** (the user's example): Q1=`by_others_concrete`, Q2=`concrete`, Q3=`full`, Q4=`trusses`, Q5=`yes`, envelope layers=`[insulation]` → exterior framing/sheathing/WRB/siding all excluded; interior + trusses + roof covering + interior insulation carry the weight. This is exactly the scenario that's broken today.
+- **T&M / Remodel Mode**: the Scope Boundaries step is still shown (it's just as relevant), but drives WO scope catalog filtering instead of SOV weights.
 
-- `CONewIntake.tsx` line 1 imports `useMemo` but I don't see it used in the trimmed view — verify with a lint pass.
-- `RequireAuth` wraps every CO route except `/external/co/:token` (correct) and `/change-orders/quick` uses `:projectId` while every other CO route uses `:id`. Param mismatch makes `useParams<{ id: string }>()` return undefined inside `QuickCapture` if it expects `id`.
-- `co_activity` insert in `COGuidedBuilder` uses `actor_role` derived from `myParticipant?.role`; if the user is GC-only-by-org and not a project participant yet, `role` falls back to `'TC'` silently. Should reject creation instead.
+### Non-goals for this pass
 
----
+- Not touching CO/WO scope pickers — they already have their own scenario→system filtering. If it works well here we can port the concept later.
+- Not persisting boundaries to a new DB column — they live in `project_setup_answers` JSON like other wizard answers. A dedicated column can come later if reporting needs it.
 
-## Recommended fix order
+## What I need from you before building
 
-1. **P0/#1** — unblock the guided builder (hook order fix).
-2. **P1/#5** — hide bottom nav on guided + intake.
-3. **P2/#6** — make `addToCoId` actually append.
-4. **P1/#2, #4, #3** — collapse the two intake pages and the two voice entry points, add the explicit list route.
-5. **P2/#9, P3** — consistency polish.
-
-Want me to proceed with #1 + #5 + #6 in one pass (the user-visible breakages), and queue the consolidation work (#2/#3/#4) separately?
+One decision: do you want the "By others" ghost rows visible in the SOV preview (transparent, no dollars) so GCs/TCs can confirm nothing was dropped silently, or should excluded scope disappear entirely from the SOV? My recommendation is ghost rows — it's a trust/clarity win with almost no cost — but it's your call.
