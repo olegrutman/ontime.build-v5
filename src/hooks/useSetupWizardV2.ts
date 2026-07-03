@@ -1408,7 +1408,7 @@ export function useSetupWizardV2(
         }).select('id').single();
         if (sErr) throw sErr;
 
-        const currentSovLines = generateSOVLines(buildingType!, { ...answers, contract_value: contractValue });
+        const currentSovLines = generateSOVLines(buildingType!, { ...answers, contract_value: contractValue }).filter(l => !l.byOthers);
         const sovItems = currentSovLines.map((line) => ({
           project_id: pid,
           sov_id: newSov.id,
