@@ -365,6 +365,8 @@ export default function CreateProjectNew() {
           <BuildingTypeSelector
             selected={wizard.buildingType}
             onSelect={(bt) => wizard.selectBuildingType(bt)}
+            otherLabel={otherProjectLabel}
+            onOtherLabelChange={setOtherProjectLabel}
           />
         );
       case 'scope':
