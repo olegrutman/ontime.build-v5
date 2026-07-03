@@ -116,11 +116,12 @@ export default function CreateProjectNew() {
           tmScope,
           wizardAnswers: wizard.answers,
           wizardBuildingType: wizard.buildingType,
+          otherProjectLabel,
         }));
       } catch { /* quota exceeded — ignore */ }
     }, 300);
     return () => clearTimeout(timer);
-  }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType]);
+  }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType, otherProjectLabel]);
 
   const isTM = contractMode === 'tm';
   const isSupplier = creatorOrgType === 'SUPPLIER';
