@@ -566,6 +566,64 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
     buildingTypes: 'all',
   },
 
+  // ─── FASCIA & SOFFIT ──────────────────────────────────────────
+  {
+    id: 'Q9b_fascia',
+    phase: 'exterior_finish',
+    label: 'Finished fascia in scope?',
+    inputType: 'yes_no',
+    tag: 'scope_gate',
+    fieldKey: 'fascia_in_scope',
+    buildingTypes: 'all',
+  },
+  {
+    id: 'Q9b_fascia_material',
+    phase: 'exterior_finish',
+    label: 'Fascia material',
+    inputType: 'dropdown',
+    options: [
+      'Aluminum (pre-finished)',
+      'PVC trim (Azek / Versatex)',
+      'Fiber cement (HardieTrim)',
+      'Cedar / paint-grade wood',
+      'Engineered wood (LP SmartTrim)',
+      'GC specifies / match siding',
+    ],
+    tag: 'conditional',
+    conditionalOn: 'fascia_in_scope=yes',
+    fieldKey: 'fascia_material',
+    buildingTypes: 'all',
+  },
+  {
+    id: 'Q9c_soffit',
+    phase: 'exterior_finish',
+    label: 'Finished soffit in scope?',
+    inputType: 'yes_no',
+    tag: 'scope_gate',
+    fieldKey: 'soffit_in_scope',
+    buildingTypes: 'all',
+  },
+  {
+    id: 'Q9c_soffit_material',
+    phase: 'exterior_finish',
+    label: 'Soffit material',
+    inputType: 'dropdown',
+    options: [
+      'Vented aluminum',
+      'Non-vented aluminum',
+      'Fiber cement (HardieSoffit)',
+      'LP SmartSide panels',
+      'Plywood (paint-grade)',
+      'T&G wood (cedar / pine)',
+      'GC specifies',
+    ],
+    tag: 'conditional',
+    conditionalOn: 'soffit_in_scope=yes',
+    fieldKey: 'soffit_material',
+    buildingTypes: 'all',
+  },
+
+
   // ─── WINDOWS & DOORS ──────────────────────────────────────────
   {
     id: 'Q8_windows',
