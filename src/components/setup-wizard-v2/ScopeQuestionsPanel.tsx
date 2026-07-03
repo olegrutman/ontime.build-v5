@@ -33,6 +33,7 @@ interface ScopeQuestionsPanelProps {
   contractValue: number;
   fcContractValue: number;
   creatorOrgType?: OrgType;
+  isNonStandard?: boolean;
 }
 
 export function ScopeQuestionsPanel({
@@ -44,6 +45,7 @@ export function ScopeQuestionsPanel({
   contractValue,
   fcContractValue,
   creatorOrgType,
+  isNonStandard = false,
 }: ScopeQuestionsPanelProps) {
   const isTC = creatorOrgType === 'TC';
 
