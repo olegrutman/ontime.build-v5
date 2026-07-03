@@ -3,18 +3,25 @@ import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 import { SOVLivePreview } from './SOVLivePreview';
 import {
-  DEFAULT_SCOPE_BOUNDARIES,
+  BUILDING_SCOPE_LABEL,
+  BUILDING_SCOPE_HINT,
   EXTERIOR_WALL_LABEL,
   ROOF_STRUCTURE_LABEL,
   INTERIOR_PARTITION_LABEL,
   ENVELOPE_LAYER_LABEL,
+  GROUND_FLOOR_LABEL,
+  UPPER_FLOOR_LABEL,
+  presetForBuildingScope,
   resolveScopeBoundaries,
   type Answers,
   type BuildingType,
+  type BuildingScopeType,
   type ExteriorWallsScope,
   type RoofStructureScope,
   type InteriorPartitionsScope,
   type EnvelopeLayer,
+  type GroundFloorScope,
+  type UpperFloorScope,
   type ScopeBoundaries,
   type SOVLine,
 } from '@/hooks/useSetupWizardV2';
@@ -26,18 +33,38 @@ interface Props {
   sovLines: SOVLine[];
 }
 
+const BUILDING_SCOPE_OPTIONS: BuildingScopeType[] = [
+  'complete', 'shell_only', 'interior_only', 'addition_vertical', 'addition_horizontal', 'specific',
+];
 const EXT_WALL_OPTIONS: ExteriorWallsScope[] = [
   'self', 'by_others_concrete', 'by_others_cmu', 'by_others_tilt', 'by_others_steel', 'na',
 ];
 const ROOF_OPTIONS: RoofStructureScope[] = ['trusses', 'rafters', 'steel_joist', 'by_others'];
 const INTERIOR_OPTIONS: InteriorPartitionsScope[] = ['full', 'partial', 'none'];
 const ENV_OPTIONS: EnvelopeLayer[] = ['sheathing', 'wrb', 'insulation', 'siding'];
+const GROUND_OPTIONS: GroundFloorScope[] = ['framed_self', 'slab_by_others', 'podium_by_others', 'na'];
+const UPPER_OPTIONS: UpperFloorScope[] = ['framed_self', 'ijoist_self', 'steel_by_others', 'concrete_by_others', 'na'];
 
 export function ScopeBoundariesPanel({ buildingType, answers, setAnswer, sovLines }: Props) {
   const sb = useMemo(() => resolveScopeBoundaries(answers), [answers]);
 
+  // Resolve story count from earlier wizard answers (mirrors generator logic)
+  const storyCount = useMemo(() => {
+    const v = answers?.stories;
+    if (typeof v === 'number') return Math.max(1, v);
+    if (v === '2-story' || v === '2') return 2;
+    if (v === '3') return 3;
+    if (v === 'Mix of both') return 2;
+    if (v === '1-story') return 1;
+    return 1;
+  }, [answers]);
+
   const update = (patch: Partial<ScopeBoundaries>) => {
     setAnswer('scope_boundaries', { ...sb, ...patch });
+  };
+
+  const pickBuildingScope = (scope: BuildingScopeType) => {
+    setAnswer('scope_boundaries', { ...sb, building_scope: scope, ...presetForBuildingScope(scope) });
   };
 
   const toggleLayer = (layer: EnvelopeLayer) => {
@@ -47,8 +74,15 @@ export function ScopeBoundariesPanel({ buildingType, answers, setAnswer, sovLine
     update({ envelope_layers: next });
   };
 
+  const toggleFloor = (n: number) => {
+    const current = sb.framed_floors ?? Array.from({ length: storyCount }, (_, i) => i + 1);
+    const next = current.includes(n) ? current.filter(x => x !== n) : [...current, n].sort((a, b) => a - b);
+    update({ framed_floors: next.length === storyCount ? null : next });
+  };
+
   const extByOthers = sb.exterior_walls !== 'self' && sb.exterior_walls !== 'na';
   const roofInScope = sb.roof_structure !== 'by_others';
+  const showFloorSubset = sb.building_scope !== 'complete' && storyCount > 1;
 
   const Section = ({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) => (
     <div className="space-y-2.5">
@@ -81,6 +115,8 @@ export function ScopeBoundariesPanel({ buildingType, answers, setAnswer, sovLine
     </button>
   );
 
+  const framedSet = sb.framed_floors ?? Array.from({ length: storyCount }, (_, i) => i + 1);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left: boundary questions */}
@@ -90,10 +126,24 @@ export function ScopeBoundariesPanel({ buildingType, answers, setAnswer, sovLine
             What are you actually building?
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Tell us which systems are in your scope so we don't generate line items for work
-            someone else is doing. You can change any answer later.
+            Start with the overall picture, then fine-tune. We'll skip line items for work
+            someone else is doing so your SOV reflects only your scope.
           </p>
         </div>
+
+        <Section title="Building scope" subtitle="Pick the closest match — it pre-fills the questions below">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {BUILDING_SCOPE_OPTIONS.map(opt => (
+              <Tile
+                key={opt}
+                active={sb.building_scope === opt}
+                onClick={() => pickBuildingScope(opt)}
+                label={BUILDING_SCOPE_LABEL[opt]}
+                hint={BUILDING_SCOPE_HINT[opt]}
+              />
+            ))}
+          </div>
+        </Section>
 
         <Section title="Exterior walls" subtitle="Who is framing the exterior wall structure?">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -105,6 +155,70 @@ export function ScopeBoundariesPanel({ buildingType, answers, setAnswer, sovLine
                 label={EXTERIOR_WALL_LABEL[opt]}
               />
             ))}
+          </div>
+        </Section>
+
+        <Section title="Floors — ground floor" subtitle="Slab-on-grade, framed deck, or concrete podium?">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {GROUND_OPTIONS.map(opt => (
+              <Tile
+                key={opt}
+                active={sb.ground_floor === opt}
+                onClick={() => update({ ground_floor: opt })}
+                label={GROUND_FLOOR_LABEL[opt]}
+              />
+            ))}
+          </div>
+        </Section>
+
+        {storyCount > 1 && (
+          <Section title="Floors — upper floors" subtitle="How are floors 2 and above being built?">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {UPPER_OPTIONS.map(opt => (
+                <Tile
+                  key={opt}
+                  active={sb.upper_floors === opt}
+                  onClick={() => update({ upper_floors: opt })}
+                  label={UPPER_FLOOR_LABEL[opt]}
+                />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {showFloorSubset && (
+          <Section
+            title="Which floors are you framing?"
+            subtitle="Uncheck any floor that's out of scope (e.g. vertical addition = 2nd floor + roof only)"
+          >
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: storyCount }, (_, i) => i + 1).map(n => {
+                const active = framedSet.includes(n);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => toggleFloor(n)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md border text-sm font-medium transition-all',
+                      active
+                        ? 'border-primary bg-primary/10 text-foreground'
+                        : 'border-border bg-card text-muted-foreground hover:border-primary/40',
+                    )}
+                  >
+                    {active && <Check className="w-3 h-3 inline mr-1" />}
+                    Level {n}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
+        <Section title="Stair framing" subtitle="Wood stair towers and framed landings">
+          <div className="grid grid-cols-2 gap-2">
+            <Tile active={sb.stair_framing} onClick={() => update({ stair_framing: true })} label="In my scope" />
+            <Tile active={!sb.stair_framing} onClick={() => update({ stair_framing: false })} label="By others" />
           </div>
         </Section>
 
