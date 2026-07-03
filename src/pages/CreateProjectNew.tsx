@@ -198,7 +198,7 @@ export default function CreateProjectNew() {
         .from('projects')
         .insert({
           name: basics.name,
-          project_type: isSupplier ? (tmScope.buildingType || '') : (isTM ? 'Remodel / T&M' : (wizard.buildingType || '')),
+          project_type: isSupplier ? (tmScope.buildingType || '') : (isTM ? 'Remodel / T&M' : (otherProjectLabel || wizard.buildingType || '')),
           address: { street: basics.address } as any,
           city: basics.city,
           state: basics.state,
