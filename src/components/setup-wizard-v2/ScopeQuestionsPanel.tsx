@@ -184,7 +184,7 @@ export function ScopeQuestionsPanel({
             <p className="text-xs font-medium text-muted-foreground">Trade Contractor → Field Crew SOV</p>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+            <SOVLivePreview lines={fcSovLines} buildingType={buildingType} isNonStandard={isNonStandard} />
           </div>
         </div>
       )}
