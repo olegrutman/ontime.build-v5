@@ -209,14 +209,21 @@ beforeEach(() => {
   });
 
   projectContractModeRef.current = 'fixed';
-  useAiIntakeDataRef.current = {
-    id: 'int-1',
-    status: 'succeeded',
-    output_json: {
-      lines: [{ title: 'Move kitchen wall 2ft east', problem: 'Owner request', qty: 1, unit: 'EA', confidence: 0.9 }],
-    },
-  };
-  startMutateAsyncMock.mockResolvedValue({ intake_id: 'int-1', status: 'pending' });
+  // Intake data is null until the user clicks "Extract scope"; the mocked
+  // mutation then flips it to a succeeded row so scope lines render.
+  useAiIntakeDataRef.current = null;
+  startMutateAsyncMock.mockImplementation(async () => {
+    useAiIntakeDataRef.current = {
+      id: 'int-1',
+      status: 'succeeded',
+      output_json: {
+        lines: [
+          { title: 'Move kitchen wall 2ft east', problem: 'Owner request', qty: 1, unit: 'EA', confidence: 0.9 },
+        ],
+      },
+    };
+    return { intake_id: 'int-1', status: 'pending' };
+  });
   generateCONumberMock.mockResolvedValue('CO-001');
 });
 
