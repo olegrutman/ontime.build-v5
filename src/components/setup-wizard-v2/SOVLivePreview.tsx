@@ -7,9 +7,12 @@ import { AlertTriangle } from 'lucide-react';
 interface Props {
   lines: SOVLine[];
   buildingType?: BuildingType | null;
+  /** True for "Other" project types (barn, ADU, TI, etc.) — suppresses
+   *  standard-building warnings that don't apply. */
+  isNonStandard?: boolean;
 }
 
-export function SOVLivePreview({ lines, buildingType }: Props) {
+export function SOVLivePreview({ lines, buildingType, isNonStandard = false }: Props) {
   const { activeLines, ghostLines } = useMemo(() => {
     const active: SOVLine[] = [];
     const ghost: SOVLine[] = [];
@@ -29,8 +32,8 @@ export function SOVLivePreview({ lines, buildingType }: Props) {
   const totalPct = useMemo(() => activeLines.reduce((s, l) => s + l.suggested_pct, 0), [activeLines]);
 
   const warnings = useMemo(
-    () => buildingType ? validateSOV(activeLines, totalValue, buildingType) : [],
-    [activeLines, totalValue, buildingType],
+    () => buildingType ? validateSOV(activeLines, totalValue, buildingType, isNonStandard) : [],
+    [activeLines, totalValue, buildingType, isNonStandard],
   );
 
   return (
