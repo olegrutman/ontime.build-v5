@@ -173,7 +173,7 @@ export function ScopeQuestionsPanel({
           </p>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+          <SOVLivePreview lines={sovLines} buildingType={buildingType} isNonStandard={isNonStandard} />
         </div>
       </div>
 
