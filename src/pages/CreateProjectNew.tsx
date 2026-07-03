@@ -166,6 +166,7 @@ export default function CreateProjectNew() {
         return hasGcContract;
       }
       case 'building_type': return !!wizard.buildingType;
+      case 'scope_boundaries': return true;
       case 'scope': return true;
       case 'review': return true;
       default: return false;
