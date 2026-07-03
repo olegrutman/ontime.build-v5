@@ -225,6 +225,7 @@ export default function FinishProjectSetup() {
       }
       case 'building_type':
         return !!wizard.buildingType;
+      case 'scope_boundaries':
       case 'scope':
       case 'review':
         return true;
