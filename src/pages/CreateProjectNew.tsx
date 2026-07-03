@@ -419,47 +419,114 @@ export default function CreateProjectNew() {
 
   const isLastStep = currentStep === activeSteps.length - 1;
 
+  const currentStepDef = activeSteps[currentStep];
+  const progressPct = Math.round(((currentStep + 1) / activeSteps.length) * 100);
+
   return (
     <AppLayout title="Create New Project" fullWidth>
-      <div className="mx-auto p-6 w-full">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Progress sidebar */}
-          <div className="col-span-12 md:col-span-2">
-            <Card>
-              <CardContent className="p-4">
-                <nav className="space-y-2">
-                  {activeSteps.map((step, index) => (
-                    <div
+      <div className="mx-auto p-4 sm:p-6 w-full">
+        {/* Compact horizontal stepper — visible below lg */}
+        <div className="lg:hidden mb-4">
+          <Card>
+            <CardContent className="p-3 sm:p-4 space-y-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-heading">
+                    Step {currentStep + 1} of {activeSteps.length}
+                  </p>
+                  <p className="font-heading font-semibold text-sm sm:text-base truncate">
+                    {currentStepDef?.label}
+                  </p>
+                </div>
+                <span className="font-mono text-xs text-muted-foreground shrink-0">{progressPct}%</span>
+              </div>
+
+              {/* Slim progress track */}
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+
+              {/* Dot row — tappable, no wrapping labels */}
+              <div className="flex items-center justify-between gap-1">
+                {activeSteps.map((step, index) => {
+                  const done = index < currentStep;
+                  const active = index === currentStep;
+                  return (
+                    <button
                       key={step.id}
-                      onClick={() => { if (index < currentStep) setCurrentStep(index); }}
+                      type="button"
+                      onClick={() => { if (done) setCurrentStep(index); }}
+                      disabled={!done && !active}
+                      aria-label={`${step.label} (${index + 1} of ${activeSteps.length})`}
+                      aria-current={active ? 'step' : undefined}
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-lg transition-colors",
-                        index === currentStep && "bg-primary/10",
-                        index < currentStep && "text-muted-foreground cursor-pointer hover:bg-muted/50",
-                        index > currentStep && "cursor-default"
+                        "flex-1 flex flex-col items-center gap-1 min-w-0",
+                        done ? "cursor-pointer" : "cursor-default",
                       )}
                     >
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold font-heading",
-                        index < currentStep && "bg-primary text-primary-foreground",
-                        index === currentStep && "bg-primary text-primary-foreground",
-                        index > currentStep && "bg-muted text-muted-foreground"
+                      <span className={cn(
+                        "flex items-center justify-center h-7 w-7 rounded-full text-[11px] font-semibold font-heading transition-colors",
+                        active && "bg-primary text-primary-foreground ring-4 ring-primary/15",
+                        done && "bg-primary text-primary-foreground",
+                        !active && !done && "bg-muted text-muted-foreground",
                       )}>
-                        {index < currentStep ? <Check className="h-4 w-4" /> : index + 1}
-                      </div>
-                      <div className="hidden md:block">
-                        <p className="font-medium text-sm font-heading">{step.label}</p>
-                        <p className="text-xs text-muted-foreground">{step.description}</p>
-                      </div>
-                    </div>
-                  ))}
+                        {done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-12 gap-6">
+          {/* Vertical sidebar — only at lg+ where there's room for label + description */}
+          <aside className="hidden lg:block lg:col-span-3 xl:col-span-2">
+            <Card className="sticky top-4">
+              <CardContent className="p-3">
+                <nav className="space-y-1">
+                  {activeSteps.map((step, index) => {
+                    const done = index < currentStep;
+                    const active = index === currentStep;
+                    return (
+                      <button
+                        key={step.id}
+                        type="button"
+                        onClick={() => { if (done) setCurrentStep(index); }}
+                        disabled={!done && !active}
+                        aria-current={active ? 'step' : undefined}
+                        className={cn(
+                          "w-full flex items-start gap-3 p-2.5 rounded-lg transition-colors text-left",
+                          active && "bg-primary/10",
+                          done && "hover:bg-muted/60 cursor-pointer",
+                          !active && !done && "opacity-60 cursor-default",
+                        )}
+                      >
+                        <span className={cn(
+                          "shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold font-heading",
+                          (done || active) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                        )}>
+                          {done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 pt-0.5">
+                          <span className="block font-medium text-sm font-heading leading-tight">{step.label}</span>
+                          <span className="block text-[11px] text-muted-foreground leading-snug mt-0.5">{step.description}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </nav>
               </CardContent>
             </Card>
-          </div>
+          </aside>
 
           {/* Main content */}
-          <div className="col-span-12 md:col-span-10">
+          <div className="col-span-12 lg:col-span-9 xl:col-span-10">
+
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-semibold font-heading">New Project</h1>
               <Button
