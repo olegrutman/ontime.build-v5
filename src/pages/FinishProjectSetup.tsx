@@ -19,6 +19,7 @@ import { EditableInfoRow, type RowFieldType } from '@/components/project-setup/E
 
 import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
 import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
+import { ScopeBoundariesPanel } from '@/components/setup-wizard-v2/ScopeBoundariesPanel';
 import { ContractsStep, type DownstreamContractRow } from '@/components/project-wizard-new/ContractsStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
 import { TeamStep } from '@/components/project-wizard-new/TeamStep';
@@ -31,6 +32,7 @@ const FIXED_STEPS: StepDef[] = [
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'invite_team', label: 'Invite Team', description: 'Add downstream crews' },
   { id: 'contracts', label: 'Contracts', description: 'Owner + downstream values' },
+  { id: 'scope_boundaries', label: 'Scope Boundaries', description: "What's in your scope?" },
   { id: 'scope', label: 'Scope', description: 'Scope & SOV' },
   { id: 'review', label: 'Review', description: 'Finalize' },
 ];
@@ -223,6 +225,7 @@ export default function FinishProjectSetup() {
       }
       case 'building_type':
         return !!wizard.buildingType;
+      case 'scope_boundaries':
       case 'scope':
       case 'review':
         return true;
@@ -425,6 +428,17 @@ export default function FinishProjectSetup() {
         );
       case 'building_type':
         return <BuildingTypeSelector selected={wizard.buildingType} onSelect={(bt) => wizard.selectBuildingType(bt)} />;
+      case 'scope_boundaries':
+        return wizard.buildingType ? (
+          <ScopeBoundariesPanel
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            sovLines={wizard.sovLines}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground py-8 text-center">Pick a building type first.</p>
+        );
       case 'scope':
         return wizard.buildingType ? (
           <ScopeQuestionsPanel

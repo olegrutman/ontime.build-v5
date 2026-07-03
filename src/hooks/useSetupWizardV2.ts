@@ -76,6 +76,10 @@ export interface SOVLine {
   suggested_pct: number;
   status: 'draft';
   conditionalKey: string | null;
+  /** True when the line is intentionally out-of-scope (ghost row). */
+  byOthers?: boolean;
+  /** Short reason shown in the SOV preview when byOthers is true. */
+  byOthersReason?: string;
 }
 
 export interface SOVValidationWarning {
@@ -85,6 +89,88 @@ export interface SOVValidationWarning {
 }
 
 export type Answers = Record<string, any>;
+
+/* ══════════════════════════════════════════════════════════════════════
+   SCOPE BOUNDARIES — what the contractor is actually building
+   ══════════════════════════════════════════════════════════════════════ */
+
+export type ExteriorWallsScope =
+  | 'self'
+  | 'by_others_concrete'
+  | 'by_others_cmu'
+  | 'by_others_tilt'
+  | 'by_others_steel'
+  | 'na';
+
+export type RoofStructureScope =
+  | 'trusses'
+  | 'rafters'
+  | 'steel_joist'
+  | 'by_others';
+
+export type InteriorPartitionsScope = 'full' | 'partial' | 'none';
+
+export type EnvelopeLayer = 'sheathing' | 'wrb' | 'insulation' | 'siding';
+
+export interface ScopeBoundaries {
+  exterior_walls: ExteriorWallsScope;
+  exterior_wall_material?: string;
+  interior_partitions: InteriorPartitionsScope;
+  roof_structure: RoofStructureScope;
+  roof_covering: boolean;
+  envelope_layers: EnvelopeLayer[];
+  mep_backout: boolean;
+}
+
+export const DEFAULT_SCOPE_BOUNDARIES: ScopeBoundaries = {
+  exterior_walls: 'self',
+  interior_partitions: 'full',
+  roof_structure: 'trusses',
+  roof_covering: true,
+  envelope_layers: ['sheathing', 'wrb', 'insulation', 'siding'],
+  mep_backout: true,
+};
+
+export const EXTERIOR_WALL_LABEL: Record<ExteriorWallsScope, string> = {
+  self: "I'm building them (wood or CFS framing)",
+  by_others_concrete: 'By others — poured concrete',
+  by_others_cmu: 'By others — CMU / block',
+  by_others_tilt: 'By others — tilt-up panels',
+  by_others_steel: 'By others — structural steel + infill',
+  na: 'N/A — interior-only project',
+};
+
+export const ROOF_STRUCTURE_LABEL: Record<RoofStructureScope, string> = {
+  trusses: 'Yes — engineered trusses',
+  rafters: 'Yes — rafters / stick-framed',
+  steel_joist: 'Yes — steel joists / deck',
+  by_others: 'No — by others',
+};
+
+export const INTERIOR_PARTITION_LABEL: Record<InteriorPartitionsScope, string> = {
+  full: 'Yes — all floors',
+  partial: 'Partial — some floors',
+  none: 'No — not in scope',
+};
+
+export const ENVELOPE_LAYER_LABEL: Record<EnvelopeLayer, string> = {
+  sheathing: 'Wall sheathing',
+  wrb: 'WRB / house wrap',
+  insulation: 'Insulation',
+  siding: 'Siding / exterior finish',
+};
+
+export function resolveScopeBoundaries(answers: Answers): ScopeBoundaries {
+  const raw = (answers?.scope_boundaries ?? {}) as Partial<ScopeBoundaries>;
+  return {
+    ...DEFAULT_SCOPE_BOUNDARIES,
+    ...raw,
+    envelope_layers: Array.isArray(raw.envelope_layers)
+      ? raw.envelope_layers.filter((l): l is EnvelopeLayer =>
+          l === 'sheathing' || l === 'wrb' || l === 'insulation' || l === 'siding')
+      : DEFAULT_SCOPE_BOUNDARIES.envelope_layers,
+  };
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    QUESTION DEFINITIONS
@@ -705,6 +791,33 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   const a = answers;
   const contractValue = typeof a.contract_value === 'number' ? a.contract_value : 0;
   const isLaborOnly = a.material_responsibility === 'GC supplies materials';
+  const sb = resolveScopeBoundaries(a);
+
+  // Excluded phases (all lines skipped -> ghost)
+  const excludedPhases = new Set<SOVPhase>();
+  const extWallsByOthers = sb.exterior_walls !== 'self';
+  const noInteriorWalls = sb.interior_partitions === 'none';
+  const noExtOrInterior = extWallsByOthers && noInteriorWalls;
+
+  if (sb.roof_structure === 'by_others') excludedPhases.add('roof');
+  if (!sb.mep_backout || noInteriorWalls) excludedPhases.add('backout');
+  // Envelope only fully excluded if walls by others AND no layers selected
+  if (extWallsByOthers && sb.envelope_layers.length === 0) excludedPhases.add('envelope');
+  // Exterior finish excluded when walls by others and no siding — but decks/porches survive individually
+  const excludeExteriorFinishBulk = extWallsByOthers && !sb.envelope_layers.includes('siding');
+
+  const wallMaterialLabel = extWallsByOthers
+    ? EXTERIOR_WALL_LABEL[sb.exterior_walls].replace(/^By others — /, '')
+    : '';
+  const byOthersReason = (kind: 'ext_walls' | 'roof' | 'interior' | 'envelope' | 'backout'): string => {
+    switch (kind) {
+      case 'ext_walls': return `Exterior walls by others (${wallMaterialLabel})`;
+      case 'roof': return 'Roof structure by others';
+      case 'interior': return 'Interior partitions not in scope';
+      case 'envelope': return 'Envelope layer not in scope';
+      case 'backout': return 'MEP backout not in scope';
+    }
+  };
 
   const w = (key: WeightKey): number => {
     const val = BT_OVERRIDES[bt]?.[key] ?? BASE_WEIGHTS[key] ?? 0;
@@ -716,8 +829,12 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // Collect raw weighted lines
   const rawLines: { desc: string; phase: SOVPhase; weight: number; key: string | null }[] = [];
+  const ghostLines: { desc: string; phase: SOVPhase; reason: string; key: string | null }[] = [];
   const push = (phase: SOVPhase, desc: string, wt: number, key: string | null = null) => {
     if (wt > 0) rawLines.push({ desc, phase, weight: wt, key });
+  };
+  const pushGhost = (phase: SOVPhase, desc: string, reason: string, key: string | null = null) => {
+    ghostLines.push({ desc, phase, reason, key });
   };
 
   const floorSystem = a.floor_system || 'TJI I-joists';
@@ -754,16 +871,33 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
     }
     push('per_floor', 'Hardware & connectors — Basement', w('basement_hw'), 'has_basement');
     if (a.basement_walkout === 'yes') {
-      push('per_floor', 'Exterior wall framing — Basement', w('basement_wall'), 'basement_walkout');
+      if (extWallsByOthers) {
+        pushGhost('per_floor', 'Exterior wall framing — Basement', byOthersReason('ext_walls'), 'basement_walkout');
+      } else {
+        push('per_floor', 'Exterior wall framing — Basement', w('basement_wall'), 'basement_walkout');
+      }
     }
     if (a.basement_type === 'Finished' || a.basement_type === 'Partially finished') {
-      push('per_floor', 'Interior wall framing — Basement', w('basement_wall') * 0.6, 'basement_type');
+      if (noInteriorWalls) {
+        pushGhost('per_floor', 'Interior wall framing — Basement', byOthersReason('interior'), 'basement_type');
+      } else {
+        push('per_floor', 'Interior wall framing — Basement', w('basement_wall') * 0.6, 'basement_type');
+      }
     }
   }
 
   // ─── Phase 2: Per-Floor Structural ──────────────────────────
   const phase2Total = getPhase2Total(storyCount);
   const perFloorAllocation = phase2Total / storyCount;
+
+  // Wall-framing weight adjustment: if exterior walls by others, keep only interior portion
+  // (assume 40% of the per-floor wall_framing weight is interior partitions).
+  // If interior partitions also excluded, weight drops to zero.
+  const wallWeightMultiplier =
+    noExtOrInterior ? 0
+    : extWallsByOthers ? (sb.interior_partitions === 'full' ? 0.4 : sb.interior_partitions === 'partial' ? 0.25 : 0)
+    : noInteriorWalls ? 0.6 // exterior only
+    : 1;
 
   for (let i = 1; i <= storyCount; i++) {
     const label = `L${i}`;
@@ -778,7 +912,20 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
       isLaborOnly ? floorSysW * (1 - (LABOR_ONLY_REDUCTIONS.floor_system || 0)) : floorSysW);
     push('per_floor', `Floor sheathing — ${label}`,
       isLaborOnly ? floorSheathW * (1 - (LABOR_ONLY_REDUCTIONS.floor_sheathing || 0)) : floorSheathW);
-    push('per_floor', `Wall framing — ${label}`, wallW);
+
+    if (wallWeightMultiplier > 0) {
+      const wallLabel = extWallsByOthers
+        ? `Interior wall framing — ${label}`
+        : noInteriorWalls
+          ? `Exterior wall framing — ${label}`
+          : `Wall framing — ${label}`;
+      push('per_floor', wallLabel, wallW * wallWeightMultiplier);
+    } else {
+      pushGhost('per_floor', `Wall framing — ${label}`,
+        noExtOrInterior ? 'All walls by others / not in scope'
+        : extWallsByOthers ? byOthersReason('ext_walls')
+        : byOthersReason('interior'));
+    }
     push('per_floor', `Hardware & connectors — ${label}`, hwW);
 
     if (a.has_elevator === 'yes') {
@@ -798,17 +945,27 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   }
 
   // ─── Phase 3: Roof ──────────────────────────────────────────
-  push('roof', 'Roof framing', w('roof_framing'));
-  push('roof', 'Roof sheathing', w('roof_sheathing'));
-  if (a.has_parapet === 'yes') {
-    push('roof', 'Parapet wall framing', w('parapet'), 'has_parapet');
-  }
-  if (a.has_roof_deck === 'yes') {
-    push('roof', 'Roof deck framing', w('roof_deck_struct'), 'has_roof_deck');
+  if (excludedPhases.has('roof')) {
+    pushGhost('roof', 'Roof framing', byOthersReason('roof'));
+    pushGhost('roof', 'Roof sheathing', byOthersReason('roof'));
+    if (a.has_parapet === 'yes') pushGhost('roof', 'Parapet wall framing', byOthersReason('roof'), 'has_parapet');
+    if (a.has_roof_deck === 'yes') pushGhost('roof', 'Roof deck framing', byOthersReason('roof'), 'has_roof_deck');
+  } else {
+    const roofLabel = sb.roof_structure === 'rafters' ? 'Roof framing (rafters)'
+      : sb.roof_structure === 'steel_joist' ? 'Roof framing (steel joists / deck)'
+      : 'Roof framing (trusses)';
+    push('roof', roofLabel, w('roof_framing'));
+    push('roof', 'Roof sheathing', w('roof_sheathing'));
+    if (a.has_parapet === 'yes') push('roof', 'Parapet wall framing', w('parapet'), 'has_parapet');
+    if (a.has_roof_deck === 'yes') push('roof', 'Roof deck framing', w('roof_deck_struct'), 'has_roof_deck');
   }
 
   // ─── Phase 4: Envelope ──────────────────────────────────────
-  push('envelope', 'WRB (weather-resistive barrier)', w('wrb'));
+  if (sb.envelope_layers.includes('wrb') || !extWallsByOthers) {
+    push('envelope', 'WRB (weather-resistive barrier)', w('wrb'));
+  } else {
+    pushGhost('envelope', 'WRB (weather-resistive barrier)', byOthersReason('envelope'));
+  }
   if (a.windows_in_scope === 'yes') {
     const mode = a.window_install_mode || 'Install only';
     const winKey: WeightKey = mode === 'RO only' ? 'windows_ro'
@@ -817,7 +974,7 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   }
 
   // ─── Phase 5: Backout & Interior ────────────────────────────
-  if (a.has_backout === 'yes') {
+  if (a.has_backout === 'yes' && !excludedPhases.has('backout')) {
     push('backout', 'MEP backout', w('mep_backout'), 'has_backout');
     push('backout', 'Blocking', w('blocking'), 'has_backout');
     push('backout', 'Fire blocking', w('fire_blocking'), 'has_backout');
@@ -828,10 +985,13 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
       const adaKey: WeightKey = adaScope.includes('Full') ? 'ada_full' : 'ada_std';
       push('backout', `ADA blocking — ${adaScope}`, w(adaKey), 'ada_blocking');
     }
+  } else if (a.has_backout === 'yes' && excludedPhases.has('backout')) {
+    pushGhost('backout', 'MEP backout & interior blocking',
+      noInteriorWalls ? byOthersReason('interior') : byOthersReason('backout'), 'has_backout');
   }
 
   // ─── Phase 6: Exterior Finish ───────────────────────────────
-  if (a.siding_in_scope === 'yes') {
+  if (a.siding_in_scope === 'yes' && !excludeExteriorFinishBulk) {
     if (a.siding_coverage === 'Per elevation (Front · Left · Right · Rear)') {
       for (const elev of ['Front', 'Left', 'Right', 'Rear']) {
         push('exterior_finish', `Siding — ${elev} elevation`, w('siding_elev'), 'siding_in_scope');
@@ -839,10 +999,17 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
     } else {
       push('exterior_finish', 'Siding — whole building', w('siding_whole'), 'siding_in_scope');
     }
+  } else if (a.siding_in_scope === 'yes' && excludeExteriorFinishBulk) {
+    pushGhost('exterior_finish', 'Siding', byOthersReason('ext_walls'), 'siding_in_scope');
   }
 
-  push('exterior_finish', 'Fascia & soffit', w('fascia_soffit'));
-  push('exterior_finish', 'Trim', w('trim'));
+  if (excludeExteriorFinishBulk) {
+    pushGhost('exterior_finish', 'Fascia & soffit', byOthersReason('ext_walls'));
+    pushGhost('exterior_finish', 'Trim', byOthersReason('ext_walls'));
+  } else {
+    push('exterior_finish', 'Fascia & soffit', w('fascia_soffit'));
+    push('exterior_finish', 'Trim', w('trim'));
+  }
 
   if (a.has_balcony === 'yes') {
     const deckLabel = bt === 'senior_living' ? 'Porch / screened entry framing'
@@ -865,6 +1032,8 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
       push('exterior_finish', 'Rooftop decking finish', w('rooftop_decking'), 'rooftop_decking_in_scope');
     }
   }
+
+
 
   if (a.has_decorative === 'yes') push('exterior_finish', 'Decorative exterior (columns, corbels, shutters)', w('decorative'), 'has_decorative');
   if (a.has_covered_entry === 'yes') push('exterior_finish', 'Covered entry framing', w('covered_entry'), 'has_covered_entry');
@@ -936,6 +1105,22 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
     const allocated = lines.slice(0, -1).reduce((s, l) => s + l.amount, 0);
     lines[lines.length - 1].amount = Math.round((contractValue - allocated) * 100) / 100;
   }
+
+  // Append ghost lines (by-others) at the end — no dollars, no % impact
+  const startNumber = lines.length + 1;
+  ghostLines.forEach((g, idx) => {
+    lines.push({
+      lineNumber: startNumber + idx,
+      description: g.desc,
+      phase: g.phase,
+      amount: 0,
+      suggested_pct: 0,
+      status: 'draft',
+      conditionalKey: g.key,
+      byOthers: true,
+      byOthersReason: g.reason,
+    });
+  });
 
   return lines;
 }
@@ -1077,7 +1262,7 @@ export function useSetupWizardV2(
     const sovId = newSov.id;
 
     // Generate and insert SOV items
-    const currentSovLines = generateSOVLines(buildingType!, { ...sovLineAnswers, contract_value: contractValue });
+    const currentSovLines = generateSOVLines(buildingType!, { ...sovLineAnswers, contract_value: contractValue }).filter(l => !l.byOthers);
     const sovItems = currentSovLines.map((line) => ({
       project_id: pid,
       sov_id: sovId,
@@ -1223,7 +1408,7 @@ export function useSetupWizardV2(
         }).select('id').single();
         if (sErr) throw sErr;
 
-        const currentSovLines = generateSOVLines(buildingType!, { ...answers, contract_value: contractValue });
+        const currentSovLines = generateSOVLines(buildingType!, { ...answers, contract_value: contractValue }).filter(l => !l.byOthers);
         const sovItems = currentSovLines.map((line) => ({
           project_id: pid,
           sov_id: newSov.id,

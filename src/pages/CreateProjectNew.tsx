@@ -25,6 +25,7 @@ import { useSetupWizardV2, type BuildingType, type Answers } from '@/hooks/useSe
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
 import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
+import { ScopeBoundariesPanel } from '@/components/setup-wizard-v2/ScopeBoundariesPanel';
 import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
@@ -41,6 +42,7 @@ const FIXED_STEPS: StepDef[] = [
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'contracts', label: 'Contracts', description: 'Contract values' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
+  { id: 'scope_boundaries', label: 'Scope Boundaries', description: "What's in your scope?" },
   { id: 'scope', label: 'Scope', description: 'Scope & live SOV' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
@@ -165,6 +167,7 @@ export default function CreateProjectNew() {
         return hasGcContract;
       }
       case 'building_type': return !!wizard.buildingType;
+      case 'scope_boundaries': return true;
       case 'scope': return true;
       case 'review': return true;
       default: return false;
@@ -368,6 +371,19 @@ export default function CreateProjectNew() {
             otherLabel={otherProjectLabel}
             onOtherLabelChange={setOtherProjectLabel}
           />
+        );
+      case 'scope_boundaries':
+        return wizard.buildingType ? (
+          <ScopeBoundariesPanel
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            sovLines={wizard.sovLines}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Please go back and select a building type first.
+          </p>
         );
       case 'scope':
         return wizard.buildingType ? (

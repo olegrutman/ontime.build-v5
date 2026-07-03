@@ -10,20 +10,27 @@ interface Props {
 }
 
 export function SOVLivePreview({ lines, buildingType }: Props) {
+  const { activeLines, ghostLines } = useMemo(() => {
+    const active: SOVLine[] = [];
+    const ghost: SOVLine[] = [];
+    for (const l of lines) (l.byOthers ? ghost : active).push(l);
+    return { activeLines: active, ghostLines: ghost };
+  }, [lines]);
+
   const grouped = useMemo(() => {
     const map: Record<SOVPhase, SOVLine[]> = {} as any;
     for (const p of SOV_PHASE_ORDER) map[p] = [];
-    for (const l of lines) map[l.phase].push(l);
+    for (const l of activeLines) map[l.phase].push(l);
     return map;
-  }, [lines]);
+  }, [activeLines]);
 
-  const totalLines = lines.length;
-  const totalValue = useMemo(() => lines.reduce((s, l) => s + l.amount, 0), [lines]);
-  const totalPct = useMemo(() => lines.reduce((s, l) => s + l.suggested_pct, 0), [lines]);
+  const totalLines = activeLines.length;
+  const totalValue = useMemo(() => activeLines.reduce((s, l) => s + l.amount, 0), [activeLines]);
+  const totalPct = useMemo(() => activeLines.reduce((s, l) => s + l.suggested_pct, 0), [activeLines]);
 
   const warnings = useMemo(
-    () => buildingType ? validateSOV(lines, totalValue, buildingType) : [],
-    [lines, totalValue, buildingType],
+    () => buildingType ? validateSOV(activeLines, totalValue, buildingType) : [],
+    [activeLines, totalValue, buildingType],
   );
 
   return (
@@ -34,6 +41,7 @@ export function SOVLivePreview({ lines, buildingType }: Props) {
         </h3>
         <p className="text-[10px] text-muted-foreground mt-0.5">
           {totalLines} line item{totalLines !== 1 ? 's' : ''} · {totalValue > 0 ? formatCurrency(totalValue) : 'enter contract value'} · {totalPct.toFixed(1)}%
+          {ghostLines.length > 0 && ` · ${ghostLines.length} by others`}
         </p>
       </div>
 
@@ -101,6 +109,33 @@ export function SOVLivePreview({ lines, buildingType }: Props) {
             </div>
           );
         })}
+
+        {ghostLines.length > 0 && (
+          <details className="pt-2 border-t border-dashed border-border">
+            <summary className="cursor-pointer text-[11px] font-heading font-bold text-muted-foreground uppercase tracking-wide hover:text-foreground">
+              By others / not in scope ({ghostLines.length})
+            </summary>
+            <div className="mt-2 space-y-0.5">
+              {ghostLines.map((line) => (
+                <div
+                  key={`ghost-${line.phase}-${line.lineNumber}-${line.description}`}
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded text-xs bg-muted/20 border border-dashed border-border/60"
+                  title={line.byOthersReason}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] text-muted-foreground/60 font-mono w-5 shrink-0">—</span>
+                    <span className="truncate text-muted-foreground line-through decoration-muted-foreground/40">
+                      {line.description}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/70 shrink-0 ml-2 italic">
+                    {line.byOthersReason}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );
