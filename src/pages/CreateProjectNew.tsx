@@ -41,6 +41,7 @@ const FIXED_STEPS: StepDef[] = [
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'contracts', label: 'Contracts', description: 'Contract values' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
+  { id: 'scope_boundaries', label: 'Scope Boundaries', description: "What's in your scope?" },
   { id: 'scope', label: 'Scope', description: 'Scope & live SOV' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
