@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Building2 } from 'lucide-react';
 import { SIDING_MATERIALS } from '@/types/projectWizard';
 import { BUILDING_TYPES, type BuildingType } from '@/hooks/useSetupWizardV2';
+import { ALL_OTHER_PROJECT_OPTIONS, OTHER_PROJECT_GROUPS } from '@/lib/otherProjectTypes';
 import { cn } from '@/lib/utils';
 
 export interface TMBuildingInfo {
