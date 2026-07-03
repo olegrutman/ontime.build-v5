@@ -1201,13 +1201,25 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
     pushGhost('exterior_finish', 'Siding', byOthersReason('ext_walls'), 'siding_in_scope');
   }
 
+  // Fascia & soffit — split so users control each independently. Defaults
+  // to included when unanswered (backward compat with older drafts).
+  const fasciaIncluded = a.fascia_in_scope === undefined ? true : a.fascia_in_scope === 'yes';
+  const soffitIncluded = a.soffit_in_scope === undefined ? true : a.soffit_in_scope === 'yes';
+  const fasciaLabel = a.fascia_material ? `Fascia — ${a.fascia_material}` : 'Fascia';
+  const soffitLabel = a.soffit_material ? `Soffit — ${a.soffit_material}` : 'Soffit';
+
   if (excludeExteriorFinishBulk) {
-    pushGhost('exterior_finish', 'Fascia & soffit', byOthersReason('ext_walls'));
+    pushGhost('exterior_finish', 'Fascia', byOthersReason('ext_walls'), 'fascia_in_scope');
+    pushGhost('exterior_finish', 'Soffit', byOthersReason('ext_walls'), 'soffit_in_scope');
     pushGhost('exterior_finish', 'Trim', byOthersReason('ext_walls'));
   } else {
-    push('exterior_finish', 'Fascia & soffit', w('fascia_soffit'));
+    if (fasciaIncluded) push('exterior_finish', fasciaLabel, w('fascia'), 'fascia_in_scope');
+    else pushGhost('exterior_finish', 'Fascia', 'Not in scope', 'fascia_in_scope');
+    if (soffitIncluded) push('exterior_finish', soffitLabel, w('soffit'), 'soffit_in_scope');
+    else pushGhost('exterior_finish', 'Soffit', 'Not in scope', 'soffit_in_scope');
     push('exterior_finish', 'Trim', w('trim'));
   }
+
 
   if (a.has_balcony === 'yes') {
     const deckLabel = bt === 'senior_living' ? 'Porch / screened entry framing'
