@@ -112,7 +112,29 @@ export type InteriorPartitionsScope = 'full' | 'partial' | 'none';
 
 export type EnvelopeLayer = 'sheathing' | 'wrb' | 'insulation' | 'siding';
 
+export type BuildingScopeType =
+  | 'complete'
+  | 'shell_only'
+  | 'interior_only'
+  | 'addition_vertical'
+  | 'addition_horizontal'
+  | 'specific';
+
+export type GroundFloorScope =
+  | 'framed_self'
+  | 'slab_by_others'
+  | 'podium_by_others'
+  | 'na';
+
+export type UpperFloorScope =
+  | 'framed_self'
+  | 'ijoist_self'
+  | 'steel_by_others'
+  | 'concrete_by_others'
+  | 'na';
+
 export interface ScopeBoundaries {
+  building_scope: BuildingScopeType;
   exterior_walls: ExteriorWallsScope;
   exterior_wall_material?: string;
   interior_partitions: InteriorPartitionsScope;
@@ -120,15 +142,58 @@ export interface ScopeBoundaries {
   roof_covering: boolean;
   envelope_layers: EnvelopeLayer[];
   mep_backout: boolean;
+  ground_floor: GroundFloorScope;
+  upper_floors: UpperFloorScope;
+  stair_framing: boolean;
+  /** Which story numbers (1-based) the contractor is framing. null = all. */
+  framed_floors: number[] | null;
 }
 
 export const DEFAULT_SCOPE_BOUNDARIES: ScopeBoundaries = {
+  building_scope: 'complete',
   exterior_walls: 'self',
   interior_partitions: 'full',
   roof_structure: 'trusses',
   roof_covering: true,
   envelope_layers: ['sheathing', 'wrb', 'insulation', 'siding'],
   mep_backout: true,
+  ground_floor: 'framed_self',
+  upper_floors: 'framed_self',
+  stair_framing: true,
+  framed_floors: null,
+};
+
+export const BUILDING_SCOPE_LABEL: Record<BuildingScopeType, string> = {
+  complete: 'Complete building (shell + interior)',
+  shell_only: 'Shell only (structure + envelope)',
+  interior_only: 'Interior only (TI / remodel inside existing shell)',
+  addition_vertical: 'Vertical addition (adding a story)',
+  addition_horizontal: 'Horizontal addition (expanding footprint)',
+  specific: 'Specific systems only (pick à la carte)',
+};
+
+export const BUILDING_SCOPE_HINT: Record<BuildingScopeType, string> = {
+  complete: 'Full framing scope from foundation to roof',
+  shell_only: 'No interior partitions or MEP backout',
+  interior_only: 'Existing shell — partitions + MEP only',
+  addition_vertical: 'New upper story on existing building',
+  addition_horizontal: 'New footprint attached to existing',
+  specific: 'You choose exactly what to include below',
+};
+
+export const GROUND_FLOOR_LABEL: Record<GroundFloorScope, string> = {
+  framed_self: "I'm framing the ground floor",
+  slab_by_others: 'Slab-on-grade by others (concrete sub)',
+  podium_by_others: 'Concrete podium by others',
+  na: 'N/A',
+};
+
+export const UPPER_FLOOR_LABEL: Record<UpperFloorScope, string> = {
+  framed_self: 'Wood-framed (self)',
+  ijoist_self: 'Engineered I-joist (self)',
+  steel_by_others: 'Steel deck by others',
+  concrete_by_others: 'Concrete deck by others',
+  na: 'N/A — single story',
 };
 
 export const EXTERIOR_WALL_LABEL: Record<ExteriorWallsScope, string> = {
@@ -160,6 +225,54 @@ export const ENVELOPE_LAYER_LABEL: Record<EnvelopeLayer, string> = {
   siding: 'Siding / exterior finish',
 };
 
+/** Preset boundary values applied when the user picks a building scope. */
+export function presetForBuildingScope(scope: BuildingScopeType): Partial<ScopeBoundaries> {
+  switch (scope) {
+    case 'complete':
+      return {
+        exterior_walls: 'self', interior_partitions: 'full',
+        roof_structure: 'trusses', roof_covering: true,
+        envelope_layers: ['sheathing', 'wrb', 'insulation', 'siding'],
+        mep_backout: true, ground_floor: 'framed_self',
+        upper_floors: 'framed_self', stair_framing: true, framed_floors: null,
+      };
+    case 'shell_only':
+      return {
+        exterior_walls: 'self', interior_partitions: 'none',
+        roof_structure: 'trusses', roof_covering: true,
+        envelope_layers: ['sheathing', 'wrb', 'insulation', 'siding'],
+        mep_backout: false, ground_floor: 'framed_self',
+        upper_floors: 'framed_self', stair_framing: true, framed_floors: null,
+      };
+    case 'interior_only':
+      return {
+        exterior_walls: 'na', interior_partitions: 'full',
+        roof_structure: 'by_others', roof_covering: false,
+        envelope_layers: [], mep_backout: true,
+        ground_floor: 'slab_by_others', upper_floors: 'na',
+        stair_framing: false, framed_floors: null,
+      };
+    case 'addition_vertical':
+      return {
+        exterior_walls: 'self', interior_partitions: 'full',
+        roof_structure: 'trusses', roof_covering: true,
+        envelope_layers: ['sheathing', 'wrb', 'insulation', 'siding'],
+        mep_backout: true, ground_floor: 'slab_by_others',
+        upper_floors: 'framed_self', stair_framing: true, framed_floors: null,
+      };
+    case 'addition_horizontal':
+      return {
+        exterior_walls: 'self', interior_partitions: 'full',
+        roof_structure: 'trusses', roof_covering: true,
+        envelope_layers: ['sheathing', 'wrb', 'insulation', 'siding'],
+        mep_backout: true, ground_floor: 'framed_self',
+        upper_floors: 'framed_self', stair_framing: true, framed_floors: null,
+      };
+    case 'specific':
+      return {};
+  }
+}
+
 export function resolveScopeBoundaries(answers: Answers): ScopeBoundaries {
   const raw = (answers?.scope_boundaries ?? {}) as Partial<ScopeBoundaries>;
   return {
@@ -169,8 +282,10 @@ export function resolveScopeBoundaries(answers: Answers): ScopeBoundaries {
       ? raw.envelope_layers.filter((l): l is EnvelopeLayer =>
           l === 'sheathing' || l === 'wrb' || l === 'insulation' || l === 'siding')
       : DEFAULT_SCOPE_BOUNDARIES.envelope_layers,
+    framed_floors: Array.isArray(raw.framed_floors) ? raw.framed_floors : null,
   };
 }
+
 
 /* ══════════════════════════════════════════════════════════════════════
    QUESTION DEFINITIONS
