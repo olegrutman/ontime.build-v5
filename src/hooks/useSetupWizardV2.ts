@@ -1335,36 +1335,49 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   return lines;
 }
 
-/** Validate SOV and return warnings */
-export function validateSOV(lines: SOVLine[], contractValue: number, bt: BuildingType): SOVValidationWarning[] {
+/** Validate SOV and return warnings.
+ *  `isNonStandard` = true for "Other" project types (barn, shed, TI, ADU, etc.)
+ *  where the standard weighting thresholds routinely produce false positives
+ *  because the underlying template is `custom_home` but the real scope isn't. */
+export function validateSOV(
+  lines: SOVLine[],
+  contractValue: number,
+  bt: BuildingType,
+  isNonStandard: boolean = false,
+): SOVValidationWarning[] {
   const warnings: SOVValidationWarning[] = [];
   if (lines.length === 0) return warnings;
 
-  // Single line > 20%
-  for (const l of lines) {
-    if (l.suggested_pct > 20) {
-      warnings.push({ lineNumber: l.lineNumber, message: `"${l.description}" is ${l.suggested_pct}% — exceeds 20% threshold`, severity: 'soft' });
+  // Single line > 20% — noisy for non-standard projects (single-system scopes
+  // legitimately concentrate value in one or two lines).
+  if (!isNonStandard) {
+    for (const l of lines) {
+      if (l.suggested_pct > 20) {
+        warnings.push({ lineNumber: l.lineNumber, message: `"${l.description}" is ${l.suggested_pct}% — exceeds 20% threshold`, severity: 'soft' });
+      }
     }
   }
 
-  // Mobilization > 10%
+  // Mobilization > 10% — always a hard cap.
   const mobLines = lines.filter(l => l.description.toLowerCase().includes('mobilization'));
   const mobTotal = mobLines.reduce((s, l) => s + l.suggested_pct, 0);
   if (mobTotal > 10) {
     warnings.push({ message: `Mobilization total ${mobTotal}% exceeds 10% hard cap`, severity: 'hard' });
   }
 
-  // Closeout < 2% or < $2000
-  const closeoutLines = lines.filter(l => l.phase === 'closeout');
-  const closeoutPct = closeoutLines.reduce((s, l) => s + l.suggested_pct, 0);
-  const closeoutAmt = closeoutLines.reduce((s, l) => s + l.amount, 0);
-  if (closeoutPct < 2 || (contractValue > 0 && closeoutAmt < 2000)) {
-    warnings.push({ message: `Closeout total is ${closeoutPct.toFixed(1)}% ($${closeoutAmt.toLocaleString()}) — recommend at least 2% or $2,000`, severity: 'soft' });
+  // Closeout < 2% or < $2000 — skip for non-standard (many outbuildings/TI have no closeout phase).
+  if (!isNonStandard) {
+    const closeoutLines = lines.filter(l => l.phase === 'closeout');
+    const closeoutPct = closeoutLines.reduce((s, l) => s + l.suggested_pct, 0);
+    const closeoutAmt = closeoutLines.reduce((s, l) => s + l.amount, 0);
+    if (closeoutPct < 2 || (contractValue > 0 && closeoutAmt < 2000)) {
+      warnings.push({ message: `Closeout total is ${closeoutPct.toFixed(1)}% ($${closeoutAmt.toLocaleString()}) — recommend at least 2% or $2,000`, severity: 'soft' });
+    }
   }
 
-  // MEP backout < 6% on MF/Hotel/Senior
+  // MEP backout < 6% on MF/Hotel/Senior — not applicable to non-standard scopes.
   const isMFCommercial = ['apartments_mf', 'hotel', 'senior_living', 'townhome'].includes(bt);
-  if (isMFCommercial) {
+  if (isMFCommercial && !isNonStandard) {
     const backoutLine = lines.find(l => l.description.toLowerCase().includes('mep backout'));
     if (backoutLine && backoutLine.suggested_pct < 6) {
       warnings.push({ lineNumber: backoutLine.lineNumber, message: `MEP backout at ${backoutLine.suggested_pct}% — under-pricing backout is the #1 reason framers lose money on MF/commercial jobs`, severity: 'soft' });
@@ -1373,6 +1386,7 @@ export function validateSOV(lines: SOVLine[], contractValue: number, bt: Buildin
 
   return warnings;
 }
+
 
 export const WIZARD_STEPS = [
   { key: 'building_type', label: 'Building Type' },
