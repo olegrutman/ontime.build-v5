@@ -371,6 +371,19 @@ export default function CreateProjectNew() {
             onOtherLabelChange={setOtherProjectLabel}
           />
         );
+      case 'scope_boundaries':
+        return wizard.buildingType ? (
+          <ScopeBoundariesPanel
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            sovLines={wizard.sovLines}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Please go back and select a building type first.
+          </p>
+        );
       case 'scope':
         return wizard.buildingType ? (
           <ScopeQuestionsPanel
