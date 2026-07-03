@@ -76,6 +76,10 @@ export interface SOVLine {
   suggested_pct: number;
   status: 'draft';
   conditionalKey: string | null;
+  /** True when the line is intentionally out-of-scope (ghost row). */
+  byOthers?: boolean;
+  /** Short reason shown in the SOV preview when byOthers is true. */
+  byOthersReason?: string;
 }
 
 export interface SOVValidationWarning {
@@ -85,6 +89,88 @@ export interface SOVValidationWarning {
 }
 
 export type Answers = Record<string, any>;
+
+/* ══════════════════════════════════════════════════════════════════════
+   SCOPE BOUNDARIES — what the contractor is actually building
+   ══════════════════════════════════════════════════════════════════════ */
+
+export type ExteriorWallsScope =
+  | 'self'
+  | 'by_others_concrete'
+  | 'by_others_cmu'
+  | 'by_others_tilt'
+  | 'by_others_steel'
+  | 'na';
+
+export type RoofStructureScope =
+  | 'trusses'
+  | 'rafters'
+  | 'steel_joist'
+  | 'by_others';
+
+export type InteriorPartitionsScope = 'full' | 'partial' | 'none';
+
+export type EnvelopeLayer = 'sheathing' | 'wrb' | 'insulation' | 'siding';
+
+export interface ScopeBoundaries {
+  exterior_walls: ExteriorWallsScope;
+  exterior_wall_material?: string;
+  interior_partitions: InteriorPartitionsScope;
+  roof_structure: RoofStructureScope;
+  roof_covering: boolean;
+  envelope_layers: EnvelopeLayer[];
+  mep_backout: boolean;
+}
+
+export const DEFAULT_SCOPE_BOUNDARIES: ScopeBoundaries = {
+  exterior_walls: 'self',
+  interior_partitions: 'full',
+  roof_structure: 'trusses',
+  roof_covering: true,
+  envelope_layers: ['sheathing', 'wrb', 'insulation', 'siding'],
+  mep_backout: true,
+};
+
+export const EXTERIOR_WALL_LABEL: Record<ExteriorWallsScope, string> = {
+  self: "I'm building them (wood or CFS framing)",
+  by_others_concrete: 'By others — poured concrete',
+  by_others_cmu: 'By others — CMU / block',
+  by_others_tilt: 'By others — tilt-up panels',
+  by_others_steel: 'By others — structural steel + infill',
+  na: 'N/A — interior-only project',
+};
+
+export const ROOF_STRUCTURE_LABEL: Record<RoofStructureScope, string> = {
+  trusses: 'Yes — engineered trusses',
+  rafters: 'Yes — rafters / stick-framed',
+  steel_joist: 'Yes — steel joists / deck',
+  by_others: 'No — by others',
+};
+
+export const INTERIOR_PARTITION_LABEL: Record<InteriorPartitionsScope, string> = {
+  full: 'Yes — all floors',
+  partial: 'Partial — some floors',
+  none: 'No — not in scope',
+};
+
+export const ENVELOPE_LAYER_LABEL: Record<EnvelopeLayer, string> = {
+  sheathing: 'Wall sheathing',
+  wrb: 'WRB / house wrap',
+  insulation: 'Insulation',
+  siding: 'Siding / exterior finish',
+};
+
+export function resolveScopeBoundaries(answers: Answers): ScopeBoundaries {
+  const raw = (answers?.scope_boundaries ?? {}) as Partial<ScopeBoundaries>;
+  return {
+    ...DEFAULT_SCOPE_BOUNDARIES,
+    ...raw,
+    envelope_layers: Array.isArray(raw.envelope_layers)
+      ? raw.envelope_layers.filter((l): l is EnvelopeLayer =>
+          l === 'sheathing' || l === 'wrb' || l === 'insulation' || l === 'siding')
+      : DEFAULT_SCOPE_BOUNDARIES.envelope_layers,
+  };
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    QUESTION DEFINITIONS
