@@ -791,6 +791,33 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   const a = answers;
   const contractValue = typeof a.contract_value === 'number' ? a.contract_value : 0;
   const isLaborOnly = a.material_responsibility === 'GC supplies materials';
+  const sb = resolveScopeBoundaries(a);
+
+  // Excluded phases (all lines skipped -> ghost)
+  const excludedPhases = new Set<SOVPhase>();
+  const extWallsByOthers = sb.exterior_walls !== 'self';
+  const noInteriorWalls = sb.interior_partitions === 'none';
+  const noExtOrInterior = extWallsByOthers && noInteriorWalls;
+
+  if (sb.roof_structure === 'by_others') excludedPhases.add('roof');
+  if (!sb.mep_backout || noInteriorWalls) excludedPhases.add('backout');
+  // Envelope only fully excluded if walls by others AND no layers selected
+  if (extWallsByOthers && sb.envelope_layers.length === 0) excludedPhases.add('envelope');
+  // Exterior finish excluded when walls by others and no siding — but decks/porches survive individually
+  const excludeExteriorFinishBulk = extWallsByOthers && !sb.envelope_layers.includes('siding');
+
+  const wallMaterialLabel = extWallsByOthers
+    ? EXTERIOR_WALL_LABEL[sb.exterior_walls].replace(/^By others — /, '')
+    : '';
+  const byOthersReason = (kind: 'ext_walls' | 'roof' | 'interior' | 'envelope' | 'backout'): string => {
+    switch (kind) {
+      case 'ext_walls': return `Exterior walls by others (${wallMaterialLabel})`;
+      case 'roof': return 'Roof structure by others';
+      case 'interior': return 'Interior partitions not in scope';
+      case 'envelope': return 'Envelope layer not in scope';
+      case 'backout': return 'MEP backout not in scope';
+    }
+  };
 
   const w = (key: WeightKey): number => {
     const val = BT_OVERRIDES[bt]?.[key] ?? BASE_WEIGHTS[key] ?? 0;
@@ -802,8 +829,12 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // Collect raw weighted lines
   const rawLines: { desc: string; phase: SOVPhase; weight: number; key: string | null }[] = [];
+  const ghostLines: { desc: string; phase: SOVPhase; reason: string; key: string | null }[] = [];
   const push = (phase: SOVPhase, desc: string, wt: number, key: string | null = null) => {
     if (wt > 0) rawLines.push({ desc, phase, weight: wt, key });
+  };
+  const pushGhost = (phase: SOVPhase, desc: string, reason: string, key: string | null = null) => {
+    ghostLines.push({ desc, phase, reason, key });
   };
 
   const floorSystem = a.floor_system || 'TJI I-joists';
