@@ -196,6 +196,12 @@ export default function FinishProjectSetup() {
     if (currentStep > activeSteps.length - 1) setCurrentStep(activeSteps.length - 1);
   }, [activeSteps.length, currentStep]);
 
+  // Scroll to top on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [currentStep]);
+
+
   // When the project is already active, show the read-only Project Summary
   // instead of the setup wizard. The wizard is shown only while the project
   // is still in 'setup' or 'draft'.

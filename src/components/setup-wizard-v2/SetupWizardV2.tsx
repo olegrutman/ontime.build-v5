@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Loader2, ChevronRight, ChevronLeft, CheckCircle2, Pencil } from 'lucide-react';
@@ -49,6 +49,12 @@ export function SetupWizardV2({ projectId, onComplete }: Props) {
     const phases = STEP_PHASES[stepKey] || [];
     return visibleQuestions.filter((q) => phases.includes(q.phase));
   }, [currentStep, visibleQuestions]);
+
+  // Scroll to top on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [currentStep]);
+
 
   const stepKey = WIZARD_STEPS[currentStep]?.key;
   const isTypeStep = stepKey === 'building_type';

@@ -139,6 +139,12 @@ export default function CreateProjectNew() {
     }
   }, [activeSteps.length, currentStep]);
 
+  // Scroll to top on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [currentStep]);
+
+
   useEffect(() => {
     if (!authLoading && (!user || !currentOrg)) {
       navigate('/dashboard');
