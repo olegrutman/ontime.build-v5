@@ -25,6 +25,7 @@ import { useSetupWizardV2, type BuildingType, type Answers } from '@/hooks/useSe
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
 import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
+import { ScopeBoundariesPanel } from '@/components/setup-wizard-v2/ScopeBoundariesPanel';
 import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
