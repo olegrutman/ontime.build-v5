@@ -1262,7 +1262,7 @@ export function useSetupWizardV2(
     const sovId = newSov.id;
 
     // Generate and insert SOV items
-    const currentSovLines = generateSOVLines(buildingType!, { ...sovLineAnswers, contract_value: contractValue });
+    const currentSovLines = generateSOVLines(buildingType!, { ...sovLineAnswers, contract_value: contractValue }).filter(l => !l.byOthers);
     const sovItems = currentSovLines.map((line) => ({
       project_id: pid,
       sov_id: sovId,
