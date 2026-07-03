@@ -90,6 +90,7 @@ export default function CreateProjectNew() {
   const [contractMode, setContractMode] = useState<ContractMode>(draft?.contractMode ?? 'fixed');
   const [tmScope, setTmScope] = useState<TMBuildingInfo>(draft?.tmScope ?? initialTMBuildingInfo);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [otherProjectLabel, setOtherProjectLabel] = useState<string | null>(draft?.otherProjectLabel ?? null);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
@@ -115,11 +116,12 @@ export default function CreateProjectNew() {
           tmScope,
           wizardAnswers: wizard.answers,
           wizardBuildingType: wizard.buildingType,
+          otherProjectLabel,
         }));
       } catch { /* quota exceeded — ignore */ }
     }, 300);
     return () => clearTimeout(timer);
-  }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType]);
+  }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType, otherProjectLabel]);
 
   const isTM = contractMode === 'tm';
   const isSupplier = creatorOrgType === 'SUPPLIER';
@@ -196,7 +198,7 @@ export default function CreateProjectNew() {
         .from('projects')
         .insert({
           name: basics.name,
-          project_type: isSupplier ? (tmScope.buildingType || '') : (isTM ? 'Remodel / T&M' : (wizard.buildingType || '')),
+          project_type: isSupplier ? (tmScope.buildingType || '') : (isTM ? 'Remodel / T&M' : (otherProjectLabel || wizard.buildingType || '')),
           address: { street: basics.address } as any,
           city: basics.city,
           state: basics.state,
@@ -363,6 +365,8 @@ export default function CreateProjectNew() {
           <BuildingTypeSelector
             selected={wizard.buildingType}
             onSelect={(bt) => wizard.selectBuildingType(bt)}
+            otherLabel={otherProjectLabel}
+            onOtherLabelChange={setOtherProjectLabel}
           />
         );
       case 'scope':

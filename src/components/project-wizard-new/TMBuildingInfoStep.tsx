@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Building2 } from 'lucide-react';
 import { SIDING_MATERIALS } from '@/types/projectWizard';
 import { BUILDING_TYPES, type BuildingType } from '@/hooks/useSetupWizardV2';
+import { ALL_OTHER_PROJECT_OPTIONS, OTHER_PROJECT_GROUPS } from '@/lib/otherProjectTypes';
 import { cn } from '@/lib/utils';
 
 export interface TMBuildingInfo {
@@ -96,26 +97,93 @@ export function TMBuildingInfoStep({ data, onChange, hideMaterialResponsibility,
           <div className="space-y-1.5">
             <Label>Building Type *</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
-              {BUILDING_TYPES.map((bt) => (
-                <button
-                  key={bt.slug}
-                  type="button"
-                  onClick={() => onChange({ buildingType: bt.slug })}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all text-center',
-                    'hover:border-primary/60 hover:bg-primary/5',
-                    data.buildingType === bt.slug
-                      ? 'border-primary bg-primary/10 shadow-sm'
-                      : 'border-border bg-card',
-                  )}
-                >
-                  <span className="text-2xl">{bt.icon}</span>
-                  <span className="font-heading text-xs font-bold leading-tight">{bt.label}</span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">{bt.description}</span>
-                </button>
-              ))}
+              {BUILDING_TYPES.map((bt) => {
+                const active = data.buildingType === bt.slug;
+                return (
+                  <button
+                    key={bt.slug}
+                    type="button"
+                    onClick={() => onChange({ buildingType: bt.slug })}
+                    className={cn(
+                      'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all text-center',
+                      'hover:border-primary/60 hover:bg-primary/5',
+                      active ? 'border-primary bg-primary/10 shadow-sm' : 'border-border bg-card',
+                    )}
+                  >
+                    <span className="text-2xl">{bt.icon}</span>
+                    <span className="font-heading text-xs font-bold leading-tight">{bt.label}</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">{bt.description}</span>
+                  </button>
+                );
+              })}
+
+              {/* Other tile */}
+              <button
+                type="button"
+                onClick={() => onChange({ buildingType: 'other' })}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all text-center',
+                  'hover:border-primary/60 hover:bg-primary/5',
+                  (data.buildingType === 'other' || ALL_OTHER_PROJECT_OPTIONS.includes(data.buildingType) || (data.buildingType && !BUILDING_TYPES.some(b => b.slug === data.buildingType)))
+                    ? 'border-primary bg-primary/10 shadow-sm'
+                    : 'border-dashed border-border bg-card',
+                )}
+              >
+                <span className="text-2xl">➕</span>
+                <span className="font-heading text-xs font-bold leading-tight">Other</span>
+                <span className="text-[10px] text-muted-foreground leading-tight">
+                  Restaurant, barn, office, school, shed…
+                </span>
+              </button>
             </div>
+
+            {/* Other subtype picker */}
+            {(data.buildingType === 'other' || (data.buildingType && !BUILDING_TYPES.some(b => b.slug === data.buildingType))) && (
+              <div className="mt-4 space-y-4 p-4 rounded-lg border bg-muted/30">
+                {OTHER_PROJECT_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                      {group.label}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {group.options.map((opt) => {
+                        const active = data.buildingType === opt;
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => onChange({ buildingType: opt })}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                              active
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-card text-foreground border-border hover:border-primary/50',
+                            )}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div className="pt-2 border-t">
+                  <Label className="text-xs">Or type a custom project</Label>
+                  <Input
+                    className="mt-1"
+                    placeholder="e.g., Firehouse, Winery, Boat House…"
+                    value={
+                      data.buildingType && data.buildingType !== 'other' && !ALL_OTHER_PROJECT_OPTIONS.includes(data.buildingType)
+                        ? data.buildingType
+                        : ''
+                    }
+                    onChange={(e) => onChange({ buildingType: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
+
 
           <div className="grid grid-cols-2 gap-4">
             {/* Stories */}
