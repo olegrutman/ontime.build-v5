@@ -32,6 +32,7 @@ const FIXED_STEPS: StepDef[] = [
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'invite_team', label: 'Invite Team', description: 'Add downstream crews' },
   { id: 'contracts', label: 'Contracts', description: 'Owner + downstream values' },
+  { id: 'scope_boundaries', label: 'Scope Boundaries', description: "What's in your scope?" },
   { id: 'scope', label: 'Scope', description: 'Scope & SOV' },
   { id: 'review', label: 'Review', description: 'Finalize' },
 ];
