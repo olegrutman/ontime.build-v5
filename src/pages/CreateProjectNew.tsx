@@ -90,6 +90,7 @@ export default function CreateProjectNew() {
   const [contractMode, setContractMode] = useState<ContractMode>(draft?.contractMode ?? 'fixed');
   const [tmScope, setTmScope] = useState<TMBuildingInfo>(draft?.tmScope ?? initialTMBuildingInfo);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [otherProjectLabel, setOtherProjectLabel] = useState<string | null>(draft?.otherProjectLabel ?? null);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
