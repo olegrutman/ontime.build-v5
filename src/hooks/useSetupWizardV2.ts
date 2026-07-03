@@ -850,7 +850,7 @@ const BASE_WEIGHTS: Partial<Record<WeightKey, number>> = {
   roof_framing: 5.5, roof_sheathing: 2.5, parapet: 2, roof_deck_struct: 2,
   wrb: 2, windows_install: 2.5, windows_fi: 5.5, windows_ro: 1.25,
   mep_backout: 7, blocking: 2.5, fire_blocking: 2, shim_shave: 2, ada_std: 2.5, ada_full: 4.5,
-  siding_whole: 4, siding_elev: 1.5, fascia_soffit: 3, trim: 1.5,
+  siding_whole: 4, siding_elev: 1.5, fascia_soffit: 3, fascia: 1.5, soffit: 1.5, trim: 1.5,
   balcony_framing: 1.5, decking_composite: 1.5, decking_pt: 0.75, decking_concrete: 1.25,
   rooftop_deck_framing: 2, rooftop_decking: 1.5,
   decorative: 2, covered_entry: 1.5, porte_cochere: 2, pool_deck: 1.5,
