@@ -428,6 +428,17 @@ export default function FinishProjectSetup() {
         );
       case 'building_type':
         return <BuildingTypeSelector selected={wizard.buildingType} onSelect={(bt) => wizard.selectBuildingType(bt)} />;
+      case 'scope_boundaries':
+        return wizard.buildingType ? (
+          <ScopeBoundariesPanel
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            sovLines={wizard.sovLines}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground py-8 text-center">Pick a building type first.</p>
+        );
       case 'scope':
         return wizard.buildingType ? (
           <ScopeQuestionsPanel
