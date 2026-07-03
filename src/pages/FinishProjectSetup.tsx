@@ -19,6 +19,7 @@ import { EditableInfoRow, type RowFieldType } from '@/components/project-setup/E
 
 import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
 import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
+import { ScopeBoundariesPanel } from '@/components/setup-wizard-v2/ScopeBoundariesPanel';
 import { ContractsStep, type DownstreamContractRow } from '@/components/project-wizard-new/ContractsStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
 import { TeamStep } from '@/components/project-wizard-new/TeamStep';
