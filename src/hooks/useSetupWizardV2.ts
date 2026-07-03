@@ -831,7 +831,7 @@ type WeightKey =
   | 'roof_framing' | 'roof_sheathing' | 'parapet' | 'roof_deck_struct'
   | 'wrb' | 'windows_install' | 'windows_fi' | 'windows_ro'
   | 'mep_backout' | 'blocking' | 'fire_blocking' | 'shim_shave' | 'ada_std' | 'ada_full'
-  | 'siding_whole' | 'siding_elev' | 'fascia_soffit' | 'trim'
+  | 'siding_whole' | 'siding_elev' | 'fascia_soffit' | 'fascia' | 'soffit' | 'trim'
   | 'balcony_framing' | 'decking_composite' | 'decking_pt' | 'decking_concrete'
   | 'rooftop_deck_framing' | 'rooftop_decking'
   | 'decorative' | 'covered_entry' | 'porte_cochere' | 'pool_deck'
