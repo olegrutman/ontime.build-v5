@@ -1106,6 +1106,22 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
     lines[lines.length - 1].amount = Math.round((contractValue - allocated) * 100) / 100;
   }
 
+  // Append ghost lines (by-others) at the end — no dollars, no % impact
+  const startNumber = lines.length + 1;
+  ghostLines.forEach((g, idx) => {
+    lines.push({
+      lineNumber: startNumber + idx,
+      description: g.desc,
+      phase: g.phase,
+      amount: 0,
+      suggested_pct: 0,
+      status: 'draft',
+      conditionalKey: g.key,
+      byOthers: true,
+      byOthersReason: g.reason,
+    });
+  });
+
   return lines;
 }
 
