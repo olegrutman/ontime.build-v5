@@ -1018,37 +1018,62 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
     const label = `L${i}`;
     const fi = FLOOR_INNER_WEIGHTS;
 
+    // Skip entire floor if user picked a specific subset that excludes it
+    const floorInScope = sb.framed_floors === null || sb.framed_floors.includes(i);
+    // Determine per-floor system exclusion (ground vs upper)
+    const isGround = i === 1;
+    const groundExcluded = isGround && (sb.ground_floor === 'slab_by_others' || sb.ground_floor === 'podium_by_others' || sb.ground_floor === 'na');
+    const upperExcluded = !isGround && (sb.upper_floors === 'steel_by_others' || sb.upper_floors === 'concrete_by_others' || sb.upper_floors === 'na');
+    const floorSysExcluded = !floorInScope || groundExcluded || upperExcluded;
+    const floorSysReason = !floorInScope ? `${label} not in your scope`
+      : groundExcluded ? `Ground floor: ${GROUND_FLOOR_LABEL[sb.ground_floor]}`
+      : `Upper floor: ${UPPER_FLOOR_LABEL[sb.upper_floors]}`;
+
     const floorSysW = perFloorAllocation * fi.floor_system / 100;
     const floorSheathW = perFloorAllocation * fi.floor_sheathing / 100;
     const wallW = perFloorAllocation * fi.wall_framing / 100;
     const hwW = perFloorAllocation * fi.hardware / 100;
 
-    push('per_floor', `Floor system (${floorSystem}) — ${label}`,
-      isLaborOnly ? floorSysW * (1 - (LABOR_ONLY_REDUCTIONS.floor_system || 0)) : floorSysW);
-    push('per_floor', `Floor sheathing — ${label}`,
-      isLaborOnly ? floorSheathW * (1 - (LABOR_ONLY_REDUCTIONS.floor_sheathing || 0)) : floorSheathW);
+    if (floorSysExcluded) {
+      pushGhost('per_floor', `Floor system — ${label}`, floorSysReason);
+      pushGhost('per_floor', `Floor sheathing — ${label}`, floorSysReason);
+    } else {
+      push('per_floor', `Floor system (${floorSystem}) — ${label}`,
+        isLaborOnly ? floorSysW * (1 - (LABOR_ONLY_REDUCTIONS.floor_system || 0)) : floorSysW);
+      push('per_floor', `Floor sheathing — ${label}`,
+        isLaborOnly ? floorSheathW * (1 - (LABOR_ONLY_REDUCTIONS.floor_sheathing || 0)) : floorSheathW);
+    }
 
-    if (wallWeightMultiplier > 0) {
+    if (!floorInScope) {
+      pushGhost('per_floor', `Wall framing — ${label}`, floorSysReason);
+      pushGhost('per_floor', `Hardware & connectors — ${label}`, floorSysReason);
+    } else if (wallWeightMultiplier > 0) {
       const wallLabel = extWallsByOthers
         ? `Interior wall framing — ${label}`
         : noInteriorWalls
           ? `Exterior wall framing — ${label}`
           : `Wall framing — ${label}`;
       push('per_floor', wallLabel, wallW * wallWeightMultiplier);
+      push('per_floor', `Hardware & connectors — ${label}`, hwW);
     } else {
       pushGhost('per_floor', `Wall framing — ${label}`,
         noExtOrInterior ? 'All walls by others / not in scope'
         : extWallsByOthers ? byOthersReason('ext_walls')
         : byOthersReason('interior'));
+      push('per_floor', `Hardware & connectors — ${label}`, hwW);
     }
-    push('per_floor', `Hardware & connectors — ${label}`, hwW);
 
-    if (a.has_elevator === 'yes') {
+    if (a.has_elevator === 'yes' && floorInScope) {
       push('per_floor', `Elevator hoistway framing — ${label}`, perFloorAllocation * fi.elevator / 100, 'has_elevator');
     }
-    if ((a.stair_towers ?? 0) > 0) {
-      push('per_floor', `Stair tower framing — ${label} (×${a.stair_towers})`, perFloorAllocation * fi.stairs / 100, 'stair_towers');
+    if ((a.stair_towers ?? 0) > 0 && floorInScope) {
+      if (sb.stair_framing) {
+        push('per_floor', `Stair tower framing — ${label} (×${a.stair_towers})`, perFloorAllocation * fi.stairs / 100, 'stair_towers');
+      } else {
+        pushGhost('per_floor', `Stair tower framing — ${label}`, 'Stair framing by others', 'stair_towers');
+      }
     }
+
     if (i === 1 && (a.has_garage === 'yes' || (a.has_garage as any)?.enabled === true || (a.garage_type && a.garage_type !== 'No garage'))) {
       const gType = a.garage_type || (typeof a.has_garage === 'object' ? a.has_garage.subtype : 'Attached');
       push('per_floor', `Garage framing — ${gType || 'Attached'}`, w('garage'), 'has_garage');
