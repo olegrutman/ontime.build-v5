@@ -528,12 +528,16 @@ export function useDashboardData(): DashboardData {
       if (poIds.length > 0) {
         const { data: poDetails } = await supabase
           .from('purchase_orders')
-          .select('id, pricing_owner_org_id, supplier_org_id')
+          .select('id, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
           .in('id', poIds);
         (poDetails || []).forEach((po: any) => {
-          poOrgMap.set(po.id, { pricing_owner_org_id: po.pricing_owner_org_id, supplier_org_id: po.supplier_org_id });
+          poOrgMap.set(po.id, {
+            pricing_owner_org_id: po.pricing_owner_org_id,
+            supplier_org_id: po.supplier?.organization_id ?? null,
+          });
         });
       }
+
 
       // Build recent docs — filtered by org ownership
       const recentDocsList: RecentDoc[] = [];
