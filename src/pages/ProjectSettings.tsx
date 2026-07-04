@@ -112,10 +112,14 @@ export default function ProjectSettings() {
     );
   }
 
-  if (!isGC) {
+  if (!canEditProjectInfo && !canEditFinancials) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <p className="text-muted-foreground">Only GC organizations can manage project settings.</p>
+        <p className="text-muted-foreground">
+          {isGC
+            ? 'Only GC admins or managers with "Manage Org" permission can edit project settings. Ask an admin for access.'
+            : 'Only the General Contractor on this project can manage these settings.'}
+        </p>
         <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>Go back</Button>
       </div>
     );
