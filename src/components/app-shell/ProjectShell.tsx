@@ -2,7 +2,7 @@ import { ReactNode, useState } from 'react';
 import { useRoleLabels } from '@/hooks/useRoleLabels';
 import { RoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Download, Loader2 } from 'lucide-react';
+import { ChevronDown, Download, Loader2, Settings } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -138,6 +138,18 @@ export function ProjectShell({
           {/* Download */}
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hidden sm:flex" onClick={handleDownloadSummary} disabled={downloading}>
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          </Button>
+
+          {/* Project Settings (tax, retainage, markup disclosure) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => navigate(`/project/${projectId}/settings`)}
+            title="Project settings"
+            aria-label="Project settings"
+          >
+            <Settings className="h-4 w-4" />
           </Button>
 
           
