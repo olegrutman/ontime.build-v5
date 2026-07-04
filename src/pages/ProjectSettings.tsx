@@ -176,6 +176,7 @@ export default function ProjectSettings() {
                   onChange={e => setTaxRate(e.target.value)}
                   placeholder="8.25"
                   className="h-9 mt-1 font-mono"
+                  disabled={!canEditFinancials}
                 />
               </div>
               <div>
@@ -185,6 +186,7 @@ export default function ProjectSettings() {
                   onChange={e => setTaxLabel(e.target.value)}
                   placeholder="WA Sales Tax"
                   className="h-9 mt-1"
+                  disabled={!canEditFinancials}
                 />
               </div>
             </div>
@@ -194,10 +196,10 @@ export default function ProjectSettings() {
                 <p className="text-sm font-medium text-foreground">Labor is taxable</p>
                 <p className="text-xs text-muted-foreground">Some jurisdictions tax labor; most only tax materials & equipment.</p>
               </div>
-              <Switch checked={laborTaxable} onCheckedChange={setLaborTaxable} />
+              <Switch checked={laborTaxable} onCheckedChange={setLaborTaxable} disabled={!canEditFinancials} />
             </div>
 
-            <Button size="sm" onClick={saveTaxSettings} disabled={savingTax} className="h-8 text-xs">
+            <Button size="sm" onClick={saveTaxSettings} disabled={savingTax || !canEditFinancials} className="h-8 text-xs">
               {savingTax ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
               Save Tax Settings
             </Button>
