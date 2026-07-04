@@ -783,14 +783,15 @@ export default function FinishProjectSetup() {
 
   return (
     <AppLayout title="Finish Project Setup" fullWidth>
-      <div className="mx-auto w-full p-4 lg:p-6">
-        {/* Mobile / tablet header + horizontal stepper */}
-        <div className="lg:hidden mb-4">
-          <div className="flex items-center justify-between mb-3">
+      <div className="mx-auto w-full max-w-5xl p-4 lg:p-6">
+        {/* Header + horizontal stepper bar (all breakpoints) */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-3 gap-3">
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold font-heading truncate">Finish Setup</h1>
-              <p className="text-[11px] text-muted-foreground">
-                Step {currentStep + 1} of {activeSteps.length} · {activeSteps[currentStep]?.label}
+              <h1 className="text-lg lg:text-xl font-semibold font-heading truncate">Finish Project Setup</h1>
+              <p className="text-[11px] lg:text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                <Info className="h-3 w-3 shrink-0" />
+                <span className="truncate">Step {currentStep + 1} of {activeSteps.length} · {activeSteps[currentStep]?.label}</span>
               </p>
             </div>
             <Button
@@ -798,9 +799,9 @@ export default function FinishProjectSetup() {
               size="sm"
               onClick={() => navigate(`/project/${projectId}`)}
               disabled={saving}
-              className="text-muted-foreground hover:text-destructive h-9 px-2 shrink-0"
+              className="text-muted-foreground hover:text-destructive h-9 px-2 lg:px-3 shrink-0"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4 lg:mr-1.5" /> <span className="hidden lg:inline">Exit</span>
             </Button>
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1">
@@ -812,7 +813,7 @@ export default function FinishProjectSetup() {
                   key={step.id}
                   onClick={() => { if (index < currentStep) setCurrentStep(index); }}
                   className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap border transition-colors shrink-0',
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] lg:text-xs font-medium whitespace-nowrap border transition-colors shrink-0',
                     active && 'bg-primary text-primary-foreground border-primary',
                     done && !active && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
                     !done && !active && 'bg-muted/40 text-muted-foreground border-border',
@@ -832,87 +833,26 @@ export default function FinishProjectSetup() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          {/* Desktop sidebar */}
-          <aside className="hidden lg:block col-span-3 xl:col-span-2">
-            <div className="sticky top-4 bg-card rounded-2xl border border-border shadow-sm p-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-heading px-2 pb-2">
-                Setup Progress
-              </p>
-              <nav className="space-y-0.5">
-                {activeSteps.map((step, index) => {
-                  const done = index < currentStep;
-                  const active = index === currentStep;
-                  return (
-                    <button
-                      key={step.id}
-                      onClick={() => { if (index < currentStep) setCurrentStep(index); }}
-                      className={cn(
-                        'flex items-center gap-3 w-full text-left p-2 rounded-lg transition-colors',
-                        active && 'bg-primary/10',
-                        done && 'hover:bg-muted/50 cursor-pointer',
-                        !done && !active && 'cursor-default opacity-70',
-                      )}
-                    >
-                      <div className={cn(
-                        'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold font-heading shrink-0',
-                        active && 'bg-primary text-primary-foreground',
-                        done && 'bg-emerald-500 text-white',
-                        !done && !active && 'bg-muted text-muted-foreground',
-                      )}>
-                        {done ? <Check className="h-3.5 w-3.5" /> : index + 1}
-                      </div>
-                      <div className="min-w-0">
-                        <p className={cn('text-sm font-medium font-heading leading-tight', active && 'text-primary')}>{step.label}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{step.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </aside>
-
-          <div className="col-span-12 lg:col-span-9 xl:col-span-10">
-            <div className="hidden lg:flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-xl font-semibold font-heading">Finish Project Setup</h1>
-                <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                  <Info className="h-3.5 w-3.5" />
-                  This project was started by a supplier. Add the missing pieces to unlock dashboards.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(`/project/${projectId}`)}
-                disabled={saving}
-                className="text-muted-foreground hover:text-destructive h-9 px-3"
-              >
-                <X className="h-4 w-4 mr-1.5" /> Exit
+        <Card className="overflow-hidden">
+          <CardContent className="p-4 sm:p-6">{renderStep()}</CardContent>
+          <div className="flex items-center justify-between p-4 border-t bg-muted/30 gap-3">
+            <Button variant="outline" onClick={prevStep} disabled={currentStep === 0 || saving} className="min-h-[44px]">
+              <ChevronLeft className="h-4 w-4 mr-2" /> Back
+            </Button>
+            {!isLastStep ? (
+              <Button onClick={nextStep} disabled={!canProceed() || saving} className="min-h-[44px]">
+                Next <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
-            </div>
-            <Card className="overflow-hidden">
-              <CardContent className="p-4 sm:p-6">{renderStep()}</CardContent>
-              <div className="flex items-center justify-between p-4 border-t bg-muted/30 gap-3">
-                <Button variant="outline" onClick={prevStep} disabled={currentStep === 0 || saving} className="min-h-[44px]">
-                  <ChevronLeft className="h-4 w-4 mr-2" /> Back
-                </Button>
-                {!isLastStep ? (
-                  <Button onClick={nextStep} disabled={!canProceed() || saving} className="min-h-[44px]">
-                    Next <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={finish} disabled={saving} className="min-h-[44px]">
-                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Finish Setup
-                  </Button>
-                )}
-              </div>
-            </Card>
+            ) : (
+              <Button onClick={finish} disabled={saving} className="min-h-[44px]">
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Finish Setup
+              </Button>
+            )}
           </div>
-        </div>
+        </Card>
       </div>
+
     </AppLayout>
   );
 }
