@@ -218,7 +218,7 @@ export default function ProjectSettings() {
             </p>
           </div>
 
-          <RadioGroup value={markupVis} onValueChange={(v) => saveMarkupVisibility(v as MarkupVisibility)} className="space-y-3">
+          <RadioGroup value={markupVis} onValueChange={(v) => canEditFinancials && saveMarkupVisibility(v as MarkupVisibility)} disabled={!canEditFinancials} className="space-y-3">
             <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
               <RadioGroupItem value="hidden" className="mt-0.5" />
               <div>
