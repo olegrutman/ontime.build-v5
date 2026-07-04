@@ -10,15 +10,22 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { getEffectivePermissions } from '@/types/organization';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 
 export default function ProjectSettings() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { userOrgRoles } = useAuth();
-  const orgType = userOrgRoles?.[0]?.organization?.type;
+  const { userOrgRoles, memberPermissions } = useAuth();
+  const primaryRole = userOrgRoles?.[0];
+  const orgType = primaryRole?.organization?.type;
   const isGC = orgType === 'GC';
+  const isAdmin = !!primaryRole?.is_admin;
+  const perms = getEffectivePermissions(primaryRole?.role ?? null, memberPermissions, isAdmin);
+  // GC admins can edit everything; GC PMs with Manage Org can edit non-financial project info.
+  const canEditProjectInfo = isGC && (isAdmin || perms.canManageOrg);
+  const canEditFinancials = isGC && isAdmin;
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project-settings', projectId],
