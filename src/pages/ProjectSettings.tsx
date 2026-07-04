@@ -10,15 +10,22 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { getEffectivePermissions } from '@/types/organization';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 
 export default function ProjectSettings() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { userOrgRoles } = useAuth();
-  const orgType = userOrgRoles?.[0]?.organization?.type;
+  const { userOrgRoles, memberPermissions } = useAuth();
+  const primaryRole = userOrgRoles?.[0];
+  const orgType = primaryRole?.organization?.type;
   const isGC = orgType === 'GC';
+  const isAdmin = !!primaryRole?.is_admin;
+  const perms = getEffectivePermissions(primaryRole?.role ?? null, memberPermissions, isAdmin);
+  // GC admins can edit everything; GC PMs with Manage Org can edit non-financial project info.
+  const canEditProjectInfo = isGC && (isAdmin || perms.canManageOrg);
+  const canEditFinancials = isGC && isAdmin;
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project-settings', projectId],
@@ -105,10 +112,14 @@ export default function ProjectSettings() {
     );
   }
 
-  if (!isGC) {
+  if (!canEditProjectInfo && !canEditFinancials) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <p className="text-muted-foreground">Only GC organizations can manage project settings.</p>
+        <p className="text-muted-foreground">
+          {isGC
+            ? 'Only GC admins or managers with "Manage Org" permission can edit project settings. Ask an admin for access.'
+            : 'Only the General Contractor on this project can manage these settings.'}
+        </p>
         <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>Go back</Button>
       </div>
     );
@@ -133,6 +144,11 @@ export default function ProjectSettings() {
         <div>
           <h1 className="text-xl font-bold text-foreground">{project?.name ?? 'Project'} Settings</h1>
           <p className="text-sm text-muted-foreground mt-1">Configure project-level behavior and visibility rules.</p>
+          {!canEditFinancials && (
+            <div className="mt-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+              You have view-only access to financial settings (tax, retainage, markup disclosure). Only a GC admin can change these.
+            </div>
+          )}
         </div>
 
         {/* Sales Tax */}
@@ -160,6 +176,7 @@ export default function ProjectSettings() {
                   onChange={e => setTaxRate(e.target.value)}
                   placeholder="8.25"
                   className="h-9 mt-1 font-mono"
+                  disabled={!canEditFinancials}
                 />
               </div>
               <div>
@@ -169,6 +186,7 @@ export default function ProjectSettings() {
                   onChange={e => setTaxLabel(e.target.value)}
                   placeholder="WA Sales Tax"
                   className="h-9 mt-1"
+                  disabled={!canEditFinancials}
                 />
               </div>
             </div>
@@ -178,10 +196,10 @@ export default function ProjectSettings() {
                 <p className="text-sm font-medium text-foreground">Labor is taxable</p>
                 <p className="text-xs text-muted-foreground">Some jurisdictions tax labor; most only tax materials & equipment.</p>
               </div>
-              <Switch checked={laborTaxable} onCheckedChange={setLaborTaxable} />
+              <Switch checked={laborTaxable} onCheckedChange={setLaborTaxable} disabled={!canEditFinancials} />
             </div>
 
-            <Button size="sm" onClick={saveTaxSettings} disabled={savingTax} className="h-8 text-xs">
+            <Button size="sm" onClick={saveTaxSettings} disabled={savingTax || !canEditFinancials} className="h-8 text-xs">
               {savingTax ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
               Save Tax Settings
             </Button>
@@ -200,7 +218,7 @@ export default function ProjectSettings() {
             </p>
           </div>
 
-          <RadioGroup value={markupVis} onValueChange={(v) => saveMarkupVisibility(v as MarkupVisibility)} className="space-y-3">
+          <RadioGroup value={markupVis} onValueChange={(v) => canEditFinancials && saveMarkupVisibility(v as MarkupVisibility)} disabled={!canEditFinancials} className="space-y-3">
             <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
               <RadioGroupItem value="hidden" className="mt-0.5" />
               <div>
@@ -248,12 +266,13 @@ export default function ProjectSettings() {
                 onChange={e => setRetainagePct(e.target.value)}
                 placeholder="5"
                 className="h-9 mt-1 font-mono max-w-[160px]"
+                disabled={!canEditFinancials}
               />
             </div>
 
             <div>
               <Label className="text-xs text-muted-foreground mb-2 block">Release Trigger</Label>
-              <RadioGroup value={retainageTrigger} onValueChange={setRetainageTrigger} className="space-y-2">
+              <RadioGroup value={retainageTrigger} onValueChange={setRetainageTrigger} disabled={!canEditFinancials} className="space-y-2">
                 <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-lg border border-border hover:bg-accent/50 transition-colors">
                   <RadioGroupItem value="substantial_completion" className="mt-0.5" />
                   <div>
@@ -297,7 +316,7 @@ export default function ProjectSettings() {
                 queryClient.invalidateQueries({ queryKey: ['project-settings', projectId] });
                 queryClient.invalidateQueries({ queryKey: ['project-tax-settings'] });
               }
-            }} disabled={savingRetainage} className="h-8 text-xs">
+            }} disabled={savingRetainage || !canEditFinancials} className="h-8 text-xs">
               {savingRetainage ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
               Save Retainage Settings
             </Button>
