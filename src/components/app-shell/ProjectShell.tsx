@@ -140,6 +140,18 @@ export function ProjectShell({
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           </Button>
 
+          {/* Project Settings (tax, retainage, markup disclosure) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => navigate(`/project/${projectId}/settings`)}
+            title="Project settings"
+            aria-label="Project settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+
           
 
           {/* Avatar — mobile only, desktop uses sidebar */}
