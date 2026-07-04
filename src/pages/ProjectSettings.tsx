@@ -316,7 +316,7 @@ export default function ProjectSettings() {
                 queryClient.invalidateQueries({ queryKey: ['project-settings', projectId] });
                 queryClient.invalidateQueries({ queryKey: ['project-tax-settings'] });
               }
-            }} disabled={savingRetainage} className="h-8 text-xs">
+            }} disabled={savingRetainage || !canEditFinancials} className="h-8 text-xs">
               {savingRetainage ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
               Save Retainage Settings
             </Button>
