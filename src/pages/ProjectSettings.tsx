@@ -266,12 +266,13 @@ export default function ProjectSettings() {
                 onChange={e => setRetainagePct(e.target.value)}
                 placeholder="5"
                 className="h-9 mt-1 font-mono max-w-[160px]"
+                disabled={!canEditFinancials}
               />
             </div>
 
             <div>
               <Label className="text-xs text-muted-foreground mb-2 block">Release Trigger</Label>
-              <RadioGroup value={retainageTrigger} onValueChange={setRetainageTrigger} className="space-y-2">
+              <RadioGroup value={retainageTrigger} onValueChange={setRetainageTrigger} disabled={!canEditFinancials} className="space-y-2">
                 <label className="flex items-start gap-3 cursor-pointer p-2.5 rounded-lg border border-border hover:bg-accent/50 transition-colors">
                   <RadioGroupItem value="substantial_completion" className="mt-0.5" />
                   <div>
