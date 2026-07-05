@@ -305,8 +305,16 @@ export default function Settings() {
                     <AlertDialogAction
                       disabled={deleteConfirm !== 'DELETE'}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toast({
+                          title: 'Account deletion requires support',
+                          description: 'For your safety, self-service account deletion is not enabled. Email support@ontime.build and we will delete your account within 1 business day.',
+                        });
+                        setDeleteConfirm('');
+                      }}
                     >
-                      Delete Account
+                      Request Deletion
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
