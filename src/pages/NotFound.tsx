@@ -1,5 +1,4 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, LayoutDashboard, LifeBuoy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,10 +7,6 @@ const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
 
   const homePath = user ? "/dashboard" : "/";
 
