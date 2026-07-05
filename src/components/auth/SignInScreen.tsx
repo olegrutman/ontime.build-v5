@@ -18,6 +18,7 @@ export function SignInScreen({
   onSignIn, onGoogleSignIn, onForgot, onGoToSignUp,
   loading, googleLoading, error, unconfirmedEmail, onResendVerification,
 }: SignInScreenProps) {
+  // Phone auth path is disabled until fully wired; email only.
   const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -68,7 +69,10 @@ export function SignInScreen({
 
   return (
     <div className="auth-screen-enter">
-      <div className="auth-card">
+      <form
+        className="auth-card"
+        onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+      >
         <div className="auth-header">
           <div className="auth-screen-icon">👋</div>
           <div className="auth-title">Welcome back</div>
@@ -77,7 +81,7 @@ export function SignInScreen({
 
         {/* Social buttons */}
         <div className="auth-social-btns" style={{ marginBottom: 16 }}>
-          <button className="auth-social-btn" onClick={onGoogleSignIn} disabled={googleLoading}>
+          <button type="button" className="auth-social-btn" onClick={onGoogleSignIn} disabled={googleLoading}>
             {googleLoading ? (
               <div className="auth-spinner" />
             ) : (
@@ -91,8 +95,8 @@ export function SignInScreen({
 
         <div className="auth-divider-line">or continue with</div>
 
-        {/* Method toggle */}
-        <MethodToggle method={method} onChange={setMethod} />
+        {/* Method toggle hidden: phone auth not yet available */}
+        {false && <MethodToggle method={method} onChange={setMethod} />}
 
         {/* Unconfirmed email alert */}
         {unconfirmedEmail && (
@@ -200,16 +204,16 @@ export function SignInScreen({
         </div>
 
         <button
+          type="submit"
           className="auth-cta-btn"
-          onClick={handleSubmit}
           disabled={loading}
         >
           {loading ? <div className="auth-spinner" /> : <span>Sign In</span>}
         </button>
-      </div>
+      </form>
 
       <div className="auth-switch-link">
-        New to Ontime? <button onClick={onGoToSignUp}>Create an account →</button>
+        New to Ontime? <button type="button" onClick={onGoToSignUp}>Create an account →</button>
       </div>
     </div>
   );

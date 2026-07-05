@@ -18,7 +18,7 @@ const ROLE_TO_ORG_TYPE: Record<string, OrgType> = {
   supplier: 'SUPPLIER',
 };
 
-const VERIFICATION_CODE_LENGTH = 8;
+const VERIFICATION_CODE_LENGTH = 6;
 const PENDING_KEY = 'ontime_pending_signup';
 
 /* ── Mock data (kept for future API) ── */
@@ -40,6 +40,7 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
   const navigate = useNavigate();
   const { user, userOrgRoles, refreshUserData, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
+  // Phone signup path disabled until fully wired; email only.
   const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -128,11 +129,8 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
     if (!terms) { setFieldErrors({ terms: 'Required' }); return; }
 
     setLoading(true);
-    const { error, emailSent, message } = await onSignUp(
-      method === 'email' ? email : `phone-placeholder@ontime.build`,
-      password,
-      name,
-    );
+    // Phone path disabled; always use the real email address.
+    const { error, emailSent, message } = await onSignUp(email, password, name);
     setLoading(false);
 
     if (error) {
@@ -280,8 +278,8 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
             </div>
             <div className="auth-divider-line">or sign up with</div>
 
-            {/* Method toggle */}
-            <MethodToggle method={method} onChange={setMethod} />
+            {/* Phone signup hidden: not yet wired */}
+            {false && <MethodToggle method={method} onChange={setMethod} />}
 
             {/* Form error */}
             {fieldErrors.form && (
