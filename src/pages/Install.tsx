@@ -54,7 +54,7 @@ export default function Install() {
         <CheckCircle2 className="h-16 w-16 text-primary mb-4" />
         <h1 className="text-2xl font-bold mb-2">App Installed!</h1>
         <p className="text-muted-foreground text-center mb-6">
-          OnTime.Build is installed on your device. You can launch it from your home screen.
+          Ontime.Build is installed on your device. You can launch it from your home screen.
         </p>
         <Button onClick={() => navigate("/dashboard")}>Go to Dashboard</Button>
       </div>
@@ -66,7 +66,7 @@ export default function Install() {
       <div className="max-w-lg mx-auto space-y-6">
         <div className="text-center space-y-2 pt-8">
           <Smartphone className="h-12 w-12 mx-auto text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Install OnTime.Build</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Install Ontime.Build</h1>
           <p className="text-muted-foreground">
             Add to your home screen for quick access — works offline, feels like a native app.
           </p>
