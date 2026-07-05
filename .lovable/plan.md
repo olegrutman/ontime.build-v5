@@ -1,89 +1,134 @@
 
-## Problem
+# App Audit — Per-Role, Every Page, Report Only
 
-Today the Setup Wizard v2 assumes the contractor is building the whole shell. There is no way to say "exterior walls are concrete/CMU and out of my scope, but I'm doing interior partitions and roof trusses." As a result, SOV lines for exterior framing/sheathing/WRB get generated anyway and the contractor has to fight the numbers.
+## What you get
 
-The same gap shows up in reverse for interior-only trims, roof-only re-roofs, and additions where the shell already exists.
+One written report (Markdown document, saved to the repo as `AUDIT.md` so you can read, share, and check items off). No code changes in this pass. You decide afterward what to fix and in what order.
 
-## Approach — "Scope Boundaries" step
+## Roles I will audit separately
 
-Add one new step to the wizard, **between Building Basics and Structure**, called **"What are you actually building?"**. It captures scope inclusions/exclusions BEFORE any scope questions are asked, so downstream phases (`structure`, `envelope`, `roof`, `backout`, `exterior_finish`) can be conditionally hidden and their SOV weight redistributed.
+1. **Visitor / Not signed in** — landing, marketing, legal, signup, login, forgot password, email verification, invite acceptance.
+2. **General Contractor (GC)** — the "power user" role. Most features.
+3. **Trade Contractor (TC)** — dual-contract user (has upstream GC + downstream FC).
+4. **Field Crew (FC)** — labor-focused, work-order-driven.
+5. **Supplier** — materials, POs, quotes, returns, inventory.
+6. **Platform Admin** — internal ops (`/platform/*`).
 
-### Questions asked (in order, with smart skipping)
+For each role I record what they see, what's broken, what's confusing, and what's below the standard set by leading SaaS.
 
-1. **Exterior walls — who's building them?**
-   - I'm building them (wood / cold-formed steel framing)
-   - Someone else — concrete / CMU / tilt-up already in place
-   - Someone else — structural steel + infill by others
-   - N/A (interior-only project)
+## Benchmarks I will compare against
 
-2. **If "someone else": what wall material is going up?** (drives finish/fastening logic — concrete, CMU, tilt-up, steel + metal panel, curtain wall)
+- **Signup / onboarding:** Linear, Notion, Vercel, Stripe, Figma.
+- **Dashboard + navigation:** Linear, Height, Monday.
+- **Project / job management:** Procore, Buildertrend, CompanyCam.
+- **Financials (invoices, POs, change orders):** QuickBooks, Stripe Dashboard, Ramp.
+- **Empty states, loading, error handling:** Linear, Stripe (industry gold standard).
+- **Mobile / tablet responsive behavior:** Notion, Linear mobile.
 
-3. **Interior partitions — in your scope?** Yes / No / Partial (specify floors)
+## How I will do it (methodology)
 
-4. **Roof structure — in your scope?**
-   - Yes — trusses
-   - Yes — rafters / stick-framed
-   - Yes — steel joists / deck
-   - No — by others
-   
-5. **Roof covering — in your scope?** Yes / No (only asked if roof structure = yes or by others)
+For every page I visit I check the same 12 things, so the report is consistent and comparable:
 
-6. **Envelope layers — sheathing / WRB / insulation / siding:** multi-select of what's in scope. Auto-unchecked and hidden when Q1 says "by others" for exterior walls.
-
-7. **MEP backout coordination — in your scope?** (already exists for MF/commercial; move it here)
-
-Questions 2–7 are conditionally shown based on Q1/Q4. If a contractor picks "wood framing whole shell" in Q1 + "trusses" in Q4, they only see Q3, Q6, Q7 — three taps.
-
-### How this drives the SOV
-
-Extend `Answers` with a new `scope_boundaries` object:
-
-```ts
-scope_boundaries: {
-  exterior_walls: 'self' | 'by_others_concrete' | 'by_others_cmu' | 'by_others_steel' | 'na',
-  interior_partitions: 'full' | 'none' | 'partial',
-  roof_structure: 'trusses' | 'rafters' | 'steel_joist' | 'by_others',
-  roof_covering: boolean,
-  envelope_layers: ('sheathing'|'wrb'|'insulation'|'siding')[],
-  mep_backout: boolean,
-}
+```text
+1.  Page loads without console errors
+2.  Loading state (skeleton vs spinner vs blank)
+3.  Empty state (first-time user with no data)
+4.  Error state (network fail, permission denied)
+5.  Every button — does it do what its label says?
+6.  Every link — does it go somewhere real?
+7.  Every form — validation, error messages, success feedback
+8.  Role-appropriate data (no leaks, no missing sections)
+9.  Mobile (390px) + tablet (799px) + desktop layout
+10. Keyboard + accessibility basics (focus, labels, contrast)
+11. Copy quality (professional, no placeholder text, no dev jargon)
+12. Comparison to how a leading app handles the same thing
 ```
 
-In `useSetupWizardV2.ts`:
+Signup gets extra scrutiny because it's the #1 churn point.
 
-- `getVisibleQuestions()` filters phase questions by these flags (e.g. skip all `envelope` questions when `exterior_walls !== 'self'` and no envelope layers selected).
-- `generateSOVLines()` skips excluded phases entirely and passes the excluded set to the SOV weighting engine so remaining phases absorb the freed weight proportionally (the existing `SOVWeighting` logic already normalizes to 100% — we just remove lines before normalization).
-- Add per-line tags like `by_others: true` for anything intentionally excluded, surfaced in the SOV preview as a struck-through "By others" row so the GC/TC can see it was considered and dropped (avoids confusion).
+## Report structure
 
-### UI changes
+```text
+AUDIT.md
+├── 0. Executive summary
+│     - Overall readiness score per role (0–10)
+│     - Top 5 blockers across the whole app
+│     - Top 5 "embarrassing in a demo" issues
+│
+├── 1. Signup & onboarding (deep dive)
+│     - Step-by-step walkthrough vs Linear/Notion/Stripe
+│     - Every field, every validation, every email
+│     - Google OAuth flow
+│     - Invite-acceptance flow
+│     - Email verification UX
+│     - First-run experience after signup (empty dashboard)
+│     - Verdict + concrete gap list
+│
+├── 2. Visitor / logged-out pages
+│     - Landing, legal, /auth, /signup, /reset-password,
+│       /verify-email, /auth/callback, /unsubscribe, /install
+│
+├── 3. General Contractor
+│     3.1 Dashboard
+│     3.2 Projects list + create project + project setup wizard
+│     3.3 Project overview
+│     3.4 SOV, Invoices, POs, Change Orders, RFIs, Daily Logs
+│     3.5 Team, Partner Directory, Suppliers
+│     3.6 Settings, Financials, Reminders, Notifications
+│
+├── 4. Trade Contractor
+│     - Same page list, but flagged where TC experience diverges
+│     - Dual-contract views, markup privacy, WO/CO behavior
+│
+├── 5. Field Crew
+│     - T&M mode, Work Orders, Quick Capture, Field Captures,
+│       Daily Log, mobile-first flows
+│
+├── 6. Supplier
+│     - Supplier Inventory, Supplier Estimates, PO responses,
+│       Returns, Materials Health dashboard, cross-org visibility
+│
+├── 7. Platform Admin
+│     - /platform/* pages, impersonation, support actions,
+│       QA tools, plans, roles, KPIs
+│
+├── 8. Cross-cutting issues
+│     - Design consistency (typography, spacing, tokens)
+│     - Loading + empty + error state coverage matrix
+│     - Mobile responsiveness matrix
+│     - Notification system coverage
+│     - Permission leaks / RLS concerns worth manual review
+│     - Dead code / dead routes / dead buttons
+│
+└── 9. Prioritized backlog
+      P0 Blockers        — ship-stoppers, must fix before customers
+      P1 Broken          — works but wrong, users will complain
+      P2 Below standard  — works, but not what leading apps do
+      P3 Polish          — nice-to-have, brand/craft level
+      Each item: page, role, finding, benchmark, suggested fix,
+      rough effort (S/M/L).
+```
 
-- New `ScopeBoundariesPanel.tsx` rendered as a dedicated step in `SetupWizardV2.tsx` (before the current Scope step). Uses the same accordion-free "one card, big radio tiles" pattern as `BuildingTypeSelector`.
-- `SOVLivePreview` gains an optional "By others" section (collapsed by default, gray, no dollars) so users can verify nothing was silently dropped.
-- Summary step lists inclusions/exclusions plainly ("Exterior walls: by others — CMU · Interior partitions: full · Roof: trusses").
+## How I will gather the evidence
 
-### Files touched
+- Read the route tree in `src/App.tsx` to enumerate every page.
+- Read every page component in `src/pages/**` and its main child components.
+- For each role, trace what the role gates (`RequireOrgType`, `useOrgType`, `useAuth`, `hasRole`) actually show/hide.
+- Drive the running preview headlessly (Playwright) for the signup flow and a handful of high-value pages per role, using the pre-injected Supabase session where available, to capture real screenshots and console/network errors — not just a code read.
+- Cross-reference against the memory notes already recorded for this project (financials, SOV, CO/WO, invoicing, etc.) so I don't flag intentional design decisions as bugs.
 
-- `src/hooks/useSetupWizardV2.ts` — extend `Answers`, add `scope_boundaries` questions to the tree, gate phase visibility, feed exclusions into `generateSOVLines`.
-- `src/components/setup-wizard-v2/SetupWizardV2.tsx` — insert the new step in `WIZARD_STEPS`, route to the new panel.
-- `src/components/setup-wizard-v2/ScopeBoundariesPanel.tsx` — new file.
-- `src/components/setup-wizard-v2/ScopeQuestionsPanel.tsx` — respect exclusions when computing `nonEmptySteps`; empty phases just don't render.
-- `src/components/setup-wizard-v2/SOVLivePreview.tsx` — render "By others" ghost rows.
-- `src/components/setup-wizard-v2/WizardSummary.tsx` — show scope boundaries block.
-- `src/lib/sovWeighting.ts` (or wherever `generateSOVLines` re-normalizes) — accept excluded-phase set and re-normalize to 100%.
+## What is NOT in this pass
 
-### Edge cases handled
+- No code changes.
+- No database migrations.
+- No design mockups or redesigns — findings only, with references to how leaders solve the same problem.
+- No security pentest (I will note obvious concerns but this isn't a security audit).
+- No performance profiling beyond "this page feels slow / this query is obviously heavy."
 
-- **Interior-only remodel**: Q1=`na`, Q3=`full`, Q4=`by_others` → SOV shows only interior partitions + backout + finishes.
-- **Roof-only**: Q3=`none`, Q4=`trusses`, Q5=`yes`, envelope layers=[] → SOV is roof structure + covering only.
-- **Concrete shell + wood interior + wood trusses** (the user's example): Q1=`by_others_concrete`, Q2=`concrete`, Q3=`full`, Q4=`trusses`, Q5=`yes`, envelope layers=`[insulation]` → exterior framing/sheathing/WRB/siding all excluded; interior + trusses + roof covering + interior insulation carry the weight. This is exactly the scenario that's broken today.
-- **T&M / Remodel Mode**: the Scope Boundaries step is still shown (it's just as relevant), but drives WO scope catalog filtering instead of SOV weights.
+## What I need from you to start
 
-### Non-goals for this pass
+Nothing. I have enough context. On approval I will produce `AUDIT.md` in one pass. It will be long — expect 15–25 pages of dense findings — because you asked for every page, every role.
 
-- Not touching CO/WO scope pickers — they already have their own scenario→system filtering. If it works well here we can port the concept later.
-- Not persisting boundaries to a new DB column — they live in `project_setup_answers` JSON like other wizard answers. A dedicated column can come later if reporting needs it.
+## After you read the report
 
-## What I need from you before building
-
-One decision: do you want the "By others" ghost rows visible in the SOV preview (transparent, no dollars) so GCs/TCs can confirm nothing was dropped silently, or should excluded scope disappear entirely from the SOV? My recommendation is ghost rows — it's a trust/clarity win with almost no cost — but it's your call.
+You come back and say "fix P0 items 1, 3, 7 and P1 item 2" (or "rebuild signup"), and I do that in a separate build session with a focused plan.
