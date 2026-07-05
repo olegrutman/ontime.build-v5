@@ -81,7 +81,7 @@ export function SignInScreen({
 
         {/* Social buttons */}
         <div className="auth-social-btns" style={{ marginBottom: 16 }}>
-          <button className="auth-social-btn" onClick={onGoogleSignIn} disabled={googleLoading}>
+          <button type="button" className="auth-social-btn" onClick={onGoogleSignIn} disabled={googleLoading}>
             {googleLoading ? (
               <div className="auth-spinner" />
             ) : (
