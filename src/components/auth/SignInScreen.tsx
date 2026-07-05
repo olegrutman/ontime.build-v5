@@ -18,7 +18,9 @@ export function SignInScreen({
   onSignIn, onGoogleSignIn, onForgot, onGoToSignUp,
   loading, googleLoading, error, unconfirmedEmail, onResendVerification,
 }: SignInScreenProps) {
-  const [method, setMethod] = useState<'email' | 'phone'>('email');
+  // Phone auth path is disabled until fully wired; email only.
+  const method: 'email' | 'phone' = 'email';
+  const setMethod = (_: 'email' | 'phone') => {};
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -91,8 +93,8 @@ export function SignInScreen({
 
         <div className="auth-divider-line">or continue with</div>
 
-        {/* Method toggle */}
-        <MethodToggle method={method} onChange={setMethod} />
+        {/* Method toggle hidden: phone auth not yet available */}
+        {false && <MethodToggle method={method} onChange={setMethod} />}
 
         {/* Unconfirmed email alert */}
         {unconfirmedEmail && (
