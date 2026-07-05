@@ -70,7 +70,7 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 const QuickCapture = lazy(() => import("./pages/QuickCapture"));
-const GCProjectOverview = lazy(() => import("./pages/GCProjectOverview"));
+// GCProjectOverview removed — legacy static mockup; route now redirects to ProjectHome.
 const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
 const PaymentApplicationsPage = lazy(() => import("./pages/PaymentApplicationsPage"));
