@@ -65,7 +65,7 @@ import { DailyLogPanel } from '@/components/daily-log/DailyLogPanel';
 import { useToast } from '@/hooks/use-toast';
 import { FeatureGate, useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
-import { COListPage } from '@/components/change-orders';
+import { COListPage } from '@/components/change-orders/COListPage';
 import { BackchargesList } from '@/components/backcharges/BackchargesList';
 import PaymentApplicationsPage from '@/pages/PaymentApplicationsPage';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';

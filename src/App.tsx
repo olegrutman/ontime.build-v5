@@ -30,7 +30,7 @@ const queryClient = new QueryClient({
 // 5. Lazy-loaded page components
 const Landing = lazy(() => import("./pages/Landing"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Demo = lazy(() => import("./pages/Demo"));
+
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const CreateProjectNew = lazy(() => import("./pages/CreateProjectNew"));
 const ProjectHome = lazy(() => import("./pages/ProjectHome"));
@@ -74,9 +74,6 @@ const QuickCapture = lazy(() => import("./pages/QuickCapture"));
 const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
 const PaymentApplicationsPage = lazy(() => import("./pages/PaymentApplicationsPage"));
-const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
-const DemoV2ProjectOverview = lazy(() => import("./pages/DemoV2ProjectOverview"));
-const CatalogMatrixPreview = lazy(() => import("./pages/dev/CatalogMatrixPreview"));
 
 // Platform Admin pages
 const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
@@ -188,7 +185,7 @@ function AppRoutes() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
-            {import.meta.env.DEV && <Route path="/demo" element={<Demo />} />}
+            
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/callback" element={<AuthPage />} />
             <Route path="/verify-email" element={<AuthPage />} />
@@ -261,14 +258,6 @@ function AppRoutes() {
             <Route path="/platform/co-scenarios" element={<RequirePlatformRole><PlatformCOScenarios /></RequirePlatformRole>} />
             
 
-            {/* Demo V2 & dev-only routes — gated to development builds so production doesn't ship mock data. */}
-            {import.meta.env.DEV && (
-              <>
-                <Route path="/demo-v2" element={<DemoV2Dashboard />} />
-                <Route path="/demo-v2/project/:id" element={<DemoV2ProjectOverview />} />
-                <Route path="/dev/catalog-matrix" element={<CatalogMatrixPreview />} />
-              </>
-            )}
 
             <Route path="*" element={<NotFound />} />
           </Routes>
