@@ -1,1 +1,0 @@
-export { InviteSearchInput } from './InviteSearchInput';
