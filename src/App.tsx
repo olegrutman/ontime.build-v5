@@ -42,7 +42,7 @@ const OrgTeam = lazy(() => import("./pages/OrgTeam"));
 
 const CatalogPage = lazy(() => import("./pages/CatalogPage"));
 const SupplierEstimates = lazy(() => import("./pages/SupplierEstimates"));
-const MaterialOrders = lazy(() => import("./pages/MaterialOrders"));
+// MaterialOrders removed — flow consolidated into PurchaseOrders; /orders now redirects.
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
@@ -188,7 +188,7 @@ function AppRoutes() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
-            <Route path="/demo" element={<Demo />} />
+            {import.meta.env.DEV && <Route path="/demo" element={<Demo />} />}
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/callback" element={<AuthPage />} />
             <Route path="/verify-email" element={<AuthPage />} />
@@ -234,7 +234,7 @@ function AppRoutes() {
             <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
             <Route path="/catalog" element={<RequireAuth><CatalogPage /></RequireAuth>} />
             <Route path="/estimates" element={<RequireAuth><SupplierEstimates /></RequireAuth>} />
-            <Route path="/orders" element={<RequireAuth><MaterialOrders /></RequireAuth>} />
+            <Route path="/orders" element={<Navigate to="/purchase-orders" replace />} />
             <Route path="/purchase-orders" element={<RequireAuth><PurchaseOrders /></RequireAuth>} />
             <Route path="/reminders" element={<RequireAuth><Reminders /></RequireAuth>} />
             
@@ -261,12 +261,14 @@ function AppRoutes() {
             <Route path="/platform/co-scenarios" element={<RequirePlatformRole><PlatformCOScenarios /></RequirePlatformRole>} />
             
 
-            {/* Demo V2 — standalone prototype */}
-            <Route path="/demo-v2" element={<DemoV2Dashboard />} />
-            <Route path="/demo-v2/project/:id" element={<DemoV2ProjectOverview />} />
-
-            {/* Dev — catalog matrix preview (CO/WO picker constraints) */}
-            <Route path="/dev/catalog-matrix" element={<CatalogMatrixPreview />} />
+            {/* Demo V2 & dev-only routes — gated to development builds so production doesn't ship mock data. */}
+            {import.meta.env.DEV && (
+              <>
+                <Route path="/demo-v2" element={<DemoV2Dashboard />} />
+                <Route path="/demo-v2/project/:id" element={<DemoV2ProjectOverview />} />
+                <Route path="/dev/catalog-matrix" element={<CatalogMatrixPreview />} />
+              </>
+            )}
 
             <Route path="*" element={<NotFound />} />
           </Routes>
