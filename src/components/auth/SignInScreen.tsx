@@ -19,8 +19,7 @@ export function SignInScreen({
   loading, googleLoading, error, unconfirmedEmail, onResendVerification,
 }: SignInScreenProps) {
   // Phone auth path is disabled until fully wired; email only.
-  const method: 'email' | 'phone' = 'email';
-  const setMethod = (_: 'email' | 'phone') => {};
+  const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');

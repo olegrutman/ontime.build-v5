@@ -41,8 +41,7 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
   const { user, userOrgRoles, refreshUserData, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   // Phone signup path disabled until fully wired; email only.
-  const method: 'email' | 'phone' = 'email';
-  const setMethod = (_: 'email' | 'phone') => {};
+  const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
