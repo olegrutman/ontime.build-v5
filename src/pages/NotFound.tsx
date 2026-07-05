@@ -1,5 +1,4 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, LayoutDashboard, LifeBuoy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,8 +7,6 @@ const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  const homePath = user ? "/dashboard" : "/";
 
   const homePath = user ? "/dashboard" : "/";
 
