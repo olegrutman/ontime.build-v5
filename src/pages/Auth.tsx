@@ -130,7 +130,7 @@ export default function Auth() {
           <div className="flex items-center justify-center gap-3 mb-8">
             <OntimeLogo className="w-12 h-12" />
             <div>
-              <h1 className="font-bold text-2xl tracking-tight">OnTime.Build</h1>
+              <h1 className="font-bold text-2xl tracking-tight">Ontime.Build</h1>
               <p className="text-xs text-muted-foreground uppercase tracking-widest">V1</p>
             </div>
           </div>
@@ -152,7 +152,7 @@ export default function Auth() {
         <div className="flex items-center justify-center gap-3 mb-8">
           <OntimeLogo className="w-12 h-12" />
           <div>
-            <h1 className="font-bold text-2xl tracking-tight">OnTime.Build</h1>
+            <h1 className="font-bold text-2xl tracking-tight">Ontime.Build</h1>
             <p className="text-xs text-muted-foreground uppercase tracking-widest">V1</p>
           </div>
         </div>
