@@ -204,16 +204,16 @@ export function SignInScreen({
         </div>
 
         <button
+          type="submit"
           className="auth-cta-btn"
-          onClick={handleSubmit}
           disabled={loading}
         >
           {loading ? <div className="auth-spinner" /> : <span>Sign In</span>}
         </button>
-      </div>
+      </form>
 
       <div className="auth-switch-link">
-        New to Ontime? <button onClick={onGoToSignUp}>Create an account →</button>
+        New to Ontime? <button type="button" onClick={onGoToSignUp}>Create an account →</button>
       </div>
     </div>
   );
