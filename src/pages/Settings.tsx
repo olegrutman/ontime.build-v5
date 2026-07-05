@@ -20,6 +20,7 @@ import {
 import { Lock, Bell, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 
 export default function Settings() {
   const { signOut } = useAuth();
