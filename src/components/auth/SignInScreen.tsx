@@ -69,7 +69,10 @@ export function SignInScreen({
 
   return (
     <div className="auth-screen-enter">
-      <div className="auth-card">
+      <form
+        className="auth-card"
+        onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+      >
         <div className="auth-header">
           <div className="auth-screen-icon">👋</div>
           <div className="auth-title">Welcome back</div>
