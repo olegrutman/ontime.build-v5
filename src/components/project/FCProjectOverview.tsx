@@ -67,6 +67,12 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   // totalPending is set after revisedTotal is computed below (cash-basis: contract minus paid)
   const totalInvoiced = financials.billedToDate;
 
+  // 6-month invoice trend for sparklines
+  const { data: monthly = [] } = useProjectMonthlyBilling(projectId);
+  const billedSeries = monthly.map(m => m.billed);
+  const paidSeries = monthly.map(m => m.paid);
+  const hasTrend = monthly.some(m => m.billed > 0 || m.paid > 0);
+
   // Change orders / Work orders — FC sees WOs they own OR collaborate on
   const { data: changeOrders = [] } = useQuery({
     queryKey: ['fc-project-cos', projectId, currentOrgId, isTM],
