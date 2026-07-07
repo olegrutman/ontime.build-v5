@@ -11,6 +11,8 @@ import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/co
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 import { LadderCard } from '@/components/shared/LadderCard';
+import { Sparkline } from '@/components/shared/Sparkline';
+import { useProjectMonthlyBilling } from '@/hooks/useProjectMonthlyBilling';
 
 /* ═══════════════════════════════════════════════════ */
 
