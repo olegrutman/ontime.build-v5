@@ -10,6 +10,7 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
+import { LadderCard } from '@/components/shared/LadderCard';
 
 /* ═══════════════════════════════════════════════════ */
 
