@@ -10,6 +10,7 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
+import { LadderCard } from '@/components/shared/LadderCard';
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -548,27 +549,56 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
       </KpiGrid>
 
       {/* Earnings Tracker (fixed-contract only) */}
-      {!isTM && (
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 20px', ...fontLabel }}>
-          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💰 Earnings Tracker — {projectName}</div>
-          <BarRow label="Total Scope" value={fmt(revisedTotal)} pct={100} barColor={C.amber} />
-          <BarRow label={`Invoiced (${revisedTotal > 0 ? Math.round((totalInvoiced / revisedTotal) * 100) : 0}%)`} value={fmt(totalInvoiced)} pct={revisedTotal > 0 ? (totalInvoiced / revisedTotal) * 100 : 0} barColor={C.green} />
-          <BarRow label={`Received (${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}%)`} value={fmt(totalPaid)} pct={revisedTotal > 0 ? (totalPaid / revisedTotal) * 100 : 0} barColor={C.greenDark} />
-          {totalPending > 0 && <BarRow label="Pending" value={fmt(totalPending)} pct={revisedTotal > 0 ? (totalPending / revisedTotal) * 100 : 0} barColor={C.yellow} />}
-          <BarRow label={`Remaining to Earn (${revisedTotal > 0 ? Math.round((remainingToEarn / revisedTotal) * 100) : 0}%)`} value={fmt(remainingToEarn)} pct={revisedTotal > 0 ? (remainingToEarn / revisedTotal) * 100 : 0} barColor={C.border} />
-        </div>
-      )}
+      {!isTM && (() => {
+        const invPct = revisedTotal > 0 ? (totalInvoiced / revisedTotal) * 100 : 0;
+        const paidPct = revisedTotal > 0 ? (totalPaid / revisedTotal) * 100 : 0;
+        const pendPct = revisedTotal > 0 ? (totalPending / revisedTotal) * 100 : 0;
+        const remPct = revisedTotal > 0 ? (remainingToEarn / revisedTotal) * 100 : 0;
+        return (
+          <LadderCard
+            title={`💰 Earnings Tracker — ${projectName}`}
+            totalLabel="Total Scope"
+            totalValue={fmt(revisedTotal)}
+            segments={[
+              { pct: paidPct, color: C.greenDark },
+              { pct: Math.max(invPct - paidPct, 0), color: C.green },
+              { pct: pendPct, color: C.yellow },
+            ]}
+            rows={[
+              { label: 'Total Scope', value: fmt(revisedTotal), pct: 100, barColor: C.amber },
+              { label: 'Invoiced', value: fmt(totalInvoiced), pct: invPct, barColor: C.green, headline: true },
+              { label: 'Collected', value: fmt(totalPaid), pct: paidPct, barColor: C.greenDark, headline: true },
+              ...(totalPending > 0 ? [{ label: 'Pending', value: fmt(totalPending), pct: pendPct, barColor: C.yellow }] : []),
+              { label: 'Remaining to Earn', value: fmt(remainingToEarn), pct: remPct, barColor: C.border },
+            ]}
+          />
+        );
+      })()}
 
       {/* T&M Earnings Summary */}
-      {isTM && (
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 20px', ...fontLabel }}>
-          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💰 WO Earnings Summary — {projectName}</div>
-          <BarRow label="Total WO Earnings" value={fmt(coTotal)} pct={100} barColor={C.amber} />
-          <BarRow label={`Paid (${coTotal > 0 ? Math.round((totalPaid / coTotal) * 100) : 0}%)`} value={fmt(totalPaid)} pct={coTotal > 0 ? (totalPaid / coTotal) * 100 : 0} barColor={C.green} />
-          {totalPending > 0 && <BarRow label="Pending" value={fmt(totalPending)} pct={coTotal > 0 ? (totalPending / coTotal) * 100 : 0} barColor={C.yellow} />}
-          <BarRow label={`Remaining (${coTotal > 0 ? Math.round(((coTotal - totalPaid - totalPending) / coTotal) * 100) : 0}%)`} value={fmt(coTotal - totalPaid - totalPending)} pct={coTotal > 0 ? ((coTotal - totalPaid - totalPending) / coTotal) * 100 : 0} barColor={C.border} />
-        </div>
-      )}
+      {isTM && (() => {
+        const paidPct = coTotal > 0 ? (totalPaid / coTotal) * 100 : 0;
+        const pendPct = coTotal > 0 ? (totalPending / coTotal) * 100 : 0;
+        const remaining = coTotal - totalPaid - totalPending;
+        const remPct = coTotal > 0 ? (remaining / coTotal) * 100 : 0;
+        return (
+          <LadderCard
+            title={`💰 WO Earnings Summary — ${projectName}`}
+            totalLabel="Total WO Earnings"
+            totalValue={fmt(coTotal)}
+            segments={[
+              { pct: paidPct, color: C.green },
+              { pct: pendPct, color: C.yellow },
+            ]}
+            rows={[
+              { label: 'Total WO Earnings', value: fmt(coTotal), pct: 100, barColor: C.amber },
+              { label: 'Paid', value: fmt(totalPaid), pct: paidPct, barColor: C.green, headline: true },
+              ...(totalPending > 0 ? [{ label: 'Pending', value: fmt(totalPending), pct: pendPct, barColor: C.yellow }] : []),
+              { label: 'Remaining', value: fmt(remaining), pct: remPct, barColor: C.border, headline: true },
+            ]}
+          />
+        );
+      })()}
 
       {/* Warnings */}
       {warnings.length > 0 && (

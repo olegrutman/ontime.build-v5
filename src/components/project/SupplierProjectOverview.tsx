@@ -7,6 +7,7 @@ import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useSupplierProjectAnalytics } from '@/hooks/useSupplierProjectAnalytics';
 import { SupplierProjectAnalyticsSection } from './SupplierProjectAnalyticsSection';
+import { LadderCard } from '@/components/shared/LadderCard';
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -385,15 +386,31 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         )}
       </div>
 
-      {/* Lifecycle Tracker */}
-      <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 20px', ...fontLabel }}>
-        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>📊 Material Lifecycle — {projectName}</div>
-        <BarRow label="Estimated" value={fmt(totalEstimate)} pct={100} barColor={C.navy} />
-        <BarRow label={`Ordered (${orderedPct}%)`} value={fmt(totalOrdered)} pct={totalEstimate > 0 ? (totalOrdered / totalEstimate) * 100 : 0} barColor={C.amber} />
-        <BarRow label={`Billed (${billedPct}%)`} value={fmt(totalBilled)} pct={totalOrdered > 0 ? (totalBilled / totalOrdered) * 100 : 0} barColor={C.blue} />
-        <BarRow label={`Received (${receivedPct}%)`} value={fmt(totalReceived)} pct={totalBilled > 0 ? (totalReceived / totalBilled) * 100 : 0} barColor={C.green} />
-        {outstanding > 0 && <BarRow label="Outstanding" value={fmt(outstanding)} pct={totalBilled > 0 ? (outstanding / totalBilled) * 100 : 0} barColor={C.yellow} />}
-      </div>
+      {(() => {
+        const orderedPctT = totalEstimate > 0 ? (totalOrdered / totalEstimate) * 100 : 0;
+        const billedPctT = totalOrdered > 0 ? (totalBilled / totalOrdered) * 100 : 0;
+        const receivedPctT = totalBilled > 0 ? (totalReceived / totalBilled) * 100 : 0;
+        const outstandingPctT = totalBilled > 0 ? (outstanding / totalBilled) * 100 : 0;
+        return (
+          <LadderCard
+            title={`📊 Material Lifecycle — ${projectName}`}
+            totalLabel="Estimated"
+            totalValue={fmt(totalEstimate)}
+            segments={[
+              { pct: (totalReceived / (totalEstimate || 1)) * 100, color: C.green },
+              { pct: ((totalBilled - totalReceived) / (totalEstimate || 1)) * 100, color: C.blue },
+              { pct: ((totalOrdered - totalBilled) / (totalEstimate || 1)) * 100, color: C.amber },
+            ]}
+            rows={[
+              { label: 'Estimated', value: fmt(totalEstimate), pct: 100, barColor: C.navy },
+              { label: 'Ordered', value: fmt(totalOrdered), pct: orderedPctT, barColor: C.amber, headline: true },
+              { label: 'Received', value: fmt(totalReceived), pct: receivedPctT, barColor: C.green, headline: true },
+              { label: 'Billed', value: fmt(totalBilled), pct: billedPctT, barColor: C.blue },
+              ...(outstanding > 0 ? [{ label: 'Outstanding', value: fmt(outstanding), pct: outstandingPctT, barColor: C.yellow }] : []),
+            ]}
+          />
+        );
+      })()}
 
       {/* Warnings */}
       {warnings.length > 0 && (
