@@ -19,9 +19,19 @@ export function MobileBottomNav() {
 
   const canManageOrg = permissions?.canManageOrg ?? false;
 
-  // On project pages, ProjectBottomNav handles mobile nav
-  const isProjectPage = location.pathname.startsWith('/project/');
-  if (isProjectPage) return null;
+  // Only hide when a page renders its own ProjectBottomNav (ProjectHome + CODetail).
+  // All other project sub-pages (setup, edit, wizards, scope, rfis, settings, ...) still get the global bottom nav.
+  const parts = location.pathname.split('/').filter(Boolean);
+  const isProjectRoute = parts[0] === 'project' && !!parts[1];
+  const projectSubPages = new Set([
+    'edit', 'setup', 'contracts', 'details-wizard', 'scope-wizard',
+    'contract', 'settings', 'gc-overview',
+  ]);
+  const firstSub = parts[2];
+  const isProjectHomeOwned = isProjectRoute && (!firstSub || !projectSubPages.has(firstSub) && firstSub !== 'change-orders' && firstSub !== 'rfis');
+  const coNewPaths = new Set(['new', 'quick', 'guided', 'intake', 'manual']);
+  const isCoDetailOwned = isProjectRoute && firstSub === 'change-orders' && !!parts[3] && !coNewPaths.has(parts[3]) && !parts[4];
+  if (isProjectHomeOwned || isCoDetailOwned) return null;
 
   const primaryItems: NavItem[] = [
     { label: 'Home', icon: Home, path: '/dashboard' },
