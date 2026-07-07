@@ -486,7 +486,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             </KpiCard>
 
             {/* Card 4 — Paid by TC */}
-            <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`PAID BY ${tcName.toUpperCase()}`} value={fmt(totalPaid)} sub={`${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% of contract collected · ${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% received` }]} idx={3}>
+            <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`PAID BY ${tcName.toUpperCase()}`} value={fmt(totalPaid)} sub={`${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% of contract collected · ${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% received` }]} spark={hasTrend ? <Sparkline data={paidSeries} color={C.green} fill={C.green} /> : undefined} idx={3}>
               <div style={{ padding: 12 }}>
                 {paidInvoices.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
