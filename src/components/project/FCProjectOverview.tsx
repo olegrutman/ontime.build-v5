@@ -593,8 +593,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             rows={[
               { label: 'Total WO Earnings', value: fmt(coTotal), pct: 100, barColor: C.amber },
               { label: 'Paid', value: fmt(totalPaid), pct: paidPct, barColor: C.green, headline: true },
-              ...(totalPending > 0 ? [{ label: 'Pending', value: fmt(totalPending), pct: pendPct, barColor: C.yellow, headline: true }] : [{ label: 'Remaining', value: fmt(remaining), pct: remPct, barColor: C.border, headline: true }]),
-              { label: 'Remaining', value: fmt(remaining), pct: remPct, barColor: C.border },
+              ...(totalPending > 0 ? [{ label: 'Pending', value: fmt(totalPending), pct: pendPct, barColor: C.yellow }] : []),
+              { label: 'Remaining', value: fmt(remaining), pct: remPct, barColor: C.border, headline: true },
             ]}
           />
         );
