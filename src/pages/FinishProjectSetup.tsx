@@ -795,13 +795,13 @@ export default function FinishProjectSetup() {
               </p>
             </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => navigate(`/project/${projectId}`)}
               disabled={saving}
-              className="text-muted-foreground hover:text-destructive h-9 px-2 lg:px-3 shrink-0"
+              className="h-9 px-3 shrink-0 hover:text-destructive hover:border-destructive"
             >
-              <X className="h-4 w-4 lg:mr-1.5" /> <span className="hidden lg:inline">Exit</span>
+              <X className="h-4 w-4 mr-1.5" /> Exit Setup
             </Button>
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1">
