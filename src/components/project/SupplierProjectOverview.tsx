@@ -7,6 +7,7 @@ import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useSupplierProjectAnalytics } from '@/hooks/useSupplierProjectAnalytics';
 import { SupplierProjectAnalyticsSection } from './SupplierProjectAnalyticsSection';
+import { LadderCard } from '@/components/shared/LadderCard';
 
 /* ═══════════════════════════════════════════════════ */
 
