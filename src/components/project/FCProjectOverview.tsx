@@ -248,7 +248,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             {/* ═══ T&M MODE: WO-driven cards ═══ */}
 
             {/* Card 1 — My WO Earnings */}
-            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="MY WO EARNINGS" value={coTotal > 0 ? fmt(coTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of your prices`} pills={coTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
+            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="MY WO EARNINGS" value={coTotal > 0 ? fmt(coTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of your prices`} pills={coTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
               <div style={{ padding: 12 }}>
                 {approvedCOs.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
