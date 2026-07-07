@@ -11,6 +11,8 @@ import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/co
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 import { LadderCard } from '@/components/shared/LadderCard';
+import { Sparkline } from '@/components/shared/Sparkline';
+import { useProjectMonthlyBilling } from '@/hooks/useProjectMonthlyBilling';
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -64,6 +66,12 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const totalPendingSubmitted = pendingInvoices.reduce((s, i) => s + i.total_amount, 0);
   // totalPending is set after revisedTotal is computed below (cash-basis: contract minus paid)
   const totalInvoiced = financials.billedToDate;
+
+  // 6-month invoice trend for sparklines
+  const { data: monthly = [] } = useProjectMonthlyBilling(projectId);
+  const billedSeries = monthly.map(m => m.billed);
+  const paidSeries = monthly.map(m => m.paid);
+  const hasTrend = monthly.some(m => m.billed > 0 || m.paid > 0);
 
   // Change orders / Work orders — FC sees WOs they own OR collaborate on
   const { data: changeOrders = [] } = useQuery({
@@ -240,7 +248,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             {/* ═══ T&M MODE: WO-driven cards ═══ */}
 
             {/* Card 1 — My WO Earnings */}
-            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="MY WO EARNINGS" value={coTotal > 0 ? fmt(coTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of your prices`} pills={coTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
+            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="MY WO EARNINGS" value={coTotal > 0 ? fmt(coTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of your prices`} pills={coTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
               <div style={{ padding: 12 }}>
                 {approvedCOs.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -312,7 +320,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             </KpiCard>
 
             {/* Card 4 — Paid by TC (same as fixed-contract) */}
-            <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`PAID BY ${tcName.toUpperCase()}`} value={fmt(totalPaid)} sub={`${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${paidInvoices.length} paid` }]} idx={3}>
+            <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`PAID BY ${tcName.toUpperCase()}`} value={fmt(totalPaid)} sub={`${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${paidInvoices.length} paid` }]} spark={hasTrend ? <Sparkline data={paidSeries} color={C.green} fill={C.green} /> : undefined} idx={3}>
               <div style={{ padding: 12 }}>
                 {paidInvoices.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -478,7 +486,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             </KpiCard>
 
             {/* Card 4 — Paid by TC */}
-            <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`PAID BY ${tcName.toUpperCase()}`} value={fmt(totalPaid)} sub={`${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% of contract collected · ${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% received` }]} idx={3}>
+            <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`PAID BY ${tcName.toUpperCase()}`} value={fmt(totalPaid)} sub={`${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% of contract collected · ${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% received` }]} spark={hasTrend ? <Sparkline data={paidSeries} color={C.green} fill={C.green} /> : undefined} idx={3}>
               <div style={{ padding: 12 }}>
                 {paidInvoices.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
