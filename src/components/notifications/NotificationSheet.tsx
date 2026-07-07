@@ -36,8 +36,8 @@ export function NotificationSheet() {
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
-        <SheetHeader className="px-4 py-3 border-b">
-          <div className="flex items-center justify-between">
+        <SheetHeader className="px-4 py-3 border-b pr-12">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <SheetTitle className="text-base">Notifications</SheetTitle>
             {unreadCount > 0 && (
               <Button
