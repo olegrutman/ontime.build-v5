@@ -22,7 +22,7 @@ export function LandingHeader() {
     <header className="fixed top-0 left-0 right-0 z-50 h-[68px] flex items-center" style={{ background: 'hsl(var(--navy))', borderBottom: '1px solid hsl(var(--amber) / 0.15)' }}>
       <div className="w-full px-[5%] flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 no-underline">
+        <Link to={user ? '/dashboard' : '/'} className="flex items-center gap-2.5 no-underline">
           <OntimeLogo />
           <div>
             <span className="font-heading text-[1.35rem] font-extrabold tracking-[-0.3px] text-white leading-none">

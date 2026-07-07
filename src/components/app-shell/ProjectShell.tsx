@@ -98,13 +98,19 @@ export function ProjectShell({
       <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/80 backdrop-blur-xl border-b border-border">
       {/* Left — Logo + Project name */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <OntimeLogo className="w-7 h-7 shrink-0" />
-          <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none shrink-0">
-            Ontime<span className="text-primary">.build</span>
-          </span>
-          <span className="sm:hidden text-[0.85rem] font-semibold text-foreground truncate max-w-[140px]">
-            {projectName}
-          </span>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+            aria-label="Back to dashboard"
+          >
+            <OntimeLogo className="w-7 h-7 shrink-0" />
+            <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none shrink-0">
+              Ontime<span className="text-primary">.build</span>
+            </span>
+            <span className="sm:hidden text-[0.85rem] font-semibold text-foreground truncate max-w-[140px]">
+              {projectName}
+            </span>
+          </button>
         </div>
 
         {/* Right — Status, Download, Search, Notifications, Avatar */}
