@@ -1,209 +1,190 @@
+import { Link } from 'react-router-dom';
+
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex flex-col justify-center pt-[120px] pb-20 px-[5%] overflow-hidden"
-      style={{ background: 'linear-gradient(155deg, #fff 0%, #F6F8FD 50%, #FFF8EC 100%)' }}
+    <section
+      className="relative flex flex-col justify-center pt-[104px] pb-16 sm:pt-[128px] sm:pb-24 px-5 sm:px-[5%] overflow-hidden"
+      style={{ background: 'linear-gradient(155deg, #fff 0%, #F6F8FD 55%, #FFF4DC 100%)' }}
     >
-      {/* Dot grid */}
+      {/* Background texture */}
       <div
-        className="absolute inset-0 dot-grid pointer-events-none"
-        style={{ maskImage: 'radial-gradient(ellipse 80% 70% at 62% 40%, black 30%, transparent 100%)' }}
+        className="absolute inset-0 dot-grid pointer-events-none opacity-70"
+        style={{ maskImage: 'radial-gradient(ellipse 90% 70% at 60% 35%, black 30%, transparent 100%)' }}
       />
-      {/* Accent orbs */}
-      <div className="absolute -top-[100px] -right-[60px] w-[640px] h-[640px] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse, hsl(var(--amber) / 0.09), transparent 65%)' }}
+      <div
+        className="absolute -top-24 -right-24 w-[420px] h-[420px] sm:w-[640px] sm:h-[640px] pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse, hsl(var(--amber) / 0.14), transparent 65%)' }}
       />
-      <div className="absolute -bottom-[200px] -left-[80px] w-[500px] h-[500px] pointer-events-none"
+      <div
+        className="absolute -bottom-40 -left-20 w-[360px] h-[360px] sm:w-[500px] sm:h-[500px] pointer-events-none"
         style={{ background: 'radial-gradient(ellipse, hsl(var(--navy) / 0.05), transparent 65%)' }}
       />
 
-      {/* Eyebrow */}
-      <div className="animate-fade-up inline-flex items-center gap-2 border px-3.5 py-[5px] rounded-full text-[0.73rem] font-bold tracking-[1.2px] uppercase mb-6 w-fit"
-        style={{ background: 'hsl(var(--amber-pale))', borderColor: 'hsl(var(--amber) / 0.25)', color: 'hsl(var(--amber-d))' }}
-      >
-        <div className="w-[7px] h-[7px] rounded-full animate-pulse-dot" style={{ background: 'hsl(var(--amber))' }} />
-        Construction Operations Platform
-      </div>
-
-      {/* Headline */}
-      <h1 className="animate-fade-up-delay-1 font-heading font-black text-[clamp(3.2rem,7.5vw,7rem)] leading-[0.93] tracking-[-2.5px] uppercase max-w-[860px]" style={{ color: 'hsl(var(--ink))' }}>
-        Every Order.<br />
-        Every Job.<br />
-        <em className="not-italic" style={{ color: 'hsl(var(--amber-d))' }}>One System.</em>
-      </h1>
-
-      {/* Sub */}
-      <p className="animate-fade-up-delay-2 text-[clamp(0.95rem,1.8vw,1.12rem)] max-w-[560px] leading-[1.78] mt-6 mb-10 font-normal" style={{ color: 'hsl(var(--muted-foreground))' }}>
-        Stop reconciling SOVs by hand, chasing change-order approvals over text,
-        and discovering $40k of unreturned material at closeout. Ontime.Build connects
-        GCs, Trade Contractors, Field Crews, and Suppliers in one financial loop —
-        with role-based privacy baked in.
-      </p>
-
-      {/* Actions */}
-      <div className="animate-fade-up-delay-3 flex gap-3.5 items-center flex-wrap">
-        <a
-          href="/signup"
-          className="px-8 py-3.5 rounded-[5px] text-[0.98rem] font-bold shadow-amber-lg hover:brightness-110 hover:-translate-y-px transition-all no-underline"
-          style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy-d))' }}
+      <div className="relative z-10 max-w-6xl mx-auto w-full">
+        {/* Eyebrow */}
+        <div
+          className="animate-fade-up inline-flex items-center gap-2 border px-3 py-[5px] rounded-full text-[0.68rem] sm:text-[0.73rem] font-bold tracking-[1.2px] uppercase mb-5 w-fit"
+          style={{
+            background: 'hsl(var(--amber-pale))',
+            borderColor: 'hsl(var(--amber) / 0.25)',
+            color: 'hsl(var(--amber-d))',
+          }}
         >
-          Create an Account
-        </a>
-        <a href="#how" className="flex items-center gap-2.5 text-[0.9rem] font-medium no-underline transition-colors group" style={{ color: 'hsl(var(--ink2))' }}>
-          <span
-            aria-hidden="true"
-            className="w-[44px] h-[44px] rounded-full border-[1.5px] flex items-center justify-center text-[0.8rem] bg-white shadow-sm transition-all flex-shrink-0"
-            style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--amber-d))' }}
+          <div className="w-[7px] h-[7px] rounded-full animate-pulse-dot" style={{ background: 'hsl(var(--amber))' }} />
+          Construction Operations Platform
+        </div>
+
+        {/* Headline — mobile-first sizing */}
+        <h1
+          className="animate-fade-up-delay-1 font-heading font-black uppercase text-balance
+                     text-[2.6rem] leading-[0.95] tracking-[-1.5px]
+                     sm:text-[4rem] sm:leading-[0.93] sm:tracking-[-2px]
+                     lg:text-[6rem] lg:tracking-[-2.5px] max-w-[860px]"
+          style={{ color: 'hsl(var(--ink))' }}
+        >
+          Every Order.<br />
+          Every Job.<br />
+          <em className="not-italic" style={{ color: 'hsl(var(--amber-d))' }}>One System.</em>
+        </h1>
+
+        {/* Sub */}
+        <p
+          className="animate-fade-up-delay-2 mt-5 sm:mt-6 mb-8 sm:mb-10 max-w-[560px] font-normal
+                     text-[1rem] leading-[1.65]
+                     sm:text-[1.08rem] sm:leading-[1.75]"
+          style={{ color: 'hsl(var(--muted-foreground))' }}
+        >
+          Stop reconciling SOVs by hand, chasing change orders over text, and finding
+          $40k of unreturned material at closeout. Ontime.Build connects <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>GCs, Trade Contractors, Field Crews, and Suppliers</strong> in one financial loop.
+        </p>
+
+        {/* Actions — full-width on mobile */}
+        <div className="animate-fade-up-delay-3 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
+          <Link
+            to="/signup"
+            className="text-center px-7 py-4 sm:py-3.5 rounded-[6px] text-[0.98rem] font-bold shadow-amber-lg hover:brightness-110 hover:-translate-y-px transition-all no-underline"
+            style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy-d))' }}
           >
-            ▶
-          </span>
-          See How It Works
-        </a>
-      </div>
-
-      {/* Trust */}
-      <div className="animate-fade-up-delay-4 flex items-center gap-4 mt-11">
-        <div className="flex">
-          {[
-            { initials: 'GC', bg: 'hsl(var(--amber-d))' },
-            { initials: 'TC', bg: 'hsl(var(--navy))' },
-            { initials: 'FC', bg: 'hsl(153, 82%, 31%)' },
-            { initials: 'SUP', bg: 'hsl(210, 76%, 44%)' },
-          ].map((a, i) => (
-            <div
-              key={a.initials}
-              className="w-[34px] h-[34px] rounded-full border-2 border-white flex items-center justify-center text-[0.62rem] font-bold text-white"
-              style={{ background: a.bg, marginLeft: i > 0 ? '-10px' : 0 }}
+            Create an Account — Free
+          </Link>
+          <a
+            href="#how"
+            className="flex items-center justify-center sm:justify-start gap-2.5 text-[0.9rem] font-medium no-underline transition-colors group py-2"
+            style={{ color: 'hsl(var(--ink2))' }}
+          >
+            <span
+              aria-hidden="true"
+              className="w-[40px] h-[40px] rounded-full border-[1.5px] flex items-center justify-center text-[0.75rem] bg-white shadow-sm flex-shrink-0"
+              style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--amber-d))' }}
             >
-              {a.initials}
-            </div>
-          ))}
+              ▶
+            </span>
+            See how it works
+          </a>
         </div>
-        <div className="text-[0.82rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
-          Built with input from working <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>GCs, Trade Contractors, Field Crews, and Suppliers</strong>
-        </div>
-      </div>
 
-      {/* Dashboard Mock */}
-      <div className="animate-fade-up-delay-5 mt-16 relative">
-        <div className="absolute -inset-x-5 -inset-y-8 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 50%, hsl(var(--amber) / 0.06), transparent 70%)' }} />
-        <div className="bg-white rounded-[14px] overflow-hidden" style={{ border: '1px solid hsl(var(--border))', boxShadow: '0 4px 6px rgba(0,0,0,.04), 0 24px 60px hsl(var(--navy) / 0.1), 0 0 0 1px hsl(var(--amber) / 0.07)' }}>
-          {/* Browser bar */}
-          <div className="px-[18px] py-[11px] flex items-center gap-2" style={{ background: 'hsl(var(--surface))', borderBottom: '1px solid hsl(var(--border))' }}>
-            <div className="w-[10px] h-[10px] rounded-full bg-[#FF5F57]" />
-            <div className="w-[10px] h-[10px] rounded-full bg-[#FFBD2E]" />
-            <div className="w-[10px] h-[10px] rounded-full bg-[#28C840]" />
-            <div className="flex-1 text-center text-[0.75rem] font-medium tracking-[0.5px]" style={{ color: 'hsl(var(--muted-foreground))', }}>
-              Ontime.Build — 5 Cherry Hills Park · Operations Dashboard
-            </div>
+        {/* Trust row */}
+        <div className="animate-fade-up-delay-4 flex items-center gap-3.5 mt-10">
+          <div className="flex">
+            {[
+              { initials: 'GC', bg: 'hsl(var(--amber-d))' },
+              { initials: 'TC', bg: 'hsl(var(--navy))' },
+              { initials: 'FC', bg: 'hsl(153, 82%, 31%)' },
+              { initials: 'SUP', bg: 'hsl(210, 76%, 44%)' },
+            ].map((a, i) => (
+              <div
+                key={a.initials}
+                className="w-[30px] h-[30px] sm:w-[34px] sm:h-[34px] rounded-full border-2 border-white flex items-center justify-center text-[0.58rem] sm:text-[0.62rem] font-bold text-white"
+                style={{ background: a.bg, marginLeft: i > 0 ? '-10px' : 0 }}
+              >
+                {a.initials}
+              </div>
+            ))}
           </div>
-          {/* Body */}
-          <div className="grid grid-cols-1 lg:grid-cols-[196px_1fr_244px] min-h-[400px]">
-            {/* Sidebar — navy */}
-            <div className="hidden lg:block py-4" style={{ background: 'hsl(var(--navy))', borderRight: '1px solid hsl(var(--amber) / 0.1)' }}>
+          <div className="text-[0.78rem] sm:text-[0.82rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            Built with real <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>GCs, trades, crews & suppliers</strong>
+          </div>
+        </div>
+
+        {/* Compact product "proof strip" — replaces oversized dashboard mock on mobile */}
+        <div className="animate-fade-up-delay-5 mt-12 sm:mt-16 relative">
+          <div
+            className="absolute -inset-x-3 -inset-y-6 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse at 50% 50%, hsl(var(--amber) / 0.08), transparent 70%)' }}
+          />
+          <div
+            className="relative bg-white rounded-[14px] overflow-hidden"
+            style={{
+              border: '1px solid hsl(var(--border))',
+              boxShadow: '0 4px 6px rgba(0,0,0,.04), 0 24px 60px hsl(var(--navy) / 0.12), 0 0 0 1px hsl(var(--amber) / 0.07)',
+            }}
+          >
+            {/* Browser bar */}
+            <div
+              className="px-4 py-2.5 flex items-center gap-2"
+              style={{ background: 'hsl(var(--surface))', borderBottom: '1px solid hsl(var(--border))' }}
+            >
+              <div className="w-[9px] h-[9px] rounded-full bg-[#FF5F57]" />
+              <div className="w-[9px] h-[9px] rounded-full bg-[#FFBD2E]" />
+              <div className="w-[9px] h-[9px] rounded-full bg-[#28C840]" />
+              <div
+                className="flex-1 text-center text-[0.68rem] sm:text-[0.75rem] font-medium tracking-[0.4px] truncate px-2"
+                style={{ color: 'hsl(var(--muted-foreground))' }}
+              >
+                Cherry Hills Park — Live Overview
+              </div>
+            </div>
+
+            {/* KPI strip — 3 tiles that stack tight on mobile */}
+            <div className="grid grid-cols-3 gap-px" style={{ background: 'hsl(var(--border))' }}>
               {[
-                { icon: '▦', label: 'Dashboard', active: true },
-                { icon: '📦', label: 'Purchase Orders' },
-                { icon: '📋', label: 'Change Orders' },
-                { icon: '🗓', label: 'Schedule' },
-                { icon: '💰', label: 'Invoices' },
-                { icon: '↩', label: 'Returns' },
-                { icon: '📊', label: 'Project Budget' },
-                { icon: '👥', label: 'Crew Tasks' },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className={`px-4 py-[9px] flex items-center gap-[9px] text-[0.73rem] cursor-pointer transition-all ${
-                    item.active
-                      ? 'font-semibold'
-                      : ''
-                  }`}
-                  style={{
-                    color: item.active ? 'hsl(var(--amber))' : 'rgba(255,255,255,.35)',
-                    background: item.active ? 'hsl(var(--amber) / 0.08)' : 'transparent',
-                    borderLeft: item.active ? '2.5px solid hsl(var(--amber))' : '2.5px solid transparent',
-                  }}
-                >
-                  <span className="w-[14px] text-center">{item.icon}</span>
-                  {item.label}
-                </div>
-              ))}
-              <div className="px-4 pt-3 pb-1.5 text-[0.58rem] text-white/[0.18] tracking-[1.2px] uppercase">Projects</div>
-              {['🏗 Cherry Hills Park', '🏢 Tower 14 — Ph.2', '🏨 Mesa Logistics Hub'].map((p) => (
-                <div key={p} className="px-4 py-[9px] flex items-center gap-[9px] text-[0.73rem] text-white/[0.35] cursor-pointer">
-                  {p}
+                { label: 'Contract', val: '$420K', color: 'hsl(var(--amber-d))', hint: 'Active' },
+                { label: 'Paid', val: '$150K', color: 'hsl(153, 82%, 31%)', hint: 'On track' },
+                { label: 'Approvals', val: '4', color: 'hsl(var(--navy))', hint: '1 INV · 2 WO · 1 CO' },
+              ].map((k) => (
+                <div key={k.label} className="bg-white p-3 sm:p-4">
+                  <div className="text-[0.58rem] sm:text-[0.62rem] uppercase tracking-[0.8px] mb-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    {k.label}
+                  </div>
+                  <div className="font-heading text-[1.35rem] sm:text-[1.8rem] font-black leading-none tabular-nums" style={{ color: k.color }}>
+                    {k.val}
+                  </div>
+                  <div className="text-[0.58rem] sm:text-[0.62rem] mt-1.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    {k.hint}
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Main */}
-            <div className="p-[22px] bg-white">
-              <div className="flex items-center justify-between mb-[18px]">
-                <div className="font-heading text-[1.1rem] font-extrabold tracking-[0.3px]" style={{ color: 'hsl(var(--ink))' }}>5 CHERRY HILLS PARK — LIVE OVERVIEW</div>
-                <div className="px-2.5 py-1 rounded-full text-[0.66rem] font-bold" style={{ background: '#E6F7F2', color: 'hsl(153, 82%, 31%)', border: '1px solid rgba(12,146,104,.2)' }}>82% WITHIN PLAN ✓</div>
+            {/* Progress bars */}
+            <div className="p-4 sm:p-5 bg-white">
+              <div className="text-[0.62rem] sm:text-[0.66rem] font-bold uppercase tracking-[0.8px] mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                Material budget vs orders
               </div>
-              {/* KPIs */}
-              <div className="grid grid-cols-3 gap-2.5 mb-[18px]">
-                {[
-                  { label: 'Contract Value', val: '$420K', colorVar: '--amber-d', delta: 'Framing contract', deltaHL: 'Active' },
-                  { label: 'Invoices Paid', val: '$150K', color: 'hsl(153, 82%, 31%)', delta: 'GC approved', deltaHL: '↑ On Track' },
-                  { label: 'Open Approvals', val: '4', colorVar: '--navy', delta: '1 invoice · 2 WOs · 1 CO' },
-                ].map((kpi) => (
-                  <div key={kpi.label} className="rounded-lg p-3.5" style={{ background: 'hsl(var(--surface))', border: '1px solid hsl(var(--border))' }}>
-                    <div className="text-[0.62rem] uppercase tracking-[0.8px] mb-1" style={{ color: 'hsl(var(--muted-foreground))' }}>{kpi.label}</div>
-                    <div className="font-heading text-[1.8rem] font-black leading-none" style={{ color: kpi.color || `hsl(var(${kpi.colorVar}))` }}>{kpi.val}</div>
-                    <div className="text-[0.62rem] mt-[3px]" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                      {kpi.delta} {kpi.deltaHL && <span style={{ color: 'hsl(153, 82%, 31%)' }}>{kpi.deltaHL}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Progress */}
-              <div className="rounded-lg p-3.5" style={{ background: 'hsl(var(--surface))', border: '1px solid hsl(var(--border))' }}>
-                <div className="text-[0.66rem] font-bold uppercase tracking-[0.8px] mb-2.5" style={{ color: 'hsl(var(--muted-foreground))' }}>Material Budget vs Orders</div>
-                {[
-                  { label: 'Lumber Package', pct: 84, gradient: 'linear-gradient(90deg, hsl(var(--amber-d)), hsl(var(--amber)))' },
-                  { label: 'Hardware', pct: 63, gradient: 'linear-gradient(90deg, hsl(var(--amber)), hsl(var(--amber-l)))' },
-                  { label: 'Sheathing', pct: 76, gradient: 'linear-gradient(90deg, hsl(var(--amber-d)), hsl(var(--amber)))' },
-                  { label: 'Returns Closed', pct: 41, color: 'hsl(153, 82%, 31%)' },
-                ].map((row) => (
-                  <div key={row.label} className="flex items-center gap-2 mb-[7px]">
-                    <div className="text-[0.66rem] w-[90px] flex-shrink-0 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>{row.label}</div>
-                    <div className="flex-1 h-[6px] rounded-[3px] overflow-hidden" style={{ background: 'hsl(var(--surface2))' }}>
-                      <div className="h-full rounded-[3px]" style={{ width: `${row.pct}%`, background: row.gradient || row.color }} />
-                    </div>
-                    <div className="text-[0.62rem] font-semibold flex-shrink-0 ml-[6px] w-[26px] text-right" style={{ color: row.color || 'hsl(var(--amber-d))' }}>{row.pct}%</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right panel */}
-            <div className="hidden lg:flex flex-col p-[18px] bg-white" style={{ borderLeft: '1px solid hsl(var(--border))' }}>
-              <div className="text-[0.63rem] font-bold uppercase tracking-[0.8px] mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>Urgent Items</div>
               {[
-                { initials: 'INV', bg: 'hsl(var(--amber-pale))', color: 'hsl(var(--amber-d))', text: <><strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>Invoice #1048</strong> — $18,400 waiting GC approval</>, flag: 'Pending', flagClass: '' },
-                { initials: 'PO', bg: '#FEF3C7', color: '#92400E', text: <><strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>PO-2213</strong> — Lumber delivery confirmed tomorrow</>, flag: 'Delivery', flagClass: '' },
-                { initials: 'CO', bg: '#E6F7F2', color: 'hsl(153, 82%, 31%)', text: <><strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>Change Order #8</strong> — Level 3 scope approved</>, flag: 'Approved', flagClass: 'green' },
-                { initials: 'RET', bg: '#FEF3C7', color: '#92400E', text: <><strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>Return Request</strong> — 84 LF excess framing lumber</>, flag: 'Review', flagClass: '' },
-                { initials: 'WO', bg: 'hsl(var(--surface2))', color: 'hsl(var(--navy))', text: <><strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>Crew Task</strong> — Level 2 framing update needed</>, flag: 'Crew', flagClass: 'navy' },
-              ].map((item, i) => (
-                <div key={i} className={`flex items-start gap-[9px] pb-2.5 mb-2.5 ${i < 4 ? '' : ''}`} style={{ borderBottom: i < 4 ? '1px solid hsl(var(--border))' : 'none' }}>
+                { label: 'Lumber', pct: 84 },
+                { label: 'Hardware', pct: 63 },
+                { label: 'Sheathing', pct: 76 },
+                { label: 'Returns closed', pct: 41, color: 'hsl(153, 82%, 31%)' },
+              ].map((row) => (
+                <div key={row.label} className="flex items-center gap-2.5 mb-2 last:mb-0">
+                  <div className="text-[0.68rem] w-[74px] sm:w-[100px] flex-shrink-0 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    {row.label}
+                  </div>
+                  <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'hsl(var(--surface2))' }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${row.pct}%`,
+                        background: row.color || 'linear-gradient(90deg, hsl(var(--amber-d)), hsl(var(--amber)))',
+                      }}
+                    />
+                  </div>
                   <div
-                    className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[0.58rem] font-bold flex-shrink-0 mt-[1px]"
-                    style={{ background: item.bg, color: item.color }}
+                    className="text-[0.62rem] font-bold flex-shrink-0 w-[28px] text-right tabular-nums"
+                    style={{ color: row.color || 'hsl(var(--amber-d))' }}
                   >
-                    {item.initials}
-                  </div>
-                  <div>
-                    <div className="text-[0.7rem] leading-[1.45]" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                      {item.text}
-                      <span className="inline-block ml-1 rounded-[3px] text-[0.55rem] font-bold px-[5px] py-px"
-                        style={{
-                          background: item.flagClass === 'green' ? '#E6F7F2' : item.flagClass === 'navy' ? 'hsl(var(--surface2))' : 'hsl(var(--amber-pale))',
-                          color: item.flagClass === 'green' ? 'hsl(153, 82%, 31%)' : item.flagClass === 'navy' ? 'hsl(var(--navy))' : 'hsl(var(--amber-d))',
-                        }}
-                      >{item.flag}</span>
-                    </div>
+                    {row.pct}%
                   </div>
                 </div>
               ))}
