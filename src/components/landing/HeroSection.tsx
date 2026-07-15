@@ -101,7 +101,7 @@ export function HeroSection() {
               </div>
             ))}
           </div>
-          <div className="text-[0.78rem] sm:text-[0.82rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <div className="text-[0.88rem] sm:text-[0.82rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
             Built with real <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>GCs, trades, crews & suppliers</strong>
           </div>
         </div>
