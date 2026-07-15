@@ -167,11 +167,11 @@ export function HeroSection() {
                 { label: 'Sheathing', pct: 76 },
                 { label: 'Returns closed', pct: 41, color: 'hsl(153, 82%, 31%)' },
               ].map((row) => (
-                <div key={row.label} className="flex items-center gap-2.5 mb-2 last:mb-0">
-                  <div className="text-[0.68rem] w-[74px] sm:w-[100px] flex-shrink-0 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                <div key={row.label} className="flex items-center gap-2.5 mb-2.5 last:mb-0">
+                  <div className="text-[0.8rem] sm:text-[0.72rem] w-[92px] sm:w-[100px] flex-shrink-0 truncate font-medium" style={{ color: 'hsl(var(--ink2))' }}>
                     {row.label}
                   </div>
-                  <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'hsl(var(--surface2))' }}>
+                  <div className="flex-1 h-[7px] sm:h-[6px] rounded-full overflow-hidden" style={{ background: 'hsl(var(--surface2))' }}>
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -181,7 +181,7 @@ export function HeroSection() {
                     />
                   </div>
                   <div
-                    className="text-[0.62rem] font-bold flex-shrink-0 w-[28px] text-right tabular-nums"
+                    className="text-[0.78rem] sm:text-[0.68rem] font-bold flex-shrink-0 w-[34px] sm:w-[30px] text-right tabular-nums"
                     style={{ color: row.color || 'hsl(var(--amber-d))' }}
                   >
                     {row.pct}%
