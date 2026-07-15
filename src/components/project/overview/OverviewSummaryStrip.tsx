@@ -56,12 +56,12 @@ function SummaryCard({ title, accent, icon, rows, footer }: SummaryCardProps) {
                 borderTop: r.emphasis ? `1px solid ${C.border}` : 'none',
               }}
             >
-              <span style={{ fontSize: '0.72rem', color: C.muted, fontWeight: r.emphasis ? 700 : 500, minWidth: 0, flex: '1 1 auto' }}>
+              <span style={{ fontSize: '0.88rem', color: C.ink2 || C.muted, fontWeight: r.emphasis ? 700 : 500, minWidth: 0, flex: '1 1 auto' }}>
                 {r.label}
               </span>
               <span
                 style={{
-                  fontSize: r.emphasis ? '0.95rem' : '0.82rem',
+                  fontSize: r.emphasis ? '1.05rem' : '0.95rem',
                   color: toneColor,
                   ...fontMono,
                   fontWeight: r.emphasis ? 700 : 600,
@@ -76,7 +76,7 @@ function SummaryCard({ title, accent, icon, rows, footer }: SummaryCardProps) {
           );
         })}
       </div>
-      {footer && <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, fontSize: '0.68rem', color: C.faint }}>{footer}</div>}
+      {footer && <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, fontSize: '0.8rem', color: C.muted, lineHeight: 1.45 }}>{footer}</div>}
     </div>
   );
 }
