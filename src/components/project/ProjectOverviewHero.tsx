@@ -27,7 +27,10 @@ export function ProjectOverviewHero({
   rightSlot,
 }: ProjectOverviewHeroProps) {
   const navigate = useNavigate();
-  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+  const typeLabel = projectType
+    ? projectType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : null;
 
   return (
     <div className="bg-[hsl(var(--foreground))] text-white rounded-2xl px-4 sm:px-5 py-4">
