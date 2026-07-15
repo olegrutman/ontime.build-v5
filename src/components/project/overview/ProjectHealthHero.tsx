@@ -56,20 +56,20 @@ export function ProjectHealthHero({
 
       {/* Left: status + value */}
       <div style={{ minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
           <span
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '4px 10px', borderRadius: 999,
+              padding: '5px 11px', borderRadius: 999,
               background: s.bg, color: s.color,
-              fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px',
+              fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px',
               border: `1px solid ${s.color}33`,
             }}
           >
-            <Icon size={12} />
+            <Icon size={13} />
             {s.label}
           </span>
-          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700 }}>
+          <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.muted, fontWeight: 700 }}>
             {label}
           </span>
         </div>
@@ -81,13 +81,13 @@ export function ProjectHealthHero({
               <span style={{ fontSize: '2.4rem', color: C.ink, lineHeight: 1, ...fontVal }}>
                 {fmtSigned(projectedMargin)}
               </span>
-              <span style={{ fontSize: '1rem', color: s.color, ...fontMono }}>
+              <span style={{ fontSize: '1.05rem', color: s.color, fontWeight: 700, ...fontMono }}>
                 {pctRounded >= 0 ? '+' : ''}{pctRounded}%
               </span>
             </>
           )}
         </div>
-        <p style={{ fontSize: '0.82rem', color: C.muted, marginTop: 8, lineHeight: 1.4 }}>
+        <p style={{ fontSize: '0.92rem', color: C.ink2 || C.muted, marginTop: 10, lineHeight: 1.45 }}>
           {summary}
         </p>
         {detail && <div style={{ marginTop: 6 }}>{detail}</div>}
