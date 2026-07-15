@@ -10,7 +10,7 @@ export function CTASection() {
         style={{ background: 'radial-gradient(ellipse, hsl(var(--amber) / 0.08), transparent 70%)' }}
       />
 
-      <h2 className="font-heading text-[clamp(2.8rem,6vw,5.5rem)] font-black leading-[0.93] tracking-[-2px] uppercase text-white max-w-[800px] mx-auto mb-[22px] relative">
+      <h2 className="font-heading text-[clamp(2.4rem,8vw,5.5rem)] font-black leading-[0.93] tracking-[-2px] uppercase text-white max-w-[800px] mx-auto mb-[22px] relative">
         Stop Losing Money<br />to <em className="not-italic" style={{ color: 'hsl(var(--amber))' }}>Disconnected Systems.</em>
       </h2>
       <p className="text-white/[0.44] text-[1.05rem] max-w-[460px] mx-auto mb-9 relative">
