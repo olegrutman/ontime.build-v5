@@ -10,7 +10,7 @@ export function CTASection() {
         style={{ background: 'radial-gradient(ellipse, hsl(var(--amber) / 0.08), transparent 70%)' }}
       />
 
-      <h2 className="font-heading text-[clamp(2.8rem,6vw,5.5rem)] font-black leading-[0.93] tracking-[-2px] uppercase text-white max-w-[800px] mx-auto mb-[22px] relative">
+      <h2 className="font-heading text-[clamp(2.4rem,8vw,5.5rem)] font-black leading-[0.93] tracking-[-2px] uppercase text-white max-w-[800px] mx-auto mb-[22px] relative">
         Stop Losing Money<br />to <em className="not-italic" style={{ color: 'hsl(var(--amber))' }}>Disconnected Systems.</em>
       </h2>
       <p className="text-white/[0.44] text-[1.05rem] max-w-[460px] mx-auto mb-9 relative">
@@ -31,9 +31,9 @@ export function CTASection() {
           Talk to Sales
         </a>
       </div>
-      <div className="mt-[22px] flex justify-center gap-6 flex-wrap relative">
+      <div className="mt-[22px] grid grid-cols-2 sm:flex sm:justify-center gap-x-4 gap-y-2 sm:gap-6 max-w-[440px] sm:max-w-none mx-auto relative">
         {['No credit card required', 'Full platform access', 'Setup in under 30 min', '$89 / company / month'].map((t) => (
-          <span key={t} className="text-[0.8rem] text-white/30 flex items-center gap-[5px]">
+          <span key={t} className="text-[0.82rem] sm:text-[0.8rem] text-white/45 sm:text-white/30 flex items-center gap-[5px]">
             <span className="font-bold" style={{ color: 'hsl(var(--amber))' }}>✓</span>
             {t}
           </span>

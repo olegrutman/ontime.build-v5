@@ -23,7 +23,7 @@ export function HeroSection() {
       <div className="relative z-10 max-w-6xl mx-auto w-full">
         {/* Eyebrow */}
         <div
-          className="animate-fade-up inline-flex items-center gap-2 border px-3 py-[5px] rounded-full text-[0.68rem] sm:text-[0.73rem] font-bold tracking-[1.2px] uppercase mb-5 w-fit"
+          className="animate-fade-up inline-flex items-center gap-2 border px-3 py-[5px] rounded-full text-[0.72rem] sm:text-[0.73rem] font-bold tracking-[1px] sm:tracking-[1.2px] uppercase mb-5 w-fit"
           style={{
             background: 'hsl(var(--amber-pale))',
             borderColor: 'hsl(var(--amber) / 0.25)',
@@ -49,8 +49,8 @@ export function HeroSection() {
 
         {/* Sub */}
         <p
-          className="animate-fade-up-delay-2 mt-5 sm:mt-6 mb-8 sm:mb-10 max-w-[560px] font-normal
-                     text-[1rem] leading-[1.65]
+          className="animate-fade-up-delay-2 mt-5 sm:mt-6 mb-9 sm:mb-10 max-w-[560px] font-normal
+                     text-[1rem] leading-[1.7]
                      sm:text-[1.08rem] sm:leading-[1.75]"
           style={{ color: 'hsl(var(--muted-foreground))' }}
         >
@@ -101,7 +101,7 @@ export function HeroSection() {
               </div>
             ))}
           </div>
-          <div className="text-[0.78rem] sm:text-[0.82rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <div className="text-[0.88rem] sm:text-[0.82rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
             Built with real <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>GCs, trades, crews & suppliers</strong>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function HeroSection() {
               <div className="w-[9px] h-[9px] rounded-full bg-[#FFBD2E]" />
               <div className="w-[9px] h-[9px] rounded-full bg-[#28C840]" />
               <div
-                className="flex-1 text-center text-[0.68rem] sm:text-[0.75rem] font-medium tracking-[0.4px] truncate px-2"
+                className="flex-1 text-center text-[0.75rem] sm:text-[0.75rem] font-medium tracking-[0.4px] truncate px-2"
                 style={{ color: 'hsl(var(--muted-foreground))' }}
               >
                 Cherry Hills Park — Live Overview
@@ -143,13 +143,13 @@ export function HeroSection() {
                 { label: 'Approvals', val: '4', color: 'hsl(var(--navy))', hint: '1 INV · 2 WO · 1 CO' },
               ].map((k) => (
                 <div key={k.label} className="bg-white p-3 sm:p-4">
-                  <div className="text-[0.58rem] sm:text-[0.62rem] uppercase tracking-[0.8px] mb-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  <div className="text-[0.7rem] sm:text-[0.62rem] uppercase tracking-[0.6px] sm:tracking-[0.8px] mb-1.5 font-semibold" style={{ color: 'hsl(var(--muted-foreground))' }}>
                     {k.label}
                   </div>
-                  <div className="font-heading text-[1.35rem] sm:text-[1.8rem] font-black leading-none tabular-nums" style={{ color: k.color }}>
+                  <div className="font-heading text-[1.6rem] sm:text-[1.8rem] font-black leading-none tabular-nums" style={{ color: k.color }}>
                     {k.val}
                   </div>
-                  <div className="text-[0.58rem] sm:text-[0.62rem] mt-1.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  <div className="text-[0.7rem] sm:text-[0.62rem] mt-1.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
                     {k.hint}
                   </div>
                 </div>
@@ -158,7 +158,7 @@ export function HeroSection() {
 
             {/* Progress bars */}
             <div className="p-4 sm:p-5 bg-white">
-              <div className="text-[0.62rem] sm:text-[0.66rem] font-bold uppercase tracking-[0.8px] mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              <div className="text-[0.75rem] sm:text-[0.66rem] font-bold uppercase tracking-[0.6px] sm:tracking-[0.8px] mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
                 Material budget vs orders
               </div>
               {[
@@ -167,11 +167,11 @@ export function HeroSection() {
                 { label: 'Sheathing', pct: 76 },
                 { label: 'Returns closed', pct: 41, color: 'hsl(153, 82%, 31%)' },
               ].map((row) => (
-                <div key={row.label} className="flex items-center gap-2.5 mb-2 last:mb-0">
-                  <div className="text-[0.68rem] w-[74px] sm:w-[100px] flex-shrink-0 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                <div key={row.label} className="flex items-center gap-2.5 mb-2.5 last:mb-0">
+                  <div className="text-[0.8rem] sm:text-[0.72rem] w-[92px] sm:w-[100px] flex-shrink-0 truncate font-medium" style={{ color: 'hsl(var(--ink2))' }}>
                     {row.label}
                   </div>
-                  <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'hsl(var(--surface2))' }}>
+                  <div className="flex-1 h-[7px] sm:h-[6px] rounded-full overflow-hidden" style={{ background: 'hsl(var(--surface2))' }}>
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -181,7 +181,7 @@ export function HeroSection() {
                     />
                   </div>
                   <div
-                    className="text-[0.62rem] font-bold flex-shrink-0 w-[28px] text-right tabular-nums"
+                    className="text-[0.78rem] sm:text-[0.68rem] font-bold flex-shrink-0 w-[34px] sm:w-[30px] text-right tabular-nums"
                     style={{ color: row.color || 'hsl(var(--amber-d))' }}
                   >
                     {row.pct}%

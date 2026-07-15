@@ -1,82 +1,70 @@
+## Problem
 
-# Overnight Autonomous Fix Plan
+On mobile (390–440px), several landing sections use font sizes that are technically legible but feel cramped for outdoor/site reading (bright screens, gloves, older eyes). Specifically:
 
-**Honest answer up front:** I can safely fix roughly **60–70%** of PROBLEMS.md on my own tonight. The rest needs your judgment (product copy, design decisions, backend policy, real testing with users). I'll fix what's safe, leave the rest documented, and give you a report in the morning.
+| Location | Current mobile size | Issue |
+|---|---|---|
+| Hero sub-paragraph | `1rem` (16px) | Fine, but line-height 1.65 is tight for the long paragraph |
+| Hero KPI tile labels ("Contract", "Paid", "Approvals") | `0.58rem` (~9px) | Way below readable minimum |
+| Hero KPI hint row ("Active", "1 INV · 2 WO…") | `0.58rem` (~9px) | Same — unreadable at arm's length |
+| Hero KPI values | `1.35rem` (~22px) | OK but small for a headline number |
+| Hero "Material budget vs orders" label | `0.62rem` (~10px) | Too small |
+| Hero progress bar row labels (Lumber, Hardware…) | `0.68rem` (~11px) | Below comfort threshold |
+| Hero progress % values | `0.62rem` (~10px) | Too small |
+| Hero trust row ("Built with real GCs…") | `0.78rem` (~12.5px) | Borderline |
+| Hero eyebrow pill | `0.68rem` (~11px) | OK for a label, but tracking is tight |
+| ProblemSolution "before" / "after" text | `0.9–0.95rem` (~14–15px) | Fine, keep |
+| CTASection subhead | `1.05rem` | Fine |
+| CTASection trust chips | `0.8rem` (~13px) | Borderline |
+| StatsStrip label | `0.83rem` (~13px) | Borderline on 390px |
 
----
+Root cause: mobile sizes were set to make the "browser mockup" tile look proportional. That's the wrong priority — legibility beats mockup fidelity.
 
-## What I WILL fix on my own (safe, mechanical, no judgment calls)
+## Fix approach
 
-### Wave 1 — Blockers that are pure bugs
-- Remove the "UI preview only" label from the phone signup tab in production.
-- Fix Google sign-in redirect to point at `/auth/callback` instead of site root.
-- Remove the broken phone-signup path entirely (or hide it behind a feature flag) so no more `phone-placeholder@ontime.build` users get created.
-- Fix the OTP length mismatch (6 vs 8 digits).
-- Fix the "I'm part of a team" toggle inversion on GC signup.
-- Remove hardcoded mock data ("5 Cherry Hills Park", "Derek Kowalski") from `GCProjectOverview.tsx` — replace with real data hooks or an empty state.
-- Add confirm dialogs to all destructive actions currently using browser `confirm()` or firing immediately (Approve $18,400, Clear QA data, PO deletes, Supplier delete, etc.) — replace with the existing shadcn `AlertDialog`.
-- Fix Cash Position formula on FC dashboard (`totalPaid - payables`, not `totalPaid - 0`).
-- Fix "Pending CO net at risk" to filter out FC-irrelevant COs.
-- Fix `FS` role bypassing FC guard.
-- Fix `TC_PM` default `canApprove` (align with role spec).
-- Add org filter to Supplier estimates/projects queries (data leak).
-- Add org filter to TC gross margin visibility.
-- Wire the orphaned `ProjectSOVPage.tsx` route or remove the file.
-- Remove the duplicate Supplier estimate page.
-- Add role gate to desktop Quick Capture fallback.
+**Adopt a mobile minimum of 12px (0.75rem) for any label, 14px (0.875rem) for any body-adjacent text, 16px (1rem) for paragraphs.** This matches Apple HIG and Material guidance and is what leading construction/SaaS sites (Procore, Linear, Stripe) use on mobile.
 
-### Wave 2 — Embarrassing UI polish
-- Wrap sign-in inputs in a `<form>` so Enter works from the email field.
-- Add "Resend verification" button to the unconfirmed-email error state.
-- Fix "Go back" navigation to use browser history instead of always `/signup`.
-- Add `inputMode="decimal"` to all mobile numeric inputs.
-- Add `aria-label`s to the 45 flagged unlabeled controls.
-- Remove the 10 `console.log(...)` dead row-click handlers on GC Dashboard (either wire them to detail routes or remove the click affordance).
-- Remove/disable dead buttons: "Delete Account", "Submit to TC" raw enum, "New Order" flow for suppliers.
+### Specific changes (mobile only — desktop sizes unchanged)
 
-### Wave 3 — Design system cleanup (mechanical)
-- Sweep the ~380 hardcoded color classes (`text-white`, `bg-black`, `bg-[#...]`) and replace with semantic tokens from `index.css`.
-- Sweep the ~100+ inline `style={{ color: '#...' }}` objects on Supplier and GC Project Overview and move to tokens.
-- Standardize "Ontime.Build" vs "OnTime.Build" — pick "Ontime.Build" (matches BrandPanel).
-- Fix hardcoded canonical URL to use `window.location.origin`.
+**HeroSection.tsx**
+1. Sub-paragraph: keep `1rem` but bump line-height from 1.65 → 1.7 and add a hair more bottom margin so it breathes.
+2. Product mockup KPI tiles:
+   - Label: `0.58rem` → `0.7rem` (~11.2px) with tighter tracking, or accept a slightly larger tile
+   - Value: `1.35rem` → `1.6rem` — the headline number should dominate
+   - Hint: `0.58rem` → `0.68rem` and truncate more aggressively
+3. Progress section:
+   - Section label: `0.62rem` → `0.72rem`
+   - Row label: `0.68rem` → `0.8rem`, widen label column from 74px → 88px
+   - Percent value: `0.62rem` → `0.75rem` bold
+4. Trust row copy: `0.78rem` → `0.85rem`
+5. Eyebrow pill: `0.68rem` → `0.72rem`, loosen letter-spacing from 1.2px → 1px
 
-### Wave 4 — Loading + empty states (mechanical)
-- Add `Skeleton` loading state to the 38 pages missing one — I'll use the existing `Skeleton` component and match the page layout.
-- Add empty states to the pages missing them, following the pattern already in `SupplierDashboard`.
+**CTASection.tsx**
+6. Trust chips ("No credit card required" etc.): `0.8rem` → `0.88rem`, and stack to 2×2 grid on mobile instead of 4-wrap so each chip has room.
+7. Headline `clamp(2.8rem, 6vw, 5.5rem)` → `clamp(2.4rem, 8vw, 5.5rem)` — the 6vw minimum is too small on 390px (~23px).
 
-### Wave 5 — Security hardening
-- Move impersonation token from `sessionStorage` to httpOnly cookie flow OR shortest fix: encrypted + short TTL + tab-close cleanup.
-- Ensure the "You are impersonating" banner renders inside project routes (move to `AppLayout`).
-- Add server-side check for platform admin routes (not just client 2FA gate) via edge function.
+**StatsStrip.tsx**
+8. Label: `0.83rem` → `0.9rem` on mobile.
+9. Number: keep clamp but raise floor from 2.2rem → 2.6rem so the numbers feel like stats, not captions.
 
----
+**ProblemSolutionSection.tsx** — already fine, no changes.
 
-## What I will NOT fix (needs your call)
+### Why this works
+- **12px floor** removes the "squinting" complaint without breaking the compact aesthetic.
+- **Bumping the KPI values proportionally** keeps the visual hierarchy (big number > small label) intact.
+- **Only mobile breakpoints change** (`sm:` and above stay the same), so desktop stays polished.
+- **No layout thrash** — the mockup tile grows ~8–12px in height, still fits the viewport.
 
-- **Landing copy** — "200+ construction teams", "60 seconds", tagline honesty. That's marketing, not engineering. I'll leave a comment.
-- **Two parallel signup flows** — merging `/auth` register tab and `/signup` wizard is a product decision. I'll leave both and flag the conflict.
-- **Platform permission toggles without backend enforcement** — needs new RLS policies I shouldn't write without you reviewing.
-- **FC picker** — new feature, needs spec.
-- **Focus traps on 100+ custom bottom sheets** — risky mechanical change, could break interactions. I'll do the top 10 most-used sheets only.
-- **Returns pricing panel corruption loop** — needs reproduction with real data; I'll investigate but may not ship a fix.
+### Not changing
+- Desktop typography (already well-tuned).
+- Font families, colors, spacing tokens.
+- Section order or content.
 
----
+## Technical scope
 
-## Safety rules I'll follow
-- Every change goes through the file-edit tools (no destructive shell).
-- I won't touch: `auth` schema, `src/integrations/supabase/client.ts`, `types.ts`, `.env`, `supabase/config.toml`.
-- Any DB migration I write will be minimal and reversible; if a fix requires a large schema change, I'll skip and log it.
-- After each wave I'll run `tsgo` typecheck and `bunx vitest run`. If either breaks, I revert that wave's changes and move on.
-- I'll commit progress by leaving a running log at `.lovable/overnight-log.md`.
+Files touched:
+- `src/components/landing/HeroSection.tsx` (~10 className tweaks)
+- `src/components/landing/CTASection.tsx` (2 className tweaks + grid on mobile)
+- `src/components/landing/StatsStrip.tsx` (2 className tweaks)
 
-## What you'll see in the morning
-1. `.lovable/overnight-log.md` — every fix I shipped, every fix I skipped and why.
-2. Updated `PROBLEMS.md` — items I fixed marked `[FIXED]`, items I skipped marked `[NEEDS YOU]` with the reason.
-3. A short summary message from me listing anything that broke or anything I wasn't sure about.
-
-## Rough time/scope
-About 40–60 tool turns of work. I'll stop early if I hit repeated failures rather than thrash.
-
----
-
-**Approve this plan and I'll start immediately. Sleep well.**
+Zero new dependencies, no design tokens changed, no logic changes. Purely presentational.
