@@ -158,7 +158,7 @@ export function HeroSection() {
 
             {/* Progress bars */}
             <div className="p-4 sm:p-5 bg-white">
-              <div className="text-[0.62rem] sm:text-[0.66rem] font-bold uppercase tracking-[0.8px] mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
+              <div className="text-[0.75rem] sm:text-[0.66rem] font-bold uppercase tracking-[0.6px] sm:tracking-[0.8px] mb-3" style={{ color: 'hsl(var(--muted-foreground))' }}>
                 Material budget vs orders
               </div>
               {[
