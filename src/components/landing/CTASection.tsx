@@ -31,9 +31,9 @@ export function CTASection() {
           Talk to Sales
         </a>
       </div>
-      <div className="mt-[22px] flex justify-center gap-6 flex-wrap relative">
+      <div className="mt-[22px] grid grid-cols-2 sm:flex sm:justify-center gap-x-4 gap-y-2 sm:gap-6 max-w-[440px] sm:max-w-none mx-auto relative">
         {['No credit card required', 'Full platform access', 'Setup in under 30 min', '$89 / company / month'].map((t) => (
-          <span key={t} className="text-[0.8rem] text-white/30 flex items-center gap-[5px]">
+          <span key={t} className="text-[0.82rem] sm:text-[0.8rem] text-white/45 sm:text-white/30 flex items-center gap-[5px]">
             <span className="font-bold" style={{ color: 'hsl(var(--amber))' }}>✓</span>
             {t}
           </span>
