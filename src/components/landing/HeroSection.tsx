@@ -49,8 +49,8 @@ export function HeroSection() {
 
         {/* Sub */}
         <p
-          className="animate-fade-up-delay-2 mt-5 sm:mt-6 mb-8 sm:mb-10 max-w-[560px] font-normal
-                     text-[1rem] leading-[1.65]
+          className="animate-fade-up-delay-2 mt-5 sm:mt-6 mb-9 sm:mb-10 max-w-[560px] font-normal
+                     text-[1rem] leading-[1.7]
                      sm:text-[1.08rem] sm:leading-[1.75]"
           style={{ color: 'hsl(var(--muted-foreground))' }}
         >
