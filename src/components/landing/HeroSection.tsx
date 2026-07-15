@@ -128,7 +128,7 @@ export function HeroSection() {
               <div className="w-[9px] h-[9px] rounded-full bg-[#FFBD2E]" />
               <div className="w-[9px] h-[9px] rounded-full bg-[#28C840]" />
               <div
-                className="flex-1 text-center text-[0.68rem] sm:text-[0.75rem] font-medium tracking-[0.4px] truncate px-2"
+                className="flex-1 text-center text-[0.75rem] sm:text-[0.75rem] font-medium tracking-[0.4px] truncate px-2"
                 style={{ color: 'hsl(var(--muted-foreground))' }}
               >
                 Cherry Hills Park — Live Overview
