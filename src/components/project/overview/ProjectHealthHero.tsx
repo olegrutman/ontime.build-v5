@@ -99,7 +99,7 @@ export function ProjectHealthHero({
           style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${Math.min(miniStats.length, 3)}, minmax(0, 1fr))`,
-            gap: 14,
+            gap: 10,
             minWidth: 280,
           }}
           className="max-md:min-w-full max-md:w-full"
@@ -107,11 +107,22 @@ export function ProjectHealthHero({
           {miniStats.map((m) => {
             const toneColor = m.tone === 'pos' ? C.green : m.tone === 'neg' ? C.red : C.ink;
             return (
-              <div key={m.label} style={{ background: C.surface2, borderRadius: 10, padding: '10px 12px', border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, fontWeight: 700, marginBottom: 4 }}>
+              <div key={m.label} style={{ background: C.surface2, borderRadius: 10, padding: '10px 10px', border: `1px solid ${C.border}` }}>
+                <div
+                  style={{
+                    fontSize: '0.72rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.4px',
+                    color: C.muted,
+                    fontWeight: 700,
+                    marginBottom: 6,
+                    lineHeight: 1.15,
+                    minHeight: '1.7em',
+                  }}
+                >
                   {m.label}
                 </div>
-                <div style={{ fontSize: '1.1rem', color: toneColor, ...fontMono }}>{m.value}</div>
+                <div style={{ fontSize: '1.15rem', color: toneColor, fontWeight: 700, ...fontMono }}>{m.value}</div>
               </div>
             );
           })}
