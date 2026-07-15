@@ -143,13 +143,13 @@ export function HeroSection() {
                 { label: 'Approvals', val: '4', color: 'hsl(var(--navy))', hint: '1 INV · 2 WO · 1 CO' },
               ].map((k) => (
                 <div key={k.label} className="bg-white p-3 sm:p-4">
-                  <div className="text-[0.58rem] sm:text-[0.62rem] uppercase tracking-[0.8px] mb-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  <div className="text-[0.7rem] sm:text-[0.62rem] uppercase tracking-[0.6px] sm:tracking-[0.8px] mb-1.5 font-semibold" style={{ color: 'hsl(var(--muted-foreground))' }}>
                     {k.label}
                   </div>
-                  <div className="font-heading text-[1.35rem] sm:text-[1.8rem] font-black leading-none tabular-nums" style={{ color: k.color }}>
+                  <div className="font-heading text-[1.6rem] sm:text-[1.8rem] font-black leading-none tabular-nums" style={{ color: k.color }}>
                     {k.val}
                   </div>
-                  <div className="text-[0.58rem] sm:text-[0.62rem] mt-1.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  <div className="text-[0.7rem] sm:text-[0.62rem] mt-1.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
                     {k.hint}
                   </div>
                 </div>
