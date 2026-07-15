@@ -23,7 +23,7 @@ export function HeroSection() {
       <div className="relative z-10 max-w-6xl mx-auto w-full">
         {/* Eyebrow */}
         <div
-          className="animate-fade-up inline-flex items-center gap-2 border px-3 py-[5px] rounded-full text-[0.68rem] sm:text-[0.73rem] font-bold tracking-[1.2px] uppercase mb-5 w-fit"
+          className="animate-fade-up inline-flex items-center gap-2 border px-3 py-[5px] rounded-full text-[0.72rem] sm:text-[0.73rem] font-bold tracking-[1px] sm:tracking-[1.2px] uppercase mb-5 w-fit"
           style={{
             background: 'hsl(var(--amber-pale))',
             borderColor: 'hsl(var(--amber) / 0.25)',
