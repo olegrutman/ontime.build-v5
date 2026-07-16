@@ -526,7 +526,53 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             </Label>
           </div>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
+          {/* Mobile: stacked cards */}
+          <div className="sm:hidden divide-y divide-border">
+            {lineItems.map((item) => {
+              const percentComplete = item.scheduled_value > 0
+                ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1)
+                : '0';
+              const remaining = item.scheduled_value - item.total_billed;
+              const isOverbilled = remaining < 0;
+              const noteText = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
+              return (
+                <div key={`m-${item.id}`} className={`p-3 ${isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
+                  <div className="text-sm font-medium mb-2 break-words">{item.description}</div>
+                  {noteText && (
+                    <div className="text-xs text-muted-foreground mb-2 whitespace-pre-wrap">{noteText}</div>
+                  )}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    <div className="text-muted-foreground">Scheduled</div>
+                    <div className="text-right font-mono tabular-nums">{formatCurrency(item.scheduled_value)}</div>
+                    <div className="text-muted-foreground">Previously billed</div>
+                    <div className="text-right font-mono tabular-nums">{formatCurrency(item.previous_billed)}</div>
+                    <div className="text-muted-foreground">This period</div>
+                    <div className="text-right font-mono tabular-nums font-semibold">{formatCurrency(item.current_billed)}</div>
+                    <div className="text-muted-foreground">Total billed</div>
+                    <div className="text-right font-mono tabular-nums">{formatCurrency(item.total_billed)}</div>
+                    <div className="text-muted-foreground">Remaining</div>
+                    <div className={`text-right font-mono tabular-nums font-medium ${isOverbilled ? 'text-red-600 dark:text-red-400' : ''}`}>
+                      {formatCurrency(remaining)}{isOverbilled && ' ⚠'}
+                    </div>
+                    <div className="text-muted-foreground">% complete</div>
+                    <div className={`text-right font-mono tabular-nums ${parseFloat(percentComplete) > 100 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
+                      {percentComplete}%
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="p-3 bg-muted/40 space-y-1 text-xs">
+              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono tabular-nums font-semibold">{formatCurrency(invoice.subtotal)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Retainage withheld</span><span className="font-mono tabular-nums text-amber-600">-{formatCurrency(invoice.retainage_amount)}</span></div>
+              <div className="flex justify-between pt-1 border-t border-border/60"><span className="font-semibold">Total due</span><span className="font-mono tabular-nums font-bold text-base">{formatCurrency(invoice.total_amount)}</span></div>
+            </div>
+          </div>
+
+          {/* Desktop: full table */}
+          <div className="hidden sm:block overflow-x-auto">
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -647,7 +693,9 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
               </TableRow>
             </TableFooter>
           </Table>
+          </div>
         </CardContent>
+
       </Card>
 
       {/* Notes */}
