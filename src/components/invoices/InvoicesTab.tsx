@@ -413,7 +413,32 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       );
     }
 
-    if (viewMode === 'table' && typeof window !== 'undefined' && window.innerWidth >= 640) {
+    const isMobileWidth = typeof window !== 'undefined' && window.innerWidth < 640;
+
+    if (isMobileWidth) {
+      return (
+        <div className="border rounded-lg divide-y divide-border overflow-hidden bg-card">
+          {currentInvoices.map((invoice) => {
+            const { canSubmit, canApprove } = getInvoicePermissions(invoice);
+            return (
+              <InvoiceRow
+                key={invoice.id}
+                invoice={invoice}
+                onClick={() => setSelectedInvoiceId(invoice.id)}
+                onEdit={canSubmit ? handleEditInvoice : undefined}
+                onSubmit={canSubmit ? handleQuickSubmit : undefined}
+                onApprove={canApprove ? handleQuickApprove : undefined}
+                onDelete={canSubmit ? handleDeleteInvoice : undefined}
+                canSubmit={canSubmit}
+                canApprove={canApprove}
+              />
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (viewMode === 'table') {
       return (
         <InvoiceTableView
           invoices={currentInvoices}
@@ -428,7 +453,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     }
 
     return (
-      <div className="grid gap-3 grid-cols-1 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {currentInvoices.map((invoice) => {
           const { canSubmit, canApprove } = getInvoicePermissions(invoice);
           return (
@@ -447,6 +472,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         })}
       </div>
     );
+
   };
 
   const renderSOVAlert = () => {
