@@ -277,34 +277,73 @@
     text-wrap: balance;
   }
 
-  /* ── Unified Design Tokens ── */
+  /* ── Unified Responsive Type Scale ──
+     Mobile-first sizes with sm: (≥640px) overrides.
+     Mobile floors respect the ~12px readability minimum for supporting text
+     and boost KPI numbers for at-a-glance scanning on phones. */
+
+  /* KPI numbers (Barlow Condensed, tabular) */
   .kpi-value {
     font-family: 'Barlow Condensed', 'Barlow', sans-serif;
-    @apply text-[2rem] font-black tracking-tight leading-none tabular-nums text-foreground;
+    @apply text-[1.9rem] sm:text-[2rem] font-black tracking-tight leading-none tabular-nums text-foreground;
   }
   .kpi-value-sm {
-    font-family: 'Barlow Condensed', 'Barlow', sans-serif;
     @apply text-[1.5rem] font-black tracking-tight leading-none tabular-nums text-foreground;
+    font-family: 'Barlow Condensed', 'Barlow', sans-serif;
   }
+  .kpi-value-lg {
+    font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+    @apply text-[2.25rem] sm:text-[2.5rem] font-black tracking-tight leading-none tabular-nums text-foreground;
+  }
+
+  /* Monospaced financial numbers (IBM Plex Mono, tabular) */
+  .num-xl {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    @apply text-[1.35rem] sm:text-[1.5rem] font-bold tabular-nums leading-tight text-foreground;
+  }
+  .num-lg {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    @apply text-[1.1rem] sm:text-[1.15rem] font-semibold tabular-nums leading-tight text-foreground;
+  }
+  .num-md {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    @apply text-[0.95rem] font-semibold tabular-nums leading-tight text-foreground;
+  }
+  .num-sm {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    @apply text-[0.85rem] sm:text-[0.82rem] font-medium tabular-nums leading-tight text-foreground;
+  }
+
+  /* Labels — uppercase eyebrow style */
   .kpi-label {
-    @apply text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium;
+    @apply text-[0.75rem] sm:text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-semibold sm:font-medium;
   }
+  .stat-label {
+    @apply text-[0.78rem] sm:text-[0.72rem] uppercase tracking-[0.5px] text-muted-foreground font-semibold;
+  }
+  .stat-sub {
+    @apply text-[0.8rem] sm:text-[0.75rem] text-muted-foreground leading-snug;
+  }
+
+  /* Section headings */
   .card-header-row {
     @apply flex items-center justify-between px-4 py-3;
   }
   .card-section-title {
     font-family: 'Barlow Condensed', 'Barlow', sans-serif;
-    @apply text-[1rem] font-bold text-foreground;
+    @apply text-[1.05rem] sm:text-[1rem] font-bold text-foreground;
   }
+
+  /* Data rows */
   .data-row {
     @apply flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-accent/50 transition-colors;
     min-height: 44px;
   }
   .data-row-label {
-    @apply text-[0.82rem] font-semibold text-foreground;
+    @apply text-[0.9rem] sm:text-[0.82rem] font-semibold text-foreground;
   }
   .data-row-sub {
-    @apply text-[0.68rem] text-muted-foreground;
+    @apply text-[0.78rem] sm:text-[0.68rem] text-muted-foreground;
   }
 
   .animate-fade-in {
