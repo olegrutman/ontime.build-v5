@@ -168,7 +168,7 @@ export function SupplierMaterialsChart({ projectId, supplierOrgId }: Props) {
               y={estimateTotal}
               stroke="hsl(var(--muted-foreground))"
               strokeDasharray="6 4"
-              label={{ value: 'Estimate', position: 'right', fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              label={{ value: 'Estimate', position: 'right', fontSize: 12, fontWeight: 500, fill: 'hsl(var(--muted-foreground))' }}
             />
             <Line type="monotone" dataKey="committed" stroke="var(--color-committed)" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="netDelivered" stroke="var(--color-netDelivered)" strokeWidth={2} dot={false} />
