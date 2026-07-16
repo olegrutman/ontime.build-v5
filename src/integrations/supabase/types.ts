@@ -2907,6 +2907,24 @@ export type Database = {
           },
         ]
       }
+      internal_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       invoice_line_items: {
         Row: {
           billed_percent: number | null
@@ -3185,6 +3203,44 @@ export type Database = {
             columns: ["user_org_role_id"]
             isOneToOne: true
             referencedRelation: "user_org_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_deliveries: {
+        Row: {
+          channel: string
+          delivered_at: string
+          error: string | null
+          id: string
+          notification_id: string | null
+          status: string
+          subscription_id: string | null
+        }
+        Insert: {
+          channel: string
+          delivered_at?: string
+          error?: string | null
+          id?: string
+          notification_id?: string | null
+          status: string
+          subscription_id?: string | null
+        }
+        Update: {
+          channel?: string
+          delivered_at?: string
+          error?: string | null
+          id?: string
+          notification_id?: string | null
+          status?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
             referencedColumns: ["id"]
           },
         ]
@@ -7020,6 +7076,7 @@ export type Database = {
           notify_invites: boolean | null
           notify_invoices: boolean | null
           notify_project_invite: boolean
+          notify_push: boolean
           notify_sms: boolean | null
           notify_wo_approved: boolean
           notify_wo_assigned: boolean
@@ -7040,6 +7097,7 @@ export type Database = {
           notify_invites?: boolean | null
           notify_invoices?: boolean | null
           notify_project_invite?: boolean
+          notify_push?: boolean
           notify_sms?: boolean | null
           notify_wo_approved?: boolean
           notify_wo_assigned?: boolean
@@ -7060,6 +7118,7 @@ export type Database = {
           notify_invites?: boolean | null
           notify_invoices?: boolean | null
           notify_project_invite?: boolean
+          notify_push?: boolean
           notify_sms?: boolean | null
           notify_wo_approved?: boolean
           notify_wo_assigned?: boolean
