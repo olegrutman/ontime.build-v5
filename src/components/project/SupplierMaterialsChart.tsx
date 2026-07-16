@@ -152,9 +152,9 @@ export function SupplierMaterialsChart({ projectId, supplierOrgId }: Props) {
         <ChartContainer config={chartConfig} className="aspect-[2/1] w-full">
           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-            <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} />
             <YAxis
-              tick={{ fontSize: 11 }}
+              tick={{ fontSize: 12, fontWeight: 500 }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}

@@ -59,15 +59,15 @@ export function FinancialTrendCharts({ spendTrend, woTrend, loading }: Financial
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
-                <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} className="fill-muted-foreground" width={50} />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 500 }} className="fill-muted-foreground" />
+                <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 12, fontWeight: 500 }} className="fill-muted-foreground" width={50} />
                 <Tooltip
                   formatter={(value: number, name: string) => [formatCurrencyShort(value), name === 'billed' ? 'Billed' : 'Paid']}
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                 />
                 <Area type="monotone" dataKey="billed" stroke="hsl(var(--primary))" fill="url(#billedGrad)" strokeWidth={2} name="billed" />
                 <Area type="monotone" dataKey="paid" stroke="hsl(142 76% 36%)" fill="url(#paidGrad)" strokeWidth={2} name="paid" />
-                <Legend formatter={(value) => value === 'billed' ? 'Billed' : 'Paid'} wrapperStyle={{ fontSize: '12px' }} />
+                <Legend formatter={(value) => value === 'billed' ? 'Billed' : 'Paid'} wrapperStyle={{ fontSize: "13px", fontWeight: 500 }} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -89,15 +89,15 @@ export function FinancialTrendCharts({ spendTrend, woTrend, loading }: Financial
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={woTrend}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="fill-muted-foreground" width={30} />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 500 }} className="fill-muted-foreground" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12, fontWeight: 500 }} className="fill-muted-foreground" width={30} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                   formatter={(value: number, name: string) => [value, name === 'created' ? 'Created' : 'Approved']}
                 />
                 <Bar dataKey="created" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="created" />
                 <Bar dataKey="approved" fill="hsl(142 76% 36%)" radius={[4, 4, 0, 0]} name="approved" />
-                <Legend formatter={(value) => value === 'created' ? 'Created' : 'Approved'} wrapperStyle={{ fontSize: '12px' }} />
+                <Legend formatter={(value) => value === 'created' ? 'Created' : 'Approved'} wrapperStyle={{ fontSize: "13px", fontWeight: 500 }} />
               </BarChart>
             </ResponsiveContainer>
           )}
