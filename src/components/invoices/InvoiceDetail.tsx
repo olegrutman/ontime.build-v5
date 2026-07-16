@@ -693,7 +693,9 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
               </TableRow>
             </TableFooter>
           </Table>
+          </div>
         </CardContent>
+
       </Card>
 
       {/* Notes */}
