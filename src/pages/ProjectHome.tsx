@@ -324,9 +324,11 @@ export default function ProjectHome() {
         <ProjectSidebar isSupplier={isSupplier} isTM={isTM} />
         <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
           <div className={cn(
-            "max-w-7xl mx-auto w-full pb-36 lg:pb-6",
-            activeTab === 'overview' ? 'px-3 sm:px-6 py-3 sm:py-4' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
+            "max-w-7xl mx-auto w-full",
+            activeTab === 'overview' ? 'px-3 sm:px-6 pt-3 sm:pt-4' : 'px-3 sm:px-6 pt-4 sm:pt-6 space-y-6',
+            "pb-36 lg:pb-6"
           )}>
+
             {/* Dark Header — matches DashboardHero style */}
             {activeTab === 'overview' && (
               <div className="mb-3">
