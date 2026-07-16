@@ -17,8 +17,10 @@ import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
 import { CreateInvoiceFromSOV } from './CreateInvoiceFromSOV';
 import { CreateInvoiceFromCOs } from './CreateInvoiceFromCOs';
 import { InvoiceCard } from './InvoiceCard';
+import { InvoiceRow } from './InvoiceRow';
 import { InvoiceTableView } from './InvoiceTableView';
 import { InvoiceActionBar } from './InvoiceActionBar';
+
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
 import { useAuth } from '@/hooks/useAuth';
