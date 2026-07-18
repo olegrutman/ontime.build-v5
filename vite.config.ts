@@ -19,13 +19,10 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      strategies: "injectManifest",
-      srcDir: "src",
+      strategies: "generateSW",
       filename: "sw.js",
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
-      },
-      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
       },
       manifest: {
