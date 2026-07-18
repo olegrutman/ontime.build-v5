@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       injectRegister: "auto",
       strategies: "injectManifest",
-      srcDir: "public",
+      srcDir: "src",
       filename: "sw.js",
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
