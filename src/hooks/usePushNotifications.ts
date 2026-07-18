@@ -77,10 +77,11 @@ export function usePushNotifications() {
 
     setLoading(true);
     try {
-      // Register service worker if not already registered
-      let registration = await navigator.serviceWorker.getRegistration();
+      // Register the dedicated push worker if not already registered.
+      // The app-shell service worker is managed by vite-plugin-pwa separately.
+      let registration = await navigator.serviceWorker.getRegistration('/push-sw.js');
       if (!registration) {
-        registration = await navigator.serviceWorker.register('/sw.js');
+        registration = await navigator.serviceWorker.register('/push-sw.js');
       }
 
       // Wait for service worker to be ready

@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Switch } from '@/components/ui/switch';
+import { ElongatedSwitch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -856,7 +856,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-4">
-                          <Switch
+                          <ElongatedSwitch
                             checked={enabled}
                             onCheckedChange={(checked) => setCoBillAmount(checked ? selectedCO.remaining : 0)}
                             disabled={fullyBilled}
@@ -1078,7 +1078,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
-                            <Switch
+                            <ElongatedSwitch
                               checked={item.enabled}
                               onCheckedChange={(checked) => handleToggleItem(item.id, checked)}
                               className="mt-1"
