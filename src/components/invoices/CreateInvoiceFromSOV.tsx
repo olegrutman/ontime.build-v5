@@ -1078,7 +1078,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
-                            <Switch
+                            <ElongatedSwitch
                               checked={item.enabled}
                               onCheckedChange={(checked) => handleToggleItem(item.id, checked)}
                               className="mt-1"
