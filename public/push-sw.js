@@ -1,8 +1,5 @@
 // Ontime.Build push-notification service worker.
 // Minimal — push + click only. No app-shell caching.
-// The manifest placeholder below is required by vite-plugin-pwa's injectManifest build.
-// eslint-disable-next-line no-underscore-dangle
-self.__WB_MANIFEST;
 
 self.addEventListener('install', () => {
   self.skipWaiting();
