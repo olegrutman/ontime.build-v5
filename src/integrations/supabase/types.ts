@@ -2925,6 +2925,59 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_external_invites: {
+        Row: {
+          approver_name: string | null
+          created_at: string
+          decision: string | null
+          decision_note: string | null
+          email: string
+          expires_at: string
+          id: string
+          invited_at: string
+          invited_by_user_id: string | null
+          invoice_id: string
+          responded_at: string | null
+          token: string
+        }
+        Insert: {
+          approver_name?: string | null
+          created_at?: string
+          decision?: string | null
+          decision_note?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          invoice_id: string
+          responded_at?: string | null
+          token?: string
+        }
+        Update: {
+          approver_name?: string | null
+          created_at?: string
+          decision?: string | null
+          decision_note?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          invoice_id?: string
+          responded_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_external_invites_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_line_items: {
         Row: {
           billed_percent: number | null
