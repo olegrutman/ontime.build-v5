@@ -780,6 +780,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           revisionData={revisionData}
         />
       )}
+
+      <InvoiceExternalInviteDialog
+        invoiceId={invoiceId}
+        open={externalInviteOpen}
+        onOpenChange={setExternalInviteOpen}
+      />
     </div>
   );
 }
