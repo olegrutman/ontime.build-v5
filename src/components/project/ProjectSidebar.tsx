@@ -181,7 +181,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
   if (!id) return null;
 
   return (
-    <aside className="hidden lg:flex flex-col w-[200px] xl:w-[220px] shrink-0 bg-[hsl(var(--foreground))] text-white fixed left-0 top-[52px] bottom-0 z-40">
+    <aside className="hidden md:flex flex-col w-[200px] xl:w-[220px] shrink-0 bg-[hsl(var(--foreground))] text-white fixed left-0 top-[52px] bottom-0 z-40">
       <nav className="flex-1 flex flex-col gap-0.5 p-3 pt-4 overflow-y-auto">
         {/* Back to Dashboard */}
         <button
