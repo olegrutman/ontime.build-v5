@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell, Pencil, Check, X, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -26,6 +26,7 @@ import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
 import { useNudge } from '@/hooks/useNudge';
+import { InvoiceExternalInviteDialog } from './InvoiceExternalInviteDialog';
 
 function extractScopeOfWork(desc: string | null | undefined): string | null {
   if (!desc) return null;
