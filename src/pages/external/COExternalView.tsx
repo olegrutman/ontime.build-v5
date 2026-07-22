@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, Loader2, AlertTriangle, FileText, DollarSign, ClipboardCheck, MessageSquare } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, FileText, DollarSign, ClipboardCheck, MessageSquare, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -185,24 +185,34 @@ export default function COExternalView() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-slate-900 text-white">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-3 mb-3">
-            <PurposeIcon className={`h-6 w-6 ${purposeConfig.color === 'text-blue-600' ? 'text-blue-400' : purposeConfig.color === 'text-emerald-600' ? 'text-emerald-400' : 'text-slate-400'}`} />
-            <h1 className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
-              {purposeConfig.title}
-            </h1>
-          </div>
-          {co && (
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="font-mono text-sm text-slate-300">{co.co_number}</span>
-              <span className="text-white font-medium">{co.title}</span>
+      <div className="bg-slate-900 text-white no-print">
+        <div className="max-w-2xl mx-auto px-4 py-6 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 mb-3">
+              <PurposeIcon className={`h-6 w-6 ${purposeConfig.color === 'text-blue-600' ? 'text-blue-400' : purposeConfig.color === 'text-emerald-600' ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <h1 className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
+                {purposeConfig.title}
+              </h1>
             </div>
-          )}
+            {co && (
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <span className="font-mono text-sm text-slate-300">{co.co_number}</span>
+                <span className="text-white font-medium">{co.title}</span>
+              </div>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            className="shrink-0 bg-white/10 text-white border-white/20 hover:bg-white/20"
+          >
+            <FileDown className="h-4 w-4 mr-1" /> PDF
+          </Button>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 print-page">
         {/* CO Details - Read Only */}
         {co && (
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
@@ -305,7 +315,7 @@ export default function COExternalView() {
         )}
 
         {/* Response Form */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 no-print">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Your Response</h2>
 
           <div className="grid grid-cols-2 gap-4">

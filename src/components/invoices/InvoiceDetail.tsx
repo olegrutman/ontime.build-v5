@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell, Pencil, Check, X, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -26,6 +26,7 @@ import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
 import { useNudge } from '@/hooks/useNudge';
+import { InvoiceExternalInviteDialog } from './InvoiceExternalInviteDialog';
 
 function extractScopeOfWork(desc: string | null | undefined): string | null {
   if (!desc) return null;
@@ -78,6 +79,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [editDescription, setEditDescription] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [externalInviteOpen, setExternalInviteOpen] = useState(false);
 
   const startEditLine = (item: InvoiceLineItem) => {
     setEditingItemId(item.id);
@@ -417,6 +419,13 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
             Export PDF
           </Button>
+
+          {(status === 'DRAFT' || status === 'SUBMITTED') && (
+            <Button variant="outline" onClick={() => setExternalInviteOpen(true)}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Send for External Approval
+            </Button>
+          )}
 
           {status === 'DRAFT' && canSubmit && (
             <>
@@ -771,6 +780,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           revisionData={revisionData}
         />
       )}
+
+      <InvoiceExternalInviteDialog
+        invoiceId={invoiceId}
+        open={externalInviteOpen}
+        onOpenChange={setExternalInviteOpen}
+      />
     </div>
   );
 }
