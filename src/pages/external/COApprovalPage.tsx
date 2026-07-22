@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, X, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Check, X, Loader2, ShieldCheck, AlertTriangle, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -163,17 +163,22 @@ export default function COApprovalPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <ShieldCheck className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-lg font-bold text-foreground">{roleLabel} Approval</h1>
-            <p className="text-xs text-muted-foreground">Change Order Review</p>
+      <div className="bg-card border-b border-border no-print">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-6 w-6 text-primary" />
+            <div>
+              <h1 className="text-lg font-bold text-foreground">{roleLabel} Approval</h1>
+              <p className="text-xs text-muted-foreground">Change Order Review</p>
+            </div>
           </div>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <FileDown className="h-4 w-4 mr-1" /> PDF
+          </Button>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-5 print-page">
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <div className="flex items-center gap-2">
@@ -201,7 +206,7 @@ export default function COApprovalPage() {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4 no-print">
           <div>
             <Label className="text-sm font-medium">Your Name (legal signature) *</Label>
             <Input
