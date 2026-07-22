@@ -79,6 +79,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [editDescription, setEditDescription] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [externalInviteOpen, setExternalInviteOpen] = useState(false);
 
   const startEditLine = (item: InvoiceLineItem) => {
     setEditingItemId(item.id);
@@ -418,6 +419,13 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
             Export PDF
           </Button>
+
+          {(status === 'DRAFT' || status === 'SUBMITTED') && (
+            <Button variant="outline" onClick={() => setExternalInviteOpen(true)}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Send for External Approval
+            </Button>
+          )}
 
           {status === 'DRAFT' && canSubmit && (
             <>
