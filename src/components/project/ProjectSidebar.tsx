@@ -58,8 +58,8 @@ function getNavSections(isTM: boolean): NavSection[] {
         ...(!isTM
           ? [{ key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true } as NavItem]
           : []),
-        { key: 'change-orders', label: isTM ? 'Work Orders' : 'Change Orders', icon: AlertTriangle, route: 'change-orders', featureKey: 'change_orders' },
-        { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true },
+        { key: 'change-orders', label: isTM ? 'Work Orders' : 'Change Orders', icon: AlertTriangle, route: 'change-orders', featureKey: 'change_orders', hideForSupplier: true },
+        { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true, hideForSupplier: true },
         { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
       ],
     },
@@ -70,7 +70,7 @@ function getNavSections(isTM: boolean): NavSection[] {
         { key: 'invoices', label: 'Invoices', icon: Receipt, route: 'invoices', featureKey: 'invoicing' },
         { key: 'purchase-orders', label: 'Purchase Orders', icon: Package, route: 'purchase-orders', featureKey: 'purchase_orders' },
         { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
-        { key: 'backcharges', label: 'Backcharges', icon: AlertTriangle, route: 'backcharges' },
+        { key: 'backcharges', label: 'Backcharges', icon: AlertTriangle, route: 'backcharges', hideForSupplier: true },
         { key: 'payment-apps', label: 'Payment Apps', icon: FileText, route: 'payment-apps', hideForSupplier: true },
       ],
     },
@@ -92,8 +92,10 @@ function getNavSections(isTM: boolean): NavSection[] {
   ];
 }
 
-// Top three most-used destinations, always pinned above the section list.
-const PINNED_KEYS = ['overview', 'change-orders', 'invoices'];
+// Pinned destinations differ by role. Suppliers live in the estimate→PO→invoice loop;
+// GC/TC/FC pin the CO + invoice workflow.
+const PINNED_KEYS_DEFAULT = ['overview', 'change-orders', 'invoices'];
+const PINNED_KEYS_SUPPLIER = ['overview', 'estimates', 'purchase-orders'];
 
 function AttentionBadge({ count }: { count: number }) {
   if (count <= 0) return null;
