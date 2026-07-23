@@ -516,20 +516,36 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
   const handleDownload = async (po: PurchaseOrder) => {
     try {
-      let url: string;
-      let headers: Record<string, string> = {};
-      if (po.download_token) {
-        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
-      } else {
+      const buildAuthedUrl = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) {
           toast.error('Please log in to download');
-          return;
+          return null;
         }
-        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${po.id}&format=pdf`;
-        headers = { Authorization: `Bearer ${session.access_token}` };
+        return {
+          url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${po.id}&format=pdf`,
+          headers: { Authorization: `Bearer ${session.access_token}` } as Record<string, string>,
+        };
+      };
+
+      let url: string;
+      let headers: Record<string, string> = {};
+      const tokenExp = (po as any)?.download_token_expires_at;
+      const tokenValid = po.download_token && (!tokenExp || new Date(tokenExp).getTime() > Date.now());
+      if (tokenValid) {
+        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
+      } else {
+        const authed = await buildAuthedUrl();
+        if (!authed) return;
+        url = authed.url;
+        headers = authed.headers;
       }
-      const res = await fetch(url, { headers });
+      let res = await fetch(url, { headers });
+      if (res.status === 410 && tokenValid) {
+        const authed = await buildAuthedUrl();
+        if (!authed) return;
+        res = await fetch(authed.url, { headers: authed.headers });
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Download failed' }));
         throw new Error(err.error || `Download failed (${res.status})`);
