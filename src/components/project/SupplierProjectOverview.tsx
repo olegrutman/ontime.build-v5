@@ -146,7 +146,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   // Warnings
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (scheduledPOs.length > 0) {
-    warnings.push({ color: C.yellow, icon: '🚚', title: `${scheduledPOs.length} Delivery${scheduledPOs.length > 1 ? 'ies' : ''} Scheduled`, sub: 'Confirm logistics with GC', value: fmt(scheduledPOs.reduce((s, p) => s + (p.po_total || 0), 0)), pill: 'Upcoming', pillType: 'pw', tab: 'purchase-orders' });
+    warnings.push({ color: C.yellow, icon: '🚚', title: `${scheduledPOs.length} Deliver${scheduledPOs.length > 1 ? 'ies' : 'y'} Scheduled`, sub: 'Confirm logistics with GC', value: fmt(scheduledPOs.reduce((s, p) => s + (p.po_total || 0), 0)), pill: 'Upcoming', pillType: 'pw', tab: 'purchase-orders' });
   }
   if (outstanding > 0) {
     warnings.push({ color: C.amber, icon: '💰', title: `${fmt(outstanding)} Outstanding Balance`, sub: 'Invoiced but not yet fully paid', value: fmt(outstanding), pill: 'Receivable', pillType: 'pa', tab: 'invoices' });
@@ -180,10 +180,25 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice</button>
-          <button onClick={() => onNavigate('purchase-orders')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View All POs</button>
+          {unpricedPOs.length > 0 && (
+            <button onClick={() => onNavigate('purchase-orders')} style={{ padding: '8px 16px', borderRadius: 8, background: C.blue, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Price {unpricedPOs.length} PO{unpricedPOs.length > 1 ? 's' : ''}</button>
+          )}
+          {totalOrdered > 0 && (
+            <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice</button>
+          )}
+          <button onClick={() => onNavigate('estimates')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>Estimates</button>
         </div>
       </div>
+
+      {/* Action Queue — surfaced above KPIs so suppliers see what's on them first */}
+      {warnings.length > 0 && (
+        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, fontSize: '0.78rem', fontWeight: 700, color: C.ink }}>⚡ Action Queue — {projectName}</div>
+          {warnings.map((w, i) => (
+            <WarnItem key={i} color={w.color} icon={w.icon} title={w.title} sub={w.sub} value={w.value} pill={w.pill} pillType={w.pillType} onClick={() => onNavigate(w.tab)} />
+          ))}
+        </div>
+      )}
 
       {/* 6 KPI Cards — 3-col grid */}
       <KpiGrid>
@@ -412,15 +427,6 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         );
       })()}
 
-      {/* Warnings */}
-      {warnings.length > 0 && (
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, fontSize: '0.78rem', fontWeight: 700, color: C.ink }}>🚨 Attention — {projectName}</div>
-          {warnings.map((w, i) => (
-            <WarnItem key={i} color={w.color} icon={w.icon} title={w.title} sub={w.sub} value={w.value} pill={w.pill} pillType={w.pillType} onClick={() => onNavigate(w.tab)} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
