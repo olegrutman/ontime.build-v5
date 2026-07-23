@@ -171,7 +171,8 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
     [sections, isSupplier]
   );
 
-  const pinnedItems = PINNED_KEYS
+  const pinnedKeys = isSupplier ? PINNED_KEYS_SUPPLIER : PINNED_KEYS_DEFAULT;
+  const pinnedItems = pinnedKeys
     .map((k) => allItems.find((i) => i.key === k))
     .filter((i): i is NavItem => !!i);
 
