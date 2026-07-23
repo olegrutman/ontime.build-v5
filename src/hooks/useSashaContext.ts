@@ -8,7 +8,12 @@ export function useSashaContext(): string {
   const params = new URLSearchParams(location.search);
   const tab = params.get('tab');
 
-  let context = '';
+  // Global style directive — keep every reply skimmable.
+  let context =
+    'STYLE: Reply in plain text only. No markdown, no asterisks, no bold, no italics, no headings. ' +
+    'Answer in 1–3 short sentences. If you must list items, use short lines starting with "• " (max 4 items). ' +
+    'Be direct and skip filler. ';
+
 
   // Demo mode context
   if (isDemoMode) {
