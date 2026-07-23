@@ -2,6 +2,31 @@ import { cn } from '@/lib/utils';
 import { SashaQuickActions } from './SashaQuickActions';
 import sashaAvatar from '@/assets/sasha-avatar.png';
 
+// Strip lightweight markdown so replies render as clean, skimmable text.
+function cleanMarkdown(input: string): string {
+  if (!input) return input;
+  let s = input;
+  // Fenced/inline code — keep content, drop the backticks
+  s = s.replace(/```[a-zA-Z0-9]*\n?([\s\S]*?)```/g, '$1');
+  s = s.replace(/`([^`]+)`/g, '$1');
+  // Bold / italic (**x**, __x__, *x*, _x_)
+  s = s.replace(/\*\*([^*]+)\*\*/g, '$1');
+  s = s.replace(/__([^_]+)__/g, '$1');
+  s = s.replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1$2');
+  s = s.replace(/(^|[\s(])_([^_\n]+)_/g, '$1$2');
+  // Headings (#, ##, ###) at line start
+  s = s.replace(/^\s{0,3}#{1,6}\s+/gm, '');
+  // Bullet markers -> •
+  s = s.replace(/^\s*[-*+]\s+/gm, '• ');
+  // Numbered lists stay as-is but drop trailing periods on markers
+  // Markdown links [text](url) -> text
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
+  // Collapse 3+ blank lines
+  s = s.replace(/\n{3,}/g, '\n\n');
+  return s.trim();
+}
+
+
 export interface SashaChatMessage {
   role: 'user' | 'assistant';
   content: string;
