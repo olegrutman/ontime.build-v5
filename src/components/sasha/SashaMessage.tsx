@@ -61,7 +61,8 @@ export function SashaMessage({ message, isLast, onActionSelect, isLoading }: Sas
               : 'bg-primary/5 border border-primary/15 text-foreground rounded-bl-sm'
           )}
         >
-          {message.content}
+          {isUser ? message.content : cleanMarkdown(message.content)}
+
         </div>
 
         {!isUser && isLast && message.actions && message.actions.length > 0 && (
