@@ -483,26 +483,45 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const handleDownload = async () => {
     setExportLoading(true);
     try {
-      let url: string | null = null;
-      let headers: Record<string, string> = {};
-
-      if (po?.download_token) {
-        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
-      } else {
+      const buildAuthedUrl = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) {
           toast.error('Please log in to download');
-          return;
+          return null;
         }
-        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${poId}&format=pdf`;
-        headers = { Authorization: `Bearer ${session.access_token}` };
+        return {
+          url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${poId}&format=pdf`,
+          headers: { Authorization: `Bearer ${session.access_token}` } as Record<string, string>,
+        };
+      };
+
+      let url: string | null = null;
+      let headers: Record<string, string> = {};
+
+      // Only use the share token if it hasn't expired; otherwise fall back to the authed path.
+      const tokenExp = (po as any)?.download_token_expires_at;
+      const tokenValid = po?.download_token && (!tokenExp || new Date(tokenExp).getTime() > Date.now());
+      if (tokenValid) {
+        url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
+      } else {
+        const authed = await buildAuthedUrl();
+        if (!authed) return;
+        url = authed.url;
+        headers = authed.headers;
       }
 
-      const res = await fetch(url, { headers });
+      let res = await fetch(url, { headers });
+      // If a share token expired between check and request, retry as authed user.
+      if (res.status === 410 && tokenValid) {
+        const authed = await buildAuthedUrl();
+        if (!authed) return;
+        res = await fetch(authed.url, { headers: authed.headers });
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Download failed' }));
         throw new Error(err.error || `Download failed (${res.status})`);
       }
+
       const html = await res.text();
       const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
       const blobUrl = URL.createObjectURL(blob);
