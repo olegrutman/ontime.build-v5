@@ -427,15 +427,6 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         );
       })()}
 
-      {/* Warnings */}
-      {warnings.length > 0 && (
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, fontSize: '0.78rem', fontWeight: 700, color: C.ink }}>🚨 Attention — {projectName}</div>
-          {warnings.map((w, i) => (
-            <WarnItem key={i} color={w.color} icon={w.icon} title={w.title} sub={w.sub} value={w.value} pill={w.pill} pillType={w.pillType} onClick={() => onNavigate(w.tab)} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
