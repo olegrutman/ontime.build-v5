@@ -146,7 +146,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   // Warnings
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (scheduledPOs.length > 0) {
-    warnings.push({ color: C.yellow, icon: '🚚', title: `${scheduledPOs.length} Delivery${scheduledPOs.length > 1 ? 'ies' : ''} Scheduled`, sub: 'Confirm logistics with GC', value: fmt(scheduledPOs.reduce((s, p) => s + (p.po_total || 0), 0)), pill: 'Upcoming', pillType: 'pw', tab: 'purchase-orders' });
+    warnings.push({ color: C.yellow, icon: '🚚', title: `${scheduledPOs.length} Deliver${scheduledPOs.length > 1 ? 'ies' : 'y'} Scheduled`, sub: 'Confirm logistics with GC', value: fmt(scheduledPOs.reduce((s, p) => s + (p.po_total || 0), 0)), pill: 'Upcoming', pillType: 'pw', tab: 'purchase-orders' });
   }
   if (outstanding > 0) {
     warnings.push({ color: C.amber, icon: '💰', title: `${fmt(outstanding)} Outstanding Balance`, sub: 'Invoiced but not yet fully paid', value: fmt(outstanding), pill: 'Receivable', pillType: 'pa', tab: 'invoices' });
