@@ -1,8 +1,14 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, MousePointer2, RotateCcw } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { X, Send, MousePointer2, RotateCcw, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -13,20 +19,34 @@ import { SashaHighlightOverlay } from './SashaHighlightOverlay';
 import { collectPageSnapshot } from '@/lib/sashaPageSnapshot';
 import { toast } from 'sonner';
 
-
 const SASHA_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sasha-guide`;
 
-const INITIAL_GREETING: SashaChatMessage = {
-  role: 'assistant',
-  content:
-    "Hi, I'm Sasha.\nI'll guide you through Ontime.Build step by step.\nYou can explore safely — nothing you do here can break anything.",
-  actions: [
-    "What's on this page?",
-    'Explore a demo project',
-    'Explain change orders',
-    'Explain purchase orders',
-  ],
-};
+// Build a short, contextual greeting with exactly 2 route-aware suggestions.
+function buildGreeting(pathname: string): SashaChatMessage {
+  const base = "Hi, I'm Sasha — ask me anything about this page.";
+  const tabMatch = pathname.match(/\/project\/[^/]+\/([^/?]+)/);
+  const tab = tabMatch?.[1];
+
+  let actions: string[] = ["What's on this page?", 'Explore a demo project'];
+
+  if (pathname === '/dashboard') {
+    actions = ["What's on this page?", 'Explain change orders'];
+  } else if (tab === 'change-orders') {
+    actions = ['Explain change orders', 'How do I create one?'];
+  } else if (tab === 'purchase-orders') {
+    actions = ['Explain purchase orders', 'How do I create one?'];
+  } else if (tab === 'invoices') {
+    actions = ['Explain invoices', 'How do I create one?'];
+  } else if (tab === 'sov') {
+    actions = ['What is an SOV?', 'How do I bill from it?'];
+  } else if (tab === 'financials') {
+    actions = ["What's on this page?", 'Explain profit position'];
+  } else if (pathname.startsWith('/project/')) {
+    actions = ["What's on this page?", 'Explain this project'];
+  }
+
+  return { role: 'assistant', content: base, actions };
+}
 
 export function SashaBubble() {
   const { user } = useAuth();
@@ -36,65 +56,56 @@ export function SashaBubble() {
   const context = useSashaContext();
 
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<SashaChatMessage[]>([INITIAL_GREETING]);
+  const initialGreeting = useMemo(() => buildGreeting(location.pathname), [location.pathname]);
+  const [messages, setMessages] = useState<SashaChatMessage[]>([initialGreeting]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [pulse, setPulse] = useState(() => !localStorage.getItem('sasha_pulse_dismissed'));
-  const [showLabel, setShowLabel] = useState(true);
   const [highlightMode, setHighlightMode] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(() => {
+  const [showIntro, setShowIntro] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return !localStorage.getItem('sasha_welcome_seen');
+    return !localStorage.getItem('sasha_intro_seen');
   });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isOnDashboard = location.pathname === '/dashboard';
-
-  // Stop pulse + hide label after first open; dismiss welcome
+  // If the user hasn't sent anything, keep greeting fresh as they navigate.
   useEffect(() => {
-    if (open) {
-      setPulse(false);
-      setShowLabel(false);
-      if (showWelcome) {
-        setShowWelcome(false);
-        localStorage.setItem('sasha_welcome_seen', 'true');
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].role === 'assistant') {
+        return [buildGreeting(location.pathname)];
       }
-    }
-  }, [open, showWelcome]);
+      return prev;
+    });
+  }, [location.pathname]);
 
-  // Auto-dismiss label after 6s (or welcome after 8s)
+  // Dismiss one-time intro on open, and auto-dismiss after 6s.
   useEffect(() => {
-    const t = setTimeout(() => setShowLabel(false), 6000);
+    if (open && showIntro) {
+      setShowIntro(false);
+      localStorage.setItem('sasha_intro_seen', 'true');
+    }
+  }, [open, showIntro]);
+
+  useEffect(() => {
+    if (!showIntro) return;
+    const t = setTimeout(() => {
+      setShowIntro(false);
+      localStorage.setItem('sasha_intro_seen', 'true');
+    }, 6000);
     return () => clearTimeout(t);
-  }, []);
+  }, [showIntro]);
 
-  useEffect(() => {
-    if (showWelcome && isOnDashboard) {
-      const t = setTimeout(() => {
-        setShowWelcome(false);
-        localStorage.setItem('sasha_welcome_seen', 'true');
-      }, 8000);
-      return () => clearTimeout(t);
-    }
-  }, [showWelcome, isOnDashboard]);
-
-  // Scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  // Focus input when panel opens
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
-  // Handle Sasha action buttons that trigger navigation
   const handleAction = useCallback(
     (action: string) => {
       const lower = action.toLowerCase();
-
-      // Determine current project ID from URL or demo context
       const pathMatch = location.pathname.match(/^\/project\/([^/?]+)/);
       const currentProjectId = pathMatch?.[1] || (isDemoMode ? demoProjectId : null);
 
@@ -121,7 +132,6 @@ export function SashaBubble() {
         }
       }
 
-      // Global navigation
       const global: Array<[RegExp, string]> = [
         [/dashboard|go home/, '/dashboard'],
         [/partner/, '/partners'],
@@ -138,7 +148,6 @@ export function SashaBubble() {
         if (re.test(lower)) { navigate(path); return; }
       }
 
-      // Default: send as chat message
       sendMessage(action);
     },
     [location.pathname, isDemoMode, demoProjectId, navigate]
@@ -155,7 +164,6 @@ export function SashaBubble() {
       setIsLoading(true);
 
       const apiMessages = updatedMessages.map(({ role, content }) => ({ role, content }));
-
       let assistantText = '';
 
       try {
@@ -220,7 +228,6 @@ export function SashaBubble() {
           }
         }
 
-        // Try to parse structured JSON response
         try {
           const parsed = JSON.parse(assistantText);
           if (parsed.text) {
@@ -242,11 +249,10 @@ export function SashaBubble() {
   const handleClose = () => {
     setOpen(false);
     setHighlightMode(false);
-    // Keep messages so the user can re-open and continue the same conversation.
   };
 
   const handleResetChat = () => {
-    setMessages([INITIAL_GREETING]);
+    setMessages([buildGreeting(location.pathname)]);
     setInput('');
   };
 
@@ -255,14 +261,11 @@ export function SashaBubble() {
     sendMessage(prompt);
   }, [sendMessage]);
 
-
-  // Show for demo mode (no auth needed) or authenticated users
   const hiddenPaths = ['/', '/auth'];
   if (!isDemoMode && (!user || hiddenPaths.includes(location.pathname))) return null;
 
   return (
     <>
-      {/* Highlight overlay */}
       {open && highlightMode && (
         <SashaHighlightOverlay
           onSelect={handleHighlightSelect}
@@ -272,46 +275,49 @@ export function SashaBubble() {
 
       {/* Chat Panel */}
       {open && (
-        <div className="fixed z-50 shadow-2xl rounded-2xl border border-primary/10 bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-44 lg:bottom-24 right-2 left-2 sm:left-auto sm:right-4 sm:w-[400px] max-h-[70vh] sm:max-h-[min(560px,75vh)]">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-background">
+        <div
+          className="fixed z-50 shadow-2xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 right-2 left-2 sm:left-auto sm:right-4 sm:w-[400px] max-h-[70vh] sm:max-h-[min(560px,75vh)]"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6.5rem)',
+          }}
+        >
+          {/* Header — avatar + name + kebab + close */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b bg-background">
             <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <img src={sashaAvatar} alt="Sasha" className="h-9 w-9 rounded-full object-cover ring-2 ring-primary/30" />
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold leading-tight">Sasha</p>
-                <p className="text-[11px] text-muted-foreground">Your Ontime.Build guide</p>
-              </div>
+              <img src={sashaAvatar} alt="Sasha" className="h-8 w-8 rounded-full object-cover" />
+              <p className="text-sm font-semibold">Sasha</p>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant={highlightMode ? 'default' : 'ghost'}
-                size="sm"
-                className="h-8 gap-1.5 px-2.5 text-xs"
-                onClick={() => setHighlightMode((h) => !h)}
-                title="Tap a card on the page for Sasha to explain"
-              >
-                <MousePointer2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Point</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 px-2.5 text-xs"
-                onClick={handleResetChat}
-                title="Start a new conversation"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Reset</span>
-              </Button>
+            <div className="flex items-center gap-0.5">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="More options"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => setHighlightMode((h) => !h)}
+                    className="gap-2"
+                  >
+                    <MousePointer2 className="h-4 w-4" />
+                    {highlightMode ? 'Cancel pointing' : 'Point at something'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleResetChat} className="gap-2">
+                    <RotateCcw className="h-4 w-4" />
+                    Reset conversation
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
                 onClick={handleClose}
-                title="Close"
                 aria-label="Close Sasha"
               >
                 <X className="h-4 w-4" />
@@ -320,7 +326,7 @@ export function SashaBubble() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-b from-background to-primary/[0.02]" ref={scrollRef}>
+          <div className="flex-1 min-h-0 overflow-y-auto bg-background" ref={scrollRef}>
             <div className="space-y-3 p-4">
               {messages.map((msg, i) => (
                 <SashaMessage
@@ -339,7 +345,7 @@ export function SashaBubble() {
 
           {/* Input */}
           <form
-            className="flex items-center gap-2 px-3 py-2.5 border-t bg-background"
+            className="flex items-center gap-2 px-3 py-2 border-t bg-background"
             onSubmit={(e) => {
               e.preventDefault();
               sendMessage(input);
@@ -350,14 +356,14 @@ export function SashaBubble() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask Sasha anything…"
-              className="flex-1 h-11 text-sm rounded-full px-4 bg-muted/40 border-primary/15 focus-visible:ring-primary/30"
+              className="flex-1 h-10 text-sm rounded-full px-4"
               type="text"
               disabled={isLoading}
             />
             <Button
               type="submit"
               size="icon"
-              className="h-11 w-11 shrink-0 rounded-full"
+              className="h-10 w-10 shrink-0 rounded-full"
               disabled={isLoading || !input.trim()}
               aria-label="Send message"
             >
@@ -367,45 +373,33 @@ export function SashaBubble() {
         </div>
       )}
 
-
-      {/* Floating Bubble */}
-      <div className="fixed bottom-32 lg:bottom-4 right-4 z-50 flex items-center gap-2">
-        {/* Tooltip label */}
-        {/* Welcome tooltip on first dashboard visit */}
-        {!open && showWelcome && isOnDashboard && (
+      {/* Floating Bubble — calm resting state */}
+      <div
+        className="fixed right-4 z-50 flex items-center gap-2"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}
+      >
+        {!open && showIntro && (
           <div className="animate-in fade-in zoom-in-95 duration-300 flex items-center">
-            <div className="bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl shadow-lg whitespace-nowrap">
-              Need help? Click me! 👋
+            <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md whitespace-nowrap">
+              Hi, I'm Sasha
             </div>
-            <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-primary shrink-0" />
-          </div>
-        )}
-        {/* Default label (non-welcome) */}
-        {!open && showLabel && !(showWelcome && isOnDashboard) && (
-          <div className="animate-fade-in bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
-            Ask Sasha 💬
+            <div className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[7px] border-l-primary shrink-0" />
           </div>
         )}
         <button
           onClick={() => {
-            setPulse(false);
-            localStorage.setItem('sasha_pulse_dismissed', 'true');
+            if (showIntro) {
+              setShowIntro(false);
+              localStorage.setItem('sasha_intro_seen', 'true');
+            }
             setOpen((o) => !o);
           }}
-          className={`relative h-16 w-16 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform overflow-hidden ${
-            pulse ? 'animate-bounce' : ''
-          }`}
-          style={!open ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.45), 0 0 40px hsl(var(--primary) / 0.2)' } : undefined}
-          aria-label="Open Sasha guide"
+          className="relative h-14 w-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform overflow-hidden ring-1 ring-primary/20"
+          aria-label={open ? 'Close Sasha' : 'Open Sasha guide'}
         >
-          {/* Pulsing ring */}
-          {!open && pulse && (
-            <span className="absolute inset-0 rounded-full animate-ping bg-primary/30" />
-          )}
-          <span className={`absolute inset-0 rounded-full ring-[3px] ring-primary/50 ${!open ? '' : 'ring-0'}`} />
           {open ? (
             <div className="h-full w-full bg-primary flex items-center justify-center">
-              <X className="h-6 w-6 text-primary-foreground" />
+              <X className="h-5 w-5 text-primary-foreground" />
             </div>
           ) : (
             <img src={sashaAvatar} alt="Sasha" className="h-full w-full object-cover" />
