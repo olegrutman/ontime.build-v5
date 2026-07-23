@@ -222,6 +222,19 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
               ))
             )}
           </div>
+        ) : isSupplier ? (
+          /* Suppliers get a single flat list — only ~6 destinations, no pinned/sections noise. */
+          <div className="space-y-0.5 mt-2">
+            {allItems.map((item) => (
+              <NavRow
+                key={item.key}
+                item={item}
+                active={activeSection === item.route}
+                projectId={id}
+                attentionCount={attentionCounts[item.route]}
+              />
+            ))}
+          </div>
         ) : (
           <>
             {/* Pinned */}
