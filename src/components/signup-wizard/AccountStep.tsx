@@ -163,16 +163,16 @@ export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTi
                       </div>
                     </div>
                     {s.allow_join_requests ? (
-                      <Link
-                        to="/signup"
-                        onClick={(e) => {
-                          e.preventDefault();
+                      <button
+                        type="button"
+                        onClick={() => {
                           onChange({ joinOrgId: s.org_id, joinOrgName: s.org_name, signupPath: 'join' });
+                          onRequestJoin?.(s);
                         }}
                         className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
                       >
                         Request to join →
-                      </Link>
+                      </button>
                     ) : (
                       <span className="text-xs text-muted-foreground whitespace-nowrap">Invite only</span>
                     )}
