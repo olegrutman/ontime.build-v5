@@ -33,6 +33,7 @@ export default function AuthPage() {
   const [screen, setScreen] = useState<Screen>(getInitialScreen);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [successData, setSuccessData] = useState({ name: '', email: '', role: '', company: '' });
@@ -89,6 +90,21 @@ export default function AuthPage() {
   };
 
   /* ── Sign In ── */
+  const humanizeAuthError = (msg?: string): string => {
+    if (!msg) return 'Something went wrong. Please try again.';
+    const m = msg.toLowerCase();
+    if (m.includes('invalid login') || m.includes('invalid credentials')) {
+      return "That email and password don't match. Check the email, then try again — or reset your password.";
+    }
+    if (m.includes('email not confirmed')) return 'Please verify your email before signing in.';
+    if (m.includes('rate limit') || m.includes('too many')) {
+      return 'Too many attempts. Wait a minute, then try again.';
+    }
+    if (m.includes('user not found')) return "We couldn't find an account with that email.";
+    if (m.includes('network') || m.includes('fetch')) return 'Network issue — check your connection and try again.';
+    return msg;
+  };
+
   const handleSignIn = async (email: string, password: string) => {
     setSignInError(null);
     setUnconfirmedEmail(null);
@@ -99,7 +115,7 @@ export default function AuthPage() {
       if (error.message?.toLowerCase().includes('email not confirmed')) {
         setUnconfirmedEmail(email);
       } else {
-        setSignInError(error.message);
+        setSignInError(humanizeAuthError(error.message));
       }
     }
   };
@@ -113,6 +129,29 @@ export default function AuthPage() {
       toast({ variant: 'destructive', title: 'Google sign-in failed', description: String(result.error) });
     }
     setGoogleLoading(false);
+  };
+
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    const result = await lovable.auth.signInWithOAuth('apple', {
+      redirect_uri: `${window.location.origin}/auth/callback`,
+    });
+    if (result.error) {
+      toast({ variant: 'destructive', title: 'Apple sign-in failed', description: String(result.error) });
+    }
+    setAppleLoading(false);
+  };
+
+  const handleMagicLink = async (email: string): Promise<{ ok: boolean; message?: string }> => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin + '/auth/callback',
+        shouldCreateUser: false,
+      },
+    });
+    if (error) return { ok: false, message: humanizeAuthError(error.message) };
+    return { ok: true };
   };
 
   const handleResendVerification = async (email: string) => {
@@ -175,10 +214,13 @@ export default function AuthPage() {
               <SignInScreen
                 onSignIn={handleSignIn}
                 onGoogleSignIn={handleGoogleSignIn}
+                onAppleSignIn={handleAppleSignIn}
+                onMagicLink={handleMagicLink}
                 onForgot={() => goTo('forgot')}
                 onGoToSignUp={() => goTo('signup')}
                 loading={loading}
                 googleLoading={googleLoading}
+                appleLoading={appleLoading}
                 error={signInError}
                 unconfirmedEmail={unconfirmedEmail}
                 onResendVerification={handleResendVerification}

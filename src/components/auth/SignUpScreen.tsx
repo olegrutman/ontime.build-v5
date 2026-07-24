@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MethodToggle } from './MethodToggle';
+
 import { PasswordStrength } from './PasswordStrength';
 import { StepIndicator } from './StepIndicator';
 import { OTPInput } from './OTPInput';
@@ -278,8 +278,8 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
             </div>
             <div className="auth-divider-line">or sign up with</div>
 
-            {/* Phone signup hidden: not yet wired */}
-            {false && <MethodToggle method={method} onChange={setMethod} />}
+
+
 
             {/* Form error */}
             {fieldErrors.form && (
