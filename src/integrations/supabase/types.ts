@@ -8680,6 +8680,16 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      suggest_orgs_by_email_domain: {
+        Args: { _email: string }
+        Returns: {
+          allow_join_requests: boolean
+          member_count: number
+          org_id: string
+          org_name: string
+          org_type: string
+        }[]
+      }
       transfer_admin: { Args: { _target_role_id: string }; Returns: undefined }
       update_member_job_title: {
         Args: { _job_title: string; _target_user_id: string }
