@@ -28,14 +28,24 @@ export function usePushNotifications() {
     }
   }, []);
 
+  const getPushRegistration = useCallback(async () => {
+    if (!('serviceWorker' in navigator)) return null;
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    return (
+      registrations.find(
+        (r) => r.active?.scriptURL?.endsWith('/push/sw.js') || r.scope.endsWith('/push/'),
+      ) || null
+    );
+  }, []);
+
   const checkSubscriptionStatus = useCallback(async () => {
     if (!isSupported || !user) return;
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const registration = await getPushRegistration();
+      const subscription = registration ? await registration.pushManager.getSubscription() : null;
       setIsSubscribed(!!subscription);
-      
+
       if (subscription) {
         // Check if subscription is still valid in database
         const { data } = await supabase
@@ -44,7 +54,7 @@ export function usePushNotifications() {
           .eq('user_id', user.id)
           .eq('endpoint', subscription.endpoint)
           .maybeSingle();
-        
+
         if (!data) {
           // Subscription exists locally but not in database, re-subscribe
           await subscription.unsubscribe();
@@ -54,7 +64,7 @@ export function usePushNotifications() {
     } catch (error) {
       console.error('Error checking subscription status:', error);
     }
-  }, [isSupported, user]);
+  }, [isSupported, user, getPushRegistration]);
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) return false;
@@ -77,15 +87,29 @@ export function usePushNotifications() {
 
     setLoading(true);
     try {
-      // Register the dedicated push worker if not already registered.
-      // The app-shell service worker is managed by vite-plugin-pwa separately.
-      let registration = await navigator.serviceWorker.getRegistration('/push-sw.js');
-      if (!registration) {
-        registration = await navigator.serviceWorker.register('/push-sw.js');
-      }
+      // Register the dedicated push worker under its own scope so it doesn't
+      // collide with the app-shell PWA worker (which owns scope "/").
+      // The worker lives at /push/sw.js → default scope is /push/.
+      const PUSH_SW_URL = '/push/sw.js';
+      const PUSH_SW_SCOPE = '/push/';
 
-      // Wait for service worker to be ready
-      registration = await navigator.serviceWorker.ready;
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      let registration = registrations.find(
+        (r) => r.active?.scriptURL?.endsWith('/push/sw.js') || r.scope.endsWith(PUSH_SW_SCOPE),
+      );
+      if (!registration) {
+        registration = await navigator.serviceWorker.register(PUSH_SW_URL, { scope: PUSH_SW_SCOPE });
+      }
+      // Wait for this specific registration's worker to activate
+      if (registration.installing || registration.waiting) {
+        await new Promise<void>((resolve) => {
+          const sw = registration!.installing || registration!.waiting;
+          if (!sw) return resolve();
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'activated') resolve();
+          });
+        });
+      }
 
       // Get VAPID public key from backend
       const { data: vapidKey } = await supabase.functions.invoke('get-vapid-key');
@@ -129,15 +153,15 @@ export function usePushNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [isSupported, user, permission]);
+  }, [isSupported, user, permission, getPushRegistration]);
 
   const unsubscribe = useCallback(async () => {
     if (!isSupported || !user) return false;
 
     setLoading(true);
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const registration = await getPushRegistration();
+      const subscription = registration ? await registration.pushManager.getSubscription() : null;
       
       if (subscription) {
         await subscription.unsubscribe();
@@ -158,7 +182,7 @@ export function usePushNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [isSupported, user]);
+  }, [isSupported, user, getPushRegistration]);
 
   const testNotification = useCallback(async () => {
     if (!isSupported || permission !== 'granted') return;

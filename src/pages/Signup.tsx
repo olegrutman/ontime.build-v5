@@ -162,6 +162,25 @@ export default function Signup() {
     setStep(1);
   };
 
+  const handleRequestJoinFromSuggestion = (org: { org_id: string; org_name: string; allow_join_requests: boolean }) => {
+    if (!org.allow_join_requests) {
+      toast({
+        variant: 'destructive',
+        title: 'Invitation required',
+        description: 'This company requires invitation approval. Ask the admin to invite you.',
+      });
+      return;
+    }
+    // Switch parent-level path so handleAccountNext takes the join branch,
+    // and stay on the account step (user has already filled in details).
+    setSignupPath('join');
+    updateData({ signupPath: 'join', joinOrgId: org.org_id, joinOrgName: org.org_name });
+    toast({
+      title: `Requesting to join ${org.org_name}`,
+      description: 'Finish creating your account to send your request.',
+    });
+  };
+
   const handleAccountNext = async () => {
     setLoading(true);
 
@@ -195,19 +214,23 @@ export default function Signup() {
       retries++;
     }
 
+    // Determine effective path: parent state, or fall back to data (in case a
+    // domain-suggestion click set it via updateData before parent state updated).
+    const effectivePath: 'new' | 'join' = signupPath === 'join' || (data.signupPath === 'join' && data.joinOrgId) ? 'join' : 'new';
+
     if (!session) {
       // Save wizard state so we can resume after email verification
       localStorage.setItem('ontime_pending_signup', JSON.stringify({
-        data,
-        signupPath,
+        data: { ...data, signupPath: effectivePath },
+        signupPath: effectivePath,
       }));
       setLoading(false);
       navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
       return;
     }
 
-    // If join path, submit join request now
-    if (signupPath === 'join' && data.joinOrgId) {
+    // If join path, submit join request now (accept either parent or data path)
+    if (effectivePath === 'join' && data.joinOrgId) {
       await supabase.from('profiles').update({
         first_name: data.firstName,
         last_name: data.lastName,
@@ -249,7 +272,7 @@ export default function Signup() {
     }
 
     setLoading(false);
-    setStep(signupPath === 'new' ? 1 : 0);
+    setStep(effectivePath === 'new' ? 1 : 0);
   };
 
   const handleInviteAccept = async () => {
@@ -398,6 +421,7 @@ export default function Signup() {
           onBack={() => setSignupPath(null)}
           loading={loading}
           alreadyRegisteredError={alreadyRegisteredError}
+          onRequestJoin={handleRequestJoinFromSuggestion}
         />
       )}
       {step === 1 && (

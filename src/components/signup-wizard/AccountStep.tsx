@@ -47,9 +47,10 @@ interface Props {
   loading: boolean;
   showJobTitle?: boolean;
   alreadyRegisteredError?: boolean;
+  onRequestJoin?: (org: { org_id: string; org_name: string; allow_join_requests: boolean }) => void;
 }
 
-export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTitle, alreadyRegisteredError }: Props) {
+export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTitle, alreadyRegisteredError, onRequestJoin }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const strength = useMemo(() => getPasswordStrength(data.password), [data.password]);
   const [domainSuggestions, setDomainSuggestions] = useState<Array<{ org_id: string; org_name: string; org_type: string; member_count: number; allow_join_requests: boolean }>>([]);
@@ -162,16 +163,16 @@ export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTi
                       </div>
                     </div>
                     {s.allow_join_requests ? (
-                      <Link
-                        to="/signup"
-                        onClick={(e) => {
-                          e.preventDefault();
+                      <button
+                        type="button"
+                        onClick={() => {
                           onChange({ joinOrgId: s.org_id, joinOrgName: s.org_name, signupPath: 'join' });
+                          onRequestJoin?.(s);
                         }}
                         className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
                       >
                         Request to join →
-                      </Link>
+                      </button>
                     ) : (
                       <span className="text-xs text-muted-foreground whitespace-nowrap">Invite only</span>
                     )}
