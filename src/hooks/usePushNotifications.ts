@@ -28,14 +28,24 @@ export function usePushNotifications() {
     }
   }, []);
 
+  const getPushRegistration = useCallback(async () => {
+    if (!('serviceWorker' in navigator)) return null;
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    return (
+      registrations.find(
+        (r) => r.active?.scriptURL?.endsWith('/push/sw.js') || r.scope.endsWith('/push/'),
+      ) || null
+    );
+  }, []);
+
   const checkSubscriptionStatus = useCallback(async () => {
     if (!isSupported || !user) return;
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const registration = await getPushRegistration();
+      const subscription = registration ? await registration.pushManager.getSubscription() : null;
       setIsSubscribed(!!subscription);
-      
+
       if (subscription) {
         // Check if subscription is still valid in database
         const { data } = await supabase
@@ -44,7 +54,7 @@ export function usePushNotifications() {
           .eq('user_id', user.id)
           .eq('endpoint', subscription.endpoint)
           .maybeSingle();
-        
+
         if (!data) {
           // Subscription exists locally but not in database, re-subscribe
           await subscription.unsubscribe();
@@ -54,7 +64,7 @@ export function usePushNotifications() {
     } catch (error) {
       console.error('Error checking subscription status:', error);
     }
-  }, [isSupported, user]);
+  }, [isSupported, user, getPushRegistration]);
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) return false;
