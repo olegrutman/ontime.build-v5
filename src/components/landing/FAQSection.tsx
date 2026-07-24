@@ -3,32 +3,32 @@ import { Plus, Minus } from 'lucide-react';
 
 const faqs = [
   {
-    q: 'How is Ontime.Build priced?',
-    a: 'Flat price per company per month — unlimited projects and unlimited users. No per-seat tax, no feature-gated tiers that hide the things you actually need. Enterprise has a custom quote for portfolio reporting, SSO, and dedicated support.',
+    q: 'Do I have to migrate my existing projects to try it?',
+    a: 'No. Start with one active or upcoming job. The 5-step wizard builds a working SOV in about 20 minutes. Bring the rest over when you\'re ready — nothing forces a big-bang migration.',
   },
   {
-    q: 'Who owns the project data?',
-    a: 'You do. Every organization owns its own data and can export project records (POs, invoices, COs, SOVs, returns) to PDF or CSV at any time. Cancellation gives you a full export window.',
+    q: "What if my sub-contractor or supplier doesn't have an account?",
+    a: "They don't need one. You can send change orders and invoices as external approval links — the recipient opens the link, downloads the PDF, and approves or rejects with one click. No sign-up, no app to install.",
+  },
+  {
+    q: 'Does it actually work on a phone on the jobsite?',
+    a: 'Yes. The Field Crew interface is mobile-first with a Today / Up Next / Done task board, photo + voice capture, and offline-tolerant submissions. Install it as a PWA — no app store required. Push notifications work on both iOS and Android.',
+  },
+  {
+    q: 'How is this different from Procore?',
+    a: "Flat $89 per company per month — not $$$ per seat. All four roles (GC, Trade, Field Crew, Supplier) included. Purpose-built for change orders, SOV reconciliation, and material returns — the three things that quietly cost teams the most money. And it's actually usable on a phone.",
+  },
+  {
+    q: 'Is my QuickBooks or financial data safe?',
+    a: 'We never store your QuickBooks credentials. Integrations use OAuth on a per-user basis, and every organization owns its own data. Row-level security means a GC never sees a Trade\'s labor margins unless the Trade opts in.',
+  },
+  {
+    q: 'Can I cancel? What happens to my data?',
+    a: 'Yes, cancel anytime from Settings — no phone call, no retention team. You get a full export window for POs, invoices, COs, SOVs, and returns as PDFs and CSVs. Your data is yours.',
   },
   {
     q: 'Can a GC see my labor margins as a Trade Contractor?',
-    a: 'No — by default, your labor cost and markup are invisible to the GC. Per-project markup disclosure can be set to hidden, summary, or detailed if you want to share more. The default is privacy.',
-  },
-  {
-    q: 'Does it work on a phone or tablet in the field?',
-    a: 'Yes. The Field Crew interface is mobile-first with a Today / Up Next / Done task board, photo + voice capture, and offline-tolerant submissions. Install it as a PWA — no app store required.',
-  },
-  {
-    q: 'How long does onboarding take?',
-    a: 'Most teams set up their first project in under 30 minutes using the 5-step project wizard. The AI-generated SOV gets you to a working budget on day one. Sasha walks new users through what they\'re looking at.',
-  },
-  {
-    q: 'Do you integrate with QuickBooks, Procore, or other tools?',
-    a: 'Native integrations are on the roadmap. Today you can export clean PDFs/CSVs of POs, invoices, and SOVs to push into your accounting system. Tell us which integration to prioritize and it moves up the queue.',
-  },
-  {
-    q: 'Is it really one platform for all four roles?',
-    a: 'Yes. The GC, Trade Contractor, Field Crew, and Supplier each have purpose-built views — they\'re not the same screen with different permissions. Each role sees what they own; nothing more, nothing less.',
+    a: 'No — by default your labor cost and markup are invisible to the GC. Per-project markup disclosure can be set to hidden, summary, or detailed if you want to share more. The default is privacy.',
   },
 ];
 
@@ -44,10 +44,10 @@ export function FAQSection() {
             FAQ
           </div>
           <h2 className="font-heading text-[clamp(2.2rem,4.5vw,3.4rem)] font-black leading-[0.96] tracking-[-1.3px] uppercase mb-5" style={{ color: 'hsl(var(--ink))' }}>
-            Questions before<br /><em className="not-italic" style={{ color: 'hsl(var(--amber-d))' }}>you switch.</em>
+            The questions<br />that stop <em className="not-italic" style={{ color: 'hsl(var(--amber-d))' }}>sign-ups.</em>
           </h2>
           <p className="text-[0.92rem] leading-[1.75] mb-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            Don't see yours? Email{' '}
+            Straight answers — no marketing hedge. Don't see yours? Email{' '}
             <a href="mailto:hello@ontime.build" className="font-semibold underline" style={{ color: 'hsl(var(--amber-d))' }}>
               hello@ontime.build
             </a>{' '}
