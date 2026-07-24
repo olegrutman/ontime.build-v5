@@ -153,15 +153,15 @@ export function usePushNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [isSupported, user, permission]);
+  }, [isSupported, user, permission, getPushRegistration]);
 
   const unsubscribe = useCallback(async () => {
     if (!isSupported || !user) return false;
 
     setLoading(true);
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const registration = await getPushRegistration();
+      const subscription = registration ? await registration.pushManager.getSubscription() : null;
       
       if (subscription) {
         await subscription.unsubscribe();
