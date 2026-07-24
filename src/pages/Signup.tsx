@@ -229,8 +229,8 @@ export default function Signup() {
       return;
     }
 
-    // If join path, submit join request now
-    if (signupPath === 'join' && data.joinOrgId) {
+    // If join path, submit join request now (accept either parent or data path)
+    if (effectivePath === 'join' && data.joinOrgId) {
       await supabase.from('profiles').update({
         first_name: data.firstName,
         last_name: data.lastName,
