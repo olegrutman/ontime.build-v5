@@ -162,6 +162,25 @@ export default function Signup() {
     setStep(1);
   };
 
+  const handleRequestJoinFromSuggestion = (org: { org_id: string; org_name: string; allow_join_requests: boolean }) => {
+    if (!org.allow_join_requests) {
+      toast({
+        variant: 'destructive',
+        title: 'Invitation required',
+        description: 'This company requires invitation approval. Ask the admin to invite you.',
+      });
+      return;
+    }
+    // Switch parent-level path so handleAccountNext takes the join branch,
+    // and stay on the account step (user has already filled in details).
+    setSignupPath('join');
+    updateData({ signupPath: 'join', joinOrgId: org.org_id, joinOrgName: org.org_name });
+    toast({
+      title: `Requesting to join ${org.org_name}`,
+      description: 'Finish creating your account to send your request.',
+    });
+  };
+
   const handleAccountNext = async () => {
     setLoading(true);
 
