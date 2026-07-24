@@ -47,9 +47,10 @@ interface Props {
   loading: boolean;
   showJobTitle?: boolean;
   alreadyRegisteredError?: boolean;
+  onRequestJoin?: (org: { org_id: string; org_name: string; allow_join_requests: boolean }) => void;
 }
 
-export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTitle, alreadyRegisteredError }: Props) {
+export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTitle, alreadyRegisteredError, onRequestJoin }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const strength = useMemo(() => getPasswordStrength(data.password), [data.password]);
   const [domainSuggestions, setDomainSuggestions] = useState<Array<{ org_id: string; org_name: string; org_type: string; member_count: number; allow_join_requests: boolean }>>([]);
