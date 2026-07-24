@@ -214,11 +214,15 @@ export default function Signup() {
       retries++;
     }
 
+    // Determine effective path: parent state, or fall back to data (in case a
+    // domain-suggestion click set it via updateData before parent state updated).
+    const effectivePath: 'new' | 'join' = signupPath === 'join' || (data.signupPath === 'join' && data.joinOrgId) ? 'join' : 'new';
+
     if (!session) {
       // Save wizard state so we can resume after email verification
       localStorage.setItem('ontime_pending_signup', JSON.stringify({
-        data,
-        signupPath,
+        data: { ...data, signupPath: effectivePath },
+        signupPath: effectivePath,
       }));
       setLoading(false);
       navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
