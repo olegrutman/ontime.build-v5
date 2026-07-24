@@ -31,7 +31,7 @@ export function HeroSection() {
           }}
         >
           <div className="w-[7px] h-[7px] rounded-full animate-pulse-dot" style={{ background: 'hsl(var(--amber))' }} />
-          Construction Operations Platform
+          Set up in under 30 minutes · No credit card
         </div>
 
         {/* Headline — mobile-first sizing */}
@@ -49,13 +49,13 @@ export function HeroSection() {
 
         {/* Sub */}
         <p
-          className="animate-fade-up-delay-2 mt-5 sm:mt-6 mb-9 sm:mb-10 max-w-[560px] font-normal
+          className="animate-fade-up-delay-2 mt-5 sm:mt-6 mb-7 sm:mb-8 max-w-[560px] font-normal
                      text-[1rem] leading-[1.7]
                      sm:text-[1.08rem] sm:leading-[1.75]"
           style={{ color: 'hsl(var(--muted-foreground))' }}
         >
           Stop reconciling SOVs by hand, chasing change orders over text, and finding
-          $40k of unreturned material at closeout. Ontime.Build connects <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>GCs, Trade Contractors, Field Crews, and Suppliers</strong> in one financial loop.
+          $40k of unreturned material at closeout. One <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>flat $89/month per company</strong> — unlimited users, unlimited projects, all four roles (GC, Trade, Field Crew, Supplier).
         </p>
 
         {/* Actions — full-width on mobile */}
@@ -65,7 +65,7 @@ export function HeroSection() {
             className="text-center px-7 py-4 sm:py-3.5 rounded-[6px] text-[0.98rem] font-bold shadow-amber-lg hover:brightness-110 hover:-translate-y-px transition-all no-underline"
             style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy-d))' }}
           >
-            Create an Account — Free
+            Start free — invite your crew in 2 min
           </Link>
           <a
             href="#how"
@@ -81,6 +81,16 @@ export function HeroSection() {
             </span>
             See how it works
           </a>
+        </div>
+
+        {/* Risk-reversal micro-copy */}
+        <div className="animate-fade-up-delay-3 mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.78rem]" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          {['No credit card', 'Cancel anytime', 'Export your data on demand'].map((t) => (
+            <span key={t} className="inline-flex items-center gap-1.5">
+              <span className="font-bold" style={{ color: 'hsl(153, 82%, 31%)' }}>✓</span>
+              {t}
+            </span>
+          ))}
         </div>
 
         {/* Trust row */}

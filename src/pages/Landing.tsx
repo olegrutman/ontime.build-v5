@@ -7,6 +7,8 @@ import {
   StickyMobileCTA,
 } from '@/components/landing';
 import { ProblemSolutionSection } from '@/components/landing/ProblemSolutionSection';
+import { ProofBand } from '@/components/landing/ProofBand';
+import { InlineCTA } from '@/components/landing/InlineCTA';
 
 // Below-the-fold — lazy loaded so mobile hero paints fast
 const FeaturesSection = lazy(() => import('@/components/landing/FeaturesSection').then(m => ({ default: m.FeaturesSection })));
@@ -27,18 +29,34 @@ export default function Landing() {
       <main>
         {/* Above the fold — mobile-first, fast */}
         <HeroSection />
+        <ProofBand />
         <StatsStrip />
 
         {/* Problem → solution: strongest conversion angle */}
         <ProblemSolutionSection />
+
+        {/* Mid-scroll CTA #1 — capture the "I get it" buyer */}
+        <InlineCTA
+          eyebrow="Ready when you are"
+          headline="Fix the loop between office, field, and supplier — today."
+        />
 
         <Suspense fallback={<Fallback />}>
           <FeaturesSection />
           <HowItWorksSection />
           <RolesSection />
           <AISection />
-          <TestimonialsSection />
+
+          {/* Mid-scroll CTA #2 — after AI + roles proof */}
+          <InlineCTA
+            eyebrow="One flat price · Unlimited users"
+            headline="$89 per company. All four roles included. No per-seat tax."
+            ctaText="See pricing & sign up"
+          />
+
+          {/* Pricing raised above testimonials — it's the wedge vs Procore */}
           <PricingSection />
+          <TestimonialsSection />
           <FAQSection />
           <CTASection />
         </Suspense>
