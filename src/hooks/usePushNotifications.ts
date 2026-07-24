@@ -77,15 +77,29 @@ export function usePushNotifications() {
 
     setLoading(true);
     try {
-      // Register the dedicated push worker if not already registered.
-      // The app-shell service worker is managed by vite-plugin-pwa separately.
-      let registration = await navigator.serviceWorker.getRegistration('/push-sw.js');
-      if (!registration) {
-        registration = await navigator.serviceWorker.register('/push-sw.js');
-      }
+      // Register the dedicated push worker under its own scope so it doesn't
+      // collide with the app-shell PWA worker (which owns scope "/").
+      // The worker lives at /push/sw.js → default scope is /push/.
+      const PUSH_SW_URL = '/push/sw.js';
+      const PUSH_SW_SCOPE = '/push/';
 
-      // Wait for service worker to be ready
-      registration = await navigator.serviceWorker.ready;
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      let registration = registrations.find(
+        (r) => r.active?.scriptURL?.endsWith('/push/sw.js') || r.scope.endsWith(PUSH_SW_SCOPE),
+      );
+      if (!registration) {
+        registration = await navigator.serviceWorker.register(PUSH_SW_URL, { scope: PUSH_SW_SCOPE });
+      }
+      // Wait for this specific registration's worker to activate
+      if (registration.installing || registration.waiting) {
+        await new Promise<void>((resolve) => {
+          const sw = registration!.installing || registration!.waiting;
+          if (!sw) return resolve();
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'activated') resolve();
+          });
+        });
+      }
 
       // Get VAPID public key from backend
       const { data: vapidKey } = await supabase.functions.invoke('get-vapid-key');
