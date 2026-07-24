@@ -1,16 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, Lock, User, Phone, Loader2, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Phone, Loader2, ArrowLeft, Users } from 'lucide-react';
 import { z } from 'zod';
 import { getJobTitlesForOrgType } from '@/types/organization';
 import type { SignupWizardData } from './types';
 import { formatPhone } from '@/lib/formatPhone';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
   if (!password) return { score: 0, label: '', color: '' };
@@ -51,6 +52,18 @@ interface Props {
 export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTitle, alreadyRegisteredError }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const strength = useMemo(() => getPasswordStrength(data.password), [data.password]);
+  const [domainSuggestions, setDomainSuggestions] = useState<Array<{ org_id: string; org_name: string; org_type: string; member_count: number; allow_join_requests: boolean }>>([]);
+
+  // Look up existing orgs matching the user's email domain
+  useEffect(() => {
+    const email = data.email.trim();
+    if (!/\S+@\S+\.\S+/.test(email)) { setDomainSuggestions([]); return; }
+    const handle = setTimeout(async () => {
+      const { data: rows } = await supabase.rpc('suggest_orgs_by_email_domain', { _email: email });
+      setDomainSuggestions((rows as any) || []);
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [data.email]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +142,44 @@ export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTi
             />
           </div>
           {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
-        </div>
+
+          {/* Domain-based suggestion — offer to join teammates' org */}
+          {domainSuggestions.length > 0 && !data.joinOrgId && (
+            <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-primary" />
+                <p className="text-xs font-semibold text-foreground">
+                  Teammates from your email domain are already on Ontime.Build
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                {domainSuggestions.map(s => (
+                  <div key={s.org_id} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{s.org_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {s.org_type} · {s.member_count} member{s.member_count === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                    {s.allow_join_requests ? (
+                      <Link
+                        to="/signup"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onChange({ joinOrgId: s.org_id, joinOrgName: s.org_name, signupPath: 'join' });
+                        }}
+                        className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                      >
+                        Request to join →
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">Invite only</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         <div>
           <Label htmlFor="phone">Phone Number</Label>
