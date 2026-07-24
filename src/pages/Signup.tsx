@@ -272,7 +272,7 @@ export default function Signup() {
     }
 
     setLoading(false);
-    setStep(signupPath === 'new' ? 1 : 0);
+    setStep(effectivePath === 'new' ? 1 : 0);
   };
 
   const handleInviteAccept = async () => {
