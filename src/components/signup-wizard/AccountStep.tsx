@@ -180,6 +180,7 @@ export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTi
               </div>
             </div>
           )}
+        </div>
 
         <div>
           <Label htmlFor="phone">Phone Number</Label>
