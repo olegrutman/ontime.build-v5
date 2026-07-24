@@ -421,6 +421,7 @@ export default function Signup() {
           onBack={() => setSignupPath(null)}
           loading={loading}
           alreadyRegisteredError={alreadyRegisteredError}
+          onRequestJoin={handleRequestJoinFromSuggestion}
         />
       )}
       {step === 1 && (
