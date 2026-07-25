@@ -139,6 +139,7 @@ export function CreateInvoiceDialog({
     }
 
     if (dateError) {
+      setShowPeriodWarning(true);
       toast.error(dateError);
       return;
     }
