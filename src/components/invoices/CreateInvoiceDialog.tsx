@@ -65,8 +65,10 @@ export function CreateInvoiceDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [periodStart, setPeriodStart] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
-  const [periodEnd, setPeriodEnd] = useState<Date>(endOfMonth(subMonths(new Date(), 1)));
+  const [periodStart, setPeriodStart] = useState<Date | undefined>(undefined);
+  const [periodEnd, setPeriodEnd] = useState<Date | undefined>(undefined);
+  const [periodConfirmed, setPeriodConfirmed] = useState(false);
+  const [showPeriodWarning, setShowPeriodWarning] = useState(false);
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([]);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
