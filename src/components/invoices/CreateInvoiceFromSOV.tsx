@@ -280,6 +280,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         setInvoiceNumber(revisionData.invoiceNumber);
         setPeriodStart(new Date(revisionData.periodStart));
         setPeriodEnd(new Date(revisionData.periodEnd));
+        setPeriodConfirmed(true);
+        setShowPeriodWarning(false);
         setNotes(revisionData.notes || '');
       } else {
         setSelectedPickerValue('');
@@ -288,8 +290,10 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         setCoBillAmount(0);
         setInvoiceNumber('');
         setNotes('');
-        setPeriodStart(startOfMonth(subMonths(new Date(), 1)));
-        setPeriodEnd(endOfMonth(subMonths(new Date(), 1)));
+        setPeriodStart(undefined);
+        setPeriodEnd(undefined);
+        setPeriodConfirmed(false);
+        setShowPeriodWarning(false);
       }
     }
   }, [open, isRevisionMode]);
