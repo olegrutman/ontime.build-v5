@@ -725,8 +725,10 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     setBillingItems([]);
     setInvoiceNumber('');
     setNotes('');
-    setPeriodStart(startOfMonth(subMonths(new Date(), 1)));
-    setPeriodEnd(endOfMonth(subMonths(new Date(), 1)));
+    setPeriodStart(undefined);
+    setPeriodEnd(undefined);
+    setPeriodConfirmed(false);
+    setShowPeriodWarning(false);
   };
 
   return (
