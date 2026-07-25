@@ -512,6 +512,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     }
 
     if (dateError) {
+      setShowPeriodWarning(true);
       toast.error(dateError);
       return;
     }
