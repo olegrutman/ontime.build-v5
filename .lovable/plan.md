@@ -1,121 +1,41 @@
-# Landing Page: Conversion Rework Plan
 
-## 1. Honest audit of what we have
+## What I found
 
-Current stack (top → bottom): Header → Hero → StatsStrip → ProblemSolution → Features → HowItWorks → Roles → AI → Testimonials → Pricing → FAQ → CTA → Footer + StickyMobileCTA.
+Project **5 Cherry Hills Park** (`7295c3d2…`) has two SOVs, one per contract:
 
-What's working
-- Mobile-first hero with a real product proof strip (KPI tiles + progress bars) — better than a generic screenshot.
-- Clear value prop headline ("Every Order. Every Job. One System.").
-- Sticky mobile CTA. Trust avatars. Amber/navy identity is distinctive (not the generic purple-gradient SaaS look).
-- Problem→Solution section is a real conversion angle.
+- FC → TC (Pacifico → IMIS) · contract $100,000 · 18 items · values sum to $100,000 ✅
+- TC → GC (IMIS → Haley) · contract $150,000 · 18 items · values sum to $150,000 ✅
 
-What's blocking sign-ups
-1. **No above-the-fold social proof with weight.** "Built with real GCs, trades, crews & suppliers" is vague. Linear/Ramp/Vercel show *named* logos or hard numbers ("$X billed", "N projects live") in the hero.
-2. **Too many sections before the CTA re-appears.** 9 sections of scroll before the closing CTA. Ramp and Linear re-CTA every 2–3 sections.
-3. **Sign-up cost isn't dramatized.** The offer is "$89/company/month, unlimited users" — that's a huge wedge vs Procore ($$$/user). We bury it in Pricing instead of leading with it.
-4. **Role confusion.** GC/TC/FC/SUP is our superpower but a cold visitor doesn't know which they are. No "I am a ___" selector to personalize the page.
-5. **Hero CTA is generic.** "Create an Account — Free" doesn't tell them what happens next. Best-in-class: "Start free — no card, 2 min setup" with the exact next step visible.
-6. **No risk-reversal.** No "cancel anytime", "your data stays yours", "free until you invite your team" reassurance near the button.
-7. **AI section reads like a feature list.** It should show one concrete before/after (photo of a PDF estimate → generated PO in 30s).
-8. **Testimonials load below-the-fold and are lazy.** First-time visitors on mobile bounce before they load.
-9. **FAQ answers the wrong questions.** Should answer sign-up objections: "Do I need to migrate data?", "What if my sub doesn't have an account?", "Is my QuickBooks safe?"
-10. **No urgency / recency.** No "shipped this week", changelog, or "N teams joined this month" signal.
+Both totals reconcile to the contracts, and both percent-of-contract columns sum to exactly 100.00%.
 
-## 2. Who we're benchmarking against and why
+### The authoritative numbers are actually correct
+Per-item `total_billed_amount` on `project_sov_items` matches the sum of `invoice_line_items.current_billed` for every non-DRAFT invoice on this project — drift is **$0.00** on all 36 rows. Contract-level PAID invoice totals also match:
 
-| Site | What they do well | What we steal |
-|---|---|---|
-| **Linear.app** | Product-in-hero with real UI, not a mockup. Tight copy. Named customer logos strip. | Real product screenshot loop, customer logos row directly under hero. |
-| **Ramp.com** | Aggressive numeric proof ("$10B saved"). Repeats CTA every section. Role-based paths ("For CFOs / Controllers / Accountants"). | Big number in hero, role selector, repeated inline CTAs. |
-| **Vercel.com** | "Deploy in 30 seconds" — dramatizes time-to-value. Live demo embedded. | Time-to-value promise in hero eyebrow. |
-| **Procore.com** (direct competitor) | Segmented by role. Case studies with hard $ savings. | Our anti-Procore angle: flat pricing, all roles included. Call it out. |
-| **Notion.so** | Free tier prominent, "Get Notion free" as the primary CTA. | Free-forever framing before the $89 price. |
-| **Stripe.com** | Dense but scannable. Code/receipt shown side-by-side. Trust badges under fold. | Side-by-side "before Ontime / after Ontime" visual. |
-| **Attio / Cal.com** | Changelog and "shipped today" bar → shows momentum. | "What shipped this week" strip near footer. |
+- FC→TC: $42,600 billed vs SOV rollup $42,600 ✅
+- TC→GC: $40,249.20 billed vs SOV rollup $40,249.20 ✅
 
-Common pattern across all: **hero → logos → one killer visual proof → repeated CTA → role paths → pricing high → FAQ answers objections → final CTA**. Our order is close but we bury proof and delay the second CTA.
+### What is out of sync (and why the UI looks wrong)
+Two secondary columns are stale — they aren't recomputed by the current invoice triggers, so they drifted after invoice deletions / edits:
 
-## 3. Design decisions and why
+1. **`project_sov_items.billed_to_date`** (legacy scalar) is inflated vs `total_billed_amount` on most rows. Examples:
+   - "Steal Installation" (both SOVs): `billed_to_date` 10,499 but real billed is 4,250 / 6,249, and value is only 4,250 / 6,255.
+   - "Second Floor Walls": `billed_to_date` 12,000 with `total_billed_amount` 0 and completion 0%.
+   - "Truss Sheeting": `billed_to_date` 10,500 with 0 real billing.
+   - The two SOVs share identical `billed_to_date` values per matching item name — the field was being mirrored across paired SOVs, and stopped being decremented when invoices were deleted or when the newer per-item trigger took over.
 
-### A. Rework the hero (highest ROI)
-- **Eyebrow becomes time-to-value:** "Set up in under 30 minutes • No credit card" (replaces "Construction Operations Platform").
-- **Sub-headline gets one hard number:** "Used by teams to reconcile $X in change orders since 2024." Even a modest real number beats vague copy.
-- **CTA copy:** "Start free — invite your crew in 2 min" (concrete, tells them what happens).
-- **Micro-copy under CTA:** "No card. Cancel anytime. Your data exports on demand." (kills the 3 biggest B2B objections).
-- Keep the KPI/progress proof strip — it's already good.
+2. **`invoice_line_items.total_billed`** is stale on a handful of lines (e.g., "First Sub-floor Sheeting" `sum_current` 4,250 vs `sum_total_line` 7,862.50; "Second Sub-Floor TJI's" 7,800 vs 15,912). This is the "previous_billed + current" snapshot that wasn't recomputed after earlier invoices in the chain were deleted. `current_billed` is correct; `total_billed` is not.
 
-**Why:** Every high-converting SaaS hero answers three questions in one screen — *what is it, how fast do I get value, what do I risk*. We currently answer #1 only.
+3. Two `INVOICE_APPROVED` notifications reference deleted invoices (`2126ef8e…`, `237c8dc1…` — INV-5 C-IM-HA-0001) — orphaned rows in `notifications`, unrelated to SOV totals but they were the visible trigger that made things look wrong.
 
-### B. Add a logos/proof band directly under hero
-- Named GCs/trades who piloted, or if we can't name yet: "12 GCs · 40 trades · 180 crews using Ontime this week" — a real *live* count read from the DB via a public metrics function. Recency > vanity.
-- **Why:** Social proof at the fold is the single biggest known conversion lever (Baymard, ConversionXL studies). Our current avatar row is decorative, not evidential.
+### Root cause
+The invoice trigger that maintains `project_sov_items.total_billed_amount` from `invoice_line_items.current_billed` works and is accurate. The legacy `billed_to_date` column and the per-line `invoice_line_items.total_billed` are not part of that recompute, so they carry stale values from before the current trigger was in place and from since-deleted invoices.
 
-### C. Role selector chip band ("I am a…")
-- 4 chips: GC / Trade / Field Crew / Supplier. Clicking one filters the Roles section and re-anchors the hero sub-copy.
-- **Why:** Ramp's role paths lifted sign-up 20%+ in their public case studies. Our audience is 4 distinct personas — one-size copy under-serves all of them.
+## Plan to fix (build mode)
 
-### D. Move Pricing up, above Testimonials
-- Our $89/company (not per-user) is the *reason* someone switches from Procore. Burying it below testimonials is malpractice.
-- Add a comparison row: "Procore: $$$/user · Ontime: $89/company flat".
-- **Why:** Pricing is the #1 clicked nav item on B2B sites (Klaviyo internal data, widely cited). Lead with the wedge.
+1. **Recompute `project_sov_items.billed_to_date`** for this project (and, since the fix is generic, project-wide via a small backfill) so it equals the authoritative `total_billed_amount`. Stop treating it as an independent counter.
+2. **Recompute `invoice_line_items.total_billed`** = `previous_billed + current_billed` for every non-DRAFT invoice on this project, so line totals stop showing ghost amounts from deleted invoices.
+3. **Extend the existing SOV invoice-line trigger** to also refresh `billed_to_date` (mirror of `total_billed_amount`) on INSERT/UPDATE/DELETE, so this can't drift again.
+4. **Clean up the two orphan `INVOICE_APPROVED` notifications** pointing at deleted invoice IDs on this project.
+5. Verify: rerun the drift query — expect `billed_to_date = total_billed_amount` on every row and `sum(current_billed) = sum(total_billed) - sum(previous_billed)` on every line.
 
-### E. Insert an inline CTA band after Problem→Solution and after AI section
-- Two additional CTAs mid-scroll, styled as slim bands not full sections.
-- **Why:** Users decide to click at different points. Ramp/Linear repeat CTAs every 2 sections; we make users scroll 9 sections to the closing CTA.
-
-### F. Rebuild AI section as one concrete before/after
-- Left: a real supplier PDF thumbnail. Right: the generated PO card. Arrow between. Timer: "17 seconds."
-- Keep the 4 capability cards but demote them below the demo.
-- **Why:** Show don't tell. Every AI marketing page in 2025 that converts (Cursor, v0, Perplexity) leads with a single concrete artifact, not a capability grid.
-
-### G. Rewrite FAQ around sign-up objections
-Replace generic Qs with the ones stopping sign-up:
-- "Do I have to migrate my existing projects?" (No — start with one job.)
-- "What if my sub-contractor doesn't have an account?" (External approval links, no account needed.)
-- "Does it work on my phone in the field?" (Yes — offline-tolerant PWA with push.)
-- "Is my QuickBooks data safe?" (We never store their creds, OAuth-only, per-user.)
-- "How is this different from Procore?" (Flat $89, all roles included, actually usable on a phone.)
-- "Can I cancel?" (Yes, anytime, data exports.)
-
-### H. Add a "Shipped this month" strip above the final CTA
-- Pulls the last 3 shipped items from a simple hardcoded list initially, later from a CMS/changelog table.
-- **Why:** Signals velocity. A dead-looking product is the silent sign-up killer.
-
-### I. Mobile-specific
-- Reduce hero vertical padding on <390px (currently pt-[104px] pb-16 pushes the proof strip below the fold).
-- Sticky mobile CTA already exists — good. Add a subtle "12 sign-ups this week" counter to it to add urgency.
-
-## 4. What I will NOT change (and why)
-
-- The amber/navy color system — it's differentiated and construction-appropriate. Don't touch.
-- Typography (Barlow Condensed / DM Sans / IBM Plex Mono) — already professional, dense, on-brand.
-- The KPI proof strip in the hero — it's already better than most competitors' hero screenshots.
-- The RolesSection and HowItWorksSection structure — solid, just needs the role-chip entry point.
-
-## 5. Build order (proposed sprint)
-
-**Phase 1 — highest lift, lowest risk (ship first):**
-1. Rewrite hero eyebrow + sub-copy + CTA + risk-reversal micro-copy.
-2. Insert logos/live-count proof band under hero.
-3. Move Pricing above Testimonials in `src/pages/Landing.tsx`.
-4. Add 2 inline CTA bands (after ProblemSolution, after AI).
-5. Rewrite FAQ copy around sign-up objections.
-
-**Phase 2 — medium lift:**
-6. Role selector chip band + wire to RolesSection filter.
-7. Rebuild AI section around one before/after artifact.
-8. Add "Shipped this month" strip.
-
-**Phase 3 — data-backed:**
-9. Public `get_landing_metrics()` RPC for live GC/TC/FC/SUP counts.
-10. A/B test hero variants (needs analytics hook).
-
-## 6. How I'll measure success
-
-- Sign-ups per unique landing visit (needs an analytics event on `/signup` open from `/`).
-- Scroll depth to Pricing.
-- Sticky CTA click-through on mobile.
-- Bounce on the hero on 390px.
-
-I recommend I ship **Phase 1 in one pass** — it's copy + reordering + two new small components, no risky refactors — then we measure and decide on Phase 2. Want me to start Phase 1?
+No UI code changes required — the display fields are already reading `total_billed_amount` / `total_completion_percent`, which are correct. The fix is a data repair plus a trigger tweak so it stays correct.
