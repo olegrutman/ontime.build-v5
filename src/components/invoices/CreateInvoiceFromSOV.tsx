@@ -514,8 +514,12 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       return;
     }
 
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
 
-    setSaving(true);
+
 
     try {
       const enabledItems = billingItems.filter(item => item.enabled && item.thisBillPercent > 0);
