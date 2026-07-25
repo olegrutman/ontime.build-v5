@@ -443,6 +443,24 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     ? coBillAmount > 0
     : billingItems.some(item => item.enabled && item.thisBillPercent > 0);
 
+  // Billing period date validation
+  const dateError = useMemo(() => {
+    if (!periodStart || !periodEnd) return 'Select both a start and end date for the billing period.';
+    const startMs = periodStart.getTime();
+    const endMs = periodEnd.getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) return 'Enter valid billing period dates.';
+    if (endMs < startMs) return 'Period end must be on or after period start.';
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    if (endMs > todayEnd.getTime()) return 'Period end cannot be in the future.';
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    if (startMs < twoYearsAgo.getTime()) return 'Period start is more than 2 years ago — please confirm the dates.';
+    return null;
+  }, [periodStart, periodEnd]);
+
+
+
 
   const handleToggleItem = (itemId: string, enabled: boolean) => {
     setBillingItems(prev => prev.map(item => 
@@ -496,10 +514,15 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       return;
     }
 
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
 
     setSaving(true);
 
     try {
+
       const enabledItems = billingItems.filter(item => item.enabled && item.thisBillPercent > 0);
 
       if (isRevisionMode) {
@@ -1001,7 +1024,13 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 <Label>Period Start</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        dateError && 'border-destructive text-destructive'
+                      )}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {format(periodStart, 'MMM d, yyyy')}
                     </Button>
@@ -1010,8 +1039,14 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                     <Calendar
                       mode="single"
                       selected={periodStart}
-                      onSelect={(date) => date && setPeriodStart(date)}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setPeriodStart(date);
+                        if (periodEnd && date > periodEnd) setPeriodEnd(date);
+                      }}
+                      disabled={(d) => d > new Date()}
                       initialFocus
+                      className={cn('p-3 pointer-events-auto')}
                     />
                   </PopoverContent>
                 </Popover>
@@ -1020,7 +1055,13 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 <Label>Period End</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        dateError && 'border-destructive text-destructive'
+                      )}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {format(periodEnd, 'MMM d, yyyy')}
                     </Button>
@@ -1030,12 +1071,18 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                       mode="single"
                       selected={periodEnd}
                       onSelect={(date) => date && setPeriodEnd(date)}
+                      disabled={(d) => d > new Date() || (periodStart ? d < periodStart : false)}
                       initialFocus
+                      className={cn('p-3 pointer-events-auto')}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
+            {dateError && (
+              <p className="text-xs text-destructive -mt-2">{dateError}</p>
+            )}
+
 
             {/* SOV Items */}
             {!selectedCOId && selectedContractId && billingItems.length > 0 && (
