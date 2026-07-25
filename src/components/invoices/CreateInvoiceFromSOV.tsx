@@ -1024,7 +1024,13 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 <Label>Period Start</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        dateError && 'border-destructive text-destructive'
+                      )}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {format(periodStart, 'MMM d, yyyy')}
                     </Button>
@@ -1033,8 +1039,14 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                     <Calendar
                       mode="single"
                       selected={periodStart}
-                      onSelect={(date) => date && setPeriodStart(date)}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setPeriodStart(date);
+                        if (periodEnd && date > periodEnd) setPeriodEnd(date);
+                      }}
+                      disabled={(d) => d > new Date()}
                       initialFocus
+                      className={cn('p-3 pointer-events-auto')}
                     />
                   </PopoverContent>
                 </Popover>
@@ -1043,7 +1055,13 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 <Label>Period End</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        dateError && 'border-destructive text-destructive'
+                      )}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {format(periodEnd, 'MMM d, yyyy')}
                     </Button>
@@ -1053,12 +1071,18 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                       mode="single"
                       selected={periodEnd}
                       onSelect={(date) => date && setPeriodEnd(date)}
+                      disabled={(d) => d > new Date() || (periodStart ? d < periodStart : false)}
                       initialFocus
+                      className={cn('p-3 pointer-events-auto')}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
+            {dateError && (
+              <p className="text-xs text-destructive -mt-2">{dateError}</p>
+            )}
+
 
             {/* SOV Items */}
             {!selectedCOId && selectedContractId && billingItems.length > 0 && (
