@@ -237,8 +237,8 @@ export function CreateInvoiceDialog({
 
         <div className="flex-1 overflow-y-auto min-h-0 space-y-6 py-4">
           {/* Invoice Details */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div className="space-y-2 max-w-sm">
               <Label htmlFor="invoiceNumber">Invoice Number</Label>
               <Input
                 id="invoiceNumber"
@@ -248,69 +248,30 @@ export function CreateInvoiceDialog({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Billing Period Start</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !periodStart && 'text-muted-foreground',
-                      dateError && 'border-destructive text-destructive'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {periodStart ? format(periodStart, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={periodStart}
-                    onSelect={(date) => {
-                      if (!date) return;
-                      setPeriodStart(date);
-                      if (periodEnd && date > periodEnd) setPeriodEnd(date);
-                    }}
-                    disabled={(d) => d > new Date()}
-                    initialFocus
-                    className={cn('p-3 pointer-events-auto')}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Billing Period End</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !periodEnd && 'text-muted-foreground',
-                      dateError && 'border-destructive text-destructive'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {periodEnd ? format(periodEnd, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={periodEnd}
-                    onSelect={(date) => date && setPeriodEnd(date)}
-                    disabled={(d) => d > new Date() || (periodStart ? d < periodStart : false)}
-                    initialFocus
-                    className={cn('p-3 pointer-events-auto')}
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <Label className="text-sm">Billing Period</Label>
+                {!periodConfirmed && (
+                  <span className="text-[10px] uppercase tracking-wide text-destructive">
+                    Required
+                  </span>
+                )}
+              </div>
+              <BillingPeriodPicker
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                confirmed={periodConfirmed}
+                showRequiredWarning={showPeriodWarning}
+                onChange={(s, e, confirmed) => {
+                  setPeriodStart(s);
+                  setPeriodEnd(e);
+                  setPeriodConfirmed(confirmed && Boolean(s && e));
+                  if (confirmed) setShowPeriodWarning(false);
+                }}
+              />
             </div>
           </div>
-          {dateError && (
+          {dateError && periodConfirmed && (
             <p className="text-xs text-destructive">{dateError}</p>
           )}
 
