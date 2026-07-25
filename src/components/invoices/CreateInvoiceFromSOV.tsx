@@ -443,6 +443,24 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     ? coBillAmount > 0
     : billingItems.some(item => item.enabled && item.thisBillPercent > 0);
 
+  // Billing period date validation
+  const dateError = useMemo(() => {
+    if (!periodStart || !periodEnd) return 'Select both a start and end date for the billing period.';
+    const startMs = periodStart.getTime();
+    const endMs = periodEnd.getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) return 'Enter valid billing period dates.';
+    if (endMs < startMs) return 'Period end must be on or after period start.';
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    if (endMs > todayEnd.getTime()) return 'Period end cannot be in the future.';
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    if (startMs < twoYearsAgo.getTime()) return 'Period start is more than 2 years ago — please confirm the dates.';
+    return null;
+  }, [periodStart, periodEnd]);
+
+
+
 
   const handleToggleItem = (itemId: string, enabled: boolean) => {
     setBillingItems(prev => prev.map(item => 
