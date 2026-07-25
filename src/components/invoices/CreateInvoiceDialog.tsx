@@ -263,7 +263,8 @@ export function CreateInvoiceDialog({
                     variant="outline"
                     className={cn(
                       'w-full justify-start text-left font-normal',
-                      !periodStart && 'text-muted-foreground'
+                      !periodStart && 'text-muted-foreground',
+                      dateError && 'border-destructive text-destructive'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -274,8 +275,14 @@ export function CreateInvoiceDialog({
                   <Calendar
                     mode="single"
                     selected={periodStart}
-                    onSelect={(date) => date && setPeriodStart(date)}
+                    onSelect={(date) => {
+                      if (!date) return;
+                      setPeriodStart(date);
+                      if (periodEnd && date > periodEnd) setPeriodEnd(date);
+                    }}
+                    disabled={(d) => d > new Date()}
                     initialFocus
+                    className={cn('p-3 pointer-events-auto')}
                   />
                 </PopoverContent>
               </Popover>
@@ -289,7 +296,8 @@ export function CreateInvoiceDialog({
                     variant="outline"
                     className={cn(
                       'w-full justify-start text-left font-normal',
-                      !periodEnd && 'text-muted-foreground'
+                      !periodEnd && 'text-muted-foreground',
+                      dateError && 'border-destructive text-destructive'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -301,12 +309,19 @@ export function CreateInvoiceDialog({
                     mode="single"
                     selected={periodEnd}
                     onSelect={(date) => date && setPeriodEnd(date)}
+                    disabled={(d) => d > new Date() || (periodStart ? d < periodStart : false)}
                     initialFocus
+                    className={cn('p-3 pointer-events-auto')}
                   />
                 </PopoverContent>
               </Popover>
             </div>
           </div>
+          {dateError && (
+            <p className="text-xs text-destructive">{dateError}</p>
+          )}
+
+
 
           {/* Line Items */}
           <div className="space-y-3">
