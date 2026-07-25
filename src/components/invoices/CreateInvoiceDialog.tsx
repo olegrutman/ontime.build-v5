@@ -125,6 +125,21 @@ export function CreateInvoiceDialog({
     return { subtotal, retainageAmount, totalAmount };
   };
 
+  const dateError = (() => {
+    if (!periodStart || !periodEnd) return 'Select both a start and end date for the billing period.';
+    const s = periodStart.getTime();
+    const e = periodEnd.getTime();
+    if (Number.isNaN(s) || Number.isNaN(e)) return 'Enter valid billing period dates.';
+    if (e < s) return 'Period end must be on or after period start.';
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    if (e > todayEnd.getTime()) return 'Period end cannot be in the future.';
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    if (s < twoYearsAgo.getTime()) return 'Period start is more than 2 years ago — please confirm the dates.';
+    return null;
+  })();
+
   const handleSubmit = async () => {
     if (!user) return;
 
@@ -133,10 +148,16 @@ export function CreateInvoiceDialog({
       return;
     }
 
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
+
     if (lineItems.length === 0) {
       toast.error('Please add at least one line item');
       return;
     }
+
 
     setLoading(true);
     const { subtotal, retainageAmount, totalAmount } = calculateTotals();
