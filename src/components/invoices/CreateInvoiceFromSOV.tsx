@@ -170,8 +170,10 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   
   // Invoice details
   const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [periodStart, setPeriodStart] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
-  const [periodEnd, setPeriodEnd] = useState<Date>(endOfMonth(subMonths(new Date(), 1)));
+  const [periodStart, setPeriodStart] = useState<Date | undefined>(undefined);
+  const [periodEnd, setPeriodEnd] = useState<Date | undefined>(undefined);
+  const [periodConfirmed, setPeriodConfirmed] = useState(false);
+  const [showPeriodWarning, setShowPeriodWarning] = useState(false);
   const [notes, setNotes] = useState('');
 
   // Get current user's organization info
