@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { CalendarIcon, Plus, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { Plus, Trash2 } from 'lucide-react';
+import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -64,8 +65,10 @@ export function CreateInvoiceDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [periodStart, setPeriodStart] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
-  const [periodEnd, setPeriodEnd] = useState<Date>(endOfMonth(subMonths(new Date(), 1)));
+  const [periodStart, setPeriodStart] = useState<Date | undefined>(undefined);
+  const [periodEnd, setPeriodEnd] = useState<Date | undefined>(undefined);
+  const [periodConfirmed, setPeriodConfirmed] = useState(false);
+  const [showPeriodWarning, setShowPeriodWarning] = useState(false);
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([]);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -125,20 +128,7 @@ export function CreateInvoiceDialog({
     return { subtotal, retainageAmount, totalAmount };
   };
 
-  const dateError = (() => {
-    if (!periodStart || !periodEnd) return 'Select both a start and end date for the billing period.';
-    const s = periodStart.getTime();
-    const e = periodEnd.getTime();
-    if (Number.isNaN(s) || Number.isNaN(e)) return 'Enter valid billing period dates.';
-    if (e < s) return 'Period end must be on or after period start.';
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    if (e > todayEnd.getTime()) return 'Period end cannot be in the future.';
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-    if (s < twoYearsAgo.getTime()) return 'Period start is more than 2 years ago — please confirm the dates.';
-    return null;
-  })();
+  const dateError = validateBillingPeriod(periodStart, periodEnd, periodConfirmed);
 
   const handleSubmit = async () => {
     if (!user) return;
@@ -149,6 +139,7 @@ export function CreateInvoiceDialog({
     }
 
     if (dateError) {
+      setShowPeriodWarning(true);
       toast.error(dateError);
       return;
     }
@@ -224,8 +215,10 @@ export function CreateInvoiceDialog({
 
   const resetForm = () => {
     setInvoiceNumber('');
-    setPeriodStart(startOfMonth(subMonths(new Date(), 1)));
-    setPeriodEnd(endOfMonth(subMonths(new Date(), 1)));
+    setPeriodStart(undefined);
+    setPeriodEnd(undefined);
+    setPeriodConfirmed(false);
+    setShowPeriodWarning(false);
     setNotes('');
     setLineItems([]);
   };
@@ -244,8 +237,8 @@ export function CreateInvoiceDialog({
 
         <div className="flex-1 overflow-y-auto min-h-0 space-y-6 py-4">
           {/* Invoice Details */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div className="space-y-2 max-w-sm">
               <Label htmlFor="invoiceNumber">Invoice Number</Label>
               <Input
                 id="invoiceNumber"
@@ -255,69 +248,30 @@ export function CreateInvoiceDialog({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Billing Period Start</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !periodStart && 'text-muted-foreground',
-                      dateError && 'border-destructive text-destructive'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {periodStart ? format(periodStart, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={periodStart}
-                    onSelect={(date) => {
-                      if (!date) return;
-                      setPeriodStart(date);
-                      if (periodEnd && date > periodEnd) setPeriodEnd(date);
-                    }}
-                    disabled={(d) => d > new Date()}
-                    initialFocus
-                    className={cn('p-3 pointer-events-auto')}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Billing Period End</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !periodEnd && 'text-muted-foreground',
-                      dateError && 'border-destructive text-destructive'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {periodEnd ? format(periodEnd, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={periodEnd}
-                    onSelect={(date) => date && setPeriodEnd(date)}
-                    disabled={(d) => d > new Date() || (periodStart ? d < periodStart : false)}
-                    initialFocus
-                    className={cn('p-3 pointer-events-auto')}
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <Label className="text-sm">Billing Period</Label>
+                {!periodConfirmed && (
+                  <span className="text-[10px] uppercase tracking-wide text-destructive">
+                    Required
+                  </span>
+                )}
+              </div>
+              <BillingPeriodPicker
+                periodStart={periodStart}
+                periodEnd={periodEnd}
+                confirmed={periodConfirmed}
+                showRequiredWarning={showPeriodWarning}
+                onChange={(s, e, confirmed) => {
+                  setPeriodStart(s);
+                  setPeriodEnd(e);
+                  setPeriodConfirmed(confirmed && Boolean(s && e));
+                  if (confirmed) setShowPeriodWarning(false);
+                }}
+              />
             </div>
           </div>
-          {dateError && (
+          {dateError && periodConfirmed && (
             <p className="text-xs text-destructive">{dateError}</p>
           )}
 
