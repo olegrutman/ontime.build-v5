@@ -191,15 +191,42 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
   const handleResend = async () => {
     setOtpValue('');
     setOtpError(false);
+    setResendNotice(null);
+
+    // If the user has already confirmed via the email link, resend is a silent
+    // no-op on Supabase's side. Detect that and move them forward instead.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.email_confirmed_at || session?.user?.confirmed_at) {
+      setResendNotice({ type: 'success', message: 'Your email is already verified — continuing…' });
+      await refreshUserData();
+      goToStep(3);
+      return;
+    }
+
     startResendTimer();
     if (method === 'email' && email) {
-      await supabase.auth.resend({
+      const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
         options: { emailRedirectTo: window.location.origin + '/auth/callback' },
       });
+      if (error) {
+        const msg = error.message?.toLowerCase() || '';
+        if (msg.includes('rate') || msg.includes('too many') || msg.includes('security purposes')) {
+          setResendNotice({ type: 'error', message: 'Too many requests. Please wait a moment and try again.' });
+        } else if (msg.includes('already') && msg.includes('confirm')) {
+          setResendNotice({ type: 'success', message: 'Your email is already verified — continuing…' });
+          await refreshUserData();
+          goToStep(3);
+        } else {
+          setResendNotice({ type: 'error', message: error.message || 'Could not send the code. Please try again.' });
+        }
+        return;
+      }
+      setResendNotice({ type: 'success', message: `New code sent to ${email}. Check your inbox.` });
     }
   };
+
 
   /* ── Step 3: Finish — create organization ── */
   const handleFinish = async () => {
