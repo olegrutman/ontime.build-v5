@@ -56,7 +56,9 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
   const [otpError, setOtpError] = useState(false);
   const [otpErrorMsg, setOtpErrorMsg] = useState<string>('Incorrect code. Please try again or request a new one.');
   const [resendSeconds, setResendSeconds] = useState(30);
+  const [resendNotice, setResendNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
+
 
   // Step 3 - Role
   const [selectedRole, setSelectedRole] = useState('gc');
