@@ -449,6 +449,19 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
               </button>
             </div>
 
+            {resendNotice && (
+              <div
+                className={`auth-alert ${resendNotice.type === 'success' ? 'info' : 'err'}`}
+                style={{ marginBottom: 12 }}
+              >
+                <span style={{ fontSize: '1rem', flexShrink: 0 }}>
+                  {resendNotice.type === 'success' ? '✉' : '⚠'}
+                </span>
+                <span>{resendNotice.message}</span>
+              </div>
+            )}
+
+
             <button className="auth-cta-btn" onClick={handleVerifyOTP} disabled={loading}>
               {loading ? <div className="auth-spinner" /> : <span>Verify & Continue</span>}
             </button>
