@@ -235,7 +235,7 @@ export function usePushNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [isSupported, user, getPushRegistration]);
+  }, [isSupported, user, getPushRegistration, cleanupLegacyPushRegistration]);
 
   const testNotification = useCallback(async () => {
     if (!isSupported || permission !== 'granted') return;
