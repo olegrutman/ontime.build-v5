@@ -21,12 +21,12 @@ export function usePushNotifications() {
     // Check if push notifications are supported
     const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     setIsSupported(supported);
-    
+
     if (supported) {
       setPermission(Notification.permission);
-      checkSubscriptionStatus();
     }
   }, []);
+
 
   const getPushRegistration = useCallback(async () => {
     if (!('serviceWorker' in navigator)) return null;
