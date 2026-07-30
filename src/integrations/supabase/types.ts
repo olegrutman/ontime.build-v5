@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          detail: Json | null
+          id: number
+          organization_id: string | null
+          project_id: string | null
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: number
+          organization_id?: string | null
+          project_id?: string | null
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          id?: number
+          organization_id?: string | null
+          project_id?: string | null
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       actual_cost_entries: {
         Row: {
           cost_type: string
@@ -3675,6 +3711,7 @@ export type Database = {
           created_by: string
           default_equipment_markup_pct: number
           default_materials_markup_pct: number
+          default_project_scope: string
           id: string
           insurance_expiration_date: string | null
           license_number: string | null
@@ -3695,6 +3732,7 @@ export type Database = {
           created_by: string
           default_equipment_markup_pct?: number
           default_materials_markup_pct?: number
+          default_project_scope?: string
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
@@ -3715,6 +3753,7 @@ export type Database = {
           created_by?: string
           default_equipment_markup_pct?: number
           default_materials_markup_pct?: number
+          default_project_scope?: string
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
@@ -4539,6 +4578,51 @@ export type Database = {
             columns: ["project_team_id"]
             isOneToOne: false
             referencedRelation: "project_team"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_members: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          project_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          project_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -7080,6 +7164,7 @@ export type Database = {
           id: string
           is_admin: boolean
           organization_id: string
+          project_scope: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -7088,6 +7173,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           organization_id: string
+          project_scope?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -7096,6 +7182,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           organization_id?: string
+          project_scope?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -8079,6 +8166,7 @@ export type Database = {
       }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
+      can_see_project: { Args: { p_project_id: string }; Returns: boolean }
       can_supplier_edit_po_pricing: {
         Args: { _po_id: string; _user_id?: string }
         Returns: boolean
@@ -8463,6 +8551,7 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: boolean
       }
+      projects_visible_via_org: { Args: { p_user: string }; Returns: string[] }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
