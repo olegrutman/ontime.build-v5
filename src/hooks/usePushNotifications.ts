@@ -38,10 +38,49 @@ export function usePushNotifications() {
     );
   }, []);
 
+  // One-time migration: the push worker used to live at /push-sw.js with scope "/".
+  // That file no longer exists, so those registrations are dead. Unsubscribe them,
+  // purge their DB rows, and unregister the worker so the state is clean.
+  const cleanupLegacyPushRegistration = useCallback(async () => {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      const legacy = registrations.filter((r) =>
+        [r.active?.scriptURL, r.waiting?.scriptURL, r.installing?.scriptURL].some((u) =>
+          u?.endsWith('/push-sw.js'),
+        ),
+      );
+
+      for (const reg of legacy) {
+        try {
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) {
+            const endpoint = sub.endpoint;
+            await sub.unsubscribe().catch(() => {});
+            if (user) {
+              await supabase
+                .from('push_subscriptions')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('endpoint', endpoint);
+            }
+          }
+        } catch (_e) {
+          /* ignore */
+        }
+        await reg.unregister().catch(() => {});
+      }
+    } catch (error) {
+      console.error('Error cleaning up legacy push worker:', error);
+    }
+  }, [user]);
+
   const checkSubscriptionStatus = useCallback(async () => {
     if (!isSupported || !user) return;
 
     try {
+      await cleanupLegacyPushRegistration();
+
       const registration = await getPushRegistration();
       const subscription = registration ? await registration.pushManager.getSubscription() : null;
       setIsSubscribed(!!subscription);
@@ -64,7 +103,8 @@ export function usePushNotifications() {
     } catch (error) {
       console.error('Error checking subscription status:', error);
     }
-  }, [isSupported, user, getPushRegistration]);
+  }, [isSupported, user, getPushRegistration, cleanupLegacyPushRegistration]);
+
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) return false;
