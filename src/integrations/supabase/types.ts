@@ -101,6 +101,39 @@ export type Database = {
         }
         Relationships: []
       }
+      _phase3a_grant_backup: {
+        Row: {
+          grantee: string | null
+          privilege_type: string | null
+          table_name: string | null
+        }
+        Insert: {
+          grantee?: string | null
+          privilege_type?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          grantee?: string | null
+          privilege_type?: string | null
+          table_name?: string | null
+        }
+        Relationships: []
+      }
+      _phase3a_view_backup: {
+        Row: {
+          definition: string | null
+          viewname: unknown
+        }
+        Insert: {
+          definition?: string | null
+          viewname?: unknown
+        }
+        Update: {
+          definition?: string | null
+          viewname?: unknown
+        }
+        Relationships: []
+      }
       access_audit_log: {
         Row: {
           action: string
@@ -7548,18 +7581,18 @@ export type Database = {
           reason_note?: string | null
           rejected_at?: string | null
           rejection_note?: string | null
-          retainage_amount?: number | null
+          retainage_amount?: never
           retainage_released?: boolean | null
           retainage_released_at?: string | null
           shared_at?: string | null
           status?: string | null
           submitted_at?: string | null
-          tax_rate_snapshot?: number | null
+          tax_rate_snapshot?: never
           tc_snapshot_hourly_rate?: never
           tc_snapshot_markup_percent?: never
           tc_submitted_price?: never
           title?: string | null
-          total_tax?: number | null
+          total_tax?: never
           trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
@@ -7622,18 +7655,18 @@ export type Database = {
           reason_note?: string | null
           rejected_at?: string | null
           rejection_note?: string | null
-          retainage_amount?: number | null
+          retainage_amount?: never
           retainage_released?: boolean | null
           retainage_released_at?: string | null
           shared_at?: string | null
           status?: string | null
           submitted_at?: string | null
-          tax_rate_snapshot?: number | null
+          tax_rate_snapshot?: never
           tc_snapshot_hourly_rate?: never
           tc_snapshot_markup_percent?: never
           tc_submitted_price?: never
           title?: string | null
-          total_tax?: number | null
+          total_tax?: never
           trigger_code?: string | null
           updated_at?: string | null
           use_fc_pricing_base?: boolean | null
@@ -7730,7 +7763,7 @@ export type Database = {
         }
         Insert: {
           added_by_role?: string | null
-          billed_amount?: number | null
+          billed_amount?: never
           co_id?: string | null
           cost?: never
           created_at?: string | null
@@ -7744,7 +7777,7 @@ export type Database = {
         }
         Update: {
           added_by_role?: string | null
-          billed_amount?: number | null
+          billed_amount?: never
           co_id?: string | null
           cost?: never
           created_at?: string | null
@@ -7815,12 +7848,12 @@ export type Database = {
           entry_date?: string | null
           gc_approved?: boolean | null
           gc_approved_at?: string | null
-          hourly_rate?: number | null
+          hourly_rate?: never
           hours?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
-          line_total?: number | null
-          lump_sum?: number | null
+          line_total?: never
+          lump_sum?: never
           markup_percent?: never
           org_id?: string | null
           pricing_mode?: string | null
@@ -7837,12 +7870,12 @@ export type Database = {
           entry_date?: string | null
           gc_approved?: boolean | null
           gc_approved_at?: string | null
-          hourly_rate?: number | null
+          hourly_rate?: never
           hours?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
-          line_total?: number | null
-          lump_sum?: number | null
+          line_total?: never
+          lump_sum?: never
           markup_percent?: never
           org_id?: string | null
           pricing_mode?: string | null
@@ -7928,7 +7961,7 @@ export type Database = {
           id?: string | null
           item_name?: string | null
           location_tag?: string | null
-          nte_cap?: number | null
+          nte_cap?: never
           org_id?: string | null
           pricing_mode?: string | null
           pricing_type?: string | null
@@ -7956,7 +7989,7 @@ export type Database = {
           id?: string | null
           item_name?: string | null
           location_tag?: string | null
-          nte_cap?: number | null
+          nte_cap?: never
           org_id?: string | null
           pricing_mode?: string | null
           pricing_type?: string | null
@@ -8023,7 +8056,7 @@ export type Database = {
         }
         Insert: {
           added_by_role?: string | null
-          billed_amount?: number | null
+          billed_amount?: never
           co_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -8042,7 +8075,7 @@ export type Database = {
         }
         Update: {
           added_by_role?: string | null
-          billed_amount?: number | null
+          billed_amount?: never
           co_id?: string | null
           created_at?: string | null
           description?: string | null
