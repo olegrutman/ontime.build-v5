@@ -105,6 +105,12 @@ export function usePushNotifications() {
     }
   }, [isSupported, user, getPushRegistration, cleanupLegacyPushRegistration]);
 
+  useEffect(() => {
+    if (isSupported && user) {
+      checkSubscriptionStatus();
+    }
+  }, [isSupported, user, checkSubscriptionStatus]);
+
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) return false;
