@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      _phase2_access_baseline: {
+        Row: {
+          project_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          project_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          project_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      _phase2_conversion_log: {
+        Row: {
+          action: string
+          batch: string
+          created_at: string
+          id: number
+          new_qual: string | null
+          original_qual: string | null
+          policyname: string
+          reason: string | null
+          roles: string
+          tbl: string
+        }
+        Insert: {
+          action: string
+          batch: string
+          created_at?: string
+          id?: number
+          new_qual?: string | null
+          original_qual?: string | null
+          policyname: string
+          reason?: string | null
+          roles: string
+          tbl: string
+        }
+        Update: {
+          action?: string
+          batch?: string
+          created_at?: string
+          id?: number
+          new_qual?: string | null
+          original_qual?: string | null
+          policyname?: string
+          reason?: string | null
+          roles?: string
+          tbl?: string
+        }
+        Relationships: []
+      }
+      _phase2_policy_backup: {
+        Row: {
+          cmd: string | null
+          permissive: string | null
+          policyname: unknown
+          qual: string | null
+          roles: unknown[] | null
+          schemaname: unknown
+          tablename: unknown
+          with_check: string | null
+        }
+        Insert: {
+          cmd?: string | null
+          permissive?: string | null
+          policyname?: unknown
+          qual?: string | null
+          roles?: unknown[] | null
+          schemaname?: unknown
+          tablename?: unknown
+          with_check?: string | null
+        }
+        Update: {
+          cmd?: string | null
+          permissive?: string | null
+          policyname?: unknown
+          qual?: string | null
+          roles?: unknown[] | null
+          schemaname?: unknown
+          tablename?: unknown
+          with_check?: string | null
+        }
+        Relationships: []
+      }
       access_audit_log: {
         Row: {
           action: string
