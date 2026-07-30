@@ -210,7 +210,10 @@ export function usePushNotifications() {
 
     setLoading(true);
     try {
+      await cleanupLegacyPushRegistration();
+
       const registration = await getPushRegistration();
+
       const subscription = registration ? await registration.pushManager.getSubscription() : null;
       
       if (subscription) {
