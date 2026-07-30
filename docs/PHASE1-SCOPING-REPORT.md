@@ -1,2734 +1,702 @@
-# Phase 1 — Per-User Project Scoping: Report
+# Phase 1 - Per-User Project Scoping: Report
 
 ## A. Failed statements
 
-None. All migration statements applied successfully.
+None. Both migrations and the backfill applied successfully, with no errors.
 
 ## B. Backfill & verification
 
-project_members rows after backfill: 49
-Verification query rows (must be 0): 0
-Users with project_scope <> 'org': 0
-Orgs with default_project_scope <> 'org': 0
+- `project_members` rows inserted by the backfill: **49**
+- Verification query rows (must be 0): **0** - the new predicate matches current behavior exactly for every user.
+- Users with project_scope other than 'org': **0** (phase is inert)
+- Orgs with default_project_scope other than 'org': **0**
 
-## C. RLS policies on project-scoped tables
+## C. RLS policies on `projects` and every table with a `project_id` column
 
-awk: cmd. line:5: warning: escape sequence `\`' treated as plain ``'
 
 ### access_audit_log
 
-- **audit_insert** (INSERT, {authenticated})
+- **audit_insert** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `(actor_id = auth.uid())`
-- **audit_select** (SELECT, {authenticated})
+- **audit_select** - `SELECT` to `{authenticated}`
   - USING: `user_in_org(auth.uid(), organization_id)`
   - WITH CHECK: `-`
 
 ### actual_cost_entries
 
-- **Users can delete own org actual costs** (DELETE, {authenticated})
+- **Users can delete own org actual costs** - `DELETE` to `{authenticated}`
   - USING: `user_in_org(auth.uid(), organization_id)`
   - WITH CHECK: `-`
-- **Users can delete own org cost entries** (DELETE, {authenticated})
-  - USING: `(organization_id IN ( SELECT user_org_roles.organization_id`
-  - WITH CHECK: ``
-
-###    FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (user_org_roles.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### actual_cost_entries
-
-- **Users can insert own org actual costs** (INSERT, {authenticated})
+- **Users can delete own org cost entries** - `DELETE` to `{authenticated}`
+  - USING: `(organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))`
+  - WITH CHECK: `-`
+- **Users can insert own org actual costs** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `user_in_org(auth.uid(), organization_id)`
-- **Users can insert own org cost entries** (INSERT, {authenticated})
+- **Users can insert own org cost entries** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `(organization_id IN ( SELECT user_org_roles.organization_id`
-
-###    FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (user_org_roles.user_id = auth.uid())))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### actual_cost_entries
-
-- **Users can update own org actual costs** (UPDATE, {authenticated})
+  - WITH CHECK: `(organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))`
+- **Users can update own org actual costs** - `UPDATE` to `{authenticated}`
   - USING: `user_in_org(auth.uid(), organization_id)`
   - WITH CHECK: `-`
-- **Users can view own org actual costs** (SELECT, {authenticated})
+- **Users can view own org actual costs** - `SELECT` to `{authenticated}`
   - USING: `user_in_org(auth.uid(), organization_id)`
   - WITH CHECK: `-`
-- **Users can view own org cost entries** (SELECT, {authenticated})
-  - USING: `(organization_id IN ( SELECT user_org_roles.organization_id`
-  - WITH CHECK: ``
-
-###    FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (user_org_roles.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Users can view own org cost entries** - `SELECT` to `{authenticated}`
+  - USING: `(organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))`
+  - WITH CHECK: `-`
 
 ### backcharges
 
-- **Authenticated users can create backcharges on their projects** (INSERT, {public})
+- **Authenticated users can create backcharges on their projects** - `INSERT` to `{public}`
   - USING: `-`
   - WITH CHECK: `((auth.uid() = created_by_user_id) AND is_project_participant(auth.uid(), project_id))`
-- **Project participants can update backcharges** (UPDATE, {public})
+- **Project participants can update backcharges** - `UPDATE` to `{public}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Project participants can view backcharges** (SELECT, {public})
+- **Project participants can view backcharges** - `SELECT` to `{public}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
 
 ### change_orders
 
-- **Assigned org can decide submitted change orders** (UPDATE, {authenticated})
+- **Assigned org can decide submitted change orders** - `UPDATE` to `{authenticated}`
   - USING: `((assigned_to_org_id IS NOT NULL) AND user_in_org(auth.uid(), assigned_to_org_id) AND (status = 'submitted'::text))`
   - WITH CHECK: `((assigned_to_org_id IS NOT NULL) AND user_in_org(auth.uid(), assigned_to_org_id) AND (status = ANY (ARRAY['submitted'::text, 'approved'::text, 'rejected'::text])))`
-- **Assigned org can update approved change orders** (UPDATE, {authenticated})
+- **Assigned org can update approved change orders** - `UPDATE` to `{authenticated}`
   - USING: `((assigned_to_org_id IS NOT NULL) AND user_in_org(auth.uid(), assigned_to_org_id) AND (status = 'approved'::text))`
   - WITH CHECK: `((assigned_to_org_id IS NOT NULL) AND user_in_org(auth.uid(), assigned_to_org_id) AND (status = 'approved'::text))`
-- **Assigned org can work active change orders** (UPDATE, {authenticated})
+- **Assigned org can work active change orders** - `UPDATE` to `{authenticated}`
   - USING: `((assigned_to_org_id IS NOT NULL) AND user_in_org(auth.uid(), assigned_to_org_id) AND (status = ANY (ARRAY['draft'::text, 'shared'::text, 'rejected'::text, 'combined'::text, 'work_in_progress'::text, 'closed_for_pricing'::text, 'submitted'::text, 'approved'::text])))`
   - WITH CHECK: `((assigned_to_org_id IS NOT NULL) AND user_in_org(auth.uid(), assigned_to_org_id) AND (status = ANY (ARRAY['draft'::text, 'shared'::text, 'submitted'::text, 'rejected'::text, 'combined'::text, 'work_in_progress'::text, 'closed_for_pricing'::text, 'approved'::text])))`
-- **CO deletable by authorized owner org in editable states** (DELETE, {authenticated})
+- **CO deletable by authorized owner org in editable states** - `DELETE` to `{authenticated}`
   - USING: `can_delete_change_order(id, auth.uid())`
   - WITH CHECK: `-`
-- **Owner org can update change orders** (UPDATE, {authenticated})
+- **Owner org can update change orders** - `UPDATE` to `{authenticated}`
   - USING: `user_in_org(auth.uid(), org_id)`
   - WITH CHECK: `user_in_org(auth.uid(), org_id)`
-- **Platform staff can update change orders** (UPDATE, {public})
+- **Platform staff can update change orders** - `UPDATE` to `{public}`
   - USING: `is_platform_staff(auth.uid())`
   - WITH CHECK: `is_platform_staff(auth.uid())`
-- **Platform users can view change orders** (SELECT, {authenticated})
+- **Platform users can view change orders** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Users can access change orders they participate in** (SELECT, {authenticated})
+- **Users can access change orders they participate in** - `SELECT` to `{authenticated}`
   - USING: `can_access_change_order(id)`
   - WITH CHECK: `-`
-- **Users can insert change orders for their org** (INSERT, {authenticated})
+- **Users can insert change orders for their org** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `user_in_org(auth.uid(), org_id)`
-- **Users can select owned or assigned change orders (direct)** (SELECT, {authenticated})
+- **Users can select owned or assigned change orders (direct)** - `SELECT` to `{authenticated}`
   - USING: `(user_in_org(auth.uid(), org_id) OR ((assigned_to_org_id IS NOT NULL) AND user_in_org(auth.uid(), assigned_to_org_id)))`
   - WITH CHECK: `-`
 
 ### co_activity
 
-- **Activity insertable by co participants** (INSERT, {authenticated})
+- **Activity insertable by co participants** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `can_access_change_order(co_id)`
-- **Activity readable by co participants** (SELECT, {authenticated})
+- **Activity readable by co participants** - `SELECT` to `{authenticated}`
   - USING: `can_access_change_order(co_id)`
   - WITH CHECK: `-`
-- **Platform users can view co_activity** (SELECT, {authenticated})
+- **Platform users can view co_activity** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
 
 ### co_ai_intakes
 
-- **Creator can read own intakes** (SELECT, {authenticated})
+- **Creator can read own intakes** - `SELECT` to `{authenticated}`
   - USING: `(created_by = auth.uid())`
   - WITH CHECK: `-`
-- **Creator inserts own intake** (INSERT, {authenticated})
+- **Creator inserts own intake** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `((created_by = auth.uid()) AND is_project_participant(project_id, auth.uid()))`
-- **Creator updates own intake** (UPDATE, {authenticated})
+- **Creator updates own intake** - `UPDATE` to `{authenticated}`
   - USING: `(created_by = auth.uid())`
   - WITH CHECK: `(created_by = auth.uid())`
-- **Project participants can read linked intakes** (SELECT, {authenticated})
+- **Project participants can read linked intakes** - `SELECT` to `{authenticated}`
   - USING: `((finalized_co_id IS NOT NULL) AND is_project_participant(project_id, auth.uid()))`
   - WITH CHECK: `-`
 
 ### co_sov_lines
 
-- **Participants read CO SOV lines** (SELECT, {authenticated})
+- **Participants read CO SOV lines** - `SELECT` to `{authenticated}`
   - USING: `is_project_participant(project_id, auth.uid())`
   - WITH CHECK: `-`
 
 ### contract_scope_exclusions
 
-- **Project participants can create scope exclusions** (INSERT, {authenticated})
+- **Project participants can create scope exclusions** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `is_project_participant(auth.uid(), project_id)`
-- **Project participants can delete scope exclusions** (DELETE, {authenticated})
+- **Project participants can delete scope exclusions** - `DELETE` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Project participants can update scope exclusions** (UPDATE, {authenticated})
+- **Project participants can update scope exclusions** - `UPDATE` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Project participants can view scope exclusions** (SELECT, {authenticated})
+- **Project participants can view scope exclusions** - `SELECT` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
 
 ### contract_scope_selections
 
-- **Project participants can create scope selections** (INSERT, {authenticated})
+- **Project participants can create scope selections** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `is_project_participant(auth.uid(), project_id)`
-- **Project participants can delete scope selections** (DELETE, {authenticated})
+- **Project participants can delete scope selections** - `DELETE` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Project participants can update scope selections** (UPDATE, {authenticated})
+- **Project participants can update scope selections** - `UPDATE` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Project participants can view scope selections** (SELECT, {authenticated})
+- **Project participants can view scope selections** - `SELECT` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
 
 ### contract_sow_items
 
-- **Project members can delete SOW items** (DELETE, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid()))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### contract_sow_items
-
-- **Project members can insert SOW items** (INSERT, {authenticated})
+- **Project members can delete SOW items** - `DELETE` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid()))))))`
+  - WITH CHECK: `-`
+- **Project members can insert SOW items** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `(EXISTS ( SELECT 1`
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid()))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### contract_sow_items
-
-- **Project members can update SOW items** (UPDATE, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid()))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### contract_sow_items
-
-- **Project members can view SOW items** (SELECT, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid()))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid()))))))`
+- **Project members can update SOW items** - `UPDATE` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid()))))))`
+  - WITH CHECK: `-`
+- **Project members can view SOW items** - `SELECT` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = contract_sow_items.project_id) AND (pp.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid()))))))`
+  - WITH CHECK: `-`
 
 ### daily_logs
 
-- **Users can insert daily logs for their projects** (INSERT, {authenticated})
+- **Users can insert daily logs for their projects** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `((created_by = auth.uid()) AND (EXISTS ( SELECT 1`
-
-###    FROM (project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = daily_logs.project_id) AND (uor.user_id = auth.uid())))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### daily_logs
-
-- **Users can update their own daily logs** (UPDATE, {authenticated})
+  - WITH CHECK: `((created_by = auth.uid()) AND (EXISTS ( SELECT 1 FROM (project_team pt JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id))) WHERE ((pt.project_id = daily_logs.project_id) AND (uor.user_id = auth.uid())))))`
+- **Users can update their own daily logs** - `UPDATE` to `{authenticated}`
   - USING: `(created_by = auth.uid())`
   - WITH CHECK: `(created_by = auth.uid())`
-- **Users can view daily logs for their projects** (SELECT, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM (project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = daily_logs.project_id) AND (uor.user_id = auth.uid()))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Users can view daily logs for their projects** - `SELECT` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM (project_team pt JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id))) WHERE ((pt.project_id = daily_logs.project_id) AND (uor.user_id = auth.uid()))))`
+  - WITH CHECK: `-`
 
 ### estimate_catalog_mapping
 
-- **Project participants can view mappings** (SELECT, {public})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM (project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = estimate_catalog_mapping.project_id) AND (uor.user_id = auth.uid()))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### estimate_catalog_mapping
-
-- **Supplier org can manage own mappings** (ALL, {public})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM (supplier_estimates se
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON ((uor.organization_id = se.supplier_org_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((se.id = estimate_catalog_mapping.estimate_id) AND (uor.user_id = auth.uid()))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Project participants can view mappings** - `SELECT` to `{public}`
+  - USING: `(EXISTS ( SELECT 1 FROM (project_team pt JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id))) WHERE ((pt.project_id = estimate_catalog_mapping.project_id) AND (uor.user_id = auth.uid()))))`
+  - WITH CHECK: `-`
+- **Supplier org can manage own mappings** - `ALL` to `{public}`
+  - USING: `(EXISTS ( SELECT 1 FROM (supplier_estimates se JOIN user_org_roles uor ON ((uor.organization_id = se.supplier_org_id))) WHERE ((se.id = estimate_catalog_mapping.estimate_id) AND (uor.user_id = auth.uid()))))`
+  - WITH CHECK: `-`
 
 ### field_captures
 
-- **Project participants can view captures** (SELECT, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = field_captures.project_id) AND (pt.org_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid()))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### field_captures
-
-- **Users can create own captures** (INSERT, {authenticated})
+- **Project participants can view captures** - `SELECT` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = field_captures.project_id) AND (pt.org_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid()))))))`
+  - WITH CHECK: `-`
+- **Users can create own captures** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `(user_id = auth.uid())`
-- **Users can update own captures** (UPDATE, {authenticated})
+- **Users can update own captures** - `UPDATE` to `{authenticated}`
   - USING: `(user_id = auth.uid())`
   - WITH CHECK: `(user_id = auth.uid())`
 
 ### gc_owner_billings
 
-- **GC members can delete their owner billings** (DELETE, {authenticated})
+- **GC members can delete their owner billings** - `DELETE` to `{authenticated}`
   - USING: `(is_project_participant(project_id, auth.uid()) AND user_is_gc_in_org(auth.uid(), gc_org_id))`
   - WITH CHECK: `-`
-- **GC members can insert their owner billings** (INSERT, {authenticated})
+- **GC members can insert their owner billings** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `(is_project_participant(project_id, auth.uid()) AND user_is_gc_in_org(auth.uid(), gc_org_id))`
-- **GC members can update their owner billings** (UPDATE, {authenticated})
+- **GC members can update their owner billings** - `UPDATE` to `{authenticated}`
   - USING: `(is_project_participant(project_id, auth.uid()) AND user_is_gc_in_org(auth.uid(), gc_org_id))`
   - WITH CHECK: `(is_project_participant(project_id, auth.uid()) AND user_is_gc_in_org(auth.uid(), gc_org_id))`
-- **GC members can view their owner billings** (SELECT, {authenticated})
+- **GC members can view their owner billings** - `SELECT` to `{authenticated}`
   - USING: `(is_project_participant(project_id, auth.uid()) AND user_is_gc_in_org(auth.uid(), gc_org_id))`
   - WITH CHECK: `-`
 
 ### invoices
 
-- **Clients can update submitted invoices** (UPDATE, {authenticated})
-  - USING: `((status = ANY (ARRAY['SUBMITTED'::text, 'APPROVED'::text])) AND ((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.to_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM purchase_orders po
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), po.organization_id)))))))
-
-- **((status = ANY (ARRAY['APPROVED'::text, 'REJECTED'::text, 'PAID'::text])) AND ((EXISTS ( SELECT 1** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.to_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM purchase_orders po
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), po.organization_id)))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### invoices
-
-- **Contractors can create invoices** (INSERT, {authenticated})
+- **Clients can update submitted invoices** - `UPDATE` to `{authenticated}`
+  - USING: `((status = ANY (ARRAY['SUBMITTED'::text, 'APPROVED'::text])) AND ((EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.to_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1 FROM purchase_orders po WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), po.organization_id)))))))`
+  - WITH CHECK: `((status = ANY (ARRAY['APPROVED'::text, 'REJECTED'::text, 'PAID'::text])) AND ((EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.to_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1 FROM purchase_orders po WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), po.organization_id)))))))`
+- **Contractors can create invoices** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `((created_by = auth.uid()) AND ((EXISTS ( SELECT 1`
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM (purchase_orders po
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN suppliers s ON ((s.id = po.supplier_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### invoices
-
-- **Contractors can create invoices for their contracts** (INSERT, {public})
+  - WITH CHECK: `((created_by = auth.uid()) AND ((EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1 FROM (purchase_orders po JOIN suppliers s ON ((s.id = po.supplier_id))) WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))`
+- **Contractors can create invoices for their contracts** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `(EXISTS ( SELECT 1`
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND (pc.from_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### invoices
-
-- **Contractors can delete draft invoices** (DELETE, {authenticated})
-  - USING: `((status = 'DRAFT'::text) AND (created_by = auth.uid()) AND ((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM (purchase_orders po
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN suppliers s ON ((s.id = po.supplier_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### invoices
-
-- **Contractors can delete their draft invoices** (DELETE, {public})
-  - USING: `((status = 'DRAFT'::text) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND (pc.from_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid())))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### invoices
-
-- **Contractors can update draft invoices** (UPDATE, {authenticated})
-  - USING: `((status = ANY (ARRAY['DRAFT'::text, 'REJECTED'::text])) AND ((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM (purchase_orders po
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN suppliers s ON ((s.id = po.supplier_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))
-
-- **((status = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text])) AND ((EXISTS ( SELECT 1** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM (purchase_orders po
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN suppliers s ON ((s.id = po.supplier_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### invoices
-
-- **Platform users can view all invoices** (SELECT, {authenticated})
+  - WITH CHECK: `(EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND (pc.from_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))))`
+- **Contractors can delete draft invoices** - `DELETE` to `{authenticated}`
+  - USING: `((status = 'DRAFT'::text) AND (created_by = auth.uid()) AND ((EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1 FROM (purchase_orders po JOIN suppliers s ON ((s.id = po.supplier_id))) WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))`
+  - WITH CHECK: `-`
+- **Contractors can delete their draft invoices** - `DELETE` to `{public}`
+  - USING: `((status = 'DRAFT'::text) AND (EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND (pc.from_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))))))`
+  - WITH CHECK: `-`
+- **Contractors can update draft invoices** - `UPDATE` to `{authenticated}`
+  - USING: `((status = ANY (ARRAY['DRAFT'::text, 'REJECTED'::text])) AND ((EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1 FROM (purchase_orders po JOIN suppliers s ON ((s.id = po.supplier_id))) WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))`
+  - WITH CHECK: `((status = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text])) AND ((EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND user_in_org(auth.uid(), pc.from_org_id)))) OR ((contract_id IS NULL) AND (po_id IS NOT NULL) AND (EXISTS ( SELECT 1 FROM (purchase_orders po JOIN suppliers s ON ((s.id = po.supplier_id))) WHERE ((po.id = invoices.po_id) AND user_in_org(auth.uid(), s.organization_id)))))))`
+- **Platform users can view all invoices** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Users can update invoices based on contract role** (UPDATE, {public})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND (((pc.from_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['DRAFT'::text, 'REJECTED'::text]))) OR ((pc.to_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['SUBMITTED'::text, 'APPROVED'::text])))))))
-
-- **(EXISTS ( SELECT 1** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND (((pc.from_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text]))) OR ((pc.to_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['APPROVED'::text, 'REJECTED'::text, 'PAID'::text])))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### invoices
-
-- **Users can view invoices for their contracts** (SELECT, {public})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = invoices.contract_id) AND ((pc.from_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))) OR (pc.to_org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = invoices.project_id) AND (pp.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Users can update invoices based on contract role** - `UPDATE` to `{public}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND (((pc.from_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['DRAFT'::text, 'REJECTED'::text]))) OR ((pc.to_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['SUBMITTED'::text, 'APPROVED'::text])))))))`
+  - WITH CHECK: `(EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND (((pc.from_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text]))) OR ((pc.to_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))) AND (invoices.status = ANY (ARRAY['APPROVED'::text, 'REJECTED'::text, 'PAID'::text])))))))`
+- **Users can view invoices for their contracts** - `SELECT` to `{public}`
+  - USING: `((EXISTS ( SELECT 1 FROM project_contracts pc WHERE ((pc.id = invoices.contract_id) AND ((pc.from_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))) OR (pc.to_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = invoices.project_id) AND (pp.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))))))`
+  - WITH CHECK: `-`
 
 ### payment_applications
 
-- **Participants can create payment apps** (INSERT, {authenticated})
+- **Participants can create payment apps** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `is_project_participant(auth.uid(), project_id)`
-- **Participants can update payment apps** (UPDATE, {authenticated})
+- **Participants can update payment apps** - `UPDATE` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Participants can view payment apps** (SELECT, {authenticated})
+- **Participants can view payment apps** - `SELECT` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
 
 ### project_activity
 
-- **Authenticated users can insert activity for their projects** (INSERT, {public})
+- **Authenticated users can insert activity for their projects** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `((auth.uid() IS NOT NULL) AND ((EXISTS ( SELECT 1`
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = project_activity.project_id) AND user_in_org(auth.uid(), pp.organization_id)))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_activity.project_id) AND user_in_org(auth.uid(), p.organization_id))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_activity
-
-- **Project participants can view activity** (SELECT, {public})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = project_activity.project_id) AND user_in_org(auth.uid(), pp.organization_id)))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_activity.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `((auth.uid() IS NOT NULL) AND ((EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = project_activity.project_id) AND user_in_org(auth.uid(), pp.organization_id)))) OR (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_activity.project_id) AND user_in_org(auth.uid(), p.organization_id))))))`
+- **Project participants can view activity** - `SELECT` to `{public}`
+  - USING: `((EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = project_activity.project_id) AND user_in_org(auth.uid(), pp.organization_id)))) OR (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_activity.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
 
 ### project_contracts
 
-- **Contract party members can update contracts** (UPDATE, {public})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((user_org_roles.user_id = auth.uid()) AND ((user_org_roles.organization_id = project_contracts.from_org_id) OR (user_org_roles.organization_id = project_contracts.to_org_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_contracts
-
-- **Platform users can view all contracts** (SELECT, {public})
+- **Contract party members can update contracts** - `UPDATE` to `{public}`
+  - USING: `(EXISTS ( SELECT 1 FROM user_org_roles WHERE ((user_org_roles.user_id = auth.uid()) AND ((user_org_roles.organization_id = project_contracts.from_org_id) OR (user_org_roles.organization_id = project_contracts.to_org_id)))))`
+  - WITH CHECK: `-`
+- **Platform users can view all contracts** - `SELECT` to `{public}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Project creators can delete contracts** (DELETE, {public})
-  - USING: `(project_id IN ( SELECT projects.id`
-  - WITH CHECK: ``
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_contracts
-
-- **Project members can insert contracts** (INSERT, {authenticated})
+- **Project creators can delete contracts** - `DELETE` to `{public}`
+  - USING: `(project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid())))`
+  - WITH CHECK: `-`
+- **Project members can insert contracts** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `((project_id IN ( SELECT projects.id`
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_contracts
-
-- **Users can view their organization's contracts** (SELECT, {public})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((uor.user_id = auth.uid()) AND (uor.organization_id = project_contracts.from_org_id)))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((uor.user_id = auth.uid()) AND (uor.organization_id = project_contracts.to_org_id)))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_contracts.project_id) AND (p.created_by = auth.uid())))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `((project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))))`
+- **Users can view their organization's contracts** - `SELECT` to `{public}`
+  - USING: `((EXISTS ( SELECT 1 FROM user_org_roles uor WHERE ((uor.user_id = auth.uid()) AND (uor.organization_id = project_contracts.from_org_id)))) OR (EXISTS ( SELECT 1 FROM user_org_roles uor WHERE ((uor.user_id = auth.uid()) AND (uor.organization_id = project_contracts.to_org_id)))) OR (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_contracts.project_id) AND (p.created_by = auth.uid())))))`
+  - WITH CHECK: `-`
 
 ### project_designated_suppliers
 
-- **GC TC can delete designated suppliers** (DELETE, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM (project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (uor.user_id = auth.uid()) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text])) AND (pt.status = 'Accepted'::text))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_designated_suppliers
-
-- **GC TC can designate suppliers** (INSERT, {authenticated})
+- **GC TC can delete designated suppliers** - `DELETE` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM (project_team pt JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id))) WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (uor.user_id = auth.uid()) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text])) AND (pt.status = 'Accepted'::text))))`
+  - WITH CHECK: `-`
+- **GC TC can designate suppliers** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `(EXISTS ( SELECT 1`
-
-###    FROM (project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (uor.user_id = auth.uid()) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text])) AND (pt.status = 'Accepted'::text))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_designated_suppliers
-
-- **GC TC can update designated suppliers** (UPDATE, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM (project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (uor.user_id = auth.uid()) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text])) AND (pt.status = 'Accepted'::text))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_designated_suppliers
-
-- **Project participants can view designated suppliers** (SELECT, {authenticated})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (pt.org_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid())))))) OR (user_id = auth.uid()))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(EXISTS ( SELECT 1 FROM (project_team pt JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id))) WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (uor.user_id = auth.uid()) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text])) AND (pt.status = 'Accepted'::text))))`
+- **GC TC can update designated suppliers** - `UPDATE` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM (project_team pt JOIN user_org_roles uor ON ((uor.organization_id = pt.org_id))) WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (uor.user_id = auth.uid()) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text])) AND (pt.status = 'Accepted'::text))))`
+  - WITH CHECK: `-`
+- **Project participants can view designated suppliers** - `SELECT` to `{authenticated}`
+  - USING: `((EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = project_designated_suppliers.project_id) AND (pt.org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))))) OR (user_id = auth.uid()))`
+  - WITH CHECK: `-`
 
 ### project_estimates
 
-- **GC_PM can update estimates for approval** (UPDATE, {public})
-  - USING: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_estimates.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_estimates
-
-- **PMs can view estimates** (SELECT, {public})
-  - USING: `(is_pm_role(auth.uid()) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_estimates.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_estimates
-
-- **SUPPLIER can create estimates** (INSERT, {public})
+- **GC_PM can update estimates for approval** - `UPDATE` to `{public}`
+  - USING: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_estimates.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
+- **PMs can view estimates** - `SELECT` to `{public}`
+  - USING: `(is_pm_role(auth.uid()) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_estimates.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
+- **SUPPLIER can create estimates** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `(has_role(auth.uid(), 'SUPPLIER'::app_role) AND (EXISTS ( SELECT 1`
-
-###    FROM suppliers s
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((s.id = project_estimates.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_estimates
-
-- **SUPPLIER can update own draft estimates** (UPDATE, {public})
-  - USING: `(has_role(auth.uid(), 'SUPPLIER'::app_role) AND (status = 'DRAFT'::estimate_status) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM suppliers s
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((s.id = project_estimates.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_estimates
-
-- **SUPPLIER can view own estimates** (SELECT, {public})
-  - USING: `(has_role(auth.uid(), 'SUPPLIER'::app_role) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM suppliers s
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((s.id = project_estimates.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(has_role(auth.uid(), 'SUPPLIER'::app_role) AND (EXISTS ( SELECT 1 FROM suppliers s WHERE ((s.id = project_estimates.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))))`
+- **SUPPLIER can update own draft estimates** - `UPDATE` to `{public}`
+  - USING: `(has_role(auth.uid(), 'SUPPLIER'::app_role) AND (status = 'DRAFT'::estimate_status) AND (EXISTS ( SELECT 1 FROM suppliers s WHERE ((s.id = project_estimates.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))))`
+  - WITH CHECK: `-`
+- **SUPPLIER can view own estimates** - `SELECT` to `{public}`
+  - USING: `(has_role(auth.uid(), 'SUPPLIER'::app_role) AND (EXISTS ( SELECT 1 FROM suppliers s WHERE ((s.id = project_estimates.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))))`
+  - WITH CHECK: `-`
 
 ### project_framing_scope
 
-- **Team members can insert framing scope** (INSERT, {authenticated})
+- **Team members can insert framing scope** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `(project_id IN ( SELECT pt.project_id`
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pt.user_id = auth.uid())))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_framing_scope
-
-- **Team members can read framing scope** (SELECT, {authenticated})
-  - USING: `(project_id IN ( SELECT pt.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pt.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_framing_scope
-
-- **Team members can update framing scope** (UPDATE, {authenticated})
-  - USING: `(project_id IN ( SELECT pt.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pt.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(project_id IN ( SELECT pt.project_id FROM project_team pt WHERE (pt.user_id = auth.uid())))`
+- **Team members can read framing scope** - `SELECT` to `{authenticated}`
+  - USING: `(project_id IN ( SELECT pt.project_id FROM project_team pt WHERE (pt.user_id = auth.uid())))`
+  - WITH CHECK: `-`
+- **Team members can update framing scope** - `UPDATE` to `{authenticated}`
+  - USING: `(project_id IN ( SELECT pt.project_id FROM project_team pt WHERE (pt.user_id = auth.uid())))`
+  - WITH CHECK: `-`
 
 ### project_guests
 
-- **Project admins can delete guests** (DELETE, {public})
+- **Project admins can delete guests** - `DELETE` to `{public}`
   - USING: `(get_project_access_level(auth.uid(), project_id) = ANY (ARRAY['Owner'::text, 'Admin'::text]))`
   - WITH CHECK: `-`
-- **Project admins can manage guests** (INSERT, {public})
+- **Project admins can manage guests** - `INSERT` to `{public}`
   - USING: `-`
   - WITH CHECK: `(get_project_access_level(auth.uid(), project_id) = ANY (ARRAY['Owner'::text, 'Admin'::text]))`
-- **Project admins can update guests** (UPDATE, {public})
+- **Project admins can update guests** - `UPDATE` to `{public}`
   - USING: `(get_project_access_level(auth.uid(), project_id) = ANY (ARRAY['Owner'::text, 'Admin'::text]))`
   - WITH CHECK: `-`
-- **Project team can view guests** (SELECT, {public})
+- **Project team can view guests** - `SELECT` to `{public}`
   - USING: `has_project_access(auth.uid(), project_id)`
   - WITH CHECK: `-`
 
 ### project_invites
 
-- **Project creators can delete invites** (DELETE, {public})
-  - USING: `((invited_by_user_id = auth.uid()) OR (project_id IN ( SELECT projects.id`
-  - WITH CHECK: ``
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_invites
-
-- **Project members can insert invites** (INSERT, {authenticated})
+- **Project creators can delete invites** - `DELETE` to `{public}`
+  - USING: `((invited_by_user_id = auth.uid()) OR (project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))))`
+  - WITH CHECK: `-`
+- **Project members can insert invites** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `((project_id IN ( SELECT projects.id`
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_invites
-
-- **Users can update invites they received** (UPDATE, {authenticated})
-  - USING: `(invited_email IN ( SELECT profiles.email`
-  - WITH CHECK: ``
-
-###    FROM profiles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (profiles.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_invites
-
-- **Users can view invites** (SELECT, {authenticated})
-  - USING: `((invited_email IN ( SELECT profiles.email`
-  - WITH CHECK: ``
-
-###    FROM profiles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (profiles.user_id = auth.uid()))) OR (invited_by_user_id = auth.uid()))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `((project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))))`
+- **Users can update invites they received** - `UPDATE` to `{authenticated}`
+  - USING: `(invited_email IN ( SELECT profiles.email FROM profiles WHERE (profiles.user_id = auth.uid())))`
+  - WITH CHECK: `-`
+- **Users can view invites** - `SELECT` to `{authenticated}`
+  - USING: `((invited_email IN ( SELECT profiles.email FROM profiles WHERE (profiles.user_id = auth.uid()))) OR (invited_by_user_id = auth.uid()))`
+  - WITH CHECK: `-`
 
 ### project_members
 
-- **pm_select** (SELECT, {authenticated})
+- **pm_select** - `SELECT` to `{authenticated}`
   - USING: `((user_id = auth.uid()) OR can_see_project(project_id))`
   - WITH CHECK: `-`
-- **pm_write** (ALL, {authenticated})
+- **pm_write** - `ALL` to `{authenticated}`
   - USING: `can_see_project(project_id)`
   - WITH CHECK: `can_see_project(project_id)`
 
 ### project_participants
 
-- **Accepted participants can view co-participants** (SELECT, {authenticated})
+- **Accepted participants can view co-participants** - `SELECT` to `{authenticated}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Invited org PM can accept/decline** (UPDATE, {public})
+- **Invited org PM can accept/decline** - `UPDATE` to `{public}`
   - USING: `(is_pm_role(auth.uid()) AND user_in_org(auth.uid(), organization_id))`
   - WITH CHECK: `-`
-- **Invited org can view their participation** (SELECT, {public})
+- **Invited org can view their participation** - `SELECT` to `{public}`
   - USING: `user_in_org(auth.uid(), organization_id)`
   - WITH CHECK: `-`
-- **PM roles can delete participants** (DELETE, {public})
-  - USING: `(is_pm_role(auth.uid()) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_participants
-
-- **PM roles can update participants** (UPDATE, {public})
-  - USING: `(is_pm_role(auth.uid()) AND ((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))) OR user_in_org(auth.uid(), organization_id)))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_participants
-
-- **Project creators can add participants** (INSERT, {public})
+- **PM roles can delete participants** - `DELETE` to `{public}`
+  - USING: `(is_pm_role(auth.uid()) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
+- **PM roles can update participants** - `UPDATE` to `{public}`
+  - USING: `(is_pm_role(auth.uid()) AND ((EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))) OR user_in_org(auth.uid(), organization_id)))`
+  - WITH CHECK: `-`
+- **Project creators can add participants** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `(is_pm_role(auth.uid()) AND (invited_by = auth.uid()) AND (EXISTS ( SELECT 1`
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_participants
-
-- **Users can view their participation** (SELECT, {public})
-  - USING: `(user_in_org(auth.uid(), organization_id) OR (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(is_pm_role(auth.uid()) AND (invited_by = auth.uid()) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+- **Users can view their participation** - `SELECT` to `{public}`
+  - USING: `(user_in_org(auth.uid(), organization_id) OR (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_participants.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
 
 ### project_profiles
 
-- **Project team can manage profile** (ALL, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_profiles.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))
-
-- **(EXISTS ( SELECT 1** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_profiles.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Project team can manage profile** - `ALL` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = project_profiles.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))`
+  - WITH CHECK: `(EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = project_profiles.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))`
 
 ### project_relationships
 
-- **GC_PM can create project relationships** (INSERT, {public})
+- **GC_PM can create project relationships** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1`
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_relationships.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_relationships
-
-- **GC_PM can delete project relationships** (DELETE, {public})
-  - USING: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_relationships.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_relationships
-
-- **GC_PM can update project relationships** (UPDATE, {public})
-  - USING: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_relationships.project_id) AND user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_relationships
-
-- **Participants can view project relationships** (SELECT, {public})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (((pp.id = project_relationships.upstream_participant_id) OR (pp.id = project_relationships.downstream_participant_id)) AND user_in_org(auth.uid(), pp.organization_id))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_relationships.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+- **GC_PM can delete project relationships** - `DELETE` to `{public}`
+  - USING: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_relationships.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
+- **GC_PM can update project relationships** - `UPDATE` to `{public}`
+  - USING: `(is_gc_pm(auth.uid()) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_relationships.project_id) AND user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
+- **Participants can view project relationships** - `SELECT` to `{public}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_participants pp WHERE (((pp.id = project_relationships.upstream_participant_id) OR (pp.id = project_relationships.downstream_participant_id)) AND user_in_org(auth.uid(), pp.organization_id))))`
+  - WITH CHECK: `-`
 
 ### project_rfis
 
-- **Project members can create RFIs** (INSERT, {authenticated})
+- **Project members can create RFIs** - `INSERT` to `{authenticated}`
   - USING: `-`
   - WITH CHECK: `(has_project_access(auth.uid(), project_id) AND (submitted_by_user_id = auth.uid()))`
-- **Project team members can update RFIs** (UPDATE, {public})
+- **Project team members can update RFIs** - `UPDATE` to `{public}`
   - USING: `has_project_access(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Users can view RFIs on their projects** (SELECT, {authenticated})
+- **Users can view RFIs on their projects** - `SELECT` to `{authenticated}`
   - USING: `has_project_access(auth.uid(), project_id)`
   - WITH CHECK: `-`
 
 ### project_schedule_items
 
-- **Team members can delete schedule** (DELETE, {authenticated})
-  - USING: `(project_id IN ( SELECT pt.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pt.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_schedule_items
-
-- **Team members can insert schedule** (INSERT, {authenticated})
+- **Team members can delete schedule** - `DELETE` to `{authenticated}`
+  - USING: `(project_id IN ( SELECT pt.project_id FROM project_team pt WHERE (pt.user_id = auth.uid())))`
+  - WITH CHECK: `-`
+- **Team members can insert schedule** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `(project_id IN ( SELECT pt.project_id`
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pt.user_id = auth.uid())))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_schedule_items
-
-- **Team members can update schedule** (UPDATE, {authenticated})
-  - USING: `(project_id IN ( SELECT pt.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pt.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_schedule_items
-
-- **Team members can view schedule** (SELECT, {authenticated})
-  - USING: `(project_id IN ( SELECT pt.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pt.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(project_id IN ( SELECT pt.project_id FROM project_team pt WHERE (pt.user_id = auth.uid())))`
+- **Team members can update schedule** - `UPDATE` to `{authenticated}`
+  - USING: `(project_id IN ( SELECT pt.project_id FROM project_team pt WHERE (pt.user_id = auth.uid())))`
+  - WITH CHECK: `-`
+- **Team members can view schedule** - `SELECT` to `{authenticated}`
+  - USING: `(project_id IN ( SELECT pt.project_id FROM project_team pt WHERE (pt.user_id = auth.uid())))`
+  - WITH CHECK: `-`
 
 ### project_scope_assignments
 
-- **Team members can manage scope assignments** (ALL, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_scope_assignments.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))
-
-- **(EXISTS ( SELECT 1** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_scope_assignments.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_scope_assignments
-
-- **Team members can view scope assignments** (SELECT, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_scope_assignments.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Team members can manage scope assignments** - `ALL` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = project_scope_assignments.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))`
+  - WITH CHECK: `(EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = project_scope_assignments.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))`
+- **Team members can view scope assignments** - `SELECT` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = project_scope_assignments.project_id) AND (pt.user_id = auth.uid()) AND (pt.status = 'Accepted'::text))))`
+  - WITH CHECK: `-`
 
 ### project_scope_details
 
-- **Project members can insert scope** (INSERT, {public})
+- **Project members can insert scope** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `(is_pm_role(auth.uid()) AND ((project_id IN ( SELECT projects.id`
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))) OR user_is_project_participant(auth.uid(), project_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_scope_details
-
-- **Project members can update scope** (UPDATE, {public})
-  - USING: `(is_pm_role(auth.uid()) AND ((project_id IN ( SELECT projects.id`
-  - WITH CHECK: ``
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))) OR user_is_project_participant(auth.uid(), project_id)))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_scope_details
-
-- **Users can view scope for their projects** (SELECT, {authenticated})
-  - USING: `((project_id IN ( SELECT project_participants.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))) OR (project_id IN ( SELECT projects.id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(is_pm_role(auth.uid()) AND ((project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))) OR user_is_project_participant(auth.uid(), project_id)))`
+- **Project members can update scope** - `UPDATE` to `{public}`
+  - USING: `(is_pm_role(auth.uid()) AND ((project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))) OR user_is_project_participant(auth.uid(), project_id)))`
+  - WITH CHECK: `-`
+- **Users can view scope for their projects** - `SELECT` to `{authenticated}`
+  - USING: `((project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))) OR (project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))))`
+  - WITH CHECK: `-`
 
 ### project_scope_selections
 
-- **Project creator can manage selections** (ALL, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_scope_selections.project_id) AND (p.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid()))))))
-
-- **(EXISTS ( SELECT 1** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_scope_selections.project_id) AND (p.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid()))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_scope_selections
-
-- **Project participants can view selections** (SELECT, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = project_scope_selections.project_id) AND (pt.user_id = auth.uid()))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Project creator can manage selections** - `ALL` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_scope_selections.project_id) AND (p.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid()))))))`
+  - WITH CHECK: `(EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_scope_selections.project_id) AND (p.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid()))))))`
+- **Project participants can view selections** - `SELECT` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = project_scope_selections.project_id) AND (pt.user_id = auth.uid()))))`
+  - WITH CHECK: `-`
 
 ### project_settings_audit
 
-- **Org members can view audit for their projects** (SELECT, {authenticated})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_settings_audit.project_id) AND user_in_org(auth.uid(), p.organization_id))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+- **Org members can view audit for their projects** - `SELECT` to `{authenticated}`
+  - USING: `(EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_settings_audit.project_id) AND user_in_org(auth.uid(), p.organization_id))))`
+  - WITH CHECK: `-`
 
 ### project_setup_answers
 
-- **Project participants can insert answers** (INSERT, {authenticated})
+- **Project participants can insert answers** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `(project_id IN ( SELECT pp.project_id`
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pp.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid())))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_setup_answers
-
-- **Project participants can read answers** (SELECT, {authenticated})
-  - USING: `(project_id IN ( SELECT pp.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pp.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid())))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_setup_answers
-
-- **Project participants can update answers** (UPDATE, {authenticated})
-  - USING: `(project_id IN ( SELECT pp.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (pp.organization_id IN ( SELECT uor.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles uor
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (uor.user_id = auth.uid())))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `(project_id IN ( SELECT pp.project_id FROM project_participants pp WHERE (pp.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid())))))`
+- **Project participants can read answers** - `SELECT` to `{authenticated}`
+  - USING: `(project_id IN ( SELECT pp.project_id FROM project_participants pp WHERE (pp.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid())))))`
+  - WITH CHECK: `-`
+- **Project participants can update answers** - `UPDATE` to `{authenticated}`
+  - USING: `(project_id IN ( SELECT pp.project_id FROM project_participants pp WHERE (pp.organization_id IN ( SELECT uor.organization_id FROM user_org_roles uor WHERE (uor.user_id = auth.uid())))))`
+  - WITH CHECK: `-`
 
 ### project_sov
 
-- **Contract members can update project SOV** (UPDATE, {authenticated})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM (project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = project_sov.contract_id) AND (uor.user_id = auth.uid())))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))))
-
-- **((EXISTS ( SELECT 1** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM (project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = project_sov.contract_id) AND (uor.user_id = auth.uid())))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_sov
-
-- **Platform users can view all project SOV** (SELECT, {authenticated})
+- **Contract members can update project SOV** - `UPDATE` to `{authenticated}`
+  - USING: `((EXISTS ( SELECT 1 FROM (project_contracts pc JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id)))) WHERE ((pc.id = project_sov.contract_id) AND (uor.user_id = auth.uid())))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))))`
+  - WITH CHECK: `((EXISTS ( SELECT 1 FROM (project_contracts pc JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id)))) WHERE ((pc.id = project_sov.contract_id) AND (uor.user_id = auth.uid())))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))))`
+- **Platform users can view all project SOV** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Project members can create project SOV** (INSERT, {public})
+- **Project members can create project SOV** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `((EXISTS ( SELECT 1`
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = project_sov.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_sov
-
-- **Project members can delete project SOV** (DELETE, {public})
-  - USING: `(EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_sov
-
-- **Users can view SOV for their contracts** (SELECT, {public})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM (project_contracts pc
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pc.id = project_sov.contract_id) AND (uor.user_id = auth.uid())))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `((EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = project_sov.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))`
+- **Project members can delete project SOV** - `DELETE` to `{public}`
+  - USING: `(EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))`
+  - WITH CHECK: `-`
+- **Users can view SOV for their contracts** - `SELECT` to `{public}`
+  - USING: `((EXISTS ( SELECT 1 FROM (project_contracts pc JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id)))) WHERE ((pc.id = project_sov.contract_id) AND (uor.user_id = auth.uid())))) OR ((contract_id IS NULL) AND (EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id)))))))`
+  - WITH CHECK: `-`
 
 ### project_sov_items
 
-- **Platform users can update SOV item names** (UPDATE, {authenticated})
+- **Platform users can update SOV item names** - `UPDATE` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `is_platform_user(auth.uid())`
-- **Platform users can view all project SOV items** (SELECT, {authenticated})
+- **Platform users can view all project SOV items** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Project members can delete SOV items** (DELETE, {public})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov_items.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = project_sov_items.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_sov_items
-
-- **Project members can insert SOV items** (INSERT, {public})
+- **Project members can delete SOV items** - `DELETE` to `{public}`
+  - USING: `((EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov_items.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = project_sov_items.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))`
+  - WITH CHECK: `-`
+- **Project members can insert SOV items** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `((EXISTS ( SELECT 1`
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov_items.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = project_sov_items.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_sov_items
-
-- **Project members can update SOV items** (UPDATE, {public})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM projects p
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((p.id = project_sov_items.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants pp
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pp.project_id = project_sov_items.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_sov_items
-
-- **Users can view SOV items for their contracts** (SELECT, {public})
-  - USING: `((EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM ((project_sov ps
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN project_contracts pc ON ((pc.id = ps.contract_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((ps.id = project_sov_items.sov_id) AND (uor.user_id = auth.uid())))) OR (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM (project_sov ps
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###      JOIN projects p ON ((p.id = ps.project_id)))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((ps.id = project_sov_items.sov_id) AND (ps.contract_id IS NULL) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `((EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov_items.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = project_sov_items.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))`
+- **Project members can update SOV items** - `UPDATE` to `{public}`
+  - USING: `((EXISTS ( SELECT 1 FROM projects p WHERE ((p.id = project_sov_items.project_id) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))) OR (EXISTS ( SELECT 1 FROM project_participants pp WHERE ((pp.project_id = project_sov_items.project_id) AND user_in_org(auth.uid(), pp.organization_id)))))`
+  - WITH CHECK: `-`
+- **Users can view SOV items for their contracts** - `SELECT` to `{public}`
+  - USING: `((EXISTS ( SELECT 1 FROM ((project_sov ps JOIN project_contracts pc ON ((pc.id = ps.contract_id))) JOIN user_org_roles uor ON (((uor.organization_id = pc.from_org_id) OR (uor.organization_id = pc.to_org_id)))) WHERE ((ps.id = project_sov_items.sov_id) AND (uor.user_id = auth.uid())))) OR (EXISTS ( SELECT 1 FROM (project_sov ps JOIN projects p ON ((p.id = ps.project_id))) WHERE ((ps.id = project_sov_items.sov_id) AND (ps.contract_id IS NULL) AND ((p.created_by = auth.uid()) OR user_in_org(auth.uid(), p.organization_id))))))`
+  - WITH CHECK: `-`
 
 ### project_team
 
-- **Platform users can view all project_team** (SELECT, {authenticated})
+- **Platform users can view all project_team** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Project creators can delete team members** (DELETE, {public})
-  - USING: `((project_id IN ( SELECT projects.id`
-  - WITH CHECK: ``
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_team
-
-- **Project creators can insert team members** (INSERT, {authenticated})
+- **Project creators can delete team members** - `DELETE` to `{public}`
+  - USING: `((project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))))`
+  - WITH CHECK: `-`
+- **Project creators can insert team members** - `INSERT` to `{authenticated}`
   - USING: `-`
-  - WITH CHECK: `((project_id IN ( SELECT projects.id`
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid()))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_team
-
-- **Project creators can update team members** (UPDATE, {authenticated})
-  - USING: `((project_id IN ( SELECT projects.id`
-  - WITH CHECK: ``
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))) OR (invited_email IN ( SELECT profiles.email
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM profiles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (profiles.id = auth.uid()))) OR (user_id = auth.uid()))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### project_team
-
-- **Users can view project team** (SELECT, {public})
-  - USING: `(user_is_project_participant(auth.uid(), project_id) OR (invited_email IN ( SELECT profiles.email`
-  - WITH CHECK: ``
-
-###    FROM profiles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (profiles.user_id = auth.uid()))) OR (invited_by_user_id = auth.uid()) OR (user_id = auth.uid()) OR (project_id IN ( SELECT projects.id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM projects
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (projects.created_by = auth.uid()))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
+  - WITH CHECK: `((project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))) OR (project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid()))))))`
+- **Project creators can update team members** - `UPDATE` to `{authenticated}`
+  - USING: `((project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))) OR (invited_email IN ( SELECT profiles.email FROM profiles WHERE (profiles.id = auth.uid()))) OR (user_id = auth.uid()))`
+  - WITH CHECK: `-`
+- **Users can view project team** - `SELECT` to `{public}`
+  - USING: `(user_is_project_participant(auth.uid(), project_id) OR (invited_email IN ( SELECT profiles.email FROM profiles WHERE (profiles.user_id = auth.uid()))) OR (invited_by_user_id = auth.uid()) OR (user_id = auth.uid()) OR (project_id IN ( SELECT projects.id FROM projects WHERE (projects.created_by = auth.uid()))))`
+  - WITH CHECK: `-`
 
 ### projects
 
-- **Org members can view own projects** (SELECT, {public})
+- **Org members can view own projects** - `SELECT` to `{public}`
   - USING: `user_in_org(auth.uid(), organization_id)`
   - WITH CHECK: `-`
-- **PM roles can create projects** (INSERT, {public})
+- **PM roles can create projects** - `INSERT` to `{public}`
   - USING: `-`
   - WITH CHECK: `(is_pm_role(auth.uid()) AND (organization_id = get_user_org_id(auth.uid())) AND (created_by = auth.uid()))`
-- **PM roles can delete draft projects** (DELETE, {public})
+- **PM roles can delete draft projects** - `DELETE` to `{public}`
   - USING: `(is_pm_role(auth.uid()) AND (organization_id = get_user_org_id(auth.uid())) AND (status = 'draft'::text))`
   - WITH CHECK: `-`
-- **PM roles can update projects** (UPDATE, {public})
+- **PM roles can update projects** - `UPDATE` to `{public}`
   - USING: `(is_pm_role(auth.uid()) AND (organization_id = get_user_org_id(auth.uid())))`
   - WITH CHECK: `-`
-- **Participants can view invited projects** (SELECT, {public})
+- **Participants can view invited projects** - `SELECT` to `{public}`
   - USING: `user_is_project_participant(auth.uid(), id)`
   - WITH CHECK: `-`
-- **Platform users can view all projects** (SELECT, {authenticated})
+- **Platform users can view all projects** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
 
 ### purchase_orders
 
-- **GC_PM can delete active POs** (DELETE, {public})
+- **GC_PM can delete active POs** - `DELETE` to `{public}`
   - USING: `(is_pm_role(auth.uid()) AND user_in_org(auth.uid(), organization_id))`
   - WITH CHECK: `-`
-- **GC_PM can update any PO** (UPDATE, {public})
+- **GC_PM can update any PO** - `UPDATE` to `{public}`
   - USING: `(is_pm_role(auth.uid()) AND user_in_org(auth.uid(), organization_id))`
   - WITH CHECK: `-`
-- **PM roles can create POs** (INSERT, {public})
+- **PM roles can create POs** - `INSERT` to `{public}`
   - USING: `-`
   - WITH CHECK: `(is_pm_role(auth.uid()) AND user_in_org(auth.uid(), organization_id))`
-- **PM roles can update active POs** (UPDATE, {public})
+- **PM roles can update active POs** - `UPDATE` to `{public}`
   - USING: `(is_pm_role(auth.uid()) AND user_in_org(auth.uid(), organization_id))`
   - WITH CHECK: `-`
-- **Platform users can view all purchase_orders** (SELECT, {authenticated})
+- **Platform users can view all purchase_orders** - `SELECT` to `{authenticated}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Pricing owner can finalize PO** (UPDATE, {public})
+- **Pricing owner can finalize PO** - `UPDATE` to `{public}`
   - USING: `(is_pm_role(auth.uid()) AND user_in_org(auth.uid(), pricing_owner_org_id) AND (status = 'PRICED'::po_status))`
   - WITH CHECK: `(is_pm_role(auth.uid()) AND user_in_org(auth.uid(), pricing_owner_org_id) AND (status = ANY (ARRAY['PRICED'::po_status, 'FINALIZED'::po_status])))`
-- **Project team and suppliers can view POs** (SELECT, {public})
-  - USING: `(user_in_org(auth.uid(), organization_id) OR (EXISTS ( SELECT 1`
-  - WITH CHECK: ``
-
-###    FROM suppliers s
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((s.id = purchase_orders.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))) OR ((project_id IS NOT NULL) AND (EXISTS ( SELECT 1
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = purchase_orders.project_id) AND (pt.org_id = get_user_org_id(auth.uid())) AND (pt.status = 'Accepted'::text))))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### purchase_orders
-
-- **Supplier can mark PO as delivered** (UPDATE, {public})
+- **Project team and suppliers can view POs** - `SELECT` to `{public}`
+  - USING: `(user_in_org(auth.uid(), organization_id) OR (EXISTS ( SELECT 1 FROM suppliers s WHERE ((s.id = purchase_orders.supplier_id) AND user_in_org(auth.uid(), s.organization_id)))) OR ((project_id IS NOT NULL) AND (EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = purchase_orders.project_id) AND (pt.org_id = get_user_org_id(auth.uid())) AND (pt.status = 'Accepted'::text))))))`
+  - WITH CHECK: `-`
+- **Supplier can mark PO as delivered** - `UPDATE` to `{public}`
   - USING: `(is_supplier_for_purchase_order(id) AND (status = 'ORDERED'::po_status))`
   - WITH CHECK: `(is_supplier_for_purchase_order(id) AND (status = 'DELIVERED'::po_status))`
-- **Supplier can schedule delivery** (UPDATE, {public})
+- **Supplier can schedule delivery** - `UPDATE` to `{public}`
   - USING: `(is_supplier_for_purchase_order(id) AND (status = ANY (ARRAY['ORDERED'::po_status, 'READY_FOR_DELIVERY'::po_status])))`
   - WITH CHECK: `(is_supplier_for_purchase_order(id) AND (status = ANY (ARRAY['ORDERED'::po_status, 'READY_FOR_DELIVERY'::po_status, 'DELIVERED'::po_status])))`
-- **Supplier can update priced POs** (UPDATE, {public})
+- **Supplier can update priced POs** - `UPDATE` to `{public}`
   - USING: `(is_supplier_for_purchase_order(id) AND (status = 'PRICED'::po_status))`
   - WITH CHECK: `(is_supplier_for_purchase_order(id) AND (status = ANY (ARRAY['PRICED'::po_status, 'ORDERED'::po_status])))`
-- **Supplier can update submitted POs** (UPDATE, {public})
+- **Supplier can update submitted POs** - `UPDATE` to `{public}`
   - USING: `(is_supplier_for_purchase_order(id) AND (status = 'SUBMITTED'::po_status))`
   - WITH CHECK: `(is_supplier_for_purchase_order(id) AND (status = ANY (ARRAY['SUBMITTED'::po_status, 'PRICED'::po_status, 'ORDERED'::po_status])))`
 
 ### reminders
 
-- **Users can create own reminders** (INSERT, {public})
+- **Users can create own reminders** - `INSERT` to `{public}`
   - USING: `-`
   - WITH CHECK: `(auth.uid() = user_id)`
-- **Users can delete own reminders** (DELETE, {public})
+- **Users can delete own reminders** - `DELETE` to `{public}`
   - USING: `(auth.uid() = user_id)`
   - WITH CHECK: `-`
-- **Users can update own reminders** (UPDATE, {public})
+- **Users can update own reminders** - `UPDATE` to `{public}`
   - USING: `(auth.uid() = user_id)`
   - WITH CHECK: `-`
-- **Users can view own reminders** (SELECT, {public})
+- **Users can view own reminders** - `SELECT` to `{public}`
   - USING: `(auth.uid() = user_id)`
   - WITH CHECK: `-`
 
 ### returns
 
-- **Authorized orgs can update returns** (UPDATE, {public})
+- **Authorized orgs can update returns** - `UPDATE` to `{public}`
   - USING: `((user_in_org(auth.uid(), created_by_org_id) AND (status = ANY (ARRAY['DRAFT'::text, 'APPROVED'::text, 'SCHEDULED'::text, 'PRICED'::text]))) OR (user_in_org(auth.uid(), supplier_org_id) AND (status = ANY (ARRAY['SUBMITTED'::text, 'SUPPLIER_REVIEW'::text, 'PICKED_UP'::text, 'SCHEDULED'::text]))))`
   - WITH CHECK: `((user_in_org(auth.uid(), created_by_org_id) AND (status = ANY (ARRAY['DRAFT'::text, 'SUBMITTED'::text, 'SCHEDULED'::text, 'CLOSED'::text]))) OR (user_in_org(auth.uid(), supplier_org_id) AND (status = ANY (ARRAY['SUPPLIER_REVIEW'::text, 'APPROVED'::text, 'PICKED_UP'::text, 'PRICED'::text]))))`
-- **Creator can delete draft returns** (DELETE, {authenticated})
+- **Creator can delete draft returns** - `DELETE` to `{authenticated}`
   - USING: `(user_in_org(auth.uid(), created_by_org_id) AND (status = 'DRAFT'::text))`
   - WITH CHECK: `-`
-- **GC/TC can create returns** (INSERT, {public})
+- **GC/TC can create returns** - `INSERT` to `{public}`
   - USING: `-`
-  - WITH CHECK: `((created_by_user_id = auth.uid()) AND user_in_org(auth.uid(), created_by_org_id) AND (EXISTS ( SELECT 1`
-
-###    FROM project_team pt
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE ((pt.project_id = returns.project_id) AND (pt.org_id = returns.created_by_org_id) AND (pt.status = 'Accepted'::text) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text]))))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### returns
-
-- **Users can view returns for their orgs** (SELECT, {authenticated})
+  - WITH CHECK: `((created_by_user_id = auth.uid()) AND user_in_org(auth.uid(), created_by_org_id) AND (EXISTS ( SELECT 1 FROM project_team pt WHERE ((pt.project_id = returns.project_id) AND (pt.org_id = returns.created_by_org_id) AND (pt.status = 'Accepted'::text) AND (pt.role = ANY (ARRAY['General Contractor'::text, 'Trade Contractor'::text]))))))`
+- **Users can view returns for their orgs** - `SELECT` to `{authenticated}`
   - USING: `(user_in_org(auth.uid(), created_by_org_id) OR user_in_org(auth.uid(), supplier_org_id) OR ((pricing_owner_org_id IS NOT NULL) AND user_in_org(auth.uid(), pricing_owner_org_id)))`
   - WITH CHECK: `-`
 
 ### rfis
 
-- **Project participants can create rfis** (INSERT, {public})
+- **Project participants can create rfis** - `INSERT` to `{public}`
   - USING: `-`
   - WITH CHECK: `is_project_participant(auth.uid(), project_id)`
-- **Project participants can view rfis** (SELECT, {public})
+- **Project participants can view rfis** - `SELECT` to `{public}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
-- **Submitter or recipient org can update rfis** (UPDATE, {public})
+- **Submitter or recipient org can update rfis** - `UPDATE` to `{public}`
   - USING: `is_project_participant(auth.uid(), project_id)`
   - WITH CHECK: `-`
 
 ### supplier_estimates
 
-- **Platform users can view all supplier estimates** (SELECT, {public})
+- **Platform users can view all supplier estimates** - `SELECT` to `{public}`
   - USING: `is_platform_user(auth.uid())`
   - WITH CHECK: `-`
-- **Project team can update estimates** (UPDATE, {public})
-  - USING: `(project_id IN ( SELECT project_participants.project_id`
-  - WITH CHECK: ``
+- **Project team can update estimates** - `UPDATE` to `{public}`
+  - USING: `(project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))))`
+  - WITH CHECK: `(project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))))`
+- **Project team can view estimates** - `SELECT` to `{public}`
+  - USING: `(project_id IN ( SELECT project_participants.project_id FROM project_participants WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))))`
+  - WITH CHECK: `-`
+- **Suppliers manage own estimates** - `ALL` to `{public}`
+  - USING: `(supplier_org_id IN ( SELECT user_org_roles.organization_id FROM user_org_roles WHERE (user_org_roles.user_id = auth.uid())))`
+  - WITH CHECK: `-`
 
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid())))))
-
-- **(project_id IN ( SELECT project_participants.project_id** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid())))))
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### supplier_estimates
-
-- **Project team can view estimates** (SELECT, {public})
-  - USING: `(project_id IN ( SELECT project_participants.project_id`
-  - WITH CHECK: ``
-
-###    FROM project_participants
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (project_participants.organization_id IN ( SELECT user_org_roles.organization_id
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###            FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###           WHERE (user_org_roles.user_id = auth.uid())))))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-### supplier_estimates
-
-- **Suppliers manage own estimates** (ALL, {public})
-  - USING: `(supplier_org_id IN ( SELECT user_org_roles.organization_id`
-  - WITH CHECK: ``
-
-###    FROM user_org_roles
-
-- **** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-###   WHERE (user_org_roles.user_id = auth.uid())))
-
-- **-** (, )
-  - USING: ``
-  - WITH CHECK: ``
-
-## D. Cost / price / markup / margin columns (Phase 2 FC redaction targets)
+## D. Cost / price / rate / markup / margin columns (Phase 2 FC-redaction targets)
 
 
-### actual_cost_entries
+**actual_cost_entries**
 
 - `cost_type` (text)
 - `hourly_rate` (numeric)
 
-### change_orders
+**change_orders**
 
 - `tax_rate_snapshot` (numeric)
 - `tc_snapshot_hourly_rate` (numeric)
 - `tc_snapshot_markup_percent` (numeric)
 - `tc_submitted_price` (numeric)
 
-### change_orders_role_view
+**change_orders_role_view**
 
 - `tax_rate_snapshot` (numeric)
 - `tc_snapshot_hourly_rate` (numeric)
 - `tc_snapshot_markup_percent` (numeric)
 - `tc_submitted_price` (numeric)
 
-### co_equipment_items
+**co_equipment_items**
 
 - `cost` (numeric)
 - `markup_amount` (numeric)
 - `markup_percent` (numeric)
 
-### co_equipment_items_role_view
+**co_equipment_items_role_view**
 
 - `cost` (numeric)
 - `markup_amount` (numeric)
 - `markup_percent` (numeric)
 
-### co_labor_entries
+**co_labor_entries**
 
 - `actual_cost_note` (text)
 - `base_hourly_rate` (numeric)
@@ -2736,7 +704,7 @@ awk: cmd. line:5: warning: escape sequence `\`' treated as plain ``'
 - `is_actual_cost` (boolean)
 - `markup_percent` (numeric)
 
-### co_labor_entries_role_view
+**co_labor_entries_role_view**
 
 - `actual_cost_note` (text)
 - `base_hourly_rate` (numeric)
@@ -2744,93 +712,95 @@ awk: cmd. line:5: warning: escape sequence `\`' treated as plain ``'
 - `is_actual_cost` (boolean)
 - `markup_percent` (numeric)
 
-### co_material_items
+**co_material_items**
 
 - `line_cost` (numeric)
 - `markup_amount` (numeric)
 - `markup_percent` (numeric)
 - `unit_cost` (numeric)
 
-### co_material_items_role_view
+**co_material_items_role_view**
 
 - `line_cost` (numeric)
 - `markup_amount` (numeric)
 - `markup_percent` (numeric)
 - `unit_cost` (numeric)
 
-### contract_sow_items
+**contract_sow_items**
 
 - `unit_cost` (numeric)
 
-### org_settings
+**org_settings**
 
 - `default_hourly_rate` (numeric)
 - `labor_markup_percent` (numeric)
 
-### organizations
+**organizations**
 
 - `default_equipment_markup_pct` (numeric)
 - `default_materials_markup_pct` (numeric)
 
-### po_line_items
+**po_line_items**
 
 - `original_unit_price` (numeric)
 - `price_adjusted_by_supplier` (boolean)
 - `price_source` (text)
 - `unit_price` (numeric)
 
-### profiles
+**profiles**
 
 - `hourly_rate` (numeric)
 
-### project_contracts
+**project_contracts**
 
 - `material_markup_type` (text)
 - `material_markup_value` (numeric)
 
-### project_team
+**project_team**
 
 - `labor_rate` (numeric)
 
-### projects
+**projects**
 
 - `sales_tax_rate` (numeric)
 - `tc_markup_visibility` (text)
 
-### purchase_orders
+**purchase_orders**
 
 - `priced_at` (timestamp with time zone)
 - `priced_by` (uuid)
 
-### return_items
+**return_items**
 
 - `credit_unit_price` (numeric)
 - `original_unit_price` (numeric)
 
-### subscription_plans
+**subscription_plans**
 
 - `annual_price` (numeric)
 - `monthly_price` (numeric)
 
-### supplier_estimate_items
+**supplier_estimate_items**
 
 - `unit_price` (numeric)
 
-### supplier_quotes
+**supplier_quotes**
 
 - `tc_markup_percent` (numeric)
 - `unit_cost` (numeric)
 
-### supplier_quotes_public
+**supplier_quotes_public**
 
 - `unit_cost` (numeric)
 
-### tm_billable_slices
+**tm_billable_slices**
 
 - `markup_amount` (numeric)
 
-## E. Updated function definitions
+## E. Updated function definitions (after Step 4)
 
+
+### create_organization_and_set_admin (2 overload(s))
 
 ```sql
 CREATE OR REPLACE FUNCTION public.create_organization_and_set_admin(_org_name text, _org_type org_type, _org_phone text DEFAULT NULL::text, _address jsonb DEFAULT NULL::jsonb, _user_first_name text DEFAULT NULL::text, _user_last_name text DEFAULT NULL::text, _user_phone text DEFAULT NULL::text)
@@ -2924,9 +894,7 @@ BEGIN
   );
 END;
 $function$
-
 ```
-
 
 ```sql
 CREATE OR REPLACE FUNCTION public.create_organization_and_set_admin(_org_type org_type, _org_name text, _address jsonb, _org_phone text, _user_first_name text, _user_last_name text, _user_phone text DEFAULT NULL::text)
@@ -3017,9 +985,10 @@ BEGIN
   );
 END;
 $function$
-
 ```
 
+
+### approve_join_request (1 overload(s))
 
 ```sql
 CREATE OR REPLACE FUNCTION public.approve_join_request(_request_id uuid)
@@ -3076,9 +1045,10 @@ BEGIN
   WHERE id = _request_id;
 END;
 $function$
-
 ```
 
+
+### accept_org_invitation (1 overload(s))
 
 ```sql
 CREATE OR REPLACE FUNCTION public.accept_org_invitation(p_invitation_id uuid)
@@ -3137,6 +1107,4 @@ BEGIN
   WHERE id = p_invitation_id;
 END;
 $function$
-
 ```
-
