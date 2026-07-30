@@ -133,11 +133,15 @@ export function usePushNotifications() {
 
     setLoading(true);
     try {
+      // Drop any dead legacy /push-sw.js registration + its orphaned DB row first.
+      await cleanupLegacyPushRegistration();
+
       // Register the dedicated push worker under its own scope so it doesn't
       // collide with the app-shell PWA worker (which owns scope "/").
       // The worker lives at /push/sw.js → default scope is /push/.
       const PUSH_SW_URL = '/push/sw.js';
       const PUSH_SW_SCOPE = '/push/';
+
 
       const registrations = await navigator.serviceWorker.getRegistrations();
       let registration = registrations.find(
