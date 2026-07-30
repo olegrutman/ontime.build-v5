@@ -203,7 +203,7 @@ export function usePushNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [isSupported, user, permission, getPushRegistration]);
+  }, [isSupported, user, permission, cleanupLegacyPushRegistration]);
 
   const unsubscribe = useCallback(async () => {
     if (!isSupported || !user) return false;
