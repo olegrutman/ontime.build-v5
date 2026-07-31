@@ -210,12 +210,11 @@ export function QuickCaptureFlow({ projectId }: QuickCaptureFlowProps) {
           continue;
         }
 
-        const { data: urlData } = supabase.storage.from('co-photos').getPublicUrl(path);
-
         await supabase.from('co_evidence').insert({
           co_id: co.id,
           co_line_item_id: lineItem?.id ?? null,
-          file_url: urlData.publicUrl,
+          file_url: path,
+
           file_type: 'image',
           caption: i === 0 ? title : null,
           uploaded_by_user_id: user.id,

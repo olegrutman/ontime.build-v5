@@ -8300,6 +8300,15 @@ export type Database = {
         Args: { _co_id: string; _user_id?: string }
         Returns: boolean
       }
+      can_access_co_photo_object: { Args: { _name: string }; Returns: boolean }
+      can_access_daily_log_photo_object: {
+        Args: { _name: string }
+        Returns: boolean
+      }
+      can_access_field_capture_object: {
+        Args: { _name: string }
+        Returns: boolean
+      }
       can_delete_change_order: {
         Args: { _co_id: string; _user_id?: string }
         Returns: boolean
@@ -8909,6 +8918,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      storage_first_folder_uuid: { Args: { _name: string }; Returns: string }
       suggest_orgs_by_email_domain: {
         Args: { _email: string }
         Returns: {

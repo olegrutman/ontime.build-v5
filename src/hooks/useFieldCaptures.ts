@@ -51,9 +51,10 @@ async function uploadMedia(bucket: string, path: string, file: File | Blob) {
     upsert: false,
   });
   if (error) throw error;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  // Buckets are private — store the object path and sign it on read.
+  return path;
 }
+
 
 export function useFieldCaptures(projectId: string, date?: string) {
   const qc = useQueryClient();

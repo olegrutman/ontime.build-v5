@@ -2,7 +2,9 @@ import { useState, useRef, useCallback, useImperativeHandle, forwardRef, useEffe
 import { Camera, ImagePlus, Plus, X, Expand, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { useCOPhotos, getPhotoUrl, type COPhoto } from '@/hooks/useCOPhotos';
+import { useCOPhotos, type COPhoto } from '@/hooks/useCOPhotos';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -79,32 +81,12 @@ export const COPhotosCard = forwardRef<COPhotosCardHandle, COPhotosCardProps>(fu
       ) : (
         /* Photo grid */
         <div className="p-3 grid grid-cols-3 md:grid-cols-4 gap-2">
-          {photos.map(photo => {
-            const url = getPhotoUrl(photo.storage_path);
-            const cfg = PHOTO_TYPE_CONFIG[photo.photo_type];
-            return (
-              <button
-                key={photo.id}
-                onClick={() => setViewerPhoto(photo)}
-                className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-muted"
-              >
-                <img src={url} alt={photo.caption || 'CO photo'} className="w-full h-full object-cover" loading="lazy" />
-                {/* Type pill */}
-                <span
-                  className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: cfg.bg, color: cfg.color }}
-                >
-                  {cfg.label}
-                </span>
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <Expand className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </button>
-            );
-          })}
+          {photos.map(photo => (
+            <PhotoTile key={photo.id} photo={photo} onOpen={() => setViewerPhoto(photo)} />
+          ))}
         </div>
       )}
+
 
       {/* Add Photo Sheet */}
       <AddPhotoSheet
@@ -313,6 +295,32 @@ function AddPhotoSheet({ open, onClose, coId, role, userId, lineItems, onUpload,
   );
 }
 
+/* ─── Signed-URL photo tile ─── */
+function PhotoTile({ photo, onOpen }: { photo: COPhoto; onOpen: () => void }) {
+  const url = useSignedUrl('co-photos', photo.storage_path);
+  const cfg = PHOTO_TYPE_CONFIG[photo.photo_type];
+
+  return (
+    <button
+      onClick={onOpen}
+      className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-muted"
+    >
+      {url && (
+        <img src={url} alt={photo.caption || 'CO photo'} className="w-full h-full object-cover" loading="lazy" />
+      )}
+      <span
+        className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+        style={{ background: cfg.bg, color: cfg.color }}
+      >
+        {cfg.label}
+      </span>
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+        <Expand className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </button>
+  );
+}
+
 /* ─── Full-screen Photo Viewer ─── */
 interface PhotoViewerProps {
   photo: COPhoto;
@@ -320,8 +328,9 @@ interface PhotoViewerProps {
   onDelete?: () => void;
 }
 
+
 function PhotoViewer({ photo, onClose, onDelete }: PhotoViewerProps) {
-  const url = getPhotoUrl(photo.storage_path);
+  const url = useSignedUrl('co-photos', photo.storage_path) ?? undefined;
   const cfg = PHOTO_TYPE_CONFIG[photo.photo_type];
   const takenAt = new Date(photo.taken_at).toLocaleString();
 

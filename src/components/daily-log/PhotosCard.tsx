@@ -5,6 +5,7 @@ import { PHOTO_TAGS } from '@/types/dailyLog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 
 interface PhotoEntry {
   id: string;
@@ -50,12 +51,8 @@ export function PhotosCard({ photos, onAdd, onDelete, disabled }: PhotosCardProp
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const getPublicUrl = (path: string) => {
-    const { data } = supabase.storage.from('daily-log-photos').getPublicUrl(path);
-    return data.publicUrl;
-  };
-
   return (
+
     <div className="bg-card rounded-2xl border p-4 space-y-3">
       <h3 className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Photos</h3>
 
@@ -85,27 +82,46 @@ export function PhotosCard({ photos, onAdd, onDelete, disabled }: PhotosCardProp
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {photos.map(photo => (
-            <div key={photo.id} className="relative group aspect-square rounded-lg overflow-hidden bg-muted">
-              <img
-                src={getPublicUrl(photo.storage_path)}
-                alt={photo.tag}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-              <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/60 text-white">
-                {photo.tag}
-              </span>
-              {!disabled && (
-                <button
-                  onClick={() => onDelete(photo.id)}
-                  className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
+            <PhotoThumb
+              key={photo.id}
+              photo={photo}
+              disabled={disabled}
+              onDelete={() => onDelete(photo.id)}
+            />
           ))}
+
         </div>
+      )}
+    </div>
+  );
+}
+
+function PhotoThumb({
+  photo,
+  disabled,
+  onDelete,
+}: {
+  photo: PhotoEntry;
+  disabled?: boolean;
+  onDelete: () => void;
+}) {
+  const url = useSignedUrl('daily-log-photos', photo.storage_path);
+
+  return (
+    <div className="relative group aspect-square rounded-lg overflow-hidden bg-muted">
+      {url && (
+        <img src={url} alt={photo.tag} className="w-full h-full object-cover" loading="lazy" />
+      )}
+      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/60 text-white">
+        {photo.tag}
+      </span>
+      {!disabled && (
+        <button
+          onClick={onDelete}
+          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <X className="h-3 w-3" />
+        </button>
       )}
     </div>
   );
