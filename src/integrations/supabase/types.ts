@@ -7552,21 +7552,21 @@ export type Database = {
           entry_source?: Database["public"]["Enums"]["co_entry_source"] | null
           equipment_needed?: boolean | null
           equipment_responsible?: string | null
-          equipment_tax?: number | null
+          equipment_tax?: never
           fc_input_needed?: boolean | null
           fc_pricing_submitted_at?: string | null
           gc_budget?: never
           id?: string | null
-          labor_tax?: number | null
+          labor_tax?: never
           labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
           materials_needed?: boolean | null
           materials_on_site?: boolean | null
           materials_responsible?: string | null
-          materials_tax?: number | null
-          nte_cap?: number | null
+          materials_tax?: never
+          nte_cap?: never
           nte_increase_approved?: boolean | null
-          nte_increase_requested?: number | null
+          nte_increase_requested?: never
           org_id?: string | null
           owner_approval_status?: string | null
           owner_approved_at?: string | null
@@ -7587,7 +7587,7 @@ export type Database = {
           shared_at?: string | null
           status?: string | null
           submitted_at?: string | null
-          tax_rate_snapshot?: never
+          tax_rate_snapshot?: number | null
           tc_snapshot_hourly_rate?: never
           tc_snapshot_markup_percent?: never
           tc_submitted_price?: never
@@ -7626,21 +7626,21 @@ export type Database = {
           entry_source?: Database["public"]["Enums"]["co_entry_source"] | null
           equipment_needed?: boolean | null
           equipment_responsible?: string | null
-          equipment_tax?: number | null
+          equipment_tax?: never
           fc_input_needed?: boolean | null
           fc_pricing_submitted_at?: string | null
           gc_budget?: never
           id?: string | null
-          labor_tax?: number | null
+          labor_tax?: never
           labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
           materials_needed?: boolean | null
           materials_on_site?: boolean | null
           materials_responsible?: string | null
-          materials_tax?: number | null
-          nte_cap?: number | null
+          materials_tax?: never
+          nte_cap?: never
           nte_increase_approved?: boolean | null
-          nte_increase_requested?: number | null
+          nte_increase_requested?: never
           org_id?: string | null
           owner_approval_status?: string | null
           owner_approved_at?: string | null
@@ -7661,7 +7661,7 @@ export type Database = {
           shared_at?: string | null
           status?: string | null
           submitted_at?: string | null
-          tax_rate_snapshot?: never
+          tax_rate_snapshot?: number | null
           tc_snapshot_hourly_rate?: never
           tc_snapshot_markup_percent?: never
           tc_submitted_price?: never
