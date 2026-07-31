@@ -38,7 +38,8 @@ interface StepDef {
 }
 
 const FIXED_STEPS: StepDef[] = [
-  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'basics', label: 'Project Basics', description: 'Name & location' },
+  { id: 'team', label: 'Project Team', description: 'Who you bill & who bills you' },
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'contracts', label: 'Contracts', description: 'Contract values' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
@@ -48,14 +49,16 @@ const FIXED_STEPS: StepDef[] = [
 ];
 
 const TM_STEPS: StepDef[] = [
-  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'basics', label: 'Project Basics', description: 'Name & location' },
+  { id: 'team', label: 'Project Team', description: 'Who you bill & who bills you' },
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'building_info', label: 'Building Info', description: 'Building details for WOs' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
 
 const SUPPLIER_STEPS: StepDef[] = [
-  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'basics', label: 'Project Basics', description: 'Name & location' },
+  { id: 'team', label: 'Project Team', description: 'Who you supply' },
   { id: 'building_info', label: 'Building Info', description: 'Structure & size' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
