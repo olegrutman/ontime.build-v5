@@ -104,12 +104,33 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
     return anyC.from_org_name || anyC.to_org_name || 'Trade Contractor';
   })();
 
-  // Invoices — the crew's own billing, always theirs to see
-  const paidInvoices = financials.recentInvoices.filter(i => i.status === 'PAID');
-  const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
-  const totalPaid = financials.totalPaid;
-  const totalPendingSubmitted = pendingInvoices.reduce((s, i) => s + i.total_amount, 0);
-  const totalInvoiced = financials.billedToDate;
+  /* Invoices — the crew's OWN billing only. The shared financials hook totals
+     every invoice on the project (including TC → GC), so read this crew's
+     contract invoices directly and use the full list, not the recent-5 slice. */
+  const { data: myInvoices = [] } = useQuery({
+    queryKey: ['fc-own-invoices', projectId, myContract?.id],
+    queryFn: async () => {
+      if (!myContract?.id) return [];
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, status, total_amount, created_at')
+        .eq('project_id', projectId)
+        .eq('contract_id', myContract.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!projectId && !!myContract?.id,
+  });
+
+  const paidInvoices = myInvoices.filter((i: any) => i.status === 'PAID');
+  const pendingInvoices = myInvoices.filter((i: any) => ['SUBMITTED', 'APPROVED'].includes(i.status));
+  const totalPaid = paidInvoices.reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
+  const totalPendingSubmitted = pendingInvoices.reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
+  const totalInvoiced = myInvoices
+    .filter((i: any) => ['SUBMITTED', 'APPROVED', 'PAID'].includes(i.status))
+    .reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
+
 
   // 6-month invoice trend for sparklines
   const { data: monthly = [] } = useProjectMonthlyBilling(projectId);
