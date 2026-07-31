@@ -573,7 +573,7 @@ export function AddTeamMemberDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Add Team Member
+            {title || 'Add Team Member'}
           </DialogTitle>
           <DialogDescription>
             Add an existing organization or invite a new team member by email.
