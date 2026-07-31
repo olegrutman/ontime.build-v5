@@ -81,7 +81,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
       // Get WOs where FC is the org owner
       const ownedPromise = supabase
-        .from('change_orders')
+        .from('change_orders_role_view')
         .select('id, co_number, title, status, gc_budget, tc_submitted_price, created_at')
         .eq('project_id', projectId)
         .eq('org_id', currentOrgId)
@@ -119,7 +119,15 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
   const approvedCOs = changeOrders.filter(co => ['approved', 'completed', 'contracted'].includes(co.status));
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'contracted', 'rejected'].includes(co.status));
-  const coTotal = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || co.gc_budget || 0), 0);
+  // Money columns are masked (null) for FC viewers by the role view. Never coerce to 0 for display.
+  const coAmount = (co: any): number | null => {
+    const v = co?.tc_submitted_price ?? co?.gc_budget;
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
+  const coMoney = (co: any) => { const v = coAmount(co); return v === null ? '—' : fmt(v); };
+  const coAmountsVisible = changeOrders.some(co => coAmount(co) !== null);
+  const coTotal = approvedCOs.reduce((s, co) => s + (coAmount(co) ?? 0), 0);
+  const coTotalTxt = coAmountsVisible ? fmt(coTotal) : '—';
   const completedCOs = changeOrders.filter(co => co.status === 'completed');
 
   // FC labor hours (for T&M mode)
@@ -130,7 +138,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
       const coIds = changeOrders.map(co => co.id);
       if (coIds.length === 0) return [];
       const { data } = await supabase
-        .from('co_labor_entries')
+        .from('co_labor_entries_role_view')
         .select('hours, hourly_rate, co_id')
         .eq('org_id', currentOrgId)
         .in('co_id', coIds);
@@ -140,7 +148,10 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   });
 
   const totalHours = fcLaborData.reduce((s, e) => s + (e.hours || 0), 0);
-  const avgRate = fcLaborData.length > 0 ? fcLaborData.reduce((s, e) => s + (e.hourly_rate || 0), 0) / fcLaborData.length : 0;
+  // hourly_rate is masked (null) for FC viewers — only average over rows that actually expose it.
+  const rateRows = fcLaborData.filter((e: any) => typeof e.hourly_rate === 'number' && Number.isFinite(e.hourly_rate));
+  const rateVisible = rateRows.length > 0;
+  const avgRate = rateVisible ? rateRows.reduce((s: number, e: any) => s + e.hourly_rate, 0) / rateRows.length : 0;
 
   // Derived
   const revisedTotal = isTM ? coTotal : contractSum + coTotal;
@@ -184,7 +195,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
       {/* ─── Project Health Hero + 3-zone Summary ─── */}
       {(() => {
-        const approvedNet = approvedCOs.reduce((s, co) => s + ((co.tc_submitted_price || co.gc_budget || 0) - 0), 0); // FC: revenue side only; cost = labor budget pool
+        const approvedNet = approvedCOs.reduce((s, co) => s + (coAmount(co) ?? 0), 0); // FC: revenue side only; masked CO prices contribute 0
         const pendingNetAtRisk = financials.pendingCONetAtRisk;
         const projectedMargin = revisedTotal - laborBudget;
         const projectedMarginPct = revisedTotal > 0 ? (projectedMargin / revisedTotal) * 100 : 0;
@@ -205,7 +216,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
               miniStats={[
                 { label: 'Collected', value: fmt(totalPaid), tone: totalPaid > 0 ? 'pos' : 'neutral' },
                 { label: 'Labor Budget', value: laborBudget > 0 ? fmt(laborBudget) : '—', tone: 'neutral' },
-                { label: 'Approved COs', value: fmt(coTotal), tone: coTotal > 0 ? 'pos' : 'neutral' },
+                { label: 'Approved COs', value: coTotalTxt, tone: coAmountsVisible && coTotal > 0 ? 'pos' : 'neutral' },
               ]}
             />
             <OverviewSummaryStrip
@@ -248,7 +259,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             {/* ═══ T&M MODE: WO-driven cards ═══ */}
 
             {/* Card 1 — My WO Earnings */}
-            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="MY WO EARNINGS" value={coTotal > 0 ? fmt(coTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of your prices`} pills={coTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
+            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="MY WO EARNINGS" value={coAmountsVisible && coTotal > 0 ? fmt(coTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of your prices`} pills={approvedCOs.length > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
               <div style={{ padding: 12 }}>
                 {approvedCOs.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -258,11 +269,11 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                         <TRow key={co.id} cells={[
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
-                          <TdM>{fmt(co.tc_submitted_price || co.gc_budget || 0)}</TdM>,
+                          <TdM>{coMoney(co)}</TdM>,
                           <Pill type="pg">Approved</Pill>,
                         ]} />
                       ))}
-                      <TRow cells={[<TdN>Total</TdN>, '—', <TdM>{fmt(coTotal)}</TdM>, '—']} isTotal />
+                      <TRow cells={[<TdN>Total</TdN>, '—', <TdM>{coTotalTxt}</TdM>, '—']} isTotal />
                     </tbody>
                   </table>
                 ) : (
@@ -306,7 +317,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                         <TRow key={co.id} cells={[
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
-                          <TdM>{fmt(co.tc_submitted_price || co.gc_budget || 0)}</TdM>,
+                          <TdM>{coMoney(co)}</TdM>,
                           <Pill type={['approved', 'completed', 'contracted'].includes(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
                       ))}
@@ -362,7 +373,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             </KpiCard>
 
             {/* Card 6 — Hours Logged */}
-            <KpiCard accent={C.purple} icon="⏱" iconBg={C.purpleBg} label="HOURS LOGGED" value={totalHours > 0 ? `${totalHours.toFixed(1)} hrs` : '0 hrs'} sub={totalHours > 0 ? `${fcLaborData.length} entries · avg ${avgRate > 0 ? fmt(avgRate) : '—'}/hr` : 'No labor hours logged'} pills={totalHours > 0 ? [{ type: 'pa', text: `${fcLaborData.length} entries` }] : [{ type: 'pm', text: 'No hours' }]} idx={5}>
+            <KpiCard accent={C.purple} icon="⏱" iconBg={C.purpleBg} label="HOURS LOGGED" value={totalHours > 0 ? `${totalHours.toFixed(1)} hrs` : '0 hrs'} sub={totalHours > 0 ? `${fcLaborData.length} entries${rateVisible ? ` · avg ${fmt(avgRate)}/hr` : ''}` : 'No labor hours logged'} pills={totalHours > 0 ? [{ type: 'pa', text: `${fcLaborData.length} entries` }] : [{ type: 'pm', text: 'No hours' }]} idx={5}>
               <div style={{ padding: 12 }}>
                 {fcLaborData.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -370,8 +381,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                     <tbody>
                       <TRow cells={[<TdN>Total Hours</TdN>, <TdM>{totalHours.toFixed(1)}</TdM>]} />
                       <TRow cells={[<TdN>Entries</TdN>, <TdM>{fcLaborData.length}</TdM>]} />
-                      <TRow cells={[<TdN>Avg Rate</TdN>, <TdM>{avgRate > 0 ? fmt(avgRate) : '—'}</TdM>]} />
-                      <TRow cells={[<TdN>Total Earnings (WOs)</TdN>, <TdM>{fmt(coTotal)}</TdM>]} isTotal />
+                      {rateVisible && <TRow cells={[<TdN>Avg Rate</TdN>, <TdM>{fmt(avgRate)}</TdM>]} />}
+                      <TRow cells={[<TdN>Total Earnings (WOs)</TdN>, <TdM>{coTotalTxt}</TdM>]} isTotal />
                     </tbody>
                   </table>
                 ) : (
@@ -391,7 +402,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                   <THead cols={['Item', 'Value', 'Notes']} />
                   <tbody>
                     <TRow cells={[<TdN>Contract Value (set by {tcName})</TdN>, <TdM>{fmt(contractSum)}</TdM>, 'Lump sum']} />
-                    <TRow cells={[<TdN>Approved COs</TdN>, <TdM>+{fmt(coTotal)}</TdM>, `${approvedCOs.length} approved`]} />
+                    <TRow cells={[<TdN>Approved COs</TdN>, <TdM>{coAmountsVisible ? `+${fmt(coTotal)}` : '—'}</TdM>, `${approvedCOs.length} approved`]} />
                     <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedTotal)}</TdM>, '—']} isTotal />
                     <tr style={{ cursor: 'pointer' }} className="hover:bg-[rgba(245,166,35,.05)]">
                       <td style={cellStyle}>
@@ -449,7 +460,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
                     <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{fmt(contractSum)}</TdM>]} />
-                    <TRow cells={[<TdN>Approved COs</TdN>, <TdM>+{fmt(coTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Approved COs</TdN>, <TdM>{coAmountsVisible ? `+${fmt(coTotal)}` : '—'}</TdM>]} />
                     <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedTotal)}</TdM>]} isTotal />
                     <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{laborBudget > 0 ? fmt(laborBudget) : '—'}</TdM>]} />
                     {laborBudget > 0 && <TRow cells={[<TdN>Net Margin</TdN>, <TdM>{fmt(netMargin)}</TdM>]} isTotal />}
@@ -459,7 +470,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             </KpiCard>
 
             {/* Card 3 — Change Orders */}
-            <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CHANGE ORDERS" value={coTotal > 0 ? `+${fmt(coTotal)}` : '0 COs'} sub={`${approvedCOs.length} approved`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={2}>
+            <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CHANGE ORDERS" value={coAmountsVisible && coTotal > 0 ? `+${fmt(coTotal)}` : `${approvedCOs.length} COs`} sub={`${approvedCOs.length} approved`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={2}>
               <div style={{ padding: 12 }}>
                 {changeOrders.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -469,12 +480,12 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                         <TRow key={co.id} cells={[
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
-                          <TdM>{fmt(co.tc_submitted_price || co.gc_budget || 0)}</TdM>,
+                          <TdM>{coMoney(co)}</TdM>,
                           <Pill type={['approved', 'completed', 'contracted'].includes(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
                       ))}
                       {approvedCOs.length > 0 && (
-                        <TRow cells={[<TdN>{approvedCOs.length} COs</TdN>, '—', <TdM>+{fmt(coTotal)}</TdM>, '—']} isTotal />
+                        <TRow cells={[<TdN>{approvedCOs.length} COs</TdN>, '—', <TdM>{coAmountsVisible ? `+${fmt(coTotal)}` : '—'}</TdM>, '—']} isTotal />
                       )}
                     </tbody>
                   </table>
@@ -593,13 +604,13 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
           <LadderCard
             title={`💰 WO Earnings Summary — ${projectName}`}
             totalLabel="Total WO Earnings"
-            totalValue={fmt(coTotal)}
+            totalValue={coTotalTxt}
             segments={[
               { pct: paidPct, color: C.green },
               { pct: pendPct, color: C.yellow },
             ]}
             rows={[
-              { label: 'Total WO Earnings', value: fmt(coTotal), pct: 100, barColor: C.amber },
+              { label: 'Total WO Earnings', value: coTotalTxt, pct: 100, barColor: C.amber },
               { label: 'Paid', value: fmt(totalPaid), pct: paidPct, barColor: C.green, headline: true },
               ...(totalPending > 0 ? [{ label: 'Pending', value: fmt(totalPending), pct: pendPct, barColor: C.yellow }] : []),
               { label: 'Remaining', value: fmt(remaining), pct: remPct, barColor: C.border, headline: true },
