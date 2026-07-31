@@ -28,6 +28,7 @@ import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestions
 import { ScopeBoundariesPanel } from '@/components/setup-wizard-v2/ScopeBoundariesPanel';
 import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
+import { ProjectPartiesStep, partiesStepComplete } from '@/components/project-wizard-new/ProjectPartiesStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
 import { TMBuildingInfoStep, initialTMBuildingInfo, type TMBuildingInfo } from '@/components/project-wizard-new/TMBuildingInfoStep';
 
@@ -91,6 +92,7 @@ export default function CreateProjectNew() {
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 0);
   const [basics, setBasics] = useState<ProjectBasics>(draft?.basics ?? initialBasics);
   const [team, setTeam] = useState<TeamMember[]>(draft?.team ?? []);
+  const [selfPerform, setSelfPerform] = useState<boolean>(draft?.selfPerform ?? false);
   const [saving, setSaving] = useState(false);
   const [contractMode, setContractMode] = useState<ContractMode>(draft?.contractMode ?? 'fixed');
   const [tmScope, setTmScope] = useState<TMBuildingInfo>(draft?.tmScope ?? initialTMBuildingInfo);
@@ -165,6 +167,7 @@ export default function CreateProjectNew() {
     const stepId = activeSteps[currentStep]?.id;
     switch (stepId) {
       case 'basics': return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
+      case 'team': return partiesStepComplete(team, selfPerform, creatorOrgType);
       case 'mode': return true;
       case 'building_info': return !!(tmScope.buildingType && tmScope.stories >= 1 && tmScope.foundationType);
       case 'contracts': {
@@ -337,8 +340,18 @@ export default function CreateProjectNew() {
           <BasicsStepNew
             data={basics}
             onChange={updateBasics}
+            creatorOrgName={currentOrg?.name}
+            creatorRole={creatorRole}
+            creatorOrgType={creatorOrgType}
+          />
+        );
+      case 'team':
+        return (
+          <ProjectPartiesStep
             team={team}
             onTeamChange={setTeam}
+            selfPerform={selfPerform}
+            onSelfPerformChange={setSelfPerform}
             creatorOrgName={currentOrg?.name}
             creatorRole={creatorRole}
             creatorOrgType={creatorOrgType}
