@@ -1,30 +1,21 @@
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Building2, Shield } from 'lucide-react';
-import { ProjectBasics, US_STATES, TeamMember } from '@/types/projectWizard';
+import { Shield } from 'lucide-react';
+import { ProjectBasics, US_STATES } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
-import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 
 interface BasicsStepProps {
   data: ProjectBasics;
   onChange: (updates: Partial<ProjectBasics>) => void;
-  team: TeamMember[];
-  onTeamChange: (team: TeamMember[]) => void;
   creatorOrgName?: string;
   creatorRole?: string | null;
   creatorOrgType?: OrgType | null;
 }
 
-export function BasicsStepNew({ data, onChange, team, onTeamChange, creatorOrgName, creatorRole, creatorOrgType }: BasicsStepProps) {
-  const [showAddDialog, setShowAddDialog] = useState(false);
+export function BasicsStepNew({ data, onChange, creatorOrgName, creatorRole }: BasicsStepProps) {
 
-  const removeMember = (id: string) => {
-    onTeamChange(team.filter(m => m.id !== id));
-  };
 
   return (
     <div className="space-y-6">
