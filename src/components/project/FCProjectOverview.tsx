@@ -35,22 +35,34 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
-  /* ─── The FC's own contract row — the ONLY source of this crew's money ─── */
+  /* ─── The FC's own contract row — the ONLY source of this crew's money ───
+     Contracts are stored biller → payer, so a Field Crew row has the crew as
+     from_org_id (from_role = 'Field Crew'). Match either side to be safe. */
   const { data: myContract = null, isLoading: contractLoading } = useQuery({
     queryKey: ['fc-own-contract', projectId, currentOrgId],
     queryFn: async () => {
       if (!currentOrgId) return null;
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status')
+        .select('id, contract_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
         .eq('project_id', projectId)
-        .eq('to_org_id', currentOrgId)
-        .maybeSingle();
+        .or(`from_org_id.eq.${currentOrgId},to_org_id.eq.${currentOrgId}`);
       if (error) throw error;
-      return data;
+      const rows = (data || []).filter(
+        (c: any) => c.trade !== 'Work Order' && c.trade !== 'Work Order Labor',
+      );
+      // Prefer the crew's own billing row (crew is the biller)
+      return (
+        rows.find((c: any) => c.from_org_id === currentOrgId && c.from_role === 'Field Crew') ||
+        rows.find((c: any) => c.from_org_id === currentOrgId) ||
+        rows.find((c: any) => c.to_role === 'Field Crew') ||
+        rows[0] ||
+        null
+      );
     },
     enabled: !!projectId && !!currentOrgId,
   });
+
 
   // Zero rows is a NORMAL state: the TC has not set this crew's contract value yet.
   const contractValue: number | null =
