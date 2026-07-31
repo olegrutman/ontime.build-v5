@@ -121,7 +121,7 @@ export function AddTeamMemberDialog({
       return role === 'General Contractor' || role === 'Trade Contractor';
     }
     return true;
-  });
+  }).filter(role => !restrictRoles || restrictRoles.includes(role));
 
   const requiresTrade = (role: TeamRole) => role === 'Trade Contractor' || role === 'Field Crew';
 
@@ -139,7 +139,7 @@ export function AddTeamMemberDialog({
       setInviteForm((prev) => ({ ...prev, role: availableRoles[0], trade: undefined }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, creatorOrgType]);
+  }, [open, creatorOrgType, restrictRoles]);
 
   // Reset state when dialog closes
   useEffect(() => {
