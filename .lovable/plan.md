@@ -1,46 +1,55 @@
-## Phase 1 — Per-user project scoping (additive, behaviorally inert)
+## Goal
 
-Pre-flight check against the live database confirms none of the new objects exist, so nothing needs to be aborted or renamed:
+When creating a project, the creator must define both sides of their contract chain before continuing:
 
-- Tables `project_members`, `access_audit_log` — absent (also no `org_members` / `role_permissions` / `project_orgs`).
-- Columns `user_org_roles.project_scope`, `organizations.default_project_scope` — absent.
-- Functions `projects_visible_via_org`, `can_see_project`, `seed_project_creator`, `guard_last_admin` — absent.
-- Triggers `projects_seed_creator`, `uor_guard_admin_delete`, `uor_guard_admin_update` — absent.
-- Existing helpers `user_in_org`, `user_is_project_participant` — present, untouched.
-- 43 public tables carry a `project_id` column (relevant to the Phase 2 inventory in the report).
+- **TC creator:** must name the GC (pick an existing org or invite by email), and must either invite at least one Field Crew or toggle "We self-perform this work."
+- **GC creator:** must name at least one Trade Contractor / Field Crew, or toggle "We self-perform this work."
+- Supplier and FC creators: unchanged.
 
-One thing the prompt didn't anticipate: **`create_organization_and_set_admin` has two overloads** (differing argument order: `p_org_name text, org_type, ...` vs `org_type, text, ...`). Both will be updated identically in Step 4; neither signature changes.
+## Changes
 
-### What gets built
+### 1. New "Project Team" step in the creation wizard
+Today team members are collected as an optional card at the bottom of the Basics step. Promote it to its own required step between Basics and the mode/contract steps, so it can be validated.
 
-**Migration 1 — schema (Steps 1, 2, 6)**
-- `project_members` (project_id, user_id, organization_id, status, added_by) with the unique constraint and both indexes.
-- `user_org_roles.project_scope` default `'org'`; `organizations.default_project_scope` default `'org'`.
-- `access_audit_log` + its two indexes.
-- GRANTs on both new tables (`authenticated`, `service_role`) — required before RLS is meaningful.
-- `projects_visible_via_org(uuid)` and `can_see_project(uuid)` exactly as specified, SECURITY DEFINER, `search_path = public`, execute granted to `authenticated`.
-- RLS enabled on the two new tables only, with policies `pm_select`, `pm_write`, `audit_select`, `audit_insert` as written.
-- No RLS policy on `projects` (or any existing table) is touched. `project_participants` and `member_permissions` untouched.
+- Add a `team` step to the step lists in `src/pages/CreateProjectNew.tsx` (fixed, T&M, and supplier flows — supplier keeps it optional).
+- Remove the team card from `BasicsStep.tsx` and move it into a new `src/components/project-wizard-new/ProjectPartiesStep.tsx`.
 
-**Migration 2 — behavior preservation (Steps 4, 5)**
-- `seed_project_creator()` + `projects_seed_creator` AFTER INSERT trigger on `projects`.
-- `guard_last_admin()` + the delete/update triggers on `user_org_roles`.
-- Rewrite of `accept_org_invitation`, `approve_join_request`, and **both** `create_organization_and_set_admin` overloads so the `user_org_roles` insert stamps `project_scope` from that org's `default_project_scope`. No signature or other behavior changes. (For `create_organization_and_set_admin` the org is created in the same call, so the stamp reads the freshly inserted row's default, which is `'org'` — preserving current behavior.)
+### 2. ProjectPartiesStep layout
+Two labelled zones, driven by the creator's org type resolved from the database:
 
-**Backfill (Step 3)** — run as a data operation, not a migration: one `INSERT … SELECT DISTINCT … ON CONFLICT DO NOTHING` from `user_org_roles` cross-joined against `projects_visible_via_org`. Inserted row count reported.
+```text
+UPSTREAM (who you bill)
+  TC creator  -> General Contractor   [required]
+  GC creator  -> (owner/none: zone hidden)
 
-**Verification (Step 7)**
-- `npm run build` (via the repo's build) — zero TypeScript errors. No React/route/component files change, so this is a regression check only.
-- The zero-row verification query comparing `projects_visible_via_org` against `project_members`.
+DOWNSTREAM (who bills you)
+  TC creator  -> Field Crew           [required or self-perform]
+  GC creator  -> Trade Contractor / Field Crew [required or self-perform]
+```
 
-### Report produced at the end
+Each zone has:
+- A list of already-added parties with company, contact, trade, and an "Invited by email" vs "Existing org" chip.
+- An "Add" button opening the existing `AddTeamMemberDialog` in `collect` mode, pre-filtered to the roles valid for that zone.
+- The downstream zone has an "We self-perform this work — no crews to invite" switch (`ElongatedSwitch`), which disables and clears the downstream list.
 
-Markdown covering: (A) any failed statement + exact error; (B) backfill row count and verification result; (C) full definitions of every RLS policy on `projects`, `purchase_orders`, `change_orders`, `invoices`, and all remaining `project_id`-bearing tables; (D) every table/column holding cost / unit_cost / price / markup / margin; (E) post-edit definitions of the three (four, counting the overload) org-role functions.
+The dialog already supports both search-existing and invite-by-email, and already filters roles by creator org type, so no new invite plumbing is needed — the step just constrains and validates it.
 
-Stops there. No Phase 2 policy changes.
+### 3. Validation
+In `canProceed()` add a `team` case:
+- TC: at least one team entry with role `General Contractor`, **and** (`selfPerform` true or at least one `Field Crew` entry).
+- GC: `selfPerform` true or at least one `Trade Contractor`/`Field Crew` entry.
+- Supplier / FC: always true.
 
-### Technical notes
+Inline helper text explains what's missing rather than only greying out Next.
 
-- Migrations run through the approval flow; the backfill and all reporting queries run separately afterward since `project_members` must exist first.
-- `can_see_project` is defined but referenced only by the new tables' own policies, so no existing read path changes. Every user keeps `project_scope = 'org'`, which short-circuits Path A identically to today's `user_in_org` behavior.
-- `guard_last_admin` is a real behavior change in one narrow case: removing/demoting the final admin of an org will now raise instead of succeeding. This is intended by the spec but is the only non-inert element of Phase 1.
+### 4. Persist the self-performed flag
+`project_team.is_self_performing` already exists and is already read by `useProjectFinancials` and `TeamMembersCard`. On create, set `is_self_performing: selfPerform` on the creator's own `project_team` row in `createProject()`. No migration needed.
+
+### 5. Draft persistence
+Add `selfPerform` to the sessionStorage draft payload so a reload keeps the choice.
+
+## Technical notes
+
+- Roles come from `creatorOrgType` (`organizations.type` via `userOrgRoles[0]`), consistent with the existing `useOrgType` rule — no string inference.
+- The email-invite path already creates `project_team` + `project_invites` rows in `createProject()`; a GC invited by a TC gets a normal pending project invite and joins on signup.
+- No RLS or contract-direction logic changes; contract rows continue to be created by the existing wizard `saveAll` / invite flow.

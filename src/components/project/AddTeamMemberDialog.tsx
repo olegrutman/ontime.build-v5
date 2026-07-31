@@ -50,6 +50,10 @@ interface AddTeamMemberDialogProps {
   /** 'direct' saves to DB (default). 'collect' returns data via onCollect without DB writes. */
   mode?: 'direct' | 'collect';
   onCollect?: (member: TeamMember) => void;
+  /** Optional narrowing of the selectable roles (e.g. upstream-only or downstream-only zones). */
+  restrictRoles?: readonly TeamRole[];
+  /** Optional dialog title override. */
+  title?: string;
 }
 
 export function AddTeamMemberDialog({
@@ -60,6 +64,8 @@ export function AddTeamMemberDialog({
   onMemberAdded,
   mode = 'direct',
   onCollect,
+  restrictRoles,
+  title,
 }: AddTeamMemberDialogProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'invite'>('search');
@@ -115,7 +121,7 @@ export function AddTeamMemberDialog({
       return role === 'General Contractor' || role === 'Trade Contractor';
     }
     return true;
-  });
+  }).filter(role => !restrictRoles || restrictRoles.includes(role));
 
   const requiresTrade = (role: TeamRole) => role === 'Trade Contractor' || role === 'Field Crew';
 
@@ -133,7 +139,7 @@ export function AddTeamMemberDialog({
       setInviteForm((prev) => ({ ...prev, role: availableRoles[0], trade: undefined }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, creatorOrgType]);
+  }, [open, creatorOrgType, restrictRoles]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -255,7 +261,10 @@ export function AddTeamMemberDialog({
       'FC': 'Field Crew',
       'SUPPLIER': 'Supplier',
     };
-    const defaultRole = orgTypeToRole[result.org_type] || 'Trade Contractor';
+    const suggested = orgTypeToRole[result.org_type] || 'Trade Contractor';
+    const defaultRole = availableRoles.includes(suggested)
+      ? suggested
+      : (availableRoles[0] ?? suggested);
     setSelectedRole(defaultRole);
     
     // Set trade from org if available
@@ -564,7 +573,7 @@ export function AddTeamMemberDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Add Team Member
+            {title || 'Add Team Member'}
           </DialogTitle>
           <DialogDescription>
             Add an existing organization or invite a new team member by email.

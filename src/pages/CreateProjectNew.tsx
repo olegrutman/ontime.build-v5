@@ -28,6 +28,7 @@ import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestions
 import { ScopeBoundariesPanel } from '@/components/setup-wizard-v2/ScopeBoundariesPanel';
 import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
+import { ProjectPartiesStep, partiesStepComplete } from '@/components/project-wizard-new/ProjectPartiesStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
 import { TMBuildingInfoStep, initialTMBuildingInfo, type TMBuildingInfo } from '@/components/project-wizard-new/TMBuildingInfoStep';
 
@@ -38,7 +39,8 @@ interface StepDef {
 }
 
 const FIXED_STEPS: StepDef[] = [
-  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'basics', label: 'Project Basics', description: 'Name & location' },
+  { id: 'team', label: 'Project Team', description: 'Who you bill & who bills you' },
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'contracts', label: 'Contracts', description: 'Contract values' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
@@ -48,14 +50,16 @@ const FIXED_STEPS: StepDef[] = [
 ];
 
 const TM_STEPS: StepDef[] = [
-  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'basics', label: 'Project Basics', description: 'Name & location' },
+  { id: 'team', label: 'Project Team', description: 'Who you bill & who bills you' },
   { id: 'mode', label: 'Contract Mode', description: 'Fixed or T&M' },
   { id: 'building_info', label: 'Building Info', description: 'Building details for WOs' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
 
 const SUPPLIER_STEPS: StepDef[] = [
-  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
+  { id: 'basics', label: 'Project Basics', description: 'Name & location' },
+  { id: 'team', label: 'Project Team', description: 'Who you supply' },
   { id: 'building_info', label: 'Building Info', description: 'Structure & size' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ];
@@ -88,6 +92,7 @@ export default function CreateProjectNew() {
   const [currentStep, setCurrentStep] = useState(draft?.currentStep ?? 0);
   const [basics, setBasics] = useState<ProjectBasics>(draft?.basics ?? initialBasics);
   const [team, setTeam] = useState<TeamMember[]>(draft?.team ?? []);
+  const [selfPerform, setSelfPerform] = useState<boolean>(draft?.selfPerform ?? false);
   const [saving, setSaving] = useState(false);
   const [contractMode, setContractMode] = useState<ContractMode>(draft?.contractMode ?? 'fixed');
   const [tmScope, setTmScope] = useState<TMBuildingInfo>(draft?.tmScope ?? initialTMBuildingInfo);
@@ -114,6 +119,7 @@ export default function CreateProjectNew() {
           currentStep,
           basics,
           team,
+          selfPerform,
           contractMode,
           tmScope,
           wizardAnswers: wizard.answers,
@@ -123,7 +129,7 @@ export default function CreateProjectNew() {
       } catch { /* quota exceeded — ignore */ }
     }, 300);
     return () => clearTimeout(timer);
-  }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType, otherProjectLabel]);
+  }, [currentStep, basics, team, selfPerform, contractMode, tmScope, wizard.answers, wizard.buildingType, otherProjectLabel]);
 
   const isTM = contractMode === 'tm';
   const isSupplier = creatorOrgType === 'SUPPLIER';
@@ -162,6 +168,7 @@ export default function CreateProjectNew() {
     const stepId = activeSteps[currentStep]?.id;
     switch (stepId) {
       case 'basics': return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
+      case 'team': return partiesStepComplete(team, selfPerform, creatorOrgType);
       case 'mode': return true;
       case 'building_info': return !!(tmScope.buildingType && tmScope.stories >= 1 && tmScope.foundationType);
       case 'contracts': {
@@ -249,6 +256,7 @@ export default function CreateProjectNew() {
           invited_org_name: currentOrg.name,
           invited_by_user_id: user.id,
           status: 'Accepted',
+          is_self_performing: selfPerform,
           accepted_at: new Date().toISOString(),
         }),
       ]);
@@ -334,8 +342,18 @@ export default function CreateProjectNew() {
           <BasicsStepNew
             data={basics}
             onChange={updateBasics}
+            creatorOrgName={currentOrg?.name}
+            creatorRole={creatorRole}
+            creatorOrgType={creatorOrgType}
+          />
+        );
+      case 'team':
+        return (
+          <ProjectPartiesStep
             team={team}
             onTeamChange={setTeam}
+            selfPerform={selfPerform}
+            onSelfPerformChange={setSelfPerform}
             creatorOrgName={currentOrg?.name}
             creatorRole={creatorRole}
             creatorOrgType={creatorOrgType}
