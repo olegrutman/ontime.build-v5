@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.create_organization_and_set_admin(_org_type public.org_type, _org_name text, _address jsonb, _org_phone text, _user_first_name text, _user_last_name text, _user_phone text);

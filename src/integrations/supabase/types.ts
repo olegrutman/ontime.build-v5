@@ -8397,31 +8397,18 @@ export type Database = {
         Args: { item_row: Database["public"]["Tables"]["catalog_items"]["Row"] }
         Returns: string
       }
-      create_organization_and_set_admin:
-        | {
-            Args: {
-              _address?: Json
-              _org_name: string
-              _org_phone?: string
-              _org_type: Database["public"]["Enums"]["org_type"]
-              _user_first_name?: string
-              _user_last_name?: string
-              _user_phone?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _address: Json
-              _org_name: string
-              _org_phone: string
-              _org_type: Database["public"]["Enums"]["org_type"]
-              _user_first_name: string
-              _user_last_name: string
-              _user_phone?: string
-            }
-            Returns: Json
-          }
+      create_organization_and_set_admin: {
+        Args: {
+          _address?: Json
+          _org_name: string
+          _org_phone?: string
+          _org_type: Database["public"]["Enums"]["org_type"]
+          _user_first_name?: string
+          _user_last_name?: string
+          _user_phone?: string
+        }
+        Returns: Json
+      }
       decline_org_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
