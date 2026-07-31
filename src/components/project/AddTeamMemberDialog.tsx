@@ -50,6 +50,10 @@ interface AddTeamMemberDialogProps {
   /** 'direct' saves to DB (default). 'collect' returns data via onCollect without DB writes. */
   mode?: 'direct' | 'collect';
   onCollect?: (member: TeamMember) => void;
+  /** Optional narrowing of the selectable roles (e.g. upstream-only or downstream-only zones). */
+  restrictRoles?: readonly TeamRole[];
+  /** Optional dialog title override. */
+  title?: string;
 }
 
 export function AddTeamMemberDialog({
@@ -60,6 +64,8 @@ export function AddTeamMemberDialog({
   onMemberAdded,
   mode = 'direct',
   onCollect,
+  restrictRoles,
+  title,
 }: AddTeamMemberDialogProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'search' | 'invite'>('search');
