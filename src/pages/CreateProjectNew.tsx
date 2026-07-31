@@ -119,6 +119,7 @@ export default function CreateProjectNew() {
           currentStep,
           basics,
           team,
+          selfPerform,
           contractMode,
           tmScope,
           wizardAnswers: wizard.answers,
