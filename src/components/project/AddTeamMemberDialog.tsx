@@ -261,7 +261,10 @@ export function AddTeamMemberDialog({
       'FC': 'Field Crew',
       'SUPPLIER': 'Supplier',
     };
-    const defaultRole = orgTypeToRole[result.org_type] || 'Trade Contractor';
+    const suggested = orgTypeToRole[result.org_type] || 'Trade Contractor';
+    const defaultRole = availableRoles.includes(suggested)
+      ? suggested
+      : (availableRoles[0] ?? suggested);
     setSelectedRole(defaultRole);
     
     // Set trade from org if available
