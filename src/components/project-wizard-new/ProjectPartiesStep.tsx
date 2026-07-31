@@ -91,7 +91,7 @@ export function ProjectPartiesStep({
   creatorRole,
   creatorOrgType,
 }: ProjectPartiesStepProps) {
-  const [dialogZone, setDialogZone] = useState<'upstream' | 'downstream' | null>(null);
+  const [dialogZone, setDialogZone] = useState<'upstream' | 'downstream' | 'other' | null>(null);
 
   const upstreamRoles = upstreamRolesFor(creatorOrgType);
   const downstreamRoles = downstreamRolesFor(creatorOrgType);
@@ -240,7 +240,7 @@ export function ProjectPartiesStep({
               You can also add these later from the project team page.
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setDialogZone(null) || setDialogZone('other' as never)}>
+          <Button variant="ghost" size="sm" onClick={() => setDialogZone('other')}>
             <Plus className="h-4 w-4 mr-1.5" />
             Add
           </Button>
