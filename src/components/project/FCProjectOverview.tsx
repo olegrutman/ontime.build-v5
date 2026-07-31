@@ -35,22 +35,34 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
-  /* ─── The FC's own contract row — the ONLY source of this crew's money ─── */
+  /* ─── The FC's own contract row — the ONLY source of this crew's money ───
+     Contracts are stored biller → payer, so a Field Crew row has the crew as
+     from_org_id (from_role = 'Field Crew'). Match either side to be safe. */
   const { data: myContract = null, isLoading: contractLoading } = useQuery({
     queryKey: ['fc-own-contract', projectId, currentOrgId],
     queryFn: async () => {
       if (!currentOrgId) return null;
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status')
+        .select('id, contract_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
         .eq('project_id', projectId)
-        .eq('to_org_id', currentOrgId)
-        .maybeSingle();
+        .or(`from_org_id.eq.${currentOrgId},to_org_id.eq.${currentOrgId}`);
       if (error) throw error;
-      return data;
+      const rows = (data || []).filter(
+        (c: any) => c.trade !== 'Work Order' && c.trade !== 'Work Order Labor',
+      );
+      // Prefer the crew's own billing row (crew is the biller)
+      return (
+        rows.find((c: any) => c.from_org_id === currentOrgId && c.from_role === 'Field Crew') ||
+        rows.find((c: any) => c.from_org_id === currentOrgId) ||
+        rows.find((c: any) => c.to_role === 'Field Crew') ||
+        rows[0] ||
+        null
+      );
     },
     enabled: !!projectId && !!currentOrgId,
   });
+
 
   // Zero rows is a NORMAL state: the TC has not set this crew's contract value yet.
   const contractValue: number | null =
@@ -92,12 +104,33 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
     return anyC.from_org_name || anyC.to_org_name || 'Trade Contractor';
   })();
 
-  // Invoices — the crew's own billing, always theirs to see
-  const paidInvoices = financials.recentInvoices.filter(i => i.status === 'PAID');
-  const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
-  const totalPaid = financials.totalPaid;
-  const totalPendingSubmitted = pendingInvoices.reduce((s, i) => s + i.total_amount, 0);
-  const totalInvoiced = financials.billedToDate;
+  /* Invoices — the crew's OWN billing only. The shared financials hook totals
+     every invoice on the project (including TC → GC), so read this crew's
+     contract invoices directly and use the full list, not the recent-5 slice. */
+  const { data: myInvoices = [] } = useQuery({
+    queryKey: ['fc-own-invoices', projectId, myContract?.id],
+    queryFn: async () => {
+      if (!myContract?.id) return [];
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, status, total_amount, created_at')
+        .eq('project_id', projectId)
+        .eq('contract_id', myContract.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!projectId && !!myContract?.id,
+  });
+
+  const paidInvoices = myInvoices.filter((i: any) => i.status === 'PAID');
+  const pendingInvoices = myInvoices.filter((i: any) => ['SUBMITTED', 'APPROVED'].includes(i.status));
+  const totalPaid = paidInvoices.reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
+  const totalPendingSubmitted = pendingInvoices.reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
+  const totalInvoiced = myInvoices
+    .filter((i: any) => ['SUBMITTED', 'APPROVED', 'PAID'].includes(i.status))
+    .reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
+
 
   // 6-month invoice trend for sparklines
   const { data: monthly = [] } = useProjectMonthlyBilling(projectId);
