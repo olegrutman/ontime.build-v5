@@ -129,7 +129,7 @@ export default function CreateProjectNew() {
       } catch { /* quota exceeded — ignore */ }
     }, 300);
     return () => clearTimeout(timer);
-  }, [currentStep, basics, team, contractMode, tmScope, wizard.answers, wizard.buildingType, otherProjectLabel]);
+  }, [currentStep, basics, team, selfPerform, contractMode, tmScope, wizard.answers, wizard.buildingType, otherProjectLabel]);
 
   const isTM = contractMode === 'tm';
   const isSupplier = creatorOrgType === 'SUPPLIER';
@@ -256,6 +256,7 @@ export default function CreateProjectNew() {
           invited_org_name: currentOrg.name,
           invited_by_user_id: user.id,
           status: 'Accepted',
+          is_self_performing: selfPerform,
           accepted_at: new Date().toISOString(),
         }),
       ]);
