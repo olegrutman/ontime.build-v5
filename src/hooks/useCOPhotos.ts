@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getSignedStorageUrl } from '@/hooks/useSignedUrl';
+
 
 export interface COPhoto {
   id: string;
@@ -88,6 +90,6 @@ export function useCOPhotos(coId: string) {
 }
 
 export function getPhotoUrl(storagePath: string) {
-  const { data } = supabase.storage.from('co-photos').getPublicUrl(storagePath);
-  return data.publicUrl;
+  return getSignedStorageUrl('co-photos', storagePath);
 }
+

@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { REASON_LABELS } from './CaptureReasonChips';
 import type { FieldCapture } from '@/hooks/useFieldCaptures';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+
 
 interface FieldCaptureCardProps {
   capture: FieldCapture;
@@ -13,18 +15,21 @@ interface FieldCaptureCardProps {
 export function FieldCaptureCard({ capture, onConvert }: FieldCaptureCardProps) {
   const time = format(new Date(capture.timestamp), 'h:mm a');
   const reasonLabel = capture.reason_category ? REASON_LABELS[capture.reason_category] : null;
+  const photoSrc = useSignedUrl('field-captures', capture.photo_url);
+  const voiceSrc = useSignedUrl('field-captures', capture.voice_note_url);
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
       {/* Photo thumbnail */}
-      {capture.photo_url && (
+      {photoSrc && (
         <img
-          src={capture.photo_url}
+          src={photoSrc}
           alt="Capture"
           className="w-full h-32 object-cover"
           loading="lazy"
         />
       )}
+
 
       <div className="p-3 space-y-2">
         {/* Time + indicators */}
