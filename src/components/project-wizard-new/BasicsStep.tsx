@@ -117,67 +117,6 @@ export function BasicsStepNew({ data, onChange, team, onTeamChange, creatorOrgNa
           />
         </div>
       </div>
-
-      {/* Team Members Section */}
-      <div className="border-t pt-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold">Project Team</h3>
-            <p className="text-sm text-muted-foreground">
-              Add contractors and crew to invite to this project.
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Member
-          </Button>
-        </div>
-
-        {/* Members list */}
-        {team.length > 0 ? (
-          <div className="space-y-2">
-            {team.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{member.companyName}</p>
-                    <p className="text-xs text-muted-foreground">{member.contactEmail}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{member.role}</Badge>
-                  {member.trade && (
-                    <Badge variant="outline">
-                      {member.trade === 'Other' ? member.tradeCustom : member.trade}
-                    </Badge>
-                  )}
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeMember(member.id)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No team members added yet. You can add them now or after creating the project.
-          </p>
-        )}
-      </div>
-
-      <AddTeamMemberDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        creatorOrgType={creatorOrgType || null}
-        onMemberAdded={() => {}}
-        mode="collect"
-        onCollect={(member) => {
-          onTeamChange([...team, member]);
-        }}
-      />
     </div>
   );
 }
