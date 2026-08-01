@@ -387,6 +387,30 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
   const contact = method === 'email' ? email : phone;
 
 
+  /* ── Pending join approval ── */
+  if (pendingOrgName) {
+    return (
+      <div className="auth-screen-enter">
+        <div className="auth-card">
+          <div className="auth-header">
+            <div className="auth-screen-icon">⏳</div>
+            <div className="auth-title">Request sent</div>
+            <div className="auth-sub">
+              We asked an admin at <strong>{pendingOrgName}</strong> to add you to their team.
+              You'll get an email as soon as they approve it.
+            </div>
+          </div>
+          <button className="auth-cta-btn" onClick={() => navigate('/dashboard', { replace: true })}>
+            <span>Check status</span>
+          </button>
+        </div>
+        <div className="auth-switch-link">
+          Wrong company? <button onClick={() => { setPendingOrgName(null); setOrgMode('join'); }}>Search again</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-screen-enter">
       <div className="auth-card">
@@ -397,7 +421,8 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
         </div>
 
         {/* Step indicator */}
-        <StepIndicator currentStep={step} labels={['Account', 'Verify', 'Role']} />
+        <StepIndicator currentStep={step} labels={['Account', 'Verify', 'Company']} />
+
 
         {/* ── STEP 1 ── */}
         {step === 1 && (
