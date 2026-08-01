@@ -21,6 +21,16 @@ const ROLE_TO_ORG_TYPE: Record<string, OrgType> = {
 const VERIFICATION_CODE_LENGTH = 6;
 const PENDING_KEY = 'ontime_pending_signup';
 
+interface JoinOrg {
+  org_id: string;
+  org_name: string;
+  org_type: string;
+  org_trade: string | null;
+  org_address: { city?: string; state?: string } | null;
+  admin_name: string | null;
+  allow_join_requests: boolean;
+}
+
 /* ── Mock data (kept for future API) ── */
 // const MOCK_ORGS = [
 //   { id: 'kc', name: 'Kowalski Construction', abbr: 'KC', members: 8, plan: 'GC account', admins: [{ av: 'DK', name: 'Derek K.' }], domain: 'kowalski.com' },
