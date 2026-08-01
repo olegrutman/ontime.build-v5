@@ -543,27 +543,23 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
           </div>
         )}
 
-        {/* ── STEP 2: OTP ── */}
+        {/* ── STEP 2: Verify email (link-first) ── */}
         {step === 2 && (
           <div>
             <div className="auth-otp-badge">
-              {method === 'email' ? '📧' : '📱'} Sent to {contact}
+              📧 Sent to {contact}
             </div>
-            <div className="auth-sub" style={{ marginBottom: 4 }}>
-              {method === 'email'
-                ? 'We sent a verification email. Check your inbox and enter the code, or click the link in the email.'
-                : `Enter the ${VERIFICATION_CODE_LENGTH}-digit code we just sent. It expires in 10 minutes.`
-              }
+            <div className="auth-sub" style={{ marginBottom: 14 }}>
+              Open the email from Ontime.Build and click <strong>Confirm your email</strong>.
+              This page continues automatically once you do — you can leave it open.
             </div>
 
-            <OTPInput
-              length={VERIFICATION_CODE_LENGTH}
-              value={otpValue}
-              onChange={setOtpValue}
-              error={otpError}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div className="auth-spinner" style={{ borderTopColor: 'var(--auth-amber)' }} />
+              <span className="auth-sub" style={{ margin: 0 }}>Waiting for verification…</span>
+            </div>
 
-            <div className="auth-resend-row" style={{ marginBottom: 20 }}>
+            <div className="auth-resend-row" style={{ marginBottom: 16 }}>
               Didn't get it?{' '}
               <button
                 className="auth-resend-btn"
@@ -573,7 +569,7 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
                 {resendSeconds > 0 ? (
                   <>Resend in <span className="auth-resend-timer">0:{resendSeconds < 10 ? `0${resendSeconds}` : resendSeconds}</span></>
                 ) : (
-                  'Resend code'
+                  'Resend email'
                 )}
               </button>
             </div>
@@ -590,27 +586,38 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
               </div>
             )}
 
-
-            <button className="auth-cta-btn" onClick={handleVerifyOTP} disabled={loading}>
-              {loading ? <div className="auth-spinner" /> : <span>Verify & Continue</span>}
-            </button>
-
-            {otpError && (
-              <div className="auth-alert err" style={{ marginTop: 12, marginBottom: 0 }}>
-                <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠</span>
-                <span>{otpErrorMsg}</span>
+            {!showCodeEntry ? (
+              <div className="auth-resend-row">
+                Email includes a code?{' '}
+                <button className="auth-resend-btn" onClick={() => setShowCodeEntry(true)}>
+                  Enter it manually
+                </button>
+              </div>
+            ) : (
+              <div>
+                <OTPInput
+                  length={VERIFICATION_CODE_LENGTH}
+                  value={otpValue}
+                  onChange={setOtpValue}
+                  error={otpError}
+                />
+                <button className="auth-cta-btn" onClick={handleVerifyOTP} disabled={loading}>
+                  {loading ? <div className="auth-spinner" /> : <span>Verify & Continue</span>}
+                </button>
+                {otpError && (
+                  <div className="auth-alert err" style={{ marginTop: 12, marginBottom: 0 }}>
+                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠</span>
+                    <span>{otpErrorMsg}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* ── STEP 3: Role & Company ── */}
+        {/* ── STEP 3: New company or join a team ── */}
         {step === 3 && (
           <div>
-            <div className="auth-sub" style={{ marginBottom: 18 }}>
-              This helps us set up the right features for you.
-            </div>
-
             {fieldErrors.form && (
               <div className="auth-alert err" style={{ marginBottom: 16 }}>
                 <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠</span>
@@ -618,27 +625,114 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
               </div>
             )}
 
-            <RoleSelector selectedRole={selectedRole} onSelect={setSelectedRole} />
-
-            <div className="auth-field">
-              <div className="auth-field-label">Company name</div>
-              <div className="auth-field-wrap">
-                <input
-                  type="text"
-                  className={`auth-input-field${fieldErrors.company ? ' error' : ''}`}
-                  placeholder="e.g. Kowalski Construction"
-                  value={company}
-                  onChange={e => { setCompany(e.target.value); setFieldErrors({}); }}
-                />
+            {/* 3a — the choice */}
+            {orgMode === null && (
+              <div>
+                <div className="auth-sub" style={{ marginBottom: 18 }}>
+                  Is your company already on Ontime.Build?
+                </div>
+                <div className="auth-role-grid">
+                  <div className="auth-role-card" onClick={() => setOrgMode('new')}>
+                    <div className="auth-role-icon">🏢</div>
+                    <div className="auth-role-name">I'm new here</div>
+                    <div className="auth-role-desc">Register my company</div>
+                  </div>
+                  <div className="auth-role-card" onClick={() => setOrgMode('join')}>
+                    <div className="auth-role-icon">👥</div>
+                    <div className="auth-role-name">Joining a team</div>
+                    <div className="auth-role-desc">Request to join my company</div>
+                  </div>
+                </div>
               </div>
-              {fieldErrors.company && <div className="auth-field-error">{fieldErrors.company}</div>}
-            </div>
+            )}
 
-            <button className="auth-cta-btn amber" onClick={handleFinish} disabled={loading}>
-              {loading ? <div className="auth-spinner" /> : <span>🚀 Launch My Dashboard</span>}
-            </button>
+            {/* 3b — create new org */}
+            {orgMode === 'new' && (
+              <div>
+                <div className="auth-sub" style={{ marginBottom: 18 }}>
+                  This helps us set up the right features for you.
+                </div>
+
+                <RoleSelector selectedRole={selectedRole} onSelect={setSelectedRole} />
+
+                <div className="auth-field">
+                  <div className="auth-field-label">Company name</div>
+                  <div className="auth-field-wrap">
+                    <input
+                      type="text"
+                      className={`auth-input-field${fieldErrors.company ? ' error' : ''}`}
+                      placeholder="e.g. Kowalski Construction"
+                      value={company}
+                      onChange={e => { setCompany(e.target.value); setFieldErrors({}); }}
+                    />
+                  </div>
+                  {fieldErrors.company && <div className="auth-field-error">{fieldErrors.company}</div>}
+                </div>
+
+                <button className="auth-cta-btn amber" onClick={handleFinish} disabled={loading}>
+                  {loading ? <div className="auth-spinner" /> : <span>🚀 Launch My Dashboard</span>}
+                </button>
+                <div className="auth-resend-row" style={{ marginTop: 12 }}>
+                  <button className="auth-resend-btn" onClick={() => setOrgMode(null)}>← Back</button>
+                </div>
+              </div>
+            )}
+
+            {/* 3c — join existing org */}
+            {orgMode === 'join' && (
+              <div>
+                <div className="auth-sub" style={{ marginBottom: 14 }}>
+                  Search for your company and send a join request to their admin.
+                </div>
+
+                <div className="auth-field">
+                  <div className="auth-field-label">Company name</div>
+                  <div className="auth-field-wrap">
+                    <input
+                      type="text"
+                      className="auth-input-field"
+                      placeholder="Search by company name…"
+                      value={joinQuery}
+                      onChange={e => setJoinQuery(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleJoinSearch()}
+                    />
+                    <button className="auth-field-suffix-btn" type="button" onClick={handleJoinSearch}>
+                      {joinSearching ? '…' : 'Search'}
+                    </button>
+                  </div>
+                </div>
+
+                {joinSearched && !joinSearching && joinResults.length === 0 && (
+                  <div className="auth-alert info" style={{ marginBottom: 12 }}>
+                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>ℹ</span>
+                    <span>No companies matched. Check the spelling, or register your company instead.</span>
+                  </div>
+                )}
+
+                {joinResults.map(org => (
+                  <button
+                    key={org.org_id}
+                    className="auth-role-card"
+                    style={{ width: '100%', textAlign: 'left', marginBottom: 8, display: 'block' }}
+                    onClick={() => handleRequestJoin(org)}
+                    disabled={loading}
+                  >
+                    <div className="auth-role-name">{org.org_name}</div>
+                    <div className="auth-role-desc">
+                      {[org.org_type, org.org_address?.city, org.org_address?.state].filter(Boolean).join(' · ')}
+                      {org.allow_join_requests ? '' : ' · invitation only'}
+                    </div>
+                  </button>
+                ))}
+
+                <div className="auth-resend-row" style={{ marginTop: 12 }}>
+                  <button className="auth-resend-btn" onClick={() => setOrgMode(null)}>← Back</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
       </div>
 
       <div className="auth-switch-link">
