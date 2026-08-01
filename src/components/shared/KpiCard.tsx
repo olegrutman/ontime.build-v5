@@ -75,10 +75,10 @@ export function BarRow({ label, value, pct, barColor }: { label: string; value: 
 }
 
 /* ─── KPI Card ─── */
-export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, children, idx, spark }: {
+export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, children, idx, spark, headerAction }: {
   accent: string; icon: ReactNode; iconBg: string; label: string; value: string; sub: string;
   pills: { type: PillType; text: string }[]; children: ReactNode; idx: number;
-  spark?: ReactNode;
+  spark?: ReactNode; headerAction?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -97,8 +97,9 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, childr
         {/* Icon + Pills row — fixed height */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, minHeight: 36 }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }} className="sm:w-9 sm:h-9 sm:text-[18px]">{icon}</div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end', minHeight: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', minHeight: 22 }}>
             {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
+            {headerAction}
           </div>
         </div>
         {/* Label */}
