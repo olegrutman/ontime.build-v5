@@ -244,18 +244,18 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
-            {estimate.status === 'DRAFT' && (
-              <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                <Button variant="outline" size="sm" onClick={handleUploadClick}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Update
-                </Button>
+            <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+              <Button variant="outline" size="sm" onClick={handleUploadClick}>
+                <Upload className="h-4 w-4 mr-2" />
+                Update
+              </Button>
+              {estimate.status !== 'SUBMITTED' && (
                 <Button size="sm" onClick={handleSubmitEstimate}>
                   <Send className="h-4 w-4 mr-2" />
-                  Submit
+                  {estimate.status === 'DRAFT' ? 'Submit' : 'Resubmit'}
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       </CardContent>
@@ -269,22 +269,24 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
             </Badge>
           </div>
 
-          {estimate.status === 'DRAFT' && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleUploadClick}>
-                <Upload className="h-4 w-4 mr-2" />
-                Update
-              </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleUploadClick}>
+              <Upload className="h-4 w-4 mr-2" />
+              Update
+            </Button>
+            {estimate.status !== 'SUBMITTED' && (
               <Button size="sm" onClick={handleSubmitEstimate} disabled={estimateItems.length === 0}>
                 <Send className="h-4 w-4 mr-2" />
-                Submit for Review
+                {estimate.status === 'DRAFT' ? 'Submit for Review' : 'Resubmit for Review'}
               </Button>
+            )}
+            {estimate.status === 'DRAFT' && (
               <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(estimate.id)}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </Button>
-            </div>
-          )}
+            )}
+          </div>
 
           {loadingItems ? (
             <Skeleton className="h-32 w-full" />
