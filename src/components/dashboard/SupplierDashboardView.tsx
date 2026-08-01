@@ -360,14 +360,13 @@ export function SupplierDashboardView({
           <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="TOTAL ESTIMATE VALUE" value={fmt(totalEstimate)} sub={`Across ${dp.filter(p => p.estimate > 0).length} active projects`}
             pills={[{ type: 'pm', text: 'Estimates' }]} idx={0}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'Phase', 'Estimate', 'Notes', 'Action']} />
+              <THead cols={['Project', 'Phase', 'Estimate', 'Action']} />
               <tbody>
                 {dp.map((p, i) => (
                   <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                     <TdN>{p.name}</TdN>,
                     <span>{p.phase}</span>,
                     <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
-                    <span style={{ fontSize: '0.68rem' }}>{p.estimate === 0 ? 'Not started' : p.risk === 'Over Budget' ? 'Over Budget' : 'Active'}</span>,
                     <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/project/${p.projectId}`); }}
                       style={{
@@ -387,7 +386,7 @@ export function SupplierDashboardView({
                     </button>,
                   ]} />
                 ))}
-                <TRow isTotal cells={['—', '—', <TdM>{fmt(totalEstimate)}</TdM>, '—', '—']} />
+                <TRow isTotal cells={['—', '—', <TdM>{fmt(totalEstimate)}</TdM>, '—']} />
               </tbody>
             </table>
           </KpiCard>
