@@ -126,6 +126,46 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, userOrgRoles.length]);
 
+  // Existing pending join request → show waiting state instead of company step
+  useEffect(() => {
+    if (!user || userOrgRoles.length > 0) return;
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('org_join_requests')
+        .select('id, organization:organizations(name)')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .limit(1);
+      if (active && data && data.length > 0) {
+        setPendingOrgName((data[0].organization as { name?: string } | null)?.name || 'the organization');
+      }
+    })();
+    return () => { active = false; };
+  }, [user, userOrgRoles.length]);
+
+  // While waiting on email verification, detect it automatically (link clicked
+  // here or in another tab) and move the wizard forward.
+  useEffect(() => {
+    if (step !== 2) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user?.email_confirmed_at) {
+        refreshUserData();
+        setStep(3);
+      }
+    });
+    const poll = setInterval(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email_confirmed_at) {
+        clearInterval(poll);
+        await refreshUserData();
+        setStep(3);
+      }
+    }, 4000);
+    return () => { subscription.unsubscribe(); clearInterval(poll); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   const goToStep = (n: number) => {
     setStep(n);
     if (n === 2) {
