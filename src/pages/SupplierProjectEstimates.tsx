@@ -550,38 +550,40 @@ export default function SupplierProjectEstimates() {
                   </span>
                 </div>
 
-                {selectedEstimate.status === 'DRAFT' && (
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={async () => {
-                        const { data: suppliers } = await supabase
-                          .from('suppliers')
-                          .select('id')
-                          .eq('organization_id', currentOrg?.id)
-                          .limit(1);
-                        const sid = suppliers?.[0]?.id || '';
-                        setUploadWizard({
-                          open: true,
-                          estimateId: selectedEstimate.id,
-                          supplierId: sid,
-                          projectName: selectedEstimate.project?.name || '',
-                          estimateName: selectedEstimate.name,
-                        });
-                      }}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Update
-                    </Button>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={async () => {
+                      const { data: suppliers } = await supabase
+                        .from('suppliers')
+                        .select('id')
+                        .eq('organization_id', currentOrg?.id)
+                        .limit(1);
+                      const sid = suppliers?.[0]?.id || '';
+                      setUploadWizard({
+                        open: true,
+                        estimateId: selectedEstimate.id,
+                        supplierId: sid,
+                        projectName: selectedEstimate.project?.name || '',
+                        estimateName: selectedEstimate.name,
+                      });
+                    }}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Update
+                  </Button>
+                  {selectedEstimate.status !== 'SUBMITTED' && (
                     <Button 
                       size="sm"
                       onClick={handleSubmitEstimate}
                       disabled={estimateItems.length === 0}
                     >
                       <Send className="h-4 w-4 mr-2" />
-                      Submit for Review
+                      {selectedEstimate.status === 'DRAFT' ? 'Submit for Review' : 'Resubmit for Review'}
                     </Button>
+                  )}
+                  {selectedEstimate.status === 'DRAFT' && (
                     <Button
                       variant="destructive"
                       size="sm"
@@ -590,8 +592,8 @@ export default function SupplierProjectEstimates() {
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {loadingItems ? (
                   <Skeleton className="h-32 w-full" />

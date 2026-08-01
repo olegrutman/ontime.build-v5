@@ -480,31 +480,31 @@ export default function SupplierEstimates() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      {selectedEstimate.status === 'DRAFT' && (
-                        <>
-                          <div>
-                            <Input
-                              type="file"
-                              accept=".csv"
-                              onChange={handleFileUpload}
-                              className="hidden"
-                              id="csv-upload"
-                            />
-                            <Label htmlFor="csv-upload" className="cursor-pointer">
-                              <Button variant="outline" asChild>
-                                <span>
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Upload CSV
-                                </span>
-                              </Button>
-                            </Label>
-                          </div>
+                      <>
+                        <div>
+                          <Input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            id="csv-upload"
+                          />
+                          <Label htmlFor="csv-upload" className="cursor-pointer">
+                            <Button variant="outline" asChild>
+                              <span>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Upload CSV
+                              </span>
+                            </Button>
+                          </Label>
+                        </div>
+                        {selectedEstimate.status !== 'SUBMITTED' && (
                           <Button onClick={() => handleSubmitEstimate(selectedEstimate.id)}>
                             <Send className="h-4 w-4 mr-2" />
-                            Submit
+                            {selectedEstimate.status === 'DRAFT' ? 'Submit' : 'Resubmit'}
                           </Button>
-                        </>
-                      )}
+                        )}
+                      </>
                     </div>
                   </div>
                 </CardHeader>
