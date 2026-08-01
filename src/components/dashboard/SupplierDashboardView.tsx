@@ -375,12 +375,11 @@ export function SupplierDashboardView({
             ) : undefined}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'Phase', 'Estimate', 'Action']} />
+              <THead cols={['Project', 'Estimate', 'Action']} />
               <tbody>
                 {dp.map((p, i) => (
                   <TRow key={i} onClick={() => goToProject(p.projectId)} cells={[
                     <TdN>{p.name}</TdN>,
-                    <span>{p.phase}</span>,
                     <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
                     <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/project/${p.projectId}`); }}
@@ -393,7 +392,7 @@ export function SupplierDashboardView({
                     </button>,
                   ]} />
                 ))}
-                <TRow isTotal cells={['—', '—', <TdM>{fmt(totalEstimate)}</TdM>, '—']} />
+                <TRow isTotal cells={['—', <TdM>{fmt(totalEstimate)}</TdM>, '—']} />
               </tbody>
             </table>
           </KpiCard>
