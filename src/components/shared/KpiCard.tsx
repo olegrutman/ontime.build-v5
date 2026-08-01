@@ -75,10 +75,10 @@ export function BarRow({ label, value, pct, barColor }: { label: string; value: 
 }
 
 /* ─── KPI Card ─── */
-export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, children, idx, spark }: {
+export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, children, idx, spark, headerAction }: {
   accent: string; icon: ReactNode; iconBg: string; label: string; value: string; sub: string;
   pills: { type: PillType; text: string }[]; children: ReactNode; idx: number;
-  spark?: ReactNode;
+  spark?: ReactNode; headerAction?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return (
