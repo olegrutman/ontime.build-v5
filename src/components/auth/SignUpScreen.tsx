@@ -338,7 +338,54 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
     navigate('/dashboard', { replace: true });
   };
 
+  /* ── Step 3 (join path): search orgs + request to join ── */
+  const handleJoinSearch = async () => {
+    setJoinSearching(true);
+    setJoinSearched(true);
+    const { data, error } = await supabase.rpc('search_organizations_for_join', {
+      _state: null,
+      _trade: null,
+      _query: joinQuery || null,
+      _limit: 25,
+    });
+    setJoinResults(!error && data ? (data as unknown as JoinOrg[]) : []);
+    setJoinSearching(false);
+  };
+
+  const handleRequestJoin = async (org: JoinOrg) => {
+    setFieldErrors({});
+    if (!org.allow_join_requests) {
+      setFieldErrors({ form: `${org.org_name} requires an invitation. Ask their admin to invite you.` });
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setFieldErrors({ form: 'Your session expired. Please sign in again.' });
+      return;
+    }
+    setLoading(true);
+    const nameParts = (name || '').trim().split(/\s+/);
+    await supabase.from('profiles').update({
+      first_name: nameParts[0] || '',
+      last_name: nameParts.slice(1).join(' ') || '',
+      full_name: (name || '').trim(),
+    }).eq('user_id', session.user.id);
+
+    const { error } = await supabase.from('org_join_requests').insert({
+      organization_id: org.org_id,
+      user_id: session.user.id,
+    });
+    setLoading(false);
+    if (error) {
+      setFieldErrors({ form: error.message });
+      return;
+    }
+    localStorage.removeItem(PENDING_KEY);
+    setPendingOrgName(org.org_name);
+  };
+
   const contact = method === 'email' ? email : phone;
+
 
   return (
     <div className="auth-screen-enter">
