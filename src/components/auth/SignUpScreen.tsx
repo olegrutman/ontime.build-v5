@@ -57,12 +57,19 @@ export function SignUpScreen({ onSignUp, onGoogleSignIn, onGoToSignIn, onSuccess
   const [otpErrorMsg, setOtpErrorMsg] = useState<string>('Incorrect code. Please try again or request a new one.');
   const [resendSeconds, setResendSeconds] = useState(30);
   const [resendNotice, setResendNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showCodeEntry, setShowCodeEntry] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
 
-  // Step 3 - Role
+  // Step 3 - Company: choose new org vs join existing
+  const [orgMode, setOrgMode] = useState<'new' | 'join' | null>(null);
   const [selectedRole, setSelectedRole] = useState('gc');
   const [company, setCompany] = useState('');
+  const [joinQuery, setJoinQuery] = useState('');
+  const [joinResults, setJoinResults] = useState<JoinOrg[]>([]);
+  const [joinSearching, setJoinSearching] = useState(false);
+  const [joinSearched, setJoinSearched] = useState(false);
+  const [pendingOrgName, setPendingOrgName] = useState<string | null>(null);
 
   const formatPhoneInput = (val: string) => {
     let v = val.replace(/\D/g, '');
