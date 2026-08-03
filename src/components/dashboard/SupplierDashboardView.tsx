@@ -213,7 +213,7 @@ export function SupplierDashboardView({
               onClick={() => navigate('/projects/archive')}
               style={{ fontSize: '0.68rem', fontWeight: 700, color: C.amber, background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              View all ({activeProjects.length}) →
+              View archive →
             </button>
           </div>
           {activeProjects.length === 0 ? (
