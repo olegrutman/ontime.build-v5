@@ -10,6 +10,8 @@ import { C, fontVal, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, 
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCashPipeline';
 import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
+import { SupplierNeedsAction } from '@/components/dashboard/supplier/SupplierNeedsAction';
+
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -186,6 +188,9 @@ export function SupplierDashboardView({
           activeProjects={activeProjectCount}
         />
 
+        {/* ─── Needs your action ─── */}
+        <SupplierNeedsAction rows={dp} deliveries={upcomingDeliveries} />
+
         {/* ─── Secondary metric strip ─── */}
         <SupplierMetricStrip
           activeProjects={activeProjectCount}
@@ -193,6 +198,7 @@ export function SupplierDashboardView({
           upcomingDeliveries={upcomingDeliveries.length}
           avgDaysSincePayment={avgDaysSincePayment}
         />
+
 
         {/* ─── My Projects — primary, always-visible entry point ─── */}
         <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
