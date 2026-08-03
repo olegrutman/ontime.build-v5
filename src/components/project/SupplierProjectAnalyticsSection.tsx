@@ -47,7 +47,9 @@ function Sparkline({ values, color = C.amber }: { values: number[]; color?: stri
 
 export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTotal, orderedTotal, onNavigate }: Props) {
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>('ALL');
+
 
   if (loading || !analytics) {
     return (
