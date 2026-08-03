@@ -297,6 +297,44 @@ export function SupplierCashPipeline({
           <StageCell key={s.key} s={s} index={i} total={stages.length} />
         ))}
       </div>
+
+      {/* ─── Unified composition bar: where the whole pipeline sits ─── */}
+      {(() => {
+        const base = Math.max(totalEstimate, totalOrdered, 1);
+        const notBilled = Math.max(0, totalOrdered - totalBilled);
+        const notOrdered = Math.max(0, totalEstimate - totalOrdered);
+        const segs = [
+          { label: 'Received', value: totalReceived, color: C.green },
+          { label: 'Outstanding', value: totalOutstanding, color: C.red },
+          { label: 'Not billed', value: notBilled, color: C.blue },
+          { label: 'Not ordered', value: notOrdered, color: C.border },
+        ].filter(s => s.value > 0);
+        if (segs.length === 0) return null;
+        return (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: 'flex', height: 10, borderRadius: 999, overflow: 'hidden', background: C.surface2 }}>
+              {segs.map(s => (
+                <div
+                  key={s.label}
+                  title={`${s.label}: ${fmt(s.value)}`}
+                  style={{ width: `${(s.value / base) * 100}%`, background: s.color }}
+                />
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 8 }}>
+              {segs.map(s => (
+                <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.64rem', color: C.muted, ...fontLabel }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color }} />
+                  <span style={{ fontWeight: 700, color: C.ink }}>{s.label}</span>
+                  <span style={{ ...fontMono, fontSize: '0.64rem' }}>{fmt(s.value)}</span>
+                  <span>({Math.round((s.value / base) * 100)}%)</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }
