@@ -174,7 +174,11 @@ export function SupplierDashboardView({
         <OrgInviteBanner />
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={handleRefresh} />}
 
+        {/* ─── Project snapshot funnel ─── */}
+        <SupplierProjectSnapshot rows={dp} deliveries={upcomingDeliveries} />
+
         {/* ─── NEW HERO: Cash Pipeline ─── */}
+
         <SupplierCashPipeline
           totalEstimate={totalEstimate}
           totalOrdered={totalOrdered}
