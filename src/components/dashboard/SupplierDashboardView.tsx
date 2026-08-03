@@ -186,6 +186,9 @@ export function SupplierDashboardView({
           activeProjects={activeProjectCount}
         />
 
+        {/* ─── Needs your action ─── */}
+        <SupplierNeedsAction rows={dp} deliveries={upcomingDeliveries} />
+
         {/* ─── Secondary metric strip ─── */}
         <SupplierMetricStrip
           activeProjects={activeProjectCount}
@@ -193,6 +196,7 @@ export function SupplierDashboardView({
           upcomingDeliveries={upcomingDeliveries.length}
           avgDaysSincePayment={avgDaysSincePayment}
         />
+
 
         {/* ─── My Projects — primary, always-visible entry point ─── */}
         <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
