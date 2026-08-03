@@ -8,6 +8,9 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useSupplierProjectAnalytics } from '@/hooks/useSupplierProjectAnalytics';
 import { SupplierProjectAnalyticsSection } from './SupplierProjectAnalyticsSection';
 import { LadderCard } from '@/components/shared/LadderCard';
+import { SupplierProjectFunnel } from './supplier/SupplierProjectFunnel';
+import { SupplierStatStrip, type StatTile } from './supplier/SupplierStatStrip';
+
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -168,18 +171,48 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     packsOrderedCount,
   });
 
+  // ─── Snapshot inputs ───
+  const projectOverBy = Math.max(0, totalOrdered - totalEstimate);
+  const packsOverCount = packNames.filter(p => (orderedByPack[p] || 0) > packTotals[p]).length;
+  const packOverBy = packNames.reduce((s, p) => s + Math.max(0, (orderedByPack[p] || 0) - packTotals[p]), 0);
+  const snapshotOverBy = projectOverBy > 0 ? projectOverBy : packOverBy;
+
+  const lastPaidAt = paidInvoices
+    .map(i => i.paid_at)
+    .filter((d): d is string => !!d)
+    .sort()
+    .pop();
+  const daysSinceLastPayment = lastPaidAt
+    ? Math.floor((Date.now() - new Date(lastPaidAt).getTime()) / 86_400_000)
+    : null;
+
+  // ─── Which KPI stages actually have data ───
+  const cardHasData = {
+    estimate: totalEstimate > 0,
+    ordered: totalOrdered > 0,
+    deliveries: deliveryCount > 0,
+    billed: totalBilled > 0,
+    received: totalReceived > 0,
+    outstanding: outstanding > 0 || futureUnbilled > 0,
+  };
+
+  const emptyTiles: StatTile[] = [
+    !cardHasData.estimate && { label: 'Estimate value', value: 0, hint: 'No estimate yet', tab: 'estimates' },
+    !cardHasData.ordered && { label: 'Total ordered', value: 0, hint: 'No POs issued', tab: 'purchase-orders' },
+    !cardHasData.deliveries && { label: 'Deliveries', value: '0', raw: true, hint: 'None scheduled', tab: 'purchase-orders' },
+    !cardHasData.billed && { label: 'Total billed', value: 0, hint: 'No invoices', tab: 'invoices' },
+    !cardHasData.received && { label: 'Total received', value: 0, hint: 'No payments', tab: 'invoices' },
+    !cardHasData.outstanding && { label: 'Outstanding', value: 0, hint: 'All clear', tab: 'invoices' },
+  ].filter(Boolean) as StatTile[];
+
+  const anyCardVisible = Object.values(cardHasData).some(Boolean);
+
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, ...fontLabel }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.amber, flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: C.ink }}>{projectName}</div>
-            <div style={{ fontSize: '0.72rem', color: C.muted }}>Supplier · {supplierName}</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {/* Action bar — project name lives in the page hero above */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, ...fontLabel }}>
+        <div style={{ fontSize: '0.74rem', color: C.muted, fontWeight: 600 }}>Supplier · {supplierName}</div>
+        <div className="flex flex-wrap gap-2">
           {unpricedPOs.length > 0 && (
             <button onClick={() => onNavigate('purchase-orders')} style={{ padding: '8px 16px', borderRadius: 8, background: C.blue, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Price {unpricedPOs.length} PO{unpricedPOs.length > 1 ? 's' : ''}</button>
           )}
@@ -189,6 +222,21 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
           <button onClick={() => onNavigate('estimates')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>Estimates</button>
         </div>
       </div>
+
+      {/* ─── Project snapshot funnel — the one card that tells the whole story ─── */}
+      <SupplierProjectFunnel
+        projectName={projectName}
+        supplierName={supplierName}
+        estimate={totalEstimate}
+        ordered={totalOrdered}
+        billed={totalBilled}
+        received={totalReceived}
+        overBy={snapshotOverBy}
+        packsOverCount={packsOverCount}
+        daysSinceLastPayment={daysSinceLastPayment}
+        upcomingDeliveries={scheduledPOs.length}
+        onNavigate={onNavigate}
+      />
 
       {/* Action Queue — surfaced above KPIs so suppliers see what's on them first */}
       {warnings.length > 0 && (
@@ -200,11 +248,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         </div>
       )}
 
-      {/* 6 KPI Cards — 3-col grid */}
-      <KpiGrid>
+      {/* Compact strip for stages with no data yet */}
+      <SupplierStatStrip tiles={emptyTiles} onNavigate={onNavigate} />
 
+      {/* KPI cards — only stages that actually have data */}
+      {anyCardVisible && (
+      <KpiGrid>
         {/* Card 1 — Estimate Value */}
+        {cardHasData.estimate && (
         <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="ESTIMATE VALUE (THIS PROJECT)" value={totalEstimate > 0 ? fmt(totalEstimate) : '—'} sub={`Total material estimate for ${projectName}`} pills={totalEstimate > 0 ? [{ type: 'pn', text: 'Estimate' }] : [{ type: 'pm', text: 'No Estimate' }]} idx={0}>
+
           <div style={{ padding: 12 }}>
             {packNames.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -223,9 +276,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             )}
           </div>
         </KpiCard>
+        )}
 
         {/* Card 2 — Total Ordered */}
+        {cardHasData.ordered && (
         <KpiCard accent={C.amber} icon="📦" iconBg={C.amberPale} label="TOTAL ORDERED (POs ISSUED)" value={totalOrdered > 0 ? fmt(totalOrdered) : '$0'} sub={totalEstimate > 0 ? `${orderedPct}% of estimate · ${fmt(totalEstimate - totalOrdered)} remaining to order` : `${orderedPOs.length} POs`} pills={orderedPct > 0 ? [{ type: 'pa', text: `${orderedPct}% of est` }] : [{ type: 'pm', text: 'No orders' }]} idx={1}>
+
           <div style={{ padding: 12 }}>
             {packNames.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -261,9 +317,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             )}
           </div>
         </KpiCard>
+        )}
 
         {/* Card 3 — Deliveries */}
+        {cardHasData.deliveries && (
         <KpiCard accent={C.blue} icon="🚚" iconBg={C.blueBg} label="DELIVERIES (THIS PROJECT)" value={`${deliveryCount}`} sub={`${scheduledPOs.length} scheduled · ${deliveredPOs.length} completed`} pills={scheduledPOs.length > 0 ? [{ type: 'pb', text: `${scheduledPOs.length} pending` }] : deliveredPOs.length > 0 ? [{ type: 'pg', text: 'All delivered' }] : [{ type: 'pm', text: 'None' }]} idx={2}>
+
           <div style={{ padding: 12 }}>
             {(scheduledPOs.length > 0 || deliveredPOs.length > 0) ? (
               <div>
@@ -294,9 +353,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             <button onClick={() => onNavigate('purchase-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>View All Purchase Orders</button>
           </div>
         </KpiCard>
+        )}
 
         {/* Card 4 — Total Billed */}
+        {cardHasData.billed && (
         <KpiCard accent={C.blue} icon="🧾" iconBg={C.blueBg} label="TOTAL BILLED (INVOICED)" value={totalBilled > 0 ? fmt(totalBilled) : '$0'} sub={totalOrdered > 0 ? `${billedPct}% of ordered value invoiced` : 'No orders to invoice against'} pills={billedPct > 0 ? [{ type: 'pb', text: `${billedPct}% billed` }] : [{ type: 'pm', text: 'No invoices' }]} idx={3}>
+
           <div style={{ padding: 12 }}>
             {nonDraftInvoices.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -318,9 +380,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit New Invoice</button>
           </div>
         </KpiCard>
+        )}
 
         {/* Card 5 — Total Received */}
+        {cardHasData.received && (
         <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="TOTAL RECEIVED" value={fmt(totalReceived)} sub={totalBilled > 0 ? `${receivedPct}% of billed · ${fmt(outstanding)} outstanding` : 'No payments received'} pills={receivedPct > 0 ? [{ type: 'pg', text: `${receivedPct}% collected` }] : [{ type: 'pm', text: 'None' }]} idx={4}>
+
           <div style={{ padding: 12 }}>
             {paidInvoices.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -342,9 +407,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             )}
           </div>
         </KpiCard>
+        )}
 
         {/* Card 6 — Outstanding Balance */}
+        {cardHasData.outstanding && (
         <KpiCard accent={C.yellow} icon="💵" iconBg={C.yellowBg} label="OUTSTANDING BALANCE" value={outstanding > 0 ? fmt(outstanding) : '$0'} sub={futureUnbilled > 0 ? `Plus ${fmt(futureUnbilled)} not yet invoiced` : 'All ordered value invoiced'} pills={outstanding > 0 ? [{ type: 'pw', text: 'Receivable' }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
+
           <div style={{ padding: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Amount', 'Notes']} />
@@ -360,7 +428,10 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             </table>
           </div>
         </KpiCard>
+        )}
       </KpiGrid>
+      )}
+
 
       {/* Phase A — Per-project supplier analytics */}
       <SupplierProjectAnalyticsSection
