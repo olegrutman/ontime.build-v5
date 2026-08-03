@@ -299,6 +299,8 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
           </div>
         </KpiCard>
       </KpiGrid>
+      )}
+
 
       {/* Project Activity Timeline */}
       <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
