@@ -108,14 +108,20 @@ export default function ProjectHome() {
   const { isDemoMode, demoRole } = useDemo();
   const isInDemoMode = isDemoMode && id?.startsWith('demo-');
 
-  const currentOrg = userOrgRoles[0]?.organization;
+  // A user can hold roles in several orgs. Prefer the SUPPLIER org when present so
+  // supplier users always land on the supplier view instead of the GC overview.
+  const currentOrg =
+    userOrgRoles.find(r => r.organization?.type === 'SUPPLIER')?.organization ??
+    userOrgRoles[0]?.organization;
   const isRealSupplier = isInDemoMode ? demoRole === 'SUPPLIER' : currentOrg?.type === 'SUPPLIER';
 
   const isFC = isInDemoMode ? demoRole === 'FC' : currentOrg?.type === 'FC';
   const isTC = isInDemoMode ? demoRole === 'TC' : currentOrg?.type === 'TC';
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
   const isSupplier = isRealSupplier || isDesignatedSupplier;
-  const supplierOrgId = isRealSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
+  // Designated suppliers also need an org id, otherwise the supplier render gate
+  // falls through to the GC overview.
+  const supplierOrgId = isSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
 
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
