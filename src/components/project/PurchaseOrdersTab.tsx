@@ -99,6 +99,17 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     updatePOSearchParam(null);
   }, [updatePOSearchParam]);
 
+  // ?action=create (from the project quick-actions bar) opens the PO wizard directly
+  useEffect(() => {
+    if (searchParams.get('action') !== 'create') return;
+    setWizardOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+
+
   const posQueryKey = useMemo(() => ['project-purchase-orders', projectId, isSupplier, currentOrgId] as const, [projectId, isSupplier, currentOrgId]);
 
   const { data: poData, isLoading: loading, refetch: refetchPOs } = useQuery({
