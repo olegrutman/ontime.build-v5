@@ -118,7 +118,9 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
     <div className="space-y-4">
       {SectionHeader}
 
+      {analyticsOpen && (
       <KpiGrid>
+
         {/* Card 7 — Sell-Through */}
         <KpiCard
           accent={C.amber}
