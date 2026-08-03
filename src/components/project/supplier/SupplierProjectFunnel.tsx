@@ -62,17 +62,24 @@ export function SupplierProjectFunnel({
 
   const hasActivity = estimate > 0 || ordered > 0 || billed > 0 || received > 0;
 
-  // Next best action based on where the pipeline stalls
-  const nextAction =
+  // Next best action based on where the pipeline stalls.
+  // Suppliers never issue POs — a stalled "ordered" stage is a wait state, not a CTA.
+  const nextAction: { text: string; label: string; tab: string } | null =
     estimate === 0
       ? { text: 'Add an estimate to set the material budget', label: 'Add estimate', tab: 'estimates' }
       : ordered === 0
-        ? { text: `Nothing ordered against ${fmt(estimate)} estimate`, label: 'Create purchase order', tab: 'purchase-orders' }
+        ? null
         : billed < ordered
           ? { text: `${fmt(ordered - billed)} ready to invoice`, label: 'Submit invoice', tab: 'invoices' }
           : outstanding > 0
             ? { text: `${fmt(outstanding)} invoiced and awaiting payment`, label: 'View invoices', tab: 'invoices' }
             : null;
+
+  // Wait state copy shown when the ball is in the GC's court
+  const waitNote =
+    estimate > 0 && ordered === 0
+      ? `Nothing ordered against ${fmt(estimate)} estimate — waiting on a purchase order from the GC`
+      : null;
 
   return (
     <div className="rounded-2xl p-4 sm:p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
