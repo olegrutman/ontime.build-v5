@@ -61,18 +61,28 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
 
   const a = analytics;
 
-  // Section header
+  // Section header — collapsed by default so the page opens on the essentials
   const SectionHeader = (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: -4, ...fontLabel }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 4, height: 18, background: C.amber, borderRadius: 2 }} />
+    <button
+      type="button"
+      onClick={() => setAnalyticsOpen(o => !o)}
+      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, cursor: 'pointer', textAlign: 'left', ...fontLabel }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <div style={{ width: 4, height: 18, background: C.amber, borderRadius: 2, flexShrink: 0 }} />
         <div style={{ fontSize: '0.86rem', fontWeight: 800, color: C.ink, textTransform: 'uppercase', letterSpacing: 0.4 }}>
           Project Analytics
         </div>
+        <span className="hidden sm:inline" style={{ fontSize: '0.66rem', color: C.muted }}>
+          sell-through, A/R, ops, returns, margin, demand
+        </span>
       </div>
-      <div style={{ fontSize: '0.68rem', color: C.muted }}>Real-world yard view · sell-through, A/R, ops, returns, margin, demand</div>
-    </div>
+      <span style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 700, flexShrink: 0 }}>
+        {analyticsOpen ? '▾ Collapse' : '▸ Expand'}
+      </span>
+    </button>
   );
+
 
   // ── Card 7: Sell-Through ──
   const stalePill: PillType =
