@@ -10,6 +10,7 @@ import { SupplierProjectAnalyticsSection } from './SupplierProjectAnalyticsSecti
 import { LadderCard } from '@/components/shared/LadderCard';
 import { SupplierProjectFunnel } from './supplier/SupplierProjectFunnel';
 import { SupplierStatStrip, type StatTile } from './supplier/SupplierStatStrip';
+import { isCountedEstimate, isOrderedPO, isBilledInvoice, isReceivedInvoice, poOrderedAmount } from '@/lib/supplierMetrics';
 
 
 /* ═══════════════════════════════════════════════════ */
@@ -57,8 +58,10 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     enabled: !!projectId && !!supplierId,
   });
 
-  // Fetch estimates for this project + supplier org
-  const { data: estimates = [] } = useQuery({
+  // Fetch estimates for this project + supplier org.
+  // Canonical "Estimated" counts APPROVED only (see @/lib/supplierMetrics) — we still
+  // fetch SUBMITTED so the estimate card can hint at pending submissions.
+  const { data: allEstimates = [] } = useQuery({
     queryKey: ['sup-proj-estimates', projectId, currentOrgId],
     queryFn: async () => {
       const { data } = await supabase
@@ -71,6 +74,8 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     },
     enabled: !!projectId && !!currentOrgId,
   });
+  const estimates = allEstimates.filter(e => isCountedEstimate(e.status));
+
 
   // Fetch estimate items for pack breakdown
   const estimateIds = estimates.map(e => e.id);
@@ -113,16 +118,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   });
   const packNames = Object.keys(packTotals);
 
-  // Ordered = non-ACTIVE POs
-  const orderedPOs = pos.filter(p => p.status !== 'ACTIVE');
-  const totalOrdered = orderedPOs.reduce((s, p) => s + (p.po_total || 0), 0);
+  // Ordered = committed POs, tax-inclusive (canonical)
+  const orderedPOs = pos.filter(p => isOrderedPO(p.status));
+  const totalOrdered = orderedPOs.reduce((s, p) => s + poOrderedAmount(p), 0);
   const orderedPct = totalEstimate > 0 ? Math.round((totalOrdered / totalEstimate) * 100) : 0;
 
   // Pack ordered breakdown
   const orderedByPack: Record<string, number> = {};
   orderedPOs.forEach(po => {
     const pack = po.source_pack_name || po.po_name || 'Other';
-    orderedByPack[pack] = (orderedByPack[pack] || 0) + (po.po_total || 0);
+    orderedByPack[pack] = (orderedByPack[pack] || 0) + poOrderedAmount(po);
   });
 
   // Deliveries
@@ -130,12 +135,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const scheduledPOs = pos.filter(p => p.status === 'ORDERED');
   const deliveryCount = deliveredPOs.length + scheduledPOs.length;
 
-  // Invoice metrics
-  const nonDraftInvoices = invoices.filter(i => i.status !== 'DRAFT');
+  // Invoice metrics (canonical: SUBMITTED/APPROVED/PAID count as billed)
+  const nonDraftInvoices = invoices.filter(i => isBilledInvoice(i.status));
   const totalBilled = nonDraftInvoices.reduce((s, i) => s + (i.total_amount || 0), 0);
   const billedPct = totalOrdered > 0 ? Math.round((totalBilled / totalOrdered) * 100) : 0;
 
-  const paidInvoices = invoices.filter(i => i.status === 'PAID');
+  const paidInvoices = invoices.filter(i => isReceivedInvoice(i.status));
   const totalReceived = paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0);
   const receivedPct = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0;
 

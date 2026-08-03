@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth, subMonths, differenceInDays, addDays, startOfWeek } from 'date-fns';
+import {
+  isCountedEstimate,
+  isOrderedPO,
+  isBilledInvoice,
+  isReceivedInvoice,
+  poOrderedAmount,
+} from '@/lib/supplierMetrics';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -593,32 +600,29 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         ensure(p.project_id, p.projects?.name || 'Unknown', p.projects?.project_type ?? null, p.projects?.status ?? null);
       });
 
-      // Estimates → estimate (APPROVED only)
+      // Estimates → estimate (canonical: APPROVED only, see @/lib/supplierMetrics)
       allEstimates.forEach((est: any) => {
-        if (!est.project_id || est.status !== 'APPROVED') return;
+        if (!est.project_id || !isCountedEstimate(est.status)) return;
         const row = ensure(est.project_id, est.projects?.name || 'Unknown');
         row.estimate += est.total_amount || 0;
       });
 
-      // POs → ordered (exclude pre-submission/in-negotiation states; only count committed POs)
-      // Apply sales tax to po_total so we compare apples-to-apples with tax-inclusive estimates.
-      const orderedExcludeStatuses = new Set(['ACTIVE', 'DRAFT', 'CANCELLED', 'SUBMITTED', 'PRICED']);
+      // POs → ordered (canonical: committed POs only, grossed up by sales tax)
       allPOs.forEach((po: any) => {
-        if (!po.project_id || orderedExcludeStatuses.has(po.status)) return;
+        if (!po.project_id || !isOrderedPO(po.status)) return;
         const row = ensure(po.project_id, po.projects?.name || 'Unknown');
-        const taxMultiplier = 1 + ((po.sales_tax_percent || 0) / 100);
-        row.ordered += (po.po_total || 0) * taxMultiplier;
+        row.ordered += poOrderedAmount(po);
       });
 
-      // Invoices → billed + received + lastPaymentDate
+      // Invoices → billed + received + lastPaymentDate (canonical statuses)
       const lastPaidByProject: Record<string, Date> = {};
       allInvoices.forEach((inv: any) => {
         if (!inv.project_id) return;
         const row = ensure(inv.project_id, '');
-        if (['SUBMITTED', 'APPROVED', 'PAID'].includes(inv.status)) {
+        if (isBilledInvoice(inv.status)) {
           row.billed += inv.total_amount || 0;
         }
-        if (inv.status === 'PAID') {
+        if (isReceivedInvoice(inv.status)) {
           row.received += inv.total_amount || 0;
           if (inv.paid_at) {
             const d = new Date(inv.paid_at);
@@ -633,7 +637,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       // packEstimate[projectId][packName] = Σ line_total of APPROVED estimate items for that pack
       // packOrdered[projectId][packName]  = Σ po_total × (1 + tax) for committed POs sourced from that pack
       const approvedEstIds = new Set(
-        allEstimates.filter((e: any) => e.status === 'APPROVED' && e.project_id).map((e: any) => e.id)
+        allEstimates.filter((e: any) => isCountedEstimate(e.status) && e.project_id).map((e: any) => e.id)
       );
       const estProjectMap: Record<string, string> = {};
       allEstimates.forEach((e: any) => { if (e.id && e.project_id) estProjectMap[e.id] = e.project_id; });
@@ -652,14 +656,13 @@ export function useSupplierDashboardData(): SupplierDashboardData {
 
       allPOs.forEach((po: any) => {
         if (!po.project_id || !po.source_pack_name) return;
-        if (orderedExcludeStatuses.has(po.status)) return;
+        if (!isOrderedPO(po.status)) return;
         // Only count POs whose source estimate is APPROVED to keep apples-to-apples with packEstimate
         if (po.source_estimate_id && !approvedEstIds.has(po.source_estimate_id)) return;
         const pid = po.project_id;
         if (!packOrdered[pid]) packOrdered[pid] = {};
-        const taxMultiplier = 1 + ((po.sales_tax_percent || 0) / 100);
         packOrdered[pid][po.source_pack_name] =
-          (packOrdered[pid][po.source_pack_name] || 0) + (po.po_total || 0) * taxMultiplier;
+          (packOrdered[pid][po.source_pack_name] || 0) + poOrderedAmount(po);
       });
 
       const packStatsByProject: Record<string, { count: number; overBy: number; worstPct: number; details: PackOverDetail[] }> = {};

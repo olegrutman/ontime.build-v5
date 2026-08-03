@@ -76,7 +76,7 @@ export function useSupplierProjectAnalytics({
   estimateTotal, orderedTotal, packCount, packsOrderedCount,
 }: Args) {
   return useQuery<SupplierProjectAnalytics>({
-    queryKey: ['supplier-project-analytics', projectId, supplierId, supplierOrgId, estimateTotal, orderedTotal],
+    queryKey: ['supplier-project-analytics', projectId, supplierId, supplierOrgId, estimateTotal, orderedTotal, packCount, packsOrderedCount],
     enabled: !!projectId && !!supplierId,
     queryFn: async () => {
       const now = new Date();
