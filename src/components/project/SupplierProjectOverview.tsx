@@ -57,8 +57,10 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     enabled: !!projectId && !!supplierId,
   });
 
-  // Fetch estimates for this project + supplier org
-  const { data: estimates = [] } = useQuery({
+  // Fetch estimates for this project + supplier org.
+  // Canonical "Estimated" counts APPROVED only (see @/lib/supplierMetrics) — we still
+  // fetch SUBMITTED so the estimate card can hint at pending submissions.
+  const { data: allEstimates = [] } = useQuery({
     queryKey: ['sup-proj-estimates', projectId, currentOrgId],
     queryFn: async () => {
       const { data } = await supabase
@@ -71,6 +73,8 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     },
     enabled: !!projectId && !!currentOrgId,
   });
+  const estimates = allEstimates.filter(e => isCountedEstimate(e.status));
+
 
   // Fetch estimate items for pack breakdown
   const estimateIds = estimates.map(e => e.id);
