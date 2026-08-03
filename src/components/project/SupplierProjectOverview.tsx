@@ -273,9 +273,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             )}
           </div>
         </KpiCard>
+        )}
 
         {/* Card 2 — Total Ordered */}
+        {cardHasData.ordered && (
         <KpiCard accent={C.amber} icon="📦" iconBg={C.amberPale} label="TOTAL ORDERED (POs ISSUED)" value={totalOrdered > 0 ? fmt(totalOrdered) : '$0'} sub={totalEstimate > 0 ? `${orderedPct}% of estimate · ${fmt(totalEstimate - totalOrdered)} remaining to order` : `${orderedPOs.length} POs`} pills={orderedPct > 0 ? [{ type: 'pa', text: `${orderedPct}% of est` }] : [{ type: 'pm', text: 'No orders' }]} idx={1}>
+
           <div style={{ padding: 12 }}>
             {packNames.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -311,9 +314,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             )}
           </div>
         </KpiCard>
+        )}
 
         {/* Card 3 — Deliveries */}
+        {cardHasData.deliveries && (
         <KpiCard accent={C.blue} icon="🚚" iconBg={C.blueBg} label="DELIVERIES (THIS PROJECT)" value={`${deliveryCount}`} sub={`${scheduledPOs.length} scheduled · ${deliveredPOs.length} completed`} pills={scheduledPOs.length > 0 ? [{ type: 'pb', text: `${scheduledPOs.length} pending` }] : deliveredPOs.length > 0 ? [{ type: 'pg', text: 'All delivered' }] : [{ type: 'pm', text: 'None' }]} idx={2}>
+
           <div style={{ padding: 12 }}>
             {(scheduledPOs.length > 0 || deliveredPOs.length > 0) ? (
               <div>
@@ -344,9 +350,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             <button onClick={() => onNavigate('purchase-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>View All Purchase Orders</button>
           </div>
         </KpiCard>
+        )}
 
         {/* Card 4 — Total Billed */}
+        {cardHasData.billed && (
         <KpiCard accent={C.blue} icon="🧾" iconBg={C.blueBg} label="TOTAL BILLED (INVOICED)" value={totalBilled > 0 ? fmt(totalBilled) : '$0'} sub={totalOrdered > 0 ? `${billedPct}% of ordered value invoiced` : 'No orders to invoice against'} pills={billedPct > 0 ? [{ type: 'pb', text: `${billedPct}% billed` }] : [{ type: 'pm', text: 'No invoices' }]} idx={3}>
+
           <div style={{ padding: 12 }}>
             {nonDraftInvoices.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -368,9 +377,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit New Invoice</button>
           </div>
         </KpiCard>
+        )}
 
         {/* Card 5 — Total Received */}
+        {cardHasData.received && (
         <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="TOTAL RECEIVED" value={fmt(totalReceived)} sub={totalBilled > 0 ? `${receivedPct}% of billed · ${fmt(outstanding)} outstanding` : 'No payments received'} pills={receivedPct > 0 ? [{ type: 'pg', text: `${receivedPct}% collected` }] : [{ type: 'pm', text: 'None' }]} idx={4}>
+
           <div style={{ padding: 12 }}>
             {paidInvoices.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -392,9 +404,12 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             )}
           </div>
         </KpiCard>
+        )}
 
         {/* Card 6 — Outstanding Balance */}
+        {cardHasData.outstanding && (
         <KpiCard accent={C.yellow} icon="💵" iconBg={C.yellowBg} label="OUTSTANDING BALANCE" value={outstanding > 0 ? fmt(outstanding) : '$0'} sub={futureUnbilled > 0 ? `Plus ${fmt(futureUnbilled)} not yet invoiced` : 'All ordered value invoiced'} pills={outstanding > 0 ? [{ type: 'pw', text: 'Receivable' }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
+
           <div style={{ padding: 12 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Amount', 'Notes']} />
@@ -410,7 +425,10 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             </table>
           </div>
         </KpiCard>
+        )}
       </KpiGrid>
+      )}
+
 
       {/* Phase A — Per-project supplier analytics */}
       <SupplierProjectAnalyticsSection
