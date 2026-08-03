@@ -10,6 +10,8 @@ import { C, fontVal, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, 
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCashPipeline';
 import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
+import { SupplierNeedsAction } from '@/components/dashboard/supplier/SupplierNeedsAction';
+
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
