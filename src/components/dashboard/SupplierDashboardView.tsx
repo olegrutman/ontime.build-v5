@@ -9,6 +9,7 @@ import { useSupplierDashboardData } from '@/hooks/useSupplierDashboardData';
 import { C, fontVal, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCashPipeline';
+import { SupplierProjectSnapshot } from '@/components/dashboard/supplier/SupplierProjectSnapshot';
 import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
 import { SupplierNeedsAction } from '@/components/dashboard/supplier/SupplierNeedsAction';
 
