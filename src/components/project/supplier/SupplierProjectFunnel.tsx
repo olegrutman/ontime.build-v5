@@ -176,6 +176,14 @@ export function SupplierProjectFunnel({
       )}
 
       {/* Next action */}
+      {hasActivity && waitNote && (
+        <div
+          className="mt-3 rounded-xl p-3"
+          style={{ ...fontLabel, fontSize: '0.74rem', fontWeight: 600, color: C.ink2, background: C.surface2, border: `1px solid ${C.border}` }}
+        >
+          {waitNote}
+        </div>
+      )}
       {hasActivity && nextAction && (
         <div
           className="mt-3 flex flex-col gap-2 rounded-xl p-3 sm:flex-row sm:items-center sm:justify-between"
