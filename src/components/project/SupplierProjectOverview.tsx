@@ -251,10 +251,10 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
       {/* KPI cards — only stages that actually have data */}
       {anyCardVisible && (
       <KpiGrid>
-
-
         {/* Card 1 — Estimate Value */}
+        {cardHasData.estimate && (
         <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="ESTIMATE VALUE (THIS PROJECT)" value={totalEstimate > 0 ? fmt(totalEstimate) : '—'} sub={`Total material estimate for ${projectName}`} pills={totalEstimate > 0 ? [{ type: 'pn', text: 'Estimate' }] : [{ type: 'pm', text: 'No Estimate' }]} idx={0}>
+
           <div style={{ padding: 12 }}>
             {packNames.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
