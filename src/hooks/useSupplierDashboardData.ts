@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth, subMonths, differenceInDays, addDays, startOfWeek } from 'date-fns';
+import {
+  isCountedEstimate,
+  isOrderedPO,
+  isBilledInvoice,
+  isReceivedInvoice,
+  poOrderedAmount,
+} from '@/lib/supplierMetrics';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
