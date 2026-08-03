@@ -59,6 +59,19 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   // GC sub-tab: 'from_tc' or 'from_supplier'
   const [gcSubTab, setGcSubTab] = useState<'from_tc' | 'from_supplier'>('from_tc');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ?action=create (from the project quick-actions bar) opens the create-invoice dialog
+  useEffect(() => {
+    if (searchParams.get('action') !== 'create') return;
+    if (isTM) setCreateFromCOsOpen(true);
+    else setCreateDialogOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, isTM]);
+
+
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
