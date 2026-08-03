@@ -1,55 +1,42 @@
-## Goal
+# Supplier Project Snapshot — Funnel Card
 
-When creating a project, the creator must define both sides of their contract chain before continuing:
+A new large "Project Snapshot" card on the supplier dashboard with a funnel/waterfall chart, scoped to one selectable project, sitting above the existing 5-stage cash pipeline strip (both stay).
 
-- **TC creator:** must name the GC (pick an existing org or invite by email), and must either invite at least one Field Crew or toggle "We self-perform this work."
-- **GC creator:** must name at least one Trade Contractor / Field Crew, or toggle "We self-perform this work."
-- Supplier and FC creators: unchanged.
+## What the user sees
 
-## Changes
+A wide hero card with:
 
-### 1. New "Project Team" step in the creation wizard
-Today team members are collected as an optional card at the bottom of the Basics step. Promote it to its own required step between Basics and the mode/contract steps, so it can be validated.
-
-- Add a `team` step to the step lists in `src/pages/CreateProjectNew.tsx` (fixed, T&M, and supplier flows — supplier keeps it optional).
-- Remove the team card from `BasicsStep.tsx` and move it into a new `src/components/project-wizard-new/ProjectPartiesStep.tsx`.
-
-### 2. ProjectPartiesStep layout
-Two labelled zones, driven by the creator's org type resolved from the database:
+- **Project switcher** — a row of pill tabs (or a select on mobile) listing the supplier's active projects, plus an "All projects" pill for the portfolio roll-up. Defaults to the project with the most activity.
+- **Headline block** — project name, risk pill (On Track / Watch / Over Budget), and the two numbers that matter: contract-side Ordered value and Outstanding (billed minus received).
+- **Funnel/waterfall chart** — four descending bars: Estimated → Ordered → Billed → Received. Each bar shows its amount and its share of the first stage. Between consecutive bars a small connector label shows the drop-off, e.g. `-$12.4K not billed`, `-$8.1K awaiting payment`. When Ordered exceeds Estimated, that step is drawn upward in red and labeled `+$X over estimate`.
+- **Footer strip** — three compact stats for the selected project: over-estimate amount (with pack count when applicable), days since last payment, and upcoming deliveries count.
+- **Empty states** — a project with no supplier activity shows a "No estimate or orders yet" message with an "Add estimate →" link instead of an empty chart.
 
 ```text
-UPSTREAM (who you bill)
-  TC creator  -> General Contractor   [required]
-  GC creator  -> (owner/none: zone hidden)
-
-DOWNSTREAM (who bills you)
-  TC creator  -> Field Crew           [required or self-perform]
-  GC creator  -> Trade Contractor / Field Crew [required or self-perform]
+┌──────────────────────────────────────────────────────────────┐
+│ PROJECT SNAPSHOT     [All] [Main Street Apts] [Oak Ridge]    │
+│ Main Street Apartments   ● Watch                             │
+│ Ordered $240K                        Outstanding $46K        │
+│                                                              │
+│ Estimated  ████████████████████████████  $260K   100%        │
+│              ↓ -$20K unordered                               │
+│ Ordered    ██████████████████████████    $240K    92%        │
+│              ↓ -$60K not billed                              │
+│ Billed     ██████████████████            $180K    69%        │
+│              ↓ -$46K awaiting payment                        │
+│ Received   █████████████                 $134K    52%        │
+│                                                              │
+│ Over estimate +$8K (2 packs) · Last payment 12d · 3 deliveries│
+└──────────────────────────────────────────────────────────────┘
 ```
 
-Each zone has:
-- A list of already-added parties with company, contact, trade, and an "Invited by email" vs "Existing org" chip.
-- An "Add" button opening the existing `AddTeamMemberDialog` in `collect` mode, pre-filtered to the roles valid for that zone.
-- The downstream zone has an "We self-perform this work — no crews to invite" switch (`ElongatedSwitch`), which disables and clears the downstream list.
-
-The dialog already supports both search-existing and invite-by-email, and already filters roles by creator org type, so no new invite plumbing is needed — the step just constrains and validates it.
-
-### 3. Validation
-In `canProceed()` add a `team` case:
-- TC: at least one team entry with role `General Contractor`, **and** (`selfPerform` true or at least one `Field Crew` entry).
-- GC: `selfPerform` true or at least one `Trade Contractor`/`Field Crew` entry.
-- Supplier / FC: always true.
-
-Inline helper text explains what's missing rather than only greying out Next.
-
-### 4. Persist the self-performed flag
-`project_team.is_self_performing` already exists and is already read by `useProjectFinancials` and `TeamMembersCard`. On create, set `is_self_performing: selfPerform` on the creator's own `project_team` row in `createProject()`. No migration needed.
-
-### 5. Draft persistence
-Add `selfPerform` to the sessionStorage draft payload so a reload keeps the choice.
+Below it, unchanged: the existing Cash Pipeline strip, the "Needs your action" card, metric strip, My Projects, deliveries, forecast table, and the 6 drill-down KPI cards.
 
 ## Technical notes
 
-- Roles come from `creatorOrgType` (`organizations.type` via `userOrgRoles[0]`), consistent with the existing `useOrgType` rule — no string inference.
-- The email-invite path already creates `project_team` + `project_invites` rows in `createProject()`; a GC invited by a TC gets a normal pending project invite and joins on signup.
-- No RLS or contract-direction logic changes; contract rows continue to be created by the existing wizard `saveAll` / invite flow.
+- New component `src/components/dashboard/supplier/SupplierProjectSnapshot.tsx`. Presentational only — it receives the already-computed `dp` rows and `upcomingDeliveries` from `SupplierDashboardView`, so no new queries or hooks and no backend change.
+- Selected-project state lives in the new component (`useState`), with an "all" option that sums the rows passed in.
+- Chart drawn with plain divs and the existing design tokens (`C`, `fontVal`, `fontMono`, `fontLabel`, `fmt` from `@/components/shared/KpiCard`) rather than recharts — the bars are a simple proportional layout, and this keeps the type/number styling identical to the rest of the dashboard and avoids a chart-library render cost on the dashboard's critical path.
+- Bar widths are normalized against `max(estimate, ordered)` so an over-order case still renders in bounds; the over-estimate step uses `C.red`, normal stages use neutral → amber → navy/blue → green matching the existing pipeline tones.
+- Mobile: project pills scroll horizontally, bars stack full width, connector labels shrink to a single line; card gets the standard responsive padding used by the sibling supplier cards.
+- Rendered in `SupplierDashboardView.tsx` immediately above `<SupplierCashPipeline />`.
