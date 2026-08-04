@@ -120,7 +120,8 @@ export function useBuyerMaterialsAnalytics({
     queryFn: async () => {
       const now = new Date();
 
-      // POs created by buyer org for this project
+      // POs the buyer org owns financially: either it created them, or ownership
+      // transferred to it on approval (e.g. TC-created PO approved by the GC).
       const posRes = await supabase
         .from('purchase_orders')
         .select(
@@ -128,7 +129,8 @@ export function useBuyerMaterialsAnalytics({
           'created_at, submitted_at, priced_at, ordered_at, ready_for_delivery_at, delivered_at, updated_at'
         )
         .eq('project_id', projectId)
-        .eq('created_by_org_id', buyerOrgId!);
+        .or(`created_by_org_id.eq.${buyerOrgId},pricing_owner_org_id.eq.${buyerOrgId}`);
+
 
       const pos = (posRes.data || []) as any[];
       const poIds = pos.map(p => p.id);
