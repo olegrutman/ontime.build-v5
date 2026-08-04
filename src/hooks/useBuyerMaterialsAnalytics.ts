@@ -152,7 +152,7 @@ export function useBuyerMaterialsAnalytics({
           .from('returns')
           .select('id, status, credit_subtotal, restocking_total, net_credit_total, reason, created_at')
           .eq('project_id', projectId)
-          .eq('created_by_org_id', buyerOrgId!),
+          .or(`created_by_org_id.eq.${buyerOrgId},pricing_owner_org_id.eq.${buyerOrgId}`),
         // Pack estimates — pulled from supplier_estimates approved on this project
         supabase
           .from('supplier_estimates')
