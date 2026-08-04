@@ -8713,6 +8713,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      recalc_po_totals: { Args: { _po_id: string }; Returns: undefined }
       recalc_sov_item_billing: {
         Args: { _sov_item_id: string }
         Returns: undefined
