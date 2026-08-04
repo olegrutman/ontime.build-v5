@@ -10,7 +10,7 @@ export type ReturnStatus =
   | 'CLOSED';
 
 export type ReturnReason = 'Extra' | 'Wrong' | 'Estimate Over' | 'Damaged' | 'Other';
-export type WrongType = 'Not Per Specification' | 'Wrong Item Shipped';
+export type WrongType = 'Supplier Error' | 'Contractor Error';
 export type PickupType = 'Supplier Pickup' | 'Contractor Drop-off';
 export type RestockingType = 'Percent' | 'Flat' | 'None';
 export type UrgencyType = 'Standard' | 'Priority' | 'Urgent' | 'Emergency';
@@ -105,6 +105,13 @@ export const RETURN_STATUS_COLORS: Record<ReturnStatus, string> = {
 };
 
 export const RETURN_REASONS: ReturnReason[] = ['Extra', 'Wrong', 'Estimate Over', 'Damaged', 'Other'];
+
+export const WRONG_TYPES: WrongType[] = ['Supplier Error', 'Contractor Error'];
+
+export const WRONG_TYPE_LABELS: Record<WrongType, string> = {
+  'Supplier Error': 'Supplier Error — wrong item shipped',
+  'Contractor Error': 'Contractor Error — wrong item ordered',
+};
 
 export const RETURN_REASON_DETAILS: Record<ReturnReason, { label: string; description: string }> = {
   Extra: { label: 'Extra Material', description: 'Ordered more than needed for the job' },
