@@ -19,6 +19,9 @@ import { WizardProgress } from '@/components/ui/wizard-progress';
 import { VIRTUAL_CATEGORIES, CategoryCount } from '@/types/poWizardV2';
 import {
   ReturnReason,
+  WrongType,
+  WRONG_TYPES,
+  WRONG_TYPE_LABELS,
   ReturnCondition,
   RETURN_REASONS,
   RETURN_REASON_DETAILS,
@@ -54,6 +57,7 @@ interface SelectedItem extends DeliveredLineItem {
   condition: ReturnCondition;
   condition_notes: string;
   reason: ReturnReason | '';
+  wrong_type: WrongType | '';
   reason_notes: string;
 }
 
@@ -253,6 +257,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           condition: 'Unknown' as ReturnCondition,
           condition_notes: '',
           reason: '' as ReturnReason | '',
+          wrong_type: '' as WrongType | '',
           reason_notes: '',
         })),
       ]);
@@ -270,6 +275,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         condition: 'Unknown' as ReturnCondition,
         condition_notes: '',
         reason: '' as ReturnReason | '',
+        wrong_type: '' as WrongType | '',
         reason_notes: '',
       }]);
     } else {
@@ -298,9 +304,14 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     i.reason &&
     i.condition &&
     (!CONDITIONS_REQUIRING_NOTES.includes(i.condition) || i.condition_notes.trim()) &&
-    (i.reason !== 'Other' || i.reason_notes.trim())
+    (i.reason !== 'Other' || i.reason_notes.trim()) &&
+    (i.reason !== 'Wrong' || i.wrong_type)
   );
   const canProceedStep2 = pickupType && contactName.trim() && contactPhone.trim();
+
+  // The return header carries a single reason; use the first selected item as
+  // the primary reason and carry its qualifiers (wrong_type / notes) with it.
+  const primaryItem = selectedItems[0];
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -311,7 +322,11 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           supplier_org_id: supplierOrgId!,
           created_by_org_id: userOrgId!,
           created_by_user_id: user!.id,
-          reason: selectedItems[0]?.reason || 'Other',
+          reason: primaryItem?.reason || 'Other',
+          wrong_type: primaryItem?.reason === 'Wrong' ? primaryItem.wrong_type : null,
+          reason_notes: primaryItem?.reason === 'Other'
+            ? (primaryItem.reason_notes || 'See item-level notes')
+            : (primaryItem?.reason_notes || null),
           pickup_type: pickupType as string,
           pickup_date: pickupDate || null,
           contact_name: contactName,
@@ -337,7 +352,11 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         condition: si.condition,
         condition_notes: CONDITIONS_REQUIRING_NOTES.includes(si.condition) ? si.condition_notes : null,
         reason: si.reason || null,
-        reason_notes: si.reason === 'Other' ? si.reason_notes : null,
+        reason_notes: si.reason === 'Other'
+          ? si.reason_notes
+          : si.reason === 'Wrong'
+          ? si.wrong_type || null
+          : null,
         original_unit_price: si.unit_price,
         credit_unit_price: si.unit_price,
         credit_line_total: si.qty_requested * si.unit_price,
@@ -366,7 +385,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
-        <WizardProgress currentStep={step + 1} totalSteps={4} steps={wizardSteps} />
+        <WizardProgress currentStep={step} totalSteps={4} steps={wizardSteps} />
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
         {/* Step 0: Select Items with Category Browser */}
@@ -529,7 +548,11 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                     <Label className="text-xs">Reason</Label>
                     <Select
                       value={item.reason}
-                      onValueChange={v => updateItemField(item.id, 'reason', v)}
+                      onValueChange={v => {
+                        updateItemField(item.id, 'reason', v);
+                        if (v !== 'Wrong') updateItemField(item.id, 'wrong_type', '');
+                        if (v !== 'Other') updateItemField(item.id, 'reason_notes', '');
+                      }}
                     >
                       <SelectTrigger className="h-9"><SelectValue placeholder="Select reason" /></SelectTrigger>
                       <SelectContent>
@@ -554,6 +577,25 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                     </Select>
                   </div>
                 </div>
+
+                {item.reason === 'Wrong' && (
+                  <div>
+                    <Label className="text-xs">Whose Error?</Label>
+                    <Select
+                      value={item.wrong_type}
+                      onValueChange={v => updateItemField(item.id, 'wrong_type', v)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select responsibility" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WRONG_TYPES.map(w => (
+                          <SelectItem key={w} value={w}>{WRONG_TYPE_LABELS[w]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {item.reason === 'Other' && (
                   <Textarea

@@ -52,18 +52,22 @@ export function ReturnPricingPanel({ returnId, items, projectId }: ReturnPricing
       for (const item of returnableItems) {
         const unitPrice = prices[item.id] || 0;
         const qty = item.accepted_qty ?? item.qty_requested;
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('return_items')
           .update({
             credit_unit_price: unitPrice,
             credit_line_total: unitPrice * qty,
           })
-          .eq('id', item.id);
+          .eq('id', item.id)
+          .select('id');
         if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error('Pricing blocked — you cannot edit credits for this return at its current status.');
+        }
       }
 
       // Update return totals and status
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('returns')
         .update({
           credit_subtotal: creditSubtotal,
@@ -73,8 +77,12 @@ export function ReturnPricingPanel({ returnId, items, projectId }: ReturnPricing
           net_credit_total: netCredit,
           status: 'PRICED',
         })
-        .eq('id', returnId);
+        .eq('id', returnId)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Pricing blocked — this return is not ready to be priced.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['return-detail', returnId] });

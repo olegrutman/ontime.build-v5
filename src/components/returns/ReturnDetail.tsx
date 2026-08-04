@@ -60,8 +60,15 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
     mutationFn: async ({ newStatus, extraFields }: { newStatus: ReturnStatus; extraFields?: Record<string, any> }) => {
       const update: Record<string, any> = { status: newStatus, ...extraFields };
       if (newStatus === 'CLOSED') update.closed_at = new Date().toISOString();
-      const { error } = await supabase.from('returns').update(update).eq('id', returnId);
+      const { data, error } = await supabase
+        .from('returns')
+        .update(update)
+        .eq('id', returnId)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Update blocked: your role cannot make this change at the current status.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['return-detail', returnId] });
@@ -96,11 +103,14 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
 
   const scheduleMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('returns').update({
+      const { data, error } = await supabase.from('returns').update({
         pickup_date: pickupDate,
         status: 'SCHEDULED',
-      }).eq('id', returnId);
+      }).eq('id', returnId).select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Scheduling blocked: your role cannot schedule this return at its current status.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['return-detail', returnId] });
