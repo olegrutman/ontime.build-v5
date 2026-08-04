@@ -492,8 +492,11 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         .update({
           approved_by: user.id,
           approved_at: new Date().toISOString(),
+          // Once the GC approves a TC-raised PO, the GC owns it (and its pricing)
+          ...(currentOrgId ? { pricing_owner_org_id: currentOrgId } : {}),
         })
         .eq('id', po.id);
+
 
       if (updateErr) throw updateErr;
 
