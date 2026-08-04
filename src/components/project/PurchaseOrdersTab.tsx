@@ -382,7 +382,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   };
 
   const handleSubmitToSupplier = async (po: PurchaseOrder) => {
-    if (isTC && poRequiresApproval && po.created_by_org_id === currentOrgId) {
+    if (requiresGCApproval && po.created_by_org_id === currentOrgId) {
       try {
         const { error } = await supabase
           .from('purchase_orders')
@@ -408,7 +408,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     try {
       const { newPO, poNumber } = await createPurchaseOrderRecord(data);
 
-      if (isTC && poRequiresApproval) {
+      if (requiresGCApproval) {
         await supabase
           .from('purchase_orders')
           .update({ status: 'PENDING_APPROVAL' as any })
