@@ -206,15 +206,20 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
     setActionLoading(true);
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('invoices')
         .update({
           status: newStatus,
           ...additionalFields,
         })
-        .eq('id', invoiceId);
+        .eq('id', invoiceId)
+        .select('id');
 
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("You don't have permission to change this invoice's status.");
+      }
+
 
       // Update SOV billing totals when invoice status affects billing
       // (SUBMITTED, APPROVED, PAID affect the billed_to_date calculation)
