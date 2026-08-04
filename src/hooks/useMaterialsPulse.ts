@@ -54,11 +54,12 @@ export function useMaterialsPulse({ buyerOrgId, projectIds, enabled = true }: Ar
       const now = new Date();
       const todayKey = now.toISOString().slice(0, 10);
 
-      // 1) Pull POs across all projects in one query
+      // 1) Pull POs across all projects in one query. Include POs whose financial
+      // ownership transferred to this org (TC-created PO approved by the GC).
       const posRes = await supabase
         .from('purchase_orders')
         .select('id, project_id, po_number, po_name, status, po_total, ordered_at')
-        .eq('created_by_org_id', buyerOrgId!)
+        .or(`created_by_org_id.eq.${buyerOrgId},pricing_owner_org_id.eq.${buyerOrgId}`)
         .in('project_id', projectIds);
 
       const pos = (posRes.data || []) as any[];

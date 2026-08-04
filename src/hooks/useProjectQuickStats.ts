@@ -102,7 +102,7 @@ export function useProjectQuickStats(
         // Purchase orders
         supabase
           .from('purchase_orders')
-          .select('id, status, organization_id, supplier_id, po_total, created_by_org_id')
+          .select('id, status, organization_id, supplier_id, po_total, created_by_org_id, pricing_owner_org_id')
           .eq('project_id', projectId),
       ]);
 
@@ -147,9 +147,12 @@ export function useProjectQuickStats(
         // Filter work orders by org
         workOrders = allWorkOrders.filter((w) => w.organization_id === orgId);
 
-        // Filter POs by org (created by or supplier matches)
+        // Filter POs by org (created by, owner org, pricing owner, or supplier matches)
         pos = allPos.filter(
-          (p) => p.created_by_org_id === orgId || p.organization_id === orgId
+          (p) =>
+            p.created_by_org_id === orgId ||
+            p.organization_id === orgId ||
+            (p as any).pricing_owner_org_id === orgId
         );
       }
 
