@@ -510,7 +510,7 @@ export function PSMBrowser({
             product={selectedProduct}
             onAdd={handleAddPSMItem}
             onClose={() => setStep('products')}
-            estimateUnitPrice={hidePricing ? null : matchedEstItem?.unit_price}
+            estimateUnitPrice={matchedEstItem?.unit_price ?? null}
             estimateItemId={matchedEstItem?.id}
             estimatePackName={matchedEstItem?.pack_name}
             hidePricing={hidePricing}
