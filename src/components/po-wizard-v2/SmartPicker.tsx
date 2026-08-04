@@ -467,7 +467,8 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                     if (!onLoadPack) return;
                     const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => {
                       const itemAny = item as typeof item & { unit_price?: number | null };
-                      const price = hidePricing ? null : (itemAny.unit_price ?? null);
+                      // Pricing may be hidden in the UI, but must still be persisted
+                      const price = itemAny.unit_price ?? null;
                       return {
                         id: `pack-${idx}-${Date.now()}`,
                         catalog_item_id: item.catalog_item_id || '',
