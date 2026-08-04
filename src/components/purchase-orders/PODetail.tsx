@@ -714,9 +714,32 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                Submit to Supplier
+                {needsUpstreamApproval ? 'Send to GC for Approval' : 'Submit to Supplier'}
               </Button>
             </>
+          )}
+
+          {/* PENDING_APPROVAL: GC approves (and takes ownership) or returns to the TC */}
+          {status === 'PENDING_APPROVAL' && isGCApprover && (
+            <>
+              <Button variant="outline" onClick={handleReturnToCreator} disabled={actionLoading}>
+                Return to TC
+              </Button>
+              <Button onClick={handleApproveAndSend} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Approve &amp; Send
+              </Button>
+            </>
+          )}
+
+          {status === 'PENDING_APPROVAL' && !isGCApprover && !effectiveIsSupplier && (
+            <span className="text-sm text-muted-foreground self-center">
+              Awaiting General Contractor approval
+            </span>
           )}
 
           {/* SUBMITTED: Buyer can send reminder to supplier */}
