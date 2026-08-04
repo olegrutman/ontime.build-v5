@@ -73,6 +73,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const isTC = currentOrgType === 'TC';
   const canCreatePO = permissions?.canCreatePOs ?? false;
   const hidePricing = isTC && materialResponsibility === 'GC';
+  // A TC-raised PO must route through the GC whenever the relationship asks for it OR
+  // the GC carries material responsibility (the GC ends up owning/paying the PO).
+  const requiresGCApproval = isTC && (poRequiresApproval || materialResponsibility === 'GC');
   const showDirectionalTabs = isGC || isTC;
   const poParam = searchParams.get('po');
 
