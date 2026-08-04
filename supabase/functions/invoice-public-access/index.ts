@@ -42,8 +42,9 @@ Deno.serve(async (req) => {
 
     const { data: lines } = await supabase
       .from('invoice_line_items')
-      .select('id, description, amount_this_period')
-      .eq('invoice_id', invite.invoice_id);
+      .select('id, description, current_billed, sort_order')
+      .eq('invoice_id', invite.invoice_id)
+      .order('sort_order');
 
     const { data: project } = await supabase
       .from('projects')
