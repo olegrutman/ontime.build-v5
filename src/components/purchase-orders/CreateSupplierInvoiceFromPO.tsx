@@ -65,9 +65,15 @@ export function CreateSupplierInvoiceFromPO({
 
   const supplierOrgName = userOrgRoles[0]?.organization?.name;
 
-  const subtotal = po.po_subtotal_total ?? lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
-  const taxTotal = po.po_tax_total ?? 0;
-  const total = po.po_total ?? subtotal + taxTotal;
+  // Derive from live line items; cached PO header totals can be stale/zero.
+  const lineSubtotal = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
+  const subtotal = lineSubtotal > 0 ? lineSubtotal : (po.po_subtotal_total ?? 0);
+  const taxPercent = po.tax_percent_applied ?? po.sales_tax_percent ?? 0;
+  const taxTotal =
+    lineSubtotal > 0
+      ? Math.round(subtotal * (taxPercent / 100) * 100) / 100
+      : (po.po_tax_total ?? 0);
+  const total = subtotal + taxTotal;
 
   const getProjectCode = (name: string | undefined): string => {
     if (!name) return 'XXX';
@@ -133,7 +139,7 @@ export function CreateSupplierInvoiceFromPO({
           invoice_number: invoiceNumber,
           billing_period_start: format(periodStart, 'yyyy-MM-dd'),
           billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
-          subtotal: total,
+          subtotal: subtotal,
           retainage_amount: 0,
           total_amount: total,
           created_by: user.id,
