@@ -167,7 +167,7 @@ export function CreateSupplierInvoiceFromPO({
       if (taxTotal > 0) {
         invoiceLineItems.push({
           invoice_id: invoice.id,
-          description: `Sales Tax (${po.tax_percent_applied ?? 0}%)`,
+          description: `Sales Tax (${taxPercent}%)`,
           scheduled_value: taxTotal,
           previous_billed: 0,
           current_billed: taxTotal,
@@ -267,7 +267,7 @@ export function CreateSupplierInvoiceFromPO({
                   {taxTotal > 0 && (
                     <TableRow>
                       <TableCell colSpan={2} className="text-right font-medium">
-                        Tax ({po.tax_percent_applied ?? 0}%)
+                        Tax ({taxPercent}%)
                       </TableCell>
                       <TableCell className="text-right font-bold">
                         {formatCurrency(taxTotal)}
