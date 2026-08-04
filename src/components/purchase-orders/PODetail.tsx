@@ -237,8 +237,121 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
     }
   };
 
+  // A TC-raised PO whose pricing/payment sits with another org (the GC) must be
+  // approved upstream before it can reach the supplier.
+  const needsUpstreamApproval =
+    !!po &&
+    !!currentOrgId &&
+    po.created_by_org_id === currentOrgId &&
+    !!po.pricing_owner_org_id &&
+    po.pricing_owner_org_id !== currentOrgId;
+  const isGCApprover =
+    !!po &&
+    currentOrgType === 'GC' &&
+    po.created_by_org_id !== currentOrgId &&
+    currentRole === 'GC_PM';
+
+  const handleSendForApproval = async () => {
+    if (!po) return;
+    setActionLoading(true);
+    try {
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'PENDING_APPROVAL' as never })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to submit this PO');
+      toast.success('Sent to the General Contractor for approval');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send for approval');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApproveAndSend = async () => {
+    if (!po || !user || !currentOrgId) return;
+    setActionLoading(true);
+    try {
+      let supplierEmail = '';
+      if (po.project?.id) {
+        const { data: ds } = await supabase
+          .from('project_designated_suppliers')
+          .select('po_email')
+          .eq('project_id', po.project.id)
+          .neq('status', 'removed')
+          .maybeSingle();
+        if (ds?.po_email) supplierEmail = ds.po_email;
+      }
+      if (!supplierEmail && po.supplier?.contact_info) {
+        const m = po.supplier.contact_info.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+        if (m) supplierEmail = m[0];
+      }
+      if (!supplierEmail) {
+        toast.error('No supplier email found. Please set up supplier contact.');
+        return;
+      }
+
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+          status: 'SUBMITTED' as never,
+          pricing_owner_org_id: currentOrgId,
+        })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to approve this PO');
+
+      const { error: sendErr } = await supabase.functions.invoke('send-po', {
+        body: { po_id: poId, supplier_email: supplierEmail },
+      });
+      if (sendErr) throw sendErr;
+
+      toast.success('PO approved, transferred to your org, and sent to supplier');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to approve PO');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReturnToCreator = async () => {
+    if (!po) return;
+    setActionLoading(true);
+    try {
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'ACTIVE' as never })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to return this PO');
+      toast.success('PO returned to the trade contractor');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to return PO');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleSubmitToSupplier = async () => {
     if (!user || !po) return;
+
+    if (needsUpstreamApproval) {
+      await handleSendForApproval();
+      return;
+    }
+
 
     setActionLoading(true);
     try {
@@ -601,9 +714,32 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                Submit to Supplier
+                {needsUpstreamApproval ? 'Send to GC for Approval' : 'Submit to Supplier'}
               </Button>
             </>
+          )}
+
+          {/* PENDING_APPROVAL: GC approves (and takes ownership) or returns to the TC */}
+          {status === 'PENDING_APPROVAL' && isGCApprover && (
+            <>
+              <Button variant="outline" onClick={handleReturnToCreator} disabled={actionLoading}>
+                Return to TC
+              </Button>
+              <Button onClick={handleApproveAndSend} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Approve &amp; Send
+              </Button>
+            </>
+          )}
+
+          {status === 'PENDING_APPROVAL' && !isGCApprover && !effectiveIsSupplier && (
+            <span className="text-sm text-muted-foreground self-center">
+              Awaiting General Contractor approval
+            </span>
           )}
 
           {/* SUBMITTED: Buyer can send reminder to supplier */}

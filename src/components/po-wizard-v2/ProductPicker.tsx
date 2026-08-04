@@ -326,7 +326,8 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
   const handleSelectPack = useCallback((pack: EstimatePack, estimateId: string) => {
     if (!onLoadPack) return;
     const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => {
-      const price = hidePricing ? null : item.unit_price;
+      // Pricing may be hidden in the UI, but must still be persisted
+      const price = item.unit_price ?? null;
       return {
         id: `pack-${idx}-${Date.now()}`,
         catalog_item_id: item.catalog_item_id || '',

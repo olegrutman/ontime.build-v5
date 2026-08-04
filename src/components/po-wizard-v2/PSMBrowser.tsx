@@ -395,7 +395,9 @@ export function PSMBrowser({
   }, [onAddItem]);
 
   const handleAddUnmatchedItem = useCallback((estimateItem: EstimateItem, quantity: number) => {
-    const unitPrice = hidePricing ? null : estimateItem.unit_price;
+    // Keep the estimate price on the record even when this org can't see pricing —
+    // hiding is a display concern; the GC/supplier must still get real totals.
+    const unitPrice = estimateItem.unit_price ?? null;
     const lineItem: POWizardV2LineItem = {
       id: `psm-unmatched-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       catalog_item_id: '',
@@ -508,7 +510,7 @@ export function PSMBrowser({
             product={selectedProduct}
             onAdd={handleAddPSMItem}
             onClose={() => setStep('products')}
-            estimateUnitPrice={hidePricing ? null : matchedEstItem?.unit_price}
+            estimateUnitPrice={matchedEstItem?.unit_price ?? null}
             estimateItemId={matchedEstItem?.id}
             estimatePackName={matchedEstItem?.pack_name}
             hidePricing={hidePricing}
