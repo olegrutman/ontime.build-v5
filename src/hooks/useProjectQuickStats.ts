@@ -102,7 +102,7 @@ export function useProjectQuickStats(
         // Purchase orders
         supabase
           .from('purchase_orders')
-          .select('id, status, organization_id, supplier_id, po_total, created_by_org_id')
+          .select('id, status, organization_id, supplier_id, po_total, created_by_org_id, pricing_owner_org_id')
           .eq('project_id', projectId),
       ]);
 
