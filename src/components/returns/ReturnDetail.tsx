@@ -276,7 +276,7 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
       </Card>
 
       {/* Financial summary */}
-      {pricing.canViewPricing && ['APPROVED', 'SCHEDULED', 'PICKED_UP', 'PRICED', 'CLOSED'].includes(returnData.status) && (
+      {pricing.canViewPricing && (
         <Card>
           <CardContent className="p-4 space-y-1 text-sm">
             <div className="flex justify-between">
