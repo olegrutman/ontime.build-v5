@@ -37,7 +37,10 @@ export function usePOPricingVisibility(
 
   // Check if user is the pricing owner org (GC or TC based on material_responsibility)
   const isPricingOwner = po.pricing_owner_org_id === userOrgId;
-  
+
+  // The org that raised the PO (e.g. a TC routing a PO up through the GC)
+  const isCreatorOrg = po.created_by_org_id === userOrgId;
+
   // Check if user is the supplier for this PO
   // supplierOrgId can be passed explicitly, or derived from po.supplier
   const isSupplier = supplierOrgId 
@@ -50,8 +53,9 @@ export function usePOPricingVisibility(
   // Only pricing owner can finalize after supplier pricing is locked
   const canFinalize = isPricingOwner && po.status === 'PRICED';
   
-  // Can view pricing if you're the pricing owner OR the supplier
-  const canViewPricing = isPricingOwner || isSupplier;
+  // Can view pricing if you're the pricing owner, the originating org, or the supplier
+  const canViewPricing = isPricingOwner || isCreatorOrg || isSupplier;
+
   
   return {
     canViewPricing,
