@@ -23,7 +23,7 @@ interface InvoiceData {
   billing_period_end: string | null;
 }
 
-interface LineItem { id: string; description: string | null; amount_this_period: number | null; }
+interface LineItem { id: string; description: string | null; current_billed: number | null; }
 
 export default function InvoiceApprovalPage() {
   const { token } = useParams<{ token: string }>();
@@ -165,7 +165,7 @@ export default function InvoiceApprovalPage() {
                 {lines.map((l) => (
                   <div key={l.id} className="flex justify-between text-sm gap-4">
                     <span className="flex-1 min-w-0 truncate text-foreground">{l.description ?? '—'}</span>
-                    <span className="font-mono text-foreground">{fmtCurrency(Number(l.amount_this_period ?? 0))}</span>
+                    <span className="font-mono text-foreground">{fmtCurrency(Number(l.current_billed ?? 0))}</span>
                   </div>
                 ))}
               </div>
