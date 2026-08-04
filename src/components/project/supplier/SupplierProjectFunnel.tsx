@@ -5,6 +5,8 @@ export interface SupplierFunnelProps {
   projectName: string;
   supplierName: string;
   estimate: number;
+  pendingEstimate?: number;
+  pendingEstimateCount?: number;
   ordered: number;
   billed: number;
   received: number;
@@ -27,6 +29,8 @@ export function SupplierProjectFunnel({
   projectName,
   supplierName,
   estimate,
+  pendingEstimate = 0,
+  pendingEstimateCount = 0,
   ordered,
   billed,
   received,
@@ -124,14 +128,18 @@ export function SupplierProjectFunnel({
       {/* Funnel */}
       {!hasActivity ? (
         <div className="mt-4 rounded-xl p-4 text-center" style={{ background: C.surface2, border: `1px dashed ${C.border}` }}>
-          <div style={{ ...fontLabel, fontSize: '0.8rem', color: C.muted, fontWeight: 600 }}>No estimate or orders yet</div>
+          <div style={{ ...fontLabel, fontSize: '0.8rem', color: C.muted, fontWeight: 600 }}>
+            {pendingEstimateCount > 0
+              ? `${pendingEstimateCount} estimate${pendingEstimateCount === 1 ? '' : 's'} · ${fmt(pendingEstimate)} pending approval`
+              : 'No estimate or orders yet'}
+          </div>
           <button
             type="button"
             onClick={() => onNavigate('estimates')}
             className="mt-2 inline-flex items-center gap-1"
             style={{ ...fontLabel, fontSize: '0.72rem', fontWeight: 800, color: C.amberD, background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            Add estimate <ChevronRight size={13} />
+            {pendingEstimateCount > 0 ? 'View estimate' : 'Add estimate'} <ChevronRight size={13} />
           </button>
         </div>
       ) : (
@@ -172,6 +180,25 @@ export function SupplierProjectFunnel({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {hasActivity && pendingEstimateCount > 0 && (
+        <div
+          className="mt-3 flex flex-col gap-2 rounded-xl p-3 sm:flex-row sm:items-center sm:justify-between"
+          style={{ background: C.amberPale, border: `1px solid ${C.amber}` }}
+        >
+          <div style={{ ...fontLabel, fontSize: '0.74rem', fontWeight: 700, color: C.ink2 }}>
+            {pendingEstimateCount} estimate{pendingEstimateCount === 1 ? '' : 's'} · {fmt(pendingEstimate)} pending approval
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('estimates')}
+            className="shrink-0 inline-flex items-center gap-1"
+            style={{ ...fontLabel, fontSize: '0.72rem', fontWeight: 800, color: C.amberD, background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            View estimate <ChevronRight size={13} />
+          </button>
         </div>
       )}
 

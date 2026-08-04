@@ -10,7 +10,7 @@ import { SupplierProjectAnalyticsSection } from './SupplierProjectAnalyticsSecti
 import { LadderCard } from '@/components/shared/LadderCard';
 import { SupplierProjectFunnel } from './supplier/SupplierProjectFunnel';
 import { SupplierStatStrip, type StatTile } from './supplier/SupplierStatStrip';
-import { isCountedEstimate, isOrderedPO, isBilledInvoice, isReceivedInvoice, poOrderedAmount } from '@/lib/supplierMetrics';
+import { isCountedEstimate, isPendingEstimate, isOrderedPO, isBilledInvoice, isReceivedInvoice, poOrderedAmount } from '@/lib/supplierMetrics';
 
 
 /* ═══════════════════════════════════════════════════ */
@@ -75,6 +75,8 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     enabled: !!projectId && !!currentOrgId,
   });
   const estimates = allEstimates.filter(e => isCountedEstimate(e.status));
+  const pendingEstimates = allEstimates.filter(e => isPendingEstimate(e.status));
+  const pendingEstimateTotal = pendingEstimates.reduce((sum, estimate) => sum + (estimate.total_amount || 0), 0);
 
 
   // Fetch estimate items for pack breakdown
@@ -202,7 +204,14 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   };
 
   const emptyTiles: StatTile[] = [
-    !cardHasData.estimate && { label: 'Estimate value', value: 0, hint: 'No estimate yet', tab: 'estimates' },
+    !cardHasData.estimate && {
+      label: 'Estimate value',
+      value: 0,
+      hint: pendingEstimates.length > 0
+        ? `${pendingEstimates.length} pending · ${fmt(pendingEstimateTotal)}`
+        : 'No estimate yet',
+      tab: 'estimates',
+    },
     !cardHasData.ordered && { label: 'Total ordered', value: 0, hint: 'No POs issued', tab: 'purchase-orders' },
     !cardHasData.deliveries && { label: 'Deliveries', value: '0', raw: true, hint: 'None scheduled', tab: 'purchase-orders' },
     !cardHasData.billed && { label: 'Total billed', value: 0, hint: 'No invoices', tab: 'invoices' },
@@ -233,6 +242,8 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         projectName={projectName}
         supplierName={supplierName}
         estimate={totalEstimate}
+        pendingEstimate={pendingEstimateTotal}
+        pendingEstimateCount={pendingEstimates.length}
         ordered={totalOrdered}
         billed={totalBilled}
         received={totalReceived}

@@ -8,6 +8,8 @@ export interface SnapshotRow {
   name: string;
   status: string;
   estimate: number;
+  pendingEstimate: number;
+  pendingEstimateCount: number;
   ordered: number;
   billed: number;
   received: number;
@@ -69,6 +71,8 @@ export function SupplierProjectSnapshot({ rows, deliveries }: Props) {
       name: effective === 'all' ? 'All projects' : (set[0]?.name ?? '—'),
       count: set.length,
       estimate: sum(r => r.estimate),
+      pendingEstimate: sum(r => r.pendingEstimate),
+      pendingEstimateCount: sum(r => r.pendingEstimateCount),
       ordered: sum(r => r.ordered),
       billed: sum(r => r.billed),
       received: sum(r => r.received),
@@ -198,7 +202,9 @@ export function SupplierProjectSnapshot({ rows, deliveries }: Props) {
           style={{ background: C.surface2, border: `1px dashed ${C.border}` }}
         >
           <div style={{ ...fontLabel, fontSize: '0.8rem', color: C.muted, fontWeight: 600 }}>
-            No estimate or orders yet
+            {agg.pendingEstimateCount > 0
+              ? `${agg.pendingEstimateCount} estimate${agg.pendingEstimateCount === 1 ? '' : 's'} · ${fmt(agg.pendingEstimate)} pending approval`
+              : 'No estimate or orders yet'}
           </div>
           {effective !== 'all' && (
             <button
@@ -207,7 +213,7 @@ export function SupplierProjectSnapshot({ rows, deliveries }: Props) {
               className="mt-2 inline-flex items-center gap-1"
               style={{ ...fontLabel, fontSize: '0.72rem', fontWeight: 800, color: C.amberD }}
             >
-              Add estimate <ChevronRight size={13} />
+              {agg.pendingEstimateCount > 0 ? 'View estimate' : 'Add estimate'} <ChevronRight size={13} />
             </button>
           )}
         </div>
@@ -255,6 +261,27 @@ export function SupplierProjectSnapshot({ rows, deliveries }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {hasActivity && agg.pendingEstimateCount > 0 && (
+        <div
+          className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl p-3"
+          style={{ background: C.amberPale, border: `1px solid ${C.amber}`, ...fontLabel }}
+        >
+          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: C.ink2 }}>
+            {agg.pendingEstimateCount} estimate{agg.pendingEstimateCount === 1 ? '' : 's'} · {fmt(agg.pendingEstimate)} pending approval
+          </span>
+          {effective !== 'all' && (
+            <button
+              type="button"
+              onClick={() => navigate(`/project/${effective}/estimates`)}
+              className="inline-flex items-center gap-1"
+              style={{ ...fontLabel, fontSize: '0.7rem', fontWeight: 800, color: C.amberD }}
+            >
+              View estimate <ChevronRight size={13} />
+            </button>
+          )}
         </div>
       )}
 
