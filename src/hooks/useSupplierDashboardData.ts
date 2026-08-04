@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth, subMonths, differenceInDays, addDays, startOfWeek } from 'date-fns';
 import {
   isCountedEstimate,
+  isPendingEstimate,
   isOrderedPO,
   isBilledInvoice,
   isReceivedInvoice,
@@ -130,6 +131,8 @@ export interface SupplierProjectFinancial {
   projectType: string | null;
   status: string | null;
   estimate: number;        // sum of APPROVED supplier_estimates.total_amount
+  pendingEstimate: number; // sum of SUBMITTED estimates, visible but excluded from budget
+  pendingEstimateCount: number;
   ordered: number;         // sum of purchase_orders.po_total where status != ACTIVE/DRAFT
   billed: number;          // sum of invoices.total_amount where status in SUBMITTED/APPROVED/PAID
   received: number;        // sum of invoices.total_amount where status = PAID
@@ -584,7 +587,8 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         if (!pfMap[pid]) {
           pfMap[pid] = {
             projectId: pid, projectName: name, projectType, status,
-            estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, daysSinceLastPayment: null,
+             estimate: 0, pendingEstimate: 0, pendingEstimateCount: 0,
+             ordered: 0, billed: 0, received: 0, overBy: 0, daysSinceLastPayment: null,
             packsOverCount: 0, packOverBy: 0, worstPackPct: 0, packOverDetails: [],
           };
         } else {
@@ -600,11 +604,15 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         ensure(p.project_id, p.projects?.name || 'Unknown', p.projects?.project_type ?? null, p.projects?.status ?? null);
       });
 
-      // Estimates → estimate (canonical: APPROVED only, see @/lib/supplierMetrics)
+       // Approved estimates establish the budget; submitted estimates remain visible as pending.
       allEstimates.forEach((est: any) => {
-        if (!est.project_id || !isCountedEstimate(est.status)) return;
+         if (!est.project_id) return;
         const row = ensure(est.project_id, est.projects?.name || 'Unknown');
-        row.estimate += est.total_amount || 0;
+         if (isCountedEstimate(est.status)) row.estimate += est.total_amount || 0;
+         if (isPendingEstimate(est.status)) {
+           row.pendingEstimate += est.total_amount || 0;
+           row.pendingEstimateCount += 1;
+         }
       });
 
       // POs → ordered (canonical: committed POs only, grossed up by sales tax)

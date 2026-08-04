@@ -111,6 +111,8 @@ export function SupplierDashboardView({
       status: pf.status || proj?.status || 'active',
       phase: formatPhase(phaseRaw),
       estimate: pf.estimate,
+      pendingEstimate: pf.pendingEstimate,
+      pendingEstimateCount: pf.pendingEstimateCount,
       ordered: pf.ordered,
       billed: pf.billed,
       received: pf.received,

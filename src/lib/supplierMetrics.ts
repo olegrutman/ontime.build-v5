@@ -9,6 +9,9 @@
 /** Estimates counted toward "Estimated" (material budget). Approved only. */
 export const ESTIMATE_COUNTED_STATUSES = ['APPROVED'] as const;
 
+/** Submitted estimates are visible as pending, but do not enter the approved budget. */
+export const ESTIMATE_PENDING_STATUSES = ['SUBMITTED'] as const;
+
 /** PO statuses excluded from "Ordered" (pre-submission / in-negotiation / void). */
 export const ORDERED_EXCLUDED_PO_STATUSES = new Set([
   'ACTIVE',
@@ -26,6 +29,10 @@ export const RECEIVED_INVOICE_STATUSES = new Set(['PAID']);
 
 export function isCountedEstimate(status?: string | null): boolean {
   return !!status && (ESTIMATE_COUNTED_STATUSES as readonly string[]).includes(status);
+}
+
+export function isPendingEstimate(status?: string | null): boolean {
+  return !!status && (ESTIMATE_PENDING_STATUSES as readonly string[]).includes(status);
 }
 
 export function isOrderedPO(status?: string | null): boolean {
