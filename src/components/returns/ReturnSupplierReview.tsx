@@ -75,7 +75,7 @@ export function ReturnSupplierReview({ returnId, items, projectId }: ReturnSuppl
       for (const item of items) {
         const d = decisions[item.id];
         const isReturnable = d.flag === 'Yes';
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('return_items')
           .update({
             returnable_flag: d.flag,
@@ -84,11 +84,15 @@ export function ReturnSupplierReview({ returnId, items, projectId }: ReturnSuppl
             credit_unit_price: isReturnable ? d.unit_credit : 0,
             credit_line_total: isReturnable ? d.accepted_qty * d.unit_credit : 0,
           })
-          .eq('id', item.id);
+          .eq('id', item.id)
+          .select('id');
         if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error('Item update blocked — this return is no longer open for supplier review.');
+        }
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('returns')
         .update({
           status: 'APPROVED',
@@ -98,8 +102,12 @@ export function ReturnSupplierReview({ returnId, items, projectId }: ReturnSuppl
           restocking_total: restockingTotal,
           net_credit_total: netCredit,
         })
-        .eq('id', returnId);
+        .eq('id', returnId)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Approval blocked — this return is no longer in supplier review.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['return-detail', returnId] });
@@ -113,11 +121,15 @@ export function ReturnSupplierReview({ returnId, items, projectId }: ReturnSuppl
 
   const rejectMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('returns')
         .update({ status: 'REJECTED' })
-        .eq('id', returnId);
+        .eq('id', returnId)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Rejection blocked — this return is no longer in supplier review.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['return-detail', returnId] });
