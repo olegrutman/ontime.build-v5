@@ -487,18 +487,23 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         return;
       }
 
-      const { error: updateErr } = await supabase
+      // Full ownership transfer: the approving GC becomes pricing owner (and payer),
+      // and the PO moves on to the supplier.
+      const { data: updated, error: updateErr } = await supabase
         .from('purchase_orders')
         .update({
           approved_by: user.id,
           approved_at: new Date().toISOString(),
-          // Once the GC approves a TC-raised PO, the GC owns it (and its pricing)
+          status: 'SUBMITTED' as any,
           ...(currentOrgId ? { pricing_owner_org_id: currentOrgId } : {}),
         })
-        .eq('id', po.id);
-
+        .eq('id', po.id)
+        .select('id');
 
       if (updateErr) throw updateErr;
+      if (!updated || updated.length === 0) {
+        throw new Error('You do not have permission to approve this PO');
+      }
 
       const { error: sendErr } = await supabase.functions.invoke('send-po', {
         body: { po_id: po.id, supplier_email: supplierEmail },
@@ -506,7 +511,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
       if (sendErr) throw sendErr;
 
-      toast.success('PO approved and sent to supplier');
+      toast.success('PO approved, transferred to your org, and sent to supplier');
       fetchPurchaseOrders();
     } catch (err: any) {
       toast.error('Failed to approve PO: ' + (err?.message || 'Unknown error'));
@@ -515,13 +520,17 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
   const handleRejectPO = async (po: PurchaseOrder) => {
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('purchase_orders')
         .update({ status: 'ACTIVE' as any })
-        .eq('id', po.id);
+        .eq('id', po.id)
+        .select('id');
 
       if (error) throw error;
-      toast.success('PO returned to active');
+      if (!updated || updated.length === 0) {
+        throw new Error('You do not have permission to return this PO');
+      }
+      toast.success('PO returned to the trade contractor');
       fetchPurchaseOrders();
     } catch (err: any) {
       toast.error('Failed to reject PO: ' + (err?.message || 'Unknown error'));
