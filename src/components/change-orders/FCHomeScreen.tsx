@@ -91,7 +91,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
   function handleHeroTap(key: string, reason: COReasonCode | null) {
     if (key === 'something_happened' || key === 'saw_damage') {
       const params = reason ? `?reason=${reason}` : '';
-      navigate(`/project/${projectId}/change-orders/new${params}`);
+      navigate(`/project/${projectId}/change-orders/start${params}`);
     } else if (key === 'log_hours' || key === 'need_material') {
       navigate(`/project/${projectId}/change-orders`);
     }

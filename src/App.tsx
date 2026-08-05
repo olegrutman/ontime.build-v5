@@ -65,6 +65,7 @@ const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
 const CONewIntakePage = lazy(() => import("./pages/CONewIntake"));
+const CONewStartPage = lazy(() => import("./pages/CONewStart"));
 const COGuidedBuilderPage = lazy(() => import("./pages/COGuidedBuilder"));
 const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
@@ -171,7 +172,7 @@ function AuthenticatedSashaBubble() {
   const { pathname } = useLocation();
   if (!user && !isDemoMode) return null;
   // Hide on full-screen picker/wizard routes where Sasha overlaps the submit bar
-  if (/\/change-orders\/(new|guided|intake|[^/]+\/add)/.test(pathname)) return null;
+  if (/\/change-orders\/(start|new|guided|intake|[^/]+\/add)/.test(pathname)) return null;
   return <SashaBubble />;
 }
 
@@ -210,6 +211,7 @@ function AppRoutes() {
             <Route path="/project/:id/contracts" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
             <Route path="/project/:id/change-orders/quick" element={<RequireAuth><QuickCapture /></RequireAuth>} />
             
+            <Route path="/project/:id/change-orders/start" element={<RequireAuth><CONewStartPage /></RequireAuth>} />
             <Route path="/project/:id/change-orders/new" element={<RequireAuth><CONewIntakePage /></RequireAuth>} />
             <Route path="/project/:id/change-orders/new/manual" element={<RequireAuth><COPickerV3Page /></RequireAuth>} />
             <Route path="/project/:id/change-orders/guided" element={<RequireAuth><COGuidedBuilderPage /></RequireAuth>} />

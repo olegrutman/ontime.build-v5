@@ -12,9 +12,7 @@ import { COBoardCard } from './COBoardCard';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
-import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 
-import { NewCOChooserDialog } from './NewCOChooserDialog';
 
 
 
@@ -34,17 +32,8 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
 
 
   const canCreateCO = usePermission('canCreateChangeOrders');
-  const coV4 = useCoV4Flag();
-  const [chooserOpen, setChooserOpen] = useState(false);
   // Navigate to the new Picker v3 full-page wizard
-  const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
-  const openGuided = () => navigate(`/project/${projectId}/change-orders/guided`);
-  const handlePickMode = (mode: 'voice' | 'guided' | 'describe') => {
-    setChooserOpen(false);
-    if (mode === 'voice') navigate(`/project/${projectId}/change-orders/intake?mode=voice`);
-    else if (mode === 'guided') openGuided();
-    else navigate(`/project/${projectId}/change-orders/intake`);
-  };
+  const openNewPicker = () => navigate(`/project/${projectId}/change-orders/start`);
   const [filter, setFilter] = useState<FilterKey>('in_progress');
   function handleCardClick(id: string) {
     navigate(`/project/${projectId}/change-orders/${id}`);
@@ -135,7 +124,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
             <div className="flex items-center gap-1.5 shrink-0">
               <Button
                 size="sm"
-                onClick={() => (coV4 ? setChooserOpen(true) : openNewPicker())}
+                onClick={openNewPicker}
                 className="gap-1.5"
                 aria-label={`New ${coLabel(dt, false)}`}
               >
@@ -224,13 +213,6 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       {/* Legacy wizard removed — now using Picker v3 full-page route */}
 
       
-      <NewCOChooserDialog
-        open={chooserOpen}
-        onOpenChange={setChooserOpen}
-        onPick={handlePickMode}
-        docLabel={coLabel(dt, false)}
-      />
-
     </div>
   );
 }
