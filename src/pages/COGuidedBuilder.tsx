@@ -263,9 +263,9 @@ export default function COGuidedBuilder() {
     try {
       const isTM = project?.contract_mode === 'tm';
 
-      // Resolve upstream/downstream assignment
-      let assignedToOrgId: string | null = null;
-      if (role === 'FC') {
+      // Routing target: explicit selection wins, else fall back to upstream resolution
+      let assignedToOrgId: string | null = assignedOrgId;
+      if (!assignedToOrgId && role === 'FC') {
         const { data: up } = await supabase
           .from('project_contracts')
           .select('from_org_id')
@@ -273,7 +273,7 @@ export default function COGuidedBuilder() {
           .eq('to_org_id', orgId)
           .maybeSingle();
         assignedToOrgId = up?.from_org_id ?? null;
-      } else if (role === 'TC') {
+      } else if (!assignedToOrgId && role === 'TC') {
         const { data: gc } = await supabase
           .from('project_participants')
           .select('organization_id')
