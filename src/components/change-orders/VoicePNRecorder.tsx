@@ -381,6 +381,17 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
               </Button>
             </div>
           )}
+          {phase === 'failed' && (
+            <div className="flex gap-2 justify-between">
+              <Button variant="outline" onClick={resetRecording}>
+                <RotateCcw className="h-4 w-4 mr-1.5" /> Re-record
+              </Button>
+              <Button onClick={submit} disabled={!blob}>
+                <Send className="h-4 w-4 mr-1.5" /> Send to GC
+              </Button>
+            </div>
+          )}
+
 
           {phase === 'ready' && readyCoId && (
             <div className="flex gap-2 justify-between">
