@@ -149,7 +149,7 @@ async function startAndStopRecording() {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('VoicePNRecorder — end-to-end flow', () => {
-  it('records, uploads to co-voice-notes, invokes co-voice-pn, and navigates to the draft', async () => {
+  it('records, uploads to co-voice-notes, posts to co-voice-pn, and surfaces the ready draft', async () => {
     render(
       <VoicePNRecorder projectId="proj-1" open onOpenChange={() => {}} />,
     );
@@ -169,21 +169,24 @@ describe('VoicePNRecorder — end-to-end flow', () => {
     expect(blob).toBeInstanceOf(Blob);
     expect(opts).toMatchObject({ contentType: 'audio/webm', upsert: false });
 
-    // Edge function invoked with base64 audio + voice_url from signed URL.
-    await waitFor(() => expect(invokeMock).toHaveBeenCalledTimes(1));
-    const [fnName, { body }] = invokeMock.mock.calls[0];
-    expect(fnName).toBe('co-voice-pn');
-    expect(body.project_id).toBe('proj-1');
-    expect(body.mime_type).toBe('audio/webm');
-    expect(body.voice_url).toBe('https://signed.example/voice.webm');
-    expect(typeof body.audio_base64).toBe('string');
-    expect(body.audio_base64.length).toBeGreaterThan(0);
-    expect(body.duration_sec).toBeGreaterThanOrEqual(3);
+    // Edge function called over multipart form-data with audio + voice_url.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [fnUrl, init] = fetchMock.mock.calls[0];
+    expect(String(fnUrl)).toContain('/functions/v1/co-voice-pn');
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBe('Bearer test-token');
+    const form = init.body as FormData;
+    expect(form.get('project_id')).toBe('proj-1');
+    expect(form.get('voice_url')).toBe('https://signed.example/voice.webm');
+    expect(form.get('audio')).toBeInstanceOf(Blob);
 
-    // Navigation to the newly created draft CO.
+    // Intake polling resolves to a ready draft.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
     await waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith(
-        '/project/proj-1/change-orders/co-123',
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        expect.stringContaining('PN-1'),
       ),
     );
 
@@ -200,18 +203,18 @@ describe('VoicePNRecorder — end-to-end flow', () => {
     await startAndStopRecording();
     fireEvent.click(await screen.findByRole('button', { name: /send to gc/i }));
 
-    await waitFor(() => expect(invokeMock).toHaveBeenCalledTimes(1));
-    const [, { body }] = invokeMock.mock.calls[0];
-    expect(body.voice_url).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const form = fetchMock.mock.calls[0][1].body as FormData;
+    expect(form.get('voice_url')).toBeNull();
     // No signed URL attempted on failed upload.
     expect(createSignedUrlMock).not.toHaveBeenCalled();
   });
 
   it('surfaces edge-function errors and returns to the recorded phase for retry', async () => {
-    const toast = { error: toastErrorMock };
-    invokeMock.mockResolvedValueOnce({
-      data: { error: 'transcribe_failed' },
-      error: null,
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ error: 'transcribe_failed' }),
     });
 
     render(
@@ -221,7 +224,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
     fireEvent.click(await screen.findByRole('button', { name: /send to gc/i }));
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
+      expect(toastErrorMock).toHaveBeenCalledWith(
         expect.stringContaining('transcribe_failed'),
       ),
     );
@@ -231,6 +234,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
       await screen.findByRole('button', { name: /send to gc/i }),
     ).toBeInTheDocument();
   });
+
 
   it('resets state when Re-record is clicked', async () => {
     render(
