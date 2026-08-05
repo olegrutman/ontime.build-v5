@@ -178,6 +178,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     (co as any)?.materials_responsible,
     (co as any)?.equipment_responsible,
   );
+  // Whoever is on the hook for procurement gets the panel — including the GC.
+  const isMaterialsOwner =
+    responsibility.materialResponsible === 'GC' ? isGC : (isTC || isFC);
+  const isEquipmentOwner =
+    responsibility.equipmentResponsible === 'GC' ? isGC : (isTC || isFC);
+
 
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
     o => !collaboratorOrgIds.has(o.id) || o.id === currentCollaborator?.organization_id
