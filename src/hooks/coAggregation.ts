@@ -119,13 +119,27 @@ export function aggregateCOTotals(
       .filter((r) => r.co_id === coId && r.org_id === billingOrgId)
       .reduce((s, r) => s + Number(r[field] ?? 0), 0);
 
+  // Actual-cost labor rows record what was really spent — they are never
+  // billable revenue (mirrors co_grand_total, which ignores them) but they must
+  // count toward cost or margin comes out overstated.
+  const sumLabor = (coId: string, opts: { billableOnly: boolean }) =>
+    labor
+      .filter(
+        (r) =>
+          r.co_id === coId &&
+          r.org_id === billingOrgId &&
+          (!opts.billableOnly || !r.is_actual_cost),
+      )
+      .reduce((s, r) => s + Number(r.line_total ?? 0), 0);
+
   const perCO = cos.map((c) => {
-    const laborSum = sumScoped(labor, c.id, 'line_total');
+    const laborRevenue = sumLabor(c.id, { billableOnly: true });
+    const laborCost = sumLabor(c.id, { billableOnly: false });
     // A snapshot of 0/null means "never priced" — fall back to the labor sum so
     // UI totals match the DB's co_grand_total (which drives contract_sum).
     const snapshot = Number(c.tc_submitted_price ?? 0);
     const revLabor =
-      isGCPerspective && snapshot > 0 ? snapshot : laborSum;
+      isGCPerspective && snapshot > 0 ? snapshot : laborRevenue;
     const matRev = sumScoped(materials, c.id, 'billed_amount');
     const equipRev = sumScoped(equipment, c.id, 'billed_amount');
     const matCost = sumScoped(materials, c.id, 'line_cost');
@@ -134,9 +148,10 @@ export function aggregateCOTotals(
       status: c.status,
       document_type: c.document_type,
       revenue: revLabor + matRev + equipRev,
-      cost: laborSum + matCost + equipCost,
+      cost: laborCost + matCost + equipCost,
     };
   });
+
 
   const approved = perCO.filter((c) => c.status === 'approved');
   const pending = perCO.filter((c) => c.status !== 'approved');
