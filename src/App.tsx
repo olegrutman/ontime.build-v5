@@ -65,6 +65,7 @@ const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
 const CONewIntakePage = lazy(() => import("./pages/CONewIntake"));
+const CONewStartPage = lazy(() => import("./pages/CONewStart"));
 const COGuidedBuilderPage = lazy(() => import("./pages/COGuidedBuilder"));
 const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
