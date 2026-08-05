@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useCoV4FlagState } from '@/hooks/useCoV4Flag';
 import { generateCONumber } from '@/lib/generateCONumber';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -53,7 +52,7 @@ export default function COGuidedBuilder() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, userOrgRoles } = useAuth();
-  const { enabled: v4, loading: v4Loading, resolved: v4Resolved } = useCoV4FlagState();
+
 
   const [step, setStep] = useState<Step>(1);
   const [scenarioId, setScenarioId] = useState<string | null>(null);
@@ -357,7 +356,7 @@ export default function COGuidedBuilder() {
           </Button>
           <div className="flex-1 min-w-0">
             <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">
-              Guided Change Order · v4
+              Guided Change Order
             </div>
             <h1 className="font-heading text-xl font-extrabold truncate">
               {project?.name ?? 'Project'}
