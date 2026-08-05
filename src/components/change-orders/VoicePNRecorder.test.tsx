@@ -54,6 +54,12 @@ vi.mock('@/integrations/supabase/client', () => ({
       }),
     },
     functions: { invoke: invokeMock },
+    auth: {
+      getSession: async () => ({
+        data: { session: { access_token: 'test-token', user: { id: 'user-1' } } },
+        error: null,
+      }),
+    },
   },
 }));
 
