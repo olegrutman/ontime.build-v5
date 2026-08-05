@@ -11,6 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { VisualLocationPicker } from '@/components/change-orders/VisualLocationPicker';
+import { AssignToCard } from '@/components/change-orders/AssignToCard';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { getLocationContract, autoFillLocationTag } from '@/lib/scenarioLocationRules';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
@@ -62,6 +65,17 @@ export default function COGuidedBuilder() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
+  const [assignedOrgId, setAssignedOrgId] = useState<string | null>(null);
+
+  const rl = useRoleLabelsContext();
+  const { data: routing } = useCORoutingTargets(projectId);
+
+  // Default the routing target once resolved
+  useEffect(() => {
+    if (!assignedOrgId && routing?.defaultId) setAssignedOrgId(routing.defaultId);
+  }, [routing?.defaultId, assignedOrgId]);
+
+
 
   // Resolve participant + project
   const { data: myParticipant } = useQuery({
@@ -249,9 +263,9 @@ export default function COGuidedBuilder() {
     try {
       const isTM = project?.contract_mode === 'tm';
 
-      // Resolve upstream/downstream assignment
-      let assignedToOrgId: string | null = null;
-      if (role === 'FC') {
+      // Routing target: explicit selection wins, else fall back to upstream resolution
+      let assignedToOrgId: string | null = assignedOrgId;
+      if (!assignedToOrgId && role === 'FC') {
         const { data: up } = await supabase
           .from('project_contracts')
           .select('from_org_id')
@@ -259,7 +273,7 @@ export default function COGuidedBuilder() {
           .eq('to_org_id', orgId)
           .maybeSingle();
         assignedToOrgId = up?.from_org_id ?? null;
-      } else if (role === 'TC') {
+      } else if (!assignedToOrgId && role === 'TC') {
         const { data: gc } = await supabase
           .from('project_participants')
           .select('organization_id')
@@ -639,6 +653,16 @@ export default function COGuidedBuilder() {
                 </div>
               </div>
             )}
+
+            <AssignToCard
+              targets={routing?.targets ?? []}
+              value={assignedOrgId}
+              onChange={setAssignedOrgId}
+              roleLabel={routing?.myRole === 'GC' ? rl.TC : routing?.myRole === 'TC' ? rl.GC : 'party'}
+              className="mb-0"
+            />
+
+
 
 
 

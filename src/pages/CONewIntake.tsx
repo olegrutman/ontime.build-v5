@@ -13,6 +13,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
+import { AssignToCard } from '@/components/change-orders/AssignToCard';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import {
   Sparkles,
   ArrowLeft,
@@ -53,6 +56,14 @@ export default function CONewIntakePage() {
   const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
   const [materialBy, setMaterialBy] = useState<'GC' | 'TC' | null>(null);
   const [equipmentBy, setEquipmentBy] = useState<'GC' | 'TC' | null>(null);
+  const [assignedOrgId, setAssignedOrgId] = useState<string | null>(null);
+
+  const rl = useRoleLabelsContext();
+  const { data: routing } = useCORoutingTargets(projectId);
+
+  useEffect(() => {
+    if (!assignedOrgId && routing?.defaultId) setAssignedOrgId(routing.defaultId);
+  }, [routing?.defaultId, assignedOrgId]);
 
   const runIntake = useStartAiIntake();
   const intakeQuery = useAiIntake(intakeId);
@@ -204,7 +215,7 @@ export default function CONewIntakePage() {
       const coNumber = await generateCONumber({
         projectId,
         creatorOrgId: orgId,
-        assignedToOrgId: null,
+        assignedToOrgId: assignedOrgId,
         isTM: isWO,
       });
 
@@ -219,6 +230,7 @@ export default function CONewIntakePage() {
           title: lines[0]?.title?.slice(0, 80) ?? 'New change',
           status: 'draft',
           pricing_type: isWO ? 'tm' : pricingType,
+          assigned_to_org_id: assignedOrgId,
           entry_source: 'ai_intake',
           ai_intake_id: intakeId,
           problem_summary: text.slice(0, 4000),
@@ -567,6 +579,18 @@ export default function CONewIntakePage() {
               })}
             </div>
           </Card>
+
+          {/* Routing — who this order goes to */}
+          {!addToCoId && (
+            <AssignToCard
+              targets={routing?.targets ?? []}
+              value={assignedOrgId}
+              onChange={setAssignedOrgId}
+              roleLabel={routing?.myRole === 'GC' ? rl.TC : routing?.myRole === 'TC' ? rl.GC : 'party'}
+            />
+          )}
+
+
 
           {/* Pricing model — CO only. WO is inherently T&M. */}
           {docLabel === 'CO' && (
