@@ -53,6 +53,14 @@ export default function CONewIntakePage() {
   const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
   const [materialBy, setMaterialBy] = useState<'GC' | 'TC' | null>(null);
   const [equipmentBy, setEquipmentBy] = useState<'GC' | 'TC' | null>(null);
+  const [assignedOrgId, setAssignedOrgId] = useState<string | null>(null);
+
+  const rl = useRoleLabelsContext();
+  const { data: routing } = useCORoutingTargets(projectId);
+
+  useEffect(() => {
+    if (!assignedOrgId && routing?.defaultId) setAssignedOrgId(routing.defaultId);
+  }, [routing?.defaultId, assignedOrgId]);
 
   const runIntake = useStartAiIntake();
   const intakeQuery = useAiIntake(intakeId);
