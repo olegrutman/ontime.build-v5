@@ -23,6 +23,8 @@ const {
   uploadMock,
   createSignedUrlMock,
   invokeMock,
+  maybeSingleMock,
+  fetchMock,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -31,6 +33,8 @@ const {
   uploadMock: vi.fn(),
   createSignedUrlMock: vi.fn(),
   invokeMock: vi.fn(),
+  maybeSingleMock: vi.fn(),
+  fetchMock: vi.fn(),
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -60,8 +64,14 @@ vi.mock('@/integrations/supabase/client', () => ({
         error: null,
       }),
     },
+    from: (_table: string) => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: maybeSingleMock }),
+      }),
+    }),
   },
 }));
+
 
 // ── MediaRecorder + getUserMedia harness ─────────────────────────────────────
 
