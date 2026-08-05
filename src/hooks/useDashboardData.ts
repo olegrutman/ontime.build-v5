@@ -784,11 +784,40 @@ export function useDashboardData(): DashboardData {
           .select('id, status, document_type, tc_submitted_price, gc_budget, org_id, project_id')
           .in('project_id', projectIds);
         const cos = (allCOs || []) as any[];
+
+        // COs with no priced snapshot still carry real value in their line rows.
+        // Mirror the DB's co_grand_total so dashboard $ matches contract_sum.
+        const unpricedIds = cos
+          .filter((co) => !(Number(co.tc_submitted_price ?? 0) > 0) && !(Number(co.gc_budget ?? 0) > 0))
+          .map((co) => co.id);
+        const fallbackTotals = new Map<string, number>();
+        if (unpricedIds.length > 0) {
+          const [laborRes, matRes, eqRes] = await Promise.all([
+            supabase.from('co_labor_entries').select('co_id, line_total, is_actual_cost').in('co_id', unpricedIds),
+            supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', unpricedIds),
+            supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', unpricedIds),
+          ]);
+          const add = (id: string, amt: number) =>
+            fallbackTotals.set(id, (fallbackTotals.get(id) || 0) + amt);
+          for (const r of (laborRes.data || []) as any[]) {
+            if (!r.is_actual_cost) add(r.co_id, Number(r.line_total ?? 0));
+          }
+          for (const r of (matRes.data || []) as any[]) add(r.co_id, Number(r.billed_amount ?? 0));
+          for (const r of (eqRes.data || []) as any[]) add(r.co_id, Number(r.billed_amount ?? 0));
+        }
+
+        const pricedValue = (co: any): number => {
+          const snap = Number(co.tc_submitted_price ?? 0);
+          if (snap > 0) return snap;
+          const budget = Number(co.gc_budget ?? 0);
+          if (budget > 0) return budget;
+          return fallbackTotals.get(co.id) || 0;
+        };
         const valueForViewer = (co: any): number => {
-          // GC sees contract impact via tc_submitted_price (locked submitted), else gc_budget
-          if (orgType === 'GC') return Number(co.tc_submitted_price ?? co.gc_budget ?? 0);
-          // TC/FC: their own org's CO line = tc_submitted_price (what they bill upstream)
-          if (co.org_id === currentOrg.id) return Number(co.tc_submitted_price ?? co.gc_budget ?? 0);
+          // GC sees contract impact via the priced snapshot, else the CO's line rollup
+          if (orgType === 'GC') return pricedValue(co);
+          // TC/FC: their own org's CO line = what they bill upstream
+          if (co.org_id === currentOrg.id) return pricedValue(co);
           return 0;
         };
         for (const co of cos) {
