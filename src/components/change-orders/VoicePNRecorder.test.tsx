@@ -203,14 +203,13 @@ describe('VoicePNRecorder — end-to-end flow', () => {
     expect(form.get('voice_url')).toBe('https://signed.example/voice.webm');
     expect(form.get('audio')).toBeInstanceOf(Blob);
 
-    // Intake polling resolves to a ready draft.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
-    });
-    await waitFor(() =>
-      expect(toastSuccessMock).toHaveBeenCalledWith(
-        expect.stringContaining('PN-1'),
-      ),
+    // Intake polling resolves to a ready draft (poll interval is 1.2s of real time).
+    await waitFor(
+      () =>
+        expect(toastSuccessMock).toHaveBeenCalledWith(
+          expect.stringContaining('PN-1'),
+        ),
+      { timeout: 4000 },
     );
 
     // The mic stream tracks were released.
