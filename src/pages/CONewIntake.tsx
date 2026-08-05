@@ -215,7 +215,7 @@ export default function CONewIntakePage() {
       const coNumber = await generateCONumber({
         projectId,
         creatorOrgId: orgId,
-        assignedToOrgId: null,
+        assignedToOrgId: assignedOrgId,
         isTM: isWO,
       });
 
@@ -230,6 +230,7 @@ export default function CONewIntakePage() {
           title: lines[0]?.title?.slice(0, 80) ?? 'New change',
           status: 'draft',
           pricing_type: isWO ? 'tm' : pricingType,
+          assigned_to_org_id: assignedOrgId,
           entry_source: 'ai_intake',
           ai_intake_id: intakeId,
           problem_summary: text.slice(0, 4000),
