@@ -99,17 +99,30 @@ const getUserMediaMock = vi.fn().mockResolvedValue(fakeStream);
 // ── Setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] });
   navigateMock.mockReset();
   uploadMock.mockReset().mockResolvedValue({ error: null });
   createSignedUrlMock.mockReset().mockResolvedValue({
     data: { signedUrl: 'https://signed.example/voice.webm' },
     error: null,
   });
-  invokeMock.mockReset().mockResolvedValue({
-    data: { co_id: 'co-123', co_number: 'CO-ABC-PN001' },
+  invokeMock.mockReset().mockResolvedValue({ data: null, error: null });
+  maybeSingleMock.mockReset().mockResolvedValue({
+    data: {
+      status: 'succeeded',
+      finalized_co_id: 'co-123',
+      error_message: null,
+      output_json: { co_number: 'PN-1' },
+    },
     error: null,
   });
+  fetchMock.mockReset().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ intake_id: 'intake-1' }),
+  });
+  (globalThis as any).fetch = fetchMock;
+
   stopTrack.mockReset();
   getUserMediaMock.mockClear();
   FakeMediaRecorder.instances = [];
