@@ -139,18 +139,53 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
     });
   }
 
-  if (members.length === 0) return null;
+  if (members.length === 0 && !canReroute) return null;
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="px-3.5 py-3 border-b border-border">
-        <h3
-          className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground"
-         
-        >
+      <div className="px-3.5 py-3 border-b border-border flex items-center justify-between gap-2">
+        <h3 className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground">
           👥 Team
         </h3>
+        {canReroute && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => setEditing(v => !v)}
+          >
+            {editing ? 'Cancel' : co.assigned_to_org_id ? 'Change assignee' : 'Assign'}
+          </Button>
+        )}
       </div>
+      {canReroute && editing && (
+        <div className="px-3.5 py-3 border-b border-border space-y-1.5 bg-muted/30">
+          <p className="text-[11px] text-muted-foreground">
+            Route this draft to a different party.
+          </p>
+          {(routing?.targets ?? []).length === 0 && (
+            <p className="text-[11px] text-muted-foreground">No eligible party on this project yet.</p>
+          )}
+          {(routing?.targets ?? []).map(t => (
+            <button
+              key={t.id}
+              type="button"
+              disabled={saving}
+              onClick={() => reroute(t.id)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors',
+                co.assigned_to_org_id === t.id
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground/40',
+              )}
+            >
+              <span className="text-sm font-medium flex-1 truncate">{t.name}</span>
+              <span className="text-[10px] font-bold uppercase text-muted-foreground">{t.type}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="divide-y divide-border">
         {members.map(member => (
           <div key={member.orgId} className="flex items-center gap-3 px-3.5 py-2.5">
