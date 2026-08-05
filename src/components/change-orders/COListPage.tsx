@@ -37,7 +37,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const coV4 = useCoV4Flag();
   const [chooserOpen, setChooserOpen] = useState(false);
   // Navigate to the new Picker v3 full-page wizard
-  const openNewPicker = () => navigate(`/project/${projectId}/change-orders/new`);
+  const openNewPicker = () => navigate(`/project/${projectId}/change-orders/start`);
   const openGuided = () => navigate(`/project/${projectId}/change-orders/guided`);
   const handlePickMode = (mode: 'voice' | 'guided' | 'describe') => {
     setChooserOpen(false);
@@ -135,7 +135,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
             <div className="flex items-center gap-1.5 shrink-0">
               <Button
                 size="sm"
-                onClick={() => (coV4 ? setChooserOpen(true) : openNewPicker())}
+                onClick={openNewPicker}
                 className="gap-1.5"
                 aria-label={`New ${coLabel(dt, false)}`}
               >
