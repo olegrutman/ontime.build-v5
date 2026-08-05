@@ -179,6 +179,7 @@ export function useChangeOrders(projectId: string | null) {
           collaboratorStatus: collaboratorMap.get(c.id)?.status,
           collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
           display_total: computeDisplayTotal(c),
+          fc_cost_total: fcLaborByCo.get(c.id) ?? 0,
           _isDownstreamOrg: downstreamOrgIds.has(c.org_id),
         })) as (ChangeOrderWithMembers & { _isDownstreamOrg?: boolean })[],
         isGCOnProject,
