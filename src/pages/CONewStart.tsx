@@ -105,7 +105,7 @@ export default function CONewStartPage() {
 
   const pick = (mode: Mode) => {
     const base = `/project/${projectId}/change-orders`;
-    if (mode === 'voice') navigate(`${base}/new${reason ? `&reason=${reason}` : ''}`.replace('/new', '/new?mode=voice'));
+    if (mode === 'voice') navigate(`${base}/new?mode=voice${reason ? `&reason=${reason}` : ''}`);
     else if (mode === 'guided') navigate(`${base}/guided${suffix}`);
     else if (mode === 'manual') navigate(`${base}/new/manual${suffix}`);
     else navigate(`${base}/new${suffix}`);
