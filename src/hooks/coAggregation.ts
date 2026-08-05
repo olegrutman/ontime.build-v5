@@ -121,10 +121,11 @@ export function aggregateCOTotals(
 
   const perCO = cos.map((c) => {
     const laborSum = sumScoped(labor, c.id, 'line_total');
+    // A snapshot of 0/null means "never priced" — fall back to the labor sum so
+    // UI totals match the DB's co_grand_total (which drives contract_sum).
+    const snapshot = Number(c.tc_submitted_price ?? 0);
     const revLabor =
-      isGCPerspective && c.tc_submitted_price != null
-        ? Number(c.tc_submitted_price)
-        : laborSum;
+      isGCPerspective && snapshot > 0 ? snapshot : laborSum;
     const matRev = sumScoped(materials, c.id, 'billed_amount');
     const equipRev = sumScoped(equipment, c.id, 'billed_amount');
     const matCost = sumScoped(materials, c.id, 'line_cost');
