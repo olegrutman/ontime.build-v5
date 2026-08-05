@@ -197,6 +197,8 @@ export function COMaterialsPanel({
 
   const canManageMaterials = canEdit && isResponsibleForMaterials;
   const showPricingColumns = isResponsibleForMaterials;
+  /** Mask cost/markup only from a GC who is NOT the procurer (i.e. TC-bought materials). */
+  const hideCostFromViewer = isGC && !isResponsibleForMaterials;
   const addedByRole = isGC ? 'GC' : isFC ? 'FC' : 'TC';
   const responsibleLabel =
     materialsResponsible === 'GC' ? rl.GC : materialsResponsible === 'TC' ? rl.TC : null;
@@ -803,8 +805,8 @@ export function COMaterialsPanel({
                   <th className="text-left px-4 py-2 font-medium">Description</th>
                   <th className="text-right px-2 py-2 font-medium">Qty</th>
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
-                  {(showPricingColumns || draftRows.length > 0) && !isGC && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'Supplier cost' : 'Unit cost'}</th>}
-                  {(showPricingColumns || draftRows.length > 0) && !isGC && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'My margin' : 'Markup %'}</th>}
+                  {(showPricingColumns || draftRows.length > 0) && !hideCostFromViewer && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'Supplier cost' : 'Unit cost'}</th>}
+                  {(showPricingColumns || draftRows.length > 0) && !hideCostFromViewer && <th className="text-right px-2 py-2 font-medium">{(isTC || isFC) ? 'My margin' : 'Markup %'}</th>}
                   {(showPricingColumns || draftRows.length > 0) && <th className="text-right px-4 py-2 font-medium">Amount</th>}
                   {canManageMaterials && <th className="w-8" />}
                 </tr>
@@ -838,7 +840,7 @@ export function COMaterialsPanel({
                         ) : material.quantity}
                       </td>
                       <td className="px-2 py-2.5 text-muted-foreground">{material.uom}</td>
-                      {(showPricingColumns || draftRows.length > 0) && !isGC && (
+                      {(showPricingColumns || draftRows.length > 0) && !hideCostFromViewer && (
                         <td className="text-right px-2 py-2.5">
                           {isEditingMat && matDraft ? (
                             <Input type="number" value={matDraft.unit_cost} onChange={e => setMatDraft({ ...matDraft, unit_cost: e.target.value })} className="h-7 text-xs w-20 text-right" />
@@ -850,7 +852,7 @@ export function COMaterialsPanel({
                           )}
                         </td>
                       )}
-                      {(showPricingColumns || draftRows.length > 0) && !isGC && (
+                      {(showPricingColumns || draftRows.length > 0) && !hideCostFromViewer && (
                         <td className="text-right px-2 py-2.5">
                           {canEdit && (isTC || isFC) ? (
                             <MarkupEditor materialId={material.id} initialValue={material.markup_percent} onRefresh={onRefresh} />
@@ -1008,13 +1010,13 @@ export function COMaterialsPanel({
                   <span className="text-[10px] font-medium text-primary uppercase tracking-wide">Supplier priced</span>
                 </div>
               )}
-              {showPricingColumns && !isGC && totalCost > 0 && (
+              {showPricingColumns && !hideCostFromViewer && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{(isTC || isFC) ? 'Supplier cost' : 'Cost'}</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
-              {showPricingColumns && !isGC && totalBilled > totalCost && (
+              {showPricingColumns && !hideCostFromViewer && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{(isTC || isFC) ? 'My margin' : 'Markup'}</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>

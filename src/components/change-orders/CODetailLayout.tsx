@@ -27,6 +27,8 @@ import { COStickyFooter } from './COStickyFooter';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
+import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
+
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
 import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
@@ -176,6 +178,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     (co as any)?.materials_responsible,
     (co as any)?.equipment_responsible,
   );
+  // Whoever is on the hook for procurement gets the panel — including the GC.
+  const isMaterialsOwner =
+    responsibility.materialResponsible === 'GC' ? isGC : (isTC || isFC);
+  const isEquipmentOwner =
+    responsibility.equipmentResponsible === 'GC' ? isGC : (isTC || isFC);
+
 
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
     o => !collaboratorOrgIds.has(o.id) || o.id === currentCollaborator?.organization_id
@@ -438,7 +446,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* KPI Row */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || ((isTC || isFC) && canEdit)} hasEquipment={co.equipment_needed || equipment.length > 0 || ((isTC || isFC) && canEdit)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
@@ -455,14 +463,27 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none">Scope & Labor</h3>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
-                          <span className="mx-1.5 text-muted-foreground/40">·</span>
-                          Materials <span className="font-semibold text-foreground/80">{responsibility.materialResponsible}</span>
-                          <span className="mx-1.5 text-muted-foreground/40">·</span>
-                          Equipment <span className="font-semibold text-foreground/80">{responsibility.equipmentResponsible}</span>
-                        </p>
+                        <div className="flex items-center gap-3 flex-wrap mt-1.5">
+                          <p className="text-[11px] text-muted-foreground">
+                            {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
+                          </p>
+                          <COMaterialResponsibilityToggle
+                            type="material"
+                            responsible={responsibility.materialResponsible}
+                            isOverridden={responsibility.materialOverridden}
+                            canEdit={canEditInternal && (isGC || isTC)}
+                            onSet={responsibility.setMaterialOverride}
+                          />
+                          <COMaterialResponsibilityToggle
+                            type="equipment"
+                            responsible={responsibility.equipmentResponsible}
+                            isOverridden={responsibility.equipmentOverridden}
+                            canEdit={canEditInternal && (isGC || isTC)}
+                            onSet={responsibility.setEquipmentOverride}
+                          />
+                        </div>
                       </div>
+
                     </div>
                     {canEdit && !nteBlocked && co && (
                       <AddItemsChooser
@@ -572,7 +593,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               </div>
 
               {/* Materials */}
-              {(co.materials_needed || materials.length > 0 || ((isTC || isFC) && canEdit)) && (
+              {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
                 <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
@@ -588,7 +609,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Equipment */}
-              {(co.equipment_needed || equipment.length > 0 || ((isTC || isFC) && canEdit)) && (
+              {(co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
