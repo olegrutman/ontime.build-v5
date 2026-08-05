@@ -65,6 +65,17 @@ export default function COGuidedBuilder() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
+  const [assignedOrgId, setAssignedOrgId] = useState<string | null>(null);
+
+  const rl = useRoleLabelsContext();
+  const { data: routing } = useCORoutingTargets(projectId);
+
+  // Default the routing target once resolved
+  useEffect(() => {
+    if (!assignedOrgId && routing?.defaultId) setAssignedOrgId(routing.defaultId);
+  }, [routing?.defaultId, assignedOrgId]);
+
+
 
   // Resolve participant + project
   const { data: myParticipant } = useQuery({
