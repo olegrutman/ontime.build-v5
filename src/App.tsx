@@ -211,6 +211,7 @@ function AppRoutes() {
             <Route path="/project/:id/contracts" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
             <Route path="/project/:id/change-orders/quick" element={<RequireAuth><QuickCapture /></RequireAuth>} />
             
+            <Route path="/project/:id/change-orders/start" element={<RequireAuth><CONewStartPage /></RequireAuth>} />
             <Route path="/project/:id/change-orders/new" element={<RequireAuth><CONewIntakePage /></RequireAuth>} />
             <Route path="/project/:id/change-orders/new/manual" element={<RequireAuth><COPickerV3Page /></RequireAuth>} />
             <Route path="/project/:id/change-orders/guided" element={<RequireAuth><COGuidedBuilderPage /></RequireAuth>} />
