@@ -635,15 +635,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           </TabsContent>
         </Tabs>
 
-        {isTM ? (
-          <CreateInvoiceFromCOs
-            open={createFromCOsOpen}
-            onOpenChange={setCreateFromCOsOpen}
-            projectId={projectId}
-            onSuccess={handleCreateSuccess}
-            isTM
-          />
-        ) : (
+        <CreateInvoiceFromCOs
+          open={createFromCOsOpen}
+          onOpenChange={setCreateFromCOsOpen}
+          projectId={projectId}
+          onSuccess={handleCreateSuccess}
+          isTM={isTM}
+        />
+        {!isTM && (
           <CreateInvoiceFromSOV
             open={createDialogOpen}
             onOpenChange={setCreateDialogOpen}
@@ -692,15 +691,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           </TabsContent>
         </Tabs>
 
-        {isTM ? (
-          <CreateInvoiceFromCOs
-            open={createFromCOsOpen}
-            onOpenChange={setCreateFromCOsOpen}
-            projectId={projectId}
-            onSuccess={handleCreateSuccess}
-            isTM
-          />
-        ) : (
+        <CreateInvoiceFromCOs
+          open={createFromCOsOpen}
+          onOpenChange={setCreateFromCOsOpen}
+          projectId={projectId}
+          onSuccess={handleCreateSuccess}
+          isTM={isTM}
+        />
+        {!isTM && (
           <CreateInvoiceFromSOV
             open={createDialogOpen}
             onOpenChange={setCreateDialogOpen}
@@ -731,15 +729,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
 
-      {isTM ? (
-        <CreateInvoiceFromCOs
-          open={createFromCOsOpen}
-          onOpenChange={setCreateFromCOsOpen}
-          projectId={projectId}
-          onSuccess={handleCreateSuccess}
-          isTM
-        />
-      ) : (
+      <CreateInvoiceFromCOs
+        open={createFromCOsOpen}
+        onOpenChange={setCreateFromCOsOpen}
+        projectId={projectId}
+        onSuccess={handleCreateSuccess}
+        isTM={isTM}
+      />
+      {!isTM && (
         <CreateInvoiceFromSOV
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
