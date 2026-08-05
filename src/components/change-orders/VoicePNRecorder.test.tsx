@@ -109,7 +109,7 @@ const getUserMediaMock = vi.fn().mockResolvedValue(fakeStream);
 // ── Setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] });
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
   navigateMock.mockReset();
   uploadMock.mockReset().mockResolvedValue({ error: null });
   createSignedUrlMock.mockReset().mockResolvedValue({
