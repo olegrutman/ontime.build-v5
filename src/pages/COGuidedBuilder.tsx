@@ -11,6 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { VisualLocationPicker } from '@/components/change-orders/VisualLocationPicker';
+import { AssignToCard } from '@/components/change-orders/AssignToCard';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { getLocationContract, autoFillLocationTag } from '@/lib/scenarioLocationRules';
 import type { COCreatedByRole } from '@/types/changeOrder';
 
