@@ -13,6 +13,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
+import { AssignToCard } from '@/components/change-orders/AssignToCard';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import {
   Sparkles,
   ArrowLeft,
