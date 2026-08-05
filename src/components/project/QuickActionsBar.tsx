@@ -31,7 +31,7 @@ export function QuickActionsBar({ projectId, role, isTM = false, onNavigate }: P
     key: 'co',
     label: isTM ? 'New Work Order' : 'New Change Order',
     icon: isTM ? Hammer : ClipboardEdit,
-    onClick: () => navigate(`/project/${projectId}/change-orders/new`),
+    onClick: () => navigate(`/project/${projectId}/change-orders/start`),
     accent: C.blue,
   };
 
