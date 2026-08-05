@@ -22,24 +22,30 @@ export function useCOResponsibility(
 ): UseCOResponsibilityResult {
   const queryClient = useQueryClient();
 
-  // Fetch project contract defaults
+  // Fetch project contract defaults.
+  // Important: prefer the contract that governs the *work* (a downstream
+  // contractor billing upstream, i.e. from_role !== 'Owner'). The Owner→GC
+  // contract almost always says materials are "GC" (GC buys for the owner),
+  // which must NOT leak onto TC/FC work orders.
   const { data: contractDefaults, isLoading } = useQuery({
     queryKey: ['project-contract-responsibility', projectId],
     enabled: !!projectId,
     queryFn: async () => {
       const { data } = await supabase
         .from('project_contracts')
-        .select('material_responsibility')
+        .select('from_role, to_role, material_responsibility, created_at')
         .eq('project_id', projectId!)
-        .not('material_responsibility', 'is', null)
-        .limit(1)
-        .maybeSingle();
+        .not('material_responsibility', 'is', null);
+      const rows = data ?? [];
+      const trade = rows.find(r => (r.from_role ?? '') !== 'Owner');
+      const chosen = trade ?? rows[0];
       return {
-        materialResponsibility: (data?.material_responsibility as 'GC' | 'TC') ?? 'TC',
+        materialResponsibility: (chosen?.material_responsibility as 'GC' | 'TC') ?? 'TC',
       };
     },
     staleTime: 60_000,
   });
+
 
   const materialOverridden = !!coMaterialOverride;
   const equipmentOverridden = !!coEquipmentOverride;
