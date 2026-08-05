@@ -197,6 +197,8 @@ export function COMaterialsPanel({
 
   const canManageMaterials = canEdit && isResponsibleForMaterials;
   const showPricingColumns = isResponsibleForMaterials;
+  /** Mask cost/markup only from a GC who is NOT the procurer (i.e. TC-bought materials). */
+  const hideCostFromViewer = isGC && !isResponsibleForMaterials;
   const addedByRole = isGC ? 'GC' : isFC ? 'FC' : 'TC';
   const responsibleLabel =
     materialsResponsible === 'GC' ? rl.GC : materialsResponsible === 'TC' ? rl.TC : null;
