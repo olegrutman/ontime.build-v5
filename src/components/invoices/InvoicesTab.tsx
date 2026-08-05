@@ -548,6 +548,13 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           </SelectContent>
         </Select>
 
+        {showCreateButton && canCreateInvoice && !isTM && (
+          <Button size="sm" variant="outline" onClick={() => setCreateFromCOsOpen(true)}>
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Bill Change Orders</span>
+          </Button>
+        )}
+
         {showCreateButton && canCreateInvoice && (
           <TooltipProvider>
             <Tooltip>
@@ -559,6 +566,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
                   </Button>
                 </span>
               </TooltipTrigger>
+
               {isBlocked && (
                 <TooltipContent>
                   <p>Create SOVs for all contracts first</p>
