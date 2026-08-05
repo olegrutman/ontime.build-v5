@@ -580,6 +580,18 @@ export default function CONewIntakePage() {
             </div>
           </Card>
 
+          {/* Routing — who this order goes to */}
+          {!addToCoId && (
+            <AssignToCard
+              targets={routing?.targets ?? []}
+              value={assignedOrgId}
+              onChange={setAssignedOrgId}
+              roleLabel={routing?.myRole === 'GC' ? rl.TC : routing?.myRole === 'TC' ? rl.GC : 'party'}
+            />
+          )}
+
+
+
           {/* Pricing model — CO only. WO is inherently T&M. */}
           {docLabel === 'CO' && (
             <Card className={cn('mb-4 rounded-2xl p-4', existingCO && 'opacity-70')}>
