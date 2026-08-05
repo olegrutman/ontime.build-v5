@@ -27,6 +27,8 @@ import { COStickyFooter } from './COStickyFooter';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
+import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
+
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
 import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
