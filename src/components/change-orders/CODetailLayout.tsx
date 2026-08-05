@@ -455,14 +455,27 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none">Scope & Labor</h3>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
-                          <span className="mx-1.5 text-muted-foreground/40">·</span>
-                          Materials <span className="font-semibold text-foreground/80">{responsibility.materialResponsible}</span>
-                          <span className="mx-1.5 text-muted-foreground/40">·</span>
-                          Equipment <span className="font-semibold text-foreground/80">{responsibility.equipmentResponsible}</span>
-                        </p>
+                        <div className="flex items-center gap-3 flex-wrap mt-1.5">
+                          <p className="text-[11px] text-muted-foreground">
+                            {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
+                          </p>
+                          <COMaterialResponsibilityToggle
+                            type="material"
+                            responsible={responsibility.materialResponsible}
+                            isOverridden={responsibility.materialOverridden}
+                            canEdit={canEditInternal && (isGC || isTC)}
+                            onSet={responsibility.setMaterialOverride}
+                          />
+                          <COMaterialResponsibilityToggle
+                            type="equipment"
+                            responsible={responsibility.equipmentResponsible}
+                            isOverridden={responsibility.equipmentOverridden}
+                            canEdit={canEditInternal && (isGC || isTC)}
+                            onSet={responsibility.setEquipmentOverride}
+                          />
+                        </div>
                       </div>
+
                     </div>
                     {canEdit && !nteBlocked && co && (
                       <AddItemsChooser
