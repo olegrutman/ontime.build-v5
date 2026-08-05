@@ -268,12 +268,19 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'contracted', 'rejected'].includes(co.status));
   // Net CO margin counts all non-rejected COs (approved + pending)
   const countedCOs = changeOrders.filter(co => co.status !== 'rejected');
-  const coRevenue = countedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  const coCost = countedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
+  // TC revenue on a CO = what the TC bills the GC (its own priced total, or the
+  // GC-set budget as a fallback). TC cost on a CO = what the Field Crew priced.
+  // tc_submitted_price is REVENUE, never cost — treating it as cost made approved
+  // COs subtract from the TC's revised contract instead of adding to it.
+  const coRev = (co: any) => Number(co.display_total ?? 0) || Number(co.tc_submitted_price ?? 0) || Number(co.gc_budget ?? 0) || 0;
+  const coCst = (co: any) => Number(co.fc_cost_total ?? 0) || 0;
+  const coRevenue = countedCOs.reduce((s, co) => s + coRev(co), 0);
+  const coCost = countedCOs.reduce((s, co) => s + coCst(co), 0);
   const coNetMargin = coRevenue - coCost;
   // Approved-only rollups (for revised contract totals)
-  const approvedCoRevenue = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  const approvedCoCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
+  const approvedCoRevenue = approvedCOs.reduce((s, co) => s + coRev(co), 0);
+  const approvedCoCost = approvedCOs.reduce((s, co) => s + coCst(co), 0);
+
 
   // ─── T&M: derive "contract" values from WOs when no project_contracts exist ───
   const effectiveGCVal = isTM && gcContractVal === 0 ? approvedCoRevenue : gcContractVal;
