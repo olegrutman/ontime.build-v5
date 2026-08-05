@@ -199,3 +199,41 @@ describe('aggregateCOTotals', () => {
     expect(out.approvedCOMargin).toBe(100);
   });
 });
+
+describe('aggregateCOTotals — actual-cost labor', () => {
+  const co = (over: Partial<COLike> = {}): COLike => ({
+    id: 'co-1',
+    status: 'approved',
+    document_type: 'CO',
+    tc_submitted_price: null,
+    ...over,
+  });
+
+  it('excludes actual-cost labor from revenue but counts it as cost', () => {
+    const labor: COLineRow[] = [
+      { co_id: 'co-1', org_id: TC, line_total: 1730, is_actual_cost: false },
+      { co_id: 'co-1', org_id: TC, line_total: 644, is_actual_cost: true },
+    ];
+    const out = aggregateCOTotals([co()], labor, [], [], TC, false);
+    expect(out.approvedCORevenue).toBe(1730);
+    expect(out.approvedCOCost).toBe(2374);
+    expect(out.approvedCOMargin).toBe(1730 - 2374);
+  });
+
+  it('keeps the GC priced snapshot as revenue while cost includes actual costs', () => {
+    const labor: COLineRow[] = [
+      { co_id: 'co-1', org_id: TC, line_total: 1730, is_actual_cost: false },
+      { co_id: 'co-1', org_id: TC, line_total: 644, is_actual_cost: true },
+    ];
+    const out = aggregateCOTotals(
+      [co({ tc_submitted_price: 1170 })],
+      labor,
+      [],
+      [],
+      TC,
+      true,
+    );
+    expect(out.approvedCORevenue).toBe(1170);
+    expect(out.approvedCOCost).toBe(2374);
+  });
+});
