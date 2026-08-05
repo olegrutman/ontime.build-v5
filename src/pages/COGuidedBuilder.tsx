@@ -341,16 +341,7 @@ export default function COGuidedBuilder() {
   };
 
   if (!projectId) return <Navigate to="/dashboard" replace />;
-  if (v4Loading || !v4Resolved) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  if (!v4) {
-    return <Navigate to={`/project/${projectId}/change-orders/new`} replace />;
-  }
+
 
   return (
     <div className="min-h-screen bg-muted/30">
