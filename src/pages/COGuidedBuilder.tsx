@@ -640,6 +640,16 @@ export default function COGuidedBuilder() {
               </div>
             )}
 
+            <AssignToCard
+              targets={routing?.targets ?? []}
+              value={assignedOrgId}
+              onChange={setAssignedOrgId}
+              roleLabel={routing?.myRole === 'GC' ? rl.TC : routing?.myRole === 'TC' ? rl.GC : 'party'}
+              className="mb-0"
+            />
+
+
+
 
 
             <div>
