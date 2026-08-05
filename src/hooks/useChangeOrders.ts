@@ -125,12 +125,12 @@ export function useChangeOrders(projectId: string | null) {
           : Promise.resolve({ data: [] as any[] }) as any,
         coIds.length
           ? supabase.from(t.mats)
-              .select('co_id, billed_amount')
+              .select('co_id, billed_amount, added_by_role')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
         coIds.length
           ? supabase.from(t.eq)
-              .select('co_id, billed_amount')
+              .select('co_id, billed_amount, added_by_role')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
       ]);
@@ -142,17 +142,25 @@ export function useChangeOrders(projectId: string | null) {
 
       // Per-CO aggregates mirroring useChangeOrderDetail formulas
       const tcLaborByCo = new Map<string, number>();
+      const fcLaborByCo = new Map<string, number>();
       for (const r of (laborRows ?? []) as any[]) {
         if (r.is_actual_cost) continue;
-        if (r.entered_by_role !== 'TC') continue;
-        tcLaborByCo.set(r.co_id, (tcLaborByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+        if (r.entered_by_role === 'TC') {
+          tcLaborByCo.set(r.co_id, (tcLaborByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+        } else if (r.entered_by_role === 'FC') {
+          fcLaborByCo.set(r.co_id, (fcLaborByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+        }
       }
+      // Materials / equipment procured by the GC are billed to the GC directly by the
+      // supplier — they are NOT part of what the TC bills the GC for.
       const matByCo = new Map<string, number>();
       for (const r of (matRows ?? []) as any[]) {
+        if (r.added_by_role === 'GC') continue;
         matByCo.set(r.co_id, (matByCo.get(r.co_id) ?? 0) + Number(r.billed_amount ?? 0));
       }
       const eqByCo = new Map<string, number>();
       for (const r of (eqRows ?? []) as any[]) {
+        if (r.added_by_role === 'GC') continue;
         eqByCo.set(r.co_id, (eqByCo.get(r.co_id) ?? 0) + Number(r.billed_amount ?? 0));
       }
       const computeDisplayTotal = (c: ChangeOrder) => {
@@ -163,6 +171,7 @@ export function useChangeOrders(projectId: string | null) {
           : tcLabor;
         return tcBillableToGC + (matByCo.get(c.id) ?? 0) + (eqByCo.get(c.id) ?? 0);
       };
+
 
       return {
         items: allCOs.map(c => ({
