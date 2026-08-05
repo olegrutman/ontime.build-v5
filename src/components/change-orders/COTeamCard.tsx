@@ -41,6 +41,34 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function COTeamCard({ co, collaborators }: COTeamCardProps) {
   const rl = useRoleLabelsContext();
+  const queryClient = useQueryClient();
+  const { userOrgRoles } = useAuth();
+  const myOrgId = userOrgRoles?.[0]?.organization_id ?? null;
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { data: routing } = useCORoutingTargets(co.project_id);
+
+  const canReroute = myOrgId === co.org_id && co.status === 'draft';
+
+  const reroute = async (orgId: string) => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('change_orders')
+        .update({ assigned_to_org_id: orgId })
+        .eq('id', co.id);
+      if (error) throw error;
+      toast.success('Routing updated');
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['change-order', co.id] });
+      queryClient.invalidateQueries({ queryKey: ['change-orders', co.project_id] });
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Could not update routing');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Fetch org names for creator and assigned orgs
   const orgIds = [co.org_id, co.assigned_to_org_id, ...collaborators.map(c => c.organization_id)].filter(Boolean) as string[];
   const uniqueOrgIds = [...new Set(orgIds)];
