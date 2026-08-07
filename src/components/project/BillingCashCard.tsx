@@ -35,7 +35,9 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
   if (loading) return null;
   if (viewerRole === 'Supplier') return null;
 
-  if (viewerRole === 'Trade Contractor') {
+  if (viewerRole === 'Trade Contractor' || viewerRole === 'General Contractor') {
+    const isGC = viewerRole === 'General Contractor';
+
     const {
       receivablesInvoiced, receivablesCollected, receivablesRetainage,
       payablesInvoiced, payablesPaid, payablesRetainage,
