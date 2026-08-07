@@ -320,7 +320,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
             <div style={{ fontSize: '0.78rem', fontWeight: 800, color: C.ink, textTransform: 'uppercase', letterSpacing: 0.4 }}>
               📦 Per-Pack Variance
             </div>
-            <div style={{ fontSize: '0.66rem', color: C.muted }}>{a.packs.length} packs · click to open POs</div>
+            <div style={{ fontSize: '0.66rem', color: C.muted }}>{a.packs.length} packs · pre-tax · click to open POs</div>
           </div>
           {/* Mobile: stacked card per pack */}
           <div className="sm:hidden">
@@ -341,10 +341,11 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink }} className="truncate">{p.packName}</span>
                     <Pill type={pill}>{label}</Pill>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 mb-2">
+                  <div className="grid grid-cols-4 gap-2 mb-2">
                     {[
                       { label: 'Est', value: fmt(p.estimate) },
                       { label: 'Ord', value: fmt(p.ordered) },
+                      { label: 'Flight', value: p.inFlight > 0 ? fmt(p.inFlight) : '—' },
                       { label: 'Del', value: fmt(p.delivered) },
                     ].map(cell => (
                       <div key={cell.label}>
@@ -353,6 +354,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                       </div>
                     ))}
                   </div>
+
                   <div className="flex items-center justify-between" style={{ borderTop: `1px dashed ${C.border}`, paddingTop: 6 }}>
                     <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: 0.6, color: C.faint, fontWeight: 700 }}>Variance</span>
                     <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: varColor }}>
@@ -367,7 +369,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           {/* Desktop: full table */}
           <div className="hidden sm:block">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Pack', 'Estimate', 'Ordered', 'Delivered', 'Variance', 'Status']} />
+              <THead cols={['Pack', 'Estimate', 'Ordered', 'In flight', 'Delivered', 'Variance', 'Status']} />
               <tbody>
                 {a.packs.map(p => {
                   const pill: PillType = p.status === 'over' ? 'pr' : p.status === 'watch' ? 'pa' : p.status === 'pending' ? 'pm' : 'pg';
@@ -382,7 +384,9 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                         <TdN>{p.packName}</TdN>,
                         <TdM>{fmt(p.estimate)}</TdM>,
                         <TdM>{fmt(p.ordered)}</TdM>,
-                        <TdM>{fmt(p.delivered)}</TdM>,
+                        <TdM>{p.inFlight > 0 ? fmt(p.inFlight) : '—'}</TdM>,
+                        <TdM>{p.credits > 0 ? `${fmt(p.delivered)} (−${fmt(p.credits)} credits)` : fmt(p.delivered)}</TdM>,
+
                         <TdM>{varCell}</TdM>,
                         <Pill type={pill}>{label}</Pill>,
                       ]}

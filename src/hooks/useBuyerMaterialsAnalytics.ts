@@ -52,13 +52,23 @@ export interface CashExposure {
 
 export interface PackVariance {
   packName: string;
+  /** Pre-tax sum of estimate line items for this pack. */
   estimate: number;
+  /** Pre-tax PO subtotal for committed (ORDERED+) POs. */
   ordered: number;
+  /** Pre-tax PO subtotal for DRAFT/SUBMITTED/PRICED POs (not committed yet). */
+  inFlight: number;
+  /** Pre-tax PO subtotal for DELIVERED/FINALIZED POs, less realized return credits. */
   delivered: number;
+  /** Realized return credits (pre-tax) tied to this pack's POs. */
+  credits: number;
+  /** Tax booked on this pack's committed POs (shown separately, never in variance). */
+  tax: number;
   variance: number;
   variancePct: number | null;
   status: 'ok' | 'watch' | 'over' | 'pending';
 }
+
 
 export interface BuyerMaterialsAnalytics {
   // Forecast
@@ -125,7 +135,7 @@ export function useBuyerMaterialsAnalytics({
       const posRes = await supabase
         .from('purchase_orders')
         .select(
-          'id, po_number, po_name, status, po_total, source_pack_name, source_estimate_id, ' +
+          'id, po_number, po_name, status, po_total, po_subtotal_total, po_tax_total, source_pack_name, source_estimate_id, ' +
           'created_at, submitted_at, priced_at, ordered_at, ready_for_delivery_at, delivered_at, updated_at'
         )
         .eq('project_id', projectId)
@@ -346,6 +356,12 @@ export function useBuyerMaterialsAnalytics({
       };
 
       // ── Pack-level variance ──
+      // All columns in this table are PRE-TAX so estimate and PO sides share a unit.
+      // Tax is surfaced separately and never enters the variance math.
+      const emptyPack = (name: string): PackVariance => ({
+        packName: name, estimate: 0, ordered: 0, inFlight: 0, delivered: 0,
+        credits: 0, tax: 0, variance: 0, variancePct: 0, status: 'ok',
+      });
       const estimateIds = approvedEstimates.map(e => e.id);
       const packMap = new Map<string, PackVariance>();
 
@@ -364,16 +380,14 @@ export function useBuyerMaterialsAnalytics({
         // Sum estimate per pack name
         (itemRows || []).forEach((it: any) => {
           const name = it.pack_name || 'Unassigned';
-          const cur = packMap.get(name) || { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
+          const cur = packMap.get(name) || emptyPack(name);
           cur.estimate += Number(it.line_total || 0);
           packMap.set(name, cur);
         });
         // Make sure each pack row exists too
         (packRows || []).forEach((p: any) => {
           const name = p.pack_name;
-          if (!packMap.has(name)) {
-            packMap.set(name, { packName: name, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0, status: 'ok' });
-          }
+          if (!packMap.has(name)) packMap.set(name, emptyPack(name));
         });
       }
 
@@ -387,27 +401,59 @@ export function useBuyerMaterialsAnalytics({
         if (existing) {
           existing.estimate += v.estimate;
           existing.ordered += v.ordered;
+          existing.inFlight += v.inFlight;
           existing.delivered += v.delivered;
         } else {
           normalizedMap.set(nk, { ...v });
         }
       });
 
+      // Pre-tax subtotal of a PO (fall back to total minus tax for legacy rows).
+      const preTax = (p: any) =>
+        p.po_subtotal_total != null
+          ? Number(p.po_subtotal_total)
+          : Math.max(0, Number(p.po_total || 0) - Number(p.po_tax_total || 0));
+
+      const packKeyByPoId = new Map<string, string>();
       pos.forEach(p => {
         const rawName = p.source_pack_name || 'Ad-hoc';
         const nk = normalize(rawName);
-        const cur = normalizedMap.get(nk) || { packName: rawName, estimate: 0, ordered: 0, delivered: 0, variance: 0, variancePct: 0 as number | null, status: 'ok' as const };
-        if (['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status)) {
-          cur.ordered += Number(p.po_total || 0);
+        packKeyByPoId.set(p.id, nk);
+        const cur = normalizedMap.get(nk) || emptyPack(rawName);
+        const committed = ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status);
+        if (committed) {
+          cur.ordered += preTax(p);
+          cur.tax += Number(p.po_tax_total || 0);
+        } else {
+          // DRAFT / SUBMITTED / PRICED — money in flight, not yet committed.
+          cur.inFlight += preTax(p);
         }
         if (['DELIVERED', 'FINALIZED'].includes(p.status)) {
-          cur.delivered += Number(p.po_total || 0);
+          cur.delivered += preTax(p);
         }
         normalizedMap.set(nk, cur);
       });
 
+      // Subtract realized return credits (pre-tax) from the delivered value per pack.
+      const realizedReturnIds = realizedReturns.map(r => r.id);
+      if (realizedReturnIds.length) {
+        const { data: retItems } = await supabase
+          .from('return_items')
+          .select('return_id, po_id, credit_line_total')
+          .in('return_id', realizedReturnIds);
+        (retItems || []).forEach((ri: any) => {
+          const nk = ri.po_id ? packKeyByPoId.get(ri.po_id) : undefined;
+          if (!nk) return;
+          const cur = normalizedMap.get(nk);
+          if (!cur) return;
+          const credit = Number(ri.credit_line_total || 0);
+          cur.credits += credit;
+          cur.delivered = Math.max(0, cur.delivered - credit);
+        });
+      }
+
       const packs = Array.from(normalizedMap.values())
-        .filter(p => p.estimate > 0 || p.ordered > 0)
+        .filter(p => p.estimate > 0 || p.ordered > 0 || p.inFlight > 0)
         .map(p => {
           // For packs with nothing ordered yet, variance is not meaningful —
           // showing "-100%" would falsely suggest a problem. Treat as Pending.
@@ -418,7 +464,9 @@ export function useBuyerMaterialsAnalytics({
           const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
           let status: PackVariance['status'];
           if (p.estimate === 0 && p.ordered > 0) {
-            status = 'over'; // un-budgeted (ad-hoc) spend
+            // Un-budgeted (ad-hoc) spend: only flag when it's material, otherwise
+            // every small extra order shows permanently red.
+            status = p.ordered >= 2500 ? 'over' : 'watch';
           } else if (variancePct == null) {
             status = 'ok';
           } else if (variancePct > 5) {
@@ -439,15 +487,20 @@ export function useBuyerMaterialsAnalytics({
           return Math.max(b.estimate, b.ordered) - Math.max(a.estimate, a.ordered);
         });
 
+
       // ── Recompute FAC using pack-level overrun ──
       // Bug fix 1.1: uncommitted estimate = estimate slice not yet covered by ordered POs.
-      // Previously subtracted ALL committedTotal (including ad-hoc), which under-forecasts.
+      // Bug fix (unit mismatch): pack figures are pre-tax while committedTotal and
+      // estimateTotal are tax-inclusive, so gross the pack side up by the observed
+      // tax factor before comparing.
+      const committedPreTax = packs.reduce((s, p) => s + p.ordered, 0);
+      const taxFactor = committedPreTax > 0 ? committedTotal / committedPreTax : 1;
       const committedPacksEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
-        .reduce((s, p) => s + p.estimate, 0);
+        .reduce((s, p) => s + p.estimate, 0) * taxFactor;
       const committedAgainstKnownEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
-        .reduce((s, p) => s + p.ordered, 0);
+        .reduce((s, p) => s + p.ordered, 0) * taxFactor;
       const adHocCommitted = Math.max(0, committedTotal - committedAgainstKnownEstimate);
       const unCommittedEstimate = Math.max(0, estimateTotal - committedPacksEstimate);
 
@@ -458,6 +511,7 @@ export function useBuyerMaterialsAnalytics({
       } else {
         overrunRatio = 0;
       }
+
       // FAC = realized commitments + projected spend on the remaining estimate slice,
       // inflated by the current overrun ratio. Ad-hoc spend already lives in committedTotal.
       forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
