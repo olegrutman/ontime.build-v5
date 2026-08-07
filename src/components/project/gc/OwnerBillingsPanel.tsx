@@ -71,6 +71,18 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       toast.error('Billed amount must be greater than 0');
       return;
     }
+    if (!isFinite(collected) || collected < 0) {
+      toast.error('Collected amount cannot be negative');
+      return;
+    }
+    if (collected > billed) {
+      toast.error("Collected can't exceed the billed amount");
+      return;
+    }
+    if (draft.billing_number && rows.some((r) => r.billing_number === draft.billing_number)) {
+      toast.error(`Billing #${draft.billing_number} already exists on this project`);
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.from('gc_owner_billings').insert({
       project_id: projectId,
@@ -79,14 +91,18 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       billed_amount: billed,
       collected_amount: collected,
       billed_at: draft.billed_at,
-      collected_at: collected > 0 ? draft.billed_at : null,
+      collected_at: collected > 0 ? (draft.collected_at || draft.billed_at) : null,
       notes: draft.notes || null,
       created_by_user_id: user?.id ?? null,
     });
     setBusy(false);
     if (error) {
       console.error(error);
-      toast.error('Could not save billing');
+      toast.error(
+        error.message?.includes('row-level security')
+          ? 'You need General Contractor access on this project to record owner billings'
+          : 'Could not save billing',
+      );
       return;
     }
     toast.success('Owner billing recorded');
@@ -95,8 +111,37 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       billed_amount: '',
       collected_amount: '',
       billed_at: new Date().toISOString().slice(0, 10),
+      collected_at: '',
       notes: '',
     });
+    await load();
+    onChanged?.();
+  };
+
+  const saveCollected = async (row: Billing, raw: string) => {
+    const amount = Number(raw);
+    if (!isFinite(amount) || amount < 0) {
+      toast.error('Collected amount must be 0 or more');
+      return;
+    }
+    if (amount > Number(row.billed_amount)) {
+      toast.error("Collected can't exceed the billed amount");
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from('gc_owner_billings')
+      .update({
+        collected_amount: amount,
+        collected_at: amount > 0 ? (row.collected_at || new Date().toISOString().slice(0, 10)) : null,
+      })
+      .eq('id', row.id);
+    setBusy(false);
+    setEditing(null);
+    if (error) {
+      toast.error('Could not update billing');
+      return;
+    }
     await load();
     onChanged?.();
   };
@@ -119,6 +164,7 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
     await load();
     onChanged?.();
   };
+
 
   const remove = async (id: string) => {
     if (!confirm('Delete this owner billing record?')) return;
