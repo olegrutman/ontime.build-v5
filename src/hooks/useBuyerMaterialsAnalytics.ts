@@ -135,7 +135,7 @@ export function useBuyerMaterialsAnalytics({
       const posRes = await supabase
         .from('purchase_orders')
         .select(
-          'id, po_number, po_name, status, po_total, source_pack_name, source_estimate_id, ' +
+          'id, po_number, po_name, status, po_total, po_subtotal_total, po_tax_total, source_pack_name, source_estimate_id, ' +
           'created_at, submitted_at, priced_at, ordered_at, ready_for_delivery_at, delivered_at, updated_at'
         )
         .eq('project_id', projectId)
