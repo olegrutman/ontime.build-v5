@@ -23,6 +23,8 @@ import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
+import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
 import { toast } from 'sonner';
 import type { ChangeOrder, COCollaborator, COFinancials, COStatus } from '@/types/changeOrder';
 
@@ -57,6 +59,14 @@ export function COStatusActions({
   const { shareCO, updateCO } = useChangeOrders(projectId);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: routing } = useCORoutingTargets(projectId);
+  /* A CO routed to nobody (or to its own creating org) still needs a Submit path:
+     fall back to the default upstream target for this org. */
+  const routedAssignee = co.assigned_to_org_id && co.assigned_to_org_id !== co.org_id
+    ? co.assigned_to_org_id
+    : null;
+  const fallbackAssignee = routing?.defaultId && routing.defaultId !== co.org_id ? routing.defaultId : null;
+  const effectiveAssignee = routedAssignee ?? fallbackAssignee;
   const actorRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
 
   const [acting, setActing] = useState(false);
@@ -190,12 +200,18 @@ export function COStatusActions({
   }
 
   async function doSubmitToWIP() {
-    if (!co.assigned_to_org_id) {
-      toast.error('Assign a TC before submitting.');
-      return;
-    }
     setActing(true);
     try {
+      const assignee = await resolveCOAssignee({
+        coId: co.id,
+        ownerOrgId: co.org_id,
+        currentAssignee: co.assigned_to_org_id,
+        fallbackOrgId: fallbackAssignee,
+      });
+      if (!assignee) {
+        toast.error('No trade contractor on this project to send this to.');
+        return;
+      }
       await updateCO.mutateAsync({
         id: co.id,
         updates: {
@@ -206,7 +222,7 @@ export function COStatusActions({
       });
       toast.success('CO sent to TC as Work in Progress');
       await logActivity('sent_to_wip');
-      await notifyOrg(co.assigned_to_org_id, 'CO_SHARED');
+      await notifyOrg(assignee, 'CO_SHARED');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed');
@@ -237,10 +253,6 @@ export function COStatusActions({
   }
 
   async function doSubmit() {
-    if (!co.assigned_to_org_id) {
-      toast.error('This CO has no assigned party. Assign a TC or GC before submitting.');
-      return;
-    }
     if (lineItemCount === 0) {
       toast.error('Add at least one scope item before submitting.');
       return;
@@ -248,72 +260,31 @@ export function COStatusActions({
 
     setActing(true);
     try {
-      // Snapshot tax settings from project
-      const { data: projTax } = await supabase
-        .from('projects')
-        .select('sales_tax_rate, labor_taxable')
-        .eq('id', projectId)
-        .single();
-
-      const taxSnapshot: Record<string, any> = {};
-      if (projTax) {
-        taxSnapshot.tax_rate_snapshot = projTax.sales_tax_rate ?? 0;
-        taxSnapshot.labor_taxable_snapshot = projTax.labor_taxable ?? false;
-        // Compute tax amounts
-        const rate = (projTax.sales_tax_rate ?? 0) / 100;
-        taxSnapshot.materials_tax = (financials?.materialsTotal ?? 0) * rate;
-        taxSnapshot.labor_tax = projTax.labor_taxable ? (financials?.laborTotal ?? 0) * rate : 0;
-        taxSnapshot.equipment_tax = (financials?.equipmentTotal ?? 0) * rate;
-        taxSnapshot.total_tax = (taxSnapshot.materials_tax ?? 0) + (taxSnapshot.labor_tax ?? 0) + (taxSnapshot.equipment_tax ?? 0);
+      const assignee = await resolveCOAssignee({
+        coId: co.id,
+        ownerOrgId: co.org_id,
+        currentAssignee: co.assigned_to_org_id,
+        fallbackOrgId: fallbackAssignee,
+      });
+      if (!assignee) {
+        toast.error('No upstream party on this project to submit to. Add them to the project team first.');
+        return;
       }
 
-      // Snapshot TC rates if toggle is ON
-      if (isTC && co.use_fc_pricing_base) {
-        const { data: settings } = await supabase
-          .from('org_settings')
-          .select('default_hourly_rate, labor_markup_percent')
-          .eq('organization_id', currentOrgId)
-          .maybeSingle();
-
-        const rate = settings?.default_hourly_rate ?? 0;
-        const markup = settings?.labor_markup_percent ?? 0;
-        const isHourly = co.pricing_type === 'tm' || co.pricing_type === 'nte';
-        const calcPrice = isHourly
-          ? (financials?.fcTotalHours ?? 0) * rate
-          : (financials?.fcLumpSumTotal ?? 0) * (1 + markup / 100);
-
-        await supabase
-          .from('change_orders')
-          .update({
-            tc_snapshot_hourly_rate: rate,
-            tc_snapshot_markup_percent: markup,
-            tc_submitted_price: calcPrice,
-            ...taxSnapshot,
-          })
-          .eq('id', co.id);
-      } else if (isTC) {
-        // Toggle OFF — snapshot manual total
-        await supabase
-          .from('change_orders')
-          .update({
-            tc_submitted_price: financials?.grandTotal ?? 0,
-            ...taxSnapshot,
-          })
-          .eq('id', co.id);
-      } else {
-        // Non-TC submitter — still snapshot tax
-        if (Object.keys(taxSnapshot).length > 0) {
-          await supabase
-            .from('change_orders')
-            .update(taxSnapshot)
-            .eq('id', co.id);
-        }
-      }
+      await snapshotCOSubmission({
+        coId: co.id,
+        projectId,
+        isTC,
+        currentOrgId,
+        useFcPricingBase: co.use_fc_pricing_base,
+        pricingType: co.pricing_type,
+        financials,
+      });
 
       await submitCO.mutateAsync(co.id);
       toast.success('CO submitted for approval');
       await logActivity('submitted', undefined, submitAmount || undefined);
-      await notifyOrg(co.assigned_to_org_id, 'CHANGE_SUBMITTED', submitAmount || undefined);
+      await notifyOrg(assignee, 'CHANGE_SUBMITTED', submitAmount || undefined);
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to submit');
@@ -524,8 +495,8 @@ export function COStatusActions({
   const isAnyCollaborator = collaborators.some(c => c.organization_id === currentOrgId);
 
   /* Draft actions — suppress Share when Send-to-WIP is available (M5) */
-  const canSendToWIP = isGC && isCreator && status === 'draft' && !!co.assigned_to_org_id;
-  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP && !!co.assigned_to_org_id;
+  const canSendToWIP = isGC && isCreator && status === 'draft' && !!effectiveAssignee;
+  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP && !!effectiveAssignee;
   /* GC can close for pricing (Flow 1) */
   const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
   /* TC/FC submit for approval — include 'rejected' (C3). FC collaborators (any status) should NOT see primary submit.
@@ -534,12 +505,16 @@ export function COStatusActions({
   const submitStatuses = isOwnerOrg
     ? ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'rejected']
     : ['shared', 'work_in_progress', 'closed_for_pricing', 'rejected'];
-  const canSubmit = (isTC || isFC) && !isAnyCollaborator && submitStatuses.includes(status) && !!co.assigned_to_org_id;
+  const canSubmit = (isTC || isFC) && !isAnyCollaborator && submitStatuses.includes(status) && !!effectiveAssignee;
   /* FC collaborator can submit pricing independently (M4) */
   const canSubmitFCPricing = isFC && isActiveCollaborator && status === 'closed_for_pricing';
   const canRecall = (isTC || isFC) && !isAnyCollaborator && status === 'submitted';
   /* GC approves using org_id (creating org) not assigned_to_org_id (C2) */
-  const canApprove = ((isGC && status === 'submitted' && co.org_id === currentOrgId) || forwardsToGC) && !isActiveCollaborator;
+  /* The GC may be either the creating org (GC-initiated CO) or the assigned org
+     (TC submitted upstream to them) — both must be able to decide. */
+  const canApprove = ((isGC && status === 'submitted'
+    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || forwardsToGC)
+    && !isActiveCollaborator;
   const canReject = canApprove;
   /* Flow 2 completion */
   const isApproved = status === 'approved';
