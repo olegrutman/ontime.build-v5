@@ -364,6 +364,7 @@ export function useBuyerMaterialsAnalytics({
       });
       const estimateIds = approvedEstimates.map(e => e.id);
       const packMap = new Map<string, PackVariance>();
+      let estimateItemRows: any[] = [];
 
       if (estimateIds.length) {
         const [{ data: packRows }, { data: itemRows }] = await Promise.all([
@@ -376,9 +377,10 @@ export function useBuyerMaterialsAnalytics({
             .select('id, estimate_id, pack_name, line_total')
             .in('estimate_id', estimateIds),
         ]);
+        estimateItemRows = itemRows || [];
 
         // Sum estimate per pack name
-        (itemRows || []).forEach((it: any) => {
+        estimateItemRows.forEach((it: any) => {
           const name = it.pack_name || 'Unassigned';
           const cur = packMap.get(name) || emptyPack(name);
           cur.estimate += Number(it.line_total || 0);
@@ -413,10 +415,11 @@ export function useBuyerMaterialsAnalytics({
       // Instead, total only lines linked to items in the approved estimate and use
       // the estimate item's canonical pack assignment.
       const estimateItemPackById = new Map<string, string>();
-      (itemRows || []).forEach((item: any) => {
+      estimateItemRows.forEach((item: any) => {
         if (item.id && item.pack_name) estimateItemPackById.set(item.id, normalize(item.pack_name));
       });
       const poById = new Map(pos.map(p => [p.id, p]));
+      const poLineById = new Map(lines.map(line => [line.id, line]));
       const eligiblePoLineIds = new Set<string>();
       lines.forEach(line => {
         const nk = line.source_estimate_item_id
@@ -445,7 +448,7 @@ export function useBuyerMaterialsAnalytics({
           .in('return_id', realizedReturnIds);
         (retItems || []).forEach((ri: any) => {
           if (!ri.po_line_item_id || !eligiblePoLineIds.has(ri.po_line_item_id)) return;
-          const poLine = lines.find(line => line.id === ri.po_line_item_id);
+          const poLine = poLineById.get(ri.po_line_item_id);
           const nk = poLine?.source_estimate_item_id
             ? estimateItemPackById.get(poLine.source_estimate_item_id)
             : undefined;
