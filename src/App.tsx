@@ -30,6 +30,7 @@ const queryClient = new QueryClient({
 
 // 5. Lazy-loaded page components
 const Landing = lazy(() => import("./pages/Landing"));
+const RolePage = lazy(() => import("./pages/RolePage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -188,6 +189,7 @@ function AppRoutes() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
+            <Route path="/for/:slug" element={<RolePage />} />
             
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/callback" element={<AuthPage />} />

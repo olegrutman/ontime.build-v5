@@ -1,22 +1,29 @@
+import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
+
 const roles = [
   {
     icon: '🏗️', name: 'General Contractors',
     desc: 'Control project costs, approve invoices and change orders, track supplier activity, and keep every trade aligned from one dashboard.',
+    slug: 'general-contractors',
     tags: ['Budget Control', 'Approvals', 'Trade Oversight', 'Material Visibility'],
   },
   {
     icon: '🔧', name: 'Trade Contractors',
     desc: 'Run framing operations with tighter labor control, cleaner invoicing, faster supplier coordination, and full visibility into change order status.',
+    slug: 'trade-contractors',
     tags: ['Change Orders', 'Invoicing', 'Crew Management', 'Contract Tracking'],
   },
   {
     icon: '👷', name: 'Field Crews',
     desc: 'See exactly what work is assigned, submit field updates, attach jobsite proof, and keep the office informed without endless phone calls.',
+    slug: 'field-crews',
     tags: ['Assigned Tasks', 'Field Updates', 'Photo Proof', 'Simple Mobile'],
   },
   {
     icon: '📦', name: 'Suppliers',
     desc: 'Receive clean purchase orders, price estimates, confirm deliveries, and manage returns — all tied to live project demand without back-and-forth calls.',
+    slug: 'suppliers',
     tags: ['Material Orders', 'Delivery Confirm', 'Returns Workflow', 'Estimate Upload'],
   },
 ];
@@ -39,9 +46,10 @@ export function RolesSection() {
         style={{ background: 'hsl(var(--amber) / 0.08)', border: '1px solid hsl(var(--amber) / 0.1)' }}
       >
         {roles.map((role) => (
-          <div
+          <Link
             key={role.icon}
-            className="group p-8 transition-colors relative overflow-hidden"
+            to={`/for/${role.slug}`}
+            className="group p-8 transition-colors relative overflow-hidden block no-underline hover:bg-white/[0.05]"
             style={{ background: 'rgba(255,255,255,0.02)' }}
           >
             {/* Hover top border */}
@@ -60,7 +68,10 @@ export function RolesSection() {
                 <span key={tag} className="text-[0.62rem] text-white/55 border border-white/15 px-2 py-[2px] rounded-[3px]">{tag}</span>
               ))}
             </div>
-          </div>
+            <div className="mt-4 inline-flex items-center gap-1.5 text-[0.72rem] font-bold uppercase tracking-[1.4px] transition-transform group-hover:translate-x-0.5" style={{ color: 'hsl(var(--amber))' }}>
+              Explore this role <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
         ))}
       </div>
     </section>
