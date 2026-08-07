@@ -37,8 +37,11 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
     billed_amount: '',
     collected_amount: '',
     billed_at: new Date().toISOString().slice(0, 10),
+    collected_at: '',
     notes: '',
   });
+  const [editing, setEditing] = useState<{ id: string; value: string } | null>(null);
+
 
   const load = async () => {
     setLoading(true);
