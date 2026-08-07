@@ -35,7 +35,9 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
   if (loading) return null;
   if (viewerRole === 'Supplier') return null;
 
-  if (viewerRole === 'Trade Contractor') {
+  if (viewerRole === 'Trade Contractor' || viewerRole === 'General Contractor') {
+    const isGC = viewerRole === 'General Contractor';
+
     const {
       receivablesInvoiced, receivablesCollected, receivablesRetainage,
       payablesInvoiced, payablesPaid, payablesRetainage,
@@ -50,20 +52,29 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
         <SurfaceCardHeader title="Billing & Cash Position" />
         <SurfaceCardBody className="pt-0 space-y-4">
           <div>
-            <p className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Receivables (from GC)</p>
+            <p className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+              {isGC ? 'Receivables (from Owner)' : 'Receivables (from GC)'}
+            </p>
             <RowList
               dividerBefore={3}
               rows={[
-                { label: 'Invoiced to GC', value: fmt(receivablesInvoiced) },
+                { label: isGC ? 'Billed to Owner' : 'Invoiced to GC', value: fmt(receivablesInvoiced) },
                 { label: 'Collected', value: fmt(receivablesCollected), color: receivablesCollected > 0 ? 'green' : undefined },
                 { label: 'Retainage Held', value: fmt(receivablesRetainage), color: receivablesRetainage > 0 ? 'amber' : undefined },
                 { label: 'Outstanding', value: fmt(receivablesOutstanding), color: receivablesOutstanding > 0 ? 'amber' : undefined, bold: true },
               ]}
             />
+            {isGC && receivablesInvoiced === 0 && (
+              <p className="text-[0.65rem] text-muted-foreground mt-1.5">
+                Record what you've billed the owner in the Owner Billings ledger below.
+              </p>
+            )}
           </div>
 
           <div className="border-t pt-3">
-            <p className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Payables (to FC & Suppliers)</p>
+            <p className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+              {isGC ? 'Payables (to TC & Suppliers)' : 'Payables (to FC & Suppliers)'}
+            </p>
             <RowList
               dividerBefore={3}
               rows={[
@@ -78,12 +89,15 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
           <div className="border-t pt-3 flex items-center justify-between">
             <div>
               <span className="text-[0.85rem] font-medium text-foreground">Net Position</span>
-              <p className="text-[0.65rem] text-muted-foreground">Total Invoiced to GC − Total Invoiced by FC</p>
+              <p className="text-[0.65rem] text-muted-foreground">
+                {isGC ? 'Billed to Owner − Invoices Received' : 'Total Invoiced to GC − Total Invoiced by FC'}
+              </p>
             </div>
             <span className={cn("text-base font-bold tabular-nums", netCash >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
               {fmt(netCash)}
             </span>
           </div>
+
         </SurfaceCardBody>
       </SurfaceCard>
     );

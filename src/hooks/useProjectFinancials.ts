@@ -63,6 +63,9 @@ export interface ProjectFinancials {
   // GC owner billings ledger (Phase 2)
   ownerBillingsTotal: number;
   ownerBillingsCollected: number;
+  // The viewer's GC org id on this project (null unless the viewer is the GC)
+  gcOrgId: string | null;
+
 
   // NEW: Financial command center fields
   totalPaid: number;
@@ -168,6 +171,9 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // replace the legacy upstream-invoice proxy in the realized margin formula.
   const [ownerBillingsTotal, setOwnerBillingsTotal] = useState(0);
   const [ownerBillingsCollected, setOwnerBillingsCollected] = useState(0);
+  // The viewer's GC org on this project (null when the viewer is not the GC).
+  const [gcOrgId, setGcOrgId] = useState<string | null>(null);
+
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -197,7 +203,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           } else {
             setIsTCSelfPerforming(false);
           }
+          // Resolve the viewer's GC org on THIS project (multi-org safe) so the
+          // owner-billings ledger writes with an org id that passes RLS.
+          const gcRow = teamMembers.find((m: any) => m.role === 'General Contractor');
+          setGcOrgId(gcRow?.org_id ?? null);
         }
+
       }
       setViewerRole(detectedRole);
 
@@ -427,10 +438,18 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!)
         );
 
-        const gcPayables = gcContractInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0)
-          + gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
+        const gcPayableInvs = [...gcContractInvs, ...gcPoInvs];
+        const gcPayables = gcPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
         setGcPayablesInvoiced(gcPayables);
         setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+
+        // GC payables mirror the TC split so cash position / margin have a real
+        // cost side (previously these stayed 0 for GCs).
+        setPayablesInvoiced(gcPayables);
+        setPayablesPaid(
+          gcPayableInvs.filter((i: any) => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0),
+        );
+        setPayablesRetainage(gcPayableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
 
         // Owner billings (Phase 2) — only the GC org can read these via RLS.
         const { data: ownerBillings } = await supabase
@@ -442,6 +461,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const collected = (ownerBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
         setOwnerBillingsTotal(billed);
         setOwnerBillingsCollected(collected);
+        // The GC's receivables ARE the owner ledger — owners aren't platform users.
+        setReceivablesInvoiced(billed);
+        setReceivablesCollected(collected);
+        setReceivablesRetainage(0);
+
       }
 
 
@@ -644,7 +668,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     approvedWOTotal,
     earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
     materialInvoiced, openMaterialCommitment: Math.max(0, materialOrdered - materialInvoiced), gcPayablesInvoiced,
-    ownerBillingsTotal, ownerBillingsCollected,
+    ownerBillingsTotal, ownerBillingsCollected, gcOrgId,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     ownerContractValue, materialMarkupType, materialMarkupValue,

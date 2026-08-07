@@ -37,8 +37,11 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
     billed_amount: '',
     collected_amount: '',
     billed_at: new Date().toISOString().slice(0, 10),
+    collected_at: '',
     notes: '',
   });
+  const [editing, setEditing] = useState<{ id: string; value: string } | null>(null);
+
 
   const load = async () => {
     setLoading(true);
@@ -68,6 +71,18 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       toast.error('Billed amount must be greater than 0');
       return;
     }
+    if (!isFinite(collected) || collected < 0) {
+      toast.error('Collected amount cannot be negative');
+      return;
+    }
+    if (collected > billed) {
+      toast.error("Collected can't exceed the billed amount");
+      return;
+    }
+    if (draft.billing_number && rows.some((r) => r.billing_number === draft.billing_number)) {
+      toast.error(`Billing #${draft.billing_number} already exists on this project`);
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.from('gc_owner_billings').insert({
       project_id: projectId,
@@ -76,14 +91,18 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       billed_amount: billed,
       collected_amount: collected,
       billed_at: draft.billed_at,
-      collected_at: collected > 0 ? draft.billed_at : null,
+      collected_at: collected > 0 ? (draft.collected_at || draft.billed_at) : null,
       notes: draft.notes || null,
       created_by_user_id: user?.id ?? null,
     });
     setBusy(false);
     if (error) {
       console.error(error);
-      toast.error('Could not save billing');
+      toast.error(
+        error.message?.includes('row-level security')
+          ? 'You need General Contractor access on this project to record owner billings'
+          : 'Could not save billing',
+      );
       return;
     }
     toast.success('Owner billing recorded');
@@ -92,8 +111,37 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       billed_amount: '',
       collected_amount: '',
       billed_at: new Date().toISOString().slice(0, 10),
+      collected_at: '',
       notes: '',
     });
+    await load();
+    onChanged?.();
+  };
+
+  const saveCollected = async (row: Billing, raw: string) => {
+    const amount = Number(raw);
+    if (!isFinite(amount) || amount < 0) {
+      toast.error('Collected amount must be 0 or more');
+      return;
+    }
+    if (amount > Number(row.billed_amount)) {
+      toast.error("Collected can't exceed the billed amount");
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase
+      .from('gc_owner_billings')
+      .update({
+        collected_amount: amount,
+        collected_at: amount > 0 ? (row.collected_at || new Date().toISOString().slice(0, 10)) : null,
+      })
+      .eq('id', row.id);
+    setBusy(false);
+    setEditing(null);
+    if (error) {
+      toast.error('Could not update billing');
+      return;
+    }
     await load();
     onChanged?.();
   };
@@ -116,6 +164,7 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
     await load();
     onChanged?.();
   };
+
 
   const remove = async (id: string) => {
     if (!confirm('Delete this owner billing record?')) return;
@@ -164,11 +213,12 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       </div>
 
       {/* Add new billing */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 2fr auto', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 2fr auto', gap: 8, marginBottom: 12 }}>
         <input style={inputStyle} placeholder="Billing #" value={draft.billing_number} onChange={(e) => setDraft({ ...draft, billing_number: e.target.value })} />
-        <input style={inputStyle} type="date" value={draft.billed_at} onChange={(e) => setDraft({ ...draft, billed_at: e.target.value })} />
-        <input style={inputStyle} type="number" placeholder="Billed $" value={draft.billed_amount} onChange={(e) => setDraft({ ...draft, billed_amount: e.target.value })} />
-        <input style={inputStyle} type="number" placeholder="Collected $" value={draft.collected_amount} onChange={(e) => setDraft({ ...draft, collected_amount: e.target.value })} />
+        <input style={inputStyle} type="date" title="Billed date" value={draft.billed_at} onChange={(e) => setDraft({ ...draft, billed_at: e.target.value })} />
+        <input style={inputStyle} type="number" min="0" placeholder="Billed $" value={draft.billed_amount} onChange={(e) => setDraft({ ...draft, billed_amount: e.target.value })} />
+        <input style={inputStyle} type="number" min="0" placeholder="Collected $" value={draft.collected_amount} onChange={(e) => setDraft({ ...draft, collected_amount: e.target.value })} />
+        <input style={inputStyle} type="date" title="Collected date" value={draft.collected_at} onChange={(e) => setDraft({ ...draft, collected_at: e.target.value })} />
         <input style={inputStyle} placeholder="Notes (optional)" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
         <button
           onClick={addBilling}
@@ -178,6 +228,7 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
           {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Add
         </button>
       </div>
+
 
       {/* List */}
       {loading ? (
@@ -198,11 +249,33 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
                   <TdN>{r.billed_at}</TdN>,
                   <TdM>{fmt(Number(r.billed_amount))}</TdM>,
                   <TdM>
-                    <span style={{ color: fullyCollected ? C.green : C.amber }}>
-                      {fmt(Number(r.collected_amount))}
-                    </span>
+                    {editing?.id === r.id ? (
+                      <input
+                        autoFocus
+                        type="number"
+                        min="0"
+                        style={{ ...inputStyle, width: 96, textAlign: 'right' }}
+                        value={editing.value}
+                        onChange={(e) => setEditing({ id: r.id, value: e.target.value })}
+                        onBlur={() => saveCollected(r, editing.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveCollected(r, editing.value);
+                          if (e.key === 'Escape') setEditing(null);
+                        }}
+                      />
+                    ) : (
+                      <span
+                        title="Click to record a partial payment"
+                        onClick={() => setEditing({ id: r.id, value: String(Number(r.collected_amount)) })}
+                        style={{ color: fullyCollected ? C.green : C.amber, cursor: 'pointer' }}
+                      >
+                        {fmt(Number(r.collected_amount))}
+                        {r.collected_at ? <span style={{ ...fontLabel, color: C.faint, fontSize: '0.66rem', marginLeft: 6 }}>{r.collected_at}</span> : null}
+                      </span>
+                    )}
                   </TdM>,
                   <TdN>{r.notes || '—'}</TdN>,
+
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                     {!fullyCollected && (
                       <button onClick={() => markCollected(r)} disabled={busy} style={{ padding: '3px 8px', borderRadius: 4, background: 'transparent', color: C.green, fontSize: '0.7rem', fontWeight: 700, border: `1px solid ${C.green}`, cursor: 'pointer' }}>
