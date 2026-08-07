@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { rolePages } from '@/content/rolePages';
 
 const roles = [
   {
