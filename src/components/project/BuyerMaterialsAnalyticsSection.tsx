@@ -384,7 +384,9 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                         <TdN>{p.packName}</TdN>,
                         <TdM>{fmt(p.estimate)}</TdM>,
                         <TdM>{fmt(p.ordered)}</TdM>,
-                        <TdM>{fmt(p.delivered)}</TdM>,
+                        <TdM>{p.inFlight > 0 ? fmt(p.inFlight) : '—'}</TdM>,
+                        <TdM>{p.credits > 0 ? `${fmt(p.delivered)} (−${fmt(p.credits)} credits)` : fmt(p.delivered)}</TdM>,
+
                         <TdM>{varCell}</TdM>,
                         <Pill type={pill}>{label}</Pill>,
                       ]}
