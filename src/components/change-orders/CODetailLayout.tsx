@@ -728,7 +728,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
       <COStickyFooter
         status={status} isGC={isGC} isTC={isTC} isFC={isFC}
-        financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction}
+        financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
         photoCount={photos.length} photosBlocked={photosBlocked}
         onOpenCamera={() => photosCardRef.current?.openAdd()}
       />
