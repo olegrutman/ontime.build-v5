@@ -249,11 +249,33 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
                   <TdN>{r.billed_at}</TdN>,
                   <TdM>{fmt(Number(r.billed_amount))}</TdM>,
                   <TdM>
-                    <span style={{ color: fullyCollected ? C.green : C.amber }}>
-                      {fmt(Number(r.collected_amount))}
-                    </span>
+                    {editing?.id === r.id ? (
+                      <input
+                        autoFocus
+                        type="number"
+                        min="0"
+                        style={{ ...inputStyle, width: 96, textAlign: 'right' }}
+                        value={editing.value}
+                        onChange={(e) => setEditing({ id: r.id, value: e.target.value })}
+                        onBlur={() => saveCollected(r, editing.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveCollected(r, editing.value);
+                          if (e.key === 'Escape') setEditing(null);
+                        }}
+                      />
+                    ) : (
+                      <span
+                        title="Click to record a partial payment"
+                        onClick={() => setEditing({ id: r.id, value: String(Number(r.collected_amount)) })}
+                        style={{ color: fullyCollected ? C.green : C.amber, cursor: 'pointer' }}
+                      >
+                        {fmt(Number(r.collected_amount))}
+                        {r.collected_at ? <span style={{ ...fontLabel, color: C.faint, fontSize: '0.66rem', marginLeft: 6 }}>{r.collected_at}</span> : null}
+                      </span>
+                    )}
                   </TdM>,
                   <TdN>{r.notes || '—'}</TdN>,
+
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                     {!fullyCollected && (
                       <button onClick={() => markCollected(r)} disabled={busy} style={{ padding: '3px 8px', borderRadius: 4, background: 'transparent', color: C.green, fontSize: '0.7rem', fontWeight: 700, border: `1px solid ${C.green}`, cursor: 'pointer' }}>
