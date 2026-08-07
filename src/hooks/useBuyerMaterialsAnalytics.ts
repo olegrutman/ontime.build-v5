@@ -149,7 +149,7 @@ export function useBuyerMaterialsAnalytics({
         poIds.length
           ? supabase
               .from('po_line_items')
-              .select('po_id, description, supplier_sku, quantity, unit_price, original_unit_price, line_total, lead_time_days, price_adjusted_by_supplier')
+              .select('id, po_id, description, supplier_sku, quantity, unit_price, original_unit_price, line_total, lead_time_days, price_adjusted_by_supplier, source_estimate_item_id, source_pack_name')
               .in('po_id', poIds)
           : Promise.resolve({ data: [] as any[] }),
         poIds.length
@@ -364,6 +364,7 @@ export function useBuyerMaterialsAnalytics({
       });
       const estimateIds = approvedEstimates.map(e => e.id);
       const packMap = new Map<string, PackVariance>();
+      let estimateItemRows: any[] = [];
 
       if (estimateIds.length) {
         const [{ data: packRows }, { data: itemRows }] = await Promise.all([
@@ -373,12 +374,13 @@ export function useBuyerMaterialsAnalytics({
             .in('estimate_id', estimateIds),
           supabase
             .from('supplier_estimate_items')
-            .select('estimate_id, pack_name, line_total')
+            .select('id, estimate_id, pack_name, line_total')
             .in('estimate_id', estimateIds),
         ]);
+        estimateItemRows = itemRows || [];
 
         // Sum estimate per pack name
-        (itemRows || []).forEach((it: any) => {
+        estimateItemRows.forEach((it: any) => {
           const name = it.pack_name || 'Unassigned';
           const cur = packMap.get(name) || emptyPack(name);
           cur.estimate += Number(it.line_total || 0);
@@ -391,7 +393,7 @@ export function useBuyerMaterialsAnalytics({
         });
       }
 
-      // Sum POs per pack — bug fix 7.1: normalize key to avoid case/whitespace splits.
+      // Sum POs per pack — normalize keys to avoid case/whitespace splits.
       const normalize = (s: string) => s.trim().toLowerCase();
       // Re-key existing entries by normalized name while preserving display name.
       const normalizedMap = new Map<string, PackVariance>();
@@ -408,30 +410,33 @@ export function useBuyerMaterialsAnalytics({
         }
       });
 
-      // Pre-tax subtotal of a PO (fall back to total minus tax for legacy rows).
-      const preTax = (p: any) =>
-        p.po_subtotal_total != null
-          ? Number(p.po_subtotal_total)
-          : Math.max(0, Number(p.po_total || 0) - Number(p.po_tax_total || 0));
+      // The pack comparison is estimate-only by definition. Never use a PO header
+      // subtotal here: it includes manual/non-estimate lines added to the same PO.
+      // Instead, total only lines linked to items in the approved estimate and use
+      // the estimate item's canonical pack assignment.
+      const estimateItemPackById = new Map<string, string>();
+      estimateItemRows.forEach((item: any) => {
+        if (item.id && item.pack_name) estimateItemPackById.set(item.id, normalize(item.pack_name));
+      });
+      const poById = new Map(pos.map(p => [p.id, p]));
+      const poLineById = new Map(lines.map(line => [line.id, line]));
+      const eligiblePoLineIds = new Set<string>();
+      lines.forEach(line => {
+        const nk = line.source_estimate_item_id
+          ? estimateItemPackById.get(line.source_estimate_item_id)
+          : undefined;
+        if (!nk) return;
 
-      const packKeyByPoId = new Map<string, string>();
-      pos.forEach(p => {
-        const rawName = p.source_pack_name || 'Ad-hoc';
-        const nk = normalize(rawName);
-        packKeyByPoId.set(p.id, nk);
-        const cur = normalizedMap.get(nk) || emptyPack(rawName);
-        const committed = ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(p.status);
-        if (committed) {
-          cur.ordered += preTax(p);
-          cur.tax += Number(p.po_tax_total || 0);
-        } else {
-          // DRAFT / SUBMITTED / PRICED — money in flight, not yet committed.
-          cur.inFlight += preTax(p);
-        }
-        if (['DELIVERED', 'FINALIZED'].includes(p.status)) {
-          cur.delivered += preTax(p);
-        }
-        normalizedMap.set(nk, cur);
+        const po = poById.get(line.po_id);
+        const cur = normalizedMap.get(nk);
+        if (!po || !cur) return;
+
+        eligiblePoLineIds.add(line.id);
+        const amount = Number(line.line_total || 0);
+        const committed = ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(po.status);
+        if (committed) cur.ordered += amount;
+        else if (po.status !== 'CANCELLED') cur.inFlight += amount;
+        if (['DELIVERED', 'FINALIZED'].includes(po.status)) cur.delivered += amount;
       });
 
       // Subtract realized return credits (pre-tax) from the delivered value per pack.
@@ -439,10 +444,14 @@ export function useBuyerMaterialsAnalytics({
       if (realizedReturnIds.length) {
         const { data: retItems } = await supabase
           .from('return_items')
-          .select('return_id, po_id, credit_line_total')
+          .select('return_id, po_line_item_id, credit_line_total')
           .in('return_id', realizedReturnIds);
         (retItems || []).forEach((ri: any) => {
-          const nk = ri.po_id ? packKeyByPoId.get(ri.po_id) : undefined;
+          if (!ri.po_line_item_id || !eligiblePoLineIds.has(ri.po_line_item_id)) return;
+          const poLine = poLineById.get(ri.po_line_item_id);
+          const nk = poLine?.source_estimate_item_id
+            ? estimateItemPackById.get(poLine.source_estimate_item_id)
+            : undefined;
           if (!nk) return;
           const cur = normalizedMap.get(nk);
           if (!cur) return;
@@ -453,7 +462,8 @@ export function useBuyerMaterialsAnalytics({
       }
 
       const packs = Array.from(normalizedMap.values())
-        .filter(p => p.estimate > 0 || p.ordered > 0 || p.inFlight > 0)
+        // Estimate packs only. Ad-hoc/non-estimate material must never appear here.
+        .filter(p => p.estimate > 0)
         .map(p => {
           // For packs with nothing ordered yet, variance is not meaningful —
           // showing "-100%" would falsely suggest a problem. Treat as Pending.
@@ -463,11 +473,7 @@ export function useBuyerMaterialsAnalytics({
           const variance = p.ordered - p.estimate;
           const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
           let status: PackVariance['status'];
-          if (p.estimate === 0 && p.ordered > 0) {
-            // Un-budgeted (ad-hoc) spend: only flag when it's material, otherwise
-            // every small extra order shows permanently red.
-            status = p.ordered >= 2500 ? 'over' : 'watch';
-          } else if (variancePct == null) {
+          if (variancePct == null) {
             status = 'ok';
           } else if (variancePct > 5) {
             status = 'over';
