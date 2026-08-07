@@ -63,6 +63,9 @@ export interface ProjectFinancials {
   // GC owner billings ledger (Phase 2)
   ownerBillingsTotal: number;
   ownerBillingsCollected: number;
+  // The viewer's GC org id on this project (null unless the viewer is the GC)
+  gcOrgId: string | null;
+
 
   // NEW: Financial command center fields
   totalPaid: number;
@@ -168,6 +171,9 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // replace the legacy upstream-invoice proxy in the realized margin formula.
   const [ownerBillingsTotal, setOwnerBillingsTotal] = useState(0);
   const [ownerBillingsCollected, setOwnerBillingsCollected] = useState(0);
+  // The viewer's GC org on this project (null when the viewer is not the GC).
+  const [gcOrgId, setGcOrgId] = useState<string | null>(null);
+
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -197,7 +203,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           } else {
             setIsTCSelfPerforming(false);
           }
+          // Resolve the viewer's GC org on THIS project (multi-org safe) so the
+          // owner-billings ledger writes with an org id that passes RLS.
+          const gcRow = teamMembers.find((m: any) => m.role === 'General Contractor');
+          setGcOrgId(gcRow?.org_id ?? null);
         }
+
       }
       setViewerRole(detectedRole);
 
