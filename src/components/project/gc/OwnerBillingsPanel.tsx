@@ -213,11 +213,12 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       </div>
 
       {/* Add new billing */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 2fr auto', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 2fr auto', gap: 8, marginBottom: 12 }}>
         <input style={inputStyle} placeholder="Billing #" value={draft.billing_number} onChange={(e) => setDraft({ ...draft, billing_number: e.target.value })} />
-        <input style={inputStyle} type="date" value={draft.billed_at} onChange={(e) => setDraft({ ...draft, billed_at: e.target.value })} />
-        <input style={inputStyle} type="number" placeholder="Billed $" value={draft.billed_amount} onChange={(e) => setDraft({ ...draft, billed_amount: e.target.value })} />
-        <input style={inputStyle} type="number" placeholder="Collected $" value={draft.collected_amount} onChange={(e) => setDraft({ ...draft, collected_amount: e.target.value })} />
+        <input style={inputStyle} type="date" title="Billed date" value={draft.billed_at} onChange={(e) => setDraft({ ...draft, billed_at: e.target.value })} />
+        <input style={inputStyle} type="number" min="0" placeholder="Billed $" value={draft.billed_amount} onChange={(e) => setDraft({ ...draft, billed_amount: e.target.value })} />
+        <input style={inputStyle} type="number" min="0" placeholder="Collected $" value={draft.collected_amount} onChange={(e) => setDraft({ ...draft, collected_amount: e.target.value })} />
+        <input style={inputStyle} type="date" title="Collected date" value={draft.collected_at} onChange={(e) => setDraft({ ...draft, collected_at: e.target.value })} />
         <input style={inputStyle} placeholder="Notes (optional)" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
         <button
           onClick={addBilling}
@@ -227,6 +228,7 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
           {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Add
         </button>
       </div>
+
 
       {/* List */}
       {loading ? (
