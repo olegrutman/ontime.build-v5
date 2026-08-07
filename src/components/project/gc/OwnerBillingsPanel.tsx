@@ -53,7 +53,11 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       .order('billed_at', { ascending: false });
     if (error) {
       console.error('Failed to load owner billings:', error);
-      toast.error('Could not load owner billings');
+      toast.error(
+        error.code === '42501' || error.message?.includes('row-level security')
+          ? 'You need General Contractor access on this project to see owner billings'
+          : 'Could not load owner billings',
+      );
     }
     setRows((data || []) as Billing[]);
     setLoading(false);
@@ -213,7 +217,7 @@ export function OwnerBillingsPanel({ projectId, gcOrgId, onChanged }: Props) {
       </div>
 
       {/* Add new billing */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 2fr auto', gap: 8, marginBottom: 12 }}>
+      <div className="grid grid-cols-2 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_2fr_auto]" style={{ gap: 8, marginBottom: 12 }}>
         <input style={inputStyle} placeholder="Billing #" value={draft.billing_number} onChange={(e) => setDraft({ ...draft, billing_number: e.target.value })} />
         <input style={inputStyle} type="date" title="Billed date" value={draft.billed_at} onChange={(e) => setDraft({ ...draft, billed_at: e.target.value })} />
         <input style={inputStyle} type="number" min="0" placeholder="Billed $" value={draft.billed_amount} onChange={(e) => setDraft({ ...draft, billed_amount: e.target.value })} />
