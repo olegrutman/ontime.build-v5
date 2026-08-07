@@ -6,6 +6,7 @@ import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { COStatusActions } from './COStatusActions';
 import { COSOVPanel } from './COSOVPanel';
+import { COTeamCard } from './COTeamCard';
 import type { ChangeOrder, COFinancials, COCollaborator, COFCOrgOption, COCreatedByRole } from '@/types/changeOrder';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { CONTELogEntry } from '@/types/changeOrder';
@@ -137,6 +138,9 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
         </div>
       </div>
 
+
+      {/* Team & routing — lets any party see (and a creator fix) who this is assigned to */}
+      <COTeamCard co={co} collaborators={collaborators} />
 
       {/* FC Pricing Toggle — move higher so TC sees it immediately */}
       {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (

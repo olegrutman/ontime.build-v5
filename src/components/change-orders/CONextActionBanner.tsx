@@ -13,6 +13,8 @@ interface CONextActionBannerProps {
   isFCCollaborator?: boolean;
   financials: COFinancials;
   fcCollabName: string;
+  /** Default upstream routing target when the CO has no explicit assignee yet. */
+  upstreamOrgId?: string | null;
   onAction: (action: string) => void;
 }
 
@@ -29,7 +31,7 @@ function fmtCurrency(value: number) {
 }
 
 function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): BannerConfig | null {
-  const { co, isGC, isTC, isFC, isFCCollaborator, financials, fcCollabName } = props;
+  const { co, isGC, isTC, isFC, isFCCollaborator, financials, fcCollabName, upstreamOrgId } = props;
   const status = co.status;
   // Single source of truth: price the GC sees == price the TC submits (responsibility-aware).
   const priceToUpstream = financials.billableGrandTotal;
@@ -65,7 +67,8 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     // FC collaborators submit their input via the complete_fc_change_order_input RPC
     // (action 'submit_to_tc'), not by flipping the entire CO to 'submitted'.
     const submitActionName = isFC && isFCCollaborator ? 'submit_to_tc' : 'submit';
-    const canSubmitNow = (isFC && isFCCollaborator) || !!co.assigned_to_org_id;
+    const routedAssignee = co.assigned_to_org_id && co.assigned_to_org_id !== co.org_id ? co.assigned_to_org_id : null;
+    const canSubmitNow = (isFC && isFCCollaborator) || !!routedAssignee || !!upstreamOrgId;
     const submitAction = canSubmitNow
       ? { label: `Submit to ${upstream}`, action: submitActionName }
       : { label: `Assign ${upstream} to submit`, action: 'noop' };
