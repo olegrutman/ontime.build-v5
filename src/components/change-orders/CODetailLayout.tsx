@@ -14,6 +14,8 @@ import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useCOResponsibility } from '@/hooks/useCOResponsibility';
+import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
+import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -59,6 +61,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const coV4 = useCoV4Flag();
+  const { data: coRouting } = useCORoutingTargets(projectId);
 
   const scopeRef = useRef<HTMLDivElement>(null);
   const materialsRef = useRef<HTMLDivElement>(null);
@@ -271,6 +274,25 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             break;
           }
           try {
+            const assignee = await resolveCOAssignee({
+              coId: co.id,
+              ownerOrgId: co.org_id,
+              currentAssignee: co.assigned_to_org_id,
+              fallbackOrgId: coRouting?.defaultId ?? null,
+            });
+            if (!assignee) {
+              toast.error('No upstream party on this project to submit to. Add them to the project team first.');
+              break;
+            }
+            await snapshotCOSubmission({
+              coId: co.id,
+              projectId,
+              isTC,
+              currentOrgId: myOrgId,
+              useFcPricingBase: co.use_fc_pricing_base,
+              pricingType: co.pricing_type,
+              financials,
+            });
             await submitCO.mutateAsync(co.id);
             toast.success('Submitted for approval');
           } catch (e: any) { toast.error(e?.message ?? 'Failed to submit'); }
@@ -436,7 +458,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
 
           {/* Next Action Banner */}
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} onAction={handleAction} />
+          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
           {/* Photo nudge banner */}
           <COPhotoNudgeBanner
@@ -706,7 +728,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
       <COStickyFooter
         status={status} isGC={isGC} isTC={isTC} isFC={isFC}
-        financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
+        financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction}
         photoCount={photos.length} photosBlocked={photosBlocked}
         onOpenCamera={() => photosCardRef.current?.openAdd()}
       />
