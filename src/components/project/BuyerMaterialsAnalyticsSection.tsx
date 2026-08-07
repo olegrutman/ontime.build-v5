@@ -320,7 +320,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
             <div style={{ fontSize: '0.78rem', fontWeight: 800, color: C.ink, textTransform: 'uppercase', letterSpacing: 0.4 }}>
               📦 Per-Pack Variance
             </div>
-            <div style={{ fontSize: '0.66rem', color: C.muted }}>{a.packs.length} packs · click to open POs</div>
+            <div style={{ fontSize: '0.66rem', color: C.muted }}>{a.packs.length} packs · pre-tax · click to open POs</div>
           </div>
           {/* Mobile: stacked card per pack */}
           <div className="sm:hidden">
