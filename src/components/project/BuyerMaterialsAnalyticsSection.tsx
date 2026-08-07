@@ -369,7 +369,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
           {/* Desktop: full table */}
           <div className="hidden sm:block">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Pack', 'Estimate', 'Ordered', 'Delivered', 'Variance', 'Status']} />
+              <THead cols={['Pack', 'Estimate', 'Ordered', 'In flight', 'Delivered', 'Variance', 'Status']} />
               <tbody>
                 {a.packs.map(p => {
                   const pill: PillType = p.status === 'over' ? 'pr' : p.status === 'watch' ? 'pa' : p.status === 'pending' ? 'pm' : 'pg';
