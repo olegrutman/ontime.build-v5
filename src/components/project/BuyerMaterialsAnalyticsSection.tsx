@@ -341,10 +341,11 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink }} className="truncate">{p.packName}</span>
                     <Pill type={pill}>{label}</Pill>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 mb-2">
+                  <div className="grid grid-cols-4 gap-2 mb-2">
                     {[
                       { label: 'Est', value: fmt(p.estimate) },
                       { label: 'Ord', value: fmt(p.ordered) },
+                      { label: 'Flight', value: p.inFlight > 0 ? fmt(p.inFlight) : '—' },
                       { label: 'Del', value: fmt(p.delivered) },
                     ].map(cell => (
                       <div key={cell.label}>
@@ -353,6 +354,7 @@ export function BuyerMaterialsAnalyticsSection({ analytics, loading, onNavigate 
                       </div>
                     ))}
                   </div>
+
                   <div className="flex items-center justify-between" style={{ borderTop: `1px dashed ${C.border}`, paddingTop: 6 }}>
                     <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: 0.6, color: C.faint, fontWeight: 700 }}>Variance</span>
                     <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: varColor }}>
