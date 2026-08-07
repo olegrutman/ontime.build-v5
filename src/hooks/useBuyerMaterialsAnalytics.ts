@@ -490,13 +490,17 @@ export function useBuyerMaterialsAnalytics({
 
       // ── Recompute FAC using pack-level overrun ──
       // Bug fix 1.1: uncommitted estimate = estimate slice not yet covered by ordered POs.
-      // Previously subtracted ALL committedTotal (including ad-hoc), which under-forecasts.
+      // Bug fix (unit mismatch): pack figures are pre-tax while committedTotal and
+      // estimateTotal are tax-inclusive, so gross the pack side up by the observed
+      // tax factor before comparing.
+      const committedPreTax = packs.reduce((s, p) => s + p.ordered, 0);
+      const taxFactor = committedPreTax > 0 ? committedTotal / committedPreTax : 1;
       const committedPacksEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
-        .reduce((s, p) => s + p.estimate, 0);
+        .reduce((s, p) => s + p.estimate, 0) * taxFactor;
       const committedAgainstKnownEstimate = packs
         .filter(p => p.ordered > 0 && p.estimate > 0)
-        .reduce((s, p) => s + p.ordered, 0);
+        .reduce((s, p) => s + p.ordered, 0) * taxFactor;
       const adHocCommitted = Math.max(0, committedTotal - committedAgainstKnownEstimate);
       const unCommittedEstimate = Math.max(0, estimateTotal - committedPacksEstimate);
 
@@ -507,6 +511,7 @@ export function useBuyerMaterialsAnalytics({
       } else {
         overrunRatio = 0;
       }
+
       // FAC = realized commitments + projected spend on the remaining estimate slice,
       // inflated by the current overrun ratio. Ad-hoc spend already lives in committedTotal.
       forecastAtCompletion = committedTotal + unCommittedEstimate * (1 + overrunRatio);
