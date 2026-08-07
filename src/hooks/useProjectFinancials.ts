@@ -668,7 +668,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     approvedWOTotal,
     earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
     materialInvoiced, openMaterialCommitment: Math.max(0, materialOrdered - materialInvoiced), gcPayablesInvoiced,
-    ownerBillingsTotal, ownerBillingsCollected,
+    ownerBillingsTotal, ownerBillingsCollected, gcOrgId,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     ownerContractValue, materialMarkupType, materialMarkupValue,
