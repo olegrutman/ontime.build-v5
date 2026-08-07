@@ -52,13 +52,23 @@ export interface CashExposure {
 
 export interface PackVariance {
   packName: string;
+  /** Pre-tax sum of estimate line items for this pack. */
   estimate: number;
+  /** Pre-tax PO subtotal for committed (ORDERED+) POs. */
   ordered: number;
+  /** Pre-tax PO subtotal for DRAFT/SUBMITTED/PRICED POs (not committed yet). */
+  inFlight: number;
+  /** Pre-tax PO subtotal for DELIVERED/FINALIZED POs, less realized return credits. */
   delivered: number;
+  /** Realized return credits (pre-tax) tied to this pack's POs. */
+  credits: number;
+  /** Tax booked on this pack's committed POs (shown separately, never in variance). */
+  tax: number;
   variance: number;
   variancePct: number | null;
   status: 'ok' | 'watch' | 'over' | 'pending';
 }
+
 
 export interface BuyerMaterialsAnalytics {
   // Forecast
