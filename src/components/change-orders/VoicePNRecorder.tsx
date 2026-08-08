@@ -409,16 +409,6 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
             </div>
           )}
 
-          {phase === 'failed' && (
-            <div className="flex gap-2 justify-between">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              <Button onClick={resetRecording}>
-                <RotateCcw className="h-4 w-4 mr-1.5" /> Try again
-              </Button>
-            </div>
-          )}
 
           {phase === 'idle' && (
             <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
