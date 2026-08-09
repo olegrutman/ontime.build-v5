@@ -299,7 +299,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         .from('change_orders')
         .select('id, status, document_type, tc_submitted_price')
         .eq('project_id', projectId)
-        .in('status', ['approved', ...PENDING_CO_STATUSES]);
+        .in('status', [...APPROVED_CO_STATUSES, ...PENDING_CO_STATUSES]);
 
       const allCOIds = (allCOs || []).map((c: any) => c.id);
       let coLabor: any[] = [];
