@@ -476,11 +476,11 @@ export function useBuyerMaterialsAnalytics({
         (retItems || []).forEach((ri: any) => {
           if (!ri.po_line_item_id || !eligiblePoLineIds.has(ri.po_line_item_id)) return;
           const poLine = poLineById.get(ri.po_line_item_id);
-          const nk = poLine?.source_estimate_item_id
-            ? estimateItemPackById.get(poLine.source_estimate_item_id)
-            : undefined;
+          if (!poLine) return;
+          const nk = packKeyForLine(poLine);
           if (!nk) return;
           const cur = normalizedMap.get(nk);
+
           if (!cur) return;
           const credit = Number(ri.credit_line_total || 0);
           cur.credits += credit;
