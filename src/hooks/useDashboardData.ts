@@ -59,6 +59,7 @@ interface FinancialSummary {
   totalBilled: number;
   paidByYou: number;
   paidToYou: number;
+  receivedToDate: number;
   outstandingBilling: number;
   potentialProfit: number;
   earnedToDate: number;
@@ -151,6 +152,7 @@ export function useDashboardData(): DashboardData {
     totalBilled: 0,
     paidByYou: 0,
     paidToYou: 0,
+    receivedToDate: 0,
     outstandingBilling: 0,
     potentialProfit: 0,
     earnedToDate: 0,
@@ -847,7 +849,7 @@ export function useDashboardData(): DashboardData {
       const effectiveProjectedMargin = totalRevenue > 0 ? potentialProfit : 0;
       const effectiveMarginPct = totalRevenue > 0 ? (effectiveProjectedMargin / totalRevenue) * 100 : 0;
 
-      const pendingUnbilled = Math.max(0, revisedRevenue - paidToYou - pendingInvoiced);
+      const pendingUnbilled = Math.max(0, revisedRevenue - receivedToDate - pendingInvoiced);
 
       setFinancials({
         totalContracts: totalContractValue,
@@ -857,6 +859,7 @@ export function useDashboardData(): DashboardData {
         totalBilled,
         paidByYou,
         paidToYou,
+        receivedToDate,
         outstandingBilling,
         potentialProfit,
         earnedToDate,
