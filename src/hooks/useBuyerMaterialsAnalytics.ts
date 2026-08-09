@@ -489,8 +489,9 @@ export function useBuyerMaterialsAnalytics({
       }
 
       const packs = Array.from(normalizedMap.values())
-        // Estimate packs only. Ad-hoc/non-estimate material must never appear here.
-        .filter(p => p.estimate > 0)
+        // Keep any pack with a budget OR with real PO spend, so ordered packs that
+        // were never (or not yet) in an approved estimate still show up.
+        .filter(p => p.estimate > 0 || p.ordered > 0 || p.inFlight > 0)
         .map(p => {
           // For packs with nothing ordered yet, variance is not meaningful —
           // showing "-100%" would falsely suggest a problem. Treat as Pending.
@@ -501,7 +502,8 @@ export function useBuyerMaterialsAnalytics({
           const variancePct: number | null = p.estimate > 0 ? (variance / p.estimate) * 100 : null;
           let status: PackVariance['status'];
           if (variancePct == null) {
-            status = 'ok';
+            // Spend with no estimated budget — unbudgeted, always worth a look.
+            status = p.ordered > 0 || p.inFlight > 0 ? 'watch' : 'ok';
           } else if (variancePct > 5) {
             status = 'over';
           } else if (variancePct > 0) {
@@ -511,6 +513,7 @@ export function useBuyerMaterialsAnalytics({
           }
           return { ...p, variance, variancePct, status };
         })
+
         // Bug fix 7.3: sort by status priority (over → watch → ok), then by size,
         // so small high-risk packs aren't buried under big on-budget ones.
         .sort((a, b) => {
