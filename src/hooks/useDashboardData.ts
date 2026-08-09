@@ -875,10 +875,10 @@ export function useDashboardData(): DashboardData {
         };
         for (const co of cos) {
           const v = valueForViewer(co);
-          if (co.status === 'approved') {
+          if ((APPROVED_CO_STATUSES as readonly string[]).includes(co.status)) {
             coApprovedCount += 1;
             coApprovedNet += v;
-          } else if (['submitted', 'closed_for_pricing', 'shared', 'work_in_progress'].includes(co.status)) {
+          } else if ((PENDING_CO_STATUSES as readonly string[]).includes(co.status)) {
             coPendingCount += 1;
             coPendingNetAtRisk += v;
           }
