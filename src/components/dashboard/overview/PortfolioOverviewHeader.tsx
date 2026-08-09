@@ -75,7 +75,9 @@ export function PortfolioOverviewHeader({
         marginPct: financials.projectedMarginRevisedPct,
       }}
       cashFlow={{
-        received: financials.paidToYou,
+        // Revenue-side cash: for a GC that is the owner-billings ledger, not
+        // platform invoices (paidToYou is always 0 for them).
+        received: financials.receivedToDate ?? financials.paidToYou,
         paid: financials.paidByYou,
         cashPosition: financials.cashPosition,
         owedToYou: financials.pendingInvoiced + financials.pendingUnbilled,
