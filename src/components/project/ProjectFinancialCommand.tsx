@@ -27,10 +27,14 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
     const originalContract = upstreamContract?.contract_sum || 0;
     const coAdds = approvedCORevenue;
     const revised = originalContract + coAdds;
+    // Cost out = contracts where the GC is the paying party (downstream billed
+    // TO the GC). The old filter (`to_org_id !== myOrg`) excluded exactly those
+    // rows and counted TC↔FC contracts the GC never pays, so cost read $0.
     const totalCostOut = contracts
-      .filter(c => c.to_org_id !== financials.userOrgIds[0])
+      .filter(c => c.to_org_id != null && financials.userOrgIds.includes(c.to_org_id) && c.from_role !== 'Owner')
       .reduce((sum, c) => sum + (c.contract_sum || 0), 0);
     const margin = revised > 0 ? ((revised - totalCostOut) / revised) * 100 : 0;
+
 
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
