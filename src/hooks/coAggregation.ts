@@ -48,6 +48,14 @@ export const PENDING_CO_STATUSES = [
 ] as const;
 
 /**
+ * Statuses that count as locked-in / approved contract value. `contracted` and
+ * `completed` are downstream of approval — the overview tables already treat
+ * them as approved, so the financial rollup must agree or the KPI cards and the
+ * CO tables disagree on the same project.
+ */
+export const APPROVED_CO_STATUSES = ['approved', 'contracted', 'completed'] as const;
+
+/**
  * Resolve the org id whose CO line items represent revenue/cost for the viewer.
  * - GC viewer:  TC's org   (billing party of upstream TC↔GC contract)
  * - TC viewer:  TC's org   (own org as billing party upstream)
