@@ -375,9 +375,9 @@ export default function Dashboard() {
             {/* Two-col: Materials Health + Action Queue */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <DashboardMaterialsHealth
-                estimate={financials.totalCosts}
-                ordered={financials.paidByYou}
-                forecast={financials.totalCosts * 1.04}
+                estimate={materials.estimate}
+                ordered={materials.ordered}
+                forecast={materials.forecast}
               />
               <DashboardActionQueue docs={recentDocs} />
             </div>

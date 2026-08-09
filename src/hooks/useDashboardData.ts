@@ -103,8 +103,15 @@ export interface ProjectFinancialDetail {
   pendingToPay: number;
 }
 
+export interface MaterialsRollup {
+  estimate: number;
+  ordered: number;
+  forecast: number;
+}
+
 interface DashboardData {
   projects: ProjectWithDetails[];
+  materials: MaterialsRollup;
   statusCounts: {
     setup: number;
     active: number;
@@ -144,6 +151,7 @@ export function useDashboardData(): DashboardData {
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
+  const [materials, setMaterials] = useState<MaterialsRollup>({ estimate: 0, ordered: 0, forecast: 0 });
   const [financials, setFinancials] = useState<FinancialSummary>({
     totalContracts: 0,
     totalRevenue: 0,
@@ -715,6 +723,44 @@ export function useDashboardData(): DashboardData {
         ownerCollected = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
       }
 
+      // Portfolio materials rollup — real estimate vs ordered vs forecast.
+      // (The dashboard card previously received contract costs and a hardcoded
+      // ×1.04 forecast, which had nothing to do with materials.)
+      if (projectIds.length > 0) {
+        const [estRes, poRes] = await Promise.all([
+          supabase
+            .from('supplier_estimates')
+            .select('total_amount, project_id')
+            .in('project_id', projectIds)
+            .eq('status', 'APPROVED'),
+          supabase
+            .from('purchase_orders')
+            .select('id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
+            .in('project_id', projectIds),
+        ]);
+        const matEstimate = (estRes.data || []).reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
+        const ownedPOs = (poRes.data || []).filter((po: any) =>
+          orgType === 'SUPPLIER' ? true : po.pricing_owner_org_id === currentOrg.id,
+        );
+        const poTotal = (po: any) => {
+          const sub = (po.po_line_items || []).reduce((s2: number, li: any) => s2 + Number(li.line_total || 0), 0);
+          return sub * (1 + Number(po.sales_tax_percent || 0) / 100);
+        };
+        const COMMITTED = ['ORDERED', 'DELIVERED', 'FINALIZED', 'READY_FOR_DELIVERY'];
+        const IN_FLIGHT = ['SENT', 'ACTIVE', 'PENDING_APPROVAL', 'SUBMITTED', 'PRICED'];
+        const matOrdered = ownedPOs.filter((po: any) => COMMITTED.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
+        const matInFlight = ownedPOs.filter((po: any) => IN_FLIGHT.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
+        setMaterials({
+          estimate: matEstimate,
+          ordered: matOrdered,
+          // Forecast = committed + everything already in the pipeline, floored at
+          // the estimate so an untouched project doesn't read as under budget.
+          forecast: Math.max(matOrdered + matInFlight, matEstimate > 0 && matOrdered === 0 ? matEstimate : 0),
+        });
+      } else {
+        setMaterials({ estimate: 0, ordered: 0, forecast: 0 });
+      }
+
       if (orgType === 'TC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
@@ -969,6 +1015,7 @@ export function useDashboardData(): DashboardData {
 
   return {
     projects,
+    materials,
     statusCounts,
     needsAttention,
     attentionItems,
