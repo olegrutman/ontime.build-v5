@@ -422,9 +422,11 @@ export function useBuyerMaterialsAnalytics({
       });
       const poById = new Map(pos.map(p => [p.id, p]));
       const poLineById = new Map(lines.map(line => [line.id, line]));
+      const eligiblePoLineIds = new Set<string>();
       const OFF_ESTIMATE = 'Off-estimate materials';
       const displayNameFor = new Map<string, string>();
       normalizedMap.forEach((v, nk) => displayNameFor.set(nk, v.packName));
+
 
       const packKeyForLine = (line: any): string | undefined => {
         const fromEstimate = line.source_estimate_item_id
