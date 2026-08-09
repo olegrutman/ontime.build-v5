@@ -676,7 +676,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
-    billedToDate, retainageAmount, outstanding,
+    billedToDate: revenueBilledToDate, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     approvedCORevenue, approvedCOCost, approvedCOMargin: approvedCORevenue - approvedCOCost,
