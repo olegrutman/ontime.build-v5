@@ -161,8 +161,10 @@ export function aggregateCOTotals(
   });
 
 
-  const approved = perCO.filter((c) => c.status === 'approved');
-  const pending = perCO.filter((c) => c.status !== 'approved');
+  const isApproved = (s: string) =>
+    (APPROVED_CO_STATUSES as readonly string[]).includes(s);
+  const approved = perCO.filter((c) => isApproved(c.status));
+  const pending = perCO.filter((c) => !isApproved(c.status));
 
   const approvedCORevenue = approved.reduce((s, c) => s + c.revenue, 0);
   const approvedCOCost = approved.reduce((s, c) => s + c.cost, 0);
