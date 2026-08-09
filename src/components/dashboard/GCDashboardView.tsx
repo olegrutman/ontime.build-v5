@@ -227,7 +227,7 @@ export function GCDashboardView({
                 <TRow cells={[<TdN>Owner Budget (Revenue)</TdN>, <TdM>{fmt(financials.totalRevenue)}</TdM>]} />
                 <TRow cells={[<TdN>Trade Contractor Contracts (Costs)</TdN>, <TdM>{fmt(financials.totalCosts)}</TdM>]} />
                 <TRow cells={[<TdN>Paid by You</TdN>, <TdM>{fmt(financials.paidByYou)}</TdM>]} />
-                <TRow cells={[<TdN>Paid to You</TdN>, <TdM>{fmt(financials.paidToYou)}</TdM>]} />
+                <TRow cells={[<TdN>Collected from Owners</TdN>, <TdM>{fmt((financials as any).receivedToDate ?? financials.paidToYou)}</TdM>]} />
                 <TRow isTotal cells={[<TdN>Net Margin</TdN>, <TdM>{fmt(margin)}</TdM>]} />
               </tbody>
             </table>
