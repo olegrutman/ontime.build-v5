@@ -17,6 +17,7 @@ import { OwnerBillingsPanel } from '@/components/project/gc/OwnerBillingsPanel';
 import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
+import { APPROVED_CO_STATUSES } from '@/hooks/coAggregation';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -187,8 +188,11 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     },
   });
 
-  const approvedCOs = changeOrders.filter(co => co.status === 'approved' || co.status === 'completed');
-  const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'rejected'].includes(co.status));
+  // `contracted` is downstream of approval — excluding it made approved COs read
+  // as "pending" here while the financial hook counted them as contract value.
+  const isApprovedCO = (s: string) => (APPROVED_CO_STATUSES as readonly string[]).includes(s);
+  const approvedCOs = changeOrders.filter(co => isApprovedCO(co.status));
+  const pendingCOs = changeOrders.filter(co => !isApprovedCO(co.status) && co.status !== 'rejected');
   const coRevenueTotal = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
   // For T&M: only count mat/equip in TC cost when TC is the responsible party per WO
   const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
@@ -398,7 +402,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
                           <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
-                          <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                          <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
                       ))}
                       {approvedCOs.length > 0 && (
@@ -512,7 +516,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                             co.title || '—',
                             <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
                             <TdM>{woTotalCost > 0 ? fmt(woTotalCost) : '—'}</TdM>,
-                            <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                            <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                           ]} />
                         );
                       })}
@@ -635,7 +639,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                           co.title || '—',
                           <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
                           <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
-                          <Pill type={co.status === 'approved' || co.status === 'completed' ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                          <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
                       ))}
                     </tbody>

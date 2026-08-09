@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth } from 'date-fns';
+import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES } from '@/hooks/coAggregation';
 
 interface Project {
   id: string;
@@ -59,6 +60,7 @@ interface FinancialSummary {
   totalBilled: number;
   paidByYou: number;
   paidToYou: number;
+  receivedToDate: number;
   outstandingBilling: number;
   potentialProfit: number;
   earnedToDate: number;
@@ -102,8 +104,15 @@ export interface ProjectFinancialDetail {
   pendingToPay: number;
 }
 
+export interface MaterialsRollup {
+  estimate: number;
+  ordered: number;
+  forecast: number;
+}
+
 interface DashboardData {
   projects: ProjectWithDetails[];
+  materials: MaterialsRollup;
   statusCounts: {
     setup: number;
     active: number;
@@ -143,6 +152,7 @@ export function useDashboardData(): DashboardData {
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
+  const [materials, setMaterials] = useState<MaterialsRollup>({ estimate: 0, ordered: 0, forecast: 0 });
   const [financials, setFinancials] = useState<FinancialSummary>({
     totalContracts: 0,
     totalRevenue: 0,
@@ -151,6 +161,7 @@ export function useDashboardData(): DashboardData {
     totalBilled: 0,
     paidByYou: 0,
     paidToYou: 0,
+    receivedToDate: 0,
     outstandingBilling: 0,
     potentialProfit: 0,
     earnedToDate: 0,
@@ -697,6 +708,60 @@ export function useDashboardData(): DashboardData {
         }
       });
 
+      // GC revenue is billed to the project owner, who is not a platform user —
+      // so it lives in the gc_owner_billings ledger, never in `invoices`. Load
+      // it up front: "Received", "Billed", cash position and realized margin all
+      // depend on it (they previously read 0 from paidToYou).
+      let ownerBilled = 0;
+      let ownerCollected = 0;
+      if (orgType === 'GC' && projectIds.length > 0) {
+        const { data: gcBillings } = await supabase
+          .from('gc_owner_billings')
+          .select('billed_amount, collected_amount')
+          .eq('gc_org_id', currentOrg.id)
+          .in('project_id', projectIds);
+        ownerBilled = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.billed_amount || 0), 0);
+        ownerCollected = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
+      }
+
+      // Portfolio materials rollup — real estimate vs ordered vs forecast.
+      // (The dashboard card previously received contract costs and a hardcoded
+      // ×1.04 forecast, which had nothing to do with materials.)
+      if (projectIds.length > 0) {
+        const [estRes, poRes] = await Promise.all([
+          supabase
+            .from('supplier_estimates')
+            .select('total_amount, project_id')
+            .in('project_id', projectIds)
+            .eq('status', 'APPROVED'),
+          supabase
+            .from('purchase_orders')
+            .select('id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
+            .in('project_id', projectIds),
+        ]);
+        const matEstimate = (estRes.data || []).reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
+        const ownedPOs = (poRes.data || []).filter((po: any) =>
+          orgType === 'SUPPLIER' ? true : po.pricing_owner_org_id === currentOrg.id,
+        );
+        const poTotal = (po: any) => {
+          const sub = (po.po_line_items || []).reduce((s2: number, li: any) => s2 + Number(li.line_total || 0), 0);
+          return sub * (1 + Number(po.sales_tax_percent || 0) / 100);
+        };
+        const COMMITTED = ['ORDERED', 'DELIVERED', 'FINALIZED', 'READY_FOR_DELIVERY'];
+        const IN_FLIGHT = ['SENT', 'ACTIVE', 'PENDING_APPROVAL', 'SUBMITTED', 'PRICED'];
+        const matOrdered = ownedPOs.filter((po: any) => COMMITTED.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
+        const matInFlight = ownedPOs.filter((po: any) => IN_FLIGHT.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
+        setMaterials({
+          estimate: matEstimate,
+          ordered: matOrdered,
+          // Forecast = committed + everything already in the pipeline, floored at
+          // the estimate so an untouched project doesn't read as under budget.
+          forecast: Math.max(matOrdered + matInFlight, matEstimate > 0 && matOrdered === 0 ? matEstimate : 0),
+        });
+      } else {
+        setMaterials({ estimate: 0, ordered: 0, forecast: 0 });
+      }
+
       if (orgType === 'TC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
@@ -706,8 +771,6 @@ export function useDashboardData(): DashboardData {
             totalCosts += c.contract_sum || 0;
           }
         });
-
-        totalBilled = paidToYou; // TC: billed = money received
       } else if (orgType === 'GC') {
         contracts.forEach(c => {
           if (c.to_org_id === currentOrg.id) {
@@ -725,8 +788,6 @@ export function useDashboardData(): DashboardData {
           // Fallback: use total contract value (sum of TC contracts), not costs
           totalRevenue = totalContractValue;
         }
-
-        totalBilled = paidByYou; // GC: billed = money paid out
       } else if (orgType === 'FC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
@@ -738,36 +799,29 @@ export function useDashboardData(): DashboardData {
         fcContracts.forEach(c => {
           totalCosts += (c as any).labor_budget || 0;
         });
-
-        totalBilled = paidToYou; // FC: billed = money received
       }
+
+      // Cash collected on the revenue side (owner ledger for GCs, paid invoices
+      // for everyone else).
+      const receivedToDate = orgType === 'GC' ? ownerCollected : paidToYou;
+      // Billed = what you have invoiced, collected or not. It is NOT cash.
+      totalBilled = orgType === 'GC' ? ownerBilled : receivedToDate + outstandingToCollect;
 
       const potentialProfit = totalRevenue - totalCosts;
       const profitMargin = totalRevenue > 0 
         ? (potentialProfit / totalRevenue) * 100 
         : 0;
-      const outstandingBilling = totalRevenue - totalBilled;
+      const outstandingBilling = Math.max(0, totalRevenue - totalBilled);
 
-      // Realized margin to date (cash-basis rollup across all projects)
-      // TC: earned = collected from GCs (paidToYou), incurred = paid to FCs/suppliers (paidByYou)
-      // FC: earned = collected (paidToYou), incurred ~ 0 (off-platform labor costs)
-      // GC: earned = collected from owners via gc_owner_billings ledger (Phase 2).
-      //     When no owner billings exist yet the tile stays at 0 / "No data".
-      let earnedToDate = orgType === 'GC' ? 0 : paidToYou;
-      if (orgType === 'GC' && projectIds.length > 0) {
-        const { data: gcBillings } = await supabase
-          .from('gc_owner_billings')
-          .select('collected_amount')
-          .eq('gc_org_id', currentOrg.id)
-          .in('project_id', projectIds);
-        earnedToDate = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
-      }
+      // Realized margin to date (cash-basis rollup across all projects):
+      // earned = collected on the revenue side, incurred = cash paid out.
+      const earnedToDate = receivedToDate;
       const incurredToDate = paidByYou;
       const marginToDate = earnedToDate - incurredToDate;
       const marginToDatePct = earnedToDate > 0 ? (marginToDate / earnedToDate) * 100 : 0;
 
       // Cash position — true working capital, NOT margin.
-      const cashPosition = paidToYou - paidByYou;
+      const cashPosition = receivedToDate - paidByYou;
 
       // Pending invoiced (you've billed, not yet paid) vs unbilled remaining.
       const pendingInvoiced = outstandingToCollect;
@@ -822,10 +876,10 @@ export function useDashboardData(): DashboardData {
         };
         for (const co of cos) {
           const v = valueForViewer(co);
-          if (co.status === 'approved') {
+          if ((APPROVED_CO_STATUSES as readonly string[]).includes(co.status)) {
             coApprovedCount += 1;
             coApprovedNet += v;
-          } else if (['submitted', 'closed_for_pricing', 'shared', 'work_in_progress'].includes(co.status)) {
+          } else if ((PENDING_CO_STATUSES as readonly string[]).includes(co.status)) {
             coPendingCount += 1;
             coPendingNetAtRisk += v;
           }
@@ -842,7 +896,7 @@ export function useDashboardData(): DashboardData {
       const effectiveProjectedMargin = totalRevenue > 0 ? potentialProfit : 0;
       const effectiveMarginPct = totalRevenue > 0 ? (effectiveProjectedMargin / totalRevenue) * 100 : 0;
 
-      const pendingUnbilled = Math.max(0, revisedRevenue - paidToYou - pendingInvoiced);
+      const pendingUnbilled = Math.max(0, revisedRevenue - receivedToDate - pendingInvoiced);
 
       setFinancials({
         totalContracts: totalContractValue,
@@ -852,6 +906,7 @@ export function useDashboardData(): DashboardData {
         totalBilled,
         paidByYou,
         paidToYou,
+        receivedToDate,
         outstandingBilling,
         potentialProfit,
         earnedToDate,
@@ -961,6 +1016,7 @@ export function useDashboardData(): DashboardData {
 
   return {
     projects,
+    materials,
     statusCounts,
     needsAttention,
     attentionItems,
