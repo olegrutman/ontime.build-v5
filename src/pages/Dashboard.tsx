@@ -39,6 +39,7 @@ export default function Dashboard() {
   const { user, userOrgRoles, loading: authLoading, signOut } = useAuth();
   const {
     projects,
+    materials,
     statusCounts,
     attentionItems,
     pendingInvites,
