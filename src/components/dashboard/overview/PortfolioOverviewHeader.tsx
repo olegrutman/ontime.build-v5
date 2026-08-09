@@ -8,6 +8,7 @@ interface PortfolioOverviewHeaderProps {
     totalRevenue: number;
     totalCosts: number;
     paidToYou: number;
+    receivedToDate?: number;
     paidByYou: number;
     cashPosition: number;
     pendingInvoiced: number;
