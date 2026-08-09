@@ -412,32 +412,57 @@ export function useBuyerMaterialsAnalytics({
 
       // The pack comparison is estimate-only by definition. Never use a PO header
       // subtotal here: it includes manual/non-estimate lines added to the same PO.
-      // Instead, total only lines linked to items in the approved estimate and use
-      // the estimate item's canonical pack assignment.
+      // Preferred pack key is the estimate item's canonical pack assignment, but a
+      // line ordered off-estimate must still be visible: fall back to the line's
+      // own pack tag, then the PO's pack tag, then an "Off-estimate" bucket. Without
+      // the fallbacks, ordered packs silently vanished from the table.
       const estimateItemPackById = new Map<string, string>();
       estimateItemRows.forEach((item: any) => {
         if (item.id && item.pack_name) estimateItemPackById.set(item.id, normalize(item.pack_name));
       });
       const poById = new Map(pos.map(p => [p.id, p]));
       const poLineById = new Map(lines.map(line => [line.id, line]));
-      const eligiblePoLineIds = new Set<string>();
-      lines.forEach(line => {
-        const nk = line.source_estimate_item_id
+      const OFF_ESTIMATE = 'Off-estimate materials';
+      const displayNameFor = new Map<string, string>();
+      normalizedMap.forEach((v, nk) => displayNameFor.set(nk, v.packName));
+
+      const packKeyForLine = (line: any): string | undefined => {
+        const fromEstimate = line.source_estimate_item_id
           ? estimateItemPackById.get(line.source_estimate_item_id)
           : undefined;
+        if (fromEstimate) return fromEstimate;
+        const po = poById.get(line.po_id);
+        const raw = line.source_pack_name || po?.source_pack_name || null;
+        if (raw) {
+          const nk = normalize(raw);
+          if (!displayNameFor.has(nk)) displayNameFor.set(nk, raw);
+          return nk;
+        }
+        const nk = normalize(OFF_ESTIMATE);
+        if (!displayNameFor.has(nk)) displayNameFor.set(nk, OFF_ESTIMATE);
+        return nk;
+      };
+
+      lines.forEach(line => {
+        const po = poById.get(line.po_id);
+        if (!po || po.status === 'CANCELLED') return;
+        const nk = packKeyForLine(line);
         if (!nk) return;
 
-        const po = poById.get(line.po_id);
-        const cur = normalizedMap.get(nk);
-        if (!po || !cur) return;
+        let cur = normalizedMap.get(nk);
+        if (!cur) {
+          cur = emptyPack(displayNameFor.get(nk) || nk);
+          normalizedMap.set(nk, cur);
+        }
 
         eligiblePoLineIds.add(line.id);
         const amount = Number(line.line_total || 0);
         const committed = ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(po.status);
         if (committed) cur.ordered += amount;
-        else if (po.status !== 'CANCELLED') cur.inFlight += amount;
+        else cur.inFlight += amount;
         if (['DELIVERED', 'FINALIZED'].includes(po.status)) cur.delivered += amount;
       });
+
 
       // Subtract realized return credits (pre-tax) from the delivered value per pack.
       const realizedReturnIds = realizedReturns.map(r => r.id);
