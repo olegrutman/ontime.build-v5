@@ -697,6 +697,22 @@ export function useDashboardData(): DashboardData {
         }
       });
 
+      // GC revenue is billed to the project owner, who is not a platform user —
+      // so it lives in the gc_owner_billings ledger, never in `invoices`. Load
+      // it up front: "Received", "Billed", cash position and realized margin all
+      // depend on it (they previously read 0 from paidToYou).
+      let ownerBilled = 0;
+      let ownerCollected = 0;
+      if (orgType === 'GC' && projectIds.length > 0) {
+        const { data: gcBillings } = await supabase
+          .from('gc_owner_billings')
+          .select('billed_amount, collected_amount')
+          .eq('gc_org_id', currentOrg.id)
+          .in('project_id', projectIds);
+        ownerBilled = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.billed_amount || 0), 0);
+        ownerCollected = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
+      }
+
       if (orgType === 'TC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
@@ -706,8 +722,6 @@ export function useDashboardData(): DashboardData {
             totalCosts += c.contract_sum || 0;
           }
         });
-
-        totalBilled = paidToYou; // TC: billed = money received
       } else if (orgType === 'GC') {
         contracts.forEach(c => {
           if (c.to_org_id === currentOrg.id) {
@@ -725,8 +739,6 @@ export function useDashboardData(): DashboardData {
           // Fallback: use total contract value (sum of TC contracts), not costs
           totalRevenue = totalContractValue;
         }
-
-        totalBilled = paidByYou; // GC: billed = money paid out
       } else if (orgType === 'FC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
@@ -738,36 +750,29 @@ export function useDashboardData(): DashboardData {
         fcContracts.forEach(c => {
           totalCosts += (c as any).labor_budget || 0;
         });
-
-        totalBilled = paidToYou; // FC: billed = money received
       }
+
+      // Cash collected on the revenue side (owner ledger for GCs, paid invoices
+      // for everyone else).
+      const receivedToDate = orgType === 'GC' ? ownerCollected : paidToYou;
+      // Billed = what you have invoiced, collected or not. It is NOT cash.
+      totalBilled = orgType === 'GC' ? ownerBilled : receivedToDate + outstandingToCollect;
 
       const potentialProfit = totalRevenue - totalCosts;
       const profitMargin = totalRevenue > 0 
         ? (potentialProfit / totalRevenue) * 100 
         : 0;
-      const outstandingBilling = totalRevenue - totalBilled;
+      const outstandingBilling = Math.max(0, totalRevenue - totalBilled);
 
-      // Realized margin to date (cash-basis rollup across all projects)
-      // TC: earned = collected from GCs (paidToYou), incurred = paid to FCs/suppliers (paidByYou)
-      // FC: earned = collected (paidToYou), incurred ~ 0 (off-platform labor costs)
-      // GC: earned = collected from owners via gc_owner_billings ledger (Phase 2).
-      //     When no owner billings exist yet the tile stays at 0 / "No data".
-      let earnedToDate = orgType === 'GC' ? 0 : paidToYou;
-      if (orgType === 'GC' && projectIds.length > 0) {
-        const { data: gcBillings } = await supabase
-          .from('gc_owner_billings')
-          .select('collected_amount')
-          .eq('gc_org_id', currentOrg.id)
-          .in('project_id', projectIds);
-        earnedToDate = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
-      }
+      // Realized margin to date (cash-basis rollup across all projects):
+      // earned = collected on the revenue side, incurred = cash paid out.
+      const earnedToDate = receivedToDate;
       const incurredToDate = paidByYou;
       const marginToDate = earnedToDate - incurredToDate;
       const marginToDatePct = earnedToDate > 0 ? (marginToDate / earnedToDate) * 100 : 0;
 
       // Cash position — true working capital, NOT margin.
-      const cashPosition = paidToYou - paidByYou;
+      const cashPosition = receivedToDate - paidByYou;
 
       // Pending invoiced (you've billed, not yet paid) vs unbilled remaining.
       const pendingInvoiced = outstandingToCollect;
