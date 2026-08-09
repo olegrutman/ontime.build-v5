@@ -589,8 +589,24 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const primaryContract = viewerRole === 'Field Crew' ? downstreamContract : upstreamContract;
   const contractValue = primaryContract?.contract_sum || 0;
   const retainagePercent = primaryContract?.retainage_percent || 0;
-  const retainageAmount = billedToDate * (retainagePercent / 100);
-  const outstanding = contractValue - billedToDate;
+
+  // Revenue-side billing only. `billedToDate` used to sum EVERY invoice on the
+  // project (including TC→GC payables and supplier invoices), so a GC saw its
+  // own costs reported as "invoiced to date" against the owner budget.
+  //  - GC: the owner-billings ledger is the only revenue instrument.
+  //  - TC: invoices on contracts where the TC is the billing party.
+  //  - FC / Supplier: they only ever bill, so all invoices are revenue.
+  const revenueBilledToDate =
+    viewerRole === 'General Contractor'
+      ? ownerBillingsTotal
+      : viewerRole === 'Trade Contractor'
+        ? receivablesInvoiced
+        : billedToDate;
+  // Revenue contract for the viewer: GC bills the owner, everyone else bills upstream.
+  const revenueContractValue =
+    viewerRole === 'General Contractor' ? (ownerContractValue || 0) : contractValue;
+  const retainageAmount = revenueBilledToDate * (retainagePercent / 100);
+  const outstanding = revenueContractValue - revenueBilledToDate;
 
   // Margin to date — pure cash basis for all roles: received minus paid.
   // Earned = sum of PAID receivable invoices (collected).
