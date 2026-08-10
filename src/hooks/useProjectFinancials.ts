@@ -59,6 +59,8 @@ export interface ProjectFinancials {
   marginToDatePct: number;
   // Components used in the realized-margin drilldown
   materialInvoiced: number;
+  /** Paid portion of supplier (PO-linked) invoices the viewer's org owns. */
+  materialPaid: number;
   openMaterialCommitment: number;
   gcPayablesInvoiced: number;
   // GC owner billings ledger (Phase 2)
