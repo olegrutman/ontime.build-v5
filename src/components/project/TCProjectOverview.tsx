@@ -447,7 +447,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 margin: projectedMargin,
                 marginPct: projectedMarginPct,
                 materialCommitment,
-                materialLabel: 'Materials contract (approved supplier estimates)',
+                materialLabel,
               }}
               cashFlow={{
                 received: totalReceivedFromGC,
