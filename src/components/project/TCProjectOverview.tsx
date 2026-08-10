@@ -320,8 +320,23 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const revisedGCTotal = isTM ? approvedCoRevenue : gcContractVal + approvedCoRevenue;
   // Approved supplier estimates are the TC↔supplier material contract when the
   // TC is materials-responsible — a real committed cost, not a budget note.
-  const materialCommitment = financials.isTCMaterialResponsible ? matEstimateForAnalytics : 0;
+  // No approved estimate yet → fall back to committed POs so the card is never
+  // blind to real spend.
+  const matOrderedTC = financials.materialOrdered || 0;
+  const matDeliveredTC = financials.materialDelivered || 0;
+  const matPendingTC = financials.materialOrderedPending || 0;
+  const materialFromPOs = !!financials.isTCMaterialResponsible && matEstimateForAnalytics <= 0 && matOrderedTC > 0;
+  const materialCommitment = financials.isTCMaterialResponsible
+    ? (matEstimateForAnalytics > 0 ? matEstimateForAnalytics : matOrderedTC)
+    : 0;
+  const materialLabel = materialFromPOs
+    ? 'Committed POs (no approved estimate)'
+    : 'Materials contract (approved supplier estimates)';
+  const materialAtRiskOnDelivery = matPendingTC + (materialCommitment > 0 ? Math.max(0, matOrderedTC - materialCommitment) : 0);
   const revisedFCTotal = (isTM ? approvedCoCost : draftFcVal + approvedCoCost) + materialCommitment;
+  // One margin number for hero, summary strip and the margin card.
+  const netTCMarginAll = revisedGCTotal - revisedFCTotal;
+  const netTCMarginAllPct = revisedGCTotal > 0 ? ((netTCMarginAll / revisedGCTotal) * 100).toFixed(1) : '0';
   const netTCMargin = isTM ? coNetMargin : tcGrossMargin + coNetMargin;
   // Pending = everything not paid (contract total minus collected)
   const totalPendingFromGC = Math.max(0, revisedGCTotal - totalReceivedFromGC);
