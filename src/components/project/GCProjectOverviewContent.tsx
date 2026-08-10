@@ -322,7 +322,11 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         const approvedNet = coRevenueTotal - coCostTotal;
         const pendingNetAtRisk = financials.pendingCONetAtRisk;
         const revisedIn = ownerBudget + coRevenueTotal;
-        const revisedOut = draftContractVal + coCostTotal;
+        // The approved supplier estimate IS the material contract between the
+        // materials-responsible party and the supplier. When the GC owns
+        // materials, that commitment belongs on the cost side of the contract.
+        const materialCommitment = financials.isGCMaterialResponsible ? matEstimate : 0;
+        const revisedOut = draftContractVal + coCostTotal + materialCommitment;
         const projectedMargin = revisedIn - revisedOut;
         const projectedMarginPct = revisedIn > 0 ? (projectedMargin / revisedIn) * 100 : 0;
         const cashPosition = financials.marginToDateAmount;
@@ -358,11 +362,15 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                 revisedOut,
                 margin: projectedMargin,
                 marginPct: projectedMarginPct,
+                materialCommitment,
+                materialLabel: 'Materials contract (approved supplier estimates)',
               }}
               cashFlow={{
                 received,
                 paid,
                 cashPosition: received - paid,
+                paidToSuppliers: financials.materialPaid,
+                paidToSubs: Math.max(0, paid - financials.materialPaid),
                 owedToYou: Math.max(0, revisedIn - received),
                 youOwe: hasContract ? Math.max(0, revisedOut - paid) : Math.max(0, financials.gcPayablesInvoiced - paid),
 

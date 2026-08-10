@@ -88,6 +88,10 @@ interface OverviewSummaryStripProps {
     revisedOut: number;
     margin: number;
     marginPct: number;
+    /** Committed material cost (approved supplier estimates) inside revisedOut. */
+    materialCommitment?: number;
+    /** Label for the material commitment row. */
+    materialLabel?: string;
   };
   cashFlow: {
     received: number;
@@ -96,6 +100,10 @@ interface OverviewSummaryStripProps {
     owedToYou: number;
     youOwe?: number;
     retainage?: number;
+    /** Cash paid to the downstream sub only (excludes suppliers). */
+    paidToSubs?: number;
+    /** Cash paid to suppliers on POs the viewer's org owns. */
+    paidToSuppliers?: number;
   };
   changeOrders: {
     approvedCount: number;
@@ -129,6 +137,9 @@ export function OverviewSummaryStrip({
         rows={[
           { label: `Revised in (from ${receivablePartyLabel})`, value: awaitingUpstream ? dash : contract.revisedIn },
           { label: `Revised out (to ${payablePartyLabel})`, value: contract.revisedOut, tone: 'muted' },
+          ...(contract.materialCommitment && contract.materialCommitment > 0
+            ? [{ label: `  ↳ ${contract.materialLabel || 'Materials contract (supplier estimates)'}`, value: contract.materialCommitment, tone: 'muted' as const }]
+            : []),
           awaitingUpstream
             ? { label: 'Projected margin', value: dash, tone: 'muted', emphasis: true }
             : { label: 'Projected margin', value: contract.margin, tone: contract.margin > 0 ? 'pos' : contract.margin < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
@@ -138,7 +149,9 @@ export function OverviewSummaryStrip({
         ]}
         footer={awaitingUpstream
           ? `Set the ${receivablePartyLabel} contract value to see projected margin`
-          : `Original + approved change orders on both sides`}
+          : contract.materialCommitment && contract.materialCommitment > 0
+            ? `Original + approved change orders, plus the approved supplier estimate as the materials contract`
+            : `Original + approved change orders on both sides`}
       />
 
       <SummaryCard
@@ -148,6 +161,12 @@ export function OverviewSummaryStrip({
         rows={[
           { label: `Received from ${receivablePartyLabel}`, value: cashFlow.received, tone: cashFlow.received > 0 ? 'pos' : 'muted' },
           { label: `Paid out to ${payablePartyLabel}`, value: cashFlow.paid, tone: cashFlow.paid > 0 ? 'neg' : 'muted' },
+          ...(cashFlow.paidToSuppliers && cashFlow.paidToSuppliers > 0
+            ? [
+                { label: '  ↳ Subcontract', value: (cashFlow.paidToSubs ?? Math.max(0, cashFlow.paid - cashFlow.paidToSuppliers)), tone: 'muted' as const },
+                { label: '  ↳ Suppliers (materials)', value: cashFlow.paidToSuppliers, tone: 'muted' as const },
+              ]
+            : []),
           { label: 'Cash position', value: cashFlow.cashPosition, tone: cashFlow.cashPosition > 0 ? 'pos' : cashFlow.cashPosition < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
           awaitingUpstream
             ? { label: `Owed to you (unpaid)`, value: dash, tone: 'muted' }
