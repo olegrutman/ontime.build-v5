@@ -318,7 +318,10 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
   // ─── Totals (revised contracts use approved-only COs) ───
   const revisedGCTotal = isTM ? approvedCoRevenue : gcContractVal + approvedCoRevenue;
-  const revisedFCTotal = isTM ? approvedCoCost : draftFcVal + approvedCoCost;
+  // Approved supplier estimates are the TC↔supplier material contract when the
+  // TC is materials-responsible — a real committed cost, not a budget note.
+  const materialCommitment = financials.isTCMaterialResponsible ? matEstimateForAnalytics : 0;
+  const revisedFCTotal = (isTM ? approvedCoCost : draftFcVal + approvedCoCost) + materialCommitment;
   const netTCMargin = isTM ? coNetMargin : tcGrossMargin + coNetMargin;
   // Pending = everything not paid (contract total minus collected)
   const totalPendingFromGC = Math.max(0, revisedGCTotal - totalReceivedFromGC);
@@ -428,11 +431,15 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 revisedOut: revisedFCTotal,
                 margin: projectedMargin,
                 marginPct: projectedMarginPct,
+                materialCommitment,
+                materialLabel: 'Materials contract (approved supplier estimates)',
               }}
               cashFlow={{
                 received: totalReceivedFromGC,
                 paid: totalPaidToFC,
                 cashPosition,
+                paidToSuppliers: financials.materialPaid,
+                paidToSubs: Math.max(0, totalPaidToFC - financials.materialPaid),
                 owedToYou: Math.max(0, revisedGCTotal - totalReceivedFromGC),
                 youOwe: Math.max(0, revisedFCTotal - totalPaidToFC),
                 retainage: financials.receivablesRetainage,
