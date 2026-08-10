@@ -343,7 +343,6 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
       {(() => {
         const approvedNet = coRevenueTotal - coCostTotal;
         const pendingNetAtRisk = financials.pendingCONetAtRisk;
-        const cashPosition0 = financials.marginToDateAmount;
         const cashPosition = financials.marginToDateAmount;
         const hasContract = revisedIn > 0;
         const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
