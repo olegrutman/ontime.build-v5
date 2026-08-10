@@ -595,8 +595,11 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                     <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(draftContractVal)}</TdM>]} />
                     <TRow cells={[<TdN>Your Gross Margin</TdN>, <TdM>{fmt(liveMargin)}</TdM>]} isTotal />
                     <TRow cells={[<TdN>CO Revenue (owner)</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Cost (to {tcName})</TdN>, <TdM>+{fmt(coCostTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(liveMargin + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>CO Cost (to {tcName})</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
+                    {materialCommitment > 0 && (
+                      <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />
+                    )}
+                    <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(projectedMargin)}</TdM>]} isTotal />
                   </tbody>
                 </table>
               </div>
