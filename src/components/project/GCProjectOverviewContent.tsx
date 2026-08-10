@@ -343,14 +343,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
       {(() => {
         const approvedNet = coRevenueTotal - coCostTotal;
         const pendingNetAtRisk = financials.pendingCONetAtRisk;
-        const revisedIn = ownerBudget + coRevenueTotal;
-        // The approved supplier estimate IS the material contract between the
-        // materials-responsible party and the supplier. When the GC owns
-        // materials, that commitment belongs on the cost side of the contract.
-        const materialCommitment = financials.isGCMaterialResponsible ? matEstimate : 0;
-        const revisedOut = draftContractVal + coCostTotal + materialCommitment;
-        const projectedMargin = revisedIn - revisedOut;
-        const projectedMarginPct = revisedIn > 0 ? (projectedMargin / revisedIn) * 100 : 0;
+        const cashPosition0 = financials.marginToDateAmount;
         const cashPosition = financials.marginToDateAmount;
         const hasContract = revisedIn > 0;
         const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
