@@ -377,7 +377,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                 margin: projectedMargin,
                 marginPct: projectedMarginPct,
                 materialCommitment,
-                materialLabel: 'Materials contract (approved supplier estimates)',
+                materialLabel,
               }}
               cashFlow={{
                 received,
