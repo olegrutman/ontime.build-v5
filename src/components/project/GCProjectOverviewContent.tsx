@@ -308,6 +308,28 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   }
 
   const draftContractVal = parseInt(contractDraft.value.replace(/[^0-9]/g, '')) || 0;
+
+  // ─── Single source of truth for margin (hero, summary strip, margin card) ───
+  // The approved supplier estimate IS the material contract between the
+  // materials-responsible party and the supplier. When no estimate is approved
+  // yet we fall back to committed POs so the card is never blind to real spend.
+  const materialFromPOs = !!financials.isGCMaterialResponsible && matEstimate <= 0 && matOrdered > 0;
+  const materialCommitment = financials.isGCMaterialResponsible
+    ? (matEstimate > 0 ? matEstimate : matOrdered)
+    : 0;
+  const materialLabel = materialFromPOs
+    ? 'Committed POs (no approved estimate)'
+    : 'Materials contract (approved supplier estimates)';
+  const revisedIn = ownerBudget + coRevenueTotal;
+  const revisedOut = draftContractVal + coCostTotal + materialCommitment;
+  const projectedMargin = revisedIn - revisedOut;
+  const projectedMarginPct = revisedIn > 0 ? (projectedMargin / revisedIn) * 100 : 0;
+  const projectedMarginPctStr = projectedMarginPct.toFixed(1);
+  // Undelivered material is exposure, not yet cost — surfaced separately.
+  const materialOveragePastContract = materialCommitment > 0 ? Math.max(0, matOrdered - materialCommitment) : 0;
+  const materialAtRiskOnDelivery = matPending + materialOveragePastContract;
+
+  // Legacy gross-margin figures (contract-only) kept for the TC contract card.
   const liveMargin = ownerBudget - draftContractVal;
   const liveMarginPct = ownerBudget > 0 ? ((liveMargin / ownerBudget) * 100).toFixed(1) : '0';
 
@@ -321,14 +343,6 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
       {(() => {
         const approvedNet = coRevenueTotal - coCostTotal;
         const pendingNetAtRisk = financials.pendingCONetAtRisk;
-        const revisedIn = ownerBudget + coRevenueTotal;
-        // The approved supplier estimate IS the material contract between the
-        // materials-responsible party and the supplier. When the GC owns
-        // materials, that commitment belongs on the cost side of the contract.
-        const materialCommitment = financials.isGCMaterialResponsible ? matEstimate : 0;
-        const revisedOut = draftContractVal + coCostTotal + materialCommitment;
-        const projectedMargin = revisedIn - revisedOut;
-        const projectedMarginPct = revisedIn > 0 ? (projectedMargin / revisedIn) * 100 : 0;
         const cashPosition = financials.marginToDateAmount;
         const hasContract = revisedIn > 0;
         const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
@@ -363,7 +377,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                 margin: projectedMargin,
                 marginPct: projectedMarginPct,
                 materialCommitment,
-                materialLabel: 'Materials contract (approved supplier estimates)',
+                materialLabel,
               }}
               cashFlow={{
                 received,
@@ -581,32 +595,49 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                     <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(draftContractVal)}</TdM>]} />
                     <TRow cells={[<TdN>Your Gross Margin</TdN>, <TdM>{fmt(liveMargin)}</TdM>]} isTotal />
                     <TRow cells={[<TdN>CO Revenue (owner)</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Cost (to {tcName})</TdN>, <TdM>+{fmt(coCostTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(liveMargin + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>CO Cost (to {tcName})</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
+                    {materialCommitment > 0 && (
+                      <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />
+                    )}
+                    <TRow cells={[<TdN>Your Net Margin</TdN>, <TdM>{fmt(projectedMargin)}</TdM>]} isTotal />
                   </tbody>
                 </table>
               </div>
             </KpiCard>
 
-            {/* Card 3 — Your Margin */}
-            <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(liveMargin + coRevenueTotal - coCostTotal) : '—'} sub={ownerBudget > 0 ? `${liveMarginPct}% gross · incl. CO impact` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: Number(liveMarginPct) > 15 ? 'pg' : Number(liveMarginPct) > 5 ? 'pw' : 'pr', text: `${liveMarginPct}%` }] : []} idx={2}>
+            {/* Card 3 — Your Margin (incl. supplier material contract + delivery risk) */}
+            <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(projectedMargin) : '—'} sub={ownerBudget > 0 ? `${projectedMarginPctStr}% · incl. COs${materialCommitment > 0 ? ' + materials contract' : ''}` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: projectedMarginPct > 15 ? 'pg' : projectedMarginPct > 5 ? 'pw' : 'pr', text: `${projectedMarginPctStr}%` }] : []} idx={2}>
               <div style={{ padding: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
                     <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                    <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(tcContractVal)}</TdM>]} />
-                    <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(marginDollar)}</TdM>]} />
                     <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Revised In</TdN>, <TdM>{fmt(revisedIn)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Subcontract ({tcName})</TdN>, <TdM>-{fmt(draftContractVal)}</TdM>]} />
                     <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Net</TdN>, <TdM>{fmt(coRevenueTotal - coCostTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(marginDollar + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                    {materialCommitment > 0 && (
+                      <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />
+                    )}
+                    <TRow cells={[<TdN>Revised Out</TdN>, <TdM>{fmt(revisedOut)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(projectedMargin)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Ordered vs materials contract</TdN>, <TdM>{materialCommitment > 0 ? `${fmt(matOrdered)} / ${fmt(materialCommitment)}` : '—'}</TdM>]} />
+                    <TRow cells={[<TdN>Delivered</TdN>, <TdM>{fmt(matDelivered)}</TdM>]} />
+                    <TRow cells={[<TdN>Pending delivery</TdN>, <TdM>{fmt(matPending)}</TdM>]} />
+                    <TRow cells={[<TdN>At risk on delivery</TdN>, <TdM>{fmt(materialAtRiskOnDelivery)}</TdM>]} />
+                    <TRow cells={[<TdN>Material variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} />
                     <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
                     <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
                   </tbody>
                 </table>
+                {!financials.isGCMaterialResponsible && (
+                  <div style={{ marginTop: 10, fontSize: '0.7rem', color: C.muted, lineHeight: 1.45 }}>
+                    Materials procured by {tcName} — inside their subcontract, so not counted again here.
+                  </div>
+                )}
               </div>
             </KpiCard>
+
 
             {/* Card 3b — Margin to Date (realized) */}
             {(() => {
