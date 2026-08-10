@@ -574,8 +574,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 <TRow cells={[<TdN>Your Gross Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(tcGrossMargin)}</span>]} isTotal />
                 <TRow cells={[<TdN>Your Margin %</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
                 {!isTM && <TRow cells={[<TdN>CO Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
-                {!isTM && <TRow cells={[<TdN>CO Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>+{fmt(coCost)}</TdM>]} />}
-                <TRow cells={[<TdN>Your Net Margin{isTM ? '' : ` after COs`}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netTCMargin)}</span>]} isTotal />
+                {!isTM && <TRow cells={[<TdN>CO Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />}
+                {materialCommitment > 0 && <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />}
+                <TRow cells={[<TdN>Your Net Margin{isTM ? '' : ` after COs`}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: netTCMarginAll >= 0 ? C.green : C.red }}>{fmt(netTCMarginAll)}</span>]} isTotal />
               </tbody>
             </table>
           </div>
