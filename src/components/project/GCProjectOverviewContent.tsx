@@ -602,25 +602,39 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               </div>
             </KpiCard>
 
-            {/* Card 3 — Your Margin */}
-            <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(liveMargin + coRevenueTotal - coCostTotal) : '—'} sub={ownerBudget > 0 ? `${liveMarginPct}% gross · incl. CO impact` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: Number(liveMarginPct) > 15 ? 'pg' : Number(liveMarginPct) > 5 ? 'pw' : 'pr', text: `${liveMarginPct}%` }] : []} idx={2}>
+            {/* Card 3 — Your Margin (incl. supplier material contract + delivery risk) */}
+            <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(projectedMargin) : '—'} sub={ownerBudget > 0 ? `${projectedMarginPctStr}% · incl. COs${materialCommitment > 0 ? ' + materials contract' : ''}` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: projectedMarginPct > 15 ? 'pg' : projectedMarginPct > 5 ? 'pw' : 'pr', text: `${projectedMarginPctStr}%` }] : []} idx={2}>
               <div style={{ padding: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
                     <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                    <TRow cells={[<TdN>{tcName}</TdN>, <TdM>{fmt(tcContractVal)}</TdM>]} />
-                    <TRow cells={[<TdN>Base Margin</TdN>, <TdM>{fmt(marginDollar)}</TdM>]} />
                     <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Revised In</TdN>, <TdM>{fmt(revisedIn)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Subcontract ({tcName})</TdN>, <TdM>-{fmt(draftContractVal)}</TdM>]} />
                     <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Net</TdN>, <TdM>{fmt(coRevenueTotal - coCostTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(marginDollar + coRevenueTotal - coCostTotal)}</TdM>]} isTotal />
+                    {materialCommitment > 0 && (
+                      <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />
+                    )}
+                    <TRow cells={[<TdN>Revised Out</TdN>, <TdM>{fmt(revisedOut)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(projectedMargin)}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Ordered vs materials contract</TdN>, <TdM>{materialCommitment > 0 ? `${fmt(matOrdered)} / ${fmt(materialCommitment)}` : '—'}</TdM>]} />
+                    <TRow cells={[<TdN>Delivered</TdN>, <TdM>{fmt(matDelivered)}</TdM>]} />
+                    <TRow cells={[<TdN>Pending delivery</TdN>, <TdM>{fmt(matPending)}</TdM>]} />
+                    <TRow cells={[<TdN>At risk on delivery</TdN>, <TdM>{fmt(materialAtRiskOnDelivery)}</TdM>]} />
+                    <TRow cells={[<TdN>Material variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} />
                     <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
                     <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
                   </tbody>
                 </table>
+                {!financials.isGCMaterialResponsible && (
+                  <div style={{ marginTop: 10, fontSize: '0.7rem', color: C.muted, lineHeight: 1.45 }}>
+                    Materials procured by {tcName} — inside their subcontract, so not counted again here.
+                  </div>
+                )}
               </div>
             </KpiCard>
+
 
             {/* Card 3b — Margin to Date (realized) */}
             {(() => {
