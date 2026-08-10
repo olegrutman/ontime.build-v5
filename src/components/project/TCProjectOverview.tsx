@@ -421,7 +421,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             />
             <OverviewSummaryStrip
               receivablePartyLabel={gcName}
-              payablePartyLabel={fcName || 'Field Crew'}
+              payablePartyLabel={`${fcName || 'Field Crew'} + suppliers`}
               contract={{
                 label: 'Trade Contract',
                 revisedIn: revisedGCTotal,

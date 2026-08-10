@@ -350,7 +350,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             />
             <OverviewSummaryStrip
               receivablePartyLabel="owner"
-              payablePartyLabel={tcName}
+              payablePartyLabel={`${tcName} + suppliers`}
               awaitingUpstream={!hasContract}
               contract={{
                 label: 'Owner Contract',
