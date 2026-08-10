@@ -308,6 +308,28 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   }
 
   const draftContractVal = parseInt(contractDraft.value.replace(/[^0-9]/g, '')) || 0;
+
+  // ─── Single source of truth for margin (hero, summary strip, margin card) ───
+  // The approved supplier estimate IS the material contract between the
+  // materials-responsible party and the supplier. When no estimate is approved
+  // yet we fall back to committed POs so the card is never blind to real spend.
+  const materialFromPOs = !!financials.isGCMaterialResponsible && matEstimate <= 0 && matOrdered > 0;
+  const materialCommitment = financials.isGCMaterialResponsible
+    ? (matEstimate > 0 ? matEstimate : matOrdered)
+    : 0;
+  const materialLabel = materialFromPOs
+    ? 'Committed POs (no approved estimate)'
+    : 'Materials contract (approved supplier estimates)';
+  const revisedIn = ownerBudget + coRevenueTotal;
+  const revisedOut = draftContractVal + coCostTotal + materialCommitment;
+  const projectedMargin = revisedIn - revisedOut;
+  const projectedMarginPct = revisedIn > 0 ? (projectedMargin / revisedIn) * 100 : 0;
+  const projectedMarginPctStr = projectedMarginPct.toFixed(1);
+  // Undelivered material is exposure, not yet cost — surfaced separately.
+  const materialOveragePastContract = materialCommitment > 0 ? Math.max(0, matOrdered - materialCommitment) : 0;
+  const materialAtRiskOnDelivery = matPending + materialOveragePastContract;
+
+  // Legacy gross-margin figures (contract-only) kept for the TC contract card.
   const liveMargin = ownerBudget - draftContractVal;
   const liveMarginPct = ownerBudget > 0 ? ((liveMargin / ownerBudget) * 100).toFixed(1) : '0';
 
