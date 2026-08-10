@@ -166,6 +166,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // Subtotal of submitted/paid invoices linked to POs the viewer owns.
   // Used to avoid double-counting materials (PO commitment + supplier invoice).
   const [materialInvoiced, setMaterialInvoiced] = useState(0);
+  const [materialPaid, setMaterialPaid] = useState(0);
   // GC view: subtotal of submitted/paid contract invoices where GC org is to_org
   // (TC → GC billings = GC's accrued cost). Used for GC realized margin.
   const [gcPayablesInvoiced, setGcPayablesInvoiced] = useState(0);
@@ -415,6 +416,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setPayablesPaid(payableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
         setMaterialInvoiced(materialPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+        setMaterialPaid(materialPayableInvs.filter((i: any) => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0));
       }
 
       // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
@@ -445,6 +447,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const gcPayables = gcPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
         setGcPayablesInvoiced(gcPayables);
         setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+        setMaterialPaid(gcPoInvs.filter((i: any) => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0));
 
         // GC payables mirror the TC split so cash position / margin have a real
         // cost side (previously these stayed 0 for GCs).
@@ -686,7 +689,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     pendingCONetAtRisk: pendingCORevenue - pendingCOCost,
     approvedWOTotal,
     earnedRevenueToDate, incurredCostToDate, marginToDateAmount, marginToDatePct,
-    materialInvoiced, openMaterialCommitment: Math.max(0, materialOrdered - materialInvoiced), gcPayablesInvoiced,
+    materialInvoiced, materialPaid, openMaterialCommitment: Math.max(0, materialOrdered - materialInvoiced), gcPayablesInvoiced,
     ownerBillingsTotal, ownerBillingsCollected, gcOrgId,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
