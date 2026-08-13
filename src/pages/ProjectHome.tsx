@@ -400,11 +400,6 @@ export default function ProjectHome() {
                       </div>
                     )}
 
-                    {!showAdoptionBanner && !isFC && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC') && (
-                      <div className="flex justify-end">
-                        <ResetSetupDialog projectId={id!} />
-                      </div>
-                    )}
 
                     {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                       <ProjectReadinessCard readiness={readiness} />
