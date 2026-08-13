@@ -209,9 +209,9 @@ export function InvoiceTimeline({ invoice }: { invoice: Invoice }) {
                       <span className="font-mono text-[11px] text-muted-foreground/80">+{gap}d</span>
                     )}
                   </div>
-                  {step.at && step.by && (
+                  {step.at && step.by && names[step.by] && (
                     <p className="text-xs text-muted-foreground truncate">
-                      by {names[step.by] || '…'}
+                      by {names[step.by]}
                     </p>
                   )}
                   {step.at && step.note && (
