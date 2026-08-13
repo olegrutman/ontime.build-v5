@@ -225,7 +225,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
       // Update SOV billing totals when invoice status affects billing
       // (SUBMITTED, APPROVED, PAID affect the billed_to_date calculation)
-      if (['SUBMITTED', 'APPROVED', 'PAID', 'REJECTED', 'DRAFT'].includes(newStatus)) {
+      if (['SUBMITTED', 'APPROVED', 'PAID', 'REJECTED', 'DRAFT', 'VOIDED'].includes(newStatus)) {
         await supabase.rpc('update_sov_billing_totals', { p_project_id: projectId });
       }
 
