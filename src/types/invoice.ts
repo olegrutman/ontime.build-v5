@@ -23,6 +23,10 @@ export interface Invoice {
   rejected_by: string | null;
   rejection_reason: string | null;
   paid_at: string | null;
+  paid_by?: string | null;
+  payment_method?: string | null;
+  payment_reference?: string | null;
+  payment_note?: string | null;
   voided_at?: string | null;
   voided_by?: string | null;
   void_reason?: string | null;
