@@ -234,6 +234,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         APPROVED: `Invoice ${invoice.invoice_number} approved`,
         REJECTED: `Invoice ${invoice.invoice_number} rejected`,
         PAID: `Invoice ${invoice.invoice_number} marked as paid`,
+        VOIDED: `Invoice ${invoice.invoice_number} voided`,
       };
 
       await supabase.from('project_activity').insert({

@@ -53,6 +53,7 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
   PAID: 'Paid',
+  VOIDED: 'Voided',
 };
 
 export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
@@ -61,4 +62,5 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
   APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   PAID: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  VOIDED: 'bg-gray-100 text-gray-500 line-through dark:bg-gray-800 dark:text-gray-400',
 };
