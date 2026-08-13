@@ -107,11 +107,16 @@ export function InvoiceRow({
           </span>
         </div>
 
-        {/* Line 2: period */}
+        {/* Line 2: period + latest milestone */}
         <div className="mt-1 flex items-center justify-between gap-2 min-w-0">
-          <p className="text-xs text-muted-foreground truncate">
-            {format(new Date(invoice.billing_period_start), 'MMM d')} – {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
-          </p>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">
+              {format(new Date(invoice.billing_period_start), 'MMM d')} – {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
+            </p>
+            <p className="text-[11px] text-muted-foreground/80 truncate">
+              {invoiceMilestoneSummary(invoice)}
+            </p>
+          </div>
 
           <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             {primaryAction && (

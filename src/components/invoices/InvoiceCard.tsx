@@ -110,6 +110,9 @@ export function InvoiceCard({
             </p>
             <InvoiceAgeBadge invoice={invoice} />
           </div>
+          <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+            {invoiceMilestoneSummary(invoice)}
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
