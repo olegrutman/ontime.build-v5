@@ -84,7 +84,7 @@ export function useProjectQuickStats(
           .from('invoices')
           .select('id, status, total_amount, po_id, contract_id')
           .eq('project_id', projectId)
-          .neq('status', 'DRAFT'),
+          .not('status', 'in', '("DRAFT","VOIDED")'),
         // Bug 1 fix: Filter schedule by item_type = 'task' only
         supabase
           .from('project_schedule_items')

@@ -37,7 +37,7 @@ export function useProjectMonthlyBilling(projectId: string | undefined) {
         return {
           month: format(new Date(m + '-01'), 'MMM'),
           billed: monthInvoices
-            .filter((i) => (i.status ?? '').toUpperCase() !== 'DRAFT')
+            .filter((i) => !['DRAFT', 'VOIDED'].includes((i.status ?? '').toUpperCase()))
             .reduce((s, i) => s + (Number(i.total_amount) || 0), 0),
           paid: monthInvoices
             .filter((i) => (i.status ?? '').toUpperCase() === 'PAID')
