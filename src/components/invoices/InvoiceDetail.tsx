@@ -420,6 +420,9 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             <p className="text-sm text-muted-foreground truncate">
               Billing Period: {format(new Date(invoice.billing_period_start), 'MMM d')} -{' '}
               {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
+              {invoicePaceLabel(invoice) && (
+                <span className="ml-2 font-mono text-xs">· {invoicePaceLabel(invoice)}</span>
+              )}
             </p>
           </div>
         </div>
@@ -512,13 +515,13 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           )}
 
           {status === 'APPROVED' && canApprove && (
-            <Button onClick={handleMarkPaid} disabled={actionLoading}>
+            <Button onClick={() => setPaymentDialogOpen(true)} disabled={actionLoading}>
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <DollarSign className="h-4 w-4 mr-2" />
               )}
-              Mark as Paid
+              Record Payment
             </Button>
           )}
         </div>
