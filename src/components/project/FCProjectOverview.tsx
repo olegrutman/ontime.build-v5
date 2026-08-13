@@ -237,8 +237,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.purple, flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: C.ink }}>{projectName}</div>
-            <div style={{ fontSize: '0.72rem', color: C.muted }}>Your overview · {tcName}</div>
+            <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, color: C.faint }}>Contract Party</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.ink }}>Field Crew · {tcName}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
