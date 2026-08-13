@@ -289,13 +289,21 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   };
 
   const handleDeleteInvoice = async (invoice: Invoice) => {
+    if (invoice.status !== 'DRAFT') {
+      toast.error('Only draft invoices can be deleted. Open the invoice and void it instead.');
+      return;
+    }
     try {
       // Delete invoice — cascade removes line items, BEFORE DELETE trigger updates SOV totals
-      const { error: invError } = await supabase
+      const { data: deleted, error: invError } = await supabase
         .from('invoices')
         .delete()
-        .eq('id', invoice.id);
+        .eq('id', invoice.id)
+        .select('id');
       if (invError) throw invError;
+      if (!deleted || deleted.length === 0) {
+        throw new Error("You don't have permission to delete this invoice. Open it and void it instead.");
+      }
 
       toast.success(`Invoice ${invoice.invoice_number} deleted`);
       fetchInvoices();
