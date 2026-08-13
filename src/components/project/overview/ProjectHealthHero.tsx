@@ -14,19 +14,24 @@ interface ProjectHealthHeroProps {
   summary: string;
   /** Optional supporting line under the big number. */
   detail?: ReactNode;
-  /** Optional right-side mini stats (label + value pairs). */
+  /** Optional mini stats (label + value pairs). */
   miniStats?: { label: string; value: string; tone?: 'pos' | 'neg' | 'neutral' }[];
   /** When true the upstream contract is unset, so margin numbers are meaningless. */
   awaitingUpstream?: boolean;
 }
 
-const STATUS_STYLE: Record<HealthStatus, { bg: string; color: string; border: string; label: string }> = {
-  green: { bg: C.greenBg, color: C.green, border: C.green, label: 'On Track' },
-  amber: { bg: C.yellowBg, color: C.yellow, border: C.yellow, label: 'Needs Attention' },
-  red: { bg: C.redBg, color: C.red, border: C.red, label: 'At Risk' },
-  neutral: { bg: C.surface2, color: C.muted, border: C.border, label: 'Awaiting Data' },
+const STATUS_STYLE: Record<HealthStatus, { color: string; label: string }> = {
+  green: { color: '#34D399', label: 'Healthy' },
+  amber: { color: '#FBBF24', label: 'Watch' },
+  red: { color: '#F87171', label: 'At Risk' },
+  neutral: { color: '#94A3B8', label: 'Awaiting Data' },
 };
 
+/**
+ * Money headline for the project overview — the single dark surface on the page.
+ * Owns the projected margin, cash position, and CO figures so the cards below
+ * never repeat them.
+ */
 export function ProjectHealthHero({
   status,
   projectedMargin,
@@ -43,86 +48,86 @@ export function ProjectHealthHero({
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 md:gap-6 items-center"
-      style={{
-        background: C.surface,
-        borderRadius: 16,
-        border: `1px solid ${C.border}`,
-        borderLeft: `4px solid ${s.border}`,
-        padding: '16px 18px',
-        ...fontLabel,
-      }}
+      className="rounded-2xl px-5 py-5 text-white"
+      style={{ background: '#0F172A', ...fontLabel }}
     >
-
-      {/* Left: status + value */}
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-          <span
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '5px 11px', borderRadius: 999,
-              background: s.bg, color: s.color,
-              fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px',
-              border: `1px solid ${s.color}33`,
+              fontSize: '0.62rem',
+              textTransform: 'uppercase',
+              letterSpacing: '1.6px',
+              fontWeight: 800,
+              color: '#64748B',
             }}
           >
-            <Icon size={13} />
-            {s.label}
-          </span>
-          <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.muted, fontWeight: 700 }}>
             {label}
-          </span>
+          </p>
+          <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
+            {awaitingUpstream ? (
+              <span style={{ fontSize: '2.5rem', lineHeight: 1, color: '#64748B', ...fontVal }}>—</span>
+            ) : (
+              <>
+                <span style={{ fontSize: '2.5rem', lineHeight: 1, color: '#FFFFFF', ...fontVal }}>
+                  {fmtSigned(projectedMargin)}
+                </span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: s.color, ...fontMono }}>
+                  {pctRounded >= 0 ? '+' : ''}{pctRounded}%
+                </span>
+              </>
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-          {awaitingUpstream ? (
-            <span style={{ fontSize: '2.4rem', color: C.muted, lineHeight: 1, ...fontVal }}>—</span>
-          ) : (
-            <>
-              <span style={{ fontSize: '2.4rem', color: C.ink, lineHeight: 1, ...fontVal }}>
-                {fmtSigned(projectedMargin)}
-              </span>
-              <span style={{ fontSize: '1.05rem', color: s.color, fontWeight: 700, ...fontMono }}>
-                {pctRounded >= 0 ? '+' : ''}{pctRounded}%
-              </span>
-            </>
-          )}
-        </div>
-        <p style={{ fontSize: '0.92rem', color: C.ink2 || C.muted, marginTop: 10, lineHeight: 1.45 }}>
-          {summary}
-        </p>
-        {detail && <div style={{ marginTop: 6 }}>{detail}</div>}
+        <span
+          className="inline-flex items-center gap-1.5 shrink-0"
+          style={{
+            padding: '5px 10px',
+            borderRadius: 8,
+            background: `${s.color}1A`,
+            border: `1px solid ${s.color}33`,
+            color: s.color,
+            fontSize: '0.6rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '1.2px',
+          }}
+        >
+          <Icon size={12} />
+          {s.label}
+        </span>
       </div>
 
-      {/* Right: mini stats */}
+      <p style={{ fontSize: '0.82rem', color: '#94A3B8', marginTop: 14, lineHeight: 1.5 }}>
+        {summary}
+      </p>
+      {detail && <div style={{ marginTop: 6 }}>{detail}</div>}
+
       {miniStats.length > 0 && (
         <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${Math.min(miniStats.length, 3)}, minmax(0, 1fr))`,
-            gap: 10,
-            minWidth: 280,
-          }}
-          className="max-md:min-w-full max-md:w-full"
+          className="grid grid-cols-3 gap-3 mt-4 pt-4 max-[380px]:grid-cols-2"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
         >
           {miniStats.map((m) => {
-            const toneColor = m.tone === 'pos' ? C.green : m.tone === 'neg' ? C.red : C.ink;
+            const toneColor = m.tone === 'pos' ? '#34D399' : m.tone === 'neg' ? '#F87171' : '#FFFFFF';
             return (
-              <div key={m.label} style={{ background: C.surface2, borderRadius: 10, padding: '10px 10px', border: `1px solid ${C.border}` }}>
+              <div key={m.label} className="min-w-0">
                 <div
                   style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.58rem',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.4px',
-                    color: C.muted,
-                    fontWeight: 700,
-                    marginBottom: 6,
-                    lineHeight: 1.15,
-                    minHeight: '1.7em',
+                    letterSpacing: '1.1px',
+                    color: '#64748B',
+                    fontWeight: 800,
+                    marginBottom: 5,
+                    lineHeight: 1.2,
                   }}
                 >
                   {m.label}
                 </div>
-                <div style={{ fontSize: '1.15rem', color: toneColor, fontWeight: 700, ...fontMono }}>{m.value}</div>
+                <div style={{ fontSize: '0.95rem', color: toneColor, fontWeight: 700, ...fontMono }}>
+                  {m.value}
+                </div>
               </div>
             );
           })}
