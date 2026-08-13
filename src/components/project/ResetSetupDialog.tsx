@@ -66,12 +66,23 @@ export function ResetSetupDialog({ projectId, variant = 'button', size = 'sm', l
           >
             {label}
           </button>
+        ) : variant === 'onDark' ? (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1.5 text-[0.7rem] font-semibold text-primary hover:bg-primary/20 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {label}
+          </button>
         ) : (
           <Button variant="outline" size={size} className="gap-1.5">
             <RotateCcw className="h-3.5 w-3.5" />
             {label}
           </Button>
         )}
+      </AlertDialogTrigger>
+
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
