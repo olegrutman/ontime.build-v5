@@ -346,6 +346,11 @@ export default function ProjectHome() {
                   projectType={project.project_type}
                   health={projectStatus === 'active' ? healthLabel : null}
                   rightSlot={<NotificationSheet />}
+                  metaSlot={
+                    !showAdoptionBanner && !isFC && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC')
+                      ? <ResetSetupDialog projectId={id!} variant="onDark" />
+                      : undefined
+                  }
                 />
               </div>
             )}
@@ -361,6 +366,7 @@ export default function ProjectHome() {
                 />
               </div>
             )}
+
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
