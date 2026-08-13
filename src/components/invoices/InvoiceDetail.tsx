@@ -27,6 +27,8 @@ import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
 import { useNudge } from '@/hooks/useNudge';
 import { InvoiceExternalInviteDialog } from './InvoiceExternalInviteDialog';
+import { InvoiceTimeline, invoicePaceLabel } from './InvoiceTimeline';
+import { RecordPaymentDialog, PaymentDetails } from './RecordPaymentDialog';
 
 function extractScopeOfWork(desc: string | null | undefined): string | null {
   if (!desc) return null;
@@ -82,6 +84,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   const startEditLine = (item: InvoiceLineItem) => {
     setEditingItemId(item.id);
@@ -285,10 +288,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     setRejectionReason('');
   };
 
-  const handleMarkPaid = () => {
+  const handleRecordPayment = (details: PaymentDetails) => {
     updateInvoiceStatus('PAID', {
-      paid_at: new Date().toISOString(),
+      paid_at: details.paid_at,
+      paid_by: user?.id,
+      payment_method: details.payment_method,
+      payment_reference: details.payment_reference,
+      payment_note: details.payment_note,
     });
+    setPaymentDialogOpen(false);
   };
 
   const handleVoid = () => {
