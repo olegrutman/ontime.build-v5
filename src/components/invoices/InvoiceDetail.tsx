@@ -311,6 +311,11 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
   const handleDelete = async () => {
     if (!invoice) return;
+    if (invoice.status !== 'DRAFT') {
+      toast.error('Only draft invoices can be deleted. Void this invoice instead to keep the audit trail.');
+      setDeleteDialogOpen(false);
+      return;
+    }
     setDeleteLoading(true);
     try {
       const { error: lineError } = await supabase
@@ -319,11 +324,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         .eq('invoice_id', invoiceId);
       if (lineError) throw lineError;
 
-      const { error: invError } = await supabase
+      const { data: deleted, error: invError } = await supabase
         .from('invoices')
         .delete()
-        .eq('id', invoiceId);
+        .eq('id', invoiceId)
+        .select('id');
       if (invError) throw invError;
+      if (!deleted || deleted.length === 0) {
+        throw new Error("You don't have permission to delete this invoice. Void it instead to keep the audit trail.");
+      }
 
       toast.success(`Invoice ${invoice.invoice_number} deleted`);
       onUpdate();
