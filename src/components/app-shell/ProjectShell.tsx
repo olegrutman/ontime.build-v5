@@ -107,7 +107,7 @@ export function ProjectShell({
             <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none shrink-0">
               Ontime<span className="text-primary">.build</span>
             </span>
-            <span className="sm:hidden text-[0.85rem] font-semibold text-foreground truncate max-w-[140px]">
+            <span className="sm:hidden font-heading text-[1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none">
               {projectName}
             </span>
           </button>
