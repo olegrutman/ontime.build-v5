@@ -393,20 +393,24 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   return (
     <div className="space-y-4">
       <QuickActionsBar projectId={projectId} role="TC" isTM={isTM} onNavigate={onNavigate} />
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, ...fontLabel }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.green, flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, color: C.faint }}>Contract Party</div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.ink }}>Trade Contractor · {userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
+      {/* Contract party card */}
+      <div
+        className="rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+        style={{ background: C.surface, border: `1px solid ${C.border}`, ...fontLabel }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.green, flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '1.4px', fontWeight: 800, color: C.faint }}>Contract Party</div>
+            <div className="truncate" style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink }}>Trade Contractor · {userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice<span className="max-sm:hidden"> to {gcName}</span></button>
-          <button onClick={() => onNavigate(isTM ? 'change-orders' : 'sov')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>{isTM ? 'View Work Orders' : <>View Contract<span className="max-sm:hidden"> · {gcName}</span></>}</button>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+          <button onClick={() => onNavigate('invoices')} style={{ padding: '9px 14px', borderRadius: 10, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.72rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice<span className="max-sm:hidden"> to {gcName}</span></button>
+          <button onClick={() => onNavigate(isTM ? 'change-orders' : 'sov')} style={{ padding: '9px 14px', borderRadius: 10, background: 'transparent', color: C.muted, fontWeight: 700, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>{isTM ? 'Work Orders' : <>Contract<span className="max-sm:hidden"> · {gcName}</span></>}</button>
         </div>
       </div>
+
 
       {/* Needs Attention — TOP placement, compact horizontal chips */}
       <OverviewAttentionStrip warnings={warnings} projectName={projectName} onNavigate={onNavigate} />
