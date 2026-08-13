@@ -11,7 +11,13 @@ import { Invoice } from '@/types/invoice';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
-type SortKey = 'invoice_number' | 'created_at' | 'total_amount' | 'status' | 'age';
+type SortKey =
+  | 'invoice_number' | 'created_at' | 'total_amount' | 'status' | 'age'
+  | 'submitted_at' | 'approved_at' | 'paid_at';
+
+const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
+const shortDate = (v: string | null | undefined) =>
+  v ? format(new Date(v), 'MMM d, yyyy') : '—';
 type SortDir = 'asc' | 'desc';
 
 interface InvoiceTableViewProps {
@@ -100,6 +106,9 @@ export function InvoiceTableView({
             <TableHead>Billing Period</TableHead>
             <TableHead className="text-right"><SortHeader label="Amount" sortKeyVal="total_amount" /></TableHead>
             <TableHead><SortHeader label="Status" sortKeyVal="status" /></TableHead>
+            <TableHead><SortHeader label="Submitted" sortKeyVal="submitted_at" /></TableHead>
+            <TableHead><SortHeader label="Approved" sortKeyVal="approved_at" /></TableHead>
+            <TableHead><SortHeader label="Paid" sortKeyVal="paid_at" /></TableHead>
             <TableHead className="text-center"><SortHeader label="Age" sortKeyVal="age" /></TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
