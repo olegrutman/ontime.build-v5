@@ -74,7 +74,7 @@ export function InvoiceCard({
     { icon: <Eye className="h-4 w-4" />, label: 'View Details', onClick: (e) => { e.stopPropagation(); onClick(); } },
     ...(onEdit && invoice.status === 'DRAFT' ? [{ icon: <Edit className="h-4 w-4" />, label: 'Edit Invoice', onClick: (e: React.MouseEvent) => { e.stopPropagation(); onEdit(invoice); } }] : []),
     ...(onDownload ? [{ icon: <Download className="h-4 w-4" />, label: 'Download PDF', onClick: (e: React.MouseEvent) => { e.stopPropagation(); onDownload(invoice); } }] : []),
-    ...(onDelete && ['DRAFT', 'SUBMITTED', 'REJECTED'].includes(invoice.status) && canSubmit ? [{ icon: <Trash2 className="h-4 w-4" />, label: 'Delete Invoice', variant: 'destructive' as const, onClick: (e: React.MouseEvent) => { e.stopPropagation(); onDelete(invoice); } }] : []),
+    ...(onDelete && invoice.status === 'DRAFT' && canSubmit ? [{ icon: <Trash2 className="h-4 w-4" />, label: 'Delete Invoice', variant: 'destructive' as const, onClick: (e: React.MouseEvent) => { e.stopPropagation(); onDelete(invoice); } }] : []),
   ];
 
   const showSubmitButton = canSubmit && invoice.status === 'DRAFT' && onSubmit;

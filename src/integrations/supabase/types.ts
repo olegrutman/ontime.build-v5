@@ -3261,6 +3261,9 @@ export type Database = {
           subtotal: number
           total_amount: number
           updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -3289,6 +3292,9 @@ export type Database = {
           subtotal?: number
           total_amount?: number
           updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -3317,6 +3323,9 @@ export type Database = {
           subtotal?: number
           total_amount?: number
           updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {

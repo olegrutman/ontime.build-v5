@@ -86,7 +86,7 @@ export function useFinancialTrends() {
         return {
           month: format(new Date(m + '-01'), 'MMM'),
           billed: monthInvoices
-            .filter(i => i.status !== 'DRAFT')
+            .filter(i => i.status !== 'DRAFT' && i.status !== 'VOIDED')
             .reduce((s, i) => s + (i.total_amount || 0), 0),
           paid: monthInvoices
             .filter(i => i.status === 'PAID')

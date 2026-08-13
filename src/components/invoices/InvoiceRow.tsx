@@ -140,7 +140,7 @@ export function InvoiceRow({
                     <Edit className="h-4 w-4 mr-2" /> Edit
                   </DropdownMenuItem>
                 )}
-                {onDelete && ['DRAFT', 'SUBMITTED', 'REJECTED'].includes(invoice.status) && canSubmit && (
+                {onDelete && invoice.status === 'DRAFT' && canSubmit && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

@@ -1,4 +1,4 @@
-export type InvoiceStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PAID';
+export type InvoiceStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'PAID' | 'VOIDED';
 
 export interface Invoice {
   id: string;
@@ -23,6 +23,9 @@ export interface Invoice {
   rejected_by: string | null;
   rejection_reason: string | null;
   paid_at: string | null;
+  voided_at?: string | null;
+  voided_by?: string | null;
+  void_reason?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -50,6 +53,7 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
   PAID: 'Paid',
+  VOIDED: 'Voided',
 };
 
 export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
@@ -58,4 +62,5 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
   APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   PAID: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  VOIDED: 'bg-gray-100 text-gray-500 line-through dark:bg-gray-800 dark:text-gray-400',
 };

@@ -136,6 +136,7 @@ export const INVOICE_STATUS_OPTIONS: StatusOption[] = [
   { value: 'APPROVED', label: 'Approved', color: '#00C875' },
   { value: 'REJECTED', label: 'Rejected', color: '#E2445C' },
   { value: 'PAID', label: 'Paid', color: '#0086C0' },
+  { value: 'VOIDED', label: 'Voided', color: '#9CA3AF' },
 ];
 
 export const CHANGE_ORDER_STATUS_OPTIONS: StatusOption[] = [

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell, Pencil, Check, X, Share2 } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Ban, Bell, Pencil, Check, X, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -80,6 +80,8 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
+  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
 
   const startEditLine = (item: InvoiceLineItem) => {
     setEditingItemId(item.id);
@@ -223,7 +225,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
       // Update SOV billing totals when invoice status affects billing
       // (SUBMITTED, APPROVED, PAID affect the billed_to_date calculation)
-      if (['SUBMITTED', 'APPROVED', 'PAID', 'REJECTED', 'DRAFT'].includes(newStatus)) {
+      if (['SUBMITTED', 'APPROVED', 'PAID', 'REJECTED', 'DRAFT', 'VOIDED'].includes(newStatus)) {
         await supabase.rpc('update_sov_billing_totals', { p_project_id: projectId });
       }
 
@@ -234,6 +236,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         APPROVED: `Invoice ${invoice.invoice_number} approved`,
         REJECTED: `Invoice ${invoice.invoice_number} rejected`,
         PAID: `Invoice ${invoice.invoice_number} marked as paid`,
+        VOIDED: `Invoice ${invoice.invoice_number} voided`,
       };
 
       await supabase.from('project_activity').insert({
@@ -288,12 +291,31 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     });
   };
 
+  const handleVoid = () => {
+    if (voidReason.trim().length < 3) {
+      toast.error('Please provide a reason for voiding this invoice');
+      return;
+    }
+    updateInvoiceStatus('VOIDED', {
+      voided_at: new Date().toISOString(),
+      voided_by: user?.id,
+      void_reason: voidReason.trim(),
+    });
+    setVoidDialogOpen(false);
+    setVoidReason('');
+  };
+
   const handleRevise = () => {
     setReviseDialogOpen(true);
   };
 
   const handleDelete = async () => {
     if (!invoice) return;
+    if (invoice.status !== 'DRAFT') {
+      toast.error('Only draft invoices can be deleted. Void this invoice instead to keep the audit trail.');
+      setDeleteDialogOpen(false);
+      return;
+    }
     setDeleteLoading(true);
     try {
       const { error: lineError } = await supabase
@@ -302,11 +324,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         .eq('invoice_id', invoiceId);
       if (lineError) throw lineError;
 
-      const { error: invError } = await supabase
+      const { data: deleted, error: invError } = await supabase
         .from('invoices')
         .delete()
-        .eq('id', invoiceId);
+        .eq('id', invoiceId)
+        .select('id');
       if (invError) throw invError;
+      if (!deleted || deleted.length === 0) {
+        throw new Error("You don't have permission to delete this invoice. Void it instead to keep the audit trail.");
+      }
 
       toast.success(`Invoice ${invoice.invoice_number} deleted`);
       onUpdate();
@@ -509,6 +535,20 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         </Card>
       )}
 
+      {/* Voided Notice */}
+      {status === 'VOIDED' && (
+        <Card className="border-border bg-muted/40">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium text-muted-foreground">
+              This invoice was voided{invoice.voided_at ? ` on ${format(new Date(invoice.voided_at), 'MMM d, yyyy')}` : ''} and is excluded from all billing totals.
+            </p>
+            {invoice.void_reason && (
+              <p className="text-sm text-muted-foreground mt-1">Reason: {invoice.void_reason}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Rejection Notice */}
       {status === 'REJECTED' && invoice.rejection_reason && (
         <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
@@ -519,10 +559,22 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 <p className="text-sm text-red-700 dark:text-red-300">{invoice.rejection_reason}</p>
               </div>
               {canRevise && (
-                <Button onClick={handleRevise} disabled={actionLoading} size="sm">
-                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-                  Revise & Resubmit
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button onClick={handleRevise} disabled={actionLoading} size="sm">
+                    {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                    Revise & Resubmit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVoidDialogOpen(true)}
+                    disabled={actionLoading}
+                    className="text-destructive hover:bg-destructive/10"
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Void
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>
@@ -723,6 +775,31 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           </CardContent>
         </Card>
       )}
+
+      {/* Void Dialog */}
+      <AlertDialog open={voidDialogOpen} onOpenChange={setVoidDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Void Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Voiding retires invoice {invoice.invoice_number} without deleting it. It stays in history for the audit
+              trail, its number can't be reused, and it is excluded from all billing and financial totals.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Reason for voiding (required)"
+            value={voidReason}
+            onChange={(e) => setVoidReason(e.target.value)}
+            maxLength={500}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setVoidReason('')}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleVoid} className="bg-destructive text-destructive-foreground">
+              Void Invoice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Rejection Dialog */}
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
