@@ -398,8 +398,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.green, flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: C.ink }}>{projectName}</div>
-            <div style={{ fontSize: '0.72rem', color: C.muted }}>Trade Contractor · {userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
+            <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, color: C.faint }}>Contract Party</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.ink }}>Trade Contractor · {userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

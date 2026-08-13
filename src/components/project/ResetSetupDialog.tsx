@@ -19,7 +19,7 @@ import { RotateCcw, Loader2 } from 'lucide-react';
 
 interface Props {
   projectId: string;
-  variant?: 'button' | 'link';
+  variant?: 'button' | 'link' | 'onDark';
   size?: 'sm' | 'default';
   label?: string;
 }
@@ -64,6 +64,15 @@ export function ResetSetupDialog({ projectId, variant = 'button', size = 'sm', l
             className="text-xs font-medium text-primary underline-offset-2 hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
+            {label}
+          </button>
+        ) : variant === 'onDark' ? (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1.5 text-[0.7rem] font-semibold text-primary hover:bg-primary/20 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
             {label}
           </button>
         ) : (
