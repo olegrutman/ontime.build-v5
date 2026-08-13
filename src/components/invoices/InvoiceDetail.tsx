@@ -527,6 +527,18 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         </div>
       </div>
 
+      {/* Lifecycle tracking */}
+      <InvoiceTimeline invoice={invoice} />
+
+      <RecordPaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        amountLabel={`${invoice.invoice_number} (${formatCurrency(invoice.total_amount)})`}
+        loading={actionLoading}
+        onConfirm={handleRecordPayment}
+      />
+
+
       {/* Source PO Reference */}
       {linkedPO && (
         <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
