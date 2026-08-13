@@ -75,6 +75,9 @@ export function InvoiceTableView({
         case 'total_amount': return dir * (a.total_amount - b.total_amount);
         case 'status': return dir * a.status.localeCompare(b.status);
         case 'age': return dir * ((getAgeDays(a) ?? -1) - (getAgeDays(b) ?? -1));
+        case 'submitted_at': return dir * (ts(a.submitted_at) - ts(b.submitted_at));
+        case 'approved_at': return dir * (ts(a.approved_at) - ts(b.approved_at));
+        case 'paid_at': return dir * (ts(a.paid_at) - ts(b.paid_at));
         default: return 0;
       }
     });
@@ -116,7 +119,7 @@ export function InvoiceTableView({
         <TableBody>
           {sorted.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                 No invoices found
               </TableCell>
             </TableRow>
@@ -149,6 +152,17 @@ export function InvoiceTableView({
                     size="sm"
                     disabled
                   />
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
+                  {shortDate(invoice.submitted_at)}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
+                  {shortDate(invoice.approved_at)}
+                </TableCell>
+                <TableCell className="text-xs font-mono tabular-nums">
+                  {invoice.paid_at
+                    ? <span className="text-emerald-700 dark:text-emerald-300 font-semibold">{shortDate(invoice.paid_at)}</span>
+                    : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-center">
                   <AgeBadge days={age} />
