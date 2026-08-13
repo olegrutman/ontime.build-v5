@@ -108,8 +108,9 @@ export function ProjectShell({
               Ontime<span className="text-primary">.build</span>
             </span>
             <span className="sm:hidden font-heading text-[1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none">
-              {projectName}
+              Ontime<span className="text-primary">.build</span>
             </span>
+
           </button>
         </div>
 
