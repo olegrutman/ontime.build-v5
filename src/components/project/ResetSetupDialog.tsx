@@ -82,8 +82,6 @@ export function ResetSetupDialog({ projectId, variant = 'button', size = 'sm', l
           </Button>
         )}
       </AlertDialogTrigger>
-
-      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Re-run setup wizard?</AlertDialogTitle>
