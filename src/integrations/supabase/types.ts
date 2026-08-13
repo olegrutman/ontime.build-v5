@@ -3247,6 +3247,10 @@ export type Database = {
           invoice_number: string
           notes: string | null
           paid_at: string | null
+          paid_by: string | null
+          payment_method: string | null
+          payment_note: string | null
+          payment_reference: string | null
           po_id: string | null
           project_id: string
           rejected_at: string | null
@@ -3278,6 +3282,10 @@ export type Database = {
           invoice_number: string
           notes?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string | null
+          payment_note?: string | null
+          payment_reference?: string | null
           po_id?: string | null
           project_id: string
           rejected_at?: string | null
@@ -3309,6 +3317,10 @@ export type Database = {
           invoice_number?: string
           notes?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string | null
+          payment_note?: string | null
+          payment_reference?: string | null
           po_id?: string | null
           project_id?: string
           rejected_at?: string | null

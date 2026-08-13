@@ -4,3 +4,5 @@ export { InvoiceDetail } from './InvoiceDetail';
 export { InvoiceStatusBadge } from './InvoiceStatusBadge';
 export { CreateInvoiceDialog } from './CreateInvoiceDialog';
 export { CreateInvoiceFromSOV } from './CreateInvoiceFromSOV';
+export { InvoiceTimeline, invoiceMilestoneSummary, invoicePaceLabel } from './InvoiceTimeline';
+export { RecordPaymentDialog } from './RecordPaymentDialog';

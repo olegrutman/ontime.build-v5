@@ -11,7 +11,13 @@ import { Invoice } from '@/types/invoice';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
-type SortKey = 'invoice_number' | 'created_at' | 'total_amount' | 'status' | 'age';
+type SortKey =
+  | 'invoice_number' | 'created_at' | 'total_amount' | 'status' | 'age'
+  | 'submitted_at' | 'approved_at' | 'paid_at';
+
+const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
+const shortDate = (v: string | null | undefined) =>
+  v ? format(new Date(v), 'MMM d, yyyy') : '—';
 type SortDir = 'asc' | 'desc';
 
 interface InvoiceTableViewProps {
@@ -69,6 +75,9 @@ export function InvoiceTableView({
         case 'total_amount': return dir * (a.total_amount - b.total_amount);
         case 'status': return dir * a.status.localeCompare(b.status);
         case 'age': return dir * ((getAgeDays(a) ?? -1) - (getAgeDays(b) ?? -1));
+        case 'submitted_at': return dir * (ts(a.submitted_at) - ts(b.submitted_at));
+        case 'approved_at': return dir * (ts(a.approved_at) - ts(b.approved_at));
+        case 'paid_at': return dir * (ts(a.paid_at) - ts(b.paid_at));
         default: return 0;
       }
     });
@@ -100,6 +109,9 @@ export function InvoiceTableView({
             <TableHead>Billing Period</TableHead>
             <TableHead className="text-right"><SortHeader label="Amount" sortKeyVal="total_amount" /></TableHead>
             <TableHead><SortHeader label="Status" sortKeyVal="status" /></TableHead>
+            <TableHead><SortHeader label="Submitted" sortKeyVal="submitted_at" /></TableHead>
+            <TableHead><SortHeader label="Approved" sortKeyVal="approved_at" /></TableHead>
+            <TableHead><SortHeader label="Paid" sortKeyVal="paid_at" /></TableHead>
             <TableHead className="text-center"><SortHeader label="Age" sortKeyVal="age" /></TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -107,7 +119,7 @@ export function InvoiceTableView({
         <TableBody>
           {sorted.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                 No invoices found
               </TableCell>
             </TableRow>
@@ -140,6 +152,17 @@ export function InvoiceTableView({
                     size="sm"
                     disabled
                   />
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
+                  {shortDate(invoice.submitted_at)}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
+                  {shortDate(invoice.approved_at)}
+                </TableCell>
+                <TableCell className="text-xs font-mono tabular-nums">
+                  {invoice.paid_at
+                    ? <span className="text-emerald-700 dark:text-emerald-300 font-semibold">{shortDate(invoice.paid_at)}</span>
+                    : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-center">
                   <AgeBadge days={age} />
