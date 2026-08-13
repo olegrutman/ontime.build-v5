@@ -20,7 +20,9 @@ const HEALTH_LABELS: Record<string, string> = {
   at_risk: 'At Risk',
 };
 
-const PILL = 'px-2 py-0.5 rounded-md text-[0.68rem] font-bold uppercase tracking-wider border';
+const PILL =
+  'shrink-0 whitespace-nowrap px-2.5 py-1 rounded-md text-[0.68rem] font-bold uppercase tracking-wider border';
+
 
 export function ProjectOverviewHero({
   projectName,
