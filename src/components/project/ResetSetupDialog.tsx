@@ -19,7 +19,7 @@ import { RotateCcw, Loader2 } from 'lucide-react';
 
 interface Props {
   projectId: string;
-  variant?: 'button' | 'link';
+  variant?: 'button' | 'link' | 'onDark';
   size?: 'sm' | 'default';
   label?: string;
 }
