@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { C, fontVal, fontMono, fontLabel, fmt, fmtSigned } from '@/components/shared/KpiCard';
+import { ScrollText, Banknote } from 'lucide-react';
+import { C, fontMono, fontLabel, fmt, fmtSigned } from '@/components/shared/KpiCard';
 
 interface Row {
   label: string;
@@ -9,34 +10,24 @@ interface Row {
   signed?: boolean;
 }
 
-interface SummaryCardProps {
-  title: string;
-  accent: string;
-  icon?: ReactNode;
-  rows: Row[];
-  footer?: ReactNode;
-}
-
-function SummaryCard({ title, accent, icon, rows, footer }: SummaryCardProps) {
+function LedgerGroup({ title, icon, rows, footer }: { title: string; icon: ReactNode; rows: Row[]; footer?: ReactNode }) {
   return (
-    <div
-      style={{
-        background: C.surface,
-        borderRadius: 14,
-        border: `1px solid ${C.border}`,
-        borderTop: `3px solid ${accent}`,
-        padding: '14px 16px',
-        display: 'flex', flexDirection: 'column',
-        ...fontLabel,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        {icon && <span style={{ fontSize: 14 }}>{icon}</span>}
-        <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.muted, fontWeight: 700 }}>
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 mb-2.5">
+        <span style={{ color: C.faint, display: 'inline-flex' }}>{icon}</span>
+        <span
+          style={{
+            fontSize: '0.62rem',
+            textTransform: 'uppercase',
+            letterSpacing: '1.4px',
+            color: C.muted,
+            fontWeight: 800,
+          }}
+        >
           {title}
         </span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+      <div className="flex flex-col">
         {rows.map((r, i) => {
           const toneColor =
             r.tone === 'pos' ? C.green :
@@ -49,34 +40,36 @@ function SummaryCard({ title, accent, icon, rows, footer }: SummaryCardProps) {
           return (
             <div
               key={`${r.label}-${i}`}
+              className="flex items-baseline justify-between gap-3"
               style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-                gap: 8, flexWrap: 'wrap',
-                paddingTop: r.emphasis ? 6 : 0,
-                borderTop: r.emphasis ? `1px solid ${C.border}` : 'none',
+                padding: '6px 0',
+                borderTop: i === 0 ? 'none' : `1px solid ${C.border}`,
               }}
             >
-              <span style={{ fontSize: '0.88rem', color: C.ink2 || C.muted, fontWeight: r.emphasis ? 700 : 500, minWidth: 0, flex: '1 1 auto' }}>
+              <span
+                className="truncate"
+                style={{ fontSize: '0.8rem', color: C.muted, fontWeight: r.emphasis ? 700 : 500 }}
+              >
                 {r.label}
               </span>
               <span
                 style={{
-                  fontSize: r.emphasis ? '1.05rem' : '0.95rem',
+                  fontSize: '0.85rem',
                   color: toneColor,
-                  ...fontMono,
                   fontWeight: r.emphasis ? 700 : 600,
                   whiteSpace: 'nowrap',
-                  flexShrink: 0,
+                  ...fontMono,
                 }}
               >
                 {valueStr}
               </span>
             </div>
-
           );
         })}
       </div>
-      {footer && <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, fontSize: '0.8rem', color: C.muted, lineHeight: 1.45 }}>{footer}</div>}
+      {footer && (
+        <div style={{ marginTop: 8, fontSize: '0.7rem', color: C.faint, lineHeight: 1.4 }}>{footer}</div>
+      )}
     </div>
   );
 }
@@ -117,6 +110,11 @@ interface OverviewSummaryStripProps {
   awaitingUpstream?: boolean;
 }
 
+/**
+ * One accounting ledger card. Projected margin, margin %, cash position and CO
+ * net live in the dark hero above, so this card carries only the underlying
+ * contract and cash lines — no repeated headline numbers.
+ */
 export function OverviewSummaryStrip({
   contract,
   cashFlow,
@@ -125,71 +123,60 @@ export function OverviewSummaryStrip({
   payablePartyLabel = 'downstream',
   awaitingUpstream = false,
 }: OverviewSummaryStripProps) {
-  const pctRounded = Math.round(contract.marginPct);
   const dash = '—';
+
+  const contractRows: Row[] = [
+    { label: `Revised in (${receivablePartyLabel})`, value: awaitingUpstream ? dash : contract.revisedIn, emphasis: true },
+    { label: `Revised out (${payablePartyLabel})`, value: contract.revisedOut, tone: 'muted' },
+    ...(contract.materialCommitment && contract.materialCommitment > 0
+      ? [{ label: '↳ Materials contract', value: contract.materialCommitment, tone: 'muted' as const }]
+      : []),
+    {
+      label: `Change orders · ${changeOrders.approvedCount} approved / ${changeOrders.pendingCount} pending`,
+      value: fmtSigned(changeOrders.approvedNet),
+      tone: changeOrders.approvedNet >= 0 ? 'pos' : 'neg',
+    },
+  ];
+
+  const cashRows: Row[] = [
+    { label: `Received from ${receivablePartyLabel}`, value: cashFlow.received, tone: cashFlow.received > 0 ? 'pos' : 'muted', emphasis: true },
+    { label: `Paid out to ${payablePartyLabel}`, value: cashFlow.paid, tone: cashFlow.paid > 0 ? 'neg' : 'muted' },
+    ...(cashFlow.paidToSuppliers && cashFlow.paidToSuppliers > 0
+      ? [
+          { label: '↳ Subcontract', value: (cashFlow.paidToSubs ?? Math.max(0, cashFlow.paid - cashFlow.paidToSuppliers)), tone: 'muted' as const },
+          { label: '↳ Suppliers (materials)', value: cashFlow.paidToSuppliers, tone: 'muted' as const },
+        ]
+      : []),
+    { label: 'Owed to you', value: awaitingUpstream ? dash : cashFlow.owedToYou, tone: cashFlow.owedToYou > 0 ? 'neutral' : 'muted' },
+    ...(cashFlow.youOwe !== undefined
+      ? [{ label: 'You owe', value: cashFlow.youOwe, tone: cashFlow.youOwe > 0 ? ('neutral' as const) : ('muted' as const) }]
+      : []),
+    ...(cashFlow.retainage && cashFlow.retainage > 0
+      ? [{ label: 'Retainage held', value: cashFlow.retainage, tone: 'muted' as const }]
+      : []),
+  ];
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-
-      <SummaryCard
-        title="Contract"
-        accent={C.amber}
-        icon="📜"
-        rows={[
-          { label: `Revised in (from ${receivablePartyLabel})`, value: awaitingUpstream ? dash : contract.revisedIn },
-          { label: `Revised out (to ${payablePartyLabel})`, value: contract.revisedOut, tone: 'muted' },
-          ...(contract.materialCommitment && contract.materialCommitment > 0
-            ? [{ label: `  ↳ ${contract.materialLabel || 'Materials contract (supplier estimates)'}`, value: contract.materialCommitment, tone: 'muted' as const }]
-            : []),
-          awaitingUpstream
-            ? { label: 'Projected margin', value: dash, tone: 'muted', emphasis: true }
-            : { label: 'Projected margin', value: contract.margin, tone: contract.margin > 0 ? 'pos' : contract.margin < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
-          awaitingUpstream
-            ? { label: 'Margin %', value: dash, tone: 'muted' }
-            : { label: 'Margin %', value: `${pctRounded >= 0 ? '+' : ''}${pctRounded}%`, tone: pctRounded >= 20 ? 'pos' : pctRounded > 0 ? 'neutral' : pctRounded === 0 ? 'muted' : 'neg' },
-        ]}
-        footer={awaitingUpstream
-          ? `Set the ${receivablePartyLabel} contract value to see projected margin`
-          : contract.materialCommitment && contract.materialCommitment > 0
-            ? `Original + approved change orders, plus the approved supplier estimate as the materials contract`
-            : `Original + approved change orders on both sides`}
-      />
-
-      <SummaryCard
-        title="Cash Flow"
-        accent={C.green}
-        icon="💵"
-        rows={[
-          { label: `Received from ${receivablePartyLabel}`, value: cashFlow.received, tone: cashFlow.received > 0 ? 'pos' : 'muted' },
-          { label: `Paid out to ${payablePartyLabel}`, value: cashFlow.paid, tone: cashFlow.paid > 0 ? 'neg' : 'muted' },
-          ...(cashFlow.paidToSuppliers && cashFlow.paidToSuppliers > 0
-            ? [
-                { label: '  ↳ Subcontract', value: (cashFlow.paidToSubs ?? Math.max(0, cashFlow.paid - cashFlow.paidToSuppliers)), tone: 'muted' as const },
-                { label: '  ↳ Suppliers (materials)', value: cashFlow.paidToSuppliers, tone: 'muted' as const },
-              ]
-            : []),
-          { label: 'Cash position', value: cashFlow.cashPosition, tone: cashFlow.cashPosition > 0 ? 'pos' : cashFlow.cashPosition < 0 ? 'neg' : 'muted', emphasis: true, signed: true },
-          awaitingUpstream
-            ? { label: `Owed to you (unpaid)`, value: dash, tone: 'muted' }
-            : { label: `Owed to you (unpaid)`, value: cashFlow.owedToYou, tone: cashFlow.owedToYou > 0 ? 'neutral' : 'muted' },
-          ...(cashFlow.youOwe !== undefined ? [{ label: 'You owe (unpaid)', value: cashFlow.youOwe, tone: cashFlow.youOwe > 0 ? ('neutral' as const) : ('muted' as const) }] : []),
-          ...(cashFlow.retainage && cashFlow.retainage > 0 ? [{ label: 'Retainage held', value: cashFlow.retainage, tone: 'muted' as const }] : []),
-        ]}
-        footer="Collected minus paid — working capital, not profit"
-      />
-
-      <SummaryCard
-        title="Change Orders"
-        accent={C.blue}
-        icon="📝"
-        rows={[
-          { label: `Approved (${changeOrders.approvedCount})`, value: changeOrders.approvedNet, tone: changeOrders.approvedNet >= 0 ? 'pos' : 'neg', signed: true, emphasis: true },
-          { label: `Pending (${changeOrders.pendingCount}) — at risk`, value: changeOrders.pendingNetAtRisk, tone: changeOrders.pendingNetAtRisk >= 0 ? 'neutral' : 'neg', signed: true },
-        ]}
-        footer={changeOrders.pendingCount === 0
-          ? 'No pending change orders'
-          : 'Pending COs not yet approved — shown separately so they do not distort approved margin'}
-      />
+    <div
+      className="rounded-2xl p-4 sm:p-5"
+      style={{ background: C.surface, border: `1px solid ${C.border}`, ...fontLabel }}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
+        <LedgerGroup
+          title={contract.label}
+          icon={<ScrollText size={14} />}
+          rows={contractRows}
+          footer={awaitingUpstream
+            ? `Set the ${receivablePartyLabel} contract value to see projected margin`
+            : 'Original + approved change orders on both sides'}
+        />
+        <LedgerGroup
+          title="Cash flow"
+          icon={<Banknote size={14} />}
+          rows={cashRows}
+          footer="Collected minus paid — working capital, not profit"
+        />
+      </div>
     </div>
   );
 }
-
