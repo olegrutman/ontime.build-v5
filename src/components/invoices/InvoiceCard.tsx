@@ -1,3 +1,4 @@
+import { invoiceMilestoneSummary } from './InvoiceTimeline';
 import { format, differenceInDays } from 'date-fns';
 import { Calendar, DollarSign, Eye, Edit, Download, Send, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';

@@ -1,3 +1,4 @@
+import { invoiceMilestoneSummary } from './InvoiceTimeline';
 import { format, differenceInDays } from 'date-fns';
 import { MoreVertical, Send, CheckCircle, Edit, Trash2, Eye, Loader2 } from 'lucide-react';
 import { useState } from 'react';
