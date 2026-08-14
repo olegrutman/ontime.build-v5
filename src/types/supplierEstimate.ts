@@ -1,10 +1,12 @@
 export type SupplierEstimateStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+export type SupplierEstimateScope = 'BASE' | 'CHANGE';
 
 export interface SupplierProjectEstimate {
   id: string;
   supplier_org_id: string;
   project_id: string;
   change_order_id?: string | null;
+  scope?: SupplierEstimateScope;
   name: string;
   status: SupplierEstimateStatus;
   total_amount: number;
@@ -17,8 +19,9 @@ export interface SupplierProjectEstimate {
   updated_at: string;
   // Joined data
   project?: { id: string; name: string } | null;
-  change_order?: { id: string; title: string } | null;
+  change_order?: { id: string; title: string; co_number?: string | null; document_type?: string | null } | null;
 }
+
 
 export interface SupplierEstimateItem {
   id: string;

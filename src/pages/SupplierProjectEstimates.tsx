@@ -70,6 +70,14 @@ interface Project {
   name: string;
 }
 
+interface ProjectChangeOrder {
+  id: string;
+  co_number: string | null;
+  title: string;
+  document_type: string | null;
+}
+
+
 interface CSVLineItem {
   sku: string;
   description: string;
@@ -104,7 +112,11 @@ export default function SupplierProjectEstimates() {
   const [showCreate, setShowCreate] = useState(false);
   const [newEstimateName, setNewEstimateName] = useState('');
   const [newEstimateProjectId, setNewEstimateProjectId] = useState('');
+  const [newEstimateCOId, setNewEstimateCOId] = useState('base');
+  const [projectCOs, setProjectCOs] = useState<ProjectChangeOrder[]>([]);
+  const [loadingCOs, setLoadingCOs] = useState(false);
   const [creating, setCreating] = useState(false);
+
 
   // Estimate detail sheet
   const [selectedEstimate, setSelectedEstimate] = useState<SupplierProjectEstimate | null>(null);
@@ -170,16 +182,40 @@ export default function SupplierProjectEstimates() {
     setProjects(projectData || []);
   };
 
+  // Load change orders / work orders for the project chosen in the create dialog
+  useEffect(() => {
+    if (!newEstimateProjectId) {
+      setProjectCOs([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingCOs(true);
+    (async () => {
+      const { data } = await supabase
+        .from('change_orders')
+        .select('id, co_number, title, document_type')
+        .eq('project_id', newEstimateProjectId)
+        .order('created_at', { ascending: false });
+      if (!cancelled) {
+        setProjectCOs((data || []) as ProjectChangeOrder[]);
+        setLoadingCOs(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [newEstimateProjectId]);
+
   const fetchEstimates = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('supplier_estimates')
       .select(`
         *,
-        project:projects(id, name)
+        project:projects(id, name),
+        change_order:change_orders(id, co_number, title, document_type)
       `)
       .eq('supplier_org_id', currentOrg?.id)
       .order('created_at', { ascending: false });
+
 
     if (error) {
       console.error('Error fetching estimates:', error);
@@ -211,13 +247,28 @@ export default function SupplierProjectEstimates() {
       return;
     }
 
-    // Check if an estimate already exists for this project
-    const existing = estimates.find(e => e.project_id === newEstimateProjectId);
+    const coId = newEstimateCOId === 'base' ? null : newEstimateCOId;
+    const co = coId ? projectCOs.find(c => c.id === coId) : null;
+    const coLabel = co ? `${co.co_number || (co.document_type === 'WO' ? 'Work order' : 'Change order')} — ${co.title}` : '';
+
+    // Only one active estimate per scope (base contract, or a specific change order)
+    const existing = estimates.find(
+      e =>
+        e.project_id === newEstimateProjectId &&
+        (e.change_order_id ?? null) === coId &&
+        e.status !== 'REJECTED'
+    );
     if (existing) {
-      toast({ title: 'Already exists', description: 'An estimate already exists for this project. Opening it instead.' });
+      toast({
+        title: 'Already exists',
+        description: coId
+          ? `An estimate already exists for ${coLabel}. Opening it instead.`
+          : 'A base estimate already exists for this project. Opening it instead.',
+      });
       setShowCreate(false);
       setNewEstimateName('');
       setNewEstimateProjectId('');
+      setNewEstimateCOId('base');
       handleOpenEstimate(existing);
       return;
     }
@@ -230,7 +281,9 @@ export default function SupplierProjectEstimates() {
         project_id: newEstimateProjectId,
         name: newEstimateName.trim(),
         status: 'DRAFT',
-      })
+        change_order_id: coId,
+        scope: coId ? 'CHANGE' : 'BASE',
+      } as never)
       .select()
       .single();
 
@@ -238,10 +291,11 @@ export default function SupplierProjectEstimates() {
       console.error('Create error:', error);
       toast({ title: 'Error', description: 'Failed to create estimate', variant: 'destructive' });
     } else if (data) {
-      toast({ title: 'Success', description: 'Estimate created' });
+      toast({ title: 'Success', description: coId ? `Estimate created for ${coLabel}` : 'Estimate created' });
       setShowCreate(false);
       setNewEstimateName('');
       setNewEstimateProjectId('');
+      setNewEstimateCOId('base');
       fetchEstimates();
       // Auto-open upload wizard with the new estimate
       const { data: suppliers } = await supabase
@@ -261,6 +315,7 @@ export default function SupplierProjectEstimates() {
     }
     setCreating(false);
   };
+
 
   const handleOpenEstimate = (estimate: SupplierProjectEstimate) => {
     setSelectedEstimate(estimate);
@@ -397,6 +452,17 @@ export default function SupplierProjectEstimates() {
     ? estimates
     : estimates.filter(e => e.project_id === selectedProjectId);
 
+  const baseEstimates = filteredEstimates.filter(e => !e.change_order_id);
+  const coEstimates = filteredEstimates.filter(e => !!e.change_order_id);
+
+  const coScopeLabel = (estimate: SupplierProjectEstimate) => {
+    const co = estimate.change_order;
+    if (!co) return null;
+    const kind = co.document_type === 'WO' ? 'WO' : 'CO';
+    return `${co.co_number || kind} · ${co.title}`;
+  };
+
+
   if (authLoading) {
     return (
       <AppLayout title="My Estimates">
@@ -452,45 +518,65 @@ export default function SupplierProjectEstimates() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
-                {filteredEstimates.map((estimate) => (
-                  <Card 
-                    key={estimate.id} 
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => handleOpenEstimate(estimate)}
-                  >
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-muted">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{estimate.name}</h3>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Building2 className="h-3 w-3" />
-                            {estimate.project?.name || 'Unknown Project'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-medium">
-                            ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(estimate.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus]}>
-                          {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus]}
-                        </Badge>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div className="space-y-6">
+                {([
+                  { key: 'base', label: 'Base contract', rows: baseEstimates },
+                  { key: 'change', label: 'Change orders / work orders', rows: coEstimates },
+                ] as const).filter(g => g.rows.length > 0).map(group => (
+                  <div key={group.key} className="space-y-2">
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.label} · {group.rows.length}
+                    </p>
+                    <div className="grid gap-4">
+                      {group.rows.map((estimate) => (
+                        <Card
+                          key={estimate.id}
+                          className="cursor-pointer hover:border-primary/50 transition-colors"
+                          onClick={() => handleOpenEstimate(estimate)}
+                        >
+                          <CardContent className="flex items-center justify-between p-4">
+                            <div className="flex items-center gap-4">
+                              <div className="p-2 rounded-lg bg-muted">
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <h3 className="font-medium">{estimate.name}</h3>
+                                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Building2 className="h-3 w-3" />
+                                    {estimate.project?.name || 'Unknown Project'}
+                                  </span>
+                                  {estimate.change_order_id && (
+                                    <Badge variant="outline" className="text-[0.65rem] font-semibold">
+                                      {coScopeLabel(estimate) || 'Change order'}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="font-medium">
+                                  ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(estimate.created_at), 'MMM d, yyyy')}
+                                </p>
+                              </div>
+                              <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus]}>
+                                {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus]}
+                              </Badge>
+                              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
+
 
             {/* Create Estimate Dialog */}
             <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -513,6 +599,33 @@ export default function SupplierProjectEstimates() {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label>Attach to change order / work order</Label>
+                    <Select
+                      value={newEstimateCOId}
+                      onValueChange={setNewEstimateCOId}
+                      disabled={!newEstimateProjectId || loadingCOs}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Base contract (whole project)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="base">Base contract (whole project)</SelectItem>
+                        {projectCOs.map(co => (
+                          <SelectItem key={co.id} value={co.id}>
+                            {(co.co_number || (co.document_type === 'WO' ? 'WO' : 'CO')) + ' · ' + co.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {newEstimateProjectId
+                        ? projectCOs.length === 0
+                          ? 'This project has no change orders yet — this will be the base estimate.'
+                          : 'Leave as base contract for the original material scope.'
+                        : 'Pick a project first.'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Estimate Name</Label>
                     <Input
                       placeholder="e.g., Phase 1 Materials"
@@ -520,6 +633,7 @@ export default function SupplierProjectEstimates() {
                       onChange={(e) => setNewEstimateName(e.target.value)}
                     />
                   </div>
+
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowCreate(false)}>
@@ -544,7 +658,13 @@ export default function SupplierProjectEstimates() {
                     <Badge className={ESTIMATE_STATUS_COLORS[selectedEstimate.status as SupplierEstimateStatus]}>
                       {ESTIMATE_STATUS_LABELS[selectedEstimate.status as SupplierEstimateStatus]}
                     </Badge>
+                    <Badge variant="outline" className="text-[0.65rem] font-semibold">
+                      {selectedEstimate.change_order_id
+                        ? coScopeLabel(selectedEstimate) || 'Change order'
+                        : 'Base contract'}
+                    </Badge>
                   </div>
+
                   <span className="text-sm text-muted-foreground">
                     {selectedEstimate.project?.name}
                   </span>

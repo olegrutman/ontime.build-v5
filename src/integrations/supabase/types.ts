@@ -6954,12 +6954,14 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          change_order_id: string | null
           created_at: string | null
           id: string
           name: string
           notes: string | null
           project_id: string
           sales_tax_percent: number | null
+          scope: string
           status: string
           submitted_at: string | null
           supplier_org_id: string
@@ -6969,12 +6971,14 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          change_order_id?: string | null
           created_at?: string | null
           id?: string
           name: string
           notes?: string | null
           project_id: string
           sales_tax_percent?: number | null
+          scope?: string
           status?: string
           submitted_at?: string | null
           supplier_org_id: string
@@ -6984,12 +6988,14 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          change_order_id?: string | null
           created_at?: string | null
           id?: string
           name?: string
           notes?: string | null
           project_id?: string
           sales_tax_percent?: number | null
+          scope?: string
           status?: string
           submitted_at?: string | null
           supplier_org_id?: string
@@ -6997,6 +7003,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_estimates_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_estimates_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "supplier_estimates_project_id_fkey"
             columns: ["project_id"]
