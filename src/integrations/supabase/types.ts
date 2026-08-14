@@ -8706,6 +8706,15 @@ export type Database = {
           to_role: string
         }[]
       }
+      list_project_co_scopes: {
+        Args: { _project_id: string }
+        Returns: {
+          co_number: string
+          document_type: string
+          id: string
+          title: string
+        }[]
+      }
       log_support_action: {
         Args: {
           p_action_summary?: string
