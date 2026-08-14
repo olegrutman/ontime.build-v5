@@ -658,7 +658,13 @@ export default function SupplierProjectEstimates() {
                     <Badge className={ESTIMATE_STATUS_COLORS[selectedEstimate.status as SupplierEstimateStatus]}>
                       {ESTIMATE_STATUS_LABELS[selectedEstimate.status as SupplierEstimateStatus]}
                     </Badge>
+                    <Badge variant="outline" className="text-[0.65rem] font-semibold">
+                      {selectedEstimate.change_order_id
+                        ? coScopeLabel(selectedEstimate) || 'Change order'
+                        : 'Base contract'}
+                    </Badge>
                   </div>
+
                   <span className="text-sm text-muted-foreground">
                     {selectedEstimate.project?.name}
                   </span>
