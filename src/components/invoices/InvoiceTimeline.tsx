@@ -70,14 +70,15 @@ export function InvoiceTimeline({ invoice }: { invoice: Invoice }) {
     if (ids.length === 0) return;
     let cancelled = false;
     (async () => {
+      // Invoice actor columns store auth user ids, which map to profiles.user_id
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
-        .in('id', ids);
+        .select('user_id, full_name, email')
+        .in('user_id', ids);
       if (cancelled || !data) return;
       const map: Record<string, string> = {};
-      for (const p of data as { id: string; full_name: string | null; email: string | null }[]) {
-        map[p.id] = p.full_name || p.email || 'Unknown user';
+      for (const p of data as { user_id: string; full_name: string | null; email: string | null }[]) {
+        map[p.user_id] = p.full_name || p.email || 'Unknown user';
       }
       setNames(map);
     })();
