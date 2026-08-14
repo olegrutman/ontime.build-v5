@@ -182,16 +182,40 @@ export default function SupplierProjectEstimates() {
     setProjects(projectData || []);
   };
 
+  // Load change orders / work orders for the project chosen in the create dialog
+  useEffect(() => {
+    if (!newEstimateProjectId) {
+      setProjectCOs([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingCOs(true);
+    (async () => {
+      const { data } = await supabase
+        .from('change_orders')
+        .select('id, co_number, title, document_type')
+        .eq('project_id', newEstimateProjectId)
+        .order('created_at', { ascending: false });
+      if (!cancelled) {
+        setProjectCOs((data || []) as ProjectChangeOrder[]);
+        setLoadingCOs(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [newEstimateProjectId]);
+
   const fetchEstimates = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('supplier_estimates')
       .select(`
         *,
-        project:projects(id, name)
+        project:projects(id, name),
+        change_order:change_orders(id, co_number, title, document_type)
       `)
       .eq('supplier_org_id', currentOrg?.id)
       .order('created_at', { ascending: false });
+
 
     if (error) {
       console.error('Error fetching estimates:', error);
