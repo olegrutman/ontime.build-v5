@@ -247,13 +247,28 @@ export default function SupplierProjectEstimates() {
       return;
     }
 
-    // Check if an estimate already exists for this project
-    const existing = estimates.find(e => e.project_id === newEstimateProjectId);
+    const coId = newEstimateCOId === 'base' ? null : newEstimateCOId;
+    const co = coId ? projectCOs.find(c => c.id === coId) : null;
+    const coLabel = co ? `${co.co_number || (co.document_type === 'WO' ? 'Work order' : 'Change order')} — ${co.title}` : '';
+
+    // Only one active estimate per scope (base contract, or a specific change order)
+    const existing = estimates.find(
+      e =>
+        e.project_id === newEstimateProjectId &&
+        (e.change_order_id ?? null) === coId &&
+        e.status !== 'REJECTED'
+    );
     if (existing) {
-      toast({ title: 'Already exists', description: 'An estimate already exists for this project. Opening it instead.' });
+      toast({
+        title: 'Already exists',
+        description: coId
+          ? `An estimate already exists for ${coLabel}. Opening it instead.`
+          : 'A base estimate already exists for this project. Opening it instead.',
+      });
       setShowCreate(false);
       setNewEstimateName('');
       setNewEstimateProjectId('');
+      setNewEstimateCOId('base');
       handleOpenEstimate(existing);
       return;
     }
@@ -266,7 +281,9 @@ export default function SupplierProjectEstimates() {
         project_id: newEstimateProjectId,
         name: newEstimateName.trim(),
         status: 'DRAFT',
-      })
+        change_order_id: coId,
+        scope: coId ? 'CHANGE' : 'BASE',
+      } as never)
       .select()
       .single();
 
@@ -274,10 +291,11 @@ export default function SupplierProjectEstimates() {
       console.error('Create error:', error);
       toast({ title: 'Error', description: 'Failed to create estimate', variant: 'destructive' });
     } else if (data) {
-      toast({ title: 'Success', description: 'Estimate created' });
+      toast({ title: 'Success', description: coId ? `Estimate created for ${coLabel}` : 'Estimate created' });
       setShowCreate(false);
       setNewEstimateName('');
       setNewEstimateProjectId('');
+      setNewEstimateCOId('base');
       fetchEstimates();
       // Auto-open upload wizard with the new estimate
       const { data: suppliers } = await supabase
@@ -297,6 +315,7 @@ export default function SupplierProjectEstimates() {
     }
     setCreating(false);
   };
+
 
   const handleOpenEstimate = (estimate: SupplierProjectEstimate) => {
     setSelectedEstimate(estimate);
