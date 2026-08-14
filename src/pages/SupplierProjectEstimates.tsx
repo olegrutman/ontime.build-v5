@@ -518,45 +518,65 @@ export default function SupplierProjectEstimates() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
-                {filteredEstimates.map((estimate) => (
-                  <Card 
-                    key={estimate.id} 
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => handleOpenEstimate(estimate)}
-                  >
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-muted">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{estimate.name}</h3>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Building2 className="h-3 w-3" />
-                            {estimate.project?.name || 'Unknown Project'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="font-medium">
-                            ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(estimate.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus]}>
-                          {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus]}
-                        </Badge>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div className="space-y-6">
+                {([
+                  { key: 'base', label: 'Base contract', rows: baseEstimates },
+                  { key: 'change', label: 'Change orders / work orders', rows: coEstimates },
+                ] as const).filter(g => g.rows.length > 0).map(group => (
+                  <div key={group.key} className="space-y-2">
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.label} · {group.rows.length}
+                    </p>
+                    <div className="grid gap-4">
+                      {group.rows.map((estimate) => (
+                        <Card
+                          key={estimate.id}
+                          className="cursor-pointer hover:border-primary/50 transition-colors"
+                          onClick={() => handleOpenEstimate(estimate)}
+                        >
+                          <CardContent className="flex items-center justify-between p-4">
+                            <div className="flex items-center gap-4">
+                              <div className="p-2 rounded-lg bg-muted">
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <h3 className="font-medium">{estimate.name}</h3>
+                                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Building2 className="h-3 w-3" />
+                                    {estimate.project?.name || 'Unknown Project'}
+                                  </span>
+                                  {estimate.change_order_id && (
+                                    <Badge variant="outline" className="text-[0.65rem] font-semibold">
+                                      {coScopeLabel(estimate) || 'Change order'}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="font-medium">
+                                  ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(estimate.created_at), 'MMM d, yyyy')}
+                                </p>
+                              </div>
+                              <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus]}>
+                                {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus]}
+                              </Badge>
+                              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
+
 
             {/* Create Estimate Dialog */}
             <Dialog open={showCreate} onOpenChange={setShowCreate}>
