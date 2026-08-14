@@ -104,7 +104,11 @@ export default function SupplierProjectEstimates() {
   const [showCreate, setShowCreate] = useState(false);
   const [newEstimateName, setNewEstimateName] = useState('');
   const [newEstimateProjectId, setNewEstimateProjectId] = useState('');
+  const [newEstimateCOId, setNewEstimateCOId] = useState('base');
+  const [projectCOs, setProjectCOs] = useState<ProjectChangeOrder[]>([]);
+  const [loadingCOs, setLoadingCOs] = useState(false);
   const [creating, setCreating] = useState(false);
+
 
   // Estimate detail sheet
   const [selectedEstimate, setSelectedEstimate] = useState<SupplierProjectEstimate | null>(null);
