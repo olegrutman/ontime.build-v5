@@ -219,11 +219,35 @@ export default function SupplierProjectEstimates() {
 
     if (error) {
       console.error('Error fetching estimates:', error);
-    } else {
-      setEstimates((data || []) as unknown as SupplierProjectEstimate[]);
+      setLoading(false);
+      return;
     }
+
+    const rows = (data || []) as unknown as SupplierProjectEstimate[];
+
+    // Suppliers can't read change_orders directly (RLS), so the embedded join comes
+    // back null — backfill the scope label through the participant-safe lookup.
+    const needsScope = rows.filter(r => r.change_order_id && !r.change_order);
+    if (needsScope.length > 0) {
+      const projectIds = [...new Set(needsScope.map(r => r.project_id))];
+      const coMap: Record<string, ProjectChangeOrder> = {};
+      await Promise.all(
+        projectIds.map(async pid => {
+          const { data: cos } = await supabase.rpc('list_project_co_scopes', { _project_id: pid });
+          (cos || []).forEach((co: ProjectChangeOrder) => { coMap[co.id] = co; });
+        }),
+      );
+      rows.forEach(r => {
+        if (r.change_order_id && !r.change_order && coMap[r.change_order_id]) {
+          r.change_order = coMap[r.change_order_id] as SupplierProjectEstimate['change_order'];
+        }
+      });
+    }
+
+    setEstimates(rows);
     setLoading(false);
   };
+
 
   const fetchEstimateItems = async (estimateId: string) => {
     setLoadingItems(true);
