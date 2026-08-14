@@ -70,6 +70,14 @@ interface Project {
   name: string;
 }
 
+interface ProjectChangeOrder {
+  id: string;
+  co_number: string | null;
+  title: string;
+  document_type: string | null;
+}
+
+
 interface CSVLineItem {
   sku: string;
   description: string;
