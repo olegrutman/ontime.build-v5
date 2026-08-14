@@ -452,6 +452,17 @@ export default function SupplierProjectEstimates() {
     ? estimates
     : estimates.filter(e => e.project_id === selectedProjectId);
 
+  const baseEstimates = filteredEstimates.filter(e => !e.change_order_id);
+  const coEstimates = filteredEstimates.filter(e => !!e.change_order_id);
+
+  const coScopeLabel = (estimate: SupplierProjectEstimate) => {
+    const co = estimate.change_order;
+    if (!co) return null;
+    const kind = co.document_type === 'WO' ? 'WO' : 'CO';
+    return `${co.co_number || kind} · ${co.title}`;
+  };
+
+
   if (authLoading) {
     return (
       <AppLayout title="My Estimates">
