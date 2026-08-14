@@ -599,6 +599,33 @@ export default function SupplierProjectEstimates() {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label>Attach to change order / work order</Label>
+                    <Select
+                      value={newEstimateCOId}
+                      onValueChange={setNewEstimateCOId}
+                      disabled={!newEstimateProjectId || loadingCOs}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Base contract (whole project)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="base">Base contract (whole project)</SelectItem>
+                        {projectCOs.map(co => (
+                          <SelectItem key={co.id} value={co.id}>
+                            {(co.co_number || (co.document_type === 'WO' ? 'WO' : 'CO')) + ' · ' + co.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {newEstimateProjectId
+                        ? projectCOs.length === 0
+                          ? 'This project has no change orders yet — this will be the base estimate.'
+                          : 'Leave as base contract for the original material scope.'
+                        : 'Pick a project first.'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Estimate Name</Label>
                     <Input
                       placeholder="e.g., Phase 1 Materials"
@@ -606,6 +633,7 @@ export default function SupplierProjectEstimates() {
                       onChange={(e) => setNewEstimateName(e.target.value)}
                     />
                   </div>
+
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowCreate(false)}>
