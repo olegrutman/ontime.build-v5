@@ -191,11 +191,11 @@ export default function SupplierProjectEstimates() {
     let cancelled = false;
     setLoadingCOs(true);
     (async () => {
-      const { data } = await supabase
-        .from('change_orders')
-        .select('id, co_number, title, document_type')
-        .eq('project_id', newEstimateProjectId)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('list_project_co_scopes', {
+        _project_id: newEstimateProjectId,
+      });
+      if (error) console.error('Failed to load change order scopes', error);
+
       if (!cancelled) {
         setProjectCOs((data || []) as ProjectChangeOrder[]);
         setLoadingCOs(false);
