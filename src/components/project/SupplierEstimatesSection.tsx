@@ -56,7 +56,8 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch the single estimate for this project + supplier
+  // Fetch the base-contract estimate for this project + supplier.
+  // Change-order estimates live on the CO and are excluded here.
   const { data: estimate, isLoading } = useQuery({
     queryKey: ['supplier-project-estimate', projectId, supplierOrgId],
     queryFn: async () => {
@@ -65,7 +66,9 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
         .select('id, name, status, total_amount, sales_tax_percent, created_at')
         .eq('project_id', projectId)
         .eq('supplier_org_id', supplierOrgId)
+        .is('change_order_id', null)
         .maybeSingle();
+
 
       if (error) throw error;
       return data;
