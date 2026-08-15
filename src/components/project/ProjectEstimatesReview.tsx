@@ -25,6 +25,9 @@ interface SupplierEstimate {
   project_id: string;
   supplier_org_id: string;
   supplier_org?: { id: string; name: string; org_code: string } | null;
+  change_order_id?: string | null;
+  change_order?: { id: string; title: string; co_number?: string | null; document_type?: string | null } | null;
+
 }
 
 interface EstimateLineItem {
@@ -111,7 +114,8 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
         .from('supplier_estimates')
         .select(`
           *,
-          supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(id, name, org_code)
+          supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(id, name, org_code),
+          change_order:change_orders(id, co_number, title, document_type)
         `)
         .eq('project_id', projectId)
         .in('status', ['SUBMITTED', 'APPROVED', 'REJECTED'])
@@ -152,7 +156,9 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
       .from('supplier_estimates')
       .select(`
         *,
-        supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(id, name, org_code)
+        supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(id, name, org_code),
+        change_order:change_orders(id, co_number, title, document_type)
+
       `)
       .eq('project_id', projectId)
       .in('status', ['SUBMITTED', 'APPROVED', 'REJECTED'])
@@ -322,6 +328,15 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                   </div>
                   <CardDescription>
                     {estimate.supplier_org?.name}
+                    {estimate.change_order ? (
+                      <span className="block mt-0.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                        {estimate.change_order.co_number} · {estimate.change_order.title}
+                      </span>
+                    ) : (
+                      <span className="block mt-0.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                        Base contract
+                      </span>
+                    )}
                   </CardDescription>
                   {estimate.total_amount !== null && estimate.total_amount > 0 && (
                     <p className="text-sm font-medium text-foreground mt-1">
@@ -377,6 +392,11 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                     </div>
                     <CardDescription>
                       {estimate.supplier_org?.name}
+                      <span className="block mt-0.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                        {estimate.change_order
+                          ? `${estimate.change_order.co_number} · ${estimate.change_order.title}`
+                          : 'Base contract'}
+                      </span>
                     </CardDescription>
                   </CardHeader>
                 </Card>
