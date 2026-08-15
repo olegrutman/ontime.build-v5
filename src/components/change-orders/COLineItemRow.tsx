@@ -286,7 +286,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           <div className="shrink-0 flex items-center gap-2.5">
             {(() => {
               const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (actualTotal > 0 || hasMargin);
-              const modeLabel = pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
+              // Prefer how the entries were actually priced; fall back to the CO pricing type.
+              const modeLabel = visibleBillable.length > 0
+                ? (visibleBillable.every(e => e.pricing_mode === 'lump_sum') ? 'Lump sum' : 'Hourly')
+                : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
+
               const isPriced = entryCount > 0 || totalForRole > 0;
 
               if (!isPriced && canAddLabor) {
