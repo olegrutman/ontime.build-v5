@@ -326,38 +326,38 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               return (
                 <div className="flex items-stretch rounded-lg border border-border bg-card overflow-hidden">
                   {/* Mode */}
-                  <div className="flex flex-col justify-center px-2.5 border-r border-border bg-muted/20">
-                    <span className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
+                  <div className="flex flex-col justify-center px-2 border-r border-border bg-muted/20">
+                    <span className="text-[9px] font-bold uppercase tracking-tight leading-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
                     {entryCount > 0 && (
-                      <span className="text-[9px] font-medium uppercase tracking-tight text-muted-foreground/70">{entryCount} {entryCount === 1 ? 'entry' : 'entries'}</span>
+                      <span className="text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">{entryCount} {entryCount === 1 ? 'entry' : 'entries'}</span>
                     )}
                   </div>
 
                   {/* Primary value */}
-                  <div className="px-3.5 py-1.5">
-                    <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Billable amount</span>
+                  <div className="px-2.5 py-1.5">
+                    <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Billable</span>
                     <span className="flex items-baseline gap-0.5">
-                      <span className="font-mono text-base" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
-                      <span className="font-mono text-lg font-bold text-foreground">{fmt(totalForRole)}</span>
+                      <span className="font-mono text-sm" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
+                      <span className="font-mono text-base font-bold text-foreground">{fmt(totalForRole)}</span>
                     </span>
                   </div>
 
                   {/* Internal cost + margin */}
                   {showInternalCell && (
-                    <div className="flex items-center gap-4 border-l border-border bg-muted/20 px-3.5 py-1.5">
+                    <div className="flex items-center gap-2.5 border-l border-border bg-muted/20 px-2.5 py-1.5">
                       <div>
-                        <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
-                          <Lock className="h-2.5 w-2.5" /> Internal cost
+                        <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">
+                          <Lock className="h-2.5 w-2.5" /> Cost
                         </span>
-                        <span className="font-mono text-sm text-foreground/70">
+                        <span className="font-mono text-xs text-foreground/70">
                           {actualTotal > 0 ? `$${fmt(actualTotal)}` : '—'}
                         </span>
                       </div>
                       {hasMargin && (
                         <div className="text-right">
-                          <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Margin</span>
+                          <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Margin</span>
                           <span className={cn(
-                            'font-mono text-sm font-semibold',
+                            'font-mono text-xs font-semibold',
                             marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
                           )}>
                             {marginPct.toFixed(1)}%
@@ -368,6 +368,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   )}
                 </div>
               );
+
             })()}
 
             {/* Internal-cost nudge for TCs who priced but logged no cost */}
