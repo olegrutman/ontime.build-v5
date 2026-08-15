@@ -502,7 +502,16 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   <Lock className="h-3 w-3" />
                 </span>
               )}
-              <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', expanded && 'rotate-180')} />
+              <button
+                type="button"
+                aria-label={expanded ? 'Collapse pricing details' : 'Expand pricing details'}
+                aria-expanded={expanded}
+                onClick={() => setExpanded(!expanded)}
+                className="h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')} />
+              </button>
+
             </div>
           </div>
         </div>
