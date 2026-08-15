@@ -193,11 +193,15 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       });
     }
 
-    tiles.push({
-      label: `Total to ${upstream}`,
-      value: fmtCurrency(totalToUpstream),
-      color: '#F5A623',
-    });
+    // The Action Rail header already prints the headline "Total to {upstream}".
+    // Only repeat it here when it differs from own labor (i.e. mats/eq/tax roll in).
+    if (Math.abs(totalToUpstream - ownLaborToUpstream) > 0.005) {
+      tiles.push({
+        label: `Total to ${upstream}`,
+        value: fmtCurrency(totalToUpstream),
+        color: '#F5A623',
+      });
+    }
 
     if (financials.retainagePercent > 0 && financials.retainageAmount > 0) {
       tiles.push({
