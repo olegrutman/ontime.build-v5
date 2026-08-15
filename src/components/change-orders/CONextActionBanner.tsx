@@ -144,7 +144,11 @@ export function CONextActionBanner(props: CONextActionBannerProps) {
   const config = getBannerConfig(props, rl);
   if (!config) return null;
 
-  const buttons = config.actions.filter(a => !JUMP_ACTIONS.has(a.action));
+  const rawButtons = config.actions.filter(a => !JUMP_ACTIONS.has(a.action));
+  // Exactly one visual primary — if the config marked none, promote the first.
+  const buttons = rawButtons.some(a => a.primary)
+    ? rawButtons
+    : rawButtons.map((a, i) => (i === 0 ? { ...a, primary: true } : a));
   const jumps = config.actions.filter(a => JUMP_ACTIONS.has(a.action));
 
   return (

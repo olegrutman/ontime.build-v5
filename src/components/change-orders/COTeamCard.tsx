@@ -142,7 +142,7 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
   if (members.length === 0 && !canReroute) return null;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div id="co-team-card" className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="px-3.5 py-3 border-b border-border flex items-center justify-between gap-2">
         <h3 className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground">
           👥 Team
