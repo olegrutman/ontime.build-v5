@@ -234,7 +234,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             return (
             <>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Billable to {upstream}</span>
+                <span className="text-muted-foreground">Labor</span>
                 <span className="font-mono font-medium">{fmtCurrency(ownLabor)}</span>
               </div>
               {ownEq > 0 && (
@@ -249,6 +249,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                   <span className="font-mono font-medium">{fmtCurrency(ownMats)}</span>
                 </div>
               )}
+              {/* Only show the roll-up when it actually adds something beyond labor. */}
+              {Math.abs(financials.viewer.totalToUpstream - ownLabor) > 0.005 && (
               <div className="border-t border-border pt-2 mt-2">
                 <div className="flex justify-between text-sm font-semibold">
                   <span>Total to {upstream}</span>
