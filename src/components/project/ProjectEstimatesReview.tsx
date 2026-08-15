@@ -325,6 +325,15 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                   </div>
                   <CardDescription>
                     {estimate.supplier_org?.name}
+                    {estimate.change_order ? (
+                      <span className="block mt-0.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                        {estimate.change_order.co_number} · {estimate.change_order.title}
+                      </span>
+                    ) : (
+                      <span className="block mt-0.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                        Base contract
+                      </span>
+                    )}
                   </CardDescription>
                   {estimate.total_amount !== null && estimate.total_amount > 0 && (
                     <p className="text-sm font-medium text-foreground mt-1">
@@ -380,6 +389,11 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                     </div>
                     <CardDescription>
                       {estimate.supplier_org?.name}
+                      <span className="block mt-0.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                        {estimate.change_order
+                          ? `${estimate.change_order.co_number} · ${estimate.change_order.title}`
+                          : 'Base contract'}
+                      </span>
                     </CardDescription>
                   </CardHeader>
                 </Card>
