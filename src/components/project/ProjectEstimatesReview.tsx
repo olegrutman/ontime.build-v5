@@ -25,6 +25,9 @@ interface SupplierEstimate {
   project_id: string;
   supplier_org_id: string;
   supplier_org?: { id: string; name: string; org_code: string } | null;
+  change_order_id?: string | null;
+  change_order?: { id: string; title: string; co_number?: string | null; document_type?: string | null } | null;
+
 }
 
 interface EstimateLineItem {
