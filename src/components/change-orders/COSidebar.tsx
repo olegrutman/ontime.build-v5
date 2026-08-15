@@ -257,6 +257,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                   <span className="font-mono">{fmtCurrency(financials.viewer.totalToUpstream)}</span>
                 </div>
               </div>
+              )}
+
               {ownTotalTax > 0 && (
                 <div className="border-t border-border pt-2 mt-2 space-y-1">
                   {ownMatsTax > 0 && (
