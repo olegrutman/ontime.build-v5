@@ -227,7 +227,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Numbered index */}
             {index !== undefined && (
               <div className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
@@ -282,59 +282,104 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </div>
           </div>
 
-          {/* Right side */}
-          <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
-            {/* Status chip / CTA */}
-            {(entryCount > 0 ? (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                Priced
+          {/* Right side — consolidated pricing module */}
+          <div className="shrink-0 flex items-center gap-2.5">
+            {(() => {
+              const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (actualTotal > 0 || hasMargin);
+              // Prefer how the entries were actually priced; fall back to the CO pricing type.
+              const modeLabel = visibleBillable.length > 0
+                ? (visibleBillable.every(e => e.pricing_mode === 'lump_sum') ? 'Lump sum' : 'Hourly')
+                : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
+
+              const isPriced = entryCount > 0 || totalForRole > 0;
+
+              if (!isPriced && canAddLabor) {
+                return (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
+                    className="group/price flex items-stretch rounded-lg border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.06)] hover:border-amber-500 hover:bg-[hsl(var(--amber)/0.12)] transition-colors text-left"
+                  >
+                    <span className="flex flex-col justify-center px-2.5 border-r border-amber-400/40">
+                      <span className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
+                    </span>
+                    <span className="px-3.5 py-1.5">
+                      <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Billable amount</span>
+                      <span className="flex items-center gap-1.5">
+                        <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />
+                        <span className="font-heading text-base font-bold text-foreground">Set price</span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              }
+
+              if (!isPriced) {
+                return (
+                  <div className="rounded-lg border border-border bg-muted/20 px-3.5 py-1.5">
+                    <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Billable amount</span>
+                    <span className="font-mono text-sm text-muted-foreground">Not priced</span>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="flex items-stretch rounded-lg border border-border bg-card overflow-hidden">
+                  {/* Mode */}
+                  <div className="flex flex-col justify-center px-2 border-r border-border bg-muted/20">
+                    <span className="text-[9px] font-bold uppercase tracking-tight leading-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
+                    {entryCount > 0 && (
+                      <span className="text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">{entryCount} {entryCount === 1 ? 'entry' : 'entries'}</span>
+                    )}
+                  </div>
+
+                  {/* Primary value */}
+                  <div className="px-2.5 py-1.5">
+                    <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Billable</span>
+                    <span className="flex items-baseline gap-0.5">
+                      <span className="font-mono text-sm" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
+                      <span className="font-mono text-base font-bold text-foreground">{fmt(totalForRole)}</span>
+                    </span>
+                  </div>
+
+                  {/* Internal cost + margin */}
+                  {showInternalCell && (
+                    <div className="flex items-center gap-2.5 border-l border-border bg-muted/20 px-2.5 py-1.5">
+                      <div>
+                        <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">
+                          <Lock className="h-2.5 w-2.5" /> Cost
+                        </span>
+                        <span className="font-mono text-xs text-foreground/70">
+                          {actualTotal > 0 ? `$${fmt(actualTotal)}` : '—'}
+                        </span>
+                      </div>
+                      {hasMargin && (
+                        <div className="text-right">
+                          <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Margin</span>
+                          <span className={cn(
+                            'font-mono text-xs font-semibold',
+                            marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+                          )}>
+                            {marginPct.toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+
+            })()}
+
+            {/* Internal-cost nudge for TCs who priced but logged no cost */}
+            {isTC && entryCount > 0 && actualTotal === 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted/40 text-muted-foreground">
+                <Lock className="h-2.5 w-2.5" /> No cost logged
               </span>
-            ) : canAddLabor ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpanded(true);
-                  setFormOpen(true);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm ring-2 ring-amber-300/60 hover:bg-amber-600 hover:ring-amber-400/70 transition-all"
-              >
-                <DollarSign className="h-3.5 w-3.5" />
-                Add pricing
-              </button>
-            ) : null)}
-
-            {totalForRole > 0 && (
-              <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             )}
 
-            {/* Internal cost pill */}
-            {isTC && (
-              actualTotal > 0 ? (
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                  <Lock className="h-2.5 w-2.5" /> Internal / ${fmt(actualTotal)}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted/30 text-muted-foreground">
-                  <Lock className="h-2.5 w-2.5" /> Internal / Not logged
-                </span>
-              )
-            )}
 
-            {/* Margin badge */}
-            {hasMargin && (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-              <span className={cn(
-                'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                marginAmount >= 0
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                  : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
-              )}>
-                <TrendingUp className="h-2.5 w-2.5" />
-                {marginPct.toFixed(0)}%
-              </span>
-            )}
-
-            <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               {canEditHeader && (
                 <Popover open={editHeaderOpen} onOpenChange={(o) => {
                   setEditHeaderOpen(o);
@@ -462,7 +507,16 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   <Lock className="h-3 w-3" />
                 </span>
               )}
-              <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', expanded && 'rotate-180')} />
+              <button
+                type="button"
+                aria-label={expanded ? 'Collapse pricing details' : 'Expand pricing details'}
+                aria-expanded={expanded}
+                onClick={() => setExpanded(!expanded)}
+                className="h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')} />
+              </button>
+
             </div>
           </div>
         </div>
