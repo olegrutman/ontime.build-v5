@@ -565,6 +565,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     ))
                   )}
                 </div>
+              </div>
+
+
 
               {/* Materials */}
               {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
