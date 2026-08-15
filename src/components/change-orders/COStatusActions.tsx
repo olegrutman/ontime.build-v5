@@ -686,19 +686,29 @@ export function COStatusActions({
               Acknowledge Completion
             </Button>
           )}
-          {canWithdraw && (
-            <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1 text-muted-foreground border-muted-foreground/30" onClick={() => setWithdrawOpen(true)} disabled={acting}>
-              <Trash2 className="h-3 w-3" />
-              Cancel {co.document_type === 'WO' ? 'work order' : 'change order'}
-            </Button>
-          )}
-          {canDelete && (
-            <Button variant="ghost" size="sm" className="w-full h-8 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)} disabled={acting}>
-              <Trash2 className="h-3 w-3" />
-              Delete permanently
-            </Button>
-          )}
         </div>
+
+        {/* Destructive zone — deliberately separated from workflow actions */}
+        {(canWithdraw || canDelete) && (
+          <div className="border-t border-border px-4 pt-3 pb-3 space-y-1.5">
+            <p className="text-[0.6rem] uppercase tracking-[0.12em] font-semibold text-muted-foreground/70">
+              Danger zone
+            </p>
+            {canWithdraw && (
+              <Button variant="ghost" size="sm" className="w-full h-8 justify-start text-xs gap-1.5 text-muted-foreground hover:text-foreground" onClick={() => setWithdrawOpen(true)} disabled={acting}>
+                <RotateCcw className="h-3 w-3" />
+                Cancel {co.document_type === 'WO' ? 'work order' : 'change order'}
+              </Button>
+            )}
+            {canDelete && (
+              <Button variant="ghost" size="sm" className="w-full h-8 justify-start text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)} disabled={acting}>
+                <Trash2 className="h-3 w-3" />
+                Delete permanently
+              </Button>
+            )}
+          </div>
+        )}
+
       </div>
 
       <AlertDialog open={approveOpen} onOpenChange={(open) => {
