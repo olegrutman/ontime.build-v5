@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Copy, MoreHorizontal, Hammer, Plus, ShieldCheck, Camera, ExternalLink, Download, Receipt } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -319,6 +319,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           }
         }
         break;
+      case 'noop': {
+        const team = document.getElementById('co-team-card');
+        if (team) team.scrollIntoView({ behavior: 'smooth' });
+        toast.info('Assign an upstream party in the Team card before submitting.');
+        break;
+      }
       default: window.scrollTo({ top: 0, behavior: 'smooth' }); break;
     }
   }
@@ -433,12 +439,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 <ExternalLink className="h-3.5 w-3.5" /> Invite External
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground">
-              <Copy className="h-3.5 w-3.5" /> Duplicate
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
@@ -518,41 +518,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </div>
 
 
-                  {/* Totals strip */}
-                  {lineItems.length > 0 && (
-                    <div className="flex items-center mt-3 rounded-lg border border-border overflow-hidden text-xs">
-                      <div className={cn("flex-1 px-3 py-2 text-center", (isTC || isFC) && "border-r border-border")}>
-                        <p className="text-muted-foreground font-medium">{isGC
-                          ? (responsibility.materialResponsible === 'GC' && responsibility.equipmentResponsible === 'GC'
-                              ? 'TC Labor'
-                              : responsibility.materialResponsible === 'GC'
-                                ? 'TC Labor + Equipment'
-                                : responsibility.equipmentResponsible === 'GC'
-                                  ? 'TC Labor + Materials'
-                                  : 'TC Submitted')
-                          : isTC ? 'Billable to GC' : 'Billable to TC'}</p>
-                        <p className="font-mono font-bold text-foreground mt-0.5">
-                          ${ (isGC ? tcBillableTotal : displayBillable).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }
-                        </p>
-                      </div>
-
-                      {(isTC || isFC) && (
-                        <>
-                          <div className="flex-1 px-3 py-2 text-center border-r border-border">
-                            <p className="text-muted-foreground font-medium">Internal Cost</p>
-                            <p className="font-mono font-bold text-foreground mt-0.5">${roleActualCost.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                          </div>
-                          <div className="flex-1 px-3 py-2 text-center" style={{ background: grossMargin >= 0 ? 'hsl(152 82% 39% / 0.06)' : 'hsl(0 84% 60% / 0.06)' }}>
-                            <p className="text-muted-foreground font-medium">Gross Margin</p>
-                            <p className={cn('font-mono font-bold mt-0.5', grossMargin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
-                              ${grossMargin.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({grossMarginPct.toFixed(0)}%)
-                            </p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
                   {/* Progress bar */}
                   {lineItems.length > 0 && (
                     <div className="flex items-center gap-3 mt-3">
@@ -600,19 +565,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     ))
                   )}
                 </div>
-
-                {/* Add another scope item row */}
-                {canEdit && !nteBlocked && lineItems.length > 0 && co && (
-                  <div className="border-t border-dashed border-border p-2">
-                    <AddItemsChooser
-                      projectId={projectId}
-                      coId={co.id}
-                      variant="ghost"
-                      label="Add another item"
-                    />
-                  </div>
-                )}
               </div>
+
+
 
               {/* Materials */}
               {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (

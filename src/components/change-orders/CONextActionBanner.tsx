@@ -22,8 +22,10 @@ interface BannerConfig {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
+  /** `primary: true` renders a real button (state change). Everything else is a quiet jump link. */
   actions: { label: string; action: string; primary?: boolean }[];
 }
+
 
 function fmtCurrency(value: number) {
   if (value === 0) return '$0';
@@ -134,10 +136,20 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
   return null;
 }
 
+/** Navigational shortcuts must never look like state changes. */
+const JUMP_ACTIONS = new Set(['scroll_scope', 'scroll_materials', 'scroll_pricing', 'scroll_fc', 'log_hours', 'noop']);
+
 export function CONextActionBanner(props: CONextActionBannerProps) {
   const rl = useRoleLabelsContext();
   const config = getBannerConfig(props, rl);
   if (!config) return null;
+
+  const rawButtons = config.actions.filter(a => !JUMP_ACTIONS.has(a.action));
+  // Exactly one visual primary — if the config marked none, promote the first.
+  const buttons = rawButtons.some(a => a.primary)
+    ? rawButtons
+    : rawButtons.map((a, i) => (i === 0 ? { ...a, primary: true } : a));
+  const jumps = config.actions.filter(a => JUMP_ACTIONS.has(a.action));
 
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: 'hsl(var(--navy))' }}>
@@ -154,17 +166,32 @@ export function CONextActionBanner(props: CONextActionBannerProps) {
             <p className="text-[0.7rem] mt-0.5 break-words" style={{ color: 'hsl(220 27% 60%)' }}>
               {config.subtitle}
             </p>
+            {jumps.length > 0 && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                {jumps.map(a => (
+                  <button
+                    key={a.action}
+                    type="button"
+                    onClick={() => props.onAction(a.action)}
+                    className="text-[0.7rem] font-semibold underline underline-offset-2 decoration-white/30 hover:decoration-white transition-colors"
+                    style={{ color: 'hsl(38 92% 65%)' }}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-        {config.actions.length > 0 && (
+        {buttons.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-            {config.actions.map(a => (
+            {buttons.map(a => (
               <Button
                 key={a.action}
                 size="sm"
                 onClick={() => props.onAction(a.action)}
                 className={cn(
-                  'h-9 text-xs font-semibold rounded-lg flex-1 sm:flex-none min-w-[7rem]',
+                  'h-9 text-xs font-semibold rounded-lg flex-1 sm:flex-none min-w-[7rem] transition-transform active:scale-[0.97]',
                   a.primary
                     ? 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90'
                     : 'bg-white/10 text-white hover:bg-white/20 border border-white/10',
@@ -179,3 +206,4 @@ export function CONextActionBanner(props: CONextActionBannerProps) {
     </div>
   );
 }
+
