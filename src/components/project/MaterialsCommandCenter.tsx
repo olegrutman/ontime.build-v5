@@ -42,7 +42,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
       .from('supplier_estimates')
       .select('id')
       .eq('project_id', pid)
-      .eq('status', 'approved');
+      .eq('status', 'APPROVED');
 
     if (!estimates?.length) return;
     const estimateIds = estimates.map(e => e.id);
