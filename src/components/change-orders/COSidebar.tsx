@@ -89,44 +89,20 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
 
   return (
     <div ref={ref} className="space-y-3">
-      {/* ─── Command Console (Navy) ─── */}
+      {/* ─── Action Rail (Navy) ───
+          Single owner of every state mutation. Reference number, status and the
+          headline total deliberately live elsewhere (header strip / KPI strip /
+          Financials card) so nothing is printed twice. */}
       <div className="rounded-xl overflow-hidden shadow-lg" style={{ background: 'hsl(var(--navy))' }}>
-        {/* Reference + status pills */}
-        <div className="px-5 pt-5 pb-4 border-b border-white/10">
+        <div className="px-5 pt-4 pb-3 border-b border-white/10 flex items-baseline justify-between gap-3">
           <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: 'hsl(220 18% 55%)' }}>
-            Reference
-          </p>
-          <h2 className="font-heading text-2xl font-bold tracking-tight text-white leading-none mt-1">
-            {co.co_number || 'CO'}
-          </h2>
-          <div className="mt-3 flex flex-col gap-1.5">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md w-fit"
-                 style={{ background: 'hsl(38 92% 50% / 0.12)', border: '1px solid hsl(38 92% 50% / 0.25)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--amber))] animate-pulse" />
-              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(38 92% 60%)' }}>
-                {statusLabel}
-              </span>
-            </div>
-            <div className="inline-flex items-center px-2.5 py-1 rounded-md w-fit"
-                 style={{ background: 'hsl(212 92% 50% / 0.12)', border: '1px solid hsl(212 92% 50% / 0.25)' }}>
-              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(212 92% 70%)' }}>
-                {visibilityLabel}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Hero KPI */}
-        <div className="px-5 py-4 border-b border-white/10">
-          <p className="text-[10px] uppercase tracking-[0.18em] font-bold mb-1" style={{ color: 'hsl(220 18% 55%)' }}>
             {headlineLabel}
           </p>
-          <div className="font-mono text-3xl font-medium text-white tracking-tight">
+          <span className="font-mono text-lg font-medium text-white tracking-tight">
             ${headlineValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
+          </span>
         </div>
 
-        {/* Action buttons (existing component, scoped dark styling) */}
         <div className="px-5 py-4 co-command-actions" style={{ background: 'hsl(222 47% 8%)' }}>
           <COStatusActions
             co={co} isGC={isGC} isTC={isTC} isFC={isFC}
@@ -137,6 +113,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           />
         </div>
       </div>
+
 
 
       {/* Team & routing — lets any party see (and a creator fix) who this is assigned to */}
