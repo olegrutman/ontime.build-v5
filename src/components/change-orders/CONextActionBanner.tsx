@@ -22,8 +22,10 @@ interface BannerConfig {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
+  /** `primary: true` renders a real button (state change). Everything else is a quiet jump link. */
   actions: { label: string; action: string; primary?: boolean }[];
 }
+
 
 function fmtCurrency(value: number) {
   if (value === 0) return '$0';
