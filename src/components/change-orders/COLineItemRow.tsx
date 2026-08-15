@@ -374,7 +374,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             )}
 
 
-            <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               {canEditHeader && (
                 <Popover open={editHeaderOpen} onOpenChange={(o) => {
                   setEditHeaderOpen(o);
