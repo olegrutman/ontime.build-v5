@@ -111,7 +111,8 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
         .from('supplier_estimates')
         .select(`
           *,
-          supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(id, name, org_code)
+          supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(id, name, org_code),
+          change_order:change_orders(id, co_number, title, document_type)
         `)
         .eq('project_id', projectId)
         .in('status', ['SUBMITTED', 'APPROVED', 'REJECTED'])
