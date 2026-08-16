@@ -182,11 +182,18 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   const statusColor = getStatusColor(visibleBillable, showGCApproval);
 
+  // Cost per scope item.
+  // For a TC, what the field crew bills them IS a cost of this scope item, so it
+  // rolls into the private cost cell alongside any manually logged internal costs.
+  const fcCostForTC = isTC ? fcTotal : 0;
+  const roleCostTotal = actualTotal + fcCostForTC;
+
   // Margin
   const billableTotal = isFC ? fcTotal : tcTotal;
-  const hasMargin = billableTotal > 0 && actualTotal > 0;
-  const marginAmount = billableTotal - actualTotal;
+  const hasMargin = billableTotal > 0 && roleCostTotal > 0;
+  const marginAmount = billableTotal - roleCostTotal;
   const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
+
 
   const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
 
