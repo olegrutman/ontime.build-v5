@@ -77,6 +77,43 @@ export function LaborEntryForm({
     return () => { cancelled = true; };
   }, [user, orgId, isTC]);
 
+  // Field-crew logged hours on this line item — importable as internal cost (TC only).
+  const [fcHours, setFcHours] = useState(0);
+  const [fcCost, setFcCost] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadFC() {
+      if (!isTC || isActualCost || isEditing || !lineItemId) return;
+      const { data } = await supabase
+        .from('co_labor_entries')
+        .select('hours, hourly_rate, lump_sum, pricing_mode')
+        .eq('co_line_item_id', lineItemId)
+        .eq('entered_by_role', 'FC');
+      if (cancelled || !data) return;
+      let h = 0, c = 0;
+      for (const e of data) {
+        h += Number(e.hours ?? 0);
+        c += e.pricing_mode === 'lump_sum'
+          ? Number(e.lump_sum ?? 0)
+          : Number(e.hours ?? 0) * Number(e.hourly_rate ?? 0);
+      }
+      setFcHours(Math.round(h * 100) / 100);
+      setFcCost(Math.round(c * 100) / 100);
+    }
+    loadFC();
+    return () => { cancelled = true; };
+  }, [lineItemId, isTC, isActualCost, isEditing]);
+
+  const fcAvailable = fcCost > 0 || fcHours > 0;
+  function importFCHours() {
+    if (fcCost > 0) setInternalCost(String(fcCost));
+    if (fcHours > 0 && !hours) { setHours(String(fcHours)); setMode('hourly'); }
+    setCostType('labor_wages');
+    toast.success(`Imported ${fcHours}h of field crew time`);
+  }
+
+
+
   const hoursValue = parseFloat(hours) || 0;
   const rateValue = parseFloat(rate) || 0;
   const lumpSumValue = parseFloat(lumpSum) || 0;
@@ -224,204 +261,216 @@ export function LaborEntryForm({
     } finally { setSaving(false); setShowNTEWarn(false); }
   }
 
+  const fieldInput = 'w-full h-10 rounded-lg px-3 text-sm bg-[hsl(var(--navy-xd))] border border-[hsl(var(--navy-line))] text-[hsl(var(--navy-fg))] placeholder:text-[hsl(var(--navy-fg-muted)/0.6)] focus:outline-none focus:border-[hsl(var(--amber)/0.6)] focus:ring-1 focus:ring-[hsl(var(--amber)/0.4)] transition-colors';
+  const microLabel = 'text-[10px] uppercase tracking-wider font-bold text-[hsl(var(--navy-fg-muted))]';
+  const mono = { fontFamily: "'IBM Plex Mono', monospace" };
+
   return (
-    <div className="rounded-xl overflow-hidden border-2 shadow-sm" style={{ borderColor: 'hsl(var(--amber)/0.3)' }}>
-      {/* Header */}
-      <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'hsl(var(--amber)/0.08)' }}>
-        <div className="flex items-center gap-2">
-          {isActualCost ? (
-            <Lock className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <DollarSign className="h-4 w-4" style={{ color: 'hsl(var(--amber-d))' }} />
-          )}
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: isActualCost ? undefined : 'hsl(var(--amber-d))' }}>
+    <div className="rounded-2xl overflow-hidden border border-[hsl(var(--navy-line))] shadow-xl bg-[hsl(var(--navy-d))]">
+      {/* Header / mode switch */}
+      <div className="px-4 py-3 border-b border-[hsl(var(--navy-line))] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          {isActualCost ? <Lock className="h-3.5 w-3.5 text-[hsl(var(--navy-fg-muted))]" /> : <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber))' }} />}
+          <h3 className="text-xs uppercase tracking-widest font-bold text-[hsl(var(--navy-fg-muted))] truncate font-heading">
             {isEditing
-              ? (isActualCost ? 'Edit Internal Cost (Private)' : 'Edit Pricing Entry')
-              : (isActualCost ? 'Log Internal Cost (Private)' : 'Add Pricing Entry')}
-          </span>
+              ? (isActualCost ? 'Edit internal cost' : 'Edit pricing entry')
+              : (isActualCost ? 'Log internal cost' : 'Add pricing entry')}
+          </h3>
         </div>
-        {onCancel && (
-          <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground transition-colors">✕</button>
-        )}
-      </div>
-
-      <div className="p-4 space-y-4">
-        {/* 3-tile Entry Type */}
-        <div className="grid grid-cols-2 gap-2">
-          {([
-            { key: 'hourly' as const, icon: Clock, label: 'Hours', sub: 'Rate × Hours' },
-            { key: 'lump_sum' as const, icon: DollarSign, label: 'Flat Rate', sub: 'Fixed Amount' },
-          ]).map(opt => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => setMode(opt.key)}
-              className={cn(
-                'flex flex-col items-center justify-center gap-1 px-3 py-3 rounded-xl text-xs font-semibold border-2 transition-all min-h-[56px]',
-                mode === opt.key
-                  ? 'border-[hsl(var(--amber))] bg-[hsl(var(--amber-pale))]'
-                  : 'border-border bg-background text-muted-foreground hover:border-[hsl(var(--amber)/0.4)]',
-              )}
-              style={mode === opt.key ? { color: 'hsl(var(--amber-d))' } : undefined}
-            >
-              <opt.icon className="h-4 w-4" />
-              <span>{opt.label}</span>
-              <span className={cn('text-[9px] font-normal', mode === opt.key ? 'opacity-70' : 'text-muted-foreground/70')}>{opt.sub}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Quick hours */}
-        {!isActualCost && mode === 'hourly' && (
-          <div className="flex gap-2">
-            {QUICK_HOURS.map(h => (
+        <div className="flex items-center gap-2">
+          <div className="flex p-1 rounded-lg bg-[hsl(var(--navy-xd))] border border-[hsl(var(--navy-line))]">
+            {([
+              { key: 'hourly' as const, label: 'Hours', icon: Clock },
+              { key: 'lump_sum' as const, label: 'Flat rate', icon: DollarSign },
+            ]).map(opt => (
               <button
-                key={h} type="button" onClick={() => handleQuickHour(h)}
+                key={opt.key}
+                type="button"
+                onClick={() => setMode(opt.key)}
                 className={cn(
-                  'flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-all min-h-[48px]',
-                  hoursValue === h
-                    ? 'border-[hsl(var(--amber))] bg-[hsl(var(--amber-pale))] shadow-sm'
-                    : 'border-border bg-background text-muted-foreground hover:border-[hsl(var(--amber)/0.3)]',
+                  'px-3 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5',
+                  mode === opt.key
+                    ? 'shadow-sm'
+                    : 'text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))]',
                 )}
-                style={hoursValue === h ? { color: 'hsl(var(--amber-d))' } : undefined}
+                style={mode === opt.key ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
               >
-                {h}h
+                <opt.icon className="h-3 w-3" />
+                {opt.label}
               </button>
             ))}
           </div>
-        )}
+          {onCancel && (
+            <button type="button" onClick={onCancel} aria-label="Close pricing entry" className="text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))] text-sm px-1">✕</button>
+          )}
+        </div>
+      </div>
 
-        {/* Date + Description */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Date</Label>
+      <div className="p-4 space-y-4">
+        {/* Context row: description + date */}
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-12 sm:col-span-8 space-y-1.5">
+            <label className={microLabel}>Description</label>
+            <input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What work was done…"
+              className={fieldInput}
+            />
+          </div>
+          <div className="col-span-12 sm:col-span-4 space-y-1.5">
+            <label className={microLabel}>Date</label>
             <button
               type="button"
               onClick={() => { const input = document.getElementById(`labor-date-${lineItemId}`) as HTMLInputElement; input?.showPicker?.(); }}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-background text-sm font-medium min-h-[44px] hover:border-[hsl(var(--amber)/0.3)] transition-colors"
+              className={cn(fieldInput, 'flex items-center justify-between text-left')}
             >
-              <span className="text-xs">{dateLabel}</span>
-              <span className="text-muted-foreground">▾</span>
+              <span>{dateLabel}</span>
+              <span className="text-[hsl(var(--navy-fg-muted))]">▾</span>
             </button>
             <input id={`labor-date-${lineItemId}`} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} className="sr-only" />
           </div>
-          <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Description</Label>
-            <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="What work was done…" className="h-[44px] text-sm" />
-          </div>
         </div>
 
-        {/* Mode-specific fields */}
+        {/* Billable row */}
         {mode === 'hourly' ? (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1 block">Hours</Label>
-              <Input type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0" className="h-11 text-base font-semibold" />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1 block">Rate ($/hr)</Label>
+          <div className="grid grid-cols-12 gap-3 items-end">
+            <div className={cn('space-y-1.5', isTC && !isActualCost ? 'col-span-6 sm:col-span-4' : 'col-span-6')}>
+              <div className="flex items-center justify-between gap-2">
+                <label className={microLabel} style={{ color: 'hsl(var(--amber))' }}>Hours</label>
+                {!isActualCost && (
+                  <div className="flex gap-1">
+                    {QUICK_HOURS.map(h => (
+                      <button
+                        key={h} type="button" onClick={() => handleQuickHour(h)}
+                        className={cn(
+                          'text-[9px] px-1.5 py-0.5 rounded font-bold transition-colors',
+                          hoursValue === h
+                            ? 'text-[hsl(var(--navy))]'
+                            : 'bg-[hsl(var(--navy-line))] text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))]',
+                        )}
+                        style={hoursValue === h ? { background: 'hsl(var(--amber))' } : undefined}
+                      >
+                        {h}h
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
-                <Input type="number" step="0.01" min="0" value={rate} onChange={e => setRate(e.target.value)} className="h-11 text-base font-semibold pl-7" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-[hsl(var(--navy-fg-muted)/0.7)]">Qty</span>
+                <input
+                  type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
+                  className={cn(fieldInput, 'text-right text-base font-medium pl-10')}
+                  style={{ ...mono, color: 'hsl(var(--amber))' }}
+                />
               </div>
             </div>
+            <div className={cn('space-y-1.5', isTC && !isActualCost ? 'col-span-6 sm:col-span-4' : 'col-span-6')}>
+              <label className={microLabel}>Rate ($/hr)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">$</span>
+                <input
+                  type="number" step="0.01" min="0" value={rate} onChange={e => setRate(e.target.value)}
+                  className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
+                  style={mono}
+                />
+              </div>
+            </div>
+            {isTC && !isActualCost && (
+              <div className="col-span-12 sm:col-span-4 space-y-1.5">
+                <label className={microLabel}>Markup (%)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">%</span>
+                  <input
+                    type="number" step="0.5" min="0" value={markup} onChange={e => setMarkup(e.target.value)} placeholder="0"
+                    className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
+                    style={mono}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
-          <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Billable Amount</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
-              <Input type="number" step="0.01" min="0" value={lumpSum} onChange={e => setLumpSum(e.target.value)} placeholder="0.00" className="h-11 text-base font-semibold pl-7" />
+          <div className="grid grid-cols-12 gap-3 items-end">
+            <div className={cn('space-y-1.5', isTC && !isActualCost ? 'col-span-12 sm:col-span-8' : 'col-span-12')}>
+              <label className={microLabel} style={{ color: 'hsl(var(--amber))' }}>Billable amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">$</span>
+                <input
+                  type="number" step="0.01" min="0" value={lumpSum} onChange={e => setLumpSum(e.target.value)} placeholder="0.00"
+                  className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
+                  style={{ ...mono, color: 'hsl(var(--amber))' }}
+                />
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* TC markup */}
-        {isTC && !isActualCost && (
-          <div>
-            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Markup %</Label>
-            <Input type="number" step="0.5" min="0" value={markup} onChange={e => setMarkup(e.target.value)} className="h-11 text-base font-semibold w-32" placeholder="0" />
-          </div>
-        )}
-
-        {/* Live total */}
-        {computedTotal > 0 && (
-          <div className="flex items-center justify-between rounded-xl px-4 py-3 border" style={{ background: 'hsl(var(--amber)/0.05)', borderColor: 'hsl(var(--amber)/0.15)' }}>
-            <span className="text-xs font-medium text-muted-foreground">
-              Entry total{markupAmount > 0 && ` (incl. ${markupPct}% markup)`}
-            </span>
-            <span className="text-lg font-bold" style={{ color: 'hsl(var(--amber-d))' }}>
-              ${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        )}
-
-        {/* Margin preview */}
-        {showMarginPreview && (
-          <div className={cn(
-            'flex items-center justify-between rounded-xl px-4 py-2.5 border',
-            marginDollars >= 0
-              ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/30'
-              : 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/30',
-          )}>
-            <span className="text-xs font-medium text-muted-foreground">Margin on this entry</span>
-            <span className={cn('text-sm font-bold', marginDollars >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
-              ${marginDollars.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({marginPercent.toFixed(1)}%)
-            </span>
-          </div>
-        )}
-
-        {/* Internal cost section */}
-        {!isActualCost && !isEditing && (isTC || isFC) && (
-          <Collapsible open={internalCostOpen} onOpenChange={setInternalCostOpen}>
-            <CollapsibleTrigger asChild>
-              <button type="button" className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-dashed border-border hover:border-[hsl(var(--amber)/0.3)] transition-colors text-xs">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Lock className="h-3 w-3" />
-                  <span className="font-medium">Log internal cost</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold dark:bg-emerald-950/30 dark:text-emerald-400">Private · optional</span>
-                </div>
-                <ChevronDown className={cn('h-3 w-3 text-muted-foreground transition-transform', internalCostOpen && 'rotate-180')} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="pt-3 space-y-3">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Internal costs are private and never shared upstream. Use this to track your actual labor and material costs.
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">Your Cost</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
-                      <Input type="number" step="0.01" min="0" value={internalCost} onChange={e => setInternalCost(e.target.value)} placeholder="0.00" className="h-11 text-base font-semibold pl-7" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground mb-1 block">Cost Type</Label>
-                    <select
-                      value={costType}
-                      onChange={e => setCostType(e.target.value)}
-                      className="w-full h-11 rounded-xl border border-border bg-background px-3 text-sm font-medium"
-                    >
-                      <option value="labor_wages">Labor wages</option>
-                      <option value="subcontractor">Subcontractor</option>
-                      <option value="materials">Materials</option>
-                      <option value="equipment">Equipment</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
+            {isTC && !isActualCost && (
+              <div className="col-span-12 sm:col-span-4 space-y-1.5">
+                <label className={microLabel}>Markup (%)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">%</span>
+                  <input
+                    type="number" step="0.5" min="0" value={markup} onChange={e => setMarkup(e.target.value)} placeholder="0"
+                    className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
+                    style={mono}
+                  />
                 </div>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
+            )}
+          </div>
+        )}
+
+        {/* Private internal cost band */}
+        {!isActualCost && !isEditing && (isTC || isFC) && (
+          <div className="rounded-xl border border-dashed border-[hsl(var(--navy-line))] bg-[hsl(var(--navy-xd)/0.6)] p-3.5">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Lock className="h-3 w-3 text-[hsl(var(--navy-fg-muted))]" />
+                <span className="text-[11px] font-bold uppercase tracking-tight text-[hsl(var(--navy-fg-muted))] truncate">
+                  Private internal cost
+                </span>
+              </div>
+              {fcAvailable && (
+                <button
+                  type="button"
+                  onClick={importFCHours}
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors shrink-0"
+                  style={{ color: 'hsl(var(--amber))', background: 'hsl(var(--amber)/0.12)' }}
+                >
+                  + Import field hours ({fcHours}h · ${fcCost.toLocaleString('en-US', { maximumFractionDigits: 0 })})
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-[hsl(var(--navy-fg-muted)/0.7)]">Your cost</span>
+                <input
+                  type="number" step="0.01" min="0" value={internalCost} onChange={e => setInternalCost(e.target.value)} placeholder="0.00"
+                  className={cn(fieldInput, 'text-right pl-20')}
+                  style={mono}
+                />
+              </div>
+              <select
+                value={costType}
+                onChange={e => setCostType(e.target.value)}
+                className={fieldInput}
+              >
+                <option value="labor_wages">Labor wages</option>
+                <option value="subcontractor">Subcontractor</option>
+                <option value="materials">Materials</option>
+                <option value="equipment">Equipment</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <p className="text-[10px] text-[hsl(var(--navy-fg-muted)/0.8)] mt-2">Never shared upstream — used for your margin tracking only.</p>
+          </div>
         )}
 
         {/* NTE warning */}
         {showNTEWarn && ntePercent !== null && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 space-y-3">
             <p className="text-sm font-semibold text-destructive">NTE cap warning</p>
-            <p className="text-xs text-destructive/80">
+            <p className="text-xs text-destructive/90">
               This entry will bring you to <span className="font-semibold">{ntePercent.toFixed(1)}%</span> of the ${nteCap?.toLocaleString('en-US', { minimumFractionDigits: 2 })} cap.
             </p>
             <div className="flex gap-2">
@@ -432,27 +481,52 @@ export function LaborEntryForm({
             </div>
           </div>
         )}
+      </div>
 
-        {/* Footer buttons */}
-        {!showNTEWarn && (
+      {/* Summary + actions */}
+      {!showNTEWarn && (
+        <div className="px-4 py-3 border-t border-[hsl(var(--navy-line))] bg-[hsl(var(--navy-xd)/0.8)] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-5">
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-widest font-bold text-[hsl(var(--navy-fg-muted))]">
+                {isActualCost ? 'Cost total' : 'Billable total'}
+              </span>
+              <span className="text-lg font-semibold text-[hsl(var(--navy-fg))]" style={mono}>
+                ${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            {showMarginPreview && (
+              <>
+                <div className="h-8 w-px bg-[hsl(var(--navy-line))]" />
+                <div className="flex flex-col">
+                  <span className="text-[9px] uppercase tracking-widest font-bold text-[hsl(var(--navy-fg-muted))]">Est. margin</span>
+                  <span className={cn('text-lg font-semibold', marginDollars >= 0 ? 'text-emerald-400' : 'text-red-400')} style={mono}>
+                    {marginPercent.toFixed(1)}%
+                  </span>
+                </div>
+              </>
+            )}
+            {markupAmount > 0 && (
+              <span className="text-[10px] text-[hsl(var(--navy-fg-muted))]">incl. {markupPct}% markup</span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {onCancel && (
-              <Button variant="ghost" onClick={onCancel} className="flex-1 h-11 text-sm">Cancel</Button>
+              <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-bold text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))] transition-colors">Cancel</button>
             )}
             <Button
               onClick={attemptSave}
               disabled={!canSave || saving}
-              className={cn('h-11 text-sm font-bold gap-2 rounded-xl shadow-md', onCancel ? 'flex-1' : 'w-full')}
+              className="h-10 px-6 text-sm font-bold gap-2 rounded-lg shadow-lg"
               style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' }}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {computedTotal > 0
-                ? `${isEditing ? 'Update' : 'Save'} Entry — $${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-                : (isEditing ? 'Update Entry' : 'Save Entry')}
+              {isEditing ? 'Update entry' : 'Save entry'}
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
+

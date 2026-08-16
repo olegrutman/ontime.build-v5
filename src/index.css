@@ -52,6 +52,10 @@
     --navy: 216 56% 14%;
     --navy-d: 220 48% 7%;
     --navy-xd: 220 56% 4%;
+    --navy-fg: 0 0% 100%;
+    --navy-fg-muted: 214 20% 68%;
+    --navy-line: 217 33% 24%;
+
 
     /* Surface */
     --surface: 222 33% 97%;
