@@ -253,6 +253,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {unpricedFCHours > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                    <AlertTriangle className="h-2.5 w-2.5" />
+                    {unpricedFCHours}h {rl.FC.toLowerCase()} time unpriced
+                  </span>
+                )}
+
                 {item.category_name && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
                 )}
