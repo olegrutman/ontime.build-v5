@@ -77,6 +77,43 @@ export function LaborEntryForm({
     return () => { cancelled = true; };
   }, [user, orgId, isTC]);
 
+  // Field-crew logged hours on this line item — importable as internal cost (TC only).
+  const [fcHours, setFcHours] = useState(0);
+  const [fcCost, setFcCost] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadFC() {
+      if (!isTC || isActualCost || isEditing || !lineItemId) return;
+      const { data } = await supabase
+        .from('co_labor_entries')
+        .select('hours, hourly_rate, lump_sum, pricing_mode')
+        .eq('co_line_item_id', lineItemId)
+        .eq('entered_by_role', 'FC');
+      if (cancelled || !data) return;
+      let h = 0, c = 0;
+      for (const e of data) {
+        h += Number(e.hours ?? 0);
+        c += e.pricing_mode === 'lump_sum'
+          ? Number(e.lump_sum ?? 0)
+          : Number(e.hours ?? 0) * Number(e.hourly_rate ?? 0);
+      }
+      setFcHours(Math.round(h * 100) / 100);
+      setFcCost(Math.round(c * 100) / 100);
+    }
+    loadFC();
+    return () => { cancelled = true; };
+  }, [lineItemId, isTC, isActualCost, isEditing]);
+
+  const fcAvailable = fcCost > 0 || fcHours > 0;
+  function importFCHours() {
+    if (fcCost > 0) setInternalCost(String(fcCost));
+    if (fcHours > 0 && !hours) { setHours(String(fcHours)); setMode('hourly'); }
+    setCostType('labor_wages');
+    toast.success(`Imported ${fcHours}h of field crew time`);
+  }
+
+
+
   const hoursValue = parseFloat(hours) || 0;
   const rateValue = parseFloat(rate) || 0;
   const lumpSumValue = parseFloat(lumpSum) || 0;
