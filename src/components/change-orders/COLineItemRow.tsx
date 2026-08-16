@@ -370,9 +370,15 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           <Lock className="h-2.5 w-2.5" /> Cost
                         </span>
                         <span className="font-mono text-xs text-foreground/70">
-                          {actualTotal > 0 ? `$${fmt(actualTotal)}` : '—'}
+                          {roleCostTotal > 0 ? `$${fmt(roleCostTotal)}` : '—'}
                         </span>
+                        {fcCostForTC > 0 && (
+                          <span className="block text-[9px] font-medium text-muted-foreground/70 leading-tight">
+                            incl. ${fmt(fcCostForTC)} {rl.FC.toLowerCase()}
+                          </span>
+                        )}
                       </div>
+
                       {hasMargin && (
                         <div className="text-right">
                           <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Margin</span>
