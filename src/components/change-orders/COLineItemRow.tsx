@@ -163,6 +163,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
 
+  // Field crew log hours without a rate — those hours carry no dollar value until
+  // someone prices them, so surface it instead of letting the line read as $0.
+  const unpricedFCHours = fcBillable
+    .filter(e => (e.hours ?? 0) > 0 && (e.line_total ?? 0) === 0)
+    .reduce((s, e) => s + Number(e.hours ?? 0), 0);
+
   // Markup visibility logic for GC
   const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
   const gcSummaryOnly = isGC && markupVisibility === 'summary';
