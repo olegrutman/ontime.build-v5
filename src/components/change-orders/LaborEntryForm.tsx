@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Check, Clock, DollarSign, Lock, ChevronDown } from 'lucide-react';
+import { Loader2, Check, Clock, DollarSign, Lock, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -261,48 +261,50 @@ export function LaborEntryForm({
     } finally { setSaving(false); setShowNTEWarn(false); }
   }
 
-  const fieldInput = 'w-full h-10 rounded-lg px-3 text-sm bg-[hsl(var(--navy-xd))] border border-[hsl(var(--navy-line))] text-[hsl(var(--navy-fg))] placeholder:text-[hsl(var(--navy-fg-muted)/0.6)] focus:outline-none focus:border-[hsl(var(--amber)/0.6)] focus:ring-1 focus:ring-[hsl(var(--amber)/0.4)] transition-colors';
-  const microLabel = 'text-[10px] uppercase tracking-wider font-bold text-[hsl(var(--navy-fg-muted))]';
+  const fieldInput = 'w-full h-10 rounded-lg px-3 text-sm bg-background border border-border text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-[hsl(var(--amber))] focus:ring-2 focus:ring-[hsl(var(--amber)/0.25)] transition-colors';
+  const microLabel = 'text-[10px] uppercase tracking-wider font-bold text-muted-foreground';
   const mono = { fontFamily: "'IBM Plex Mono', monospace" };
+  const COST_TYPES: { key: string; label: string }[] = [
+    { key: 'labor_wages', label: 'Wages' },
+    { key: 'subcontractor', label: 'Sub' },
+    { key: 'materials', label: 'Materials' },
+    { key: 'equipment', label: 'Equipment' },
+    { key: 'other', label: 'Other' },
+  ];
+
+  const money = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-[hsl(var(--navy-line))] shadow-xl bg-[hsl(var(--navy-d))]">
+    <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-md">
       {/* Header / mode switch */}
-      <div className="px-4 py-3 border-b border-[hsl(var(--navy-line))] flex items-center justify-between gap-3">
+      <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          {isActualCost ? <Lock className="h-3.5 w-3.5 text-[hsl(var(--navy-fg-muted))]" /> : <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber))' }} />}
-          <h3 className="text-xs uppercase tracking-widest font-bold text-[hsl(var(--navy-fg-muted))] truncate font-heading">
+          {isActualCost ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />}
+          <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground truncate font-heading">
             {isEditing
               ? (isActualCost ? 'Edit internal cost' : 'Edit pricing entry')
               : (isActualCost ? 'Log internal cost' : 'Add pricing entry')}
           </h3>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex p-1 rounded-lg bg-[hsl(var(--navy-xd))] border border-[hsl(var(--navy-line))]">
-            {([
-              { key: 'hourly' as const, label: 'Hours', icon: Clock },
-              { key: 'lump_sum' as const, label: 'Flat rate', icon: DollarSign },
-            ]).map(opt => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setMode(opt.key)}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5',
-                  mode === opt.key
-                    ? 'shadow-sm'
-                    : 'text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))]',
-                )}
-                style={mode === opt.key ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
-              >
-                <opt.icon className="h-3 w-3" />
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          {onCancel && (
-            <button type="button" onClick={onCancel} aria-label="Close pricing entry" className="text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))] text-sm px-1">✕</button>
-          )}
+        <div className="flex p-1 rounded-lg bg-background border border-border">
+          {([
+            { key: 'hourly' as const, label: 'Hours', icon: Clock },
+            { key: 'lump_sum' as const, label: 'Flat rate', icon: DollarSign },
+          ]).map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setMode(opt.key)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5',
+                mode === opt.key ? 'shadow-sm' : 'text-muted-foreground hover:text-foreground',
+              )}
+              style={mode === opt.key ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
+            >
+              <opt.icon className="h-3 w-3" />
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -320,113 +322,139 @@ export function LaborEntryForm({
           </div>
           <div className="col-span-12 sm:col-span-4 space-y-1.5">
             <label className={microLabel}>Date</label>
-            <button
-              type="button"
-              onClick={() => { const input = document.getElementById(`labor-date-${lineItemId}`) as HTMLInputElement; input?.showPicker?.(); }}
-              className={cn(fieldInput, 'flex items-center justify-between text-left')}
-            >
-              <span>{dateLabel}</span>
-              <span className="text-[hsl(var(--navy-fg-muted))]">▾</span>
-            </button>
-            <input id={`labor-date-${lineItemId}`} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} className="sr-only" />
+            <div className="relative">
+              <input
+                id={`labor-date-${lineItemId}`}
+                type="date"
+                value={entryDate}
+                onChange={e => setEntryDate(e.target.value)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                aria-label="Entry date"
+              />
+              <div className={cn(fieldInput, 'flex items-center justify-between gap-2 pointer-events-none')}>
+                <span className="truncate">{dateLabel}</span>
+                <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Billable row */}
-        {mode === 'hourly' ? (
-          <div className="grid grid-cols-12 gap-3 items-end">
-            <div className={cn('space-y-1.5', isTC && !isActualCost ? 'col-span-6 sm:col-span-4' : 'col-span-6')}>
-              <div className="flex items-center justify-between gap-2">
-                <label className={microLabel} style={{ color: 'hsl(var(--amber))' }}>Hours</label>
-                {!isActualCost && (
-                  <div className="flex gap-1">
-                    {QUICK_HOURS.map(h => (
-                      <button
-                        key={h} type="button" onClick={() => handleQuickHour(h)}
-                        className={cn(
-                          'text-[9px] px-1.5 py-0.5 rounded font-bold transition-colors',
-                          hoursValue === h
-                            ? 'text-[hsl(var(--navy))]'
-                            : 'bg-[hsl(var(--navy-line))] text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))]',
-                        )}
-                        style={hoursValue === h ? { background: 'hsl(var(--amber))' } : undefined}
-                      >
-                        {h}h
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-[hsl(var(--navy-fg-muted)/0.7)]">Qty</span>
-                <input
-                  type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
-                  className={cn(fieldInput, 'text-right text-base font-medium pl-10')}
-                  style={{ ...mono, color: 'hsl(var(--amber))' }}
-                />
-              </div>
-            </div>
-            <div className={cn('space-y-1.5', isTC && !isActualCost ? 'col-span-6 sm:col-span-4' : 'col-span-6')}>
-              <label className={microLabel}>Rate ($/hr)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">$</span>
-                <input
-                  type="number" step="0.01" min="0" value={rate} onChange={e => setRate(e.target.value)}
-                  className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
-                  style={mono}
-                />
-              </div>
-            </div>
-            {isTC && !isActualCost && (
-              <div className="col-span-12 sm:col-span-4 space-y-1.5">
-                <label className={microLabel}>Markup (%)</label>
+        {/* Billable precision grid — stable 4/4/4 geometry */}
+        <div className="grid grid-cols-12 gap-3">
+          {mode === 'hourly' ? (
+            <>
+              <div className="col-span-6 sm:col-span-4 space-y-1.5">
+                <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hours</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">%</span>
                   <input
-                    type="number" step="0.5" min="0" value={markup} onChange={e => setMarkup(e.target.value)} placeholder="0"
-                    className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
-                    style={mono}
+                    type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
+                    className={cn(fieldInput, 'text-right text-base font-semibold pr-12')}
+                    style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold uppercase text-muted-foreground pointer-events-none">hrs</span>
                 </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-12 gap-3 items-end">
-            <div className={cn('space-y-1.5', isTC && !isActualCost ? 'col-span-12 sm:col-span-8' : 'col-span-12')}>
-              <label className={microLabel} style={{ color: 'hsl(var(--amber))' }}>Billable amount</label>
+              <div className="col-span-6 sm:col-span-4 space-y-1.5">
+                <label className={microLabel}>Rate</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                  <input
+                    type="number" step="0.01" min="0" value={rate} onChange={e => setRate(e.target.value)}
+                    className={cn(fieldInput, 'text-right text-base font-semibold pl-7 pr-10')}
+                    style={mono}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold uppercase text-muted-foreground pointer-events-none">/hr</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="col-span-12 sm:col-span-8 space-y-1.5">
+              <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Billable amount</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
                 <input
                   type="number" step="0.01" min="0" value={lumpSum} onChange={e => setLumpSum(e.target.value)} placeholder="0.00"
-                  className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
-                  style={{ ...mono, color: 'hsl(var(--amber))' }}
+                  className={cn(fieldInput, 'text-right text-base font-semibold pl-7')}
+                  style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                 />
               </div>
             </div>
-            {isTC && !isActualCost && (
-              <div className="col-span-12 sm:col-span-4 space-y-1.5">
-                <label className={microLabel}>Markup (%)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--navy-fg-muted)/0.7)]">%</span>
-                  <input
-                    type="number" step="0.5" min="0" value={markup} onChange={e => setMarkup(e.target.value)} placeholder="0"
-                    className={cn(fieldInput, 'text-right text-base font-medium pl-7')}
-                    style={mono}
-                  />
-                </div>
+          )}
+
+          {/* Third precision cell always occupied: markup (TC) or line total (others) */}
+          {isTC && !isActualCost ? (
+            <div className="col-span-12 sm:col-span-4 space-y-1.5">
+              <label className={microLabel}>Markup</label>
+              <div className="relative">
+                <input
+                  type="number" step="0.5" min="0" value={markup} onChange={e => setMarkup(e.target.value)} placeholder="0"
+                  className={cn(fieldInput, 'text-right text-base font-semibold pr-8')}
+                  style={mono}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground pointer-events-none">%</span>
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="col-span-12 sm:col-span-4 space-y-1.5">
+              <label className={microLabel}>Line total</label>
+              <div className={cn(fieldInput, 'flex items-center justify-end bg-muted/50 text-foreground font-semibold text-base')} style={mono}>
+                {money(computedTotal)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick-hour chip rail */}
+        {mode === 'hourly' && !isActualCost && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground shrink-0">Quick</span>
+            <div className="flex gap-2 flex-1">
+              {QUICK_HOURS.map(h => (
+                <button
+                  key={h} type="button" onClick={() => handleQuickHour(h)}
+                  className={cn(
+                    'flex-1 h-8 rounded-lg text-xs font-bold border transition-colors',
+                    hoursValue === h
+                      ? 'border-transparent'
+                      : 'border-border bg-background text-muted-foreground hover:text-foreground hover:border-[hsl(var(--amber)/0.5)]',
+                  )}
+                  style={hoursValue === h ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
+                >
+                  {h}h
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* Live math expression */}
+        <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5" style={mono}>
+          {mode === 'hourly' ? (
+            <>
+              <span>{hoursValue || 0} hrs</span>
+              <span className="text-muted-foreground/60">×</span>
+              <span>{money(rateValue)}</span>
+            </>
+          ) : (
+            <span>{money(lumpSumValue)}</span>
+          )}
+          {markupAmount > 0 && (
+            <>
+              <span className="text-muted-foreground/60">+</span>
+              <span>{markupPct}% markup ({money(markupAmount)})</span>
+            </>
+          )}
+          <span className="text-muted-foreground/60">=</span>
+          <span className="font-bold text-foreground">{money(computedTotal)}</span>
+        </div>
+
         {/* Private internal cost band */}
         {!isActualCost && !isEditing && (isTC || isFC) && (
-          <div className="rounded-xl border border-dashed border-[hsl(var(--navy-line))] bg-[hsl(var(--navy-xd)/0.6)] p-3.5">
+          <div className="rounded-xl border border-dashed border-border bg-muted/40 p-3.5">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2 min-w-0">
-                <Lock className="h-3 w-3 text-[hsl(var(--navy-fg-muted))]" />
-                <span className="text-[11px] font-bold uppercase tracking-tight text-[hsl(var(--navy-fg-muted))] truncate">
+                <Lock className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[11px] font-bold uppercase tracking-tight text-muted-foreground truncate">
                   Private internal cost
                 </span>
               </div>
@@ -435,43 +463,48 @@ export function LaborEntryForm({
                   type="button"
                   onClick={importFCHours}
                   className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors shrink-0"
-                  style={{ color: 'hsl(var(--amber))', background: 'hsl(var(--amber)/0.12)' }}
+                  style={{ color: 'hsl(var(--amber-d))', background: 'hsl(var(--amber)/0.14)' }}
                 >
                   + Import field hours ({fcHours}h · ${fcCost.toLocaleString('en-US', { maximumFractionDigits: 0 })})
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2.5">
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-[hsl(var(--navy-fg-muted)/0.7)]">Your cost</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] uppercase font-bold text-muted-foreground">Your cost</span>
                 <input
                   type="number" step="0.01" min="0" value={internalCost} onChange={e => setInternalCost(e.target.value)} placeholder="0.00"
-                  className={cn(fieldInput, 'text-right pl-20')}
+                  className={cn(fieldInput, 'text-right pl-24 font-semibold')}
                   style={mono}
                 />
               </div>
-              <select
-                value={costType}
-                onChange={e => setCostType(e.target.value)}
-                className={fieldInput}
-              >
-                <option value="labor_wages">Labor wages</option>
-                <option value="subcontractor">Subcontractor</option>
-                <option value="materials">Materials</option>
-                <option value="equipment">Equipment</option>
-                <option value="other">Other</option>
-              </select>
+              <div className="flex flex-wrap gap-1.5">
+                {COST_TYPES.map(t => (
+                  <button
+                    key={t.key} type="button" onClick={() => setCostType(t.key)}
+                    className={cn(
+                      'px-2.5 h-7 rounded-lg text-[11px] font-bold border transition-colors',
+                      costType === t.key
+                        ? 'border-transparent'
+                        : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                    )}
+                    style={costType === t.key ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="text-[10px] text-[hsl(var(--navy-fg-muted)/0.8)] mt-2">Never shared upstream — used for your margin tracking only.</p>
+            <p className="text-[10px] text-muted-foreground mt-2.5">Never shared upstream — used for your margin tracking only.</p>
           </div>
         )}
 
         {/* NTE warning */}
         {showNTEWarn && ntePercent !== null && (
-          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 space-y-3">
-            <p className="text-sm font-semibold text-destructive">NTE cap warning</p>
+          <div className="rounded-xl border border-dashed border-destructive/50 bg-destructive/5 p-3.5 space-y-3">
+            <p className="text-[11px] font-bold uppercase tracking-tight text-destructive">NTE cap warning</p>
             <p className="text-xs text-destructive/90">
-              This entry will bring you to <span className="font-semibold">{ntePercent.toFixed(1)}%</span> of the ${nteCap?.toLocaleString('en-US', { minimumFractionDigits: 2 })} cap.
+              This entry will bring you to <span className="font-bold" style={mono}>{ntePercent.toFixed(1)}%</span> of the {money(nteCap ?? 0)} cap.
             </p>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1 h-10" onClick={() => setShowNTEWarn(false)}>Cancel</Button>
@@ -485,39 +518,34 @@ export function LaborEntryForm({
 
       {/* Summary + actions */}
       {!showNTEWarn && (
-        <div className="px-4 py-3 border-t border-[hsl(var(--navy-line))] bg-[hsl(var(--navy-xd)/0.8)] flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 py-3 border-t border-border bg-muted/40 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-5">
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-widest font-bold text-[hsl(var(--navy-fg-muted))]">
+              <span className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground">
                 {isActualCost ? 'Cost total' : 'Billable total'}
               </span>
-              <span className="text-lg font-semibold text-[hsl(var(--navy-fg))]" style={mono}>
-                ${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </span>
+              <span className="text-lg font-bold text-foreground" style={mono}>{money(computedTotal)}</span>
             </div>
             {showMarginPreview && (
               <>
-                <div className="h-8 w-px bg-[hsl(var(--navy-line))]" />
+                <div className="h-8 w-px bg-border" />
                 <div className="flex flex-col">
-                  <span className="text-[9px] uppercase tracking-widest font-bold text-[hsl(var(--navy-fg-muted))]">Est. margin</span>
-                  <span className={cn('text-lg font-semibold', marginDollars >= 0 ? 'text-emerald-400' : 'text-red-400')} style={mono}>
+                  <span className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground">Est. margin</span>
+                  <span className={cn('text-lg font-bold', marginDollars >= 0 ? 'text-emerald-600' : 'text-destructive')} style={mono}>
                     {marginPercent.toFixed(1)}%
                   </span>
                 </div>
               </>
             )}
-            {markupAmount > 0 && (
-              <span className="text-[10px] text-[hsl(var(--navy-fg-muted))]">incl. {markupPct}% markup</span>
-            )}
           </div>
           <div className="flex items-center gap-2">
             {onCancel && (
-              <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-bold text-[hsl(var(--navy-fg-muted))] hover:text-[hsl(var(--navy-fg))] transition-colors">Cancel</button>
+              <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
             )}
             <Button
               onClick={attemptSave}
               disabled={!canSave || saving}
-              className="h-10 px-6 text-sm font-bold gap-2 rounded-lg shadow-lg"
+              className="h-10 px-6 text-sm font-bold gap-2 rounded-lg shadow-sm"
               style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' }}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -529,4 +557,3 @@ export function LaborEntryForm({
     </div>
   );
 }
-
