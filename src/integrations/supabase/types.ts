@@ -1389,6 +1389,7 @@ export type Database = {
           markup_percent: number
           org_id: string
           pricing_mode: string
+          source_fc_entry_ids: string[] | null
         }
         Insert: {
           actual_cost_note?: string | null
@@ -1411,6 +1412,7 @@ export type Database = {
           markup_percent?: number
           org_id: string
           pricing_mode?: string
+          source_fc_entry_ids?: string[] | null
         }
         Update: {
           actual_cost_note?: string | null
@@ -1433,6 +1435,7 @@ export type Database = {
           markup_percent?: number
           org_id?: string
           pricing_mode?: string
+          source_fc_entry_ids?: string[] | null
         }
         Relationships: [
           {

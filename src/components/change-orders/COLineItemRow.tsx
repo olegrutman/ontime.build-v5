@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2 } from 'lucide-react';
+import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -163,6 +163,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
 
+  // Field crew log hours without a rate — those hours carry no dollar value until
+  // someone prices them, so surface it instead of letting the line read as $0.
+  const unpricedFCHours = fcBillable
+    .filter(e => (e.hours ?? 0) > 0 && (e.line_total ?? 0) === 0)
+    .reduce((s, e) => s + Number(e.hours ?? 0), 0);
+
   // Markup visibility logic for GC
   const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
   const gcSummaryOnly = isGC && markupVisibility === 'summary';
@@ -247,6 +253,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {unpricedFCHours > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                    <AlertTriangle className="h-2.5 w-2.5" />
+                    {unpricedFCHours}h {rl.FC.toLowerCase()} time unpriced
+                  </span>
+                )}
+
                 {item.category_name && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
                 )}

@@ -1,0 +1,1 @@
+ALTER TABLE public.co_labor_entries ADD COLUMN IF NOT EXISTS source_fc_entry_ids uuid[];

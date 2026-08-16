@@ -80,13 +80,15 @@ export function LaborEntryForm({
   // Field-crew logged hours on this line item — importable as internal cost (TC only).
   const [fcHours, setFcHours] = useState(0);
   const [fcCost, setFcCost] = useState(0);
+  const [fcEntryIds, setFcEntryIds] = useState<string[]>([]);
+  const [importedFC, setImportedFC] = useState(false);
   useEffect(() => {
     let cancelled = false;
     async function loadFC() {
       if (!isTC || isActualCost || isEditing || !lineItemId) return;
       const { data } = await supabase
         .from('co_labor_entries')
-        .select('hours, hourly_rate, lump_sum, pricing_mode')
+        .select('id, hours, hourly_rate, lump_sum, pricing_mode')
         .eq('co_line_item_id', lineItemId)
         .eq('entered_by_role', 'FC');
       if (cancelled || !data) return;
@@ -99,6 +101,7 @@ export function LaborEntryForm({
       }
       setFcHours(Math.round(h * 100) / 100);
       setFcCost(Math.round(c * 100) / 100);
+      setFcEntryIds(data.map((e: any) => e.id));
     }
     loadFC();
     return () => { cancelled = true; };
@@ -109,6 +112,7 @@ export function LaborEntryForm({
     if (fcCost > 0) setInternalCost(String(fcCost));
     if (fcHours > 0 && !hours) { setHours(String(fcHours)); setMode('hourly'); }
     setCostType('labor_wages');
+    setImportedFC(true);
     toast.success(`Imported ${fcHours}h of field crew time`);
   }
 
@@ -150,6 +154,7 @@ export function LaborEntryForm({
   function resetForm() {
     setHours(''); setLumpSum(''); setDescription('');
     setInternalCost(''); setInternalCostOpen(true); setCostType('labor_wages');
+    setImportedFC(false);
     setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
   }
 
@@ -225,6 +230,8 @@ export function LaborEntryForm({
           lump_sum: internalCostValue,
           description: description.trim() ? `Internal: ${description.trim()}` : `Internal cost (${costType.replace(/_/g, ' ')})`,
           is_actual_cost: true,
+          // Provenance: ties this internal cost row back to the field crew time it came from.
+          source_fc_entry_ids: importedFC && fcEntryIds.length > 0 ? fcEntryIds : null,
         });
       }
 
