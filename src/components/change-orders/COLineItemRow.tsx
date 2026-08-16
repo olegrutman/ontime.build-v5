@@ -182,11 +182,18 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   const statusColor = getStatusColor(visibleBillable, showGCApproval);
 
+  // Cost per scope item.
+  // For a TC, what the field crew bills them IS a cost of this scope item, so it
+  // rolls into the private cost cell alongside any manually logged internal costs.
+  const fcCostForTC = isTC ? fcTotal : 0;
+  const roleCostTotal = actualTotal + fcCostForTC;
+
   // Margin
   const billableTotal = isFC ? fcTotal : tcTotal;
-  const hasMargin = billableTotal > 0 && actualTotal > 0;
-  const marginAmount = billableTotal - actualTotal;
+  const hasMargin = billableTotal > 0 && roleCostTotal > 0;
+  const marginAmount = billableTotal - roleCostTotal;
   const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
+
 
   const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
 
@@ -298,7 +305,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           {/* Right side — consolidated pricing module */}
           <div className="shrink-0 flex items-center gap-2.5">
             {(() => {
-              const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (actualTotal > 0 || hasMargin);
+              const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
               // Prefer how the entries were actually priced; fall back to the CO pricing type.
               const modeLabel = visibleBillable.length > 0
                 ? (visibleBillable.every(e => e.pricing_mode === 'lump_sum') ? 'Lump sum' : 'Hourly')
@@ -363,9 +370,15 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           <Lock className="h-2.5 w-2.5" /> Cost
                         </span>
                         <span className="font-mono text-xs text-foreground/70">
-                          {actualTotal > 0 ? `$${fmt(actualTotal)}` : '—'}
+                          {roleCostTotal > 0 ? `$${fmt(roleCostTotal)}` : '—'}
                         </span>
+                        {fcCostForTC > 0 && (
+                          <span className="block text-[9px] font-medium text-muted-foreground/70 leading-tight">
+                            incl. ${fmt(fcCostForTC)} {rl.FC.toLowerCase()}
+                          </span>
+                        )}
                       </div>
+
                       {hasMargin && (
                         <div className="text-right">
                           <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Margin</span>
@@ -728,24 +741,41 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 );
               })()}
 
-              {/* TC downstream costs */}
-              {isTC && tcDownstreamCosts.length > 0 && (
-                <div className="border-t border-border px-5 py-2">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-1">{rl.FC} Entries</p>
+              {/* TC's cost for this scope item — field crew charges + own internal costs */}
+              {isTC && (tcDownstreamCosts.length > 0 || actualTotal > 0) && (
+                <div className="border-t border-border px-5 py-2.5 bg-muted/20">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold mb-1.5 flex items-center gap-1">
+                    <Lock className="h-2.5 w-2.5" /> Your cost for this item
+                  </p>
                   {tcDownstreamCosts.map(entry => (
                     <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="w-20">{entry.entry_date}</span>
-                      <span className="flex-1 truncate">{entry.description || '—'}</span>
+                      <span className="flex-1 truncate">{rl.FC} · {entry.description || '—'}</span>
                       <span className="w-14 text-right font-mono">{entry.hours ?? '—'}</span>
-                      <span className="w-20 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
+                      <span className="w-24 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between text-xs font-semibold text-muted-foreground pt-1 border-t border-border/30">
-                    <span>{rl.FC} total</span>
-                    <span className="font-mono">${fmt(fcTotal)}</span>
+                  {actualTotal > 0 && (
+                    <div className="flex items-center text-xs py-1.5 text-muted-foreground">
+                      <span className="flex-1 truncate">Own internal costs</span>
+                      <span className="w-24 text-right font-mono">${fmt(actualTotal)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs font-bold text-foreground pt-1.5 border-t border-border/40">
+                    <span>Total cost</span>
+                    <span className="font-mono">${fmt(roleCostTotal)}</span>
                   </div>
+                  {billableTotal > 0 && (
+                    <div className="flex justify-between text-xs pt-1 text-muted-foreground">
+                      <span>Margin on this item</span>
+                      <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                        ${fmt(marginAmount)} · {marginPct.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
+
             </>
           )}
 
