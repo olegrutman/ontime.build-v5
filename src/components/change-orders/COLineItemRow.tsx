@@ -305,7 +305,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           {/* Right side — consolidated pricing module */}
           <div className="shrink-0 flex items-center gap-2.5">
             {(() => {
-              const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (actualTotal > 0 || hasMargin);
+              const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
               // Prefer how the entries were actually priced; fall back to the CO pricing type.
               const modeLabel = visibleBillable.length > 0
                 ? (visibleBillable.every(e => e.pricing_mode === 'lump_sum') ? 'Lump sum' : 'Hourly')
