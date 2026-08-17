@@ -43,6 +43,9 @@ export default function PurchaseOrders() {
   const [sending, setSending] = useState(false);
   
   const organizationId = userOrgRoles[0]?.organization_id;
+  const orgType = (userOrgRoles[0] as any)?.organization?.type as string | undefined;
+  const isSupplierOrg = orgType === 'SUPPLIER';
+
 
   useEffect(() => {
     if (!authLoading && !user) {
