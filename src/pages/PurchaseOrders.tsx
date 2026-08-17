@@ -283,7 +283,7 @@ export default function PurchaseOrders() {
     <AppLayout title="Purchase Orders" subtitle="Create and send purchase orders to suppliers">
       <div className="space-y-4 sm:space-y-6">
         <div className="flex justify-end">
-          {(permissions?.canCreatePOs ?? false) && (
+          {!isSupplierOrg && (permissions?.canCreatePOs ?? false) && (
           <Dialog open={newPOOpen} onOpenChange={setNewPOOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="sm:size-default">
