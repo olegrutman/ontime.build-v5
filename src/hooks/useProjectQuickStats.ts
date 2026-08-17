@@ -162,9 +162,9 @@ export function useProjectQuickStats(
       const budgetUsed = approvedPaid.reduce((s, i) => s + (i.total_amount ?? 0), 0);
       const budgetPercent = budgetTotal > 0 ? Math.round((budgetUsed / budgetTotal) * 100) : 0;
 
-      // Exclude REJECTED invoices from totalBilled
+      // Exclude REJECTED and VOIDED invoices from totalBilled
       const totalBilled = invoices
-        .filter((i) => i.status !== 'REJECTED')
+        .filter((i) => i.status !== 'REJECTED' && i.status !== 'VOIDED')
         .reduce((s, i) => s + (i.total_amount ?? 0), 0);
       const paidAmount = invoices
         .filter((i) => i.status === 'PAID')
