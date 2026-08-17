@@ -185,8 +185,18 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // Cost per scope item.
   // For a TC, what the field crew bills them IS a cost of this scope item, so it
   // rolls into the private cost cell alongside any manually logged internal costs.
-  const fcCostForTC = isTC ? fcTotal : 0;
+  // Field crew entries that were already captured via "Import field hours" live
+  // inside an internal-cost row, so exclude them here to avoid double counting.
+  const importedFCEntryIds = new Set<string>(
+    actualCosts.flatMap(e => ((e as { source_fc_entry_ids?: string[] | null }).source_fc_entry_ids ?? [])),
+  );
+  const fcCostForTC = isTC
+    ? fcBillable
+        .filter(e => !importedFCEntryIds.has(e.id))
+        .reduce((s, e) => s + (e.line_total ?? 0), 0)
+    : 0;
   const roleCostTotal = actualTotal + fcCostForTC;
+
 
   // Margin
   const billableTotal = isFC ? fcTotal : tcTotal;
