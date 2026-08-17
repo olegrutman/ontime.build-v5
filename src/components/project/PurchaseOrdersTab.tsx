@@ -71,7 +71,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const isSupplier = currentOrgType === 'SUPPLIER';
   const isGC = currentOrgType === 'GC';
   const isTC = currentOrgType === 'TC';
-  const canCreatePO = permissions?.canCreatePOs ?? false;
+  // Suppliers never issue POs — they receive and price them.
+  const canCreatePO = !isSupplier && (permissions?.canCreatePOs ?? false);
+
   const hidePricing = isTC && materialResponsibility === 'GC';
   // A TC-raised PO must route through the GC whenever the relationship asks for it OR
   // the GC carries material responsibility (the GC ends up owning/paying the PO).
