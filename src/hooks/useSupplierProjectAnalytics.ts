@@ -174,7 +174,7 @@ export function useSupplierProjectAnalytics({
           }
           return;
         }
-        if (inv.status === 'DRAFT') return;
+        if (inv.status === 'DRAFT' || inv.status === 'VOIDED') return;
         // open invoice
         const refDate = inv.submitted_at || inv.created_at;
         if (!refDate) return;

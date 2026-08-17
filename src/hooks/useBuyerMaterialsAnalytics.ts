@@ -337,7 +337,7 @@ export function useBuyerMaterialsAnalytics({
       let unpaidInvoicesTotal = 0;
       let next14DaysOutflow = 0;
       invoices.forEach(inv => {
-        if (inv.status === 'PAID' || inv.status === 'DRAFT' || inv.status === 'REJECTED') return;
+        if (inv.status === 'PAID' || inv.status === 'DRAFT' || inv.status === 'REJECTED' || inv.status === 'VOIDED') return;
         const amt = Number(inv.total_amount || 0);
         unpaidInvoicesTotal += amt;
         const refDate = inv.submitted_at || inv.created_at;

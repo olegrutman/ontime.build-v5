@@ -68,12 +68,12 @@ export default function PurchaseOrders() {
       .from('purchase_orders')
       .select(`
         id, po_number, po_name, status, created_at, project_id, supplier_id,
-        download_token, organization_id, po_total, sales_tax_percent,
-        organization:organizations(name, org_code),
+        download_token, organization_id, pricing_owner_org_id, po_total, sales_tax_percent,
+        organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
         supplier:suppliers(id, name, supplier_code, contact_info),
         project:projects(id, name)
       `)
-      .eq('organization_id', organizationId)
+      .or(`organization_id.eq.${organizationId},pricing_owner_org_id.eq.${organizationId}`)
       .order('created_at', { ascending: false })
       .limit(100);
 

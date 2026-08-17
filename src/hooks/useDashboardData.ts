@@ -654,7 +654,7 @@ export function useDashboardData(): DashboardData {
       setBilling({
         invoicesReceived: invoicesToPay.length,
         invoicesSent: allInvoices.filter(i => {
-          if (i.status === 'DRAFT' || !i.contract_id) return false;
+          if (i.status === 'DRAFT' || i.status === 'VOIDED' || !i.contract_id) return false;
           const contract = contractDetailMap.get(i.contract_id);
           return contract?.from_org_id === currentOrg.id;
         }).length,
