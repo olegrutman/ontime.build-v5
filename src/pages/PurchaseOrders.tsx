@@ -280,7 +280,7 @@ export default function PurchaseOrders() {
   }
 
   return (
-    <AppLayout title="Purchase Orders" subtitle="Create and send purchase orders to suppliers">
+    <AppLayout title="Purchase Orders" subtitle={isSupplierOrg ? 'Purchase orders sent to you by builders' : 'Create and send purchase orders to suppliers'}>
       <div className="space-y-4 sm:space-y-6">
         <div className="flex justify-end">
           {!isSupplierOrg && (permissions?.canCreatePOs ?? false) && (
