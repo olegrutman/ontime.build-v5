@@ -67,6 +67,23 @@ export default function PurchaseOrders() {
 
   const fetchOrders = async () => {
     if (!organizationId) return;
+
+    // Supplier orgs own POs through their supplier records (purchase_orders.supplier_id),
+    // not through organization_id / pricing_owner_org_id.
+    const { data: mySupplierRows } = await supabase
+      .from('suppliers')
+      .select('id')
+      .eq('organization_id', organizationId);
+    const mySupplierIds = (mySupplierRows || []).map((s: any) => s.id);
+
+    const orFilters = [
+      `organization_id.eq.${organizationId}`,
+      `pricing_owner_org_id.eq.${organizationId}`,
+    ];
+    if (mySupplierIds.length > 0) {
+      orFilters.push(`supplier_id.in.(${mySupplierIds.join(',')})`);
+    }
+
     const { data, error } = await supabase
       .from('purchase_orders')
       .select(`
@@ -76,7 +93,7 @@ export default function PurchaseOrders() {
         supplier:suppliers(id, name, supplier_code, contact_info),
         project:projects(id, name)
       `)
-      .or(`organization_id.eq.${organizationId},pricing_owner_org_id.eq.${organizationId}`)
+      .or(orFilters.join(','))
       .order('created_at', { ascending: false })
       .limit(100);
 
@@ -86,6 +103,7 @@ export default function PurchaseOrders() {
     }
     setOrders((data || []) as unknown as PurchaseOrder[]);
   };
+
 
   const fetchSuppliers = async () => {
     const { data } = await supabase.from('suppliers').select('id, name, supplier_code, contact_info').order('name');
