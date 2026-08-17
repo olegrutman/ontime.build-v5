@@ -7912,6 +7912,7 @@ export type Database = {
           markup_percent: number | null
           org_id: string | null
           pricing_mode: string | null
+          source_fc_entry_ids: string[] | null
         }
         Insert: {
           actual_cost_note?: string | null
@@ -7925,15 +7926,16 @@ export type Database = {
           entry_date?: string | null
           gc_approved?: boolean | null
           gc_approved_at?: string | null
-          hourly_rate?: never
+          hourly_rate?: number | null
           hours?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
-          line_total?: never
-          lump_sum?: never
+          line_total?: number | null
+          lump_sum?: number | null
           markup_percent?: never
           org_id?: string | null
           pricing_mode?: string | null
+          source_fc_entry_ids?: string[] | null
         }
         Update: {
           actual_cost_note?: string | null
@@ -7947,15 +7949,16 @@ export type Database = {
           entry_date?: string | null
           gc_approved?: boolean | null
           gc_approved_at?: string | null
-          hourly_rate?: never
+          hourly_rate?: number | null
           hours?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
-          line_total?: never
-          lump_sum?: never
+          line_total?: number | null
+          lump_sum?: number | null
           markup_percent?: never
           org_id?: string | null
           pricing_mode?: string | null
+          source_fc_entry_ids?: string[] | null
         }
         Relationships: [
           {
