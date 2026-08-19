@@ -30,6 +30,8 @@ export interface LedgerContract {
   to_org_id: string | null;
   contract_sum: number;
   co_approved_sum?: number | null;
+  original_contract_sum?: number | null;
+
   retainage_percent?: number | null;
   trade?: string | null;
 }
