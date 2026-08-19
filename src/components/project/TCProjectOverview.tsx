@@ -486,36 +486,28 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         );
       })()}
 
+      {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Financials
+      </div>
+      <CanonicalKpiGrid
+        ledger={financials.ledger}
+        extras={{
+          billsTo: gcName,
+          paidParties: `${fcName || 'Field Crew'} + suppliers`,
+          approvedCOCount: approvedCOs.length,
+          pendingCOCount: pendingCOs.length,
+          coWord: isTM ? 'WO' : 'CO',
+        }}
+      />
+
       {/* ─── Detailed KPI Cards — drilldown grid ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
         Detail
       </div>
 
-      {/* 8 KPI Cards — 4-col grid */}
       <KpiGrid>
 
-        {/* Card 1 — GC Contract / T&M Revenue */}
-        {/* Card 1 — Your revenue = base GC contract + APPROVED COs (the revised
-            total). The base alone understated revenue by every approved CO. */}
-        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `WO REVENUE (FROM ${gcName.toUpperCase()})` : `YOUR REVENUE (${gcName.toUpperCase()})`} value={revisedGCTotal > 0 ? fmt(revisedGCTotal) : '—'} sub={isTM ? `Sum of ${approvedCOs.length} approved WO${approvedCOs.length !== 1 ? 's' : ''}` : approvedCoRevenue > 0 ? `Base ${fmt(effectiveGCVal)} + ${fmt(approvedCoRevenue)} approved CO${approvedCOs.length !== 1 ? 's' : ''}` : `Base contract · ${gcName} set this`} pills={revisedGCTotal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: isTM ? `${approvedCOs.length} WOs` : approvedCoRevenue > 0 ? `incl. ${approvedCOs.length} approved CO${approvedCOs.length !== 1 ? 's' : ''}` : `${gcName} set this` }] : [{ type: 'pm', text: isTM ? 'No approved WOs' : 'Not Set' }]} idx={0}>
-          <div style={{ padding: '12px 16px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Item', 'Value']} />
-              <tbody>
-                <TRow cells={[<TdN>{isTM ? 'Approved WO Revenue' : `Base Contract (set by ${gcName})`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
-                {!isTM && <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(approvedCoRevenue)}</TdM>]} />}
-                {!isTM && <TRow cells={[<TdN>Your Revenue (revised total)</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />}
-                <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
-                <TRow cells={[<TdN>Pending from {gcName}</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
-                <TRow cells={[<TdN>Remaining to Bill</TdN>, <TdM>{fmt((isTM ? effectiveGCVal : revisedGCTotal) - totalReceivedFromGC - totalPendingFromGC)}</TdM>]} isTotal />
-              </tbody>
-            </table>
-            <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: C.blueBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
-              <span style={{ fontSize: 14 }}>ℹ️</span>
-              <span>{isTM ? `Revenue is the sum of approved Work Order gc_budget values (${approvedCOs.length} WOs).` : <>This contract value was set by {gcName}. Contact <strong style={{ color: C.ink }}>{gcName}</strong> to request changes.</>}</span>
-            </div>
-          </div>
-        </KpiCard>
 
         {/* Card 2 — FC Contract (EDITABLE) */}
         <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label={isTM ? `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} COST TRACKING` : `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} CONTRACT (YOU SET THIS)`} value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || fcName || 'Field Crew'} · ${tcMarginPct}% labor-only margin` : 'No contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
