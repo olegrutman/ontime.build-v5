@@ -333,7 +333,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const [{ data: l = [] }, { data: m = [] }, { data: e = [] }] = await Promise.all([
           // Actual-cost rows are fetched too: aggregateCOTotals excludes them
           // from revenue but needs them for cost/margin.
-          supabase.from('co_labor_entries').select('co_id, org_id, line_total, is_actual_cost').in('co_id', allCOIds),
+          supabase.from('co_labor_entries').select('id, co_id, org_id, line_total, is_actual_cost, entered_by_role, source_fc_entry_ids').in('co_id', allCOIds),
 
           supabase.from('co_material_items').select('co_id, org_id, billed_amount, line_cost').in('co_id', allCOIds),
           supabase.from('co_equipment_items').select('co_id, org_id, billed_amount, cost').in('co_id', allCOIds),
