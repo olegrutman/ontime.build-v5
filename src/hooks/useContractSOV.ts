@@ -29,7 +29,8 @@ export async function createScheduleItemsFromSOVItems(
   if (error) throw error;
 }
 
-export { baseContractSum } from '@/lib/contractSums';
+import { baseContractSum } from '@/lib/contractSums';
+export { baseContractSum };
 
 // Contract types
 export interface ProjectContract {
