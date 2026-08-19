@@ -380,6 +380,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setPendingCORevenue(agg.pendingCORevenue);
       setPendingCOCost(agg.pendingCOCost);
       setApprovedWOTotal(agg.approvedWOTotal);
+      setCoCostBreakdown(agg.approvedCostBreakdown);
+      setCoPendingCostBreakdown(agg.pendingCostBreakdown);
       // ===== end CO aggregation =====
 
       // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
