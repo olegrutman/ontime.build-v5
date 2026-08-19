@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { forwardRef, useState, type ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 /* ─── Design tokens ─── */
@@ -41,14 +41,14 @@ const PILL_S: Record<PillType, { bg: string; color: string; border?: string }> =
   pn: { bg: C.navy, color: '#FFF' },
 };
 
-export function Pill({ type, children }: { type: PillType; children: ReactNode }) {
+export const Pill = forwardRef<HTMLSpanElement, { type: PillType; children: ReactNode }>(function Pill({ type, children }, ref) {
   const s = PILL_S[type];
   return (
-    <span style={{ fontSize: '0.59rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color, border: s.border || 'none', whiteSpace: 'nowrap', ...fontLabel }}>
+    <span ref={ref} style={{ fontSize: '0.59rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color, border: s.border || 'none', whiteSpace: 'nowrap', ...fontLabel }}>
       {children}
     </span>
   );
-}
+});
 
 /* ─── Bar ─── */
 export function Bar({ pct, color }: { pct: number; color: string }) {
@@ -152,13 +152,13 @@ export const cellStyle = { padding: '7px 9px', fontSize: '0.74rem', color: C.mut
 export const cellStyleR = { ...cellStyle, textAlign: 'right' as const };
 export const totalRowStyle = { background: C.surface2, fontWeight: 700 };
 
-export function TRow({ cells, isTotal, greenText, onClick }: { cells: ReactNode[]; isTotal?: boolean; greenText?: boolean; onClick?: () => void }) {
+export const TRow = forwardRef<HTMLTableRowElement, { cells: ReactNode[]; isTotal?: boolean; greenText?: boolean; onClick?: () => void }>(function TRow({ cells, isTotal, greenText, onClick }, ref) {
   return (
-    <tr style={{ ...(isTotal ? totalRowStyle : { cursor: 'pointer' }), ...(greenText ? { color: C.green } : {}) }} className={isTotal ? '' : 'hover:bg-[rgba(245,166,35,.05)]'} onClick={onClick}>
+    <tr ref={ref} style={{ ...(isTotal ? totalRowStyle : { cursor: 'pointer' }), ...(greenText ? { color: C.green } : {}) }} className={isTotal ? '' : 'hover:bg-[rgba(245,166,35,.05)]'} onClick={onClick}>
       {cells.map((c, i) => <td key={i} style={i === cells.length - 1 ? cellStyleR : cellStyle}>{c}</td>)}
     </tr>
   );
-}
+});
 
 /* ─── WarnItem ─── */
 export function WarnItem({ color, icon, title, sub, value, pill, pillType, onClick }: {
