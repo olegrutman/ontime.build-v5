@@ -233,8 +233,6 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const gcPaidAmount = financials.payablesPaid;
   const pendingPayableCount = financials.payablesPendingCount;
   const pendingPayableAmount = financials.payablesPendingAmount;
-  const paidInvoices = financials.recentInvoices.filter(i => i.status === 'PAID');
-  const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
 
   // ─── Team data ───
   const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
@@ -432,7 +430,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                         <TRow key={co.id} cells={[
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
-                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                          <TdM>{coOwnerValue(co) ? fmt(coOwnerValue(co)) : '—'}</TdM>,
                           <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
                       ))}
@@ -545,7 +543,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                           <TRow key={co.id} cells={[
                             <TdN>{co.co_number || '—'}</TdN>,
                             co.title || '—',
-                            <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                            <TdM>{coOwnerValue(co) ? fmt(coOwnerValue(co)) : '—'}</TdM>,
                             <TdM>{woTotalCost > 0 ? fmt(woTotalCost) : '—'}</TdM>,
                             <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                           ]} />
@@ -685,7 +683,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                         <TRow key={co.id} cells={[
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
-                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                          <TdM>{coOwnerValue(co) ? fmt(coOwnerValue(co)) : '—'}</TdM>,
                           <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
                           <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
