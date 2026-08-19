@@ -33,6 +33,20 @@ export interface COLineRow {
   [key: string]: any;
 }
 
+/**
+ * Cost split so a card can say *where* the money goes. `ownLabor` is the
+ * viewer's own crew / internal cost rows; `subcontract` is what an OUTSIDE
+ * field-crew company bills the viewer. They are never mixed: an external FC is
+ * a subcontract cost, not internal labor.
+ */
+export interface COCostBreakdown {
+  ownLabor: number;
+  subcontract: number;
+  materials: number;
+  equipment: number;
+  total: number;
+}
+
 export interface AggregatedCOTotals {
   approvedCORevenue: number;
   approvedCOCost: number;
@@ -42,6 +56,8 @@ export interface AggregatedCOTotals {
   pendingCOCost: number;
   pendingCONetAtRisk: number;
   approvedWOTotal: number;
+  approvedCostBreakdown: COCostBreakdown;
+  pendingCostBreakdown: COCostBreakdown;
 }
 
 export const PENDING_CO_STATUSES = [
