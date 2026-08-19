@@ -76,7 +76,7 @@ const roleLabel: Record<string, string> = {
 };
 
 export function TCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
-  const { userOrgRoles } = useAuth();
+  const { user, userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
 
