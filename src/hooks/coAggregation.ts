@@ -215,6 +215,32 @@ export function aggregateCOTotals(
     const equipRev = eqResp === 'GC' ? 0 : sumAll(equipment, 'billed_amount');
     const matCost = matResp === 'GC' ? 0 : sumAll(materials, 'line_cost');
     const equipCost = eqResp === 'GC' ? 0 : sumAll(equipment, 'cost');
+
+    if (isGCPerspective) {
+      // For a GC an approved CO is first of all a COST: the amount owed to the
+      // TC (the frozen billable snapshot, which already excludes anything the
+      // GC procures) plus the GC-procured materials/equipment it buys at cost
+      // on its own POs. It only becomes revenue once the GC prices it to the
+      // owner via `gc_budget`; with no owner price we fall back to cost, i.e.
+      // a 0% markup pass-through, and flag it so the card can warn.
+      const owedToTC = snapshot > 0 ? snapshot : revLabor + matRev + equipRev;
+      const gcMatCost = matResp === 'GC' ? sumAll(materials, 'line_cost') : 0;
+      const gcEquipCost = eqResp === 'GC' ? sumAll(equipment, 'cost') : 0;
+      const gcCost = owedToTC + gcMatCost + gcEquipCost;
+      const ownerBudget = num(c.gc_budget);
+      return {
+        status: c.status,
+        document_type: c.document_type,
+        revenue: ownerBudget > 0 ? ownerBudget : gcCost,
+        cost: gcCost,
+        ownLabor: 0,
+        subcontract: owedToTC,
+        materials: gcMatCost,
+        equipment: gcEquipCost,
+        ownerBudgetSet: ownerBudget > 0,
+      };
+    }
+
     return {
       status: c.status,
       document_type: c.document_type,
@@ -224,6 +250,7 @@ export function aggregateCOTotals(
       subcontract: subcontractCost,
       materials: matCost,
       equipment: equipCost,
+      ownerBudgetSet: true,
     };
   });
 
