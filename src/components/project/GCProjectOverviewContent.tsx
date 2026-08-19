@@ -177,17 +177,27 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
       // too, and hard-coding 0 outside T&M made GC-side CO cost labor-only.
       const coIds = cos.map(c => c.id);
       const [matRes, eqRes] = await Promise.all([
-        supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
-        supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
+        supabase.from('co_material_items').select('co_id, billed_amount, line_cost').in('co_id', coIds),
+        supabase.from('co_equipment_items').select('co_id, billed_amount, cost').in('co_id', coIds),
       ]);
       const matByWO: Record<string, number> = {};
       const eqByWO: Record<string, number> = {};
-      (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
-      (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
+      const matCostByWO: Record<string, number> = {};
+      const eqCostByWO: Record<string, number> = {};
+      (matRes.data || []).forEach(m => {
+        matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0);
+        matCostByWO[m.co_id] = (matCostByWO[m.co_id] || 0) + ((m as any).line_cost || 0);
+      });
+      (eqRes.data || []).forEach(e => {
+        eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0);
+        eqCostByWO[e.co_id] = (eqCostByWO[e.co_id] || 0) + ((e as any).cost || 0);
+      });
       return cos.map(c => ({
         ...c,
         wo_materials_total: matByWO[c.id] || 0,
         wo_equipment_total: eqByWO[c.id] || 0,
+        wo_materials_cost: matCostByWO[c.id] || 0,
+        wo_equipment_cost: eqCostByWO[c.id] || 0,
       }));
     },
   });
