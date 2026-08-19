@@ -843,6 +843,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           )}
 
 
+          {/* Internal cost entry stays open after approval / completion — real costs
+              (invoices, timesheets, receipts) land late and never touch the billable side. */}
+          {!canAddLabor && canEditInternal && (isTC || isFC) && !showActualForm && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
+              className="w-full flex items-center gap-2.5 px-5 py-3 text-xs border-t border-border/50 hover:bg-accent/40 transition-colors"
+            >
+              <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <Plus className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-foreground">Log internal cost</p>
+                <p className="text-[10px] text-muted-foreground">Private — does not change the billable amount</p>
+              </div>
+            </button>
+          )}
+
           {/* Actual cost form */}
           {showActualForm && (
             <div className="px-5 pb-4 border-t border-border/50">

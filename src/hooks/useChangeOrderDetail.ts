@@ -270,10 +270,15 @@ export function useChangeOrderDetail(coId: string | null) {
   const viewerEquipmentTotal = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.billed_amount ?? 0), 0) : 0;
   const viewerEquipmentCost  = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.cost ?? 0), 0) : 0;
   // CO owner sees the full picture (mats/eq from anyone they procured); collaborators only see their own scope
-  const scopedMaterialsTotal = ownerIsViewer ? materialsTotal : viewerMaterialsTotal;
-  const scopedEquipmentTotal = ownerIsViewer ? equipmentTotal : viewerEquipmentTotal;
-  const scopedMaterialsCost  = ownerIsViewer ? materialsCost  : viewerMaterialsCost;
-  const scopedEquipmentCost  = ownerIsViewer ? equipmentCost  : viewerEquipmentCost;
+  // Responsibility gate: when the GC procures materials/equipment, the supplier bills
+  // the GC directly. A TC viewer must NOT see those dollars (not their cost, not their
+  // revenue) even when they own the CO — fall back to rows their own org entered.
+  const canRollUpMaterials = ownerIsViewer && matResp === 'TC';
+  const canRollUpEquipment = ownerIsViewer && eqResp === 'TC';
+  const scopedMaterialsTotal = canRollUpMaterials ? materialsTotal : viewerMaterialsTotal;
+  const scopedEquipmentTotal = canRollUpEquipment ? equipmentTotal : viewerEquipmentTotal;
+  const scopedMaterialsCost  = canRollUpMaterials ? materialsCost  : viewerMaterialsCost;
+  const scopedEquipmentCost  = canRollUpEquipment ? equipmentCost  : viewerEquipmentCost;
   const viewerTotalToUpstream = viewerOwnLaborToUpstream + scopedMaterialsTotal + scopedEquipmentTotal;
   // Tax on viewer-scoped totals
   const viewerLaborTax = laborTaxable ? viewerOwnLaborToUpstream * taxPct : 0;
