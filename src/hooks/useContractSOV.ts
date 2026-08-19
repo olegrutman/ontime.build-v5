@@ -433,6 +433,8 @@ export function useContractSOV(projectId: string | undefined) {
           trade: c.trade,
           contract_sum: c.contract_sum,
           co_approved_sum: c.co_approved_sum ?? 0,
+          original_contract_sum: c.original_contract_sum ?? null,
+
           retainage_percent: c.retainage_percent,
           allow_mobilization_line_item: c.allow_mobilization_line_item,
           status: c.status,
