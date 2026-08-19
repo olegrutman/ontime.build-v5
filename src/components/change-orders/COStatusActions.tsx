@@ -799,6 +799,89 @@ export function COStatusActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
 
+          {/* GC → owner pass-through: decide billing and markup at approval */}
+          {showOwnerStep && (
+            <div className="space-y-3 py-2 border-t border-border">
+              <div>
+                <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                  Pass this cost to the owner?
+                </Label>
+                <div className="grid grid-cols-2 gap-2 mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPassToOwner('yes')}
+                    className={`h-9 rounded-md border text-xs font-semibold ${passToOwner === 'yes' ? 'border-primary bg-primary/10 text-foreground' : 'border-input text-muted-foreground'}`}
+                  >
+                    Yes — bill the owner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPassToOwner('no')}
+                    className={`h-9 rounded-md border text-xs font-semibold ${passToOwner === 'no' ? 'border-destructive bg-destructive/10 text-foreground' : 'border-input text-muted-foreground'}`}
+                  >
+                    No — we absorb it
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] font-mono text-muted-foreground">
+                Your cost on this {co.document_type === 'WO' ? 'WO' : 'CO'}: {money(gcCostBase)}
+              </p>
+
+              {passToOwner === 'yes' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Markup %</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={ownerMarkup}
+                        onChange={e => { setOwnerMarkup(e.target.value); setOwnerPrice(''); }}
+                        placeholder="15"
+                        className="h-9 mt-1 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Owner price</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={ownerPrice}
+                        onChange={e => setOwnerPrice(e.target.value)}
+                        placeholder={derivedOwnerPrice ? derivedOwnerPrice.toFixed(0) : 'Amount'}
+                        className="h-9 mt-1 font-mono"
+                      />
+                    </div>
+                  </div>
+                  {effectiveOwnerPrice != null && effectiveOwnerPrice > 0 && (
+                    <p className="text-[11px] font-mono text-foreground">
+                      {money(gcCostBase)} cost → {money(effectiveOwnerPrice)} to owner ·{' '}
+                      margin {money(effectiveOwnerPrice - gcCostBase)}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    This amount is added to the owner contract on approval.
+                  </p>
+                </>
+              ) : (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Why not? (optional)</Label>
+                  <Textarea
+                    value={notPassedReason}
+                    onChange={e => setNotPassedReason(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. our error, goodwill, covered by allowance…"
+                    className="mt-1 resize-none"
+                  />
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                    {money(gcCostBase)} will hit your margin with no owner revenue.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Backcharge fields for damaged_by_others */}
           {isDamagedByOthers && isGC && !forwardsToGC && (
             <div className="space-y-3 py-2 border-t border-border">
