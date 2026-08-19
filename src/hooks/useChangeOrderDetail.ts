@@ -223,6 +223,24 @@ export function useChangeOrderDetail(coId: string | null) {
     },
   });
 
+  // Contract-level material responsibility — same resolution order as
+  // useCOResponsibility, so the financials never disagree with the UI badge.
+  const { data: contractMatResp } = useQuery({
+    queryKey: ['project-contract-responsibility', co?.project_id],
+    enabled: !!co?.project_id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('project_contracts')
+        .select('from_role, material_responsibility')
+        .eq('project_id', co!.project_id)
+        .not('material_responsibility', 'is', null);
+      const rows = data ?? [];
+      const trade = rows.find(r => (r.from_role ?? '') !== 'Owner');
+      return ((trade ?? rows[0])?.material_responsibility as 'GC' | 'TC') ?? 'TC';
+    },
+  });
+
   const taxRate = (co as any)?.tax_rate_snapshot ?? projectTaxSettings?.sales_tax_rate ?? 0;
   const laborTaxable = (co as any)?.labor_taxable_snapshot ?? projectTaxSettings?.labor_taxable ?? false;
   const taxPct = taxRate / 100;
@@ -239,6 +257,7 @@ export function useChangeOrderDetail(coId: string | null) {
   // show inflated numbers (e.g. headline shows $1,110 when the TC only bills $747.50).
   const matResp: 'GC' | 'TC' = ((co as any)?.co_material_responsible_override
     ?? (co as any)?.materials_responsible
+    ?? contractMatResp
     ?? 'TC') as 'GC' | 'TC';
   const eqResp: 'GC' | 'TC' = ((co as any)?.co_equipment_responsible_override
     ?? (co as any)?.equipment_responsible
