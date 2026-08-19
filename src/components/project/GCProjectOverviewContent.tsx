@@ -9,6 +9,8 @@ import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import type { OrgType } from '@/types/organization';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, THead, TdN, TdM, TRow, WarnItem, type PillType } from '@/components/shared/KpiCard';
+import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
+
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
@@ -407,10 +409,26 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         );
       })()}
 
+      {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Financials
+      </div>
+      <CanonicalKpiGrid
+        ledger={financials.ledger}
+        extras={{
+          billsTo: 'owner',
+          paidParties: `${tcName} + suppliers`,
+          approvedCOCount: approvedCOs.length,
+          pendingCOCount: pendingCOs.length,
+          coWord: isTM ? 'WO' : 'CO',
+        }}
+      />
+
       {/* ─── Detailed KPI Cards — drilldown grid ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
         Detail
       </div>
+
 
       {/* KPI Cards — 4-col grid */}
       <KpiGrid>
@@ -481,54 +499,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               </div>
             </KpiCard>
 
-            {/* Card 3 — Your Margin (WO-driven) */}
-            {(() => {
-              const woMargin = coRevenueTotal - coCostTotal;
-              const woMarginPct = coRevenueTotal > 0 ? ((woMargin / coRevenueTotal) * 100).toFixed(1) : '0';
-              return (
-                <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={coRevenueTotal > 0 ? fmt(woMargin) : '—'} sub={coRevenueTotal > 0 ? `${woMarginPct}% · WO revenue minus TC cost` : 'Create WOs to see margin'} pills={coRevenueTotal > 0 ? [{ type: Number(woMarginPct) > 15 ? 'pg' : Number(woMarginPct) > 5 ? 'pw' : 'pr', text: `${woMarginPct}%` }] : []} idx={2}>
-                  <div style={{ padding: 12 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <THead cols={['Metric', 'Value']} />
-                      <tbody>
-                        <TRow cells={[<TdN>WO Revenue (GC Budget)</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>]} />
-                        <TRow cells={[<TdN>TC Labor Cost</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
-                        <TRow cells={[<TdN>Materials Cost</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
-                        <TRow cells={[<TdN>Equipment Cost</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
-                        <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
-                        <TRow cells={[<TdN>Your Margin</TdN>, <TdM>{fmt(woMargin)}</TdM>]} isTotal />
-                        <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
-                        <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
-                      </tbody>
-                    </table>
-                  </div>
-                </KpiCard>
-              );
-            })()}
+            {/* Margin + margin-to-date now come from the canonical grid above. */}
 
-            {/* Card 3b — Margin to Date (realized, T&M) */}
-            {(() => {
-              const earned = financials.earnedRevenueToDate ?? 0;
-              const incurred = financials.incurredCostToDate ?? 0;
-              const m2d = financials.marginToDateAmount ?? 0;
-              const m2dPct = financials.marginToDatePct ?? 0;
-              const pctRounded = Math.round(m2dPct);
-              const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
-              return (
-                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · cash basis` : 'No revenue collected yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
-                  <div style={{ padding: 12 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <THead cols={['Metric', 'Value']} />
-                      <tbody>
-                        <TRow cells={[<TdN>Received (from owner / upstream)</TdN>, <TdM>{fmt(financials.receivablesCollected)}</TdM>]} />
-                        <TRow cells={[<TdN>Paid (to TC + suppliers)</TdN>, <TdM>{fmt(financials.payablesPaid)}</TdM>]} />
-                        <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
-                      </tbody>
-                    </table>
-                  </div>
-                </KpiCard>
-              );
-            })()}
 
             {/* Card 4 — Work Orders (list + create) */}
             <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="WORK ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} WOs` : '0 WOs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
@@ -612,29 +584,18 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               </div>
             </KpiCard>
 
-            {/* Card 3 — Your Margin (incl. supplier material contract + delivery risk) */}
-            <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(projectedMargin) : '—'} sub={ownerBudget > 0 ? `${projectedMarginPctStr}% · incl. COs${materialCommitment > 0 ? ' + materials contract' : ''}` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: projectedMarginPct > 15 ? 'pg' : projectedMarginPct > 5 ? 'pw' : 'pr', text: `${projectedMarginPctStr}%` }] : []} idx={2}>
+            {/* Card 3 — Materials delivery tracking only (margin lives in the canonical grid). */}
+            <KpiCard accent={C.purple} icon="🧱" iconBg={C.purpleBg} label="MATERIALS TRACKING" value={materialCommitment > 0 ? fmt(materialCommitment) : '—'} sub={materialCommitment > 0 ? `${materialLabel} · ${fmt(matOrdered)} ordered · ${fmt(matDelivered)} delivered` : `Materials inside ${tcName}'s subcontract`} pills={materialCommitment > 0 ? [{ type: 'pb', text: 'Your commitment' }] : [{ type: 'pm', text: `${tcName} procures` }]} idx={2}>
               <div style={{ padding: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>Revised In</TdN>, <TdM>{fmt(revisedIn)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Subcontract ({tcName})</TdN>, <TdM>-{fmt(draftContractVal)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
-                    {materialCommitment > 0 && (
-                      <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />
-                    )}
-                    <TRow cells={[<TdN>Revised Out</TdN>, <TdM>{fmt(revisedOut)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(projectedMargin)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Ordered vs materials contract</TdN>, <TdM>{materialCommitment > 0 ? `${fmt(matOrdered)} / ${fmt(materialCommitment)}` : '—'}</TdM>]} />
+                    <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment) : '—'}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Ordered</TdN>, <TdM>{fmt(matOrdered)}</TdM>]} />
                     <TRow cells={[<TdN>Delivered</TdN>, <TdM>{fmt(matDelivered)}</TdM>]} />
                     <TRow cells={[<TdN>Pending delivery</TdN>, <TdM>{fmt(matPending)}</TdM>]} />
                     <TRow cells={[<TdN>At risk on delivery</TdN>, <TdM>{fmt(materialAtRiskOnDelivery)}</TdM>]} />
-                    <TRow cells={[<TdN>Material variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} />
-                    <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
-                    <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
+                    <TRow cells={[<TdN>Variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} isTotal />
                   </tbody>
                 </table>
                 {!financials.isGCMaterialResponsible && (
@@ -646,31 +607,9 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             </KpiCard>
 
 
-            {/* Card 3b — Margin to Date (realized) */}
-            {(() => {
-              const earned = financials.earnedRevenueToDate ?? 0;
-              const incurred = financials.incurredCostToDate ?? 0;
-              const m2d = financials.marginToDateAmount ?? 0;
-              const m2dPct = financials.marginToDatePct ?? 0;
-              const pctRounded = Math.round(m2dPct);
-              const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
-              return (
-                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · cash basis` : 'No revenue collected yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
-                  <div style={{ padding: 12 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <THead cols={['Component', 'Amount']} />
-                      <tbody>
-                        <TRow cells={[<TdN>Received (from owner / upstream)</TdN>, <TdM>{fmt(financials.receivablesCollected)}</TdM>]} />
-                        <TRow isTotal cells={[<TdN>Earned (cash)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                        <TRow cells={[<TdN>Paid (to {tcName} + suppliers)</TdN>, <TdM>{fmt(financials.payablesPaid)}</TdM>]} />
-                        <TRow isTotal cells={[<TdN>Incurred (cash)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
-                        <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
-                      </tbody>
-                    </table>
-                  </div>
-                </KpiCard>
-              );
-            })()}
+
+            {/* Margin + margin-to-date now come from the canonical grid above. */}
+
 
             {/* Card 4 — Change Orders */}
             <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="CHANGE ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} COs` : '0 COs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>

@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, cellStyle, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
+
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 import { LadderCard } from '@/components/shared/LadderCard';
 import { Sparkline } from '@/components/shared/Sparkline';
@@ -260,10 +262,26 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
       {contractNotice}
 
+      {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Financials
+      </div>
+      <CanonicalKpiGrid
+        ledger={financials.ledger}
+        extras={{
+          billsTo: tcName,
+          paidParties: 'crew costs',
+          approvedCOCount: approvedCOs.length,
+          pendingCOCount: pendingCOs.length,
+          coWord: isTM ? 'WO' : 'CO',
+        }}
+      />
+
       {/* ─── Detailed KPI Cards ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
         Detail
       </div>
+
 
       <KpiGrid>
 
