@@ -366,7 +366,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   <div className="flex flex-col justify-center px-2 border-r border-border bg-muted/20">
                     <span className="text-[9px] font-bold uppercase tracking-tight leading-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
                     {entryCount > 0 && (
-                      <span className="text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">{entryCount} {entryCount === 1 ? 'entry' : 'entries'}</span>
+                      <span className="text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">
+                        {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
+                        {isHourly && totalHours > 0 ? ` · ${totalHours}h` : ''}
+                      </span>
                     )}
                   </div>
 
