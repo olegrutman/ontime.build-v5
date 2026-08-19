@@ -319,9 +319,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             {(() => {
               const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
               // Prefer how the entries were actually priced; fall back to the CO pricing type.
-              const modeLabel = visibleBillable.length > 0
-                ? (visibleBillable.every(e => e.pricing_mode === 'lump_sum') ? 'Lump sum' : 'Hourly')
-                : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
+              const isHourly = visibleBillable.length > 0
+                ? !visibleBillable.every(e => e.pricing_mode === 'lump_sum')
+                : pricingType === 'tm';
+              const modeLabel = isHourly ? 'Hourly' : visibleBillable.length > 0 ? 'Lump sum' : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
+              const totalHours = isHourly
+                ? visibleBillable.reduce((s, e) => s + (e.hours ?? 0), 0)
+                : 0;
 
               const isPriced = entryCount > 0 || totalForRole > 0;
               const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
