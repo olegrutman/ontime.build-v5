@@ -407,10 +407,26 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         );
       })()}
 
+      {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
+      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
+        Financials
+      </div>
+      <CanonicalKpiGrid
+        ledger={financials.ledger}
+        extras={{
+          billsTo: 'owner',
+          paidParties: `${tcName} + suppliers`,
+          approvedCOCount: approvedCOs.length,
+          pendingCOCount: pendingCOs.length,
+          coWord: isTM ? 'WO' : 'CO',
+        }}
+      />
+
       {/* ─── Detailed KPI Cards — drilldown grid ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
         Detail
       </div>
+
 
       {/* KPI Cards — 4-col grid */}
       <KpiGrid>
