@@ -13,18 +13,30 @@
 export interface ContractSumShape {
   contract_sum?: number | null;
   co_approved_sum?: number | null;
+  /** Original signed value, never touched by CO approvals. */
+  original_contract_sum?: number | null;
 }
 
-/** Contract value excluding approved change orders. */
+/**
+ * Contract value excluding approved change orders.
+ * Prefers the stored original value; falls back to the derived subtraction for
+ * rows written before `original_contract_sum` existed.
+ */
 export function baseContractSum(c?: ContractSumShape | null): number {
   if (!c) return 0;
+  if (c.original_contract_sum != null) return Number(c.original_contract_sum) || 0;
   return Math.max((c.contract_sum || 0) - (c.co_approved_sum || 0), 0);
 }
 
-/** Contract value including approved change orders (as stored). */
+/** Contract value including approved change orders. */
 export function revisedContractSum(c?: ContractSumShape | null): number {
-  return c?.contract_sum || 0;
+  if (!c) return 0;
+  if (c.original_contract_sum != null) {
+    return (Number(c.original_contract_sum) || 0) + (c.co_approved_sum || 0);
+  }
+  return c.contract_sum || 0;
 }
+
 
 /** Approved change-order portion baked into `contract_sum`. */
 export function coApprovedPortion(c?: ContractSumShape | null): number {
