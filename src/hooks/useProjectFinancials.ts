@@ -518,6 +518,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const gcPayPending = gcPayableInvs.filter((i: any) => i.status === 'SUBMITTED');
         setPayablesPendingAmount(gcPayPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
         setPayablesPendingCount(gcPayPending.length);
+        setPayablesPendingInvoices(gcPayPending.map((i: any) => ({
+          id: i.id, invoice_number: i.invoice_number, total_amount: i.total_amount || 0,
+          submitted_at: i.submitted_at ?? null, po_id: i.po_id ?? null,
+        })));
         // GCs bill the owner off-platform: no receivable invoices to approve.
         setReceivablesPendingAmount(0);
         setReceivablesPendingCount(0);
