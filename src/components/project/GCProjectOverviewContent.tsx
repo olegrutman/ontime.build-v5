@@ -18,6 +18,7 @@ import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/co
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 import { APPROVED_CO_STATUSES } from '@/hooks/coAggregation';
+import { baseContractSum } from '@/lib/contractSums';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
