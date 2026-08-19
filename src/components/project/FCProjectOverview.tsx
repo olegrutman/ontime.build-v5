@@ -38,30 +38,35 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   /* ─── The FC's own contract row — the ONLY source of this crew's money ───
      Contracts are stored biller → payer, so a Field Crew row has the crew as
      from_org_id (from_role = 'Field Crew'). Match either side to be safe. */
-  const { data: myContract = null, isLoading: contractLoading } = useQuery({
+  const { data: contractData = null, isLoading: contractLoading } = useQuery({
     queryKey: ['fc-own-contract', projectId, currentOrgId],
     queryFn: async () => {
       if (!currentOrgId) return null;
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
+        .select('id, contract_sum, co_approved_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
         .eq('project_id', projectId)
         .or(`from_org_id.eq.${currentOrgId},to_org_id.eq.${currentOrgId}`);
       if (error) throw error;
-      const rows = (data || []).filter(
+      const all = data || [];
+      const rows = all.filter(
         (c: any) => c.trade !== 'Work Order' && c.trade !== 'Work Order Labor',
       );
       // Prefer the crew's own billing row (crew is the biller)
-      return (
+      const primary =
         rows.find((c: any) => c.from_org_id === currentOrgId && c.from_role === 'Field Crew') ||
         rows.find((c: any) => c.from_org_id === currentOrgId) ||
         rows.find((c: any) => c.to_role === 'Field Crew') ||
         rows[0] ||
-        null
-      );
+        null;
+      // Work-order contracts are still this crew's money: their invoices must be
+      // counted in billed / paid, even though the base contract card ignores them.
+      return { primary, allIds: all.map((c: any) => c.id) };
     },
     enabled: !!projectId && !!currentOrgId,
   });
+  const myContract = contractData?.primary ?? null;
+  const myContractIds: string[] = contractData?.allIds ?? [];
 
 
   // Zero rows is a NORMAL state: the TC has not set this crew's contract value yet.
@@ -69,10 +74,15 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
     typeof myContract?.contract_sum === 'number' && Number.isFinite(myContract.contract_sum)
       ? Number(myContract.contract_sum)
       : null;
-  const hasContract = contractValue !== null && contractValue > 0;
+  // A contract row exists even at $0 (T&M-only crews). Only a missing row is
+  // "not set" — the old `> 0` test showed the warning banner forever.
+  const hasContract = contractValue !== null;
+  const hasContractValue = contractValue !== null && contractValue > 0;
+  const coApprovedPortion = Number((myContract as any)?.co_approved_sum || 0);
+  const baseContractValue = contractValue !== null ? Math.max(0, contractValue - coApprovedPortion) : null;
   const retainagePct: number | null =
     typeof myContract?.retainage_percent === 'number' ? Number(myContract.retainage_percent) : null;
-  const retainageAmount = hasContract && retainagePct !== null ? (contractValue! * retainagePct) / 100 : null;
+  const retainageAmount = hasContractValue && retainagePct !== null ? (contractValue! * retainagePct) / 100 : null;
 
   const laborBudget = (typeof myContract?.labor_budget === 'number' ? Number(myContract.labor_budget) : financials.laborBudget) || 0;
 
@@ -108,19 +118,19 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
      every invoice on the project (including TC → GC), so read this crew's
      contract invoices directly and use the full list, not the recent-5 slice. */
   const { data: myInvoices = [] } = useQuery({
-    queryKey: ['fc-own-invoices', projectId, myContract?.id],
+    queryKey: ['fc-own-invoices', projectId, myContractIds.join(',')],
     queryFn: async () => {
-      if (!myContract?.id) return [];
+      if (myContractIds.length === 0) return [];
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_number, status, total_amount, created_at')
+        .select('id, invoice_number, status, subtotal, total_amount, created_at, contract_id')
         .eq('project_id', projectId)
-        .eq('contract_id', myContract.id)
+        .in('contract_id', myContractIds)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!projectId && !!myContract?.id,
+    enabled: !!projectId && myContractIds.length > 0,
   });
 
   const paidInvoices = myInvoices.filter((i: any) => i.status === 'PAID');
