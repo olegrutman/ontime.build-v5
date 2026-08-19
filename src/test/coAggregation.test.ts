@@ -95,6 +95,8 @@ describe('aggregateCOTotals', () => {
       approvedWOTotal: 0,
       approvedCostBreakdown: { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 },
       pendingCostBreakdown: { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 },
+      coMissingOwnerBudget: 0,
+      coSellingAtLoss: 0,
     });
   });
 
@@ -129,16 +131,39 @@ describe('aggregateCOTotals', () => {
     expect(out.approvedCOCost).toBe(0);
   });
 
-  it('uses tc_submitted_price as revenue for GC viewer, ignoring labor sum', () => {
+  it('treats the TC snapshot as GC cost, with owner price falling back to cost', () => {
     const cos = [co({ id: 'co-1', tc_submitted_price: 2500 })];
-    const labor = [row('co-1', TC, { line_total: 1000 })]; // would be 1000 if not GC
-    const mats = [row('co-1', TC, { billed_amount: 300, line_cost: 250 })];
+    const labor = [row('co-1', TC, { line_total: 1000 })]; // inside the TC snapshot
+    const mats = [row('co-1', TC, { billed_amount: 300, line_cost: 250 })]; // TC-carried
 
     const out = aggregateCOTotals(cos, labor, mats, [], TC, true);
-    // Revenue: tc_submitted_price (2500) + mats billed (300)
-    expect(out.approvedCORevenue).toBe(2800);
-    // Cost excludes billable labor: material line_cost only
-    expect(out.approvedCOCost).toBe(250);
+    // TC carries the materials, so they sit inside the snapshot — cost is the snapshot only
+    expect(out.approvedCOCost).toBe(2500);
+    // No gc_budget set → passed through to the owner at 0% markup
+    expect(out.approvedCORevenue).toBe(2500);
+    expect(out.coMissingOwnerBudget).toBe(1);
+  });
+
+  it('prices GC CO revenue from gc_budget and flags selling below cost', () => {
+    const cos = [co({ id: 'co-1', tc_submitted_price: 2500, gc_budget: 3000 })];
+    const out = aggregateCOTotals(cos, [], [], [], TC, true);
+    expect(out.approvedCORevenue).toBe(3000);
+    expect(out.approvedCOCost).toBe(2500);
+    expect(out.coMissingOwnerBudget).toBe(0);
+    expect(out.coSellingAtLoss).toBe(0);
+
+    const loss = aggregateCOTotals(
+      [co({ id: 'co-1', tc_submitted_price: 2500, gc_budget: 2000 })],
+      [], [], [], TC, true,
+    );
+    expect(loss.coSellingAtLoss).toBe(1);
+  });
+
+  it('adds GC-procured CO materials at cost for the GC view', () => {
+    const cos = [co({ id: 'co-1', tc_submitted_price: 2500, materials_responsible: 'GC' })];
+    const mats = [row('co-1', TC, { billed_amount: 300, line_cost: 250 })];
+    const out = aggregateCOTotals(cos, [], mats, [], TC, true);
+    expect(out.approvedCOCost).toBe(2750);
   });
 
   it('falls back to labor sum for GC viewer when tc_submitted_price is null', () => {
@@ -222,7 +247,7 @@ describe('aggregateCOTotals — actual-cost labor', () => {
     expect(out.approvedCOMargin).toBe(1730 - 644);
   });
 
-  it('keeps the GC priced snapshot as revenue while cost includes actual costs', () => {
+  it('keeps the GC priced snapshot as the GC cost commitment', () => {
     const labor: COLineRow[] = [
       { co_id: 'co-1', org_id: TC, line_total: 1730, is_actual_cost: false },
       { co_id: 'co-1', org_id: TC, line_total: 644, is_actual_cost: true },
@@ -236,7 +261,7 @@ describe('aggregateCOTotals — actual-cost labor', () => {
       true,
     );
     expect(out.approvedCORevenue).toBe(1170);
-    expect(out.approvedCOCost).toBe(644);
+    expect(out.approvedCOCost).toBe(1170);
   });
 });
 

@@ -168,7 +168,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     queryFn: async () => {
       const { data: cos } = await supabase
         .from('change_orders')
-        .select('id, co_number, title, status, gc_budget, tc_submitted_price, materials_responsible, equipment_responsible')
+        .select('id, co_number, title, status, gc_budget, tc_submitted_price, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
       if (!cos || cos.length === 0) return [];
@@ -177,17 +177,27 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
       // too, and hard-coding 0 outside T&M made GC-side CO cost labor-only.
       const coIds = cos.map(c => c.id);
       const [matRes, eqRes] = await Promise.all([
-        supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
-        supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
+        supabase.from('co_material_items').select('co_id, billed_amount, line_cost').in('co_id', coIds),
+        supabase.from('co_equipment_items').select('co_id, billed_amount, cost').in('co_id', coIds),
       ]);
       const matByWO: Record<string, number> = {};
       const eqByWO: Record<string, number> = {};
-      (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
-      (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
+      const matCostByWO: Record<string, number> = {};
+      const eqCostByWO: Record<string, number> = {};
+      (matRes.data || []).forEach(m => {
+        matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0);
+        matCostByWO[m.co_id] = (matCostByWO[m.co_id] || 0) + ((m as any).line_cost || 0);
+      });
+      (eqRes.data || []).forEach(e => {
+        eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0);
+        eqCostByWO[e.co_id] = (eqCostByWO[e.co_id] || 0) + ((e as any).cost || 0);
+      });
       return cos.map(c => ({
         ...c,
         wo_materials_total: matByWO[c.id] || 0,
         wo_equipment_total: eqByWO[c.id] || 0,
+        wo_materials_cost: matCostByWO[c.id] || 0,
+        wo_equipment_cost: eqCostByWO[c.id] || 0,
       }));
     },
   });
@@ -201,17 +211,175 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const coOwnerValue = (co: any) => co.gc_budget || co.tc_submitted_price || 0;
   const coRevenueTotal = approvedCOs.reduce((s, co) => s + coOwnerValue(co), 0);
   const coRevenueIsFallback = approvedCOs.some(co => !co.gc_budget && co.tc_submitted_price);
-  // Only count mat/equip in TC cost when the TC is the responsible party per CO
-  const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
-  const coMaterialsCost = approvedCOs.reduce((s, co) => {
-    const matResp = (co as any).materials_responsible ?? 'TC';
-    return s + (matResp === 'TC' ? (co.wo_materials_total || 0) : 0);
-  }, 0);
-  const coEquipmentCost = approvedCOs.reduce((s, co) => {
-    const eqResp = (co as any).equipment_responsible ?? 'TC';
-    return s + (eqResp === 'TC' ? (co.wo_equipment_total || 0) : 0);
-  }, 0);
+  /**
+   * GC-side CO cost. An approved CO is money the GC OWES, so it hits the bottom
+   * line on the cost side:
+   *   • owed to the TC = the frozen billable snapshot (already excludes
+   *     anything the GC procures itself)
+   *   • GC-procured materials / equipment = what the GC pays at cost on its own
+   *     POs for that CO
+   * A category is counted on exactly one side, never both, so the material
+   * commitment and the CO cost can't double up.
+   */
+  const contractMaterialResp = (upContract as any)?.material_responsibility ?? null;
+  const coCostOf = (co: any) => {
+    const matResp = co.co_material_responsible_override ?? co.materials_responsible ?? contractMaterialResp ?? 'TC';
+    const eqResp = co.co_equipment_responsible_override ?? co.equipment_responsible ?? contractMaterialResp ?? 'TC';
+    const owedToTC = co.tc_submitted_price || 0;
+    const gcMaterials = matResp === 'GC' ? (co.wo_materials_cost || 0) : 0;
+    const gcEquipment = eqResp === 'GC' ? (co.wo_equipment_cost || 0) : 0;
+    return { owedToTC, gcMaterials, gcEquipment, total: owedToTC + gcMaterials + gcEquipment };
+  };
+  const sumCost = (list: any[], key: 'owedToTC' | 'gcMaterials' | 'gcEquipment' | 'total') =>
+    list.reduce((s, co) => s + coCostOf(co)[key], 0);
+
+  const coLaborCost = sumCost(approvedCOs, 'owedToTC');
+  const coMaterialsCost = sumCost(approvedCOs, 'gcMaterials');
+  const coEquipmentCost = sumCost(approvedCOs, 'gcEquipment');
   const coCostTotal = coLaborCost + coMaterialsCost + coEquipmentCost;
+  const coMarkup = coRevenueTotal - coCostTotal;
+  const coMarkupPct = coCostTotal > 0 ? (coMarkup / coCostTotal) * 100 : 0;
+  const coNoBudgetCount = approvedCOs.filter(co => !co.gc_budget).length;
+  const coAtLossCount = approvedCOs.filter(co => coOwnerValue(co) < coCostOf(co).total).length;
+  const pendingCOCostTotal = sumCost(pendingCOs, 'total');
+  const pendingCORevenueTotal = pendingCOs.reduce((s, co) => s + coOwnerValue(co), 0);
+  const coWord = isTM ? 'WO' : 'CO';
+
+  /** The three CO cards every GC sees: what COs cost, what they sell for, what's coming. */
+  const gcCoCards = (
+    <>
+      {/* CO cost committed — COs hit the GC's bottom line as cost first */}
+      <KpiCard accent={C.red} icon="🧾" iconBg={C.redBg}
+        label={`${coWord} COST COMMITTED`}
+        value={coCostTotal > 0 ? fmt(coCostTotal) : '—'}
+        sub={`Owed to ${tcName} ${fmt(coLaborCost)}${coMaterialsCost + coEquipmentCost > 0 ? ` · You procure ${fmt(coMaterialsCost + coEquipmentCost)}` : ''}`}
+        pills={coCostTotal > 0
+          ? [{ type: 'pr' as PillType, text: `${approvedCOs.length} approved` }]
+          : [{ type: 'pm' as PillType, text: 'No cost yet' }]}
+        idx={1}>
+        <div style={{ padding: 12 }}>
+          <div style={{ fontSize: '0.66rem', color: C.muted, marginBottom: 8 }}>
+            Formula: owed to {tcName} + materials/equipment you procure for these {coWord}s (at cost). Items the {tcName} carries are inside their price — never counted twice.
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <THead cols={['Cost Type', 'Value']} />
+            <tbody>
+              <TRow cells={[<TdN>Owed to {tcName} (approved {coWord} price)</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
+              <TRow cells={[<TdN>Materials you procure (at cost)</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
+              <TRow cells={[<TdN>Equipment you procure (at cost)</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
+              <TRow cells={[<TdN>Total {coWord} cost committed</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} isTotal />
+            </tbody>
+          </table>
+          {approvedCOs.length > 0 && (
+            <>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginTop: 12, marginBottom: 8 }}>Per {coWord}</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <THead cols={[`${coWord} #`, `To ${tcName}`, 'You procure', 'Total']} />
+                <tbody>
+                  {approvedCOs.slice(0, 8).map(co => {
+                    const c = coCostOf(co);
+                    return (
+                      <TRow key={co.id} cells={[
+                        <TdN>{co.co_number || '—'}</TdN>,
+                        <TdM>{fmt(c.owedToTC)}</TdM>,
+                        <TdM>{fmt(c.gcMaterials + c.gcEquipment)}</TdM>,
+                        <TdM>{fmt(c.total)}</TdM>,
+                      ]} />
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+      </KpiCard>
+
+      {/* CO revenue & markup — what you sell those COs to the owner for */}
+      <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale}
+        label={`${coWord} REVENUE & MARKUP`}
+        value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'}
+        sub={coCostTotal > 0
+          ? `${fmt(coMarkup)} markup · ${coMarkupPct.toFixed(1)}% over cost`
+          : 'No approved COs priced to the owner yet'}
+        pills={[
+          ...(coNoBudgetCount > 0 ? [{ type: 'pr' as PillType, text: `${coNoBudgetCount} no owner price` }] : []),
+          ...(coAtLossCount > 0 ? [{ type: 'pr' as PillType, text: `${coAtLossCount} below cost` }] : []),
+          ...(coNoBudgetCount === 0 && coAtLossCount === 0 && coRevenueTotal > 0 ? [{ type: 'pg' as PillType, text: 'All priced' }] : []),
+        ]}
+        idx={2}>
+        <div style={{ padding: 12 }}>
+          <div style={{ fontSize: '0.66rem', color: C.muted, marginBottom: 8 }}>
+            Formula: Σ owner price (GC budget) of approved {coWord}s − {coWord} cost committed. A {coWord} with no owner price is passed through at 0% markup.
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <THead cols={[`${coWord} #`, 'Owner price', 'Your cost', 'Markup']} />
+            <tbody>
+              {approvedCOs.length > 0 ? approvedCOs.slice(0, 8).map(co => {
+                const cost = coCostOf(co).total;
+                const rev = coOwnerValue(co);
+                const mk = rev - cost;
+                return (
+                  <TRow key={co.id} cells={[
+                    <TdN>{co.co_number || '—'}{!co.gc_budget && <span style={{ color: C.red, marginLeft: 4, fontSize: '0.62rem', fontWeight: 700 }}>NO PRICE</span>}</TdN>,
+                    <TdM>{fmt(rev)}</TdM>,
+                    <TdM>{fmt(cost)}</TdM>,
+                    <TdM>{mk < 0 ? `-${fmt(Math.abs(mk))}` : fmt(mk)}</TdM>,
+                  ]} />
+                );
+              }) : (
+                <TRow cells={[<TdN>No approved {coWord}s</TdN>, '—', '—', '—']} />
+              )}
+              {approvedCOs.length > 0 && (
+                <TRow cells={[<TdN>Total</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>, <TdM>{fmt(coCostTotal)}</TdM>, <TdM>{fmt(coMarkup)}</TdM>]} isTotal />
+              )}
+            </tbody>
+          </table>
+          {coNoBudgetCount > 0 && (
+            <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: C.redBg, color: C.red, fontSize: '0.68rem', fontWeight: 600 }}>
+              {coNoBudgetCount} approved {coWord}{coNoBudgetCount > 1 ? 's' : ''} owe money with no owner price set — set the owner budget on each to stop the margin leak.
+            </div>
+          )}
+        </div>
+      </KpiCard>
+
+      {/* CO exposure — pending COs about to hit the bottom line */}
+      <KpiCard accent={C.blue} icon="⏳" iconBg={C.blueBg}
+        label={`${coWord} EXPOSURE (PENDING)`}
+        value={pendingCOCostTotal > 0 ? fmt(pendingCOCostTotal) : '—'}
+        sub={pendingCOs.length > 0
+          ? `${pendingCOs.length} pending · ${fmt(pendingCORevenueTotal)} owner value if approved`
+          : 'Nothing pending'}
+        pills={pendingCOs.length > 0
+          ? [{ type: 'pw' as PillType, text: `${pendingCOs.length} pending` }]
+          : [{ type: 'pg' as PillType, text: 'All clear' }]}
+        idx={3}>
+        <div style={{ padding: 12 }}>
+          <div style={{ fontSize: '0.66rem', color: C.muted, marginBottom: 8 }}>
+            Formula: Σ cost of submitted {coWord}s if you approve them. Not in revenue or cost yet — this is what's about to hit your bottom line.
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <THead cols={[`${coWord} #`, 'Title', 'Cost if approved', 'Status']} />
+            <tbody>
+              {pendingCOs.length > 0 ? pendingCOs.slice(0, 8).map(co => (
+                <TRow key={co.id} cells={[
+                  <TdN>{co.co_number || '—'}</TdN>,
+                  co.title || '—',
+                  <TdM>{fmt(coCostOf(co).total)}</TdM>,
+                  <Pill type="pw">{co.status}</Pill>,
+                ]} />
+              )) : (
+                <TRow cells={[<TdN>Nothing pending</TdN>, '—', '—', '—']} />
+              )}
+              {pendingCOs.length > 0 && (
+                <TRow cells={[<TdN>Total exposure</TdN>, '—', <TdM>{fmt(pendingCOCostTotal)}</TdM>, '—']} isTotal />
+              )}
+            </tbody>
+          </table>
+          <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>Review {coWord}s</button>
+        </div>
+      </KpiCard>
+    </>
+  );
 
   // ─── RFIs ───
   const { data: rfis = [] } = useQuery({
@@ -437,68 +605,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           <>
             {/* ═══ T&M MODE: WO-driven cards 1-4 ═══ */}
 
-            {/* Card 1 — WO Revenue */}
-            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="WO REVENUE (BILLED TO OWNER)" value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'} sub={`${approvedCOs.length} approved WOs · ${coRevenueIsFallback ? 'approved values (no owner budget set)' : 'sum of GC budgets'}`} pills={coRevenueTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
-              <div style={{ padding: 12 }}>
-                {changeOrders.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <THead cols={['WO #', 'Title', 'GC Budget', 'Status']} />
-                    <tbody>
-                      {changeOrders.slice(0, 8).map(co => (
-                        <TRow key={co.id} cells={[
-                          <TdN>{co.co_number || '—'}</TdN>,
-                          co.title || '—',
-                          <TdM>{coOwnerValue(co) ? fmt(coOwnerValue(co)) : '—'}</TdM>,
-                          <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
-                        ]} />
-                      ))}
-                      {approvedCOs.length > 0 && (
-                        <TRow cells={[<TdN>{approvedCOs.length} approved</TdN>, '—', <TdM>{fmt(coRevenueTotal)}</TdM>, '—']} isTotal />
-                      )}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No work orders yet</div>
-                )}
-              </div>
-            </KpiCard>
-
-            {/* Card 2 — TC Cost (labor + materials + equipment) */}
-            <KpiCard accent={C.green} icon="🤝" iconBg={C.greenBg} label={`TC COST (TOTAL)`} value={coCostTotal > 0 ? fmt(coCostTotal) : '—'} sub={`Labor ${fmt(coLaborCost)} · Materials ${fmt(coMaterialsCost)} · Equip ${fmt(coEquipmentCost)}`} pills={coCostTotal > 0 ? [{ type: 'pg', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No cost' }]} idx={1}>
-              <div style={{ padding: 12 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <THead cols={['Cost Type', 'Value']} />
-                  <tbody>
-                    <TRow cells={[<TdN>Labor (TC Submitted)</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
-                    <TRow cells={[<TdN>Materials (billed)</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
-                    <TRow cells={[<TdN>Equipment (billed)</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
-                    <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} isTotal />
-                  </tbody>
-                </table>
-                {approvedCOs.length > 0 && (
-                  <>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginTop: 12, marginBottom: 8 }}>Per Work Order</div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <THead cols={['WO #', 'Labor', 'Mat+Eq', 'Total']} />
-                      <tbody>
-                        {approvedCOs.slice(0, 8).map(co => {
-                          const woTotal = (co.tc_submitted_price || 0) + (co.wo_materials_total || 0) + (co.wo_equipment_total || 0);
-                          return (
-                            <TRow key={co.id} cells={[
-                              <TdN>{co.co_number || '—'}</TdN>,
-                              <TdM>{fmt(co.tc_submitted_price || 0)}</TdM>,
-                              <TdM>{fmt((co.wo_materials_total || 0) + (co.wo_equipment_total || 0))}</TdM>,
-                              <TdM>{fmt(woTotal)}</TdM>,
-                            ]} />
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </>
-                )}
-              </div>
-            </KpiCard>
-
+            {gcCoCards}
             {/* Margin + margin-to-date now come from the canonical grid above. */}
 
 
@@ -544,6 +651,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                     <TRow cells={[<TdN>Approved COs to Owner</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
                     <TRow cells={[<TdN>Revised Contract Total</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal)}</TdM>]} isTotal />
                     <TRow cells={[<TdN>Billed to Owner to Date</TdN>, <TdM>{fmt(financials.ownerBillingsTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Unbilled approved CO revenue</TdN>, <TdM>{fmt(Math.max(0, coRevenueTotal - Math.max(0, financials.ownerBillingsTotal - ownerBudget)))}</TdM>]} />
                     <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.ownerBillingsTotal)}</TdM>]} />
                   </tbody>
                 </table>
@@ -612,6 +720,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
 
             {/* Card 4 — Change Orders */}
+            {gcCoCards}
+
             <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="CHANGE ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} COs` : '0 COs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
               <div style={{ padding: 12 }}>
                 {changeOrders.length > 0 ? (

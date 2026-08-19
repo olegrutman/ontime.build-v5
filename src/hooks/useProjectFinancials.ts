@@ -115,6 +115,10 @@ export interface ProjectFinancials {
   /** Where the viewer's CO cost actually goes (own crew vs external crew vs materials). */
   coCostBreakdown: COCostBreakdown;
   coPendingCostBreakdown: COCostBreakdown;
+  /** Approved COs with no owner-facing price (GC view) — you owe with no price. */
+  coMissingOwnerBudget: number;
+  /** Approved COs priced below their cost to the viewer. */
+  coSellingAtLoss: number;
 
   /** Canonical KPI ledger — the single source every financial card reads. */
   ledger: ProjectLedger;
@@ -197,6 +201,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const emptyBreakdown: COCostBreakdown = { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 };
   const [coCostBreakdown, setCoCostBreakdown] = useState<COCostBreakdown>(emptyBreakdown);
   const [coPendingCostBreakdown, setCoPendingCostBreakdown] = useState<COCostBreakdown>(emptyBreakdown);
+  const [coMissingOwnerBudget, setCoMissingOwnerBudget] = useState(0);
+  const [coSellingAtLoss, setCoSellingAtLoss] = useState(0);
   // Subtotal of submitted/paid invoices linked to POs the viewer owns.
   // Used to avoid double-counting materials (PO commitment + supplier invoice).
   const [materialInvoiced, setMaterialInvoiced] = useState(0);
@@ -335,7 +341,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       const { data: allCOs = [] } = await supabase
         .from('change_orders')
-        .select('id, status, document_type, tc_submitted_price, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
+        .select('id, status, document_type, tc_submitted_price, gc_budget, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
         .eq('project_id', projectId)
         .in('status', [...APPROVED_CO_STATUSES, ...PENDING_CO_STATUSES]);
 
@@ -382,6 +388,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setApprovedWOTotal(agg.approvedWOTotal);
       setCoCostBreakdown(agg.approvedCostBreakdown);
       setCoPendingCostBreakdown(agg.pendingCostBreakdown);
+      setCoMissingOwnerBudget(agg.coMissingOwnerBudget);
+      setCoSellingAtLoss(agg.coSellingAtLoss);
       // ===== end CO aggregation =====
 
       // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
@@ -817,6 +825,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
     receivablesPendingAmount, receivablesPendingCount, payablesPendingAmount, payablesPendingCount,
     payablesPendingInvoices, coCostBreakdown, coPendingCostBreakdown,
+    coMissingOwnerBudget, coSellingAtLoss,
     payablesPaidToSubs: Math.max(0, payablesPaid - materialPaid),
     recentInvoices, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,

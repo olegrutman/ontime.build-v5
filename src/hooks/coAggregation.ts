@@ -21,6 +21,8 @@ export interface COLike {
   status: string;
   document_type: 'CO' | 'WO' | string;
   tc_submitted_price?: number | null;
+  /** Owner-facing price the GC set for this CO. Null/0 = not priced yet. */
+  gc_budget?: number | null;
   materials_responsible?: string | null;
   equipment_responsible?: string | null;
   co_material_responsible_override?: string | null;
@@ -58,6 +60,10 @@ export interface AggregatedCOTotals {
   approvedWOTotal: number;
   approvedCostBreakdown: COCostBreakdown;
   pendingCostBreakdown: COCostBreakdown;
+  /** Approved COs with no owner-facing price set (GC view) — margin leaks. */
+  coMissingOwnerBudget: number;
+  /** Approved COs priced BELOW what they cost the viewer. */
+  coSellingAtLoss: number;
 }
 
 export const PENDING_CO_STATUSES = [
@@ -155,6 +161,8 @@ export function aggregateCOTotals(
     approvedWOTotal: 0,
     approvedCostBreakdown: emptyBreakdown(),
     pendingCostBreakdown: emptyBreakdown(),
+    coMissingOwnerBudget: 0,
+    coSellingAtLoss: 0,
   };
   if (!billingOrgId || cos.length === 0) return empty;
 
@@ -215,6 +223,32 @@ export function aggregateCOTotals(
     const equipRev = eqResp === 'GC' ? 0 : sumAll(equipment, 'billed_amount');
     const matCost = matResp === 'GC' ? 0 : sumAll(materials, 'line_cost');
     const equipCost = eqResp === 'GC' ? 0 : sumAll(equipment, 'cost');
+
+    if (isGCPerspective) {
+      // For a GC an approved CO is first of all a COST: the amount owed to the
+      // TC (the frozen billable snapshot, which already excludes anything the
+      // GC procures) plus the GC-procured materials/equipment it buys at cost
+      // on its own POs. It only becomes revenue once the GC prices it to the
+      // owner via `gc_budget`; with no owner price we fall back to cost, i.e.
+      // a 0% markup pass-through, and flag it so the card can warn.
+      const owedToTC = snapshot > 0 ? snapshot : revLabor + matRev + equipRev;
+      const gcMatCost = matResp === 'GC' ? sumAll(materials, 'line_cost') : 0;
+      const gcEquipCost = eqResp === 'GC' ? sumAll(equipment, 'cost') : 0;
+      const gcCost = owedToTC + gcMatCost + gcEquipCost;
+      const ownerBudget = num(c.gc_budget);
+      return {
+        status: c.status,
+        document_type: c.document_type,
+        revenue: ownerBudget > 0 ? ownerBudget : gcCost,
+        cost: gcCost,
+        ownLabor: 0,
+        subcontract: owedToTC,
+        materials: gcMatCost,
+        equipment: gcEquipCost,
+        ownerBudgetSet: ownerBudget > 0,
+      };
+    }
+
     return {
       status: c.status,
       document_type: c.document_type,
@@ -224,6 +258,7 @@ export function aggregateCOTotals(
       subcontract: subcontractCost,
       materials: matCost,
       equipment: equipCost,
+      ownerBudgetSet: true,
     };
   });
 
@@ -259,5 +294,7 @@ export function aggregateCOTotals(
       .reduce((s, c) => s + c.revenue, 0),
     approvedCostBreakdown: breakdown(approved),
     pendingCostBreakdown: breakdown(pending),
+    coMissingOwnerBudget: approved.filter((c) => !c.ownerBudgetSet).length,
+    coSellingAtLoss: approved.filter((c) => c.revenue < c.cost).length,
   };
 }
