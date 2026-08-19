@@ -20,6 +20,7 @@ interface Contract {
   contract_sum: number;
   /** Portion of contract_sum contributed by approved COs. */
   co_approved_sum?: number | null;
+  original_contract_sum?: number | null;
   retainage_percent: number;
   trade: string | null;
   from_org_id: string | null;
@@ -268,7 +269,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // 3. Non-supplier: fetch all in parallel
       const [contractsRes, invoicesRes, _woRemoved, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
-          id, from_role, to_role, contract_sum, co_approved_sum, retainage_percent, trade, from_org_id, to_org_id,
+          id, from_role, to_role, contract_sum, co_approved_sum, original_contract_sum, retainage_percent, trade, from_org_id, to_org_id,
           material_responsibility, material_estimate_total, labor_budget,
           owner_contract_value, material_markup_type, material_markup_value,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
@@ -681,11 +682,17 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     if (viewerRole === 'Field Crew') return false;
     const coPortion = contracts.find(c => c.id === id)?.co_approved_sum || 0;
     const revised = sum + coPortion;
-    const { error } = await supabase.from('project_contracts').update({ contract_sum: revised, retainage_percent: retainage }).eq('id', id);
+    const { error } = await supabase
+      .from('project_contracts')
+      .update({ contract_sum: revised, original_contract_sum: sum, retainage_percent: retainage })
+      .eq('id', id);
     if (error) return false;
-    setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: revised, retainage_percent: retainage } : c));
+    setContracts(prev => prev.map(c => c.id === id
+      ? { ...c, contract_sum: revised, original_contract_sum: sum, retainage_percent: retainage }
+      : c));
     return true;
   };
+
 
   const createFcContract = async (fcOrgId: string, sum: number, retainage: number): Promise<boolean> => {
     const currentOrgId = userOrgRoles[0]?.organization?.id;

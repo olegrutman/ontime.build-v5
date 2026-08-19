@@ -42,6 +42,7 @@ export interface ProjectContract {
   contract_sum: number;
   /** Portion of contract_sum contributed by approved change orders (billed on their own CO SOVs). */
   co_approved_sum?: number | null;
+  original_contract_sum?: number | null;
   retainage_percent: number;
   allow_mobilization_line_item: boolean;
   status: string;
@@ -432,6 +433,8 @@ export function useContractSOV(projectId: string | undefined) {
           trade: c.trade,
           contract_sum: c.contract_sum,
           co_approved_sum: c.co_approved_sum ?? 0,
+          original_contract_sum: c.original_contract_sum ?? null,
+
           retainage_percent: c.retainage_percent,
           allow_mobilization_line_item: c.allow_mobilization_line_item,
           status: c.status,

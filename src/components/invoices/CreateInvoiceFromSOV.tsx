@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
 import { CalendarIcon, AlertCircle, FileText, DollarSign, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { baseContractSum } from '@/lib/contractSums';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
@@ -214,7 +215,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       const { data: contractsData } = await supabase
         .from('project_contracts')
         .select(`
-          id, from_role, to_role, contract_sum, co_approved_sum, retainage_percent, from_org_id, to_org_id, trade,
+          id, from_role, to_role, contract_sum, co_approved_sum, original_contract_sum, retainage_percent, from_org_id, to_org_id, trade,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `)
@@ -224,7 +225,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         id: c.id,
         from_role: c.from_role,
         to_role: c.to_role,
-        contract_sum: Math.max((c.contract_sum || 0) - (c.co_approved_sum || 0), 0),
+        contract_sum: baseContractSum(c),
         retainage_percent: c.retainage_percent,
         from_org_id: c.from_org_id,
         to_org_id: c.to_org_id,

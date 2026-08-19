@@ -9,9 +9,13 @@
  *  2. Responsibility gates cost. Materials/equipment only count as MY cost when
  *     my org is the responsible party (mirrors the DB `co_grand_total`).
  *  3. Approved COs are the only COs in revenue. Pending COs are exposure only.
- *  4. `contract_sum` is the REVISED value; the base is always
- *     `contract_sum - co_approved_sum`.
+ *  4. `original_contract_sum` is the signed base value and never moves. The
+ *     revised value is `original_contract_sum + co_approved_sum` (older rows
+ *     without an original fall back to `contract_sum - co_approved_sum`).
+
  */
+
+import { baseContractSum } from '@/lib/contractSums';
 
 export type LedgerRole =
   | 'General Contractor'
@@ -30,6 +34,8 @@ export interface LedgerContract {
   to_org_id: string | null;
   contract_sum: number;
   co_approved_sum?: number | null;
+  original_contract_sum?: number | null;
+
   retainage_percent?: number | null;
   trade?: string | null;
 }
@@ -120,8 +126,8 @@ export function money(n: number): string {
 const isWO = (c: LedgerContract) =>
   c.trade === 'Work Order' || c.trade === 'Work Order Labor';
 
-const base = (c: LedgerContract) =>
-  Number(c.contract_sum || 0) - Number(c.co_approved_sum || 0);
+const base = (c: LedgerContract) => baseContractSum(c);
+
 
 /** Contract the viewer bills on (they are the `from` party). */
 export function findRevenueContract(
@@ -174,8 +180,9 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
     formula: isGC
       ? 'Owner contract value'
       : revContract
-        ? `${money(Number(revContract.contract_sum || 0))} revised − ${money(Number(revContract.co_approved_sum || 0))} approved COs`
+        ? `Original signed contract ${money(baseVal)}`
         : 'No contract yet',
+
   };
 
   const approvedCOAdds: LedgerTerm = {

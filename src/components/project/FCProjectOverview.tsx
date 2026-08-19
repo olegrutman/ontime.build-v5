@@ -47,7 +47,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
       if (!currentOrgId) return null;
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, co_approved_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
+        .select('id, contract_sum, co_approved_sum, original_contract_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
         .eq('project_id', projectId)
         .or(`from_org_id.eq.${currentOrgId},to_org_id.eq.${currentOrgId}`);
       if (error) throw error;
