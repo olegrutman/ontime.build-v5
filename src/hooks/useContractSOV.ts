@@ -37,6 +37,8 @@ export interface ProjectContract {
   to_role: string;
   trade: string | null;
   contract_sum: number;
+  /** Portion of contract_sum contributed by approved change orders (billed on their own CO SOVs). */
+  co_approved_sum?: number | null;
   retainage_percent: number;
   allow_mobilization_line_item: boolean;
   status: string;
