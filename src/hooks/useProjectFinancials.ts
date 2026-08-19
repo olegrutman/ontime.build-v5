@@ -104,8 +104,12 @@ export interface ProjectFinancials {
   /** Paid payables excluding supplier (PO-linked) invoices — i.e. paid to subs/crew. */
   payablesPaidToSubs: number;
 
+  /** Canonical KPI ledger — the single source every financial card reads. */
+  ledger: ProjectLedger;
+
   // Invoices for charts/lists
   recentInvoices: { id: string; invoice_number: string; status: string; total_amount: number; created_at: string }[];
+
 
   // FC participants (for contract creation)
   fcParticipants: { org_id: string; org_name: string }[];
