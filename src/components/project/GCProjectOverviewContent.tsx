@@ -207,10 +207,14 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const isApprovedCO = (s: string) => (APPROVED_CO_STATUSES as readonly string[]).includes(s);
   const approvedCOs = changeOrders.filter(co => isApprovedCO(co.status));
   const pendingCOs = changeOrders.filter(co => !isApprovedCO(co.status) && co.status !== 'rejected');
-  /** GC revenue per CO: the owner budget when typed, else the approved value. */
-  const coOwnerValue = (co: any) => co.gc_budget || co.tc_submitted_price || 0;
+  /**
+   * GC revenue per CO = the owner price only. The TC's price is what the GC OWES,
+   * never what the owner pays, so an unpriced CO earns 0 revenue (and shows as a
+   * margin leak) instead of silently borrowing the TC number.
+   */
+  const coOwnerValue = (co: any) => co.gc_budget || 0;
+  const coIsPriced = (co: any) => (co.gc_budget || 0) > 0;
   const coRevenueTotal = approvedCOs.reduce((s, co) => s + coOwnerValue(co), 0);
-  const coRevenueIsFallback = approvedCOs.some(co => !co.gc_budget && co.tc_submitted_price);
   /**
    * GC-side CO cost. An approved CO is money the GC OWES, so it hits the bottom
    * line on the cost side:
@@ -237,10 +241,15 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const coMaterialsCost = sumCost(approvedCOs, 'gcMaterials');
   const coEquipmentCost = sumCost(approvedCOs, 'gcEquipment');
   const coCostTotal = coLaborCost + coMaterialsCost + coEquipmentCost;
-  const coMarkup = coRevenueTotal - coCostTotal;
-  const coMarkupPct = coCostTotal > 0 ? (coMarkup / coCostTotal) * 100 : 0;
-  const coNoBudgetCount = approvedCOs.filter(co => !co.gc_budget).length;
-  const coAtLossCount = approvedCOs.filter(co => coOwnerValue(co) < coCostOf(co).total).length;
+  // Markup is only meaningful on COs that actually have an owner price.
+  const pricedCOs = approvedCOs.filter(coIsPriced);
+  const unpricedCOs = approvedCOs.filter(co => !coIsPriced(co));
+  const pricedCOCost = sumCost(pricedCOs, 'total');
+  const unpricedCOCost = sumCost(unpricedCOs, 'total');
+  const coMarkup = coRevenueTotal - pricedCOCost;
+  const coMarkupPct = pricedCOCost > 0 ? (coMarkup / pricedCOCost) * 100 : 0;
+  const coNoBudgetCount = unpricedCOs.length;
+  const coAtLossCount = pricedCOs.filter(co => coOwnerValue(co) < coCostOf(co).total).length;
   const pendingCOCostTotal = sumCost(pendingCOs, 'total');
   const pendingCORevenueTotal = pendingCOs.reduce((s, co) => s + coOwnerValue(co), 0);
   const coWord = isTM ? 'WO' : 'CO';
