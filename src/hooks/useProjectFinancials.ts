@@ -6,6 +6,7 @@ import {
   resolveBillingOrgId,
   PENDING_CO_STATUSES,
   APPROVED_CO_STATUSES,
+  type COCostBreakdown,
 } from '@/hooks/coAggregation';
 import { buildProjectLedger, type ProjectLedger } from '@/lib/kpiLedger';
 
@@ -104,8 +105,16 @@ export interface ProjectFinancials {
   receivablesPendingCount: number;
   payablesPendingAmount: number;
   payablesPendingCount: number;
+  /** The actual SUBMITTED invoices billed TO the viewer, awaiting their approval. */
+  payablesPendingInvoices: {
+    id: string; invoice_number: string; total_amount: number; submitted_at: string | null; po_id: string | null;
+  }[];
   /** Paid payables excluding supplier (PO-linked) invoices — i.e. paid to subs/crew. */
   payablesPaidToSubs: number;
+
+  /** Where the viewer's CO cost actually goes (own crew vs external crew vs materials). */
+  coCostBreakdown: COCostBreakdown;
+  coPendingCostBreakdown: COCostBreakdown;
 
   /** Canonical KPI ledger — the single source every financial card reads. */
   ledger: ProjectLedger;
@@ -184,6 +193,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [receivablesPendingCount, setReceivablesPendingCount] = useState(0);
   const [payablesPendingAmount, setPayablesPendingAmount] = useState(0);
   const [payablesPendingCount, setPayablesPendingCount] = useState(0);
+  const [payablesPendingInvoices, setPayablesPendingInvoices] = useState<ProjectFinancials['payablesPendingInvoices']>([]);
+  const emptyBreakdown: COCostBreakdown = { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 };
+  const [coCostBreakdown, setCoCostBreakdown] = useState<COCostBreakdown>(emptyBreakdown);
+  const [coPendingCostBreakdown, setCoPendingCostBreakdown] = useState<COCostBreakdown>(emptyBreakdown);
   // Subtotal of submitted/paid invoices linked to POs the viewer owns.
   // Used to avoid double-counting materials (PO commitment + supplier invoice).
   const [materialInvoiced, setMaterialInvoiced] = useState(0);
@@ -275,7 +288,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
-        supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount').eq('project_id', projectId),
+        supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, submitted_at, paid_at, contract_id, po_id, retainage_amount').eq('project_id', projectId),
         Promise.resolve({ data: [] }),
         supabase.from('project_participants').select('organization_id, organizations:organization_id(name)').eq('project_id', projectId).eq('role', 'FC').eq('invite_status', 'ACCEPTED'),
       ]);
@@ -367,6 +380,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setPendingCORevenue(agg.pendingCORevenue);
       setPendingCOCost(agg.pendingCOCost);
       setApprovedWOTotal(agg.approvedWOTotal);
+      setCoCostBreakdown(agg.approvedCostBreakdown);
+      setCoPendingCostBreakdown(agg.pendingCostBreakdown);
       // ===== end CO aggregation =====
 
       // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
@@ -457,6 +472,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setReceivablesPendingCount(recvPending.length);
         setPayablesPendingAmount(payPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
         setPayablesPendingCount(payPending.length);
+        setPayablesPendingInvoices(payPending.map((i: any) => ({
+          id: i.id, invoice_number: i.invoice_number, total_amount: i.total_amount || 0,
+          submitted_at: i.submitted_at ?? null, po_id: i.po_id ?? null,
+        })));
       }
 
       // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
@@ -499,6 +518,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const gcPayPending = gcPayableInvs.filter((i: any) => i.status === 'SUBMITTED');
         setPayablesPendingAmount(gcPayPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
         setPayablesPendingCount(gcPayPending.length);
+        setPayablesPendingInvoices(gcPayPending.map((i: any) => ({
+          id: i.id, invoice_number: i.invoice_number, total_amount: i.total_amount || 0,
+          submitted_at: i.submitted_at ?? null, po_id: i.po_id ?? null,
+        })));
         // GCs bill the owner off-platform: no receivable invoices to approve.
         setReceivablesPendingAmount(0);
         setReceivablesPendingCount(0);
@@ -793,6 +816,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     supplierOrderValue, supplierInvoiced, supplierPaid,
     receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
     receivablesPendingAmount, receivablesPendingCount, payablesPendingAmount, payablesPendingCount,
+    payablesPendingInvoices, coCostBreakdown, coPendingCostBreakdown,
     payablesPaidToSubs: Math.max(0, payablesPaid - materialPaid),
     recentInvoices, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
