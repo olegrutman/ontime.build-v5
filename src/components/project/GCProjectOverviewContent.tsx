@@ -221,9 +221,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
    * A category is counted on exactly one side, never both, so the material
    * commitment and the CO cost can't double up.
    */
+  const contractMaterialResp = (upContract as any)?.material_responsibility ?? null;
   const coCostOf = (co: any) => {
-    const matResp = co.co_material_responsible_override ?? co.materials_responsible ?? materialResp ?? 'TC';
-    const eqResp = co.co_equipment_responsible_override ?? co.equipment_responsible ?? materialResp ?? 'TC';
+    const matResp = co.co_material_responsible_override ?? co.materials_responsible ?? contractMaterialResp ?? 'TC';
+    const eqResp = co.co_equipment_responsible_override ?? co.equipment_responsible ?? contractMaterialResp ?? 'TC';
     const owedToTC = co.tc_submitted_price || 0;
     const gcMaterials = matResp === 'GC' ? (co.wo_materials_cost || 0) : 0;
     const gcEquipment = eqResp === 'GC' ? (co.wo_equipment_cost || 0) : 0;
