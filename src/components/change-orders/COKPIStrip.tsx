@@ -33,6 +33,10 @@ interface KPITile {
   badge?: { text: string; variant: 'healthy' | 'watch' | 'neutral' };
   editable?: boolean;
   editValue?: number | null;
+  /** GC's own cost on this CO — the base a markup % is applied to. */
+  gcCost?: number;
+  markupPercent?: number | null;
+  passedToOwner?: boolean | null;
 }
 
 const BADGE_CLASSES = {
