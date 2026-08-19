@@ -102,9 +102,19 @@ export function resolveBillingOrgId(
 
 /**
  * Aggregate change_orders + line items into viewer-scoped totals.
- * Revenue uses tc_submitted_price for GC viewers when present (privacy /
- * locked-in markup); otherwise sums labor line_total + material billed +
- * equipment billed. Cost uses raw labor + material line_cost + equipment cost.
+ *
+ * Revenue = the viewer's own billable rows (or the frozen tc_submitted_price
+ * snapshot for GC viewers) + material/equipment billed for the categories the
+ * viewer actually carries.
+ *
+ * Cost = what the viewer really pays out: their own actual-cost rows (internal
+ * cost / imported field hours) plus downstream field-crew billables that were
+ * NOT already imported, + material/equipment line cost they carry. Billable
+ * rows are never cost — counting them made cost mirror revenue and produced
+ * phantom "field crew cost".
+ *
+ * `fallbackResponsibility` mirrors the DB (`co_grand_total`): when a CO leaves
+ * materials/equipment responsibility NULL, the contract's value decides.
  */
 export function aggregateCOTotals(
   cos: COLike[],
@@ -113,6 +123,7 @@ export function aggregateCOTotals(
   equipment: COLineRow[],
   billingOrgId: string | null,
   isGCPerspective: boolean,
+  fallbackResponsibility?: { materials?: string | null; equipment?: string | null },
 ): AggregatedCOTotals {
   const empty: AggregatedCOTotals = {
     approvedCORevenue: 0,
@@ -126,35 +137,58 @@ export function aggregateCOTotals(
   };
   if (!billingOrgId || cos.length === 0) return empty;
 
-  // Actual-cost labor rows record what was really spent — they are never
-  // billable revenue (mirrors co_grand_total, which ignores them) but they must
-  // count toward cost or margin comes out overstated.
-  const sumLabor = (coId: string, opts: { billableOnly: boolean }) =>
-    labor
-      .filter(
-        (r) =>
-          r.co_id === coId &&
-          r.org_id === billingOrgId &&
-          (!opts.billableOnly || !r.is_actual_cost),
-      )
-      .reduce((s, r) => s + Number(r.line_total ?? 0), 0);
+  const num = (v: unknown) => Number(v ?? 0);
 
   const perCO = cos.map((c) => {
-    const laborRevenue = sumLabor(c.id, { billableOnly: true });
-    const laborCost = sumLabor(c.id, { billableOnly: false });
+    const rows = labor.filter((r) => r.co_id === c.id);
+    const mine = rows.filter((r) => r.org_id === billingOrgId);
+
+    // Revenue: the viewer's billable rows only.
+    const laborRevenue = mine
+      .filter((r) => !r.is_actual_cost)
+      .reduce((s, r) => s + num(r.line_total), 0);
+
+    // Cost: the viewer's actual-cost rows...
+    const actualRows = mine.filter((r) => r.is_actual_cost);
+    const internalCost = actualRows.reduce((s, r) => s + num(r.line_total), 0);
+    // ...plus downstream FC billables that were not already imported into an
+    // actual-cost row (imports carry the source ids, so we dedupe on them).
+    const importedFCIds = new Set<string>(
+      actualRows.flatMap((r) => (r.source_fc_entry_ids as string[] | null) ?? []),
+    );
+    const fcBillableCost = rows
+      .filter(
+        (r) =>
+          r.entered_by_role === 'FC' &&
+          !r.is_actual_cost &&
+          r.org_id !== billingOrgId &&
+          !(r.id && importedFCIds.has(r.id as string)),
+      )
+      .reduce((s, r) => s + num(r.line_total), 0);
+    const laborCost = internalCost + fcBillableCost;
+
     // A snapshot of 0/null means "never priced" — fall back to the labor sum so
     // UI totals match the DB's co_grand_total (which drives contract_sum).
-    const snapshot = Number(c.tc_submitted_price ?? 0);
+    const snapshot = num(c.tc_submitted_price);
     const revLabor =
       isGCPerspective && snapshot > 0 ? snapshot : laborRevenue;
     // Materials / equipment: mirror the DB's co_grand_total. Rows are stamped
     // with the org that *entered* them (often the GC on a TC's CO), so scoping
     // by billing org silently dropped them. Instead, drop the category when the
     // GC procures it — those dollars are paid on the GC's own PO.
-    const matResp = c.co_material_responsible_override ?? c.materials_responsible ?? 'TC';
-    const eqResp = c.co_equipment_responsible_override ?? c.equipment_responsible ?? 'TC';
-    const sumAll = (rows: COLineRow[], field: string) =>
-      rows.filter((r) => r.co_id === c.id).reduce((s, r) => s + Number(r[field] ?? 0), 0);
+    const matResp =
+      c.co_material_responsible_override ??
+      c.materials_responsible ??
+      fallbackResponsibility?.materials ??
+      'TC';
+    const eqResp =
+      c.co_equipment_responsible_override ??
+      c.equipment_responsible ??
+      fallbackResponsibility?.equipment ??
+      'TC';
+    const sumAll = (rowsIn: COLineRow[], field: string) =>
+      rowsIn.filter((r) => r.co_id === c.id).reduce((s, r) => s + num(r[field]), 0);
+
     const matRev = matResp === 'GC' ? 0 : sumAll(materials, 'billed_amount');
     const equipRev = eqResp === 'GC' ? 0 : sumAll(equipment, 'billed_amount');
     const matCost = matResp === 'GC' ? 0 : sumAll(materials, 'line_cost');
