@@ -23,6 +23,13 @@ export interface COLike {
   tc_submitted_price?: number | null;
   /** Owner-facing price the GC set for this CO. Null/0 = not priced yet. */
   gc_budget?: number | null;
+  /** GC markup % applied to GC cost to derive the owner price. */
+  gc_owner_markup_percent?: number | null;
+  /**
+   * Whether the GC passes this CO's cost to the owner.
+   * true = billable to owner, false = absorbed by the GC, null = undecided.
+   */
+  passed_to_owner?: boolean | null;
   materials_responsible?: string | null;
   equipment_responsible?: string | null;
   co_material_responsible_override?: string | null;
@@ -64,6 +71,10 @@ export interface AggregatedCOTotals {
   coMissingOwnerBudget: number;
   /** Approved COs priced BELOW what they cost the viewer. */
   coSellingAtLoss: number;
+  /** Cost of approved COs the GC explicitly decided NOT to pass to the owner. */
+  coAbsorbedCost: number;
+  /** Cost of approved COs where the pass-to-owner decision is still undecided. */
+  coUndecidedCost: number;
 }
 
 export const PENDING_CO_STATUSES = [
@@ -163,6 +174,8 @@ export function aggregateCOTotals(
     pendingCostBreakdown: emptyBreakdown(),
     coMissingOwnerBudget: 0,
     coSellingAtLoss: 0,
+    coAbsorbedCost: 0,
+    coUndecidedCost: 0,
   };
   if (!billingOrgId || cos.length === 0) return empty;
 
@@ -228,26 +241,28 @@ export function aggregateCOTotals(
       // For a GC an approved CO is first of all a COST: the amount owed to the
       // TC (the frozen billable snapshot, which already excludes anything the
       // GC procures) plus the GC-procured materials/equipment it buys at cost
-      // on its own POs. It only becomes revenue once the GC prices it to the
-      // owner via `gc_budget`; with no owner price we fall back to cost, i.e.
-      // a 0% markup pass-through, and flag it so the card can warn.
+      // on its own POs. It only becomes revenue when the GC passes it to the
+      // owner (`passed_to_owner`) with an owner price (`gc_budget`).
       const owedToTC = snapshot > 0 ? snapshot : revLabor + matRev + equipRev;
       const gcMatCost = matResp === 'GC' ? sumAll(materials, 'line_cost') : 0;
       const gcEquipCost = eqResp === 'GC' ? sumAll(equipment, 'cost') : 0;
       const gcCost = owedToTC + gcMatCost + gcEquipCost;
       const ownerBudget = num(c.gc_budget);
+      const absorbed = c.passed_to_owner === false;
       return {
         status: c.status,
         document_type: c.document_type,
         // Owner revenue is only what the GC priced to the owner. The TC price is a
-        // cost, so an unpriced CO earns nothing rather than borrowing the TC number.
-        revenue: ownerBudget,
+        // cost, so an unpriced (or absorbed) CO earns nothing.
+        revenue: absorbed ? 0 : ownerBudget,
         cost: gcCost,
         ownLabor: 0,
         subcontract: owedToTC,
         materials: gcMatCost,
         equipment: gcEquipCost,
-        ownerBudgetSet: ownerBudget > 0,
+        ownerBudgetSet: !absorbed && ownerBudget > 0,
+        absorbed,
+        undecided: !absorbed && ownerBudget <= 0,
       };
     }
 
@@ -261,6 +276,8 @@ export function aggregateCOTotals(
       materials: matCost,
       equipment: equipCost,
       ownerBudgetSet: true,
+      absorbed: false,
+      undecided: false,
     };
   });
 
@@ -297,6 +314,8 @@ export function aggregateCOTotals(
     approvedCostBreakdown: breakdown(approved),
     pendingCostBreakdown: breakdown(pending),
     coMissingOwnerBudget: approved.filter((c) => !c.ownerBudgetSet).length,
-    coSellingAtLoss: approved.filter((c) => c.revenue < c.cost).length,
+    coSellingAtLoss: approved.filter((c) => c.revenue < c.cost && !c.absorbed).length,
+    coAbsorbedCost: approved.filter((c) => c.absorbed).reduce((s, c) => s + c.cost, 0),
+    coUndecidedCost: approved.filter((c) => c.undecided).reduce((s, c) => s + c.cost, 0),
   };
 }

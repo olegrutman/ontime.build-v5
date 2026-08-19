@@ -81,6 +81,11 @@ export function COStatusActions({
   const [backchargeNote, setBackchargeNote] = useState('');
   const [projectParticipants, setProjectParticipants] = useState<Array<{ org_id: string; org_name: string }>>([]);
   const [canDeleteFromDb, setCanDeleteFromDb] = useState(false);
+  /* GC → owner pass-through decision captured at approval */
+  const [passToOwner, setPassToOwner] = useState<'yes' | 'no'>('yes');
+  const [ownerMarkup, setOwnerMarkup] = useState('');
+  const [ownerPrice, setOwnerPrice] = useState('');
+  const [notPassedReason, setNotPassedReason] = useState('');
 
   const isDamagedByOthers = co.reason === 'damaged_by_others';
 
@@ -104,6 +109,20 @@ export function COStatusActions({
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
   const submitAmount = financials?.viewer?.totalToUpstream ?? financials?.grandTotal ?? 0;
+
+  /* GC cost on this CO = everything it will pay out (downstream billable +
+     anything the GC procures itself). Markup % is applied to this number. */
+  const gcCostBase = financials?.grandTotal ?? 0;
+  const showOwnerStep = isGC && !forwardsToGC;
+  const parsedOwnerMarkup = parseFloat(ownerMarkup.replace(/[^0-9.\-]/g, ''));
+  const derivedOwnerPrice = !isNaN(parsedOwnerMarkup) && gcCostBase > 0
+    ? gcCostBase * (1 + parsedOwnerMarkup / 100)
+    : null;
+  const typedOwnerPrice = parseFloat(ownerPrice.replace(/[^0-9.]/g, ''));
+  const effectiveOwnerPrice = !isNaN(typedOwnerPrice) && typedOwnerPrice > 0
+    ? typedOwnerPrice
+    : derivedOwnerPrice;
+  const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -327,6 +346,54 @@ export function COStatusActions({
             .from('change_orders')
             .update({ retainage_amount: retainageAmt })
             .eq('id', co.id);
+        }
+
+        /* GC decides here whether this cost is passed to the owner and at what
+           markup. A passed-through CO adds its owner price to the owner
+           contract; an absorbed one stays a pure GC cost. */
+        if (showOwnerStep) {
+          if (passToOwner === 'yes') {
+            if (!effectiveOwnerPrice || effectiveOwnerPrice <= 0) {
+              toast.error('Enter a markup % or an owner price before approving.');
+              return;
+            }
+            const markup = !isNaN(parsedOwnerMarkup)
+              ? parsedOwnerMarkup
+              : gcCostBase > 0
+                ? Number((((effectiveOwnerPrice - gcCostBase) / gcCostBase) * 100).toFixed(2))
+                : null;
+            const { error: ownerErr } = await supabase
+              .from('change_orders')
+              .update({
+                gc_budget: Number(effectiveOwnerPrice.toFixed(2)),
+                gc_owner_markup_percent: markup,
+                passed_to_owner: true,
+                not_passed_reason: null,
+              })
+              .eq('id', co.id);
+            if (ownerErr) throw ownerErr;
+            await logActivity(
+              'owner_price_set',
+              `Passed to owner at ${money(effectiveOwnerPrice)}${markup != null ? ` (${markup}% markup on ${money(gcCostBase)} cost)` : ''}`,
+              Number(effectiveOwnerPrice.toFixed(2)),
+            );
+          } else {
+            const { error: ownerErr } = await supabase
+              .from('change_orders')
+              .update({
+                passed_to_owner: false,
+                gc_budget: null,
+                gc_owner_markup_percent: null,
+                not_passed_reason: notPassedReason.trim() || null,
+              })
+              .eq('id', co.id);
+            if (ownerErr) throw ownerErr;
+            await logActivity(
+              'owner_price_absorbed',
+              `Not passed to owner — absorbed ${money(gcCostBase)}${notPassedReason.trim() ? `: ${notPassedReason.trim()}` : ''}`,
+              gcCostBase || undefined,
+            );
+          }
         }
 
         await approveCO.mutateAsync(co.id);
@@ -731,6 +798,89 @@ export function COStatusActions({
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* GC → owner pass-through: decide billing and markup at approval */}
+          {showOwnerStep && (
+            <div className="space-y-3 py-2 border-t border-border">
+              <div>
+                <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                  Pass this cost to the owner?
+                </Label>
+                <div className="grid grid-cols-2 gap-2 mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPassToOwner('yes')}
+                    className={`h-9 rounded-md border text-xs font-semibold ${passToOwner === 'yes' ? 'border-primary bg-primary/10 text-foreground' : 'border-input text-muted-foreground'}`}
+                  >
+                    Yes — bill the owner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPassToOwner('no')}
+                    className={`h-9 rounded-md border text-xs font-semibold ${passToOwner === 'no' ? 'border-destructive bg-destructive/10 text-foreground' : 'border-input text-muted-foreground'}`}
+                  >
+                    No — we absorb it
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] font-mono text-muted-foreground">
+                Your cost on this {co.document_type === 'WO' ? 'WO' : 'CO'}: {money(gcCostBase)}
+              </p>
+
+              {passToOwner === 'yes' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Markup %</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={ownerMarkup}
+                        onChange={e => { setOwnerMarkup(e.target.value); setOwnerPrice(''); }}
+                        placeholder="15"
+                        className="h-9 mt-1 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Owner price</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={ownerPrice}
+                        onChange={e => setOwnerPrice(e.target.value)}
+                        placeholder={derivedOwnerPrice ? derivedOwnerPrice.toFixed(0) : 'Amount'}
+                        className="h-9 mt-1 font-mono"
+                      />
+                    </div>
+                  </div>
+                  {effectiveOwnerPrice != null && effectiveOwnerPrice > 0 && (
+                    <p className="text-[11px] font-mono text-foreground">
+                      {money(gcCostBase)} cost → {money(effectiveOwnerPrice)} to owner ·{' '}
+                      margin {money(effectiveOwnerPrice - gcCostBase)}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    This amount is added to the owner contract on approval.
+                  </p>
+                </>
+              ) : (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Why not? (optional)</Label>
+                  <Textarea
+                    value={notPassedReason}
+                    onChange={e => setNotPassedReason(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. our error, goodwill, covered by allowance…"
+                    className="mt-1 resize-none"
+                  />
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                    {money(gcCostBase)} will hit your margin with no owner revenue.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Backcharge fields for damaged_by_others */}
           {isDamagedByOthers && isGC && !forwardsToGC && (
