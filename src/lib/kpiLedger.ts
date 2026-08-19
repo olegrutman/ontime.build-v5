@@ -9,8 +9,10 @@
  *  2. Responsibility gates cost. Materials/equipment only count as MY cost when
  *     my org is the responsible party (mirrors the DB `co_grand_total`).
  *  3. Approved COs are the only COs in revenue. Pending COs are exposure only.
- *  4. `contract_sum` is the REVISED value; the base is always
- *     `contract_sum - co_approved_sum`.
+ *  4. `original_contract_sum` is the signed base value and never moves. The
+ *     revised value is `original_contract_sum + co_approved_sum` (older rows
+ *     without an original fall back to `contract_sum - co_approved_sum`).
+
  */
 
 export type LedgerRole =
