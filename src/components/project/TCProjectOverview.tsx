@@ -495,14 +495,16 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       <KpiGrid>
 
         {/* Card 1 — GC Contract / T&M Revenue */}
-        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `WO REVENUE (FROM ${gcName.toUpperCase()})` : `${gcName.toUpperCase()} CONTRACT (YOUR REVENUE)`} value={effectiveGCVal > 0 ? fmt(effectiveGCVal) : '—'} sub={isTM ? `Sum of ${approvedCOs.length} approved WO${approvedCOs.length !== 1 ? 's' : ''}` : `${gcName} · read-only`} pills={effectiveGCVal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: isTM ? `${approvedCOs.length} WOs` : `${gcName} set this` }] : [{ type: 'pm', text: isTM ? 'No approved WOs' : 'Not Set' }]} idx={0}>
+        {/* Card 1 — Your revenue = base GC contract + APPROVED COs (the revised
+            total). The base alone understated revenue by every approved CO. */}
+        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label={isTM ? `WO REVENUE (FROM ${gcName.toUpperCase()})` : `YOUR REVENUE (${gcName.toUpperCase()})`} value={revisedGCTotal > 0 ? fmt(revisedGCTotal) : '—'} sub={isTM ? `Sum of ${approvedCOs.length} approved WO${approvedCOs.length !== 1 ? 's' : ''}` : approvedCoRevenue > 0 ? `Base ${fmt(effectiveGCVal)} + ${fmt(approvedCoRevenue)} approved CO${approvedCOs.length !== 1 ? 's' : ''}` : `Base contract · ${gcName} set this`} pills={revisedGCTotal > 0 ? [{ type: 'pa', text: 'Revenue' }, { type: 'pn', text: isTM ? `${approvedCOs.length} WOs` : approvedCoRevenue > 0 ? `incl. ${approvedCOs.length} approved CO${approvedCOs.length !== 1 ? 's' : ''}` : `${gcName} set this` }] : [{ type: 'pm', text: isTM ? 'No approved WOs' : 'Not Set' }]} idx={0}>
           <div style={{ padding: '12px 16px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>{isTM ? 'Approved WO Revenue' : `Contract Value (set by ${gcName})`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
+                <TRow cells={[<TdN>{isTM ? 'Approved WO Revenue' : `Base Contract (set by ${gcName})`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
                 {!isTM && <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(approvedCoRevenue)}</TdM>]} />}
-                {!isTM && <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />}
+                {!isTM && <TRow cells={[<TdN>Your Revenue (revised total)</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />}
                 <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
                 <TRow cells={[<TdN>Pending from {gcName}</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
                 <TRow cells={[<TdN>Remaining to Bill</TdN>, <TdM>{fmt((isTM ? effectiveGCVal : revisedGCTotal) - totalReceivedFromGC - totalPendingFromGC)}</TdM>]} isTotal />
