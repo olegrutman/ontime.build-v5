@@ -761,17 +761,17 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
               <THead cols={['Cost bucket', 'Amount']} />
               <tbody>
                 <TRow cells={[<TdN>Subcontracted crew ({fcName || 'Field Crew'} contract)</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
-                <TRow cells={[<TdN>CO — my own crew / internal labor</TdN>, <TdM>{fmt(coCost.ownLabor)}</TdM>]} />
-                <TRow cells={[<TdN>CO — external crew billed to me</TdN>, <TdM>{fmt(coCost.subcontract)}</TdM>]} />
-                <TRow cells={[<TdN>CO — materials I carry</TdN>, <TdM>{fmt(coCost.materials)}</TdM>]} />
-                <TRow cells={[<TdN>CO — equipment I carry</TdN>, <TdM>{fmt(coCost.equipment)}</TdM>]} />
+                <TRow cells={[<TdN>CO — my own crew / internal labor</TdN>, <TdM>{fmt(myCoCost.ownLabor)}</TdM>]} />
+                <TRow cells={[<TdN>CO — external crew billed to me</TdN>, <TdM>{fmt(myCoCost.subcontract)}</TdM>]} />
+                <TRow cells={[<TdN>CO — materials I carry</TdN>, <TdM>{fmt(myCoCost.materials)}</TdM>]} />
+                <TRow cells={[<TdN>CO — equipment I carry</TdN>, <TdM>{fmt(myCoCost.equipment)}</TdM>]} />
                 <TRow cells={[<TdN>{financials.isTCMaterialResponsible ? 'Base materials commitment' : 'Materials — procured by GC (not my cost)'}</TdN>, <TdM>{fmt(materialCommitment)}</TdM>]} />
                 <TRow cells={[<TdN>Total my cost</TdN>, <TdM>{fmt(myCostTotal)}</TdM>]} isTotal />
               </tbody>
             </table>
-            {coPendingCost.total > 0 && (
+            {myCoPendingCost.total > 0 && (
               <div style={{ fontSize: '0.66rem', color: C.muted, marginTop: 8, ...fontLabel }}>
-                Plus {fmt(coPendingCost.total)} of cost on COs still pending approval (not counted above).
+                Plus {fmt(myCoPendingCost.total)} of cost on COs still pending approval (not counted above).
               </div>
             )}
           </div>
