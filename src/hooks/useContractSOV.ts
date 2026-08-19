@@ -29,14 +29,8 @@ export async function createScheduleItemsFromSOVItems(
   if (error) throw error;
 }
 
-/**
- * Base contract value excluding approved change orders.
- * Approved COs bill on their own CO SOVs, so the base SOV basis must stay
- * at the original contract value.
- */
-export function baseContractSum(c: { contract_sum?: number | null; co_approved_sum?: number | null }): number {
-  return Math.max((c.contract_sum || 0) - (c.co_approved_sum || 0), 0);
-}
+import { baseContractSum } from '@/lib/contractSums';
+export { baseContractSum };
 
 // Contract types
 export interface ProjectContract {

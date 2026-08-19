@@ -3,6 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES } from '@/hooks/coAggregation';
+import { baseContractSum } from '@/lib/contractSums';
+
+// contract_sum already includes approved COs (DB trigger). Dashboard cards add
+// approved CO value separately, so contract totals must use the base value.
+const baseSum = (c: { contract_sum?: number | null; co_approved_sum?: number | null }) => baseContractSum(c);
 
 interface Project {
   id: string;
@@ -263,7 +268,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('project_contracts')
-              .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id, trade, owner_contract_value')
+              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, from_org_id, to_org_id, trade, owner_contract_value')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         Promise.resolve({ data: [] }),
@@ -401,13 +406,13 @@ export function useDashboardData(): DashboardData {
             c.to_org_id === currentOrg.id
           );
           contractValue = gcContracts.length > 0
-            ? gcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            ? gcContracts.reduce((sum, c) => sum + baseSum(c), 0)
             : null;
         } else if (orgType === 'TC') {
           // TC revenue = sum of all contracts where TC is from_org (what TC earns from GC)
           const tcRevenueContracts = projectContracts.filter(c => c.from_org_id === currentOrg.id);
           contractValue = tcRevenueContracts.length > 0
-            ? tcRevenueContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            ? tcRevenueContracts.reduce((sum, c) => sum + baseSum(c), 0)
             : null;
         } else if (orgType === 'FC') {
           // FC revenue = sum of contracts where FC is from_org
@@ -415,7 +420,7 @@ export function useDashboardData(): DashboardData {
             c.from_org_id === currentOrg.id
           );
           contractValue = fcContracts.length > 0
-            ? fcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            ? fcContracts.reduce((sum, c) => sum + baseSum(c), 0)
             : null;
         }
 
@@ -676,13 +681,13 @@ export function useDashboardData(): DashboardData {
       const totalContractValue = contracts.reduce((sum, c) => {
         // TC & FC receive money via from_org_id; GC receives via to_org_id
         if (orgType === 'TC' && c.from_org_id === currentOrg.id) {
-          return sum + (c.contract_sum || 0);
+          return sum + baseSum(c);
         }
         if (orgType === 'GC' && c.to_org_id === currentOrg.id) {
-          return sum + (c.contract_sum || 0);
+          return sum + baseSum(c);
         }
         if (orgType === 'FC' && c.from_org_id === currentOrg.id) {
-          return sum + (c.contract_sum || 0);
+          return sum + baseSum(c);
         }
         return sum;
       }, 0);
@@ -765,16 +770,16 @@ export function useDashboardData(): DashboardData {
       if (orgType === 'TC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
-            totalRevenue += c.contract_sum || 0;
+            totalRevenue += baseSum(c);
           }
           if (c.to_org_id === currentOrg.id) {
-            totalCosts += c.contract_sum || 0;
+            totalCosts += baseSum(c);
           }
         });
       } else if (orgType === 'GC') {
         contracts.forEach(c => {
           if (c.to_org_id === currentOrg.id) {
-            totalCosts += c.contract_sum || 0;
+            totalCosts += baseSum(c);
           }
         });
 
@@ -791,7 +796,7 @@ export function useDashboardData(): DashboardData {
       } else if (orgType === 'FC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
-            totalRevenue += c.contract_sum || 0;
+            totalRevenue += baseSum(c);
           }
         });
 
@@ -937,8 +942,8 @@ export function useDashboardData(): DashboardData {
         const pf = pfMap.get(c.project_id);
         if (!pf) return;
         if (orgType === 'TC') {
-          if (c.from_org_id === currentOrg.id) pf.revenue += c.contract_sum || 0;
-          if (c.to_org_id === currentOrg.id) pf.costs += c.contract_sum || 0;
+          if (c.from_org_id === currentOrg.id) pf.revenue += baseSum(c);
+          if (c.to_org_id === currentOrg.id) pf.costs += baseSum(c);
         } else if (orgType === 'GC') {
           // Owner leg: identified by populated owner_contract_value (or from_role='Owner').
           // Sub leg: identified by from_org_id != GC and contract_sum > 0.
@@ -947,11 +952,11 @@ export function useDashboardData(): DashboardData {
           if (isOwnerLeg) {
             pf.revenue += Number(ownerValue) || 0;
           } else if (c.to_org_id === currentOrg.id) {
-            pf.costs += c.contract_sum || 0;
+            pf.costs += baseSum(c);
           }
       } else if (orgType === 'FC') {
           if (c.from_org_id === currentOrg.id) {
-            pf.revenue += c.contract_sum || 0;
+            pf.revenue += baseSum(c);
             pf.costs += (c as any).labor_budget || 0;
           }
         }

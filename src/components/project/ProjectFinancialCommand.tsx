@@ -1,6 +1,7 @@
 import { KPICard } from '@/components/ui/kpi-card';
 import { formatCurrency } from '@/lib/utils';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
+import { baseContractSum } from '@/lib/contractSums';
 
 interface ProjectFinancialCommandProps {
   financials: ProjectFinancials;
@@ -24,7 +25,9 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
   }
 
   if (viewerRole === 'General Contractor') {
-    const originalContract = upstreamContract?.contract_sum || 0;
+    // contract_sum already includes approved COs — start from the base so the
+    // "+ approved CO adds" line doesn't count them twice.
+    const originalContract = baseContractSum(upstreamContract);
     const coAdds = approvedCORevenue;
     const revised = originalContract + coAdds;
     // Cost out = contracts where the GC is the paying party (downstream billed
@@ -49,7 +52,7 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
   }
 
   if (viewerRole === 'Trade Contractor') {
-    const contractIn = upstreamContract?.contract_sum || 0;
+    const contractIn = baseContractSum(upstreamContract);
     const coAdds = approvedCORevenue;
     const revised = contractIn + coAdds;
     const costOut = downstreamContract?.contract_sum || 0;
