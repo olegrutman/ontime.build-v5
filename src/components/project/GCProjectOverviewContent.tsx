@@ -563,7 +563,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             {/* ═══ FIXED-CONTRACT MODE: Original cards 1-4 ═══ */}
 
             {/* Card 1 — Owner Budget */}
-            <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.billedToDate)} invoiced to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+            <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.ownerBillingsTotal)} billed to owner to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
               <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
                 <EditField label="Owner Contract Value" value={`$${draftOwnerBudget.toLocaleString()}`} onSave={(v) => { const n = parseInt(v.replace(/[^0-9]/g, '')) || 0; setDraftOwnerBudget(n); setDirtyOwner(n !== ownerBudgetReal); }} type="number" />
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
@@ -571,8 +571,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                   <tbody>
                     <TRow cells={[<TdN>Approved COs to Owner</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
                     <TRow cells={[<TdN>Revised Contract Total</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(financials.billedToDate)}</TdM>]} />
-                    <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.billedToDate)}</TdM>]} />
+                    <TRow cells={[<TdN>Billed to Owner to Date</TdN>, <TdM>{fmt(financials.ownerBillingsTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.ownerBillingsTotal)}</TdM>]} />
                   </tbody>
                 </table>
                 {dirtyOwner && (
