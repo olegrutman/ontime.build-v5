@@ -153,17 +153,23 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 <span className="text-muted-foreground">Labor</span>
                 <span className="font-mono font-medium">{fmtCurrency(financials.tcBillableToGC)}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex items-start justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">Materials</span>
-                {matResp === 'GC'
-                  ? <span className="text-[11px] italic text-muted-foreground">Procured by GC — billed separately</span>
-                  : <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>}
+                <div className="text-right">
+                  <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>
+                  {matResp === 'GC' && (
+                    <p className="text-[10px] italic text-muted-foreground leading-tight">GC-procured — billed separately</p>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex items-start justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">Equipment</span>
-                {eqResp === 'GC'
-                  ? <span className="text-[11px] italic text-muted-foreground">Procured by GC — billed separately</span>
-                  : <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>}
+                <div className="text-right">
+                  <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>
+                  {eqResp === 'GC' && (
+                    <p className="text-[10px] italic text-muted-foreground leading-tight">GC-procured — billed separately</p>
+                  )}
+                </div>
               </div>
               <div className="border-t border-border pt-2 mt-2 flex justify-between text-sm font-semibold">
                 <span>{headline}</span>
