@@ -21,6 +21,10 @@ export interface COLike {
   status: string;
   document_type: 'CO' | 'WO' | string;
   tc_submitted_price?: number | null;
+  materials_responsible?: string | null;
+  equipment_responsible?: string | null;
+  co_material_responsible_override?: string | null;
+  co_equipment_responsible_override?: string | null;
 }
 
 export interface COLineRow {
@@ -148,10 +152,18 @@ export function aggregateCOTotals(
     const snapshot = Number(c.tc_submitted_price ?? 0);
     const revLabor =
       isGCPerspective && snapshot > 0 ? snapshot : laborRevenue;
-    const matRev = sumScoped(materials, c.id, 'billed_amount');
-    const equipRev = sumScoped(equipment, c.id, 'billed_amount');
-    const matCost = sumScoped(materials, c.id, 'line_cost');
-    const equipCost = sumScoped(equipment, c.id, 'cost');
+    // Materials / equipment: mirror the DB's co_grand_total. Rows are stamped
+    // with the org that *entered* them (often the GC on a TC's CO), so scoping
+    // by billing org silently dropped them. Instead, drop the category when the
+    // GC procures it — those dollars are paid on the GC's own PO.
+    const matResp = c.co_material_responsible_override ?? c.materials_responsible ?? 'TC';
+    const eqResp = c.co_equipment_responsible_override ?? c.equipment_responsible ?? 'TC';
+    const sumAll = (rows: COLineRow[], field: string) =>
+      rows.filter((r) => r.co_id === c.id).reduce((s, r) => s + Number(r[field] ?? 0), 0);
+    const matRev = matResp === 'GC' ? 0 : sumAll(materials, 'billed_amount');
+    const equipRev = eqResp === 'GC' ? 0 : sumAll(equipment, 'billed_amount');
+    const matCost = matResp === 'GC' ? 0 : sumAll(materials, 'line_cost');
+    const equipCost = eqResp === 'GC' ? 0 : sumAll(equipment, 'cost');
     return {
       status: c.status,
       document_type: c.document_type,
