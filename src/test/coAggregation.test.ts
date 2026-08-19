@@ -93,6 +93,8 @@ describe('aggregateCOTotals', () => {
       pendingCOCost: 0,
       pendingCONetAtRisk: 0,
       approvedWOTotal: 0,
+      approvedCostBreakdown: { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 },
+      pendingCostBreakdown: { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 },
     });
   });
 
