@@ -139,8 +139,8 @@ describe('aggregateCOTotals', () => {
     const out = aggregateCOTotals(cos, labor, mats, [], TC, true);
     // TC carries the materials, so they sit inside the snapshot — cost is the snapshot only
     expect(out.approvedCOCost).toBe(2500);
-    // No gc_budget set → passed through to the owner at 0% markup
-    expect(out.approvedCORevenue).toBe(2500);
+    // No gc_budget set → no owner revenue at all (the TC price is not an owner price)
+    expect(out.approvedCORevenue).toBe(0);
     expect(out.coMissingOwnerBudget).toBe(1);
   });
 
@@ -166,11 +166,12 @@ describe('aggregateCOTotals', () => {
     expect(out.approvedCOCost).toBe(2750);
   });
 
-  it('falls back to labor sum for GC viewer when tc_submitted_price is null', () => {
+  it('falls back to labor sum for GC cost when tc_submitted_price is null', () => {
     const cos = [co({ tc_submitted_price: null })];
     const labor = [row('co-1', TC, { line_total: 800 })];
     const out = aggregateCOTotals(cos, labor, [], [], TC, true);
-    expect(out.approvedCORevenue).toBe(800);
+    expect(out.approvedCOCost).toBe(800);
+    expect(out.approvedCORevenue).toBe(0);
   });
 
   it('separates pending CO exposure from approved totals', () => {
@@ -260,7 +261,7 @@ describe('aggregateCOTotals — actual-cost labor', () => {
       TC,
       true,
     );
-    expect(out.approvedCORevenue).toBe(1170);
+    expect(out.approvedCORevenue).toBe(0);
     expect(out.approvedCOCost).toBe(1170);
   });
 });

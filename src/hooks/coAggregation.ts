@@ -239,7 +239,9 @@ export function aggregateCOTotals(
       return {
         status: c.status,
         document_type: c.document_type,
-        revenue: ownerBudget > 0 ? ownerBudget : gcCost,
+        // Owner revenue is only what the GC priced to the owner. The TC price is a
+        // cost, so an unpriced CO earns nothing rather than borrowing the TC number.
+        revenue: ownerBudget,
         cost: gcCost,
         ownLabor: 0,
         subcontract: owedToTC,
