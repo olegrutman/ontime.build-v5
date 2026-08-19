@@ -27,8 +27,9 @@ const NOT_SET = 'Not set';
 const money = (v: number | null | undefined) =>
   typeof v === 'number' && Number.isFinite(v) ? fmt(v) : NOT_SET;
 /** Percent formatter that never divides by zero or an absent denominator. */
+// Clamped at 100: invoice totals are tax-inclusive while contracts are pre-tax.
 const pct = (num: number, den: number | null) =>
-  den !== null && den > 0 ? Math.round((num / den) * 100) : null;
+  den !== null && den > 0 ? Math.min(100, Math.round((num / den) * 100)) : null;
 const pctTxt = (p: number | null) => (p === null ? NOT_SET : `${p}%`);
 
 export function FCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
@@ -271,12 +272,14 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             {/* ═══ T&M MODE: WO-driven cards ═══ */}
 
             {/* Card 1 — My Contract */}
-            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={`Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
+            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={coApprovedPortion > 0 ? `Base ${money(baseContractValue)} + ${fmt(coApprovedPortion)} approved WOs` : `Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
               <div style={{ padding: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Item', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />,
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />,
+                    <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Retainage</TdN>, <TdM>{retainagePct !== null ? `${retainagePct}%${retainageAmount !== null ? ` · ${fmt(retainageAmount)}` : ''}` : NOT_SET}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} isTotal />
                   </tbody>
@@ -398,7 +401,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             {/* ═══ FIXED-CONTRACT MODE ═══ */}
 
             {/* Card 1 — My Contract */}
-            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={`Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} idx={0}>
+            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={coApprovedPortion > 0 ? `Base ${money(baseContractValue)} + ${fmt(coApprovedPortion)} approved WOs` : `Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} idx={0}>
               <div style={{ padding: '12px 16px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Item', 'Value', 'Notes']} />
@@ -453,7 +456,9 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />,
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />,
+                    <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} />
                     <TRow cells={[<TdN>Collected</TdN>, <TdM>{fmt(totalPaid)}</TdM>]} />
                     <TRow cells={[<TdN>Remaining to Invoice</TdN>, <TdM>{money(remainingToEarn)}</TdM>]} isTotal />
@@ -546,7 +551,9 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />,
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />,
+                    <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} />
                     <TRow cells={[<TdN>Paid</TdN>, <TdM>{fmt(totalPaid)}</TdM>]} />
                     <TRow cells={[<TdN>Remaining</TdN>, <TdM>{money(remainingToEarn)}</TdM>]} isTotal />
