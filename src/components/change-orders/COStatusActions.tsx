@@ -110,6 +110,20 @@ export function COStatusActions({
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
   const submitAmount = financials?.viewer?.totalToUpstream ?? financials?.grandTotal ?? 0;
 
+  /* GC cost on this CO = everything it will pay out (downstream billable +
+     anything the GC procures itself). Markup % is applied to this number. */
+  const gcCostBase = financials?.grandTotal ?? 0;
+  const showOwnerStep = isGC && !forwardsToGC;
+  const parsedOwnerMarkup = parseFloat(ownerMarkup.replace(/[^0-9.\-]/g, ''));
+  const derivedOwnerPrice = !isNaN(parsedOwnerMarkup) && gcCostBase > 0
+    ? gcCostBase * (1 + parsedOwnerMarkup / 100)
+    : null;
+  const typedOwnerPrice = parseFloat(ownerPrice.replace(/[^0-9.]/g, ''));
+  const effectiveOwnerPrice = !isNaN(typedOwnerPrice) && typedOwnerPrice > 0
+    ? typedOwnerPrice
+    : derivedOwnerPrice;
+  const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+
   useEffect(() => {
     let cancelled = false;
     const deleteEligibleStatuses: COStatus[] = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'rejected'];
