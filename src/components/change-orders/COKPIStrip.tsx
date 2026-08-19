@@ -248,20 +248,46 @@ function getTiles(props: COKPIStripProps): KPITile[] {
 
 function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: string; onRefresh?: () => void }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(tile.editValue?.toString() ?? '');
+  const [priceDraft, setPriceDraft] = useState(tile.editValue?.toString() ?? '');
+  const [markupDraft, setMarkupDraft] = useState(tile.markupPercent?.toString() ?? '');
   const [saving, setSaving] = useState(false);
 
+  const cost = tile.gcCost ?? 0;
+  const parsedMarkup = parseFloat(markupDraft.replace(/[^0-9.\-]/g, ''));
+  const derivedPrice = !isNaN(parsedMarkup) && cost > 0 ? cost * (1 + parsedMarkup / 100) : null;
+
+  function open() {
+    setPriceDraft(tile.editValue?.toString() ?? '');
+    setMarkupDraft(tile.markupPercent?.toString() ?? '');
+    setEditing(true);
+  }
+
   async function save() {
-    const num = parseFloat(draft.replace(/[^0-9.]/g, ''));
-    if (isNaN(num) || num <= 0) {
+    const typedPrice = parseFloat(priceDraft.replace(/[^0-9.]/g, ''));
+    const price = !isNaN(typedPrice) && typedPrice > 0 ? typedPrice : derivedPrice;
+    if (price == null || price <= 0) {
       setEditing(false);
       return;
     }
+    const markup = !isNaN(parsedMarkup)
+      ? parsedMarkup
+      : cost > 0
+        ? Number((((price - cost) / cost) * 100).toFixed(2))
+        : null;
+
     setSaving(true);
-    const { error } = await supabase.from('change_orders').update({ gc_budget: num }).eq('id', coId);
+    const { error } = await supabase
+      .from('change_orders')
+      .update({
+        gc_budget: Number(price.toFixed(2)),
+        gc_owner_markup_percent: markup,
+        passed_to_owner: true,
+        not_passed_reason: null,
+      })
+      .eq('id', coId);
     setSaving(false);
-    if (error) { toast.error('Failed to save budget'); }
-    else { toast.success('Budget updated'); onRefresh?.(); }
+    if (error) { toast.error('Failed to save owner price'); }
+    else { toast.success('Owner price updated'); onRefresh?.(); }
     setEditing(false);
   }
 
@@ -269,7 +295,7 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
     <div
       className="bg-card rounded-xl px-3.5 py-3 border border-border shadow-sm cursor-pointer"
       style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
-      onClick={() => { if (!editing) { setDraft(tile.editValue?.toString() ?? ''); setEditing(true); } }}
+      onClick={() => { if (!editing) open(); }}
     >
       <div className="flex items-start justify-between gap-1">
         <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium leading-tight">
@@ -282,26 +308,54 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
         )}
       </div>
       {editing ? (
-        <div className="mt-1.5" onClick={e => e.stopPropagation()}>
-          <Input
-            autoFocus
-            type="number"
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onBlur={save}
-            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-            className="h-8 text-sm font-mono"
+        <div className="mt-1.5 space-y-1.5" onClick={e => e.stopPropagation()}>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5">Markup %</p>
+              <Input
+                autoFocus
+                type="number"
+                value={markupDraft}
+                onChange={e => { setMarkupDraft(e.target.value); setPriceDraft(''); }}
+                onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+                className="h-8 text-sm font-mono"
+                disabled={saving}
+                placeholder="15"
+              />
+            </div>
+            <div>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5">Owner price</p>
+              <Input
+                type="number"
+                value={priceDraft}
+                onChange={e => setPriceDraft(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+                className="h-8 text-sm font-mono"
+                disabled={saving}
+                placeholder={derivedPrice ? derivedPrice.toFixed(0) : 'Amount'}
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-mono">
+            Cost {fmtCurrency(cost)}
+            {derivedPrice != null && !priceDraft ? ` → ${fmtCurrency(derivedPrice)} to owner` : ''}
+          </p>
+          <button
+            type="button"
+            onClick={save}
             disabled={saving}
-            placeholder="Enter budget"
-          />
+            className="h-7 w-full rounded-md bg-primary text-primary-foreground text-[11px] font-semibold uppercase tracking-wider"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
         </div>
       ) : (
         <p className="font-heading text-foreground leading-none mt-1.5" style={{ fontSize: '1.35rem', fontWeight: 900 }}>
           {tile.value}
         </p>
       )}
-      {!editing && (
-        <p className="text-[10px] text-muted-foreground mt-1">Click to edit</p>
+      {!editing && tile.sub && (
+        <p className="text-[10px] text-muted-foreground mt-1">{tile.sub}</p>
       )}
     </div>
   );
