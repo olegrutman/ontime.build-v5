@@ -334,7 +334,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                     <TdN>{co.co_number || '—'}</TdN>,
                     <TdM>{fmt(rev)}</TdM>,
                     <TdM>{fmt(cost)}</TdM>,
-                    <TdM style={mk < 0 ? { color: C.red } : undefined}>{mk < 0 ? `-${fmt(Math.abs(mk))}` : fmt(mk)}</TdM>,
+                    <TdM><span style={mk < 0 ? { color: C.red } : undefined}>{mk < 0 ? `-${fmt(Math.abs(mk))}` : fmt(mk)}</span></TdM>,
                   ]} />
                 );
               }) : (
