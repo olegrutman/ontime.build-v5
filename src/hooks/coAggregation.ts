@@ -60,6 +60,10 @@ export interface AggregatedCOTotals {
   approvedWOTotal: number;
   approvedCostBreakdown: COCostBreakdown;
   pendingCostBreakdown: COCostBreakdown;
+  /** Approved COs with no owner-facing price set (GC view) — margin leaks. */
+  coMissingOwnerBudget: number;
+  /** Approved COs priced BELOW what they cost the viewer. */
+  coSellingAtLoss: number;
 }
 
 export const PENDING_CO_STATUSES = [
