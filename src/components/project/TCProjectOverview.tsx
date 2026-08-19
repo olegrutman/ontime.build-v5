@@ -8,6 +8,7 @@ import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 import { resendProjectInvite } from '@/lib/inviteUtils';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import type { OrgType } from '@/types/organization';
+import { baseContractSum } from '@/lib/contractSums';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, cellStyle, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
@@ -88,7 +89,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
   // ─── GC Contract (upstream, read-only) ───
   const gcContract = financials.upstreamContract;
-  const gcContractVal = gcContract?.contract_sum || 0;
+  // contract_sum is the REVISED value (approved COs already folded in by the DB
+  // trigger). CO adds are shown as their own line, so start from the base.
+  const gcContractVal = baseContractSum(gcContract);
   const gcName = (() => {
     if (!gcContract) return 'General Contractor';
     if (currentOrgId && gcContract.from_org_id === currentOrgId) return gcContract.to_org_name || 'General Contractor';
@@ -98,7 +101,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
   // ─── FC Contract (downstream, editable) ───
   const fcContract = financials.downstreamContract;
-  const fcContractVal = fcContract?.contract_sum || 0;
+  const fcContractVal = baseContractSum(fcContract);
   const fcName = (() => {
     if (!fcContract) return '';
     if (currentOrgId && fcContract.from_org_id === currentOrgId) return fcContract.to_org_name || '';
