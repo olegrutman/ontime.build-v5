@@ -108,9 +108,12 @@ export function useCORoleContext(
     const canEditExternal =
       !!co && (isGC || isTC || isFC) && !externalFrozenForRole && (!isFC || isCollaboratorOrg || isFCCreator);
 
-    // Internal (private cost) edits — locked only when CO reaches a final state.
+    // Internal (private cost) edits — NEVER status-locked. Real costs land after
+    // the work is approved/completed (invoices, timesheets, receipts), so a TC/FC
+    // must be able to keep booking their own cost against an approved or completed
+    // CO. These rows are private and never change the upstream billable amount.
     const canEditInternal =
-      !!co && (isGC || isTC || isFC) && !finalStatuses.includes(co?.status ?? '') && (!isFC || isCollaboratorOrg || isFCCreator);
+      !!co && (isGC || isTC || isFC) && (!isFC || isCollaboratorOrg || isFCCreator);
 
     const VALID = ['fixed', 'tm', 'nte'];
     const pricingType = co && VALID.includes(co.pricing_type) ? co.pricing_type as 'fixed' | 'tm' | 'nte' : 'fixed';
