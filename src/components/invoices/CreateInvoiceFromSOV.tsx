@@ -214,7 +214,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       const { data: contractsData } = await supabase
         .from('project_contracts')
         .select(`
-          id, from_role, to_role, contract_sum, retainage_percent, from_org_id, to_org_id, trade,
+          id, from_role, to_role, contract_sum, co_approved_sum, retainage_percent, from_org_id, to_org_id, trade,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `)
@@ -224,7 +224,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         id: c.id,
         from_role: c.from_role,
         to_role: c.to_role,
-        contract_sum: c.contract_sum,
+        contract_sum: Math.max((c.contract_sum || 0) - (c.co_approved_sum || 0), 0),
         retainage_percent: c.retainage_percent,
         from_org_id: c.from_org_id,
         to_org_id: c.to_org_id,
