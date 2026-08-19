@@ -816,6 +816,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     supplierOrderValue, supplierInvoiced, supplierPaid,
     receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
     receivablesPendingAmount, receivablesPendingCount, payablesPendingAmount, payablesPendingCount,
+    payablesPendingInvoices, coCostBreakdown, coPendingCostBreakdown,
     payablesPaidToSubs: Math.max(0, payablesPaid - materialPaid),
     recentInvoices, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
