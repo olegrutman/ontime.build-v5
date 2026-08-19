@@ -21,6 +21,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { COSOVSection } from '@/components/sov/COSOVSection';
 
 /* ─── Per-Contract SOV Section ─── */
 
@@ -568,15 +569,26 @@ export default function ProjectSOVPage() {
               </CardContent>
             </Card>
           );
-          return visibleContracts.map(contract => (
-            <SOVContractSection
-              key={contract.id}
-              projectId={projectId!}
-              contractId={contract.id}
-              contract={contract}
-              userOrgId={userOrgId}
-            />
-          ));
+          return (
+            <>
+              {visibleContracts.map(contract => (
+                <SOVContractSection
+                  key={contract.id}
+                  projectId={projectId!}
+                  contractId={contract.id}
+                  contract={contract}
+                  userOrgId={userOrgId}
+                />
+              ))}
+              <COSOVSection
+                projectId={projectId!}
+                contractIds={visibleContracts.map(c => c.id)}
+                retainagePctByContract={Object.fromEntries(
+                  visibleContracts.map(c => [c.id, Number(c.retainage_percent ?? 0)])
+                )}
+              />
+            </>
+          );
         })()}
       </div>
     </AppLayout>
