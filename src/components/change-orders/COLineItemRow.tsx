@@ -172,10 +172,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // Markup visibility logic for GC
   const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
   const gcSummaryOnly = isGC && markupVisibility === 'summary';
-  const visibleBillable = hideGCBreakdown ? [] : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
+  // GC hidden mode: show the GC's per-line cost (the approved billable amount) without
+  // revealing the TC's internal rates or margin.
+  const visibleBillable = hideGCBreakdown ? tcBillable : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
   const tcDownstreamCosts = isTC ? fcBillable : [];
-  const totalForRole = hideGCBreakdown ? 0 : isGC ? tcTotal : isFC ? fcTotal : tcTotal;
-  const entryCount = hideGCBreakdown ? billable.length : gcSummaryOnly ? billable.length : visibleBillable.length;
+  const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
+  const entryCount = visibleBillable.length;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
@@ -322,6 +324,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
 
               const isPriced = entryCount > 0 || totalForRole > 0;
+              const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
 
               if (!isPriced && canAddLabor) {
                 return (
@@ -365,7 +368,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
                   {/* Primary value */}
                   <div className="px-2.5 py-1.5">
-                    <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Billable</span>
+                    <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">{primaryLabel}</span>
                     <span className="flex items-baseline gap-0.5">
                       <span className="font-mono text-sm" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
                       <span className="font-mono text-base font-bold text-foreground">{fmt(totalForRole)}</span>
@@ -562,10 +565,14 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
       {expanded && (
         <div className="bg-accent/30 border-t border-border">
           {hideGCBreakdown ? (
-            <div className="px-6 py-8 text-center">
-              <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-foreground">Pricing details hidden</p>
-              <p className="text-xs text-muted-foreground mt-1">{rl.GC} only sees the final submitted amount on fixed-price change orders.</p>
+            <div className="px-5 py-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Approved line total</span>
+                <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
+              </div>
+              {visibleBillable.length > 0 && (
+                <p className="text-[10px] text-muted-foreground">{visibleBillable.length} entr{visibleBillable.length === 1 ? 'y' : 'ies'} · TC rates and markup hidden</p>
+              )}
             </div>
           ) : gcSummaryOnly ? (
             <div className="px-5 py-4 space-y-2">
