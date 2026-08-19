@@ -472,6 +472,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setReceivablesPendingCount(recvPending.length);
         setPayablesPendingAmount(payPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
         setPayablesPendingCount(payPending.length);
+        setPayablesPendingInvoices(payPending.map((i: any) => ({
+          id: i.id, invoice_number: i.invoice_number, total_amount: i.total_amount || 0,
+          submitted_at: i.submitted_at ?? null, po_id: i.po_id ?? null,
+        })));
       }
 
       // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
