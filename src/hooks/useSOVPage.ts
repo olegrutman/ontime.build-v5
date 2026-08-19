@@ -71,6 +71,7 @@ export function useSOVPage(projectId: string, contractId?: string | null, userOr
         .from('project_sov')
         .select('*')
         .eq('project_id', projectId)
+        .eq('sov_kind', 'base')
         .order('version', { ascending: false })
         .limit(1);
       if (activeContractId) {
@@ -142,6 +143,7 @@ export function useSOVPage(projectId: string, contractId?: string | null, userOr
         .from('project_sov')
         .select('*')
         .eq('project_id', projectId)
+        .eq('sov_kind', 'base')
         .order('version', { ascending: false });
       return (data || []) as SOVVersion[];
     },

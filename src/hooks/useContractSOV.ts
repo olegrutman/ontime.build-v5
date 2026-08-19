@@ -328,6 +328,7 @@ export async function getExistingSOVItems(projectId: string): Promise<{item_name
     .from('project_sov')
     .select('id')
     .eq('project_id', projectId)
+    .eq('sov_kind', 'base')
     .limit(1)
     .maybeSingle();
   
@@ -400,7 +401,8 @@ export function useContractSOV(projectId: string | undefined) {
         supabase
           .from('project_sov')
           .select('*')
-          .eq('project_id', projectId),
+          .eq('project_id', projectId)
+          .eq('sov_kind', 'base'),
         supabase
           .from('sov_templates')
           .select('*')
