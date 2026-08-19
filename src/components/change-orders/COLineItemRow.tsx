@@ -368,7 +368,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
                   {/* Primary value */}
                   <div className="px-2.5 py-1.5">
-                    <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Billable</span>
+                    <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">{primaryLabel}</span>
                     <span className="flex items-baseline gap-0.5">
                       <span className="font-mono text-sm" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
                       <span className="font-mono text-base font-bold text-foreground">{fmt(totalForRole)}</span>
