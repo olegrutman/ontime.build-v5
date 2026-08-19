@@ -647,11 +647,19 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const marginToDateAmount = earnedRevenueToDate - incurredCostToDate;
   const marginToDatePct = earnedRevenueToDate > 0 ? (marginToDateAmount / earnedRevenueToDate) * 100 : 0;
 
+  /**
+   * `sum` is the BASE contract value the user typed. `contract_sum` stores the
+   * revised value (base + approved COs), so the approved-CO portion must be
+   * re-added — otherwise a manual edit silently wipes every approved CO while
+   * `co_approved_sum` keeps claiming it, and base math drifts by that amount.
+   */
   const updateContract = async (id: string, sum: number, retainage: number): Promise<boolean> => {
     if (viewerRole === 'Field Crew') return false;
-    const { error } = await supabase.from('project_contracts').update({ contract_sum: sum, retainage_percent: retainage }).eq('id', id);
+    const coPortion = contracts.find(c => c.id === id)?.co_approved_sum || 0;
+    const revised = sum + coPortion;
+    const { error } = await supabase.from('project_contracts').update({ contract_sum: revised, retainage_percent: retainage }).eq('id', id);
     if (error) return false;
-    setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: sum, retainage_percent: retainage } : c));
+    setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: revised, retainage_percent: retainage } : c));
     return true;
   };
 
