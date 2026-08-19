@@ -97,15 +97,33 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       });
     }
 
+    const gcOwnMatCost = matResp === 'GC' ? financials.materialsCost : 0;
+    const gcOwnEqCost = eqResp === 'GC' ? financials.equipmentCost : 0;
+    const gcCost = tcSubmitted + gcOwnMatCost + gcOwnEqCost;
+    const markupPct = (props.co as any).gc_owner_markup_percent as number | null;
+    const passedToOwner = (props.co as any).passed_to_owner as boolean | null;
+
+    const ownerSub = passedToOwner === false
+      ? 'Not passed to owner — you absorb this cost'
+      : gcBudget
+        ? `Cost ${fmtCurrency(gcCost)}${markupPct ? ` + ${markupPct}%` : ''} = ${fmtCurrency(gcBudget)} to owner`
+        : 'What you bill the owner (click to set price or markup %)';
+
     tiles.push({
-      label: 'GC Budget',
-      value: gcBudget ? fmtCurrency(gcBudget) : '—',
+      label: 'GC to Owner Budget',
+      value: passedToOwner === false ? 'Absorbed' : gcBudget ? fmtCurrency(gcBudget) : '—',
       color: '#6366F1',
       editable: true,
       editValue: gcBudget,
-      sub: gcBudget ? undefined : 'Your internal cap (click to set)',
-      badge: gcBudget && tcSubmitted > 0
-        ? { text: `${((tcSubmitted / gcBudget) * 100).toFixed(0)}% used`, variant: tcSubmitted <= gcBudget ? 'healthy' as const : 'watch' as const }
+      gcCost,
+      markupPercent: markupPct,
+      passedToOwner,
+      sub: ownerSub,
+      badge: gcBudget && gcCost > 0 && passedToOwner !== false
+        ? {
+            text: `${(((gcBudget - gcCost) / gcCost) * 100).toFixed(0)}% markup`,
+            variant: gcBudget >= gcCost ? 'healthy' as const : 'watch' as const,
+          }
         : undefined,
     });
 
