@@ -18,6 +18,7 @@ import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/co
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 import { APPROVED_CO_STATUSES } from '@/hooks/coAggregation';
+import { baseContractSum } from '@/lib/contractSums';
 
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
@@ -87,7 +88,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   const ownerBudgetReal = financials.ownerContractValue || 0;
   const upContract = financials.upstreamContract;
-  const tcContractVal = upContract?.contract_sum || 0;
+  // BASE subcontract value: `contract_sum` already includes approved COs, and CO
+  // cost is added separately below, so using the raw sum double-counted them.
+  const tcContractVal = baseContractSum(upContract as any);
+
   const tcName = (() => {
     if (!upContract) return 'Trade Contractor';
     if (currentOrgId && upContract.from_org_id === currentOrgId) return upContract.to_org_name || 'Trade Contractor';
@@ -158,7 +162,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   // ─── Change Orders / Work Orders ───
   const { data: changeOrders = [] } = useQuery({
-    queryKey: ['project-cos-overview', projectId, isTM],
+    queryKey: ['project-cos-overview', projectId],
     queryFn: async () => {
       const { data: cos } = await supabase
         .from('change_orders')
@@ -167,24 +171,22 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         .order('created_at', { ascending: false });
       if (!cos || cos.length === 0) return [];
 
-      if (isTM) {
-        // For T&M, also fetch material + equipment totals per WO
-        const coIds = cos.map(c => c.id);
-        const [matRes, eqRes] = await Promise.all([
-          supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
-          supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
-        ]);
-        const matByWO: Record<string, number> = {};
-        const eqByWO: Record<string, number> = {};
-        (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
-        (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
-        return cos.map(c => ({
-          ...c,
-          wo_materials_total: matByWO[c.id] || 0,
-          wo_equipment_total: eqByWO[c.id] || 0,
-        }));
-      }
-      return cos.map(c => ({ ...c, wo_materials_total: 0, wo_equipment_total: 0, materials_responsible: null, equipment_responsible: null }));
+      // Materials/equipment are fetched for BOTH modes: change orders carry them
+      // too, and hard-coding 0 outside T&M made GC-side CO cost labor-only.
+      const coIds = cos.map(c => c.id);
+      const [matRes, eqRes] = await Promise.all([
+        supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
+        supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
+      ]);
+      const matByWO: Record<string, number> = {};
+      const eqByWO: Record<string, number> = {};
+      (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
+      (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
+      return cos.map(c => ({
+        ...c,
+        wo_materials_total: matByWO[c.id] || 0,
+        wo_equipment_total: eqByWO[c.id] || 0,
+      }));
     },
   });
 
@@ -193,8 +195,11 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const isApprovedCO = (s: string) => (APPROVED_CO_STATUSES as readonly string[]).includes(s);
   const approvedCOs = changeOrders.filter(co => isApprovedCO(co.status));
   const pendingCOs = changeOrders.filter(co => !isApprovedCO(co.status) && co.status !== 'rejected');
-  const coRevenueTotal = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  // For T&M: only count mat/equip in TC cost when TC is the responsible party per WO
+  /** GC revenue per CO: the owner budget when typed, else the approved value. */
+  const coOwnerValue = (co: any) => co.gc_budget || co.tc_submitted_price || 0;
+  const coRevenueTotal = approvedCOs.reduce((s, co) => s + coOwnerValue(co), 0);
+  const coRevenueIsFallback = approvedCOs.some(co => !co.gc_budget && co.tc_submitted_price);
+  // Only count mat/equip in TC cost when the TC is the responsible party per CO
   const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
   const coMaterialsCost = approvedCOs.reduce((s, co) => {
     const matResp = (co as any).materials_responsible ?? 'TC';
@@ -223,9 +228,11 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const openRfis = rfis.filter(r => r.status === 'open' || r.status === 'in_review');
   const resolvedRfis = rfis.filter(r => r.status === 'resolved' || r.status === 'closed');
 
-  // ─── Invoices ───
-  const paidInvoices = financials.recentInvoices.filter(i => i.status === 'PAID');
-  const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
+  // ─── Invoices ─── party-scoped: the GC's payables (TC + suppliers), not every
+  // invoice on the project. `recentInvoices` is an unscoped 5-row slice.
+  const gcPaidAmount = financials.payablesPaid;
+  const pendingPayableCount = financials.payablesPendingCount;
+  const pendingPayableAmount = financials.payablesPendingAmount;
 
   // ─── Team data ───
   const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
@@ -294,8 +301,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
-  if (pendingInvoices.length > 0) {
-    warnings.push({ color: C.red, icon: '💰', title: `${pendingInvoices.length} Invoice${pendingInvoices.length > 1 ? 's' : ''} Awaiting Approval`, sub: 'Review and approve pending invoices', value: fmt(pendingInvoices.reduce((s, i) => s + i.total_amount, 0)), pill: 'Action Needed', pillType: 'pr', tab: 'invoices' });
+  if (pendingPayableCount > 0) {
+    warnings.push({ color: C.red, icon: '💰', title: `${pendingPayableCount} Invoice${pendingPayableCount > 1 ? 's' : ''} Awaiting Your Approval`, sub: `From ${tcName} + suppliers`, value: fmt(pendingPayableAmount), pill: 'Action Needed', pillType: 'pr', tab: 'invoices' });
   }
   if (matPending > 0) {
     warnings.push({ color: C.yellow, icon: '🚚', title: 'Material Orders Pending Delivery', sub: `${fmt(matPending)} in transit`, value: fmt(matPending), pill: 'Pending', pillType: 'pw', tab: 'purchase-orders' });
@@ -413,7 +420,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             {/* ═══ T&M MODE: WO-driven cards 1-4 ═══ */}
 
             {/* Card 1 — WO Revenue */}
-            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="WO REVENUE (BILLED TO OWNER)" value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of GC budgets`} pills={coRevenueTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
+            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="WO REVENUE (BILLED TO OWNER)" value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'} sub={`${approvedCOs.length} approved WOs · ${coRevenueIsFallback ? 'approved values (no owner budget set)' : 'sum of GC budgets'}`} pills={coRevenueTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
               <div style={{ padding: 12 }}>
                 {changeOrders.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -423,7 +430,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                         <TRow key={co.id} cells={[
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
-                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                          <TdM>{coOwnerValue(co) ? fmt(coOwnerValue(co)) : '—'}</TdM>,
                           <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
                       ))}
@@ -490,7 +497,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                         <TRow cells={[<TdN>Equipment Cost</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
                         <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
                         <TRow cells={[<TdN>Your Margin</TdN>, <TdM>{fmt(woMargin)}</TdM>]} isTotal />
-                        <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
+                        <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
                         <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
                       </tbody>
                     </table>
@@ -536,7 +543,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                           <TRow key={co.id} cells={[
                             <TdN>{co.co_number || '—'}</TdN>,
                             co.title || '—',
-                            <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                            <TdM>{coOwnerValue(co) ? fmt(coOwnerValue(co)) : '—'}</TdM>,
                             <TdM>{woTotalCost > 0 ? fmt(woTotalCost) : '—'}</TdM>,
                             <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                           ]} />
@@ -556,7 +563,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             {/* ═══ FIXED-CONTRACT MODE: Original cards 1-4 ═══ */}
 
             {/* Card 1 — Owner Budget */}
-            <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.billedToDate)} invoiced to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+            <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.ownerBillingsTotal)} billed to owner to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
               <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
                 <EditField label="Owner Contract Value" value={`$${draftOwnerBudget.toLocaleString()}`} onSave={(v) => { const n = parseInt(v.replace(/[^0-9]/g, '')) || 0; setDraftOwnerBudget(n); setDirtyOwner(n !== ownerBudgetReal); }} type="number" />
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
@@ -564,8 +571,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                   <tbody>
                     <TRow cells={[<TdN>Approved COs to Owner</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
                     <TRow cells={[<TdN>Revised Contract Total</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(financials.billedToDate)}</TdM>]} />
-                    <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.billedToDate)}</TdM>]} />
+                    <TRow cells={[<TdN>Billed to Owner to Date</TdN>, <TdM>{fmt(financials.ownerBillingsTotal)}</TdM>]} />
+                    <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.ownerBillingsTotal)}</TdM>]} />
                   </tbody>
                 </table>
                 {dirtyOwner && (
@@ -626,7 +633,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                     <TRow cells={[<TdN>Pending delivery</TdN>, <TdM>{fmt(matPending)}</TdM>]} />
                     <TRow cells={[<TdN>At risk on delivery</TdN>, <TdM>{fmt(materialAtRiskOnDelivery)}</TdM>]} />
                     <TRow cells={[<TdN>Material variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} />
-                    <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
+                    <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
                     <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
                   </tbody>
                 </table>
@@ -676,7 +683,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                         <TRow key={co.id} cells={[
                           <TdN>{co.co_number || '—'}</TdN>,
                           co.title || '—',
-                          <TdM>{co.gc_budget ? fmt(co.gc_budget) : '—'}</TdM>,
+                          <TdM>{coOwnerValue(co) ? fmt(coOwnerValue(co)) : '—'}</TdM>,
                           <TdM>{co.tc_submitted_price ? fmt(co.tc_submitted_price) : '—'}</TdM>,
                           <Pill type={isApprovedCO(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                         ]} />
@@ -736,7 +743,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         </KpiCard>
 
         {/* Card 7 — Invoices */}
-        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="INVOICES PAID" value={fmt(financials.totalPaid)} sub={`${paidInvoices.length} paid · ${pendingInvoices.length} pending`} pills={pendingInvoices.length > 0 ? [{ type: 'pw', text: `${pendingInvoices.length} pending` }] : [{ type: 'pg', text: 'On track' }]} idx={6}>
+        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="INVOICES PAID" value={fmt(gcPaidAmount)} sub={`Paid to ${tcName} + suppliers · ${pendingPayableCount} awaiting your approval`} pills={pendingPayableCount > 0 ? [{ type: 'pw', text: `${pendingPayableCount} pending` }] : [{ type: 'pg', text: 'On track' }]} idx={6}>
           <div style={{ padding: 12 }}>
             {financials.recentInvoices.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

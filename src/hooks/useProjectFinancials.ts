@@ -96,6 +96,13 @@ export interface ProjectFinancials {
   payablesInvoiced: number;
   payablesPaid: number;
   payablesRetainage: number;
+  /** SUBMITTED invoices the viewer is owed / owes, scoped by party. */
+  receivablesPendingAmount: number;
+  receivablesPendingCount: number;
+  payablesPendingAmount: number;
+  payablesPendingCount: number;
+  /** Paid payables excluding supplier (PO-linked) invoices — i.e. paid to subs/crew. */
+  payablesPaidToSubs: number;
 
   // Invoices for charts/lists
   recentInvoices: { id: string; invoice_number: string; status: string; total_amount: number; created_at: string }[];
@@ -165,6 +172,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [payablesInvoiced, setPayablesInvoiced] = useState(0);
   const [payablesPaid, setPayablesPaid] = useState(0);
   const [payablesRetainage, setPayablesRetainage] = useState(0);
+  // Party-scoped invoice counts/amounts awaiting approval (SUBMITTED only).
+  const [receivablesPendingAmount, setReceivablesPendingAmount] = useState(0);
+  const [receivablesPendingCount, setReceivablesPendingCount] = useState(0);
+  const [payablesPendingAmount, setPayablesPendingAmount] = useState(0);
+  const [payablesPendingCount, setPayablesPendingCount] = useState(0);
   // Subtotal of submitted/paid invoices linked to POs the viewer owns.
   // Used to avoid double-counting materials (PO commitment + supplier invoice).
   const [materialInvoiced, setMaterialInvoiced] = useState(0);
@@ -419,6 +431,14 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
         setMaterialInvoiced(materialPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setMaterialPaid(materialPayableInvs.filter((i: any) => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0));
+
+        // Awaiting-approval counts, scoped by party (was a 5-row recent slice).
+        const recvPending = receivableInvs.filter((i: any) => i.status === 'SUBMITTED');
+        const payPending = payableInvs.filter((i: any) => i.status === 'SUBMITTED');
+        setReceivablesPendingAmount(recvPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setReceivablesPendingCount(recvPending.length);
+        setPayablesPendingAmount(payPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setPayablesPendingCount(payPending.length);
       }
 
       // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
@@ -458,6 +478,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           gcPayableInvs.filter((i: any) => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0),
         );
         setPayablesRetainage(gcPayableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        const gcPayPending = gcPayableInvs.filter((i: any) => i.status === 'SUBMITTED');
+        setPayablesPendingAmount(gcPayPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setPayablesPendingCount(gcPayPending.length);
+        // GCs bill the owner off-platform: no receivable invoices to approve.
+        setReceivablesPendingAmount(0);
+        setReceivablesPendingCount(0);
 
         // Owner billings (Phase 2) — only the GC org can read these via RLS.
         const { data: ownerBillings } = await supabase
@@ -489,7 +515,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       const { data: orderedPOs } = await supabase
         .from('purchase_orders')
-        .select('id, status, sales_tax_percent, po_line_items(line_total)')
+        .select('id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
         .eq('project_id', projectId)
         .in('status', ['ORDERED', 'DELIVERED']);
 
@@ -499,7 +525,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         return sum + subtotal * (1 + taxRate);
       }, 0);
 
-      const allPOs = orderedPOs || [];
+      // Only POs the viewer's org owns count toward its material spend. Without
+      // this a GC saw TC-procured POs charged against its own budget (and vice
+      // versa). Legacy rows with no owner fall back to being visible to all.
+      const allPOs = (orderedPOs || []).filter((po: any) =>
+        !po.pricing_owner_org_id || orgIds.includes(po.pricing_owner_org_id),
+      );
       const matOrdered = calcPOTotal(allPOs);
       setMaterialOrdered(matOrdered);
 
@@ -623,11 +654,19 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const marginToDateAmount = earnedRevenueToDate - incurredCostToDate;
   const marginToDatePct = earnedRevenueToDate > 0 ? (marginToDateAmount / earnedRevenueToDate) * 100 : 0;
 
+  /**
+   * `sum` is the BASE contract value the user typed. `contract_sum` stores the
+   * revised value (base + approved COs), so the approved-CO portion must be
+   * re-added — otherwise a manual edit silently wipes every approved CO while
+   * `co_approved_sum` keeps claiming it, and base math drifts by that amount.
+   */
   const updateContract = async (id: string, sum: number, retainage: number): Promise<boolean> => {
     if (viewerRole === 'Field Crew') return false;
-    const { error } = await supabase.from('project_contracts').update({ contract_sum: sum, retainage_percent: retainage }).eq('id', id);
+    const coPortion = contracts.find(c => c.id === id)?.co_approved_sum || 0;
+    const revised = sum + coPortion;
+    const { error } = await supabase.from('project_contracts').update({ contract_sum: revised, retainage_percent: retainage }).eq('id', id);
     if (error) return false;
-    setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: sum, retainage_percent: retainage } : c));
+    setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: revised, retainage_percent: retainage } : c));
     return true;
   };
 
@@ -698,6 +737,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     ownerContractValue, materialMarkupType, materialMarkupValue,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
+    receivablesPendingAmount, receivablesPendingCount, payablesPendingAmount, payablesPendingCount,
+    payablesPaidToSubs: Math.max(0, payablesPaid - materialPaid),
     recentInvoices, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
     updateOwnerContract, updateMaterialMarkup,

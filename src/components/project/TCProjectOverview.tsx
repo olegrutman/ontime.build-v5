@@ -312,14 +312,19 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const openRfis = rfis.filter(r => r.status === 'open' || r.status === 'in_review');
 
   // ─── Invoices ───
+  // Counts/amounts are party-scoped in the hook. `recentInvoices` is an unscoped
+  // 5-row slice, so it used to miss receivables and count FC payables as ours.
   const paidInvoicesUp = financials.recentInvoices.filter(i => i.status === 'PAID');
-  const pendingInvoicesUp = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
   const totalReceivedFromGC = financials.receivablesCollected;
-  const totalPendingSubmittedFromGC = pendingInvoicesUp.reduce((s, i) => s + i.total_amount, 0);
+  const pendingFromGCCount = financials.receivablesPendingCount;
+  const totalPendingSubmittedFromGC = financials.receivablesPendingAmount;
 
-  // FC invoices (payables)
-  const totalPaidToFC = financials.payablesPaid;
-  const fcPendingSubmitted = financials.payablesInvoiced - financials.payablesPaid;
+  // Payables — split supplier (materials) out of money paid to the crew.
+  const totalPaidPayables = financials.payablesPaid;
+  const totalPaidToFC = financials.payablesPaidToSubs;
+  const totalPaidToSuppliers = financials.materialPaid;
+  const fcPendingSubmitted = financials.payablesPendingAmount;
+  const fcPendingCount = financials.payablesPendingCount;
 
   // ─── Totals (revised contracts use approved-only COs) ───
   const revisedGCTotal = isTM ? approvedCoRevenue : gcContractVal + approvedCoRevenue;
@@ -346,16 +351,18 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   // Pending = everything not paid (contract total minus collected)
   const totalPendingFromGC = Math.max(0, revisedGCTotal - totalReceivedFromGC);
   const fcPendingAmount = Math.max(0, revisedFCTotal - totalPaidToFC);
-  const gcReceivedPct = revisedGCTotal > 0 ? Math.round((totalReceivedFromGC / revisedGCTotal) * 100) : 0;
-  const fcPaidPct = revisedFCTotal > 0 ? Math.round((totalPaidToFC / revisedFCTotal) * 100) : 0;
+  // Clamped: collected amounts are tax-inclusive while contracts are pre-tax, so
+  // a fully-billed job could otherwise read above 100%.
+  const gcReceivedPct = revisedGCTotal > 0 ? Math.min(100, Math.round((totalReceivedFromGC / revisedGCTotal) * 100)) : 0;
+  const fcPaidPct = revisedFCTotal > 0 ? Math.min(100, Math.round((totalPaidToFC / revisedFCTotal) * 100)) : 0;
 
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (totalPendingSubmittedFromGC > 0) {
-    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${gcName} Approval`, sub: `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} pending`, value: fmt(totalPendingSubmittedFromGC), pill: `Chasing ${gcName}`, pillType: 'pw', tab: 'invoices' });
+    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${gcName} Approval`, sub: `${pendingFromGCCount} invoice${pendingFromGCCount > 1 ? 's' : ''} pending`, value: fmt(totalPendingSubmittedFromGC), pill: `Chasing ${gcName}`, pillType: 'pw', tab: 'invoices' });
   }
   if (fcPendingSubmitted > 0) {
-    warnings.push({ color: C.red, icon: '💰', title: `${fcName || 'Field Crew'} Invoice Awaiting Your Approval`, sub: `${fcName || 'Field Crew'} submitted`, value: fmt(fcPendingSubmitted), pill: `You owe ${fcName || 'Field Crew'}`, pillType: 'pr', tab: 'invoices' });
+    warnings.push({ color: C.red, icon: '💰', title: `${fcName || 'Field Crew'} Invoice Awaiting Your Approval`, sub: `${fcPendingCount} invoice${fcPendingCount > 1 ? 's' : ''} from ${fcName || 'Field Crew'} / suppliers`, value: fmt(fcPendingSubmitted), pill: `You owe ${fcName || 'Field Crew'}`, pillType: 'pr', tab: 'invoices' });
   }
   if (openRfis.length > 0) {
     warnings.push({ color: C.blue, icon: '❓', title: `${openRfis.length} Open RFI${openRfis.length > 1 ? 's' : ''} Need Response`, sub: `${gcName} waiting on answers`, value: `${openRfis.length} RFIs`, pill: 'Action Needed', pillType: 'pb', tab: 'rfis' });
@@ -494,7 +501,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
               <THead cols={['Item', 'Value']} />
               <tbody>
                 <TRow cells={[<TdN>{isTM ? 'Approved WO Revenue' : `Contract Value (set by ${gcName})`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
-                {!isTM && <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>Approved COs (billed to {gcName})</TdN>, <TdM>+{fmt(approvedCoRevenue)}</TdM>]} />}
                 {!isTM && <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />}
                 <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
                 <TRow cells={[<TdN>Pending from {gcName}</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} />
@@ -509,7 +516,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 2 — FC Contract (EDITABLE) */}
-        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label={isTM ? `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} COST TRACKING` : `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} CONTRACT (YOU SET THIS)`} value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || fcName || 'Field Crew'} · ${tcMarginPct}% your margin` : 'No contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
+        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label={isTM ? `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} COST TRACKING` : `${(selectedFcOrg?.org_name || fcName || 'FIELD CREW').toUpperCase()} CONTRACT (YOU SET THIS)`} value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || fcName || 'Field Crew'} · ${tcMarginPct}% labor-only margin` : 'No contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
           <div style={{ padding: '12px 16px' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>{isTM ? 'FC Terms' : 'FC Contract Terms'}</div>
             {/* FC Org Search */}
@@ -581,8 +588,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 <TRow cells={[<TdN>{isTM ? 'WO Revenue' : `${gcName} (your revenue)`}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
                 <TRow cells={[<TdN>{isTM ? 'TC Labor Cost' : `${fcName || 'Field Crew'} (your cost)`}</TdN>, <TdM>{fmt(effectiveFCVal)}</TdM>]} />
                 <TRow cells={[<TdN>Your Gross Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(tcGrossMargin)}</span>]} isTotal />
-                <TRow cells={[<TdN>Your Margin %</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
-                {!isTM && <TRow cells={[<TdN>CO Revenue (from {gcName})</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                <TRow cells={[<TdN>Labor-only Margin % (base contracts)</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{tcMarginPct}%</span>]} />
+                {!isTM && <TRow cells={[<TdN>Approved CO Revenue (from {gcName})</TdN>, <TdM>+{fmt(approvedCoRevenue)}</TdM>]} />}
                 {!isTM && <TRow cells={[<TdN>CO Cost (to {fcName || 'Field Crew'})</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />}
                 {materialCommitment > 0 && <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />}
                 <TRow cells={[<TdN>Your Net Margin{isTM ? '' : ` after COs`}</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: netTCMarginAll >= 0 ? C.green : C.red }}>{fmt(netTCMarginAll)}</span>]} isTotal />
@@ -598,7 +605,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
               <THead cols={['Metric', 'Value']} />
               <tbody>
                 <TRow cells={[<TdN>{isTM ? 'WO Revenue' : gcName}</TdN>, <TdM>{fmt(effectiveGCVal)}</TdM>]} />
-                {!isTM && <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenue)}</TdM>]} />}
+                {!isTM && <TRow cells={[<TdN>Approved CO Revenue</TdN>, <TdM>+{fmt(approvedCoRevenue)}</TdM>]} />}
                 <TRow cells={[<TdN>Revised In</TdN>, <TdM>{fmt(revisedGCTotal)}</TdM>]} isTotal />
                 <TRow cells={[<TdN>{isTM ? 'TC Labor Cost' : (fcName || 'Field Crew')}</TdN>, <TdM>-{fmt(effectiveFCVal)}</TdM>]} />
                 {!isTM && <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCost)}</TdM>]} />}
@@ -639,7 +646,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                   <tbody>
                     <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(financials.receivablesCollected)}</TdM>]} />
                     <TRow isTotal cells={[<TdN>Earned (cash)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                    <TRow cells={[<TdN>Paid to {fcName || 'Field Crew'} / suppliers</TdN>, <TdM>{fmt(financials.payablesPaid)}</TdM>]} />
+                    <TRow cells={[<TdN>Paid to {fcName || 'Field Crew'}</TdN>, <TdM>{fmt(totalPaidToFC)}</TdM>]} />
+                    <TRow cells={[<TdN>Paid to suppliers</TdN>, <TdM>{fmt(totalPaidToSuppliers)}</TdM>]} />
                     <TRow isTotal cells={[<TdN>Incurred (cash)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
                     <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
                   </tbody>
@@ -707,27 +715,20 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </KpiCard>
 
-        {/* Card 6 — Pending from GC */}
-        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label={`PENDING FROM ${gcName.toUpperCase()}`} value={totalPendingFromGC > 0 ? fmt(totalPendingFromGC) : '$0'} sub={totalPendingFromGC > 0 ? `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} awaiting ${gcName} approval` : 'No pending invoices'} pills={totalPendingFromGC > 0 ? [{ type: 'pw', text: `Chasing ${gcName}` }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
+        {/* Card 6 — Awaiting GC approval (submitted invoices) + unbilled backlog.
+            These are two different numbers, so they no longer share one headline. */}
+        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label={`AWAITING ${gcName.toUpperCase()} APPROVAL`} value={totalPendingSubmittedFromGC > 0 ? fmt(totalPendingSubmittedFromGC) : '$0'} sub={pendingFromGCCount > 0 ? `${pendingFromGCCount} invoice${pendingFromGCCount > 1 ? 's' : ''} submitted · ${fmt(totalPendingFromGC)} still unbilled` : `No invoices pending · ${fmt(totalPendingFromGC)} still unbilled`} pills={pendingFromGCCount > 0 ? [{ type: 'pw', text: `Chasing ${gcName}` }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
           <div style={{ padding: 12 }}>
-            {pendingInvoicesUp.length > 0 ? (
-              <>
-                {pendingInvoicesUp.map(inv => (
-                  <div key={inv.id} style={{ padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <TdN>{inv.invoice_number}</TdN>
-                      <Pill type="pw">Pending</Pill>
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 4 }}>To: {gcName}</div>
-                    <div style={{ fontSize: '1.4rem', color: C.ink, ...fontVal }}>{fmt(inv.total_amount)}</div>
-                  </div>
-                ))}
-                <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 8, ...fontLabel }}>Awaiting {gcName} approval. You will be notified when approved.</div>
-                <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>Send Follow-Up to {gcName}</button>
-              </>
-            ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No pending invoices</div>
-            )}
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <THead cols={['Metric', 'Value']} />
+              <tbody>
+                <TRow cells={[<TdN>Submitted, awaiting approval</TdN>, <TdM>{fmt(totalPendingSubmittedFromGC)}</TdM>]} />
+                <TRow cells={[<TdN>Invoices pending</TdN>, <TdM>{pendingFromGCCount}</TdM>]} />
+                <TRow cells={[<TdN>Collected to date</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
+                <TRow cells={[<TdN>Not yet billed (backlog)</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} isTotal />
+              </tbody>
+            </table>
+            <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>View Invoices</button>
           </div>
         </KpiCard>
 

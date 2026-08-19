@@ -27,8 +27,9 @@ const NOT_SET = 'Not set';
 const money = (v: number | null | undefined) =>
   typeof v === 'number' && Number.isFinite(v) ? fmt(v) : NOT_SET;
 /** Percent formatter that never divides by zero or an absent denominator. */
+// Clamped at 100: invoice totals are tax-inclusive while contracts are pre-tax.
 const pct = (num: number, den: number | null) =>
-  den !== null && den > 0 ? Math.round((num / den) * 100) : null;
+  den !== null && den > 0 ? Math.min(100, Math.round((num / den) * 100)) : null;
 const pctTxt = (p: number | null) => (p === null ? NOT_SET : `${p}%`);
 
 export function FCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
@@ -38,30 +39,35 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   /* ─── The FC's own contract row — the ONLY source of this crew's money ───
      Contracts are stored biller → payer, so a Field Crew row has the crew as
      from_org_id (from_role = 'Field Crew'). Match either side to be safe. */
-  const { data: myContract = null, isLoading: contractLoading } = useQuery({
+  const { data: contractData = null, isLoading: contractLoading } = useQuery({
     queryKey: ['fc-own-contract', projectId, currentOrgId],
     queryFn: async () => {
       if (!currentOrgId) return null;
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
+        .select('id, contract_sum, co_approved_sum, retainage_percent, labor_budget, from_org_id, to_org_id, from_role, to_role, status, trade')
         .eq('project_id', projectId)
         .or(`from_org_id.eq.${currentOrgId},to_org_id.eq.${currentOrgId}`);
       if (error) throw error;
-      const rows = (data || []).filter(
+      const all = data || [];
+      const rows = all.filter(
         (c: any) => c.trade !== 'Work Order' && c.trade !== 'Work Order Labor',
       );
       // Prefer the crew's own billing row (crew is the biller)
-      return (
+      const primary =
         rows.find((c: any) => c.from_org_id === currentOrgId && c.from_role === 'Field Crew') ||
         rows.find((c: any) => c.from_org_id === currentOrgId) ||
         rows.find((c: any) => c.to_role === 'Field Crew') ||
         rows[0] ||
-        null
-      );
+        null;
+      // Work-order contracts are still this crew's money: their invoices must be
+      // counted in billed / paid, even though the base contract card ignores them.
+      return { primary, allIds: all.map((c: any) => c.id) };
     },
     enabled: !!projectId && !!currentOrgId,
   });
+  const myContract = contractData?.primary ?? null;
+  const myContractIds: string[] = contractData?.allIds ?? [];
 
 
   // Zero rows is a NORMAL state: the TC has not set this crew's contract value yet.
@@ -69,10 +75,15 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
     typeof myContract?.contract_sum === 'number' && Number.isFinite(myContract.contract_sum)
       ? Number(myContract.contract_sum)
       : null;
-  const hasContract = contractValue !== null && contractValue > 0;
+  // A contract row exists even at $0 (T&M-only crews). Only a missing row is
+  // "not set" — the old `> 0` test showed the warning banner forever.
+  const hasContract = contractValue !== null;
+  const hasContractValue = contractValue !== null && contractValue > 0;
+  const coApprovedPortion = Number((myContract as any)?.co_approved_sum || 0);
+  const baseContractValue = contractValue !== null ? Math.max(0, contractValue - coApprovedPortion) : null;
   const retainagePct: number | null =
     typeof myContract?.retainage_percent === 'number' ? Number(myContract.retainage_percent) : null;
-  const retainageAmount = hasContract && retainagePct !== null ? (contractValue! * retainagePct) / 100 : null;
+  const retainageAmount = hasContractValue && retainagePct !== null ? (contractValue! * retainagePct) / 100 : null;
 
   const laborBudget = (typeof myContract?.labor_budget === 'number' ? Number(myContract.labor_budget) : financials.laborBudget) || 0;
 
@@ -108,19 +119,19 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
      every invoice on the project (including TC → GC), so read this crew's
      contract invoices directly and use the full list, not the recent-5 slice. */
   const { data: myInvoices = [] } = useQuery({
-    queryKey: ['fc-own-invoices', projectId, myContract?.id],
+    queryKey: ['fc-own-invoices', projectId, myContractIds.join(',')],
     queryFn: async () => {
-      if (!myContract?.id) return [];
+      if (myContractIds.length === 0) return [];
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_number, status, total_amount, created_at')
+        .select('id, invoice_number, status, subtotal, total_amount, created_at, contract_id')
         .eq('project_id', projectId)
-        .eq('contract_id', myContract.id)
+        .in('contract_id', myContractIds)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!projectId && !!myContract?.id,
+    enabled: !!projectId && myContractIds.length > 0,
   });
 
   const paidInvoices = myInvoices.filter((i: any) => i.status === 'PAID');
@@ -261,12 +272,14 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             {/* ═══ T&M MODE: WO-driven cards ═══ */}
 
             {/* Card 1 — My Contract */}
-            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={`Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
+            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={coApprovedPortion > 0 ? `Base ${money(baseContractValue)} + ${fmt(coApprovedPortion)} approved WOs` : `Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} spark={hasTrend ? <Sparkline data={billedSeries} color={C.amberD} fill={C.amber} /> : undefined} idx={0}>
               <div style={{ padding: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Item', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />
+                    <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Retainage</TdN>, <TdM>{retainagePct !== null ? `${retainagePct}%${retainageAmount !== null ? ` · ${fmt(retainageAmount)}` : ''}` : NOT_SET}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} isTotal />
                   </tbody>
@@ -388,7 +401,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
             {/* ═══ FIXED-CONTRACT MODE ═══ */}
 
             {/* Card 1 — My Contract */}
-            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={`Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} idx={0}>
+            <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={money(contractValue)} sub={coApprovedPortion > 0 ? `Base ${money(baseContractValue)} + ${fmt(coApprovedPortion)} approved WOs` : `Set by ${tcName} · read-only`} pills={hasContract ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: NOT_SET }]} idx={0}>
               <div style={{ padding: '12px 16px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Item', 'Value', 'Notes']} />
@@ -443,7 +456,9 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />
+                    <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} />
                     <TRow cells={[<TdN>Collected</TdN>, <TdM>{fmt(totalPaid)}</TdM>]} />
                     <TRow cells={[<TdN>Remaining to Invoice</TdN>, <TdM>{money(remainingToEarn)}</TdM>]} isTotal />
@@ -536,7 +551,9 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />
+                    <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} />
                     <TRow cells={[<TdN>Paid</TdN>, <TdM>{fmt(totalPaid)}</TdM>]} />
                     <TRow cells={[<TdN>Remaining</TdN>, <TdM>{money(remainingToEarn)}</TdM>]} isTotal />
