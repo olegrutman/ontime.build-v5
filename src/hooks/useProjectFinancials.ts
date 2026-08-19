@@ -471,6 +471,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           gcPayableInvs.filter((i: any) => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0),
         );
         setPayablesRetainage(gcPayableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        const gcPayPending = gcPayableInvs.filter((i: any) => i.status === 'SUBMITTED');
+        setPayablesPendingAmount(gcPayPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setPayablesPendingCount(gcPayPending.length);
+        // GCs bill the owner off-platform: no receivable invoices to approve.
+        setReceivablesPendingAmount(0);
+        setReceivablesPendingCount(0);
 
         // Owner billings (Phase 2) — only the GC org can read these via RLS.
         const { data: ownerBillings } = await supabase
