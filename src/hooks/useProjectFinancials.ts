@@ -105,8 +105,16 @@ export interface ProjectFinancials {
   receivablesPendingCount: number;
   payablesPendingAmount: number;
   payablesPendingCount: number;
+  /** The actual SUBMITTED invoices billed TO the viewer, awaiting their approval. */
+  payablesPendingInvoices: {
+    id: string; invoice_number: string; total_amount: number; submitted_at: string | null; po_id: string | null;
+  }[];
   /** Paid payables excluding supplier (PO-linked) invoices — i.e. paid to subs/crew. */
   payablesPaidToSubs: number;
+
+  /** Where the viewer's CO cost actually goes (own crew vs external crew vs materials). */
+  coCostBreakdown: COCostBreakdown;
+  coPendingCostBreakdown: COCostBreakdown;
 
   /** Canonical KPI ledger — the single source every financial card reads. */
   ledger: ProjectLedger;
