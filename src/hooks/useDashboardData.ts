@@ -3,6 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES } from '@/hooks/coAggregation';
+import { baseContractSum } from '@/lib/contractSums';
+
+// contract_sum already includes approved COs (DB trigger). Dashboard cards add
+// approved CO value separately, so contract totals must use the base value.
+const baseSum = (c: { contract_sum?: number | null; co_approved_sum?: number | null }) => baseContractSum(c);
 
 interface Project {
   id: string;
@@ -765,16 +770,16 @@ export function useDashboardData(): DashboardData {
       if (orgType === 'TC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
-            totalRevenue += c.contract_sum || 0;
+            totalRevenue += baseSum(c);
           }
           if (c.to_org_id === currentOrg.id) {
-            totalCosts += c.contract_sum || 0;
+            totalCosts += baseSum(c);
           }
         });
       } else if (orgType === 'GC') {
         contracts.forEach(c => {
           if (c.to_org_id === currentOrg.id) {
-            totalCosts += c.contract_sum || 0;
+            totalCosts += baseSum(c);
           }
         });
 
@@ -791,7 +796,7 @@ export function useDashboardData(): DashboardData {
       } else if (orgType === 'FC') {
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
-            totalRevenue += c.contract_sum || 0;
+            totalRevenue += baseSum(c);
           }
         });
 
@@ -937,8 +942,8 @@ export function useDashboardData(): DashboardData {
         const pf = pfMap.get(c.project_id);
         if (!pf) return;
         if (orgType === 'TC') {
-          if (c.from_org_id === currentOrg.id) pf.revenue += c.contract_sum || 0;
-          if (c.to_org_id === currentOrg.id) pf.costs += c.contract_sum || 0;
+          if (c.from_org_id === currentOrg.id) pf.revenue += baseSum(c);
+          if (c.to_org_id === currentOrg.id) pf.costs += baseSum(c);
         } else if (orgType === 'GC') {
           // Owner leg: identified by populated owner_contract_value (or from_role='Owner').
           // Sub leg: identified by from_org_id != GC and contract_sum > 0.
@@ -947,11 +952,11 @@ export function useDashboardData(): DashboardData {
           if (isOwnerLeg) {
             pf.revenue += Number(ownerValue) || 0;
           } else if (c.to_org_id === currentOrg.id) {
-            pf.costs += c.contract_sum || 0;
+            pf.costs += baseSum(c);
           }
       } else if (orgType === 'FC') {
           if (c.from_org_id === currentOrg.id) {
-            pf.revenue += c.contract_sum || 0;
+            pf.revenue += baseSum(c);
             pf.costs += (c as any).labor_budget || 0;
           }
         }
