@@ -660,6 +660,7 @@ export type Database = {
           fc_input_needed: boolean
           fc_pricing_submitted_at: string | null
           gc_budget: number | null
+          gc_owner_markup_percent: number | null
           id: string
           labor_tax: number | null
           labor_taxable_snapshot: boolean | null
@@ -668,6 +669,7 @@ export type Database = {
           materials_on_site: boolean
           materials_responsible: string | null
           materials_tax: number | null
+          not_passed_reason: string | null
           nte_cap: number | null
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
@@ -678,6 +680,7 @@ export type Database = {
           owner_approver_name: string | null
           owner_rejection_note: string | null
           parent_co_id: string | null
+          passed_to_owner: boolean | null
           pricing_type: string
           problem_summary: string | null
           problem_voice_url: string | null
@@ -736,6 +739,7 @@ export type Database = {
           fc_input_needed?: boolean
           fc_pricing_submitted_at?: string | null
           gc_budget?: number | null
+          gc_owner_markup_percent?: number | null
           id?: string
           labor_tax?: number | null
           labor_taxable_snapshot?: boolean | null
@@ -744,6 +748,7 @@ export type Database = {
           materials_on_site?: boolean
           materials_responsible?: string | null
           materials_tax?: number | null
+          not_passed_reason?: string | null
           nte_cap?: number | null
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
@@ -754,6 +759,7 @@ export type Database = {
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
           parent_co_id?: string | null
+          passed_to_owner?: boolean | null
           pricing_type?: string
           problem_summary?: string | null
           problem_voice_url?: string | null
@@ -812,6 +818,7 @@ export type Database = {
           fc_input_needed?: boolean
           fc_pricing_submitted_at?: string | null
           gc_budget?: number | null
+          gc_owner_markup_percent?: number | null
           id?: string
           labor_tax?: number | null
           labor_taxable_snapshot?: boolean | null
@@ -820,6 +827,7 @@ export type Database = {
           materials_on_site?: boolean
           materials_responsible?: string | null
           materials_tax?: number | null
+          not_passed_reason?: string | null
           nte_cap?: number | null
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
@@ -830,6 +838,7 @@ export type Database = {
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
           parent_co_id?: string | null
+          passed_to_owner?: boolean | null
           pricing_type?: string
           problem_summary?: string | null
           problem_voice_url?: string | null
@@ -8562,6 +8571,7 @@ export type Database = {
           fc_input_needed: boolean
           fc_pricing_submitted_at: string | null
           gc_budget: number | null
+          gc_owner_markup_percent: number | null
           id: string
           labor_tax: number | null
           labor_taxable_snapshot: boolean | null
@@ -8570,6 +8580,7 @@ export type Database = {
           materials_on_site: boolean
           materials_responsible: string | null
           materials_tax: number | null
+          not_passed_reason: string | null
           nte_cap: number | null
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
@@ -8580,6 +8591,7 @@ export type Database = {
           owner_approver_name: string | null
           owner_rejection_note: string | null
           parent_co_id: string | null
+          passed_to_owner: boolean | null
           pricing_type: string
           problem_summary: string | null
           problem_voice_url: string | null
