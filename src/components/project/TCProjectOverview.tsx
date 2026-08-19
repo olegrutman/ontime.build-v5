@@ -659,8 +659,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           );
         })()}
 
-        {/* Card 4 — CO Net Margin */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={countedCOs.length > 0 ? `${coNetMargin >= 0 ? '+' : ''}${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={countedCOs.length > 0 ? `Billed ${fmt(coRevenue)} to ${gcName} · Your cost ${fmt(coCost)} · incl. pending` : `No ${isTM ? 'work orders' : 'change orders'}`} pills={countedCOs.length > 0 ? [{ type: 'pb', text: `${countedCOs.length} ${isTM ? 'WOs' : 'COs'}${pendingCOs.length > 0 ? ` · ${pendingCOs.length} pending` : ''}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
+        {/* Revenue / cost / margin / CO margin now live in the canonical grid above. */}
+        {/* Card 4 — CO / WO register (detail only, no competing math) */}
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO REGISTER' : 'CO REGISTER'} value={`${changeOrders.length} ${isTM ? 'WOs' : 'COs'}`} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending — see ${isTM ? 'WOs' : 'COs'} card above for margin`} pills={changeOrders.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -681,10 +682,6 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                       ]} />
                     );
                   })}
-                  {countedCOs.length > 0 && (
-                    <TRow cells={[<TdN>{countedCOs.length} {isTM ? 'WOs' : 'COs'} (incl. pending)</TdN>, 'Revenue / cost / net', <TdM>{fmt(coRevenue)}</TdM>, <TdM>{fmt(coCost)}</TdM>, <TdM>{coNetMargin >= 0 ? '+' : ''}{fmt(coNetMargin)}</TdM>, '—']} isTotal />
-                  )}
-
                 </tbody>
               </table>
             ) : (
@@ -693,6 +690,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit {isTM ? 'WO' : 'CO'} to {gcName}</button>
           </div>
         </KpiCard>
+
 
         {/* Card 5 — Received from GC */}
         <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label={`RECEIVED FROM ${gcName.toUpperCase()}`} value={fmt(totalReceivedFromGC)} sub={`${gcReceivedPct}% of ${gcName} contract collected`} pills={[{ type: 'pg', text: `${gcReceivedPct}% received` }]} idx={4}>
