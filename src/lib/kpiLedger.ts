@@ -180,8 +180,9 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
     formula: isGC
       ? 'Owner contract value'
       : revContract
-        ? `${money(Number(revContract.contract_sum || 0))} revised − ${money(Number(revContract.co_approved_sum || 0))} approved COs`
+        ? `Original signed contract ${money(baseVal)}`
         : 'No contract yet',
+
   };
 
   const approvedCOAdds: LedgerTerm = {
