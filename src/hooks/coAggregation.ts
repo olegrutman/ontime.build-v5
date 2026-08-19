@@ -141,6 +141,9 @@ export function aggregateCOTotals(
   isGCPerspective: boolean,
   fallbackResponsibility?: { materials?: string | null; equipment?: string | null },
 ): AggregatedCOTotals {
+  const emptyBreakdown = (): COCostBreakdown => ({
+    ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0,
+  });
   const empty: AggregatedCOTotals = {
     approvedCORevenue: 0,
     approvedCOCost: 0,
@@ -150,6 +153,8 @@ export function aggregateCOTotals(
     pendingCOCost: 0,
     pendingCONetAtRisk: 0,
     approvedWOTotal: 0,
+    approvedCostBreakdown: emptyBreakdown(),
+    pendingCostBreakdown: emptyBreakdown(),
   };
   if (!billingOrgId || cos.length === 0) return empty;
 
@@ -164,15 +169,17 @@ export function aggregateCOTotals(
       .filter((r) => !r.is_actual_cost)
       .reduce((s, r) => s + num(r.line_total), 0);
 
-    // Cost: the viewer's actual-cost rows...
+    // Own labor cost: the viewer's own actual-cost rows (their crew / internal
+    // burden). An outside field-crew company never lands here.
     const actualRows = mine.filter((r) => r.is_actual_cost);
-    const internalCost = actualRows.reduce((s, r) => s + num(r.line_total), 0);
-    // ...plus downstream FC billables that were not already imported into an
-    // actual-cost row (imports carry the source ids, so we dedupe on them).
+    const ownLaborCost = actualRows.reduce((s, r) => s + num(r.line_total), 0);
+    // Subcontract cost: an EXTERNAL field crew's billables that were not
+    // already imported into an actual-cost row (imports carry the source ids,
+    // so we dedupe on them).
     const importedFCIds = new Set<string>(
       actualRows.flatMap((r) => (r.source_fc_entry_ids as string[] | null) ?? []),
     );
-    const fcBillableCost = rows
+    const subcontractCost = rows
       .filter(
         (r) =>
           r.entered_by_role === 'FC' &&
@@ -181,7 +188,6 @@ export function aggregateCOTotals(
           !(r.id && importedFCIds.has(r.id as string)),
       )
       .reduce((s, r) => s + num(r.line_total), 0);
-    const laborCost = internalCost + fcBillableCost;
 
     // A snapshot of 0/null means "never priced" — fall back to the labor sum so
     // UI totals match the DB's co_grand_total (which drives contract_sum).
@@ -213,7 +219,11 @@ export function aggregateCOTotals(
       status: c.status,
       document_type: c.document_type,
       revenue: revLabor + matRev + equipRev,
-      cost: laborCost + matCost + equipCost,
+      cost: ownLaborCost + subcontractCost + matCost + equipCost,
+      ownLabor: ownLaborCost,
+      subcontract: subcontractCost,
+      materials: matCost,
+      equipment: equipCost,
     };
   });
 
@@ -228,6 +238,14 @@ export function aggregateCOTotals(
   const pendingCORevenue = pending.reduce((s, c) => s + c.revenue, 0);
   const pendingCOCost = pending.reduce((s, c) => s + c.cost, 0);
 
+  const breakdown = (list: typeof perCO): COCostBreakdown => ({
+    ownLabor: list.reduce((s, c) => s + c.ownLabor, 0),
+    subcontract: list.reduce((s, c) => s + c.subcontract, 0),
+    materials: list.reduce((s, c) => s + c.materials, 0),
+    equipment: list.reduce((s, c) => s + c.equipment, 0),
+    total: list.reduce((s, c) => s + c.cost, 0),
+  });
+
   return {
     approvedCORevenue,
     approvedCOCost,
@@ -239,5 +257,7 @@ export function aggregateCOTotals(
     approvedWOTotal: approved
       .filter((c) => c.document_type === 'WO')
       .reduce((s, c) => s + c.revenue, 0),
+    approvedCostBreakdown: breakdown(approved),
+    pendingCostBreakdown: breakdown(pending),
   };
 }
