@@ -713,27 +713,20 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </KpiCard>
 
-        {/* Card 6 — Pending from GC */}
-        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label={`PENDING FROM ${gcName.toUpperCase()}`} value={totalPendingFromGC > 0 ? fmt(totalPendingFromGC) : '$0'} sub={totalPendingFromGC > 0 ? `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} awaiting ${gcName} approval` : 'No pending invoices'} pills={totalPendingFromGC > 0 ? [{ type: 'pw', text: `Chasing ${gcName}` }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
+        {/* Card 6 — Awaiting GC approval (submitted invoices) + unbilled backlog.
+            These are two different numbers, so they no longer share one headline. */}
+        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label={`AWAITING ${gcName.toUpperCase()} APPROVAL`} value={totalPendingSubmittedFromGC > 0 ? fmt(totalPendingSubmittedFromGC) : '$0'} sub={pendingFromGCCount > 0 ? `${pendingFromGCCount} invoice${pendingFromGCCount > 1 ? 's' : ''} submitted · ${fmt(totalPendingFromGC)} still unbilled` : `No invoices pending · ${fmt(totalPendingFromGC)} still unbilled`} pills={pendingFromGCCount > 0 ? [{ type: 'pw', text: `Chasing ${gcName}` }] : [{ type: 'pg', text: 'All clear' }]} idx={5}>
           <div style={{ padding: 12 }}>
-            {pendingInvoicesUp.length > 0 ? (
-              <>
-                {pendingInvoicesUp.map(inv => (
-                  <div key={inv.id} style={{ padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <TdN>{inv.invoice_number}</TdN>
-                      <Pill type="pw">Pending</Pill>
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 4 }}>To: {gcName}</div>
-                    <div style={{ fontSize: '1.4rem', color: C.ink, ...fontVal }}>{fmt(inv.total_amount)}</div>
-                  </div>
-                ))}
-                <div style={{ fontSize: '0.72rem', color: C.muted, marginTop: 8, ...fontLabel }}>Awaiting {gcName} approval. You will be notified when approved.</div>
-                <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>Send Follow-Up to {gcName}</button>
-              </>
-            ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No pending invoices</div>
-            )}
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <THead cols={['Metric', 'Value']} />
+              <tbody>
+                <TRow cells={[<TdN>Submitted, awaiting approval</TdN>, <TdM>{fmt(totalPendingSubmittedFromGC)}</TdM>]} />
+                <TRow cells={[<TdN>Invoices pending</TdN>, <TdM>{pendingFromGCCount}</TdM>]} />
+                <TRow cells={[<TdN>Collected to date</TdN>, <TdM>{fmt(totalReceivedFromGC)}</TdM>]} />
+                <TRow cells={[<TdN>Not yet billed (backlog)</TdN>, <TdM>{fmt(totalPendingFromGC)}</TdM>]} isTotal />
+              </tbody>
+            </table>
+            <button onClick={() => onNavigate('invoices')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>View Invoices</button>
           </div>
         </KpiCard>
 
