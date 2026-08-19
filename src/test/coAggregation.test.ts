@@ -110,8 +110,8 @@ describe('aggregateCOTotals', () => {
 
     const out = aggregateCOTotals(cos, labor, mats, equip, TC, false);
     expect(out.approvedCORevenue).toBe(1700); // 1000 + 500 + 200
-    expect(out.approvedCOCost).toBe(1550); // 1000 + 400 + 150
-    expect(out.approvedCOMargin).toBe(150);
+    expect(out.approvedCOCost).toBe(550); // billable labor is not cost: 400 + 150
+    expect(out.approvedCOMargin).toBe(1150);
     expect(out.pendingCOExposure).toBe(0);
   });
 
@@ -124,7 +124,7 @@ describe('aggregateCOTotals', () => {
     ];
     const out = aggregateCOTotals(cos, labor, [], [], TC, false);
     expect(out.approvedCORevenue).toBe(1000);
-    expect(out.approvedCOCost).toBe(1000);
+    expect(out.approvedCOCost).toBe(0);
   });
 
   it('uses tc_submitted_price as revenue for GC viewer, ignoring labor sum', () => {
@@ -135,8 +135,8 @@ describe('aggregateCOTotals', () => {
     const out = aggregateCOTotals(cos, labor, mats, [], TC, true);
     // Revenue: tc_submitted_price (2500) + mats billed (300)
     expect(out.approvedCORevenue).toBe(2800);
-    // Cost still uses raw labor + material line_cost
-    expect(out.approvedCOCost).toBe(1250);
+    // Cost excludes billable labor: material line_cost only
+    expect(out.approvedCOCost).toBe(250);
   });
 
   it('falls back to labor sum for GC viewer when tc_submitted_price is null', () => {
@@ -186,7 +186,7 @@ describe('aggregateCOTotals', () => {
     ];
     const out = aggregateCOTotals(cos, labor, [], [], FC, false);
     expect(out.approvedCORevenue).toBe(600);
-    expect(out.approvedCOCost).toBe(600);
+    expect(out.approvedCOCost).toBe(0);
   });
 
   it('handles missing/null numeric fields without NaN', () => {
@@ -216,8 +216,8 @@ describe('aggregateCOTotals — actual-cost labor', () => {
     ];
     const out = aggregateCOTotals([co()], labor, [], [], TC, false);
     expect(out.approvedCORevenue).toBe(1730);
-    expect(out.approvedCOCost).toBe(2374);
-    expect(out.approvedCOMargin).toBe(1730 - 2374);
+    expect(out.approvedCOCost).toBe(644);
+    expect(out.approvedCOMargin).toBe(1730 - 644);
   });
 
   it('keeps the GC priced snapshot as revenue while cost includes actual costs', () => {
@@ -234,6 +234,51 @@ describe('aggregateCOTotals — actual-cost labor', () => {
       true,
     );
     expect(out.approvedCORevenue).toBe(1170);
-    expect(out.approvedCOCost).toBe(2374);
+    expect(out.approvedCOCost).toBe(644);
   });
 });
+
+describe('aggregateCOTotals — field crew cost & responsibility fallback', () => {
+  const co = (over: Partial<COLike> = {}): COLike => ({
+    id: 'co-1',
+    status: 'approved',
+    document_type: 'CO',
+    tc_submitted_price: null,
+    ...over,
+  });
+
+  it('counts FC billable rows as TC cost', () => {
+    const labor: COLineRow[] = [
+      { id: 'l1', co_id: 'co-1', org_id: TC, line_total: 2000, is_actual_cost: false, entered_by_role: 'TC' },
+      { id: 'f1', co_id: 'co-1', org_id: FC, line_total: 800, is_actual_cost: false, entered_by_role: 'FC' },
+    ];
+    const out = aggregateCOTotals([co()], labor, [], [], TC, false);
+    expect(out.approvedCORevenue).toBe(2000);
+    expect(out.approvedCOCost).toBe(800);
+  });
+
+  it('does not double count FC hours that were imported into an actual-cost row', () => {
+    const labor: COLineRow[] = [
+      { id: 'l1', co_id: 'co-1', org_id: TC, line_total: 2000, is_actual_cost: false, entered_by_role: 'TC' },
+      { id: 'l2', co_id: 'co-1', org_id: TC, line_total: 800, is_actual_cost: true, entered_by_role: 'TC', source_fc_entry_ids: ['f1'] },
+      { id: 'f1', co_id: 'co-1', org_id: FC, line_total: 800, is_actual_cost: false, entered_by_role: 'FC' },
+    ];
+    const out = aggregateCOTotals([co()], labor, [], [], TC, false);
+    expect(out.approvedCOCost).toBe(800);
+  });
+
+  it('falls back to the contract responsibility when the CO leaves it NULL', () => {
+    const cos = [co({ materials_responsible: null })];
+    const mats = [row2('co-1', GC, { billed_amount: 4824, line_cost: 4824 })];
+    const gcProcured = aggregateCOTotals(cos, [], mats, [], TC, false, { materials: 'GC' });
+    expect(gcProcured.approvedCORevenue).toBe(0);
+    expect(gcProcured.approvedCOCost).toBe(0);
+    const tcProcured = aggregateCOTotals(cos, [], mats, [], TC, false, { materials: 'TC' });
+    expect(tcProcured.approvedCORevenue).toBe(4824);
+    expect(tcProcured.approvedCOCost).toBe(4824);
+  });
+});
+
+function row2(co_id: string, org_id: string, fields: Record<string, number>): COLineRow {
+  return { co_id, org_id, ...fields };
+}
