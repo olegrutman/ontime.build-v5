@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useContractSOV, ContractSOV, ContractSOVItem, ProjectContract, getContractDisplayName } from '@/hooks/useContractSOV';
 import { SOVProgressBar } from './SOVProgressBar';
+import { COSOVSection } from './COSOVSection';
 import { RequireOrgType } from '@/components/auth/RequirePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { DT } from '@/lib/design-tokens';
@@ -804,6 +805,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           {workOrderSovs.map(sov => renderSOVCard(sov))}
         </>
       )}
+
+      {/* Change Order Schedules (each approved fixed-price CO bills on its own SOV) */}
+      <COSOVSection projectId={projectId} contractIds={contracts.map(c => c.id)} />
+
 
       {/* Contracts Missing SOV Section */}
       {contractsMissingSOVs.length > 0 && !isFC && (
