@@ -52,6 +52,10 @@ interface SnapshotArgs {
   pricingType?: string | null;
   financials?: {
     grandTotal?: number;
+    /** grandTotal minus categories the GC procures — what the GC actually owes. */
+    billableGrandTotal?: number;
+    billableMaterialsTotal?: number;
+    billableEquipmentTotal?: number;
     laborTotal?: number;
     materialsTotal?: number;
     equipmentTotal?: number;
@@ -81,9 +85,9 @@ export async function snapshotCOSubmission({
     const rate = (projTax.sales_tax_rate ?? 0) / 100;
     updates.tax_rate_snapshot = projTax.sales_tax_rate ?? 0;
     updates.labor_taxable_snapshot = projTax.labor_taxable ?? false;
-    updates.materials_tax = (financials?.materialsTotal ?? 0) * rate;
+    updates.materials_tax = (financials?.billableMaterialsTotal ?? financials?.materialsTotal ?? 0) * rate;
     updates.labor_tax = projTax.labor_taxable ? (financials?.laborTotal ?? 0) * rate : 0;
-    updates.equipment_tax = (financials?.equipmentTotal ?? 0) * rate;
+    updates.equipment_tax = (financials?.billableEquipmentTotal ?? financials?.equipmentTotal ?? 0) * rate;
     updates.total_tax = updates.materials_tax + updates.labor_tax + updates.equipment_tax;
   }
 
@@ -102,7 +106,9 @@ export async function snapshotCOSubmission({
       ? (financials?.fcTotalHours ?? 0) * rate
       : (financials?.fcLumpSumTotal ?? 0) * (1 + markup / 100);
   } else if (isTC) {
-    updates.tc_submitted_price = financials?.grandTotal ?? 0;
+    // Never freeze GC-procured materials/equipment into the price billed to the
+    // GC — they pay those directly on their own PO.
+    updates.tc_submitted_price = financials?.billableGrandTotal ?? financials?.grandTotal ?? 0;
   }
 
   if (Object.keys(updates).length === 0) return;
