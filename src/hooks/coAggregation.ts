@@ -126,11 +126,6 @@ export function aggregateCOTotals(
   };
   if (!billingOrgId || cos.length === 0) return empty;
 
-  const sumScoped = (rows: COLineRow[], coId: string, field: string) =>
-    rows
-      .filter((r) => r.co_id === coId && r.org_id === billingOrgId)
-      .reduce((s, r) => s + Number(r[field] ?? 0), 0);
-
   // Actual-cost labor rows record what was really spent — they are never
   // billable revenue (mirrors co_grand_total, which ignores them) but they must
   // count toward cost or margin comes out overstated.
