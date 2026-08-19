@@ -48,6 +48,8 @@ interface SOV {
   sov_name: string | null;
   version: number;
   is_locked: boolean;
+  sov_kind?: string | null;
+  source_co_id?: string | null;
 }
 
 interface SOVItem {
@@ -235,7 +237,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       
       const { data: sovsData } = await supabase
         .from('project_sov')
-        .select('id, contract_id, sov_name, version, is_locked')
+        .select('id, contract_id, sov_name, version, is_locked, sov_kind, source_co_id')
         .eq('project_id', projectId)
         .order('version', { ascending: false });
       
@@ -378,11 +380,21 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     [contracts, allContracts, selectedContractId, selectedCOId]
   );
   
+  // Fixed-price COs get their own SOV (sov_kind='change_order'), so they are billed
+  // line-by-line exactly like the base contract SOV. T&M/NTE COs have no SOV and
+  // fall back to the direct lump-sum path.
   const selectedSOV = useMemo(() => {
-    if (selectedCOId) return null; // CO mode bypasses SOV
-    const contractSovs = sovs.filter(s => s.contract_id === selectedContractId);
+    if (selectedCOId) {
+      return sovs.find(s => s.source_co_id === selectedCOId) || null;
+    }
+    const contractSovs = sovs.filter(
+      s => s.contract_id === selectedContractId && (s.sov_kind ?? 'base') === 'base'
+    );
     return contractSovs.find(s => s.is_locked) || contractSovs[0] || null;
   }, [sovs, selectedContractId, selectedCOId]);
+
+  // Lump-sum CO billing only applies when the CO has no SOV of its own.
+  const coLumpMode = !!selectedCOId && !selectedSOV;
 
   const sovNotLocked = selectedSOV && !selectedSOV.is_locked;
 
@@ -430,11 +442,11 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 
   // Calculate gross amount (CO mode uses coBillAmount; SOV mode sums enabled items)
   const grossAmount = useMemo(() => {
-    if (selectedCOId) return Math.max(0, coBillAmount);
+    if (coLumpMode) return Math.max(0, coBillAmount);
     return billingItems
       .filter(item => item.enabled)
       .reduce((sum, item) => sum + item.thisBillAmount, 0);
-  }, [billingItems, selectedCOId, coBillAmount]);
+  }, [billingItems, coLumpMode, coBillAmount]);
 
   const retainagePercent = selectedContract?.retainage_percent || 0;
   const retainageAmount = grossAmount * (retainagePercent / 100);
@@ -442,11 +454,11 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 
   const coOverbilling = selectedCO ? coBillAmount > selectedCO.remaining + 0.005 : false;
 
-  const hasErrors = selectedCOId
+  const hasErrors = coLumpMode
     ? coOverbilling || coBillAmount <= 0
     : billingItems.some(item => item.enabled && item.thisBillPercent > item.maxAllowedPercent);
 
-  const hasSelectedItems = selectedCOId
+  const hasSelectedItems = coLumpMode
     ? coBillAmount > 0
     : billingItems.some(item => item.enabled && item.thisBillPercent > 0);
 
@@ -612,7 +624,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           .insert({
             project_id: projectId,
             contract_id: selectedContract.id,
-            sov_id: selectedCOId ? null : selectedSOV!.id,
+            sov_id: selectedSOV ? selectedSOV.id : null,
             co_ids: selectedCOId ? [selectedCOId] : null,
             invoice_number: invoiceNumber,
             billing_period_start: format(periodStart, 'yyyy-MM-dd'),
@@ -629,7 +641,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         if (invoiceError) throw invoiceError;
 
         let lineItemsToInsert: any[];
-        if (selectedCOId && selectedCO) {
+        if (coLumpMode && selectedCO) {
           const billedPct = selectedCO.grand_total > 0
             ? (coBillAmount / selectedCO.grand_total) * 100
             : 0;
