@@ -115,6 +115,10 @@ export interface ProjectFinancials {
   /** Where the viewer's CO cost actually goes (own crew vs external crew vs materials). */
   coCostBreakdown: COCostBreakdown;
   coPendingCostBreakdown: COCostBreakdown;
+  /** Approved COs with no owner-facing price (GC view) — you owe with no price. */
+  coMissingOwnerBudget: number;
+  /** Approved COs priced below their cost to the viewer. */
+  coSellingAtLoss: number;
 
   /** Canonical KPI ledger — the single source every financial card reads. */
   ledger: ProjectLedger;
