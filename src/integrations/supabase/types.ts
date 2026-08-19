@@ -8413,6 +8413,10 @@ export type Database = {
       }
       check_org_setup_needed: { Args: never; Returns: Json }
       co_grand_total: { Args: { _co_id: string }; Returns: number }
+      co_sov_display_name: {
+        Args: { _co_number: string; _title: string }
+        Returns: string
+      }
       co_viewer_role: { Args: { _co_id: string }; Returns: string }
       complete_fc_change_order_input: {
         Args: { _co_id: string }
