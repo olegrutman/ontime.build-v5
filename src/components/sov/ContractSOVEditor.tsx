@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useContractSOV, ContractSOV, ContractSOVItem, ProjectContract, getContractDisplayName } from '@/hooks/useContractSOV';
+import { useContractSOV, ContractSOV, ContractSOVItem, ProjectContract, getContractDisplayName, baseContractSum } from '@/hooks/useContractSOV';
 import { SOVProgressBar } from './SOVProgressBar';
 import { COSOVSection } from './COSOVSection';
 import { RequireOrgType } from '@/components/auth/RequirePermission';
@@ -227,7 +227,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
               <div className="text-xs text-muted-foreground mb-6">
                 {contracts.map((c, i) => (
                   <div key={c.id}>
-                    {i + 1}. {getContractDisplayName(c.from_role, c.to_role, c.from_org_name, c.to_org_name)} — {formatCurrency(c.contract_sum)}
+                    {i + 1}. {getContractDisplayName(c.from_role, c.to_role, c.from_org_name, c.to_org_name)} — {formatCurrency(baseContractSum(c))}
                   </div>
                 ))}
               </div>
@@ -500,7 +500,12 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                           </Badge>
                         </div>
                         <p className="font-mono text-xs text-muted-foreground tabular-nums">
-                          {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
+                          {formatCurrency(contract ? baseContractSum(contract) : 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
+                          {!!(contract?.co_approved_sum && contract.co_approved_sum > 0) && (
+                            <span className="ml-1 text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+                              + {formatCurrency(contract.co_approved_sum)} in approved COs (billed separately)
+                            </span>
+                          )}
                         </p>
 
         {totals.totalValue > 0 && (
@@ -830,7 +835,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)}
                   </span>
                   <span className="text-muted-foreground ml-2">
-                    {formatCurrency(contract.contract_sum)}
+                    {formatCurrency(baseContractSum(contract))}
                   </span>
                 </div>
                 <div className="flex gap-2">

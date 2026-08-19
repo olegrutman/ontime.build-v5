@@ -29,6 +29,15 @@ export async function createScheduleItemsFromSOVItems(
   if (error) throw error;
 }
 
+/**
+ * Base contract value excluding approved change orders.
+ * Approved COs bill on their own CO SOVs, so the base SOV basis must stay
+ * at the original contract value.
+ */
+export function baseContractSum(c: { contract_sum?: number | null; co_approved_sum?: number | null }): number {
+  return Math.max((c.contract_sum || 0) - (c.co_approved_sum || 0), 0);
+}
+
 // Contract types
 export interface ProjectContract {
   id: string;
@@ -37,6 +46,8 @@ export interface ProjectContract {
   to_role: string;
   trade: string | null;
   contract_sum: number;
+  /** Portion of contract_sum contributed by approved change orders (billed on their own CO SOVs). */
+  co_approved_sum?: number | null;
   retainage_percent: number;
   allow_mobilization_line_item: boolean;
   status: string;
@@ -426,6 +437,7 @@ export function useContractSOV(projectId: string | undefined) {
           to_role: c.to_role,
           trade: c.trade,
           contract_sum: c.contract_sum,
+          co_approved_sum: c.co_approved_sum ?? 0,
           retainage_percent: c.retainage_percent,
           allow_mobilization_line_item: c.allow_mobilization_line_item,
           status: c.status,
@@ -662,7 +674,7 @@ export function useContractSOV(projectId: string | undefined) {
         // Create SOV items with industry-standard percentages
         const itemsToInsert = itemNames.map((name, index) => {
           const percent = normalizedPercents[index];
-          const value = Math.round((contract.contract_sum * percent / 100) * 100) / 100;
+          const value = Math.round((baseContractSum(contract) * percent / 100) * 100) / 100;
           
           return {
             project_id: projectId,
@@ -799,7 +811,7 @@ export function useContractSOV(projectId: string | undefined) {
       // Create SOV items with industry-standard percentages
       const itemsToInsert = itemNames.map((name, index) => {
         const percent = normalizedPercents[index];
-        const value = Math.round((contract.contract_sum * percent / 100) * 100) / 100;
+        const value = Math.round((baseContractSum(contract) * percent / 100) * 100) / 100;
         
         return {
           project_id: projectId,
@@ -860,7 +872,7 @@ export function useContractSOV(projectId: string | undefined) {
     const delta = newPercent - oldPct;
     if (Math.abs(delta) < 0.001) return;
 
-    const contractValue = contract.contract_sum;
+    const contractValue = baseContractSum(contract);
     const retainagePct = contract.retainage_percent || 0;
 
     // Build updates array starting with the edited line
@@ -1035,9 +1047,10 @@ export function useContractSOV(projectId: string | undefined) {
     if (!sov) return;
     
     const contract = contracts.find(c => c.id === sov.contract_id);
-    if (!contract || contract.contract_sum <= 0) return;
+    const base = contract ? baseContractSum(contract) : 0;
+    if (!contract || base <= 0) return;
     
-    const newPct = Math.round((newAmount / contract.contract_sum) * 10000) / 100;
+    const newPct = Math.round((newAmount / base) * 10000) / 100;
     await updateItemPercent(sovId, itemId, newPct);
   }, [sovs, contracts, updateItemPercent]);
 

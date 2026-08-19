@@ -4386,6 +4386,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           allow_mobilization_line_item: boolean | null
+          co_approved_sum: number
           contract_sum: number | null
           created_at: string
           created_by_user_id: string | null
@@ -4415,6 +4416,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           allow_mobilization_line_item?: boolean | null
+          co_approved_sum?: number
           contract_sum?: number | null
           created_at?: string
           created_by_user_id?: string | null
@@ -4444,6 +4446,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           allow_mobilization_line_item?: boolean | null
+          co_approved_sum?: number
           contract_sum?: number | null
           created_at?: string
           created_by_user_id?: string | null
