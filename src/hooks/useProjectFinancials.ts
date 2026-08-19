@@ -193,6 +193,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [receivablesPendingCount, setReceivablesPendingCount] = useState(0);
   const [payablesPendingAmount, setPayablesPendingAmount] = useState(0);
   const [payablesPendingCount, setPayablesPendingCount] = useState(0);
+  const [payablesPendingInvoices, setPayablesPendingInvoices] = useState<ProjectFinancials['payablesPendingInvoices']>([]);
+  const emptyBreakdown: COCostBreakdown = { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 };
+  const [coCostBreakdown, setCoCostBreakdown] = useState<COCostBreakdown>(emptyBreakdown);
+  const [coPendingCostBreakdown, setCoPendingCostBreakdown] = useState<COCostBreakdown>(emptyBreakdown);
   // Subtotal of submitted/paid invoices linked to POs the viewer owns.
   // Used to avoid double-counting materials (PO commitment + supplier invoice).
   const [materialInvoiced, setMaterialInvoiced] = useState(0);
