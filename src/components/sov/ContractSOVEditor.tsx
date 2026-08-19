@@ -805,6 +805,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         </>
       )}
 
+      {/* Change Order Schedules (each approved fixed-price CO bills on its own SOV) */}
+      <COSOVSection projectId={projectId} contractIds={contracts.map(c => c.id)} />
+
+
       {/* Contracts Missing SOV Section */}
       {contractsMissingSOVs.length > 0 && !isFC && (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
