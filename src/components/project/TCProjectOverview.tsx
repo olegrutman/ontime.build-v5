@@ -646,7 +646,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                   <tbody>
                     <TRow cells={[<TdN>Received from {gcName}</TdN>, <TdM>{fmt(financials.receivablesCollected)}</TdM>]} />
                     <TRow isTotal cells={[<TdN>Earned (cash)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                    <TRow cells={[<TdN>Paid to {fcName || 'Field Crew'}</TdN>, <TdM>{fmt(totalPaidToFC)}</TdM>]} />,
+                    <TRow cells={[<TdN>Paid to {fcName || 'Field Crew'}</TdN>, <TdM>{fmt(totalPaidToFC)}</TdM>]} />
                     <TRow cells={[<TdN>Paid to suppliers</TdN>, <TdM>{fmt(totalPaidToSuppliers)}</TdM>]} />
                     <TRow isTotal cells={[<TdN>Incurred (cash)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
                     <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />

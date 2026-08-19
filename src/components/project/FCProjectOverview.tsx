@@ -277,8 +277,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Item', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />,
-                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />,
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />
                     <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Retainage</TdN>, <TdM>{retainagePct !== null ? `${retainagePct}%${retainageAmount !== null ? ` · ${fmt(retainageAmount)}` : ''}` : NOT_SET}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} isTotal />
@@ -456,8 +456,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />,
-                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />,
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />
                     <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} />
                     <TRow cells={[<TdN>Collected</TdN>, <TdM>{fmt(totalPaid)}</TdM>]} />
@@ -551,8 +551,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />,
-                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />,
+                    <TRow cells={[<TdN>Base Contract</TdN>, <TdM>{money(baseContractValue)}</TdM>]} />
+                    <TRow cells={[<TdN>Approved Work Orders</TdN>, <TdM>{coApprovedPortion > 0 ? `+${fmt(coApprovedPortion)}` : '—'}</TdM>]} />
                     <TRow cells={[<TdN>Revised Contract Value</TdN>, <TdM>{money(contractValue)}</TdM>]} />
                     <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} />
                     <TRow cells={[<TdN>Paid</TdN>, <TdM>{fmt(totalPaid)}</TdM>]} />
