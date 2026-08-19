@@ -263,7 +263,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('project_contracts')
-              .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id, trade, owner_contract_value')
+              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, from_org_id, to_org_id, trade, owner_contract_value')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         Promise.resolve({ data: [] }),
@@ -401,13 +401,13 @@ export function useDashboardData(): DashboardData {
             c.to_org_id === currentOrg.id
           );
           contractValue = gcContracts.length > 0
-            ? gcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            ? gcContracts.reduce((sum, c) => sum + baseSum(c), 0)
             : null;
         } else if (orgType === 'TC') {
           // TC revenue = sum of all contracts where TC is from_org (what TC earns from GC)
           const tcRevenueContracts = projectContracts.filter(c => c.from_org_id === currentOrg.id);
           contractValue = tcRevenueContracts.length > 0
-            ? tcRevenueContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            ? tcRevenueContracts.reduce((sum, c) => sum + baseSum(c), 0)
             : null;
         } else if (orgType === 'FC') {
           // FC revenue = sum of contracts where FC is from_org
@@ -415,7 +415,7 @@ export function useDashboardData(): DashboardData {
             c.from_org_id === currentOrg.id
           );
           contractValue = fcContracts.length > 0
-            ? fcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            ? fcContracts.reduce((sum, c) => sum + baseSum(c), 0)
             : null;
         }
 
@@ -676,13 +676,13 @@ export function useDashboardData(): DashboardData {
       const totalContractValue = contracts.reduce((sum, c) => {
         // TC & FC receive money via from_org_id; GC receives via to_org_id
         if (orgType === 'TC' && c.from_org_id === currentOrg.id) {
-          return sum + (c.contract_sum || 0);
+          return sum + baseSum(c);
         }
         if (orgType === 'GC' && c.to_org_id === currentOrg.id) {
-          return sum + (c.contract_sum || 0);
+          return sum + baseSum(c);
         }
         if (orgType === 'FC' && c.from_org_id === currentOrg.id) {
-          return sum + (c.contract_sum || 0);
+          return sum + baseSum(c);
         }
         return sum;
       }, 0);
