@@ -165,6 +165,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [payablesInvoiced, setPayablesInvoiced] = useState(0);
   const [payablesPaid, setPayablesPaid] = useState(0);
   const [payablesRetainage, setPayablesRetainage] = useState(0);
+  // Party-scoped invoice counts/amounts awaiting approval (SUBMITTED only).
+  const [receivablesPendingAmount, setReceivablesPendingAmount] = useState(0);
+  const [receivablesPendingCount, setReceivablesPendingCount] = useState(0);
+  const [payablesPendingAmount, setPayablesPendingAmount] = useState(0);
+  const [payablesPendingCount, setPayablesPendingCount] = useState(0);
   // Subtotal of submitted/paid invoices linked to POs the viewer owns.
   // Used to avoid double-counting materials (PO commitment + supplier invoice).
   const [materialInvoiced, setMaterialInvoiced] = useState(0);
