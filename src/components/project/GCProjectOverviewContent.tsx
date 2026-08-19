@@ -306,10 +306,12 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
       {/* CO revenue & markup — what you sell those COs to the owner for */}
       <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale}
         label={`${coWord} REVENUE & MARKUP`}
-        value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'}
-        sub={coCostTotal > 0
-          ? `${fmt(coMarkup)} markup · ${coMarkupPct.toFixed(1)}% over cost`
-          : 'No approved COs priced to the owner yet'}
+        value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : 'Not priced'}
+        sub={coRevenueTotal > 0
+          ? `${pricedCOs.length} of ${approvedCOs.length} priced · ${fmt(coMarkup)} markup · ${coMarkupPct.toFixed(1)}% over your cost`
+          : approvedCOs.length > 0
+            ? `${approvedCOs.length} approved ${coWord}${approvedCOs.length > 1 ? 's' : ''} cost you ${fmt(coCostTotal)} with no owner price set`
+            : `No approved ${coWord}s yet`}
         pills={[
           ...(coNoBudgetCount > 0 ? [{ type: 'pr' as PillType, text: `${coNoBudgetCount} no owner price` }] : []),
           ...(coAtLossCount > 0 ? [{ type: 'pr' as PillType, text: `${coAtLossCount} below cost` }] : []),
@@ -318,35 +320,53 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         idx={2}>
         <div style={{ padding: 12 }}>
           <div style={{ fontSize: '0.66rem', color: C.muted, marginBottom: 8 }}>
-            Formula: Σ owner price (GC budget) of approved {coWord}s − {coWord} cost committed. A {coWord} with no owner price is passed through at 0% markup.
+            Formula: Σ owner price you set on approved {coWord}s − your cost on those same {coWord}s. The {tcName} price is what you owe, not what the owner pays — a {coWord} with no owner price earns nothing and is listed separately below.
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <THead cols={[`${coWord} #`, 'Owner price', 'Your cost', 'Markup']} />
             <tbody>
-              {approvedCOs.length > 0 ? approvedCOs.slice(0, 8).map(co => {
+              {pricedCOs.length > 0 ? pricedCOs.slice(0, 8).map(co => {
                 const cost = coCostOf(co).total;
                 const rev = coOwnerValue(co);
                 const mk = rev - cost;
                 return (
                   <TRow key={co.id} cells={[
-                    <TdN>{co.co_number || '—'}{!co.gc_budget && <span style={{ color: C.red, marginLeft: 4, fontSize: '0.62rem', fontWeight: 700 }}>NO PRICE</span>}</TdN>,
+                    <TdN>{co.co_number || '—'}</TdN>,
                     <TdM>{fmt(rev)}</TdM>,
                     <TdM>{fmt(cost)}</TdM>,
-                    <TdM>{mk < 0 ? `-${fmt(Math.abs(mk))}` : fmt(mk)}</TdM>,
+                    <TdM style={mk < 0 ? { color: C.red } : undefined}>{mk < 0 ? `-${fmt(Math.abs(mk))}` : fmt(mk)}</TdM>,
                   ]} />
                 );
               }) : (
-                <TRow cells={[<TdN>No approved {coWord}s</TdN>, '—', '—', '—']} />
+                <TRow cells={[<TdN>No {coWord}s priced to the owner</TdN>, '—', '—', '—']} />
               )}
-              {approvedCOs.length > 0 && (
-                <TRow cells={[<TdN>Total</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>, <TdM>{fmt(coCostTotal)}</TdM>, <TdM>{fmt(coMarkup)}</TdM>]} isTotal />
+              {pricedCOs.length > 0 && (
+                <TRow cells={[<TdN>Priced total</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>, <TdM>{fmt(pricedCOCost)}</TdM>, <TdM>{fmt(coMarkup)}</TdM>]} isTotal />
               )}
             </tbody>
           </table>
-          {coNoBudgetCount > 0 && (
-            <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: C.redBg, color: C.red, fontSize: '0.68rem', fontWeight: 600 }}>
-              {coNoBudgetCount} approved {coWord}{coNoBudgetCount > 1 ? 's' : ''} owe money with no owner price set — set the owner budget on each to stop the margin leak.
-            </div>
+          {unpricedCOs.length > 0 && (
+            <>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.red, marginTop: 12, marginBottom: 8 }}>Not priced to the owner</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <THead cols={[`${coWord} #`, 'Title', 'Your cost', 'Owner price']} />
+                <tbody>
+                  {unpricedCOs.slice(0, 8).map(co => (
+                    <TRow key={co.id} cells={[
+                      <TdN>{co.co_number || '—'}</TdN>,
+                      co.title || '—',
+                      <TdM>{fmt(coCostOf(co).total)}</TdM>,
+                      <Pill type="pr">Not set</Pill>,
+                    ]} />
+                  ))}
+                  <TRow cells={[<TdN>Unpriced cost you carry</TdN>, '—', <TdM>{fmt(unpricedCOCost)}</TdM>, '—']} isTotal />
+                </tbody>
+              </table>
+              <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: C.redBg, color: C.red, fontSize: '0.68rem', fontWeight: 600 }}>
+                {fmt(unpricedCOCost)} of approved {coWord} cost has no owner price — set the owner value on each {coWord} or you eat it.
+              </div>
+              <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>Price these {coWord}s</button>
+            </>
           )}
         </div>
       </KpiCard>
