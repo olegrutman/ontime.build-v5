@@ -21,6 +21,8 @@ export interface COLike {
   status: string;
   document_type: 'CO' | 'WO' | string;
   tc_submitted_price?: number | null;
+  /** Owner-facing price the GC set for this CO. Null/0 = not priced yet. */
+  gc_budget?: number | null;
   materials_responsible?: string | null;
   equipment_responsible?: string | null;
   co_material_responsible_override?: string | null;
