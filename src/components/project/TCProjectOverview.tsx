@@ -705,29 +705,74 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           </div>
         </KpiCard>
 
-        {/* Card 8 — FC Invoice Pending (You Owe FC) */}
-        <KpiCard accent={C.red} icon="⏳" iconBg={C.redBg} label={`PENDING — YOU OWE ${(fcName || 'FIELD CREW').toUpperCase()}`} value={fcPendingAmount > 0 ? fmt(fcPendingAmount) : '$0'} sub={fcPendingAmount > 0 ? `${fcName || 'Field Crew'} submitted · awaiting your approval` : `No pending ${fcName || 'Field Crew'} invoices`} pills={fcPendingAmount > 0 ? [{ type: 'pr', text: `${fcName || 'Field Crew'} waiting on you` }] : [{ type: 'pg', text: 'All clear' }]} idx={7}>
-          <div style={{ padding: 12 }}>
-            {fcPendingAmount > 0 ? (
+        {/* Card 8 — Invoices billed TO me, awaiting my approval (real invoices, real actions) */}
+        <KpiCard accent={C.red} icon="⏳" iconBg={C.redBg} label="AWAITING MY APPROVAL" value={fcPendingSubmitted > 0 ? fmt(fcPendingSubmitted) : '$0'} sub={fcPendingSubmitted > 0 ? `${fcPendingCount} invoice${fcPendingCount > 1 ? 's' : ''} submitted to you · not yet approved` : 'No invoices submitted to you'} pills={fcPendingSubmitted > 0 ? [{ type: 'pr', text: `${fcPendingCount} waiting on you` }] : [{ type: 'pg', text: 'All clear' }]} idx={7}>
+          <div style={{ padding: 12 }} onClick={(e) => e.stopPropagation()}>
+            {pendingPayableInvoices.length > 0 ? (
               <>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem' }}>FC Invoice</span>
-                    <Pill type="pw">Pending Your Approval</Pill>
+                {pendingPayableInvoices.map(inv => (
+                  <div key={inv.id} style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem' }}>{inv.invoice_number}</span>
+                      <Pill type="pw">Pending Your Approval</Pill>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: C.muted, marginBottom: 2 }}>
+                      {inv.po_id ? 'Supplier invoice (PO-linked)' : `From ${fcName || 'Field Crew'}`}
+                      {inv.submitted_at ? ` · submitted ${new Date(inv.submitted_at).toLocaleDateString()}` : ''}
+                    </div>
+                    <div style={{ fontSize: '1.35rem', color: C.ink, ...fontVal }}>{fmt(inv.total_amount)}</div>
+                    {rejectingId === inv.id ? (
+                      <div style={{ marginTop: 8 }}>
+                        <textarea autoFocus value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} placeholder="Reason for rejection (required)"
+                          style={{ width: '100%', minHeight: 52, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: '0.74rem', outline: 'none', resize: 'vertical', ...fontLabel }} />
+                        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                          <button disabled={actingId === inv.id || !rejectNote.trim()} onClick={() => rejectInvoice(inv.id)}
+                            style={{ flex: 1, padding: 8, borderRadius: 8, background: C.red, color: '#fff', fontWeight: 700, fontSize: '0.74rem', border: 'none', cursor: 'pointer', opacity: !rejectNote.trim() ? 0.5 : 1, ...fontLabel }}>Confirm rejection</button>
+                          <button onClick={() => { setRejectingId(null); setRejectNote(''); }}
+                            style={{ padding: '8px 12px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.74rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button disabled={actingId === inv.id} onClick={() => approveInvoice(inv.id)}
+                          style={{ flex: 1, padding: 9, borderRadius: 8, background: C.green, color: '#fff', fontWeight: 700, fontSize: '0.74rem', border: 'none', cursor: 'pointer', opacity: actingId === inv.id ? 0.6 : 1, ...fontLabel }}>
+                          {actingId === inv.id ? 'Approving…' : '✓ Approve'}
+                        </button>
+                        <button onClick={() => { setRejectingId(inv.id); setRejectNote(''); }}
+                          style={{ flex: 1, padding: 9, borderRadius: 8, background: 'transparent', color: C.red, fontWeight: 700, fontSize: '0.74rem', border: `1px solid ${C.red}`, cursor: 'pointer', ...fontLabel }}>✗ Reject with note</button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 2 }}>From: {fcName}</div>
-                  <div style={{ fontSize: '1.6rem', color: C.ink, ...fontVal }}>{fmt(fcPendingAmount)}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                  <button onClick={() => onNavigate('invoices')} style={{ flex: 1, padding: '10px', borderRadius: 8, background: C.green, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>✓ Approve</button>
-                  <button onClick={() => onNavigate('invoices')} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'transparent', color: C.red, fontWeight: 700, fontSize: '0.76rem', border: `1px solid ${C.red}`, cursor: 'pointer', ...fontLabel }}>✗ Reject with Note</button>
-                </div>
-                <div style={{ fontSize: '0.68rem', color: C.muted, ...fontLabel }}>
-                  Note: Approve FC invoice once GC pays you, or approve early based on your cash flow.
+                ))}
+                <div style={{ fontSize: '0.66rem', color: C.muted, ...fontLabel }}>
+                  Approving records the invoice as owed by you (payable). It does not pay it — record payment from the Invoices tab.
                 </div>
               </>
             ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No pending {fcName || 'Field Crew'} invoices</div>
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>Nothing submitted to you right now</div>
+            )}
+          </div>
+        </KpiCard>
+
+        {/* Card 8b — MY COST (own crew vs external crew vs materials) */}
+        <KpiCard accent={C.navy} icon="🧾" iconBg={C.surface2} label="MY COST" value={fmt(myCostTotal)} sub="What this job costs me — external crews are subcontract cost, not internal labor" pills={[{ type: 'pn', text: myCostBasisPill }]} idx={8}>
+          <div style={{ padding: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <THead cols={['Cost bucket', 'Amount']} />
+              <tbody>
+                <TRow cells={[<TdN>Subcontracted crew ({fcName || 'Field Crew'} contract)</TdN>, <TdM>{fmt(draftFcVal)}</TdM>]} />
+                <TRow cells={[<TdN>CO — my own crew / internal labor</TdN>, <TdM>{fmt(coCost.ownLabor)}</TdM>]} />
+                <TRow cells={[<TdN>CO — external crew billed to me</TdN>, <TdM>{fmt(coCost.subcontract)}</TdM>]} />
+                <TRow cells={[<TdN>CO — materials I carry</TdN>, <TdM>{fmt(coCost.materials)}</TdM>]} />
+                <TRow cells={[<TdN>CO — equipment I carry</TdN>, <TdM>{fmt(coCost.equipment)}</TdM>]} />
+                <TRow cells={[<TdN>{financials.isTCMaterialResponsible ? 'Base materials commitment' : 'Materials — procured by GC (not my cost)'}</TdN>, <TdM>{fmt(materialCommitment)}</TdM>]} />
+                <TRow cells={[<TdN>Total my cost</TdN>, <TdM>{fmt(myCostTotal)}</TdM>]} isTotal />
+              </tbody>
+            </table>
+            {coPendingCost.total > 0 && (
+              <div style={{ fontSize: '0.66rem', color: C.muted, marginTop: 8, ...fontLabel }}>
+                Plus {fmt(coPendingCost.total)} of cost on COs still pending approval (not counted above).
+              </div>
             )}
           </div>
         </KpiCard>
