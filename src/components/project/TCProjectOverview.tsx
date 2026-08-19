@@ -351,16 +351,18 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   // Pending = everything not paid (contract total minus collected)
   const totalPendingFromGC = Math.max(0, revisedGCTotal - totalReceivedFromGC);
   const fcPendingAmount = Math.max(0, revisedFCTotal - totalPaidToFC);
-  const gcReceivedPct = revisedGCTotal > 0 ? Math.round((totalReceivedFromGC / revisedGCTotal) * 100) : 0;
-  const fcPaidPct = revisedFCTotal > 0 ? Math.round((totalPaidToFC / revisedFCTotal) * 100) : 0;
+  // Clamped: collected amounts are tax-inclusive while contracts are pre-tax, so
+  // a fully-billed job could otherwise read above 100%.
+  const gcReceivedPct = revisedGCTotal > 0 ? Math.min(100, Math.round((totalReceivedFromGC / revisedGCTotal) * 100)) : 0;
+  const fcPaidPct = revisedFCTotal > 0 ? Math.min(100, Math.round((totalPaidToFC / revisedFCTotal) * 100)) : 0;
 
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (totalPendingSubmittedFromGC > 0) {
-    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${gcName} Approval`, sub: `${pendingInvoicesUp.length} invoice${pendingInvoicesUp.length > 1 ? 's' : ''} pending`, value: fmt(totalPendingSubmittedFromGC), pill: `Chasing ${gcName}`, pillType: 'pw', tab: 'invoices' });
+    warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${gcName} Approval`, sub: `${pendingFromGCCount} invoice${pendingFromGCCount > 1 ? 's' : ''} pending`, value: fmt(totalPendingSubmittedFromGC), pill: `Chasing ${gcName}`, pillType: 'pw', tab: 'invoices' });
   }
   if (fcPendingSubmitted > 0) {
-    warnings.push({ color: C.red, icon: '💰', title: `${fcName || 'Field Crew'} Invoice Awaiting Your Approval`, sub: `${fcName || 'Field Crew'} submitted`, value: fmt(fcPendingSubmitted), pill: `You owe ${fcName || 'Field Crew'}`, pillType: 'pr', tab: 'invoices' });
+    warnings.push({ color: C.red, icon: '💰', title: `${fcName || 'Field Crew'} Invoice Awaiting Your Approval`, sub: `${fcPendingCount} invoice${fcPendingCount > 1 ? 's' : ''} from ${fcName || 'Field Crew'} / suppliers`, value: fmt(fcPendingSubmitted), pill: `You owe ${fcName || 'Field Crew'}`, pillType: 'pr', tab: 'invoices' });
   }
   if (openRfis.length > 0) {
     warnings.push({ color: C.blue, icon: '❓', title: `${openRfis.length} Open RFI${openRfis.length > 1 ? 's' : ''} Need Response`, sub: `${gcName} waiting on answers`, value: `${openRfis.length} RFIs`, pill: 'Action Needed', pillType: 'pb', tab: 'rfis' });
