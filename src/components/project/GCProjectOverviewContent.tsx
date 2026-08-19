@@ -162,7 +162,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   // ─── Change Orders / Work Orders ───
   const { data: changeOrders = [] } = useQuery({
-    queryKey: ['project-cos-overview', projectId, isTM],
+    queryKey: ['project-cos-overview', projectId],
     queryFn: async () => {
       const { data: cos } = await supabase
         .from('change_orders')
@@ -171,24 +171,22 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         .order('created_at', { ascending: false });
       if (!cos || cos.length === 0) return [];
 
-      if (isTM) {
-        // For T&M, also fetch material + equipment totals per WO
-        const coIds = cos.map(c => c.id);
-        const [matRes, eqRes] = await Promise.all([
-          supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
-          supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
-        ]);
-        const matByWO: Record<string, number> = {};
-        const eqByWO: Record<string, number> = {};
-        (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
-        (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
-        return cos.map(c => ({
-          ...c,
-          wo_materials_total: matByWO[c.id] || 0,
-          wo_equipment_total: eqByWO[c.id] || 0,
-        }));
-      }
-      return cos.map(c => ({ ...c, wo_materials_total: 0, wo_equipment_total: 0, materials_responsible: null, equipment_responsible: null }));
+      // Materials/equipment are fetched for BOTH modes: change orders carry them
+      // too, and hard-coding 0 outside T&M made GC-side CO cost labor-only.
+      const coIds = cos.map(c => c.id);
+      const [matRes, eqRes] = await Promise.all([
+        supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', coIds),
+        supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', coIds),
+      ]);
+      const matByWO: Record<string, number> = {};
+      const eqByWO: Record<string, number> = {};
+      (matRes.data || []).forEach(m => { matByWO[m.co_id] = (matByWO[m.co_id] || 0) + (m.billed_amount || 0); });
+      (eqRes.data || []).forEach(e => { eqByWO[e.co_id] = (eqByWO[e.co_id] || 0) + (e.billed_amount || 0); });
+      return cos.map(c => ({
+        ...c,
+        wo_materials_total: matByWO[c.id] || 0,
+        wo_equipment_total: eqByWO[c.id] || 0,
+      }));
     },
   });
 
@@ -197,8 +195,11 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const isApprovedCO = (s: string) => (APPROVED_CO_STATUSES as readonly string[]).includes(s);
   const approvedCOs = changeOrders.filter(co => isApprovedCO(co.status));
   const pendingCOs = changeOrders.filter(co => !isApprovedCO(co.status) && co.status !== 'rejected');
-  const coRevenueTotal = approvedCOs.reduce((s, co) => s + (co.gc_budget || 0), 0);
-  // For T&M: only count mat/equip in TC cost when TC is the responsible party per WO
+  /** GC revenue per CO: the owner budget when typed, else the approved value. */
+  const coOwnerValue = (co: any) => co.gc_budget || co.tc_submitted_price || 0;
+  const coRevenueTotal = approvedCOs.reduce((s, co) => s + coOwnerValue(co), 0);
+  const coRevenueIsFallback = approvedCOs.some(co => !co.gc_budget && co.tc_submitted_price);
+  // Only count mat/equip in TC cost when the TC is the responsible party per CO
   const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
   const coMaterialsCost = approvedCOs.reduce((s, co) => {
     const matResp = (co as any).materials_responsible ?? 'TC';
