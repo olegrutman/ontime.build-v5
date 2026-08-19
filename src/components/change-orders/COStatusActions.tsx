@@ -81,6 +81,11 @@ export function COStatusActions({
   const [backchargeNote, setBackchargeNote] = useState('');
   const [projectParticipants, setProjectParticipants] = useState<Array<{ org_id: string; org_name: string }>>([]);
   const [canDeleteFromDb, setCanDeleteFromDb] = useState(false);
+  /* GC → owner pass-through decision captured at approval */
+  const [passToOwner, setPassToOwner] = useState<'yes' | 'no'>('yes');
+  const [ownerMarkup, setOwnerMarkup] = useState('');
+  const [ownerPrice, setOwnerPrice] = useState('');
+  const [notPassedReason, setNotPassedReason] = useState('');
 
   const isDamagedByOthers = co.reason === 'damaged_by_others';
 
