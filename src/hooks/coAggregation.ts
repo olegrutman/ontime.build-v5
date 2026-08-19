@@ -23,6 +23,13 @@ export interface COLike {
   tc_submitted_price?: number | null;
   /** Owner-facing price the GC set for this CO. Null/0 = not priced yet. */
   gc_budget?: number | null;
+  /** GC markup % applied to GC cost to derive the owner price. */
+  gc_owner_markup_percent?: number | null;
+  /**
+   * Whether the GC passes this CO's cost to the owner.
+   * true = billable to owner, false = absorbed by the GC, null = undecided.
+   */
+  passed_to_owner?: boolean | null;
   materials_responsible?: string | null;
   equipment_responsible?: string | null;
   co_material_responsible_override?: string | null;
