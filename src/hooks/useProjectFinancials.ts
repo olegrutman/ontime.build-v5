@@ -335,7 +335,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       const { data: allCOs = [] } = await supabase
         .from('change_orders')
-        .select('id, status, document_type, tc_submitted_price, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
+        .select('id, status, document_type, tc_submitted_price, gc_budget, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
         .eq('project_id', projectId)
         .in('status', [...APPROVED_CO_STATUSES, ...PENDING_CO_STATUSES]);
 
