@@ -424,6 +424,14 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
         setMaterialInvoiced(materialPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setMaterialPaid(materialPayableInvs.filter((i: any) => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0));
+
+        // Awaiting-approval counts, scoped by party (was a 5-row recent slice).
+        const recvPending = receivableInvs.filter((i: any) => i.status === 'SUBMITTED');
+        const payPending = payableInvs.filter((i: any) => i.status === 'SUBMITTED');
+        setReceivablesPendingAmount(recvPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setReceivablesPendingCount(recvPending.length);
+        setPayablesPendingAmount(payPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setPayablesPendingCount(payPending.length);
       }
 
       // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
