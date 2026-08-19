@@ -682,11 +682,17 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     if (viewerRole === 'Field Crew') return false;
     const coPortion = contracts.find(c => c.id === id)?.co_approved_sum || 0;
     const revised = sum + coPortion;
-    const { error } = await supabase.from('project_contracts').update({ contract_sum: revised, retainage_percent: retainage }).eq('id', id);
+    const { error } = await supabase
+      .from('project_contracts')
+      .update({ contract_sum: revised, original_contract_sum: sum, retainage_percent: retainage })
+      .eq('id', id);
     if (error) return false;
-    setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: revised, retainage_percent: retainage } : c));
+    setContracts(prev => prev.map(c => c.id === id
+      ? { ...c, contract_sum: revised, original_contract_sum: sum, retainage_percent: retainage }
+      : c));
     return true;
   };
+
 
   const createFcContract = async (fcOrgId: string, sum: number, retainage: number): Promise<boolean> => {
     const currentOrgId = userOrgRoles[0]?.organization?.id;
