@@ -211,17 +211,38 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const coOwnerValue = (co: any) => co.gc_budget || co.tc_submitted_price || 0;
   const coRevenueTotal = approvedCOs.reduce((s, co) => s + coOwnerValue(co), 0);
   const coRevenueIsFallback = approvedCOs.some(co => !co.gc_budget && co.tc_submitted_price);
-  // Only count mat/equip in TC cost when the TC is the responsible party per CO
-  const coLaborCost = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || 0), 0);
-  const coMaterialsCost = approvedCOs.reduce((s, co) => {
-    const matResp = (co as any).materials_responsible ?? 'TC';
-    return s + (matResp === 'TC' ? (co.wo_materials_total || 0) : 0);
-  }, 0);
-  const coEquipmentCost = approvedCOs.reduce((s, co) => {
-    const eqResp = (co as any).equipment_responsible ?? 'TC';
-    return s + (eqResp === 'TC' ? (co.wo_equipment_total || 0) : 0);
-  }, 0);
+  /**
+   * GC-side CO cost. An approved CO is money the GC OWES, so it hits the bottom
+   * line on the cost side:
+   *   • owed to the TC = the frozen billable snapshot (already excludes
+   *     anything the GC procures itself)
+   *   • GC-procured materials / equipment = what the GC pays at cost on its own
+   *     POs for that CO
+   * A category is counted on exactly one side, never both, so the material
+   * commitment and the CO cost can't double up.
+   */
+  const coCostOf = (co: any) => {
+    const matResp = co.co_material_responsible_override ?? co.materials_responsible ?? materialResp ?? 'TC';
+    const eqResp = co.co_equipment_responsible_override ?? co.equipment_responsible ?? materialResp ?? 'TC';
+    const owedToTC = co.tc_submitted_price || 0;
+    const gcMaterials = matResp === 'GC' ? (co.wo_materials_cost || 0) : 0;
+    const gcEquipment = eqResp === 'GC' ? (co.wo_equipment_cost || 0) : 0;
+    return { owedToTC, gcMaterials, gcEquipment, total: owedToTC + gcMaterials + gcEquipment };
+  };
+  const sumCost = (list: any[], key: 'owedToTC' | 'gcMaterials' | 'gcEquipment' | 'total') =>
+    list.reduce((s, co) => s + coCostOf(co)[key], 0);
+
+  const coLaborCost = sumCost(approvedCOs, 'owedToTC');
+  const coMaterialsCost = sumCost(approvedCOs, 'gcMaterials');
+  const coEquipmentCost = sumCost(approvedCOs, 'gcEquipment');
   const coCostTotal = coLaborCost + coMaterialsCost + coEquipmentCost;
+  const coMarkup = coRevenueTotal - coCostTotal;
+  const coMarkupPct = coCostTotal > 0 ? (coMarkup / coCostTotal) * 100 : 0;
+  const coNoBudgetCount = approvedCOs.filter(co => !co.gc_budget).length;
+  const coAtLossCount = approvedCOs.filter(co => coOwnerValue(co) < coCostOf(co).total).length;
+  const pendingCOCostTotal = sumCost(pendingCOs, 'total');
+  const pendingCORevenueTotal = pendingCOs.reduce((s, co) => s + coOwnerValue(co), 0);
+  const coWord = isTM ? 'WO' : 'CO';
 
   // ─── RFIs ───
   const { data: rfis = [] } = useQuery({
