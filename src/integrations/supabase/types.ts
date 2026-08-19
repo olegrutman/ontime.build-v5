@@ -5658,6 +5658,8 @@ export type Database = {
           project_id: string
           project_profile_id: string | null
           scope_snapshot: Json | null
+          source_co_id: string | null
+          sov_kind: string
           sov_name: string | null
           version: number
         }
@@ -5673,6 +5675,8 @@ export type Database = {
           project_id: string
           project_profile_id?: string | null
           scope_snapshot?: Json | null
+          source_co_id?: string | null
+          sov_kind?: string
           sov_name?: string | null
           version?: number
         }
@@ -5688,6 +5692,8 @@ export type Database = {
           project_id?: string
           project_profile_id?: string | null
           scope_snapshot?: Json | null
+          source_co_id?: string | null
+          sov_kind?: string
           sov_name?: string | null
           version?: number
         }
@@ -5718,6 +5724,20 @@ export type Database = {
             columns: ["project_profile_id"]
             isOneToOne: false
             referencedRelation: "project_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sov_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sov_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
           },
         ]
@@ -8339,6 +8359,7 @@ export type Database = {
         Args: { _request_id: string }
         Returns: undefined
       }
+      build_co_sov: { Args: { _co_id: string }; Returns: string }
       can_accept_project_invite: {
         Args: { _user_id: string }
         Returns: boolean
