@@ -6,6 +6,7 @@ import {
   resolveBillingOrgId,
   PENDING_CO_STATUSES,
   APPROVED_CO_STATUSES,
+  type COCostBreakdown,
 } from '@/hooks/coAggregation';
 import { buildProjectLedger, type ProjectLedger } from '@/lib/kpiLedger';
 
