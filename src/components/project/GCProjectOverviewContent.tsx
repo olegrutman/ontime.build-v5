@@ -303,8 +303,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
-  if (pendingInvoices.length > 0) {
-    warnings.push({ color: C.red, icon: '💰', title: `${pendingInvoices.length} Invoice${pendingInvoices.length > 1 ? 's' : ''} Awaiting Approval`, sub: 'Review and approve pending invoices', value: fmt(pendingInvoices.reduce((s, i) => s + i.total_amount, 0)), pill: 'Action Needed', pillType: 'pr', tab: 'invoices' });
+  if (pendingPayableCount > 0) {
+    warnings.push({ color: C.red, icon: '💰', title: `${pendingPayableCount} Invoice${pendingPayableCount > 1 ? 's' : ''} Awaiting Your Approval`, sub: `From ${tcName} + suppliers`, value: fmt(pendingPayableAmount), pill: 'Action Needed', pillType: 'pr', tab: 'invoices' });
   }
   if (matPending > 0) {
     warnings.push({ color: C.yellow, icon: '🚚', title: 'Material Orders Pending Delivery', sub: `${fmt(matPending)} in transit`, value: fmt(matPending), pill: 'Pending', pillType: 'pw', tab: 'purchase-orders' });
@@ -422,7 +422,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             {/* ═══ T&M MODE: WO-driven cards 1-4 ═══ */}
 
             {/* Card 1 — WO Revenue */}
-            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="WO REVENUE (BILLED TO OWNER)" value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'} sub={`${approvedCOs.length} approved WOs · sum of GC budgets`} pills={coRevenueTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
+            <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale} label="WO REVENUE (BILLED TO OWNER)" value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'} sub={`${approvedCOs.length} approved WOs · ${coRevenueIsFallback ? 'approved values (no owner budget set)' : 'sum of GC budgets'}`} pills={coRevenueTotal > 0 ? [{ type: 'pa', text: `${approvedCOs.length} WOs` }] : [{ type: 'pm', text: 'No WOs' }]} idx={0}>
               <div style={{ padding: 12 }}>
                 {changeOrders.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -499,7 +499,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                         <TRow cells={[<TdN>Equipment Cost</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
                         <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
                         <TRow cells={[<TdN>Your Margin</TdN>, <TdM>{fmt(woMargin)}</TdM>]} isTotal />
-                        <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
+                        <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
                         <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
                       </tbody>
                     </table>
@@ -635,7 +635,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                     <TRow cells={[<TdN>Pending delivery</TdN>, <TdM>{fmt(matPending)}</TdM>]} />
                     <TRow cells={[<TdN>At risk on delivery</TdN>, <TdM>{fmt(materialAtRiskOnDelivery)}</TdM>]} />
                     <TRow cells={[<TdN>Material variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} />
-                    <TRow cells={[<TdN>Paid to Date</TdN>, <TdM>{fmt(financials.totalPaid)}</TdM>]} />
+                    <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
                     <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
                   </tbody>
                 </table>
@@ -745,7 +745,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         </KpiCard>
 
         {/* Card 7 — Invoices */}
-        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="INVOICES PAID" value={fmt(financials.totalPaid)} sub={`${paidInvoices.length} paid · ${pendingInvoices.length} pending`} pills={pendingInvoices.length > 0 ? [{ type: 'pw', text: `${pendingInvoices.length} pending` }] : [{ type: 'pg', text: 'On track' }]} idx={6}>
+        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="INVOICES PAID" value={fmt(gcPaidAmount)} sub={`Paid to ${tcName} + suppliers · ${pendingPayableCount} awaiting your approval`} pills={pendingPayableCount > 0 ? [{ type: 'pw', text: `${pendingPayableCount} pending` }] : [{ type: 'pg', text: 'On track' }]} idx={6}>
           <div style={{ padding: 12 }}>
             {financials.recentInvoices.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
