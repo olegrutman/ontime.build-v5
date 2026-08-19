@@ -124,8 +124,8 @@ export function money(n: number): string {
 const isWO = (c: LedgerContract) =>
   c.trade === 'Work Order' || c.trade === 'Work Order Labor';
 
-const base = (c: LedgerContract) =>
-  Number(c.contract_sum || 0) - Number(c.co_approved_sum || 0);
+const base = (c: LedgerContract) => baseContractSum(c);
+
 
 /** Contract the viewer bills on (they are the `from` party). */
 export function findRevenueContract(
