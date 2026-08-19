@@ -273,18 +273,18 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'contracted', 'rejected'].includes(co.status));
   // Net CO margin counts all non-rejected COs (approved + pending)
   const countedCOs = changeOrders.filter(co => co.status !== 'rejected');
-  // TC revenue on a CO = what the TC bills the GC (its own priced total, or the
-  // GC-set budget as a fallback). TC cost on a CO = what the Field Crew priced.
-  // tc_submitted_price is REVENUE, never cost — treating it as cost made approved
-  // COs subtract from the TC's revised contract instead of adding to it.
-  const coRev = (co: any) => Number(co.display_total ?? 0) || Number(co.tc_submitted_price ?? 0) || Number(co.gc_budget ?? 0) || 0;
-  const coCst = (co: any) => Number(co.fc_cost_total ?? 0) || 0;
-  const coRevenue = countedCOs.reduce((s, co) => s + coRev(co), 0);
-  const coCost = countedCOs.reduce((s, co) => s + coCst(co), 0);
+  // CO revenue/cost come from the canonical aggregation in useProjectFinancials
+  // (labor line items + non-GC-procured materials/equipment). The old local
+  // helpers read `display_total` / `fc_cost_total`, columns that do not exist on
+  // change_orders — cost always resolved to 0, so the card claimed "$0 paid to
+  // Field Crew" and net margin equalled gross revenue.
+  const coRevenue = financials.approvedCORevenue + financials.pendingCORevenue;
+  const coCost = financials.approvedCOCost + financials.pendingCOCost;
   const coNetMargin = coRevenue - coCost;
   // Approved-only rollups (for revised contract totals)
-  const approvedCoRevenue = approvedCOs.reduce((s, co) => s + coRev(co), 0);
-  const approvedCoCost = approvedCOs.reduce((s, co) => s + coCst(co), 0);
+  const approvedCoRevenue = financials.approvedCORevenue;
+  const approvedCoCost = financials.approvedCOCost;
+
 
 
   // ─── T&M: derive "contract" values from WOs when no project_contracts exist ───
@@ -650,29 +650,31 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         })()}
 
         {/* Card 4 — CO Net Margin */}
-        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={countedCOs.length > 0 ? `${coNetMargin >= 0 ? '+' : ''}${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={countedCOs.length > 0 ? (isTM ? `Revenue ${fmt(coRevenue)} · Labor Cost ${fmt(coCost)} · incl. pending` : `Billed ${fmt(coRevenue)} to ${gcName} · Paid ${fmt(coCost)} to ${fcName || 'Field Crew'} · incl. pending`) : `No ${isTM ? 'work orders' : 'change orders'}`} pills={countedCOs.length > 0 ? [{ type: 'pb', text: `${countedCOs.length} ${isTM ? 'WOs' : 'COs'}${pendingCOs.length > 0 ? ` · ${pendingCOs.length} pending` : ''}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label={isTM ? 'WO BREAKDOWN' : 'CO NET MARGIN'} value={countedCOs.length > 0 ? `${coNetMargin >= 0 ? '+' : ''}${fmt(coNetMargin)}` : `0 ${isTM ? 'WOs' : 'COs'}`} sub={countedCOs.length > 0 ? `Billed ${fmt(coRevenue)} to ${gcName} · Your cost ${fmt(coCost)} · incl. pending` : `No ${isTM ? 'work orders' : 'change orders'}`} pills={countedCOs.length > 0 ? [{ type: 'pb', text: `${countedCOs.length} ${isTM ? 'WOs' : 'COs'}${pendingCOs.length > 0 ? ` · ${pendingCOs.length} pending` : ''}` }] : [{ type: 'pm', text: 'None' }]} idx={3}>
           <div style={{ padding: 12 }}>
             {changeOrders.length > 0 ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={[`${isTM ? 'WO' : 'CO'} #`, 'Description', isTM ? 'GC Budget' : `Billed to ${gcName}`, isTM ? 'TC Labor' : `Paid to ${fcName || 'Field Crew'}`, 'Your Net', 'Status']} />
+                <THead cols={[`${isTM ? 'WO' : 'CO'} #`, 'Description', 'GC Budget', 'Your Price', 'Variance', 'Status']} />
                 <tbody>
                   {changeOrders.slice(0, 8).map(co => {
                     const gcB = co.gc_budget || 0;
                     const tcP = co.tc_submitted_price || 0;
+                    const variance = tcP > 0 && gcB > 0 ? gcB - tcP : 0;
                     return (
                       <TRow key={co.id} cells={[
                         <TdN>{co.co_number || '—'}</TdN>,
                         co.title || '—',
-                        <TdM>{fmt(gcB)}</TdM>,
-                        <TdM>{fmt(tcP)}</TdM>,
-                        <span style={{ ...fontMono, fontSize: '0.78rem', color: gcB - tcP >= 0 ? C.green : C.red }}>+{fmt(gcB - tcP)}</span>,
+                        <TdM>{gcB > 0 ? fmt(gcB) : '—'}</TdM>,
+                        <TdM>{tcP > 0 ? fmt(tcP) : '—'}</TdM>,
+                        <span style={{ ...fontMono, fontSize: '0.78rem', color: variance >= 0 ? C.green : C.red }}>{tcP > 0 && gcB > 0 ? `${variance >= 0 ? '+' : ''}${fmt(variance)}` : '—'}</span>,
                         <Pill type={['approved', 'completed', 'contracted'].includes(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
                       ]} />
                     );
                   })}
                   {countedCOs.length > 0 && (
-                    <TRow cells={[<TdN>{countedCOs.length} {isTM ? 'WOs' : 'COs'} (incl. pending)</TdN>, '—', <TdM>{fmt(coRevenue)}</TdM>, <TdM>{fmt(coCost)}</TdM>, <TdM>{coNetMargin >= 0 ? '+' : ''}{fmt(coNetMargin)}</TdM>, '—']} isTotal />
+                    <TRow cells={[<TdN>{countedCOs.length} {isTM ? 'WOs' : 'COs'} (incl. pending)</TdN>, 'Revenue / cost / net', <TdM>{fmt(coRevenue)}</TdM>, <TdM>{fmt(coCost)}</TdM>, <TdM>{coNetMargin >= 0 ? '+' : ''}{fmt(coNetMargin)}</TdM>, '—']} isTotal />
                   )}
+
                 </tbody>
               </table>
             ) : (
