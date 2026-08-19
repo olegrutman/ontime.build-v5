@@ -224,7 +224,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         id: c.id,
         from_role: c.from_role,
         to_role: c.to_role,
-        contract_sum: Math.max((c.contract_sum || 0) - (c.co_approved_sum || 0), 0),
+        contract_sum: baseContractSum(c),
         retainage_percent: c.retainage_percent,
         from_org_id: c.from_org_id,
         to_org_id: c.to_org_id,
