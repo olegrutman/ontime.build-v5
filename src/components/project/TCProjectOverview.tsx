@@ -273,18 +273,18 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const pendingCOs = changeOrders.filter(co => !['approved', 'completed', 'contracted', 'rejected'].includes(co.status));
   // Net CO margin counts all non-rejected COs (approved + pending)
   const countedCOs = changeOrders.filter(co => co.status !== 'rejected');
-  // TC revenue on a CO = what the TC bills the GC (its own priced total, or the
-  // GC-set budget as a fallback). TC cost on a CO = what the Field Crew priced.
-  // tc_submitted_price is REVENUE, never cost — treating it as cost made approved
-  // COs subtract from the TC's revised contract instead of adding to it.
-  const coRev = (co: any) => Number(co.display_total ?? 0) || Number(co.tc_submitted_price ?? 0) || Number(co.gc_budget ?? 0) || 0;
-  const coCst = (co: any) => Number(co.fc_cost_total ?? 0) || 0;
-  const coRevenue = countedCOs.reduce((s, co) => s + coRev(co), 0);
-  const coCost = countedCOs.reduce((s, co) => s + coCst(co), 0);
+  // CO revenue/cost come from the canonical aggregation in useProjectFinancials
+  // (labor line items + non-GC-procured materials/equipment). The old local
+  // helpers read `display_total` / `fc_cost_total`, columns that do not exist on
+  // change_orders — cost always resolved to 0, so the card claimed "$0 paid to
+  // Field Crew" and net margin equalled gross revenue.
+  const coRevenue = financials.approvedCORevenue + financials.pendingCORevenue;
+  const coCost = financials.approvedCOCost + financials.pendingCOCost;
   const coNetMargin = coRevenue - coCost;
   // Approved-only rollups (for revised contract totals)
-  const approvedCoRevenue = approvedCOs.reduce((s, co) => s + coRev(co), 0);
-  const approvedCoCost = approvedCOs.reduce((s, co) => s + coCst(co), 0);
+  const approvedCoRevenue = financials.approvedCORevenue;
+  const approvedCoCost = financials.approvedCOCost;
+
 
 
   // ─── T&M: derive "contract" values from WOs when no project_contracts exist ───
