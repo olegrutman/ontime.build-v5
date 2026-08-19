@@ -612,29 +612,18 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               </div>
             </KpiCard>
 
-            {/* Card 3 — Your Margin (incl. supplier material contract + delivery risk) */}
-            <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={ownerBudget > 0 ? fmt(projectedMargin) : '—'} sub={ownerBudget > 0 ? `${projectedMarginPctStr}% · incl. COs${materialCommitment > 0 ? ' + materials contract' : ''}` : 'Set owner budget to see margin'} pills={ownerBudget > 0 ? [{ type: projectedMarginPct > 15 ? 'pg' : projectedMarginPct > 5 ? 'pw' : 'pr', text: `${projectedMarginPctStr}%` }] : []} idx={2}>
+            {/* Card 3 — Materials delivery tracking only (margin lives in the canonical grid). */}
+            <KpiCard accent={C.purple} icon="🧱" iconBg={C.purpleBg} label="MATERIALS TRACKING" value={materialCommitment > 0 ? fmt(materialCommitment) : '—'} sub={materialCommitment > 0 ? `${materialLabel} · ${fmt(matOrdered)} ordered · ${fmt(matDelivered)} delivered` : `Materials inside ${tcName}'s subcontract`} pills={materialCommitment > 0 ? [{ type: 'pb', text: 'Your commitment' }] : [{ type: 'pm', text: `${tcName} procures` }]} idx={2}>
               <div style={{ padding: 12 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Owner Budget</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Revenue</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
-                    <TRow cells={[<TdN>Revised In</TdN>, <TdM>{fmt(revisedIn)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Subcontract ({tcName})</TdN>, <TdM>-{fmt(draftContractVal)}</TdM>]} />
-                    <TRow cells={[<TdN>CO Cost</TdN>, <TdM>-{fmt(coCostTotal)}</TdM>]} />
-                    {materialCommitment > 0 && (
-                      <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>-{fmt(materialCommitment)}</TdM>]} />
-                    )}
-                    <TRow cells={[<TdN>Revised Out</TdN>, <TdM>{fmt(revisedOut)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Your Total Margin</TdN>, <TdM>{fmt(projectedMargin)}</TdM>]} isTotal />
-                    <TRow cells={[<TdN>Ordered vs materials contract</TdN>, <TdM>{materialCommitment > 0 ? `${fmt(matOrdered)} / ${fmt(materialCommitment)}` : '—'}</TdM>]} />
+                    <TRow cells={[<TdN>{materialLabel}</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment) : '—'}</TdM>]} isTotal />
+                    <TRow cells={[<TdN>Ordered</TdN>, <TdM>{fmt(matOrdered)}</TdM>]} />
                     <TRow cells={[<TdN>Delivered</TdN>, <TdM>{fmt(matDelivered)}</TdM>]} />
                     <TRow cells={[<TdN>Pending delivery</TdN>, <TdM>{fmt(matPending)}</TdM>]} />
                     <TRow cells={[<TdN>At risk on delivery</TdN>, <TdM>{fmt(materialAtRiskOnDelivery)}</TdM>]} />
-                    <TRow cells={[<TdN>Material variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} />
-                    <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
-                    <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
+                    <TRow cells={[<TdN>Variance (contract − ordered)</TdN>, <TdM>{materialCommitment > 0 ? fmt(materialCommitment - matOrdered) : '—'}</TdM>]} isTotal />
                   </tbody>
                 </table>
                 {!financials.isGCMaterialResponsible && (
@@ -644,6 +633,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                 )}
               </div>
             </KpiCard>
+
 
 
             {/* Margin + margin-to-date now come from the canonical grid above. */}
