@@ -161,6 +161,8 @@ export function aggregateCOTotals(
     approvedWOTotal: 0,
     approvedCostBreakdown: emptyBreakdown(),
     pendingCostBreakdown: emptyBreakdown(),
+    coMissingOwnerBudget: 0,
+    coSellingAtLoss: 0,
   };
   if (!billingOrgId || cos.length === 0) return empty;
 
