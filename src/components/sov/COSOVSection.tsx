@@ -160,6 +160,7 @@ export function COSOVSection({
 
 function COSOVRowCard({
   sov,
+  projectId,
   retainagePct,
   onBill,
 }: {
@@ -245,7 +246,7 @@ function COSOVRowCard({
             </div>
           )}
           <div className="px-3.5 py-2 border-t border-border flex justify-end">
-            <Button size="sm" variant="ghost" onClick={() => navigate(`/change-orders/${sov.source_co_id}`)}>
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/project/${projectId}/change-orders/${sov.source_co_id}`)}>
               Open change order
             </Button>
           </div>
