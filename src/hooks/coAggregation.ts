@@ -294,5 +294,7 @@ export function aggregateCOTotals(
       .reduce((s, c) => s + c.revenue, 0),
     approvedCostBreakdown: breakdown(approved),
     pendingCostBreakdown: breakdown(pending),
+    coMissingOwnerBudget: approved.filter((c) => !c.ownerBudgetSet).length,
+    coSellingAtLoss: approved.filter((c) => c.revenue < c.cost).length,
   };
 }
