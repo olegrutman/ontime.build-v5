@@ -348,6 +348,54 @@ export function COStatusActions({
             .eq('id', co.id);
         }
 
+        /* GC decides here whether this cost is passed to the owner and at what
+           markup. A passed-through CO adds its owner price to the owner
+           contract; an absorbed one stays a pure GC cost. */
+        if (showOwnerStep) {
+          if (passToOwner === 'yes') {
+            if (!effectiveOwnerPrice || effectiveOwnerPrice <= 0) {
+              toast.error('Enter a markup % or an owner price before approving.');
+              return;
+            }
+            const markup = !isNaN(parsedOwnerMarkup)
+              ? parsedOwnerMarkup
+              : gcCostBase > 0
+                ? Number((((effectiveOwnerPrice - gcCostBase) / gcCostBase) * 100).toFixed(2))
+                : null;
+            const { error: ownerErr } = await supabase
+              .from('change_orders')
+              .update({
+                gc_budget: Number(effectiveOwnerPrice.toFixed(2)),
+                gc_owner_markup_percent: markup,
+                passed_to_owner: true,
+                not_passed_reason: null,
+              })
+              .eq('id', co.id);
+            if (ownerErr) throw ownerErr;
+            await logActivity(
+              'owner_price_set',
+              `Passed to owner at ${money(effectiveOwnerPrice)}${markup != null ? ` (${markup}% markup on ${money(gcCostBase)} cost)` : ''}`,
+              Number(effectiveOwnerPrice.toFixed(2)),
+            );
+          } else {
+            const { error: ownerErr } = await supabase
+              .from('change_orders')
+              .update({
+                passed_to_owner: false,
+                gc_budget: null,
+                gc_owner_markup_percent: null,
+                not_passed_reason: notPassedReason.trim() || null,
+              })
+              .eq('id', co.id);
+            if (ownerErr) throw ownerErr;
+            await logActivity(
+              'owner_price_absorbed',
+              `Not passed to owner — absorbed ${money(gcCostBase)}${notPassedReason.trim() ? `: ${notPassedReason.trim()}` : ''}`,
+              gcCostBase || undefined,
+            );
+          }
+        }
+
         await approveCO.mutateAsync(co.id);
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
