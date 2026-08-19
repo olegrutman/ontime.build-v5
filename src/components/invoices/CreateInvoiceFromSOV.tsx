@@ -852,7 +852,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
             )}
 
             {/* CO Billing Row (CO mode) — styled like an SOV line item */}
-            {selectedCO && (
+            {selectedCO && coLumpMode && (
               <div className="space-y-3">
                 {/* Parent contract context */}
                 <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex flex-wrap items-center gap-x-2">
@@ -1062,7 +1062,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 
 
             {/* SOV Items */}
-            {!selectedCOId && selectedContractId && billingItems.length > 0 && (
+            {!coLumpMode && selectedContractId && billingItems.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1234,7 +1234,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </div>
             )}
 
-            {!selectedCOId && selectedContractId && billingItems.length === 0 && (
+            {!coLumpMode && selectedContractId && billingItems.length === 0 && (
               <Alert>
                 <FileText className="h-4 w-4" />
                 <AlertDescription>
