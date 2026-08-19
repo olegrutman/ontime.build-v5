@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, cellStyle, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
+import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
+
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 import { LadderCard } from '@/components/shared/LadderCard';
 import { Sparkline } from '@/components/shared/Sparkline';
