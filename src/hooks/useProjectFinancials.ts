@@ -96,6 +96,13 @@ export interface ProjectFinancials {
   payablesInvoiced: number;
   payablesPaid: number;
   payablesRetainage: number;
+  /** SUBMITTED invoices the viewer is owed / owes, scoped by party. */
+  receivablesPendingAmount: number;
+  receivablesPendingCount: number;
+  payablesPendingAmount: number;
+  payablesPendingCount: number;
+  /** Paid payables excluding supplier (PO-linked) invoices — i.e. paid to subs/crew. */
+  payablesPaidToSubs: number;
 
   // Invoices for charts/lists
   recentInvoices: { id: string; invoice_number: string; status: string; total_amount: number; created_at: string }[];
