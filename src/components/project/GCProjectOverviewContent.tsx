@@ -481,54 +481,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               </div>
             </KpiCard>
 
-            {/* Card 3 — Your Margin (WO-driven) */}
-            {(() => {
-              const woMargin = coRevenueTotal - coCostTotal;
-              const woMarginPct = coRevenueTotal > 0 ? ((woMargin / coRevenueTotal) * 100).toFixed(1) : '0';
-              return (
-                <KpiCard accent={C.navy} icon="📊" iconBg={C.surface2} label="YOUR MARGIN" value={coRevenueTotal > 0 ? fmt(woMargin) : '—'} sub={coRevenueTotal > 0 ? `${woMarginPct}% · WO revenue minus TC cost` : 'Create WOs to see margin'} pills={coRevenueTotal > 0 ? [{ type: Number(woMarginPct) > 15 ? 'pg' : Number(woMarginPct) > 5 ? 'pw' : 'pr', text: `${woMarginPct}%` }] : []} idx={2}>
-                  <div style={{ padding: 12 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <THead cols={['Metric', 'Value']} />
-                      <tbody>
-                        <TRow cells={[<TdN>WO Revenue (GC Budget)</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>]} />
-                        <TRow cells={[<TdN>TC Labor Cost</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
-                        <TRow cells={[<TdN>Materials Cost</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
-                        <TRow cells={[<TdN>Equipment Cost</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
-                        <TRow cells={[<TdN>Total TC Cost</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} />
-                        <TRow cells={[<TdN>Your Margin</TdN>, <TdM>{fmt(woMargin)}</TdM>]} isTotal />
-                        <TRow cells={[<TdN>Paid to Date ({tcName} + suppliers)</TdN>, <TdM>{fmt(gcPaidAmount)}</TdM>]} />
-                        <TRow cells={[<TdN>Outstanding</TdN>, <TdM>{fmt(financials.outstanding)}</TdM>]} />
-                      </tbody>
-                    </table>
-                  </div>
-                </KpiCard>
-              );
-            })()}
+            {/* Margin + margin-to-date now come from the canonical grid above. */}
 
-            {/* Card 3b — Margin to Date (realized, T&M) */}
-            {(() => {
-              const earned = financials.earnedRevenueToDate ?? 0;
-              const incurred = financials.incurredCostToDate ?? 0;
-              const m2d = financials.marginToDateAmount ?? 0;
-              const m2dPct = financials.marginToDatePct ?? 0;
-              const pctRounded = Math.round(m2dPct);
-              const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
-              return (
-                <KpiCard accent={C.green} icon="📊" iconBg={C.greenBg} label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'} sub={earned > 0 ? `${pctRounded}% realized · cash basis` : 'No revenue collected yet'} pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]} idx={3}>
-                  <div style={{ padding: 12 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <THead cols={['Metric', 'Value']} />
-                      <tbody>
-                        <TRow cells={[<TdN>Received (from owner / upstream)</TdN>, <TdM>{fmt(financials.receivablesCollected)}</TdM>]} />
-                        <TRow cells={[<TdN>Paid (to TC + suppliers)</TdN>, <TdM>{fmt(financials.payablesPaid)}</TdM>]} />
-                        <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
-                      </tbody>
-                    </table>
-                  </div>
-                </KpiCard>
-              );
-            })()}
 
             {/* Card 4 — Work Orders (list + create) */}
             <KpiCard accent={C.blue} icon="📝" iconBg={C.blueBg} label="WORK ORDERS" value={changeOrders.length > 0 ? `${changeOrders.length} WOs` : '0 WOs'} sub={`${approvedCOs.length} approved · ${pendingCOs.length} pending`} pills={pendingCOs.length > 0 ? [{ type: 'pw', text: `${pendingCOs.length} pending` }] : [{ type: 'pg', text: 'All clear' }]} idx={3}>
