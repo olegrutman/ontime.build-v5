@@ -88,7 +88,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   const ownerBudgetReal = financials.ownerContractValue || 0;
   const upContract = financials.upstreamContract;
-  const tcContractVal = upContract?.contract_sum || 0;
+  // BASE subcontract value: `contract_sum` already includes approved COs, and CO
+  // cost is added separately below, so using the raw sum double-counted them.
+  const tcContractVal = baseContractSum(upContract as any);
+
   const tcName = (() => {
     if (!upContract) return 'Trade Contractor';
     if (currentOrgId && upContract.from_org_id === currentOrgId) return upContract.to_org_name || 'Trade Contractor';
