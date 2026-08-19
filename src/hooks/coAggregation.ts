@@ -71,6 +71,10 @@ export interface AggregatedCOTotals {
   coMissingOwnerBudget: number;
   /** Approved COs priced BELOW what they cost the viewer. */
   coSellingAtLoss: number;
+  /** Cost of approved COs the GC explicitly decided NOT to pass to the owner. */
+  coAbsorbedCost: number;
+  /** Cost of approved COs where the pass-to-owner decision is still undecided. */
+  coUndecidedCost: number;
 }
 
 export const PENDING_CO_STATUSES = [
