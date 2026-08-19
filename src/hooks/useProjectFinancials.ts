@@ -489,7 +489,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       const { data: orderedPOs } = await supabase
         .from('purchase_orders')
-        .select('id, status, sales_tax_percent, po_line_items(line_total)')
+        .select('id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
         .eq('project_id', projectId)
         .in('status', ['ORDERED', 'DELIVERED']);
 
@@ -499,7 +499,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         return sum + subtotal * (1 + taxRate);
       }, 0);
 
-      const allPOs = orderedPOs || [];
+      // Only POs the viewer's org owns count toward its material spend. Without
+      // this a GC saw TC-procured POs charged against its own budget (and vice
+      // versa). Legacy rows with no owner fall back to being visible to all.
+      const allPOs = (orderedPOs || []).filter((po: any) =>
+        !po.pricing_owner_org_id || orgIds.includes(po.pricing_owner_org_id),
+      );
       const matOrdered = calcPOTotal(allPOs);
       setMaterialOrdered(matOrdered);
 
