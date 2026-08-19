@@ -324,6 +324,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
 
               const isPriced = entryCount > 0 || totalForRole > 0;
+              const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
 
               if (!isPriced && canAddLabor) {
                 return (
