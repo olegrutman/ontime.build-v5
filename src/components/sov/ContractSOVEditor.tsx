@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useContractSOV, ContractSOV, ContractSOVItem, ProjectContract, getContractDisplayName } from '@/hooks/useContractSOV';
 import { SOVProgressBar } from './SOVProgressBar';
+import { COSOVSection } from './COSOVSection';
 import { RequireOrgType } from '@/components/auth/RequirePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { DT } from '@/lib/design-tokens';
