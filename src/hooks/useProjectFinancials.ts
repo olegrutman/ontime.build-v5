@@ -726,7 +726,38 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     return true;
   };
 
+  // ── Canonical ledger ──────────────────────────────────────────────────────
+  // Built once here so every KPI card in every role reads the same terms.
+  // Materials are only the viewer's cost when the viewer is responsible; the
+  // commitment is the larger of approved supplier estimates and POs the viewer
+  // owns (an estimate becomes a PO, so taking the max avoids double-counting).
+  const materialsAreMine =
+    viewerRole === 'General Contractor' ? isGCMaterialResponsible : isTCMaterialResponsible;
+  const ledger = buildProjectLedger({
+    role: viewerRole,
+    myOrgIds: userOrgIds,
+    contracts,
+    ownerContractValue,
+    approvedCORevenue,
+    approvedCOCost,
+    pendingCORevenue,
+    pendingCOCost,
+    materialCommitment: Math.max(approvedEstimateSum, materialOrdered),
+    materialsAreMine,
+    billed: revenueBilledToDate,
+    collected: receivablesCollected,
+    retainageHeld: receivablesRetainage,
+    receivablesPendingAmount,
+    receivablesPendingCount,
+    payablesApproved: payablesInvoiced,
+    payablesPaid,
+    payablesPendingAmount,
+    payablesPendingCount,
+  });
+
   return {
+    ledger,
+
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
     billedToDate: revenueBilledToDate, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
