@@ -4399,6 +4399,7 @@ export type Database = {
           material_markup_value: number | null
           material_responsibility: string | null
           notes: string | null
+          original_contract_sum: number | null
           owner_contract_value: number | null
           project_id: string
           rejected_at: string | null
@@ -4429,6 +4430,7 @@ export type Database = {
           material_markup_value?: number | null
           material_responsibility?: string | null
           notes?: string | null
+          original_contract_sum?: number | null
           owner_contract_value?: number | null
           project_id: string
           rejected_at?: string | null
@@ -4459,6 +4461,7 @@ export type Database = {
           material_markup_value?: number | null
           material_responsibility?: string | null
           notes?: string | null
+          original_contract_sum?: number | null
           owner_contract_value?: number | null
           project_id?: string
           rejected_at?: string | null
