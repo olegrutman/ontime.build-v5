@@ -228,7 +228,11 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const openRfis = rfis.filter(r => r.status === 'open' || r.status === 'in_review');
   const resolvedRfis = rfis.filter(r => r.status === 'resolved' || r.status === 'closed');
 
-  // ─── Invoices ───
+  // ─── Invoices ─── party-scoped: the GC's payables (TC + suppliers), not every
+  // invoice on the project. `recentInvoices` is an unscoped 5-row slice.
+  const gcPaidAmount = financials.payablesPaid;
+  const pendingPayableCount = financials.payablesPendingCount;
+  const pendingPayableAmount = financials.payablesPendingAmount;
   const paidInvoices = financials.recentInvoices.filter(i => i.status === 'PAID');
   const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
 
