@@ -168,7 +168,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     queryFn: async () => {
       const { data: cos } = await supabase
         .from('change_orders')
-        .select('id, co_number, title, status, gc_budget, tc_submitted_price, materials_responsible, equipment_responsible')
+        .select('id, co_number, title, status, gc_budget, tc_submitted_price, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
       if (!cos || cos.length === 0) return [];
@@ -244,6 +244,142 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const pendingCOCostTotal = sumCost(pendingCOs, 'total');
   const pendingCORevenueTotal = pendingCOs.reduce((s, co) => s + coOwnerValue(co), 0);
   const coWord = isTM ? 'WO' : 'CO';
+
+  /** The three CO cards every GC sees: what COs cost, what they sell for, what's coming. */
+  const gcCoCards = (
+    <>
+      {/* CO cost committed — COs hit the GC's bottom line as cost first */}
+      <KpiCard accent={C.red} icon="🧾" iconBg={C.redBg}
+        label={`${coWord} COST COMMITTED`}
+        value={coCostTotal > 0 ? fmt(coCostTotal) : '—'}
+        sub={`Owed to ${tcName} ${fmt(coLaborCost)}${coMaterialsCost + coEquipmentCost > 0 ? ` · You procure ${fmt(coMaterialsCost + coEquipmentCost)}` : ''}`}
+        pills={coCostTotal > 0
+          ? [{ type: 'pr' as PillType, text: `${approvedCOs.length} approved` }]
+          : [{ type: 'pm' as PillType, text: 'No cost yet' }]}
+        idx={1}>
+        <div style={{ padding: 12 }}>
+          <div style={{ fontSize: '0.66rem', color: C.muted, marginBottom: 8 }}>
+            Formula: owed to {tcName} + materials/equipment you procure for these {coWord}s (at cost). Items the {tcName} carries are inside their price — never counted twice.
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <THead cols={['Cost Type', 'Value']} />
+            <tbody>
+              <TRow cells={[<TdN>Owed to {tcName} (approved {coWord} price)</TdN>, <TdM>{fmt(coLaborCost)}</TdM>]} />
+              <TRow cells={[<TdN>Materials you procure (at cost)</TdN>, <TdM>{fmt(coMaterialsCost)}</TdM>]} />
+              <TRow cells={[<TdN>Equipment you procure (at cost)</TdN>, <TdM>{fmt(coEquipmentCost)}</TdM>]} />
+              <TRow cells={[<TdN>Total {coWord} cost committed</TdN>, <TdM>{fmt(coCostTotal)}</TdM>]} isTotal />
+            </tbody>
+          </table>
+          {approvedCOs.length > 0 && (
+            <>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginTop: 12, marginBottom: 8 }}>Per {coWord}</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <THead cols={[`${coWord} #`, `To ${tcName}`, 'You procure', 'Total']} />
+                <tbody>
+                  {approvedCOs.slice(0, 8).map(co => {
+                    const c = coCostOf(co);
+                    return (
+                      <TRow key={co.id} cells={[
+                        <TdN>{co.co_number || '—'}</TdN>,
+                        <TdM>{fmt(c.owedToTC)}</TdM>,
+                        <TdM>{fmt(c.gcMaterials + c.gcEquipment)}</TdM>,
+                        <TdM>{fmt(c.total)}</TdM>,
+                      ]} />
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+      </KpiCard>
+
+      {/* CO revenue & markup — what you sell those COs to the owner for */}
+      <KpiCard accent={C.amber} icon="💰" iconBg={C.amberPale}
+        label={`${coWord} REVENUE & MARKUP`}
+        value={coRevenueTotal > 0 ? fmt(coRevenueTotal) : '—'}
+        sub={coCostTotal > 0
+          ? `${fmt(coMarkup)} markup · ${coMarkupPct.toFixed(1)}% over cost`
+          : 'No approved COs priced to the owner yet'}
+        pills={[
+          ...(coNoBudgetCount > 0 ? [{ type: 'pr' as PillType, text: `${coNoBudgetCount} no owner price` }] : []),
+          ...(coAtLossCount > 0 ? [{ type: 'pr' as PillType, text: `${coAtLossCount} below cost` }] : []),
+          ...(coNoBudgetCount === 0 && coAtLossCount === 0 && coRevenueTotal > 0 ? [{ type: 'pg' as PillType, text: 'All priced' }] : []),
+        ]}
+        idx={2}>
+        <div style={{ padding: 12 }}>
+          <div style={{ fontSize: '0.66rem', color: C.muted, marginBottom: 8 }}>
+            Formula: Σ owner price (GC budget) of approved {coWord}s − {coWord} cost committed. A {coWord} with no owner price is passed through at 0% markup.
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <THead cols={[`${coWord} #`, 'Owner price', 'Your cost', 'Markup']} />
+            <tbody>
+              {approvedCOs.length > 0 ? approvedCOs.slice(0, 8).map(co => {
+                const cost = coCostOf(co).total;
+                const rev = coOwnerValue(co);
+                const mk = rev - cost;
+                return (
+                  <TRow key={co.id} cells={[
+                    <TdN>{co.co_number || '—'}{!co.gc_budget && <span style={{ color: C.red, marginLeft: 4, fontSize: '0.62rem', fontWeight: 700 }}>NO PRICE</span>}</TdN>,
+                    <TdM>{fmt(rev)}</TdM>,
+                    <TdM>{fmt(cost)}</TdM>,
+                    <TdM>{mk < 0 ? `-${fmt(Math.abs(mk))}` : fmt(mk)}</TdM>,
+                  ]} />
+                );
+              }) : (
+                <TRow cells={[<TdN>No approved {coWord}s</TdN>, '—', '—', '—']} />
+              )}
+              {approvedCOs.length > 0 && (
+                <TRow cells={[<TdN>Total</TdN>, <TdM>{fmt(coRevenueTotal)}</TdM>, <TdM>{fmt(coCostTotal)}</TdM>, <TdM>{fmt(coMarkup)}</TdM>]} isTotal />
+              )}
+            </tbody>
+          </table>
+          {coNoBudgetCount > 0 && (
+            <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: C.redBg, color: C.red, fontSize: '0.68rem', fontWeight: 600 }}>
+              {coNoBudgetCount} approved {coWord}{coNoBudgetCount > 1 ? 's' : ''} owe money with no owner price set — set the owner budget on each to stop the margin leak.
+            </div>
+          )}
+        </div>
+      </KpiCard>
+
+      {/* CO exposure — pending COs about to hit the bottom line */}
+      <KpiCard accent={C.blue} icon="⏳" iconBg={C.blueBg}
+        label={`${coWord} EXPOSURE (PENDING)`}
+        value={pendingCOCostTotal > 0 ? fmt(pendingCOCostTotal) : '—'}
+        sub={pendingCOs.length > 0
+          ? `${pendingCOs.length} pending · ${fmt(pendingCORevenueTotal)} owner value if approved`
+          : 'Nothing pending'}
+        pills={pendingCOs.length > 0
+          ? [{ type: 'pw' as PillType, text: `${pendingCOs.length} pending` }]
+          : [{ type: 'pg' as PillType, text: 'All clear' }]}
+        idx={3}>
+        <div style={{ padding: 12 }}>
+          <div style={{ fontSize: '0.66rem', color: C.muted, marginBottom: 8 }}>
+            Formula: Σ cost of submitted {coWord}s if you approve them. Not in revenue or cost yet — this is what's about to hit your bottom line.
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <THead cols={[`${coWord} #`, 'Title', 'Cost if approved', 'Status']} />
+            <tbody>
+              {pendingCOs.length > 0 ? pendingCOs.slice(0, 8).map(co => (
+                <TRow key={co.id} cells={[
+                  <TdN>{co.co_number || '—'}</TdN>,
+                  co.title || '—',
+                  <TdM>{fmt(coCostOf(co).total)}</TdM>,
+                  <Pill type="pw">{co.status}</Pill>,
+                ]} />
+              )) : (
+                <TRow cells={[<TdN>Nothing pending</TdN>, '—', '—', '—']} />
+              )}
+              {pendingCOs.length > 0 && (
+                <TRow cells={[<TdN>Total exposure</TdN>, '—', <TdM>{fmt(pendingCOCostTotal)}</TdM>, '—']} isTotal />
+              )}
+            </tbody>
+          </table>
+          <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>Review {coWord}s</button>
+        </div>
+      </KpiCard>
+    </>
+  );
 
   // ─── RFIs ───
   const { data: rfis = [] } = useQuery({
