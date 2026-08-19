@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
 import { CalendarIcon, AlertCircle, FileText, DollarSign, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { baseContractSum } from '@/lib/contractSums';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
