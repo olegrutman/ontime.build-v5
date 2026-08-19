@@ -358,6 +358,63 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const gcReceivedPct = revisedGCTotal > 0 ? Math.min(100, Math.round((totalReceivedFromGC / revisedGCTotal) * 100)) : 0;
   const fcPaidPct = revisedFCTotal > 0 ? Math.min(100, Math.round((totalPaidToFC / revisedFCTotal) * 100)) : 0;
 
+  // ─── Invoices submitted TO me, awaiting my approval (real rows, real actions) ───
+  const pendingPayableInvoices = financials.payablesPendingInvoices;
+  const [actingId, setActingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
+
+  const approveInvoice = async (invoiceId: string) => {
+    setActingId(invoiceId);
+    try {
+      // Actor comes from the session, never from the row — RLS decides if this
+      // update is allowed, and a 0-row result means it was not.
+      const { data, error } = await supabase
+        .from('invoices')
+        .update({ status: 'APPROVED', approved_at: new Date().toISOString(), approved_by: user?.id ?? null })
+        .eq('id', invoiceId)
+        .eq('status', 'SUBMITTED')
+        .select('id');
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('You are not allowed to approve this invoice, or it is no longer submitted.');
+      toast.success('Invoice approved');
+      financials.refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to approve invoice');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const rejectInvoice = async (invoiceId: string) => {
+    if (!rejectNote.trim()) return;
+    setActingId(invoiceId);
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .update({ status: 'REJECTED', rejected_at: new Date().toISOString(), rejected_by: user?.id ?? null, rejection_reason: rejectNote.trim() })
+        .eq('id', invoiceId)
+        .eq('status', 'SUBMITTED')
+        .select('id');
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('You are not allowed to reject this invoice, or it is no longer submitted.');
+      toast.success('Invoice rejected with note');
+      setRejectingId(null);
+      setRejectNote('');
+      financials.refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reject invoice');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  // ─── My cost (external crews are subcontract cost, never internal labor) ───
+  const myCoCost = financials.coCostBreakdown;
+  const myCoPendingCost = financials.coPendingCostBreakdown;
+  const myCostTotal = draftFcVal + myCoCost.total + materialCommitment;
+  const myCostBasisPill = financials.isTCMaterialResponsible ? 'Incl. materials' : 'Labor + my COs';
+
   // ─── Warnings ───
   const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
   if (totalPendingSubmittedFromGC > 0) {
