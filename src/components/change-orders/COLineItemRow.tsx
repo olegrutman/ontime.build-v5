@@ -172,10 +172,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // Markup visibility logic for GC
   const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
   const gcSummaryOnly = isGC && markupVisibility === 'summary';
-  const visibleBillable = hideGCBreakdown ? [] : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
+  // GC hidden mode: show the GC's per-line cost (the approved billable amount) without
+  // revealing the TC's internal rates or margin.
+  const visibleBillable = hideGCBreakdown ? tcBillable : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
   const tcDownstreamCosts = isTC ? fcBillable : [];
-  const totalForRole = hideGCBreakdown ? 0 : isGC ? tcTotal : isFC ? fcTotal : tcTotal;
-  const entryCount = hideGCBreakdown ? billable.length : gcSummaryOnly ? billable.length : visibleBillable.length;
+  const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
+  const entryCount = visibleBillable.length;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
