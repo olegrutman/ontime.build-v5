@@ -16,6 +16,8 @@ interface Contract {
   from_role: string;
   to_role: string;
   contract_sum: number;
+  /** Portion of contract_sum contributed by approved COs. */
+  co_approved_sum?: number | null;
   retainage_percent: number;
   trade: string | null;
   from_org_id: string | null;
@@ -248,7 +250,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // 3. Non-supplier: fetch all in parallel
       const [contractsRes, invoicesRes, _woRemoved, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
-          id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
+          id, from_role, to_role, contract_sum, co_approved_sum, retainage_percent, trade, from_org_id, to_org_id,
           material_responsibility, material_estimate_total, labor_budget,
           owner_contract_value, material_markup_type, material_markup_value,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
