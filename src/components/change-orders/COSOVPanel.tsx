@@ -16,13 +16,14 @@ interface SOVItem {
   line_item_name: string;
   amount: number;
   status: string;
-  org_id: string;
+  billed: number;
 }
 
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-amber-500/10 text-amber-600',
   approved: 'bg-emerald-500/10 text-emerald-600',
-  invoiced: 'bg-blue-500/10 text-blue-600',
+  partial: 'bg-blue-500/10 text-blue-600',
+  invoiced: 'bg-primary/10 text-primary',
 };
 
 function fmtCurrency(value: number) {
@@ -36,13 +37,29 @@ export function COSOVPanel({ coId, isGC, isTC, isFC, myOrgId }: COSOVPanelProps)
     queryKey: ['co-sov-items', coId],
     enabled: !!coId,
     queryFn: async () => {
+      // A fixed-price CO has its own SOV (project_sov.sov_kind = 'change_order'),
+      // billed independently of the base contract SOV.
+      const { data: sov } = await supabase
+        .from('project_sov')
+        .select('id')
+        .eq('source_co_id', coId)
+        .maybeSingle();
+      if (!sov) return [];
       const { data, error } = await supabase
-        .from('co_sov_items')
-        .select('*')
-        .eq('co_id', coId)
-        .order('created_at');
+        .from('project_sov_items')
+        .select('id, item_name, value_amount, total_billed_amount, total_completion_percent')
+        .eq('sov_id', sov.id)
+        .order('sort_order');
       if (error) throw error;
-      return (data ?? []) as SOVItem[];
+      return (data ?? []).map((r: any) => ({
+        id: r.id,
+        line_item_name: r.item_name,
+        amount: Number(r.value_amount ?? 0),
+        billed: Number(r.total_billed_amount ?? 0),
+        status: Number(r.total_completion_percent ?? 0) >= 99.995
+          ? 'invoiced'
+          : Number(r.total_billed_amount ?? 0) > 0 ? 'partial' : 'approved',
+      })) as SOVItem[];
     },
   });
 

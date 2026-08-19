@@ -316,6 +316,7 @@ export function useProjectSOV(projectId: string | undefined) {
         .from('project_sov')
         .select('*')
         .eq('project_id', projectId)
+        .eq('sov_kind', 'base')
         .maybeSingle(),
       supabase
         .from('project_sov_items')
@@ -438,7 +439,7 @@ export function useProjectSOV(projectId: string | undefined) {
       // Delete existing SOV if any
       if (projectSOV) {
         await supabase.from('project_sov_items').delete().eq('project_id', projectId);
-        await supabase.from('project_sov').delete().eq('project_id', projectId);
+        await supabase.from('project_sov').delete().eq('project_id', projectId).eq('sov_kind', 'base');
       }
       
       // Create new project_sov

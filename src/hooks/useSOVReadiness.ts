@@ -48,7 +48,8 @@ export function useSOVReadiness(
         supabase
           .from('project_sov')
           .select('id, contract_id, is_locked')
-          .eq('project_id', projectId),
+          .eq('project_id', projectId)
+          .eq('sov_kind', 'base'),
       ]);
 
       setContracts((contractsResult.data || []) as Contract[]);
