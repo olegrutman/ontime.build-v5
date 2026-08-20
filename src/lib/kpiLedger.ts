@@ -144,19 +144,55 @@ export function findRevenueContract(
   return mine.reduce((best, c) => (base(c) > base(best) ? c : best), mine[0]);
 }
 
+/**
+ * One contract per counterparty pair.
+ *
+ * Re-inviting a party writes a second `project_contracts` row for the same
+ * org pair (usually still `Invited`). Summing every row made a GC's
+ * subcontract cost double (e.g. 800K became 1.6M). Keep the live row —
+ * Active/Accepted first, then the largest base value.
+ */
+const STATUS_RANK: Record<string, number> = {
+  active: 3,
+  accepted: 3,
+  invited: 1,
+  rejected: 0,
+};
+const rank = (c: LedgerContract) =>
+  STATUS_RANK[(c.status || '').toLowerCase()] ?? 2;
+
+export function dedupeContracts(contracts: LedgerContract[]): LedgerContract[] {
+  const byPair = new Map<string, LedgerContract>();
+  for (const c of contracts) {
+    const key = `${c.from_org_id || c.from_role}|${c.to_org_id || c.to_role}|${c.trade || ''}`;
+    const held = byPair.get(key);
+    if (
+      !held ||
+      rank(c) > rank(held) ||
+      (rank(c) === rank(held) && base(c) > base(held))
+    ) {
+      byPair.set(key, c);
+    }
+  }
+  return [...byPair.values()];
+}
+
 /** Contracts where somebody bills the viewer (subs / crew / suppliers). */
 export function findCostContracts(
   contracts: LedgerContract[],
   myOrgIds: string[],
 ): LedgerContract[] {
-  return contracts.filter(
-    (c) =>
-      c.to_org_id &&
-      myOrgIds.includes(c.to_org_id) &&
-      c.from_role !== 'Owner' &&
-      !isWO(c),
+  return dedupeContracts(
+    contracts.filter(
+      (c) =>
+        c.to_org_id &&
+        myOrgIds.includes(c.to_org_id) &&
+        c.from_role !== 'Owner' &&
+        !isWO(c),
+    ),
   );
 }
+
 
 export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   const {
