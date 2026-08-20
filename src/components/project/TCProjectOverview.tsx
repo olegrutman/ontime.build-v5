@@ -21,11 +21,8 @@ import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSumm
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 
 
-/** Parse a money string without dropping cents ("813,367.50" -> 813367.5). */
-function parseMoney(v: string | number): number {
-  const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
-  return Number.isFinite(n) ? n : 0;
-}
+import { parseMoney } from '@/lib/money';
+
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
 }) {
