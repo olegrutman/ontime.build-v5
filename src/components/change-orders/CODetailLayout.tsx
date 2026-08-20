@@ -37,6 +37,7 @@ import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
 import { COPhotoNudgeBanner } from './COPhotoNudgeBanner';
 import { COAcceptBanner } from './COAcceptBanner';
 import { COExternalApprovalBanner } from './COExternalApprovalBanner';
+import { COOwnerApprovalCard } from './COOwnerApprovalCard';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 import { useCOPhotos } from '@/hooks/useCOPhotos';
 import { CORFIBlockBanner } from './CORFIBlockBanner';
@@ -460,12 +461,25 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           {/* Next Action Banner */}
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
+          {/* External (owner / architect) approval status */}
+          <COExternalApprovalBanner co={co} projectId={projectId} />
+
+          {isGC && (
+            <COOwnerApprovalCard
+              co={co}
+              projectId={projectId}
+              coTotal={tcBillableTotal}
+              onRefresh={refreshDetail}
+            />
+          )}
+
           {/* Photo nudge banner */}
           <COPhotoNudgeBanner
             status={co.status}
             photos={photos}
             onTakePhoto={(type) => photosCardRef.current?.openAdd(type)}
           />
+
 
           {/* KPI Row */}
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
