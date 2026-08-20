@@ -489,29 +489,30 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
       </div>
 
       {(() => {
-        const orderedPctT = totalEstimate > 0 ? (totalOrdered / totalEstimate) * 100 : 0;
-        const billedPctT = totalOrdered > 0 ? (totalBilled / totalOrdered) * 100 : 0;
-        const receivedPctT = totalBilled > 0 ? (totalReceived / totalBilled) * 100 : 0;
-        const outstandingPctT = totalBilled > 0 ? (outstanding / totalBilled) * 100 : 0;
+        // Single denominator for every row and segment: the approved estimate
+        // (my material contract). Every bar reads "X% of my approved estimate".
+        const base = totalEstimate || 0;
+        const pctOfBase = (n: number) => (base > 0 ? (n / base) * 100 : 0);
         return (
           <LadderCard
             title={`📊 Material Lifecycle — ${projectName}`}
-            totalLabel="Estimated"
+            totalLabel="% of approved estimate"
             totalValue={fmt(totalEstimate)}
             segments={[
-              { pct: (totalReceived / (totalEstimate || 1)) * 100, color: C.green },
-              { pct: ((totalBilled - totalReceived) / (totalEstimate || 1)) * 100, color: C.blue },
-              { pct: ((totalOrdered - totalBilled) / (totalEstimate || 1)) * 100, color: C.amber },
+              { pct: pctOfBase(totalReceived), color: C.green },
+              { pct: pctOfBase(totalBilled - totalReceived), color: C.blue },
+              { pct: pctOfBase(totalOrdered - totalBilled), color: C.amber },
             ]}
             rows={[
-              { label: 'Estimated', value: fmt(totalEstimate), pct: 100, barColor: C.navy },
-              { label: 'Ordered', value: fmt(totalOrdered), pct: orderedPctT, barColor: C.amber, headline: true },
-              { label: 'Received', value: fmt(totalReceived), pct: receivedPctT, barColor: C.green, headline: true },
-              { label: 'Billed', value: fmt(totalBilled), pct: billedPctT, barColor: C.blue },
-              ...(outstanding > 0 ? [{ label: 'Outstanding', value: fmt(outstanding), pct: outstandingPctT, barColor: C.yellow }] : []),
+              { label: 'Estimated', value: fmt(totalEstimate), pct: base > 0 ? 100 : 0, barColor: C.navy },
+              { label: 'Ordered', value: fmt(totalOrdered), pct: pctOfBase(totalOrdered), barColor: C.amber, headline: true },
+              { label: 'Billed', value: fmt(totalBilled), pct: pctOfBase(totalBilled), barColor: C.blue },
+              { label: 'Received', value: fmt(totalReceived), pct: pctOfBase(totalReceived), barColor: C.green, headline: true },
+              ...(outstanding > 0 ? [{ label: 'Outstanding', value: fmt(outstanding), pct: pctOfBase(outstanding), barColor: C.yellow }] : []),
             ]}
           />
         );
+
       })()}
 
     </div>
