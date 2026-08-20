@@ -230,9 +230,9 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
       // Create or update the FC contract
       if (fcContract) {
-        // The input holds the BASE value; contract_sum stores base + approved COs.
-        const revised = newVal + (fcContract.co_approved_sum || 0);
-        const ok = await financials.updateContract(fcContract.id, revised, fcContract.retainage_percent);
+        // The input holds the BASE value; updateContract re-adds approved COs itself.
+        const ok = await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
+
         if (!ok) throw new Error('Failed to update contract');
       } else {
         // Create new downstream contract (TC = from, FC = to)
