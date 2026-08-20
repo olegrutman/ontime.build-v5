@@ -128,3 +128,24 @@ describe('billing and margin to date', () => {
     expect(l.outstanding.value).toBeCloseTo(600_000, 2);
   });
 });
+
+describe('duplicate contract rows (re-invites)', () => {
+  const dupes = [
+    ...contracts,
+    // Same TC → GC pair re-invited: a second row for the same counterparties.
+    { id: 'tcgc-dupe', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, co_approved_sum: 0, original_contract_sum: 800000, status: 'Invited' },
+  ];
+
+  it('counts a re-invited contract once in GC subcontract cost', () => {
+    const cost = findCostContracts(dupes, [GC]);
+    expect(cost).toHaveLength(1);
+    const ledger = buildProjectLedger(baseInput({ role: 'General Contractor', myOrgIds: [GC], contracts: dupes }));
+    expect(ledger.baseCost.value).toBeCloseTo(800000 - 11287.25, 2);
+  });
+
+  it('prefers the active row over a stale invite as the revenue contract', () => {
+    const active = { ...contracts[1], status: 'Active' };
+    const stale = { ...dupes[3], contract_sum: 900000, original_contract_sum: 900000 };
+    expect(findRevenueContract([stale, active], [TC])?.id).toBe('tcgc');
+  });
+});
