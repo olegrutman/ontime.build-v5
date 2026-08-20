@@ -48,13 +48,23 @@ export function isReceivedInvoice(status?: string | null): boolean {
 }
 
 /**
- * Tax-inclusive PO amount. Estimates are tax-inclusive, so PO totals must be
- * grossed up by sales tax before they are compared against estimates.
+ * Tax-inclusive PO amount, comparable against (tax-inclusive) estimates.
+ *
+ * `purchase_orders.po_total` is ALREADY tax-inclusive (it is maintained as
+ * `po_subtotal_total * (1 + sales_tax_percent/100)` by the totals trigger), so it
+ * must NOT be grossed up again. Only fall back to grossing up the subtotal when
+ * `po_total` is missing (older rows / RLS-masked totals).
  */
-export function poOrderedAmount(po: { po_total?: number | null; sales_tax_percent?: number | null }): number {
+export function poOrderedAmount(po: {
+  po_total?: number | null;
+  po_subtotal_total?: number | null;
+  sales_tax_percent?: number | null;
+}): number {
+  if (po.po_total != null) return po.po_total;
   const multiplier = 1 + ((po.sales_tax_percent || 0) / 100);
-  return (po.po_total || 0) * multiplier;
+  return (po.po_subtotal_total || 0) * multiplier;
 }
+
 
 export function sumEstimated(estimates: Array<{ status?: string | null; total_amount?: number | null }>): number {
   return estimates.reduce((s, e) => (isCountedEstimate(e.status) ? s + (e.total_amount || 0) : s), 0);
