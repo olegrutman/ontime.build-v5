@@ -35,10 +35,13 @@ export interface LedgerContract {
   contract_sum: number;
   co_approved_sum?: number | null;
   original_contract_sum?: number | null;
+  /** Lifecycle status — used to prefer a live contract over a stale invite. */
+  status?: string | null;
 
   retainage_percent?: number | null;
   trade?: string | null;
 }
+
 
 export interface LedgerInput {
   role: LedgerRole;
