@@ -20,6 +20,12 @@ import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/co
 import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 
+
+/** Parse a money string without dropping cents ("813,367.50" -> 813367.5). */
+function parseMoney(v: string | number): number {
+  const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
 }) {
@@ -170,7 +176,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   };
 
   const saveFcContract = async () => {
-    const newVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
+    const newVal = parseMoney(fcDraft.value);
     const targetOrg = selectedFcOrg;
 
     if (!targetOrg?.org_id) {
@@ -255,7 +261,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
     }
   };
 
-  const draftFcVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
+  const draftFcVal = parseMoney(fcDraft.value);
 
   // ─── Change Orders (fetch first so T&M can derive contract values) ───
   const { data: changeOrders = [] } = useQuery({
@@ -626,7 +632,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
                 </div>
               );
             })()}
-            <EditField label="Contract Value" value={`$${draftFcVal.toLocaleString()}`} onSave={(v) => updateFcField('value', v.replace(/[^0-9]/g, ''))} type="number" />
+            <EditField label="Contract Value" value={`$${draftFcVal.toLocaleString()}`} onSave={(v) => updateFcField('value', String(parseMoney(v)))} type="number" />
             <EditField label="Contract Type" value={fcDraft.type} onSave={(v) => updateFcField('type', v)} type="select" />
             <EditField label="Scope Summary" value={fcDraft.scope || 'Click to add scope'} onSave={(v) => updateFcField('scope', v)} type="textarea" />
             {fcDirty && (
