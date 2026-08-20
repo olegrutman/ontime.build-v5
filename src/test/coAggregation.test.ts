@@ -307,6 +307,38 @@ describe('aggregateCOTotals — field crew cost & responsibility fallback', () =
     expect(tcProcured.approvedCORevenue).toBe(4824);
     expect(tcProcured.approvedCOCost).toBe(4824);
   });
+
+  describe('GC owner pricing', () => {
+    it('counts owner revenue only when the CO is priced and passed through', () => {
+      const cos = [co({ tc_submitted_price: 1000, gc_budget: 1200, passed_to_owner: true })];
+      const out = aggregateCOTotals(cos, [], [], [], TC, true);
+      expect(out.approvedCORevenue).toBe(1200);
+      expect(out.approvedCOCost).toBe(1000);
+      expect(out.approvedCOMargin).toBe(200);
+      expect(out.coMissingOwnerBudget).toBe(0);
+      expect(out.coAbsorbedCost).toBe(0);
+      expect(out.coUndecidedCost).toBe(0);
+    });
+
+    it('treats an absorbed CO as pure cost', () => {
+      const cos = [co({ tc_submitted_price: 1000, gc_budget: 1200, passed_to_owner: false })];
+      const out = aggregateCOTotals(cos, [], [], [], TC, true);
+      expect(out.approvedCORevenue).toBe(0);
+      expect(out.approvedCOCost).toBe(1000);
+      expect(out.coAbsorbedCost).toBe(1000);
+      expect(out.coUndecidedCost).toBe(0);
+      expect(out.coSellingAtLoss).toBe(0);
+    });
+
+    it('flags an unpriced CO as undecided, never as owner revenue', () => {
+      const cos = [co({ tc_submitted_price: 1000 })];
+      const out = aggregateCOTotals(cos, [], [], [], TC, true);
+      expect(out.approvedCORevenue).toBe(0);
+      expect(out.coMissingOwnerBudget).toBe(1);
+      expect(out.coUndecidedCost).toBe(1000);
+      expect(out.coAbsorbedCost).toBe(0);
+    });
+  });
 });
 
 function row2(co_id: string, org_id: string, fields: Record<string, number>): COLineRow {
