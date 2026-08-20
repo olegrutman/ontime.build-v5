@@ -26,6 +26,8 @@ interface Contract {
   trade: string | null;
   from_org_id: string | null;
   to_org_id: string | null;
+  status?: string | null;
+
   from_org_name?: string | null;
   to_org_name?: string | null;
 }
