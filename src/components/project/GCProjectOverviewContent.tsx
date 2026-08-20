@@ -22,6 +22,12 @@ import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 import { APPROVED_CO_STATUSES } from '@/hooks/coAggregation';
 import { baseContractSum } from '@/lib/contractSums';
 
+
+/** Parse a money string without dropping cents ("813,367.50" -> 813367.5). */
+function parseMoney(v: string | number): number {
+  const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
 function EditField({ label, value, onSave, type = 'text' }: {
   label: string; value: string; onSave: (v: string) => void; type?: 'text' | 'number' | 'select' | 'textarea';
 }) {
@@ -155,7 +161,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   };
   const saveContract = async () => {
     if (upContract) {
-      const newVal = parseInt(contractDraft.value.replace(/[^0-9]/g, '')) || 0;
+      const newVal = parseMoney(contractDraft.value);
       await financials.updateContract(upContract.id, newVal, upContract.retainage_percent);
       financials.refetch();
     }
@@ -513,7 +519,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending ${isTM ? 'Work Order' : 'Change Order'}${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Review and approve', value: `${pendingCOs.length} ${isTM ? 'WOs' : 'COs'}`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });
   }
 
-  const draftContractVal = parseInt(contractDraft.value.replace(/[^0-9]/g, '')) || 0;
+  const draftContractVal = parseMoney(contractDraft.value);
 
   // ─── Single source of truth for margin (hero, summary strip, margin card) ───
   // The approved supplier estimate IS the material contract between the
@@ -673,7 +679,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             {/* Card 1 — Owner Budget */}
             <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.ownerBillingsTotal)} billed to owner to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
               <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
-                <EditField label="Owner Contract Value" value={`$${draftOwnerBudget.toLocaleString()}`} onSave={(v) => { const n = parseInt(v.replace(/[^0-9]/g, '')) || 0; setDraftOwnerBudget(n); setDirtyOwner(n !== ownerBudgetReal); }} type="number" />
+                <EditField label="Owner Contract Value" value={`$${draftOwnerBudget.toLocaleString()}`} onSave={(v) => { const n = parseMoney(v); setDraftOwnerBudget(n); setDirtyOwner(n !== ownerBudgetReal); }} type="number" />
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
                   <THead cols={['Budget Item', 'Value']} />
                   <tbody>
@@ -696,7 +702,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               <div style={{ padding: '12px 16px' }}>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>Contract Terms</div>
                 <EditField label="Trade Contractor" value={contractDraft.contractor} onSave={(v) => updateField('contractor', v)} />
-                <EditField label="Contract Value" value={`$${draftContractVal.toLocaleString()}`} onSave={(v) => updateField('value', v.replace(/[^0-9]/g, ''))} type="number" />
+                <EditField label="Contract Value" value={`$${draftContractVal.toLocaleString()}`} onSave={(v) => updateField('value', String(parseMoney(v)))} type="number" />
                 <EditField label="Contract Type" value={contractDraft.type} onSave={(v) => updateField('type', v)} type="select" />
                 {dirty && (
                   <button onClick={saveContract} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, ...fontLabel }}>Save Contract Changes</button>
