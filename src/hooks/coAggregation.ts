@@ -215,10 +215,13 @@ export function aggregateCOTotals(
     const snapshot = num(c.tc_submitted_price);
     const revLabor =
       isGCPerspective && snapshot > 0 ? snapshot : laborRevenue;
-    // Materials / equipment: mirror the DB's co_grand_total. Rows are stamped
-    // with the org that *entered* them (often the GC on a TC's CO), so scoping
-    // by billing org silently dropped them. Instead, drop the category when the
-    // GC procures it — those dollars are paid on the GC's own PO.
+    // Materials / equipment ownership. Rows are stamped with the org that
+    // *entered* them, and that org is the one that actually pays the vendor. A
+    // GC-entered material row on a TC's CO is GC money: it is NOT part of what
+    // the TC bills upstream (the frozen `tc_submitted_price` excludes it), so
+    // counting it as TC revenue inflated the TC's revised contract above
+    // `project_contracts.contract_sum`. Scope by owning org, then apply the
+    // responsibility gate on top.
     const matResp =
       c.co_material_responsible_override ??
       c.materials_responsible ??
@@ -229,24 +232,34 @@ export function aggregateCOTotals(
       c.equipment_responsible ??
       fallbackResponsibility?.equipment ??
       'TC';
-    const sumAll = (rowsIn: COLineRow[], field: string) =>
-      rowsIn.filter((r) => r.co_id === c.id).reduce((s, r) => s + num(r[field]), 0);
+    const sumMine = (rowsIn: COLineRow[], field: string) =>
+      rowsIn
+        .filter((r) => r.co_id === c.id && r.org_id === billingOrgId)
+        .reduce((s, r) => s + num(r[field]), 0);
+    const sumOthers = (rowsIn: COLineRow[], field: string) =>
+      rowsIn
+        .filter((r) => r.co_id === c.id && r.org_id !== billingOrgId)
+        .reduce((s, r) => s + num(r[field]), 0);
 
-    const matRev = matResp === 'GC' ? 0 : sumAll(materials, 'billed_amount');
-    const equipRev = eqResp === 'GC' ? 0 : sumAll(equipment, 'billed_amount');
-    const matCost = matResp === 'GC' ? 0 : sumAll(materials, 'line_cost');
-    const equipCost = eqResp === 'GC' ? 0 : sumAll(equipment, 'cost');
+    const matRev = matResp === 'GC' ? 0 : sumMine(materials, 'billed_amount');
+    const equipRev = eqResp === 'GC' ? 0 : sumMine(equipment, 'billed_amount');
+    const matCost = matResp === 'GC' ? 0 : sumMine(materials, 'line_cost');
+    const equipCost = eqResp === 'GC' ? 0 : sumMine(equipment, 'cost');
 
     if (isGCPerspective) {
       // For a GC an approved CO is first of all a COST: the amount owed to the
-      // TC (the frozen billable snapshot, which already excludes anything the
-      // GC procures) plus the GC-procured materials/equipment it buys at cost
-      // on its own POs. It only becomes revenue when the GC passes it to the
-      // owner (`passed_to_owner`) with an owner price (`gc_budget`).
-      const owedToTC = snapshot > 0 ? snapshot : revLabor + matRev + equipRev;
-      const gcMatCost = matResp === 'GC' ? sumAll(materials, 'line_cost') : 0;
-      const gcEquipCost = eqResp === 'GC' ? sumAll(equipment, 'cost') : 0;
+      // TC plus whatever the GC itself buys for that CO. Prefer the computed
+      // upstream-billable sum (labor + TC-owned materials/equipment) because it
+      // is exactly the delta the DB pushes into `contract_sum`; fall back to the
+      // frozen snapshot when RLS hides the TC's line items from the GC.
+      const computedOwed = laborRevenue + matRev + equipRev;
+      const owedToTC = computedOwed > 0 ? computedOwed : snapshot;
+      // Everything the GC entered on this CO is the GC's own procurement cost,
+      // regardless of the responsibility flag (the flag is often left NULL).
+      const gcMatCost = sumOthers(materials, 'line_cost');
+      const gcEquipCost = sumOthers(equipment, 'cost');
       const gcCost = owedToTC + gcMatCost + gcEquipCost;
+
       const ownerBudget = num(c.gc_budget);
       const absorbed = c.passed_to_owner === false;
       return {
