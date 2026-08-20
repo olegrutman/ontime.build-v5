@@ -35,10 +35,13 @@ export interface LedgerContract {
   contract_sum: number;
   co_approved_sum?: number | null;
   original_contract_sum?: number | null;
+  /** Lifecycle status — used to prefer a live contract over a stale invite. */
+  status?: string | null;
 
   retainage_percent?: number | null;
   trade?: string | null;
 }
+
 
 export interface LedgerInput {
   role: LedgerRole;
@@ -138,7 +141,45 @@ export function findRevenueContract(
     (c) => c.from_org_id && myOrgIds.includes(c.from_org_id) && c.from_role !== 'Owner' && !isWO(c),
   );
   if (mine.length === 0) return undefined;
-  return mine.reduce((best, c) => (base(c) > base(best) ? c : best), mine[0]);
+  return mine.reduce(
+    (best, c) =>
+      rank(c) > rank(best) || (rank(c) === rank(best) && base(c) > base(best)) ? c : best,
+    mine[0],
+  );
+
+}
+
+/**
+ * One contract per counterparty pair.
+ *
+ * Re-inviting a party writes a second `project_contracts` row for the same
+ * org pair (usually still `Invited`). Summing every row made a GC's
+ * subcontract cost double (e.g. 800K became 1.6M). Keep the live row —
+ * Active/Accepted first, then the largest base value.
+ */
+const STATUS_RANK: Record<string, number> = {
+  active: 3,
+  accepted: 3,
+  invited: 1,
+  rejected: 0,
+};
+const rank = (c: LedgerContract) =>
+  STATUS_RANK[(c.status || '').toLowerCase()] ?? 2;
+
+export function dedupeContracts(contracts: LedgerContract[]): LedgerContract[] {
+  const byPair = new Map<string, LedgerContract>();
+  for (const c of contracts) {
+    const key = `${c.from_org_id || c.from_role}|${c.to_org_id || c.to_role}|${c.trade || ''}`;
+    const held = byPair.get(key);
+    if (
+      !held ||
+      rank(c) > rank(held) ||
+      (rank(c) === rank(held) && base(c) > base(held))
+    ) {
+      byPair.set(key, c);
+    }
+  }
+  return [...byPair.values()];
 }
 
 /** Contracts where somebody bills the viewer (subs / crew / suppliers). */
@@ -146,14 +187,17 @@ export function findCostContracts(
   contracts: LedgerContract[],
   myOrgIds: string[],
 ): LedgerContract[] {
-  return contracts.filter(
-    (c) =>
-      c.to_org_id &&
-      myOrgIds.includes(c.to_org_id) &&
-      c.from_role !== 'Owner' &&
-      !isWO(c),
+  return dedupeContracts(
+    contracts.filter(
+      (c) =>
+        c.to_org_id &&
+        myOrgIds.includes(c.to_org_id) &&
+        c.from_role !== 'Owner' &&
+        !isWO(c),
+    ),
   );
 }
+
 
 export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   const {

@@ -26,6 +26,8 @@ interface Contract {
   trade: string | null;
   from_org_id: string | null;
   to_org_id: string | null;
+  status?: string | null;
+
   from_org_name?: string | null;
   to_org_name?: string | null;
 }
@@ -288,7 +290,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // 3. Non-supplier: fetch all in parallel
       const [contractsRes, invoicesRes, _woRemoved, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
-          id, from_role, to_role, contract_sum, co_approved_sum, original_contract_sum, retainage_percent, trade, from_org_id, to_org_id,
+          id, from_role, to_role, contract_sum, co_approved_sum, original_contract_sum, retainage_percent, trade, from_org_id, to_org_id, status,
           material_responsibility, material_estimate_total, labor_budget,
           owner_contract_value, material_markup_type, material_markup_value,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
