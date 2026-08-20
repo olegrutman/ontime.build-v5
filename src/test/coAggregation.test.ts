@@ -97,6 +97,8 @@ describe('aggregateCOTotals', () => {
       pendingCostBreakdown: { ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0 },
       coMissingOwnerBudget: 0,
       coSellingAtLoss: 0,
+      coAbsorbedCost: 0,
+      coUndecidedCost: 0,
     });
   });
 
