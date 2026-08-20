@@ -344,3 +344,59 @@ describe('aggregateCOTotals — field crew cost & responsibility fallback', () =
 function row2(co_id: string, org_id: string, fields: Record<string, number>): COLineRow {
   return { co_id, org_id, ...fields };
 }
+
+describe('cross-org material/equipment ownership (live-data audit fixes)', () => {
+  const co = (over: Partial<COLike> = {}): COLike => ({
+    id: 'co1',
+    status: 'approved',
+    document_type: 'CO',
+    tc_submitted_price: 10689.25,
+    ...over,
+  });
+  const laborRow = (over: Partial<COLineRow> = {}): COLineRow => ({
+    id: 'l1',
+    co_id: 'co1',
+    org_id: TC,
+    line_total: 10689.25,
+    is_actual_cost: false,
+    entered_by_role: 'TC',
+    ...over,
+  });
+  // GC-entered material row on the TC's CO (the real Main Street data).
+  const gcMaterial: COLineRow = {
+    co_id: 'co1', org_id: GC, billed_amount: 4824, line_cost: 4824,
+  };
+
+  it('excludes GC-purchased materials from TC revenue so the revised contract matches contract_sum', () => {
+    const agg = aggregateCOTotals([co()], [laborRow()], [gcMaterial], [], TC, false);
+    expect(agg.approvedCORevenue).toBe(10689.25);
+    expect(agg.approvedCostBreakdown.materials).toBe(0);
+  });
+
+  it('keeps TC-purchased materials in TC revenue and cost', () => {
+    const tcMaterial: COLineRow = { co_id: 'co1', org_id: TC, billed_amount: 220, line_cost: 200 };
+    const agg = aggregateCOTotals([co()], [laborRow()], [tcMaterial], [], TC, false);
+    expect(agg.approvedCORevenue).toBe(10909.25);
+    expect(agg.approvedCostBreakdown.materials).toBe(200);
+  });
+
+  it('charges GC-entered materials to the GC and owes the TC only the upstream billable', () => {
+    const agg = aggregateCOTotals(
+      [co({ gc_budget: 20000, passed_to_owner: true })],
+      [laborRow()],
+      [gcMaterial],
+      [],
+      TC,
+      true,
+    );
+    expect(agg.approvedCostBreakdown.subcontract).toBe(10689.25);
+    expect(agg.approvedCostBreakdown.materials).toBe(4824);
+    expect(agg.approvedCOCost).toBe(15513.25);
+    expect(agg.approvedCORevenue).toBe(20000);
+  });
+
+  it('falls back to the frozen snapshot when RLS hides the TC line items from the GC', () => {
+    const agg = aggregateCOTotals([co()], [], [], [], TC, true);
+    expect(agg.approvedCostBreakdown.subcontract).toBe(10689.25);
+  });
+});
