@@ -141,7 +141,12 @@ export function findRevenueContract(
     (c) => c.from_org_id && myOrgIds.includes(c.from_org_id) && c.from_role !== 'Owner' && !isWO(c),
   );
   if (mine.length === 0) return undefined;
-  return mine.reduce((best, c) => (base(c) > base(best) ? c : best), mine[0]);
+  return mine.reduce(
+    (best, c) =>
+      rank(c) > rank(best) || (rank(c) === rank(best) && base(c) > base(best)) ? c : best,
+    mine[0],
+  );
+
 }
 
 /**
