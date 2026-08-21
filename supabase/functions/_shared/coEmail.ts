@@ -94,5 +94,9 @@ export async function queueEmail(
   if (error) throw new Error(`Failed to queue email: ${error.message}`);
 
   // Best effort: nudge the worker so the email goes out now.
-  await supabase.rpc('email_queue_wake').catch(() => {});
+  try {
+    await supabase.rpc('email_queue_wake');
+  } catch (_) {
+    // ignore
+  }
 }
