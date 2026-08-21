@@ -33,7 +33,10 @@ Deno.serve(async (req) => {
   const coTitle = String(body?.co_title ?? 'Change Order').trim();
   const projectName = String(body?.project_name ?? '').trim();
   const coTotal = Number(body?.co_total ?? 0);
-  const roleLabel = approvalType === 'owner' ? 'Owner' : 'Architect';
+  const rawLabel = String(body?.role_label ?? '').trim();
+  const roleLabel = rawLabel && rawLabel.length <= 40
+    ? rawLabel
+    : approvalType === 'owner' ? 'Owner' : 'Architect';
 
   const subject = `${roleLabel} approval needed — ${coNumber || 'Change Order'}${projectName ? ` · ${projectName}` : ''}`;
 
