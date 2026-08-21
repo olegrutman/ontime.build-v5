@@ -76,6 +76,9 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [submitting, setSubmitting] = useState(false);
   const [retainagePercent, setRetainagePercent] = useState(0);
   const [invoiceMode, setInvoiceMode] = useState<'per_co' | 'aggregate'>('per_co');
+  const [eligibleContracts, setEligibleContracts] = useState<EligibleContract[]>([]);
+  const [selectedContractId, setSelectedContractId] = useState<string>('');
+
 
   // Determine invoicing role from org type
   const orgType = userOrgRoles[0]?.organization?.type as string | undefined;
