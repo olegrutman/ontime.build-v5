@@ -71,7 +71,7 @@ const ITEMS = {
  *  - "More" = long tail, collapsed by default
  * Each destination appears exactly once — no pinned duplicates.
  */
-function getNavGroups(isTM: boolean, isSupplier: boolean): { groups: NavGroup[]; more: NavItem[] } {
+export function getNavGroups(isTM: boolean, isSupplier: boolean): { groups: NavGroup[]; more: NavItem[] } {
   if (isSupplier) {
     return {
       groups: [
