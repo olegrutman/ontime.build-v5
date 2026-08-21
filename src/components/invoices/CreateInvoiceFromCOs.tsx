@@ -348,24 +348,23 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const now = new Date().toISOString();
       const today = new Date().toISOString().slice(0, 10);
 
-      // Find the UPSTREAM contract this org bills on (TC → GC, FC → TC).
-      // Without the to_role filter a TC with several contracts could invoice the
-      // wrong party, which is how CO invoices ended up on the wrong contract.
-      const { data: contracts } = await supabase
-        .from('project_contracts')
-        .select(`
-          id, to_role, created_at,
-          from_org:organizations!project_contracts_from_org_id_fkey(name),
-          to_org:organizations!project_contracts_to_org_id_fkey(name)
-        `)
-        .eq('project_id', projectId)
-        .eq('from_org_id', currentOrgId)
-        .order('created_at', { ascending: true });
-
-      const upstreamRole = invoicingRole === 'FC' ? 'Trade Contractor' : 'General Contractor';
+      // The upstream contract this org bills on (TC → GC, FC → TC). When several
+      // eligible contracts exist (duplicates), the user must pick one — never guess.
       const contract =
-        (contracts ?? []).find((c: any) => c.to_role === upstreamRole) ?? (contracts ?? [])[0] ?? null;
-      const contractId = contract?.id ?? null;
+        eligibleContracts.find(c => c.id === selectedContractId) ??
+        (eligibleContracts.length === 1 ? eligibleContracts[0] : null);
+
+      if (!contract) {
+        toast.error(
+          hasDuplicateContracts
+            ? 'Multiple contracts found — select which contract to bill on.'
+            : 'No upstream contract found for this project.',
+        );
+        setSubmitting(false);
+        return;
+      }
+      const contractId = contract.id;
+
 
       const invoiceNumber = await buildInvoiceNumber({
         projectId,
