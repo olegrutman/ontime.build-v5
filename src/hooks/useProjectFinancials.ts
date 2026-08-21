@@ -497,6 +497,27 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         })));
       }
 
+      // Field Crew: a crew only ever BILLS, but `billedToDate` sums every
+      // invoice on the project — so the canonical grid showed the TC's and the
+      // supplier's invoices as the crew's own revenue. Scope receivables to the
+      // contracts where this crew is the billing party.
+      if (detectedRole === 'Field Crew' && orgIds.length > 0) {
+        const myContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.from_org_id && orgIds.includes(c.from_org_id))
+            .map(c => c.id)
+        );
+        const myInvs = submitted.filter((inv: any) => inv.contract_id && myContractIds.has(inv.contract_id));
+        setReceivablesInvoiced(myInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+        setReceivablesCollected(myInvs.filter(i => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setReceivablesRetainage(myInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        const recvPending = myInvs.filter((i: any) => i.status === 'SUBMITTED');
+        setReceivablesPendingAmount(recvPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setReceivablesPendingCount(recvPending.length);
+      }
+
+
+
       // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
       // Used by the realized margin block below to avoid double-counting materials.
       if (detectedRole === 'General Contractor' && orgIds.length > 0) {
