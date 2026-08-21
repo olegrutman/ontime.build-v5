@@ -49,7 +49,8 @@ export default function COApprovalPage() {
         setLoading(false);
         return;
       }
-      const { co: coData, approval_type } = data as any;
+      const { co: coData, approval_type, role_label } = data as any;
+      if (role_label) setRoleLabelFromServer(role_label as string);
       setCO({ ...coData, description: null });
       setApprovalType(approval_type as ApprovalType);
       const status = approval_type === 'owner'
@@ -159,7 +160,7 @@ export default function COApprovalPage() {
   const total = co.tc_submitted_price ?? 0;
   const tax = co.total_tax ?? 0;
   const grandTotal = total + tax;
-  const roleLabel = approvalType === 'owner' ? 'Owner' : 'Architect';
+  const roleLabel = roleLabelFromServer ?? (approvalType === 'owner' ? 'Owner' : 'Architect');
 
   return (
     <div className="min-h-screen bg-background">
