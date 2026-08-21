@@ -41,6 +41,16 @@ interface GeneratedLineItem {
   type: 'labor' | 'material' | 'equipment';
 }
 
+interface EligibleContract {
+  id: string;
+  to_role: string;
+  contract_sum: number;
+  created_at: string;
+  from_org_name: string | null;
+  to_org_name: string | null;
+}
+
+
 function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
