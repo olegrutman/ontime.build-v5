@@ -28,6 +28,7 @@ export default function COApprovalPage() {
   const { token } = useParams<{ token: string }>();
   const [co, setCO] = useState<COData | null>(null);
   const [approvalType, setApprovalType] = useState<ApprovalType | null>(null);
+  const [roleLabelFromServer, setRoleLabelFromServer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<'approved' | 'rejected' | null>(null);
