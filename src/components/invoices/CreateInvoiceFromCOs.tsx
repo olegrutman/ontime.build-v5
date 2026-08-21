@@ -5,7 +5,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, ArrowRight, FileText, MapPin } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight, FileText, MapPin, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
@@ -41,6 +44,16 @@ interface GeneratedLineItem {
   type: 'labor' | 'material' | 'equipment';
 }
 
+interface EligibleContract {
+  id: string;
+  to_role: string;
+  contract_sum: number;
+  created_at: string;
+  from_org_name: string | null;
+  to_org_name: string | null;
+}
+
+
 function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -66,6 +79,9 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [submitting, setSubmitting] = useState(false);
   const [retainagePercent, setRetainagePercent] = useState(0);
   const [invoiceMode, setInvoiceMode] = useState<'per_co' | 'aggregate'>('per_co');
+  const [eligibleContracts, setEligibleContracts] = useState<EligibleContract[]>([]);
+  const [selectedContractId, setSelectedContractId] = useState<string>('');
+
 
   // Determine invoicing role from org type
   const orgType = userOrgRoles[0]?.organization?.type as string | undefined;
@@ -127,10 +143,47 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
     })();
   }, [open, projectId]);
 
+  // Load the upstream contracts this org can bill on, so duplicates are caught
+  // BEFORE an invoice lands on the wrong contract.
+  const upstreamRole = invoicingRole === 'FC' ? 'Trade Contractor' : 'General Contractor';
+
+  useEffect(() => {
+    if (!open || !projectId || !currentOrgId) return;
+    setSelectedContractId('');
+    (async () => {
+      const { data } = await supabase
+        .from('project_contracts')
+        .select(`
+          id, to_role, contract_sum, created_at,
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        `)
+        .eq('project_id', projectId)
+        .eq('from_org_id', currentOrgId)
+        .order('created_at', { ascending: true });
+
+      const rows: EligibleContract[] = (data ?? []).map((c: any) => ({
+        id: c.id,
+        to_role: c.to_role,
+        contract_sum: Number(c.contract_sum ?? 0),
+        created_at: c.created_at,
+        from_org_name: c.from_org?.name ?? null,
+        to_org_name: c.to_org?.name ?? null,
+      }));
+      const matching = rows.filter(c => c.to_role === upstreamRole);
+      const eligible = matching.length > 0 ? matching : rows;
+      setEligibleContracts(eligible);
+      if (eligible.length === 1) setSelectedContractId(eligible[0].id);
+    })();
+  }, [open, projectId, currentOrgId, upstreamRole]);
+
+  const hasDuplicateContracts = eligibleContracts.length > 1;
+
   const availableCOs = useMemo(
     () => approvedCOs.filter(co => !existingCoIds.has(co.id)),
     [approvedCOs, existingCoIds],
   );
+
 
   function toggleCO(id: string) {
     setSelectedIds(prev => {
@@ -298,29 +351,29 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const now = new Date().toISOString();
       const today = new Date().toISOString().slice(0, 10);
 
-      // Find the UPSTREAM contract this org bills on (TC → GC, FC → TC).
-      // Without the to_role filter a TC with several contracts could invoice the
-      // wrong party, which is how CO invoices ended up on the wrong contract.
-      const { data: contracts } = await supabase
-        .from('project_contracts')
-        .select(`
-          id, to_role, created_at,
-          from_org:organizations!project_contracts_from_org_id_fkey(name),
-          to_org:organizations!project_contracts_to_org_id_fkey(name)
-        `)
-        .eq('project_id', projectId)
-        .eq('from_org_id', currentOrgId)
-        .order('created_at', { ascending: true });
-
-      const upstreamRole = invoicingRole === 'FC' ? 'Trade Contractor' : 'General Contractor';
+      // The upstream contract this org bills on (TC → GC, FC → TC). When several
+      // eligible contracts exist (duplicates), the user must pick one — never guess.
       const contract =
-        (contracts ?? []).find((c: any) => c.to_role === upstreamRole) ?? (contracts ?? [])[0] ?? null;
-      const contractId = contract?.id ?? null;
+        eligibleContracts.find(c => c.id === selectedContractId) ??
+        (eligibleContracts.length === 1 ? eligibleContracts[0] : null);
+
+      if (!contract) {
+        toast.error(
+          hasDuplicateContracts
+            ? 'Multiple contracts found — select which contract to bill on.'
+            : 'No upstream contract found for this project.',
+        );
+        setSubmitting(false);
+        return;
+      }
+      const contractId = contract.id;
+
 
       const invoiceNumber = await buildInvoiceNumber({
         projectId,
-        fromOrgName: (contract as any)?.from_org?.name,
-        toOrgName: (contract as any)?.to_org?.name,
+        fromOrgName: contract.from_org_name,
+        toOrgName: contract.to_org_name,
+
         coNumber: coIds.length === 1
           ? (approvedCOs.find(c => c.id === coIds[0])?.co_number ?? null)
           : null,
@@ -513,6 +566,43 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               <ArrowLeft className="h-3.5 w-3.5" /> Back to selection
             </Button>
 
+            {hasDuplicateContracts && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-2">
+                  <p className="text-sm">
+                    This project has {eligibleContracts.length} contracts between your organization
+                    and the same upstream party. Pick the contract this invoice belongs to — billing
+                    the wrong one will corrupt contract totals.
+                  </p>
+                  <Select value={selectedContractId} onValueChange={setSelectedContractId}>
+                    <SelectTrigger className="bg-background text-foreground">
+                      <SelectValue placeholder="Select contract to bill on" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eligibleContracts.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.from_org_name ?? '—'} → {c.to_org_name ?? c.to_role} · {fmtCurrency(c.contract_sum)} · created {new Date(c.created_at).toLocaleDateString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!hasDuplicateContracts && eligibleContracts.length === 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  No upstream contract found for your organization on this project. An invoice can't
+                  be created until a contract exists.
+                </AlertDescription>
+              </Alert>
+            )}
+
+
+
             {lineItems.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
                 No billable items found in selected change orders.
@@ -580,7 +670,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || lineItems.length === 0}
+                disabled={submitting || lineItems.length === 0 || !selectedContractId}
                 className="gap-1.5"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
