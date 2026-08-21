@@ -8,6 +8,8 @@ import type { ChangeOrder } from '@/types/changeOrder';
 interface Props {
   co: ChangeOrder;
   projectId: string;
+  /** Viewer's role — a TC/FC sends upstream to an off-platform GC, a GC to the owner. */
+  role?: 'GC' | 'TC' | 'FC';
 }
 
 function timeAgo(dateStr: string) {
@@ -19,8 +21,10 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export function COExternalApprovalBanner({ co, projectId }: Props) {
+export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) {
   const [resending, setResending] = useState<string | null>(null);
+  const ownerLabel = role === 'GC' ? 'owner' : 'general contractor';
+  const architectLabel = role === 'GC' ? 'architect' : 'owner or architect';
   const ownerStatus = (co as any).owner_approval_status as string;
   const architectStatus = (co as any).architect_approval_status as string;
 
@@ -77,7 +81,7 @@ export function COExternalApprovalBanner({ co, projectId }: Props) {
           <Clock className="h-4 w-4 text-amber-600 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              Waiting on owner approval
+              Waiting on {ownerLabel} approval
             </p>
             {(co as any).approved_at && (
               <p className="text-xs text-amber-600 dark:text-amber-400">Sent {timeAgo((co as any).approved_at)}</p>
@@ -94,7 +98,7 @@ export function COExternalApprovalBanner({ co, projectId }: Props) {
           <Clock className="h-4 w-4 text-amber-600 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              Waiting on architect approval
+              Waiting on {architectLabel} approval
             </p>
           </div>
           <Button size="sm" variant="outline" className="h-7 text-xs gap-1 shrink-0" onClick={() => resendEmail('architect')} disabled={resending === 'architect'}>
@@ -107,7 +111,7 @@ export function COExternalApprovalBanner({ co, projectId }: Props) {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
           <X className="h-4 w-4 text-red-600 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">Owner rejected this CO</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">The {ownerLabel} rejected this CO</p>
             {(co as any).owner_rejection_note && (
               <p className="text-xs text-red-600 dark:text-red-400 italic">{(co as any).owner_rejection_note}</p>
             )}
@@ -118,7 +122,7 @@ export function COExternalApprovalBanner({ co, projectId }: Props) {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
           <X className="h-4 w-4 text-red-600 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">Architect rejected this CO</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">The {architectLabel} rejected this CO</p>
             {(co as any).architect_rejection_note && (
               <p className="text-xs text-red-600 dark:text-red-400 italic">{(co as any).architect_rejection_note}</p>
             )}
@@ -129,9 +133,9 @@ export function COExternalApprovalBanner({ co, projectId }: Props) {
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20">
           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
           <p className="text-xs text-emerald-700 dark:text-emerald-400">
-            {ownerStatus === 'approved' && 'Owner approved'}
+            {ownerStatus === 'approved' && `${ownerLabel} approved`}
             {ownerStatus === 'approved' && architectStatus === 'approved' && ' · '}
-            {architectStatus === 'approved' && 'Architect approved'}
+            {architectStatus === 'approved' && `${architectLabel} approved`}
             {(co as any).owner_approver_name && ` by ${(co as any).owner_approver_name}`}
           </p>
         </div>
