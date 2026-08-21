@@ -17,19 +17,32 @@ import {
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 import { cn } from '@/lib/utils';
 
-type ArchiveTab = 'completed' | 'on_hold' | 'archived';
+type ArchiveTab = 'all' | 'active' | 'setup' | 'completed' | 'on_hold' | 'archived';
 
 const TAB_DOTS: Record<ArchiveTab, string> = {
+  all: 'bg-primary',
+  active: 'bg-emerald-500',
+  setup: 'bg-violet-500',
   completed: 'bg-blue-500',
   on_hold: 'bg-amber-500',
   archived: 'bg-muted-foreground',
 };
 
 const TABS: { key: ArchiveTab; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'setup', label: 'In Setup' },
   { key: 'completed', label: 'Completed' },
   { key: 'on_hold', label: 'On Hold' },
   { key: 'archived', label: 'Archived' },
 ];
+
+// "In Setup" covers both pre-launch states stored on the project row.
+function matchesTab(status: string, tab: ArchiveTab) {
+  if (tab === 'all') return true;
+  if (tab === 'setup') return status === 'setup' || status === 'draft';
+  return status === tab;
+}
 
 export default function ProjectsArchive() {
   const navigate = useNavigate();
@@ -40,7 +53,7 @@ export default function ProjectsArchive() {
   const orgType = currentOrg?.type || null;
   const orgId = currentOrg?.id;
 
-  const [tab, setTab] = useState<ArchiveTab>('completed');
+  const [tab, setTab] = useState<ArchiveTab>('all');
   const [search, setSearch] = useState('');
 
   const {
@@ -57,11 +70,10 @@ export default function ProjectsArchive() {
     confirmComplete,
   } = useProjectStatusActions(refetch);
 
-  const archivedProjects = useMemo(() => {
+  const visibleProjects = useMemo(() => {
     const lower = search.trim().toLowerCase();
     return projects.filter((p) => {
-      const isArchived = p.status === tab;
-      if (!isArchived) return false;
+      if (!matchesTab(p.status, tab)) return false;
       if (!lower) return true;
       return p.name.toLowerCase().includes(lower);
     });
@@ -90,7 +102,7 @@ export default function ProjectsArchive() {
   }
 
   return (
-    <AppLayout title="Projects" subtitle="Completed, on hold, and archived projects" fullWidth>
+    <AppLayout title="Projects" subtitle="Every project you have access to — current, completed, on hold, and archived" fullWidth>
       <div className="px-4 sm:px-6 py-4 space-y-4 max-w-5xl">
         {/* Search */}
         <div className="relative">
@@ -106,7 +118,10 @@ export default function ProjectsArchive() {
         {/* Tabs */}
         <div className="pill-row">
           {TABS.map((t) => {
-            const count = statusCounts[t.key];
+            const count =
+              t.key === 'all'
+                ? projects.length
+                : statusCounts[t.key as keyof typeof statusCounts];
             const active = tab === t.key;
             return (
               <button
@@ -141,26 +156,24 @@ export default function ProjectsArchive() {
               <Skeleton key={i} className="h-16 w-full rounded-lg" />
             ))}
           </div>
-        ) : archivedProjects.length === 0 ? (
+        ) : visibleProjects.length === 0 ? (
           <Card className="rounded-lg">
             <CardContent className="py-12 text-center">
               <span className="text-3xl">📁</span>
               <p className="text-sm text-muted-foreground mt-2">
                 {search.trim()
-                  ? `No ${TABS.find((t) => t.key === tab)?.label.toLowerCase()} projects match "${search}"`
-                  : `No ${TABS.find((t) => t.key === tab)?.label.toLowerCase()} projects`}
+                  ? `No projects match "${search}"`
+                  : tab === 'all'
+                    ? 'No projects yet'
+                    : `No ${TABS.find((t) => t.key === tab)?.label.toLowerCase()} projects`}
               </p>
             </CardContent>
           </Card>
         ) : (
           <DashboardProjectList
-            projects={archivedProjects}
-            statusFilter={tab as ProjectStatusFilter}
-            onStatusFilterChange={(s) => {
-              if (s === 'completed' || s === 'on_hold' || s === 'archived') {
-                setTab(s);
-              }
-            }}
+            projects={visibleProjects}
+            statusFilter={(tab === 'all' ? 'active' : tab) as ProjectStatusFilter}
+            onStatusFilterChange={(s) => setTab(s as ArchiveTab)}
             statusCounts={statusCounts}
             loading={false}
             orgType={orgType}
