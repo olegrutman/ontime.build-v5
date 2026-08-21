@@ -563,6 +563,43 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               <ArrowLeft className="h-3.5 w-3.5" /> Back to selection
             </Button>
 
+            {hasDuplicateContracts && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-2">
+                  <p className="text-sm">
+                    This project has {eligibleContracts.length} contracts between your organization
+                    and the same upstream party. Pick the contract this invoice belongs to — billing
+                    the wrong one will corrupt contract totals.
+                  </p>
+                  <Select value={selectedContractId} onValueChange={setSelectedContractId}>
+                    <SelectTrigger className="bg-background text-foreground">
+                      <SelectValue placeholder="Select contract to bill on" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eligibleContracts.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.from_org_name ?? '—'} → {c.to_org_name ?? c.to_role} · {fmtCurrency(c.contract_sum)} · created {new Date(c.created_at).toLocaleDateString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!hasDuplicateContracts && eligibleContracts.length === 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  No upstream contract found for your organization on this project. An invoice can't
+                  be created until a contract exists.
+                </AlertDescription>
+              </Alert>
+            )}
+
+
+
             {lineItems.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
                 No billable items found in selected change orders.
