@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
 
       return json({
         approval_type: approvalType,
+        role_label: roleLabelFor(co.created_by_role, approvalType),
         co,
         line_items: lines ?? [],
         project_name: project?.name ?? null,
