@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES } from '@/hooks/coAggregation';
 import { baseContractSum } from '@/lib/contractSums';
+import { dedupeContracts } from '@/lib/kpiLedger';
 
 // contract_sum already includes approved COs (DB trigger). Dashboard cards add
 // approved CO value separately, so contract totals must use the base value.
@@ -268,7 +269,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('project_contracts')
-              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, original_contract_sum, from_org_id, to_org_id, trade, owner_contract_value')
+              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, original_contract_sum, from_org_id, to_org_id, trade, status, owner_contract_value')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         Promise.resolve({ data: [] }),
@@ -310,7 +311,16 @@ export function useDashboardData(): DashboardData {
           .eq('invite_status', 'INVITED'),
       ]);
 
-      const contracts = contractsResult.data || [];
+      // Re-inviting a party writes a second `project_contracts` row for the same
+      // org pair (usually still `Invited`). Summing every row doubled subcontract
+      // cost (e.g. 800K read as 1.6M). Keep one live row per pair per project.
+      const contracts: any[] = dedupeContracts(
+        ((contractsResult.data || []) as any[]).map((c) => ({
+          ...c,
+          // scope the dedupe key to the project so two projects don't collapse
+          trade: `${c.project_id}|${c.trade || ''}`,
+        })) as any,
+      ).map((c: any) => ({ ...c, trade: String(c.trade).split('|')[1] || null }));
       const pendingInvoices = ((pendingInvoicesResult.data || []) as any[]).map((inv: any) => ({
         id: inv.id,
         project_id: inv.project_id,
