@@ -29,6 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getContractDisplayName } from '@/hooks/useContractSOV';
+import { buildInvoiceNumber } from '@/lib/invoiceNumber';
+
 
 interface Contract {
   id: string;
