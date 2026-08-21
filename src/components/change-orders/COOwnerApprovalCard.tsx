@@ -12,6 +12,8 @@ import type { ChangeOrder } from '@/types/changeOrder';
 
 interface Props {
   co: ChangeOrder;
+  /** Viewer's role — drives who the external approver is called. */
+  role?: 'GC' | 'TC' | 'FC';
   projectId: string;
   projectName?: string;
   coTotal: number;
@@ -20,9 +22,18 @@ interface Props {
 
 type ApprovalType = 'owner' | 'architect';
 
+// A GC sends up to the Owner (and optionally the Architect).
+// A TC/FC whose upstream party isn't on the platform sends up to that
+// off-platform general contractor — same token machinery, different words.
 const TYPE_LABEL: Record<ApprovalType, string> = { owner: 'Owner', architect: 'Architect' };
+const UPSTREAM_LABEL: Record<ApprovalType, string> = {
+  owner: 'General contractor',
+  architect: 'Owner or architect',
+};
 
-export function COOwnerApprovalCard({ co, projectId, projectName, coTotal, onRefresh }: Props) {
+export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, coTotal, onRefresh }: Props) {
+  const isUpstreamExternal = role !== 'GC';
+  const labelFor = (t: ApprovalType) => (isUpstreamExternal ? UPSTREAM_LABEL[t] : TYPE_LABEL[t]);
   const { user } = useAuth();
   const [dialogType, setDialogType] = useState<ApprovalType | null>(null);
   const [email, setEmail] = useState('');
@@ -88,6 +99,7 @@ export function COOwnerApprovalCard({ co, projectId, projectName, coTotal, onRef
           co_title: co.title,
           co_number: co.co_number,
           co_total: coTotal,
+          role_label: labelFor(type),
           project_name: projectName,
           approve_url: approveUrl,
         },
@@ -98,7 +110,7 @@ export function COOwnerApprovalCard({ co, projectId, projectName, coTotal, onRef
         co_id: co.id,
         project_id: projectId,
         actor_user_id: user.id,
-        actor_role: 'GC',
+        actor_role: role,
         action: 'external_approval_sent',
         detail: `Sent for ${TYPE_LABEL[type].toLowerCase()} approval to ${email.trim()}`,
         amount: coTotal,
@@ -143,7 +155,7 @@ export function COOwnerApprovalCard({ co, projectId, projectName, coTotal, onRef
         />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">
-            {TYPE_LABEL[type]} approval
+            {labelFor(type)} approval
             <span className="ml-2 text-[0.68rem] uppercase tracking-wider text-muted-foreground">
               {status === 'not_required' ? 'Not sent'
                 : status === 'pending' ? 'Waiting'
@@ -189,11 +201,14 @@ export function COOwnerApprovalCard({ co, projectId, projectName, coTotal, onRef
       <Dialog open={dialogType !== null} onOpenChange={o => !o && setDialogType(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Send for {dialogType ? TYPE_LABEL[dialogType].toLowerCase() : ''} approval</DialogTitle>
+            <DialogTitle>Send for {dialogType ? labelFor(dialogType).toLowerCase() : ''} approval</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
               They'll get a secure link to review and sign off on this change order. No account needed.
+              {isUpstreamExternal && dialogType === 'owner' && (
+                <> Their approval acts as the upstream sign-off and books this change against your contract.</>
+              )}
             </p>
             <div className="space-y-2">
               <Label>Email address</Label>
@@ -201,7 +216,7 @@ export function COOwnerApprovalCard({ co, projectId, projectName, coTotal, onRef
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="owner@company.com"
+                placeholder={isUpstreamExternal ? 'pm@generalcontractor.com' : 'owner@company.com'}
               />
             </div>
             <div className="flex justify-end gap-2">

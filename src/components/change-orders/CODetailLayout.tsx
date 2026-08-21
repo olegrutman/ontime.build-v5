@@ -462,11 +462,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
           {/* External (owner / architect) approval status */}
-          <COExternalApprovalBanner co={co} projectId={projectId} />
+          <COExternalApprovalBanner co={co} projectId={projectId} role={role} />
 
-          {isGC && (
+          {(isGC || isTC || isFC) && (
             <COOwnerApprovalCard
               co={co}
+              role={role}
               projectId={projectId}
               coTotal={tcBillableTotal}
               onRefresh={refreshDetail}
