@@ -64,10 +64,15 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
 
   const m2dRows: DrilldownRow[] = [
     { label: '% complete (billed ÷ revised)', value: pct(ledger.percentComplete) },
-    { label: 'Earned revenue', value: money(ledger.earnedRevenue.value), note: ledger.earnedRevenue.formula },
-    { label: 'Earned cost', value: money(ledger.earnedCost.value), note: ledger.earnedCost.formula },
+    { label: 'Billed to date', value: money(ledger.earnedRevenue.value), note: ledger.earnedRevenue.formula },
+    {
+      label: 'Cost incurred to date',
+      value: ledger.earnedCost.known ? money(ledger.earnedCost.value) : '—',
+      note: ledger.earnedCost.formula, excluded: !ledger.earnedCost.known,
+    },
     { label: 'Margin to date', value: `${money(ledger.marginToDate.value)} · ${pct(ledger.marginToDatePct)}`, emphasis: true },
   ];
+
 
   const coRows: DrilldownRow[] = [
     { label: `Approved ${coPlural} revenue`, value: money(ledger.approvedCOAdds.value), note: `${extras.approvedCOCount ?? 0} approved` },

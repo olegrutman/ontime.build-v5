@@ -290,7 +290,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // 3. Non-supplier: fetch all in parallel
       const [contractsRes, invoicesRes, _woRemoved, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
-          id, from_role, to_role, contract_sum, co_approved_sum, original_contract_sum, retainage_percent, trade, from_org_id, to_org_id, status,
+          id, from_role, to_role, contract_sum, co_approved_sum, original_contract_sum, retainage_percent, trade, from_org_id, to_org_id, status, created_at,
           material_responsibility, material_estimate_total, labor_budget,
           owner_contract_value, material_markup_type, material_markup_value,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
@@ -329,14 +329,19 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         }
       }
 
-      // Fetch approved estimate sum as fallback for material budget
+      // Fetch approved estimate sum as fallback for material budget.
+      // BASE scope only: CHANGE-scope estimates cover CO materials, whose cost
+      // already lands in `approvedCOCost`. Summing both double-counted them.
       const { data: approvedEsts } = await supabase
         .from('supplier_estimates')
-        .select('total_amount')
+        .select('total_amount, scope')
         .eq('project_id', projectId)
         .eq('status', 'APPROVED');
-      const estSum = (approvedEsts || []).reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
+      const estSum = (approvedEsts || [])
+        .filter((e: any) => (e.scope ?? 'BASE') === 'BASE')
+        .reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
       setApprovedEstimateSum(estSum);
+
 
       const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole);
       const isGCPerspective = detectedRole === 'General Contractor';
@@ -363,12 +368,15 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         coLabor = l; coMats = m; coEquip = e;
       }
 
-      // Responsibility fallback mirrors the DB: a CO with NULL responsibility
-      // inherits the TC↔GC contract's material/equipment responsibility.
-      const respContract = contractsWithNames.find((c: any) =>
-        (c.from_role === 'Trade Contractor' && c.to_role === 'General Contractor') ||
-        (c.to_role === 'Trade Contractor' && c.from_role === 'General Contractor')
-      ) as any;
+      // Responsibility fallback must mirror the DB `co_grand_total` exactly:
+      //  - materials: first NON-Owner contract with a non-null responsibility
+      //    (an Owner→GC row says "GC" and must not leak onto trade COs). Picking
+      //    "any TC↔GC row" grabbed stale `Invited` duplicates whose value is
+      //    NULL, so the client silently fell back to 'TC' while the DB used 'GC'.
+      //  - equipment: the DB has no contract fallback — it always defaults 'TC'.
+      const respContract = (contractsWithNames as any[])
+        .filter((c) => c.material_responsibility != null && c.from_role !== 'Owner')
+        .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))[0];
       const agg = aggregateCOTotals(
         (allCOs || []) as any,
         coLabor,
@@ -378,9 +386,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         isGCPerspective,
         {
           materials: respContract?.material_responsibility ?? null,
-          equipment: respContract?.material_responsibility ?? null,
+          equipment: null,
         },
       );
+
 
       setApprovedCORevenue(agg.approvedCORevenue);
       setApprovedCOCost(agg.approvedCOCost);
@@ -487,6 +496,27 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           submitted_at: i.submitted_at ?? null, po_id: i.po_id ?? null,
         })));
       }
+
+      // Field Crew: a crew only ever BILLS, but `billedToDate` sums every
+      // invoice on the project — so the canonical grid showed the TC's and the
+      // supplier's invoices as the crew's own revenue. Scope receivables to the
+      // contracts where this crew is the billing party.
+      if (detectedRole === 'Field Crew' && orgIds.length > 0) {
+        const myContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.from_org_id && orgIds.includes(c.from_org_id))
+            .map(c => c.id)
+        );
+        const myInvs = submitted.filter((inv: any) => inv.contract_id && myContractIds.has(inv.contract_id));
+        setReceivablesInvoiced(myInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
+        setReceivablesCollected(myInvs.filter(i => i.status === 'PAID').reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setReceivablesRetainage(myInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        const recvPending = myInvs.filter((i: any) => i.status === 'SUBMITTED');
+        setReceivablesPendingAmount(recvPending.reduce((s, i: any) => s + (i.total_amount || 0), 0));
+        setReceivablesPendingCount(recvPending.length);
+      }
+
+
 
       // GC view: compute accrued costs from upstream invoices (TC → GC) and supplier POs the GC owns.
       // Used by the realized margin block below to avoid double-counting materials.
@@ -683,14 +713,15 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // project (including TC→GC payables and supplier invoices), so a GC saw its
   // own costs reported as "invoiced to date" against the owner budget.
   //  - GC: the owner-billings ledger is the only revenue instrument.
-  //  - TC: invoices on contracts where the TC is the billing party.
-  //  - FC / Supplier: they only ever bill, so all invoices are revenue.
+  //  - TC / FC: invoices on contracts where they are the billing party.
+  //  - Supplier: they only ever bill, so all invoices are revenue.
   const revenueBilledToDate =
     viewerRole === 'General Contractor'
       ? ownerBillingsTotal
-      : viewerRole === 'Trade Contractor'
+      : viewerRole === 'Trade Contractor' || viewerRole === 'Field Crew'
         ? receivablesInvoiced
         : billedToDate;
+
   // Revenue contract for the viewer: GC bills the owner, everyone else bills upstream.
   const revenueContractValue =
     viewerRole === 'General Contractor' ? (ownerContractValue || 0) : contractValue;
@@ -804,7 +835,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     payablesPaid,
     payablesPendingAmount,
     payablesPendingCount,
+    // Real cost incurred so far: what has been billed to me (subs, crew,
+    // suppliers) plus my own crew's logged burden on approved COs.
+    actualCostToDate: payablesInvoiced + coCostBreakdown.ownLabor,
   });
+
 
   return {
     ledger,
