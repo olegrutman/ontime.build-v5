@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CO_REASON_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COLaborEntry, COMaterialItem, COEquipmentItem, COLineItem } from '@/types/changeOrder';
+import { buildInvoiceNumber } from '@/lib/invoiceNumber';
+
 
 interface CreateInvoiceFromCOsProps {
   open: boolean;
