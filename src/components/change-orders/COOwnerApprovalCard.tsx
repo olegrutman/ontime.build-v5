@@ -110,7 +110,7 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
         co_id: co.id,
         project_id: projectId,
         actor_user_id: user.id,
-        actor_role: 'GC',
+        actor_role: role,
         action: 'external_approval_sent',
         detail: `Sent for ${TYPE_LABEL[type].toLowerCase()} approval to ${email.trim()}`,
         amount: coTotal,

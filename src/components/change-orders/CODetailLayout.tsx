@@ -464,9 +464,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           {/* External (owner / architect) approval status */}
           <COExternalApprovalBanner co={co} projectId={projectId} />
 
-          {isGC && (
+          {(isGC || isTC || isFC) && (
             <COOwnerApprovalCard
               co={co}
+              role={role}
               projectId={projectId}
               coTotal={tcBillableTotal}
               onRefresh={refreshDetail}
