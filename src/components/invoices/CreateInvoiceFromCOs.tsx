@@ -670,7 +670,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || lineItems.length === 0}
+                disabled={submitting || lineItems.length === 0 || !selectedContractId}
                 className="gap-1.5"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
