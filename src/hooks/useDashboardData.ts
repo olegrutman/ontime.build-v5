@@ -313,9 +313,13 @@ export function useDashboardData(): DashboardData {
       // Re-inviting a party writes a second `project_contracts` row for the same
       // org pair (usually still `Invited`). Summing every row doubled subcontract
       // cost (e.g. 800K read as 1.6M). Keep one live row per pair per project.
-      const contracts = dedupeContracts(
-        (contractsResult.data || []) as any[],
-      ) as typeof contractsResult.data;
+      const contracts: any[] = dedupeContracts(
+        ((contractsResult.data || []) as any[]).map((c) => ({
+          ...c,
+          // scope the dedupe key to the project so two projects don't collapse
+          trade: `${c.project_id}|${c.trade || ''}`,
+        })) as any,
+      ).map((c: any) => ({ ...c, trade: String(c.trade).split('|')[1] || null }));
       const pendingInvoices = ((pendingInvoicesResult.data || []) as any[]).map((inv: any) => ({
         id: inv.id,
         project_id: inv.project_id,
