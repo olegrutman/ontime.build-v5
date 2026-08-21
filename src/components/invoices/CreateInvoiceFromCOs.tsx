@@ -368,8 +368,9 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
       const invoiceNumber = await buildInvoiceNumber({
         projectId,
-        fromOrgName: (contract as any)?.from_org?.name,
-        toOrgName: (contract as any)?.to_org?.name,
+        fromOrgName: contract.from_org_name,
+        toOrgName: contract.to_org_name,
+
         coNumber: coIds.length === 1
           ? (approvedCOs.find(c => c.id === coIds[0])?.co_number ?? null)
           : null,
