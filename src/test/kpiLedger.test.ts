@@ -109,13 +109,16 @@ describe('billing and margin to date', () => {
     expect(full.percentComplete).toBe(100);
   });
 
-  it('margin to date is earned-basis, not cash', () => {
-    const l = buildProjectLedger(baseInput({ billed: 394_356.375, collected: 100_000 }));
+  it('margin to date is billed revenue minus cost actually incurred', () => {
+    const l = buildProjectLedger(baseInput({
+      billed: 394_356.375, collected: 100_000, actualCostToDate: 250_000,
+    }));
     expect(l.percentComplete).toBeCloseTo(50, 4);
     expect(l.earnedRevenue.value).toBeCloseTo(394_356.375, 2);
-    expect(l.earnedCost.value).toBeCloseTo(300_000, 2);
-    expect(l.marginToDate.value).toBeCloseTo(94_356.375, 2);
+    expect(l.earnedCost.value).toBeCloseTo(250_000, 2);
+    expect(l.marginToDate.value).toBeCloseTo(144_356.375, 2);
   });
+
 
   it('is not meaningful with zero cost — never reports 100% margin', () => {
     const l = buildProjectLedger(baseInput({ myOrgIds: [TC], contracts: [contracts[1]], billed: 50_000, collected: 50_000 }));
