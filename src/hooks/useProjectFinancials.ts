@@ -329,14 +329,19 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         }
       }
 
-      // Fetch approved estimate sum as fallback for material budget
+      // Fetch approved estimate sum as fallback for material budget.
+      // BASE scope only: CHANGE-scope estimates cover CO materials, whose cost
+      // already lands in `approvedCOCost`. Summing both double-counted them.
       const { data: approvedEsts } = await supabase
         .from('supplier_estimates')
-        .select('total_amount')
+        .select('total_amount, scope')
         .eq('project_id', projectId)
         .eq('status', 'APPROVED');
-      const estSum = (approvedEsts || []).reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
+      const estSum = (approvedEsts || [])
+        .filter((e: any) => (e.scope ?? 'BASE') === 'BASE')
+        .reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
       setApprovedEstimateSum(estSum);
+
 
       const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole);
       const isGCPerspective = detectedRole === 'General Contractor';
@@ -363,12 +368,15 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         coLabor = l; coMats = m; coEquip = e;
       }
 
-      // Responsibility fallback mirrors the DB: a CO with NULL responsibility
-      // inherits the TC↔GC contract's material/equipment responsibility.
-      const respContract = contractsWithNames.find((c: any) =>
-        (c.from_role === 'Trade Contractor' && c.to_role === 'General Contractor') ||
-        (c.to_role === 'Trade Contractor' && c.from_role === 'General Contractor')
-      ) as any;
+      // Responsibility fallback must mirror the DB `co_grand_total` exactly:
+      //  - materials: first NON-Owner contract with a non-null responsibility
+      //    (an Owner→GC row says "GC" and must not leak onto trade COs). Picking
+      //    "any TC↔GC row" grabbed stale `Invited` duplicates whose value is
+      //    NULL, so the client silently fell back to 'TC' while the DB used 'GC'.
+      //  - equipment: the DB has no contract fallback — it always defaults 'TC'.
+      const respContract = (contractsWithNames as any[])
+        .filter((c) => c.material_responsibility != null && c.from_role !== 'Owner')
+        .sort((a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')))[0];
       const agg = aggregateCOTotals(
         (allCOs || []) as any,
         coLabor,
@@ -378,9 +386,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         isGCPerspective,
         {
           materials: respContract?.material_responsibility ?? null,
-          equipment: respContract?.material_responsibility ?? null,
+          equipment: null,
         },
       );
+
 
       setApprovedCORevenue(agg.approvedCORevenue);
       setApprovedCOCost(agg.approvedCOCost);

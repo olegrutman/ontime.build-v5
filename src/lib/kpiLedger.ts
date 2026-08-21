@@ -74,7 +74,15 @@ export interface LedgerInput {
   payablesPaid: number;
   payablesPendingAmount: number;
   payablesPendingCount: number;
+
+  /**
+   * Cost actually incurred so far (accrual): invoices billed to me + my own
+   * internal labor burden. Margin-to-date measures billed revenue against THIS,
+   * never against a percentage slice of the forecast cost.
+   */
+  actualCostToDate?: number;
 }
+
 
 export interface LedgerTerm {
   value: number;
@@ -284,13 +292,19 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   // ── Forecast margin ─────────────────────────────────────────────────────
   const revisedRevenue = revisedContract.value;
   const forecastMarginVal = revisedRevenue - revisedCostVal;
+  // A viewer with revenue but no cost side at all (e.g. a field crew, whose own
+  // labor burden is not tracked here) would otherwise read "100% margin".
+  const hasCostSide = revisedCost.known && revisedCostVal > 0;
   const forecastMargin: LedgerTerm = {
     value: forecastMarginVal,
     basis: 'contract',
-    known: revisedContract.known,
-    formula: `${money(revisedRevenue)} revenue − ${money(revisedCostVal)} cost`,
+    known: revisedContract.known && hasCostSide,
+    formula: hasCostSide
+      ? `${money(revisedRevenue)} revenue − ${money(revisedCostVal)} cost`
+      : 'No cost side tracked on this project — margin not computable',
   };
   const forecastMarginPct = revisedRevenue > 0 ? (forecastMarginVal / revisedRevenue) * 100 : 0;
+
 
   // ── Billing / cash ──────────────────────────────────────────────────────
   const billedTerm: LedgerTerm = {
@@ -320,30 +334,34 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
     formula: `${money(revisedRevenue)} revised contract − ${money(billed)} billed`,
   };
 
-  // ── Margin to date (earned, not cash) ───────────────────────────────────
-  const pc = percentComplete / 100;
-  const earnedRevenueVal = revisedRevenue * pc;
-  const earnedCostVal = revisedCostVal * pc;
+  // ── Margin to date (real performance, not a slice of the forecast) ───────
+  // Earned revenue = what I have actually billed upstream.
+  // Earned cost    = what has actually been billed to me + my own labor burden.
+  // Scaling BOTH sides by % complete made this identical to the forecast margin
+  // percentage, so the card could never reveal a job going sideways.
+  const earnedRevenueVal = billed;
+  const earnedCostVal = Number(input.actualCostToDate ?? 0);
   const earnedRevenue: LedgerTerm = {
     value: earnedRevenueVal,
-    basis: 'forecast',
-    known: revisedContract.known,
-    formula: `${percentComplete.toFixed(1)}% complete × ${money(revisedRevenue)} revenue`,
+    basis: 'contract',
+    known: true,
+    formula: 'Σ pre-tax subtotal of my invoices (excl. draft & voided)',
   };
   const earnedCost: LedgerTerm = {
     value: earnedCostVal,
-    basis: 'forecast',
-    known: revisedCost.known,
-    formula: `${percentComplete.toFixed(1)}% complete × ${money(revisedCostVal)} cost`,
+    basis: 'contract',
+    known: earnedCostVal > 0,
+    formula: 'Invoices billed to me + my own labor cost logged to date',
   };
   const marginToDateVal = earnedRevenueVal - earnedCostVal;
-  const marginToDateMeaningful = billed > 0 && revisedCostVal > 0 && revisedContract.known;
+  const marginToDateMeaningful = billed > 0 && earnedCostVal > 0;
   const marginToDate: LedgerTerm = {
     value: marginToDateVal,
-    basis: 'forecast',
+    basis: 'contract',
     known: marginToDateMeaningful,
-    formula: `${money(earnedRevenueVal)} earned revenue − ${money(earnedCostVal)} earned cost`,
+    formula: `${money(earnedRevenueVal)} billed − ${money(earnedCostVal)} cost incurred`,
   };
+
   const marginToDatePct = earnedRevenueVal > 0 ? (marginToDateVal / earnedRevenueVal) * 100 : 0;
 
   const coNetMargin: LedgerTerm = {
