@@ -20,9 +20,19 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** Redacted CO header — approval-level figures only. */
 const CO_APPROVAL_COLS =
-  'id, project_id, org_id, created_by_user_id, co_number, title, status, document_type, ' +
+  'id, project_id, org_id, created_by_user_id, created_by_role, co_number, title, status, document_type, ' +
   'location_tag, reason_note, pricing_type, tc_submitted_price, total_tax, ' +
   'owner_approval_status, architect_approval_status';
+
+/**
+ * Who the external approver is, in the requester's own words.
+ * A GC sends up to the Owner / Architect. A TC or FC whose upstream party is
+ * NOT on the platform sends up to that off-platform general contractor.
+ */
+function roleLabelFor(createdByRole: string | null, approvalType: 'owner' | 'architect') {
+  if (approvalType === 'architect') return 'Architect';
+  return createdByRole && createdByRole !== 'GC' ? 'General Contractor' : 'Owner';
+}
 
 async function logActivity(
   coId: string,
