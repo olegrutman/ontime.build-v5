@@ -141,7 +141,25 @@ Deno.serve(async (req) => {
       .eq(`${prefix}_approval_status`, 'pending'); // single-use guard
     if (updErr) return json({ error: updErr.message }, 500);
 
-    const label = approvalType === 'owner' ? 'Owner' : 'Architect';
+    const label = roleLabelFor(co.created_by_role, approvalType);
+
+    // When the upstream party is NOT on the platform (TC/FC-created CO sent out for
+    // external sign-off), this decision IS the upstream decision — move the CO itself
+    // so `apply_co_contract_delta` books the contract change. GC→owner approvals never
+    // move the CO: the on-platform GC decision stays authoritative.
+    const externalIsUpstream = approvalType === 'owner' && (co.created_by_role ?? 'GC') !== 'GC';
+    const movableStatuses = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'];
+    if (externalIsUpstream && movableStatuses.includes(co.status)) {
+      const statusPatch: Record<string, unknown> = { status: decision };
+      if (decision === 'approved') statusPatch.approved_at = new Date().toISOString();
+      const { error: statusErr } = await supabase
+        .from('change_orders')
+        .update(statusPatch)
+        .eq('id', co.id)
+        .eq('status', co.status);
+      if (statusErr) return json({ error: statusErr.message }, 500);
+    }
+
     await logActivity(
       co.id,
       co.project_id,
