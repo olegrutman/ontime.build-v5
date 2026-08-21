@@ -58,6 +58,7 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
         body: {
           co_id: co.id,
           approval_type: type,
+          role_label: type === 'owner' ? ownerLabel : architectLabel,
           recipient_email: email,
           token,
           co_title: co.title,
