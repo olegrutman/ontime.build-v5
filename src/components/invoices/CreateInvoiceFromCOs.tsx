@@ -127,10 +127,47 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
     })();
   }, [open, projectId]);
 
+  // Load the upstream contracts this org can bill on, so duplicates are caught
+  // BEFORE an invoice lands on the wrong contract.
+  const upstreamRole = invoicingRole === 'FC' ? 'Trade Contractor' : 'General Contractor';
+
+  useEffect(() => {
+    if (!open || !projectId || !currentOrgId) return;
+    setSelectedContractId('');
+    (async () => {
+      const { data } = await supabase
+        .from('project_contracts')
+        .select(`
+          id, to_role, contract_sum, created_at,
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        `)
+        .eq('project_id', projectId)
+        .eq('from_org_id', currentOrgId)
+        .order('created_at', { ascending: true });
+
+      const rows: EligibleContract[] = (data ?? []).map((c: any) => ({
+        id: c.id,
+        to_role: c.to_role,
+        contract_sum: Number(c.contract_sum ?? 0),
+        created_at: c.created_at,
+        from_org_name: c.from_org?.name ?? null,
+        to_org_name: c.to_org?.name ?? null,
+      }));
+      const matching = rows.filter(c => c.to_role === upstreamRole);
+      const eligible = matching.length > 0 ? matching : rows;
+      setEligibleContracts(eligible);
+      if (eligible.length === 1) setSelectedContractId(eligible[0].id);
+    })();
+  }, [open, projectId, currentOrgId, upstreamRole]);
+
+  const hasDuplicateContracts = eligibleContracts.length > 1;
+
   const availableCOs = useMemo(
     () => approvedCOs.filter(co => !existingCoIds.has(co.id)),
     [approvedCOs, existingCoIds],
   );
+
 
   function toggleCO(id: string) {
     setSelectedIds(prev => {
