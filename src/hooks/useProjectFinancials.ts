@@ -835,7 +835,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     payablesPaid,
     payablesPendingAmount,
     payablesPendingCount,
+    // Real cost incurred so far: what has been billed to me (subs, crew,
+    // suppliers) plus my own crew's logged burden on approved COs.
+    actualCostToDate: payablesInvoiced + coCostBreakdown.ownLabor,
   });
+
 
   return {
     ledger,
