@@ -713,14 +713,15 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // project (including TC→GC payables and supplier invoices), so a GC saw its
   // own costs reported as "invoiced to date" against the owner budget.
   //  - GC: the owner-billings ledger is the only revenue instrument.
-  //  - TC: invoices on contracts where the TC is the billing party.
-  //  - FC / Supplier: they only ever bill, so all invoices are revenue.
+  //  - TC / FC: invoices on contracts where they are the billing party.
+  //  - Supplier: they only ever bill, so all invoices are revenue.
   const revenueBilledToDate =
     viewerRole === 'General Contractor'
       ? ownerBillingsTotal
-      : viewerRole === 'Trade Contractor'
+      : viewerRole === 'Trade Contractor' || viewerRole === 'Field Crew'
         ? receivablesInvoiced
         : billedToDate;
+
   // Revenue contract for the viewer: GC bills the owner, everyone else bills upstream.
   const revenueContractValue =
     viewerRole === 'General Contractor' ? (ownerContractValue || 0) : contractValue;
