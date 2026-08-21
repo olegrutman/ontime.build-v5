@@ -298,15 +298,35 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const now = new Date().toISOString();
       const today = new Date().toISOString().slice(0, 10);
 
-      // Find contract where current org is from_org (invoicer)
+      // Find the UPSTREAM contract this org bills on (TC → GC, FC → TC).
+      // Without the to_role filter a TC with several contracts could invoice the
+      // wrong party, which is how CO invoices ended up on the wrong contract.
       const { data: contracts } = await supabase
         .from('project_contracts')
-        .select('id')
+        .select(`
+          id, to_role, created_at,
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        `)
         .eq('project_id', projectId)
         .eq('from_org_id', currentOrgId)
-        .limit(1);
+        .order('created_at', { ascending: true });
 
-      const contractId = contracts?.[0]?.id ?? null;
+      const upstreamRole = invoicingRole === 'FC' ? 'Trade Contractor' : 'General Contractor';
+      const contract =
+        (contracts ?? []).find((c: any) => c.to_role === upstreamRole) ?? (contracts ?? [])[0] ?? null;
+      const contractId = contract?.id ?? null;
+
+      const invoiceNumber = await buildInvoiceNumber({
+        projectId,
+        fromOrgName: (contract as any)?.from_org?.name,
+        toOrgName: (contract as any)?.to_org?.name,
+        coNumber: coIds.length === 1
+          ? (approvedCOs.find(c => c.id === coIds[0])?.co_number ?? null)
+          : null,
+        multiCoCount: coIds.length,
+        isTM,
+      });
 
       // Create invoice
       const { data: invoice, error: invErr } = await supabase
@@ -315,7 +335,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           project_id: projectId,
           contract_id: contractId,
           co_ids: coIds,
-          invoice_number: `${isTM ? 'WO' : 'CO'}-INV-${Date.now().toString(36).toUpperCase()}`,
+          invoice_number: invoiceNumber,
+
           billing_period_start: today,
           billing_period_end: today,
           status: 'DRAFT',
