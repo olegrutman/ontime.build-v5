@@ -17,7 +17,7 @@ import {
   Lock,
   LogOut,
   Search,
-  Pin,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
@@ -31,71 +31,77 @@ interface NavItem {
   icon: React.ElementType;
   route: string;
   featureKey?: string;
-  hideForSupplier?: boolean;
   premium?: boolean;
 }
 
-interface NavSection {
+interface NavGroup {
   key: string;
-  label: string;
+  /** Empty label = primary block, rendered without a header. */
+  label?: string;
   items: NavItem[];
 }
 
-function getNavSections(isTM: boolean): NavSection[] {
-  return [
-    {
-      key: 'overview',
-      label: 'Overview',
-      items: [
-        { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
-        { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
-      ],
-    },
-    {
-      key: 'scope',
-      label: 'Scope & Contracts',
-      items: [
-        ...(!isTM
-          ? [{ key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true } as NavItem]
-          : []),
-        { key: 'change-orders', label: isTM ? 'Work Orders' : 'Change Orders', icon: AlertTriangle, route: 'change-orders', featureKey: 'change_orders', hideForSupplier: true },
-        { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true, hideForSupplier: true },
-        { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
-      ],
-    },
-    {
-      key: 'financials',
-      label: 'Financials',
-      items: [
-        { key: 'invoices', label: 'Invoices', icon: Receipt, route: 'invoices', featureKey: 'invoicing' },
-        { key: 'purchase-orders', label: 'Purchase Orders', icon: Package, route: 'purchase-orders', featureKey: 'purchase_orders' },
-        { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
-        { key: 'backcharges', label: 'Backcharges', icon: AlertTriangle, route: 'backcharges', hideForSupplier: true },
-        { key: 'payment-apps', label: 'Payment Apps', icon: FileText, route: 'payment-apps', hideForSupplier: true },
-      ],
-    },
-    {
-      key: 'field',
-      label: 'Field Ops',
-      items: [
-        { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true, hideForSupplier: true },
-        { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', premium: true, hideForSupplier: true },
-      ],
-    },
-    {
-      key: 'documents',
-      label: 'Documents',
-      items: [
-        { key: 'settings', label: 'Settings', icon: Settings, route: 'settings' },
-      ],
-    },
-  ];
-}
+const ITEMS = {
+  overview: { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
+  changeOrders: (isTM: boolean): NavItem => ({
+    key: 'change-orders',
+    label: isTM ? 'Work Orders' : 'Change Orders',
+    icon: AlertTriangle,
+    route: 'change-orders',
+    featureKey: 'change_orders',
+  }),
+  invoices: { key: 'invoices', label: 'Invoices', icon: Receipt, route: 'invoices', featureKey: 'invoicing' },
+  purchaseOrders: { key: 'purchase-orders', label: 'Purchase Orders', icon: Package, route: 'purchase-orders', featureKey: 'purchase_orders' },
+  sov: { key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts' },
+  estimates: { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
+  schedule: { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true },
+  dailyLog: { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', premium: true },
+  rfis: { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true },
+  returns: { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
+  backcharges: { key: 'backcharges', label: 'Backcharges', icon: AlertTriangle, route: 'backcharges' },
+  paymentApps: { key: 'payment-apps', label: 'Payment Apps', icon: FileText, route: 'payment-apps' },
+  projectInfo: { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
+  settings: { key: 'settings', label: 'Settings', icon: Settings, route: 'settings' },
+} satisfies Record<string, NavItem | ((isTM: boolean) => NavItem)>;
 
-// Pinned destinations differ by role. Suppliers live in the estimate→PO→invoice loop;
-// GC/TC/FC pin the CO + invoice workflow.
-const PINNED_KEYS_DEFAULT = ['overview', 'change-orders', 'invoices'];
-const PINNED_KEYS_SUPPLIER = ['overview', 'estimates', 'purchase-orders'];
+/**
+ * Nav is ordered by frequency of use, not by taxonomy:
+ *  - primary block (no header) = the 3 places a user lives in daily
+ *  - two labelled groups = periodic work
+ *  - "More" = long tail, collapsed by default
+ * Each destination appears exactly once — no pinned duplicates.
+ */
+function getNavGroups(isTM: boolean, isSupplier: boolean): { groups: NavGroup[]; more: NavItem[] } {
+  if (isSupplier) {
+    return {
+      groups: [
+        { key: 'primary', items: [ITEMS.overview, ITEMS.estimates, ITEMS.purchaseOrders] },
+        { key: 'financials', label: 'Financials', items: [ITEMS.invoices, ITEMS.returns] },
+      ],
+      more: [ITEMS.projectInfo, ITEMS.settings],
+    };
+  }
+
+  return {
+    groups: [
+      { key: 'primary', items: [ITEMS.overview, ITEMS.changeOrders(isTM), ITEMS.invoices] },
+      {
+        key: 'financials',
+        label: 'Financials',
+        items: [ITEMS.purchaseOrders, ...(!isTM ? [ITEMS.sov] : []), ITEMS.estimates],
+      },
+      { key: 'field', label: 'Field', items: [ITEMS.schedule, ITEMS.dailyLog] },
+    ],
+    more: [
+      ITEMS.rfis,
+      ITEMS.returns,
+      ITEMS.backcharges,
+      ITEMS.paymentApps,
+      ITEMS.projectInfo,
+      ITEMS.settings,
+    ],
+  };
+}
 
 function AttentionBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -111,21 +117,21 @@ function NavRow({
   active,
   projectId,
   attentionCount,
-  pinned,
 }: {
   item: NavItem;
   active: boolean;
   projectId: string;
   attentionCount?: number;
-  pinned?: boolean;
 }) {
   const navigate = useNavigate();
   const enabled = useFeatureEnabled(item.featureKey as any);
   if (item.featureKey && !enabled) return null;
   const Icon = item.icon;
+  const hasBadge = !!attentionCount && attentionCount > 0;
   return (
     <button
       onClick={() => navigate(`/project/${projectId}/${item.route}`)}
+      title={item.premium ? `${item.label} — premium` : item.label}
       className={cn(
         'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full',
         active
@@ -135,9 +141,12 @@ function NavRow({
     >
       <Icon className="w-4 h-4 shrink-0" strokeWidth={1.8} />
       <span className="truncate flex-1">{item.label}</span>
-      {pinned && !active && <Pin className="w-3 h-3 text-slate-500 shrink-0" />}
-      {attentionCount && attentionCount > 0 ? <AttentionBadge count={attentionCount} /> : null}
-      {item.premium && <Lock className="w-3 h-3 text-slate-500 shrink-0" />}
+      {/* One trailing glyph max: an attention badge outranks the premium lock. */}
+      {hasBadge ? (
+        <AttentionBadge count={attentionCount!} />
+      ) : item.premium ? (
+        <Lock className="w-3 h-3 text-slate-500 shrink-0" />
+      ) : null}
     </button>
   );
 }
@@ -163,23 +172,23 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
   const pathParts = location.pathname.split('/');
   const activeSection = pathParts[3] || 'overview';
 
-  const sections = useMemo(() => getNavSections(isTM), [isTM]);
+  const { groups, more } = useMemo(() => getNavGroups(isTM, isSupplier), [isTM, isSupplier]);
 
-  // Flat list of every visible item for pinned + search filtering.
   const allItems = useMemo(
-    () => sections.flatMap((s) => s.items.filter((i) => !(i.hideForSupplier && isSupplier))),
-    [sections, isSupplier]
+    () => [...groups.flatMap((g) => g.items), ...more],
+    [groups, more]
   );
 
-  const pinnedKeys = isSupplier ? PINNED_KEYS_SUPPLIER : PINNED_KEYS_DEFAULT;
-  const pinnedItems = pinnedKeys
-    .map((k) => allItems.find((i) => i.key === k))
-    .filter((i): i is NavItem => !!i);
+  // Keep "More" open while the user is on one of its pages.
+  const moreHasActive = more.some((i) => i.route === activeSection);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const showMore = moreOpen || moreHasActive;
 
   const q = query.trim().toLowerCase();
-  const searchResults = q
-    ? allItems.filter((i) => i.label.toLowerCase().includes(q))
-    : null;
+  const searchResults = q ? allItems.filter((i) => i.label.toLowerCase().includes(q)) : null;
+
+  // Any attention count that lives in the collapsed "More" drawer.
+  const moreAttention = more.reduce((sum, i) => sum + (attentionCounts[i.route] || 0), 0);
 
   if (!id) return null;
 
@@ -222,56 +231,46 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
               ))
             )}
           </div>
-        ) : isSupplier ? (
-          /* Suppliers get a single flat list — only ~6 destinations, no pinned/sections noise. */
-          <div className="space-y-0.5 mt-2">
-            {allItems.map((item) => (
-              <NavRow
-                key={item.key}
-                item={item}
-                active={activeSection === item.route}
-                projectId={id}
-                attentionCount={attentionCounts[item.route]}
-              />
-            ))}
-          </div>
         ) : (
           <>
-            {/* Pinned */}
-            {pinnedItems.length > 0 && (
-              <div className="mt-2 mb-1">
-                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Pinned
-                </div>
+            {groups.map((group) => (
+              <div key={group.key} className={cn(group.label ? 'mt-3' : 'mt-2')}>
+                {group.label && (
+                  <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    {group.label}
+                  </div>
+                )}
                 <div className="space-y-0.5">
-                  {pinnedItems.map((item) => (
+                  {group.items.map((item) => (
                     <NavRow
-                      key={`pin-${item.key}`}
+                      key={item.key}
                       item={item}
                       active={activeSection === item.route}
                       projectId={id}
                       attentionCount={attentionCounts[item.route]}
-                      pinned
                     />
                   ))}
                 </div>
               </div>
-            )}
+            ))}
 
-            {/* Flat sections with plain labels — no accordions */}
-            {sections.map((section) => {
-              const visibleItems = section.items.filter(
-                (item) => !(item.hideForSupplier && isSupplier)
-              );
-              if (visibleItems.length === 0) return null;
-
-              return (
-                <div key={section.key} className="mt-2">
-                  <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    {section.label}
-                  </div>
-                  <div className="space-y-0.5">
-                    {visibleItems.map((item) => (
+            {/* Long tail — collapsed until needed */}
+            {more.length > 0 && (
+              <div className="mt-3">
+                <button
+                  onClick={() => setMoreOpen((v) => !v)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full text-slate-400 hover:text-white hover:bg-white/10"
+                >
+                  <ChevronDown
+                    className={cn('w-4 h-4 shrink-0 transition-transform', !showMore && '-rotate-90')}
+                    strokeWidth={1.8}
+                  />
+                  <span className="flex-1">More</span>
+                  {!showMore && moreAttention > 0 && <AttentionBadge count={moreAttention} />}
+                </button>
+                {showMore && (
+                  <div className="space-y-0.5 mt-0.5">
+                    {more.map((item) => (
                       <NavRow
                         key={item.key}
                         item={item}
@@ -281,9 +280,9 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
                       />
                     ))}
                   </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            )}
           </>
         )}
       </nav>
