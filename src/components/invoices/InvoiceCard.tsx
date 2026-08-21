@@ -97,7 +97,15 @@ export function InvoiceCard({
       <div className="pl-4 pr-3.5 py-3.5">
         <div className="mb-3">
           <div className="flex items-start justify-between">
-            <h4 className="font-mono font-medium text-sm">{invoice.invoice_number}</h4>
+            <div className="flex items-center gap-2 min-w-0">
+              <h4 className="font-mono font-medium text-sm truncate">{invoice.invoice_number}</h4>
+              {(invoice.co_ids?.length ?? 0) > 0 && (
+                <Badge variant="outline" className="text-[0.6rem] uppercase tracking-wider shrink-0">
+                  {invoice.co_ids!.length > 1 ? `${invoice.co_ids!.length} COs` : 'Change order'}
+                </Badge>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <div className="hidden sm:block">
                 <HoverActions actions={hoverActions} />

@@ -92,6 +92,12 @@ export function InvoiceRow({
         <div className="flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             <span className="font-mono text-sm font-medium truncate">{invoice.invoice_number}</span>
+            {(invoice.co_ids?.length ?? 0) > 0 && (
+              <span className="shrink-0 px-1.5 py-0.5 rounded border border-border text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {invoice.co_ids!.length > 1 ? `${invoice.co_ids!.length} COs` : 'CO'}
+              </span>
+            )}
+
             <span
               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
               style={{ color: accent, backgroundColor: `${accent}1a` }}

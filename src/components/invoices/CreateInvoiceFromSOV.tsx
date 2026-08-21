@@ -29,6 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getContractDisplayName } from '@/hooks/useContractSOV';
+import { buildInvoiceNumber } from '@/lib/invoiceNumber';
+
 
 interface Contract {
   id: string;
@@ -349,29 +351,15 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       .eq('id', projectId)
       .single();
 
-    const projectCode = getProjectCode(project?.name);
-    const fromInitials = getOrgInitials(contract.from_org_name);
-    const toInitials = getOrgInitials(contract.to_org_name);
-    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}`;
-    
-    const { data } = await supabase
-      .from('invoices')
-      .select('invoice_number')
-      .eq('project_id', projectId);
-    
-    let maxNumber = 0;
-    if (data && data.length > 0) {
-      const prefixPattern = new RegExp(`^${prefix}-(\\d+)$`);
-      data.forEach(inv => {
-        const match = inv.invoice_number.match(prefixPattern);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxNumber) maxNumber = num;
-        }
-      });
-    }
-    setInvoiceNumber(`${prefix}-${(maxNumber + 1).toString().padStart(4, '0')}`);
+    setInvoiceNumber(await buildInvoiceNumber({
+      projectId,
+      projectName: project?.name,
+      fromOrgName: contract.from_org_name,
+      toOrgName: contract.to_org_name,
+      coNumber: co?.co_number ?? null,
+    }));
   };
+
 
   // Get the selected contract and its SOV. In CO mode, fall back to allContracts
   // because the CO's parent contract may be filtered out (e.g., contract_sum=0).
