@@ -51,6 +51,8 @@ interface DashboardProjectListProps {
   onArchive: (projectId: string) => void;
   onUnarchive: (projectId: string) => void;
   onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
+  /** When true, render `projects` as-is (caller already filtered) and hide the status tabs. */
+  preFiltered?: boolean;
 }
 
 const filters: { key: ProjectStatusFilter; label: string }[] = [
