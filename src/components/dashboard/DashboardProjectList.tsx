@@ -221,7 +221,7 @@ export function DashboardProjectList({
       return projects.filter((p) => p.status === 'setup' || p.status === 'draft');
     }
     return projects.filter((p) => p.status === statusFilter);
-  }, [projects, statusFilter]);
+  }, [projects, statusFilter, preFiltered]);
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC' || orgType === 'SUPPLIER';
 
