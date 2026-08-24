@@ -220,8 +220,64 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // The viewer's GC org on this project (null when the viewer is not the GC).
   const [gcOrgId, setGcOrgId] = useState<string | null>(null);
 
+  const resetVolatileFinancialState = () => {
+    setViewerRole(isSupplier ? 'Supplier' : 'Trade Contractor');
+    setContracts([]);
+    setUserOrgIds([]);
+    setBilledToDate(0);
+    setMaterialEstimate(0);
+    setMaterialOrdered(0);
+    setTotalPaidToFC(0);
+    setSupplierOrderValue(0);
+    setSupplierInvoiced(0);
+    setSupplierPaid(0);
+    setRecentInvoices([]);
+    setFcParticipants([]);
+    setMaterialEstimateTotal(null);
+    setIsTCMaterialResponsible(false);
+    setIsGCMaterialResponsible(false);
+    setApprovedEstimateSum(0);
+    setApprovedCORevenue(0);
+    setApprovedCOCost(0);
+    setPendingCOExposure(0);
+    setPendingCORevenue(0);
+    setPendingCOCost(0);
+    setApprovedWOTotal(0);
+    setIsDesignatedSupplier(false);
+    setIsTCSelfPerforming(false);
+    setTotalPaid(0);
+    setMaterialDelivered(0);
+    setMaterialOrderedPending(0);
+    setActualLaborCost(0);
+    setLaborBudget(null);
+    setOwnerContractValue(null);
+    setMaterialMarkupType(null);
+    setMaterialMarkupValue(null);
+    setReceivablesInvoiced(0);
+    setReceivablesCollected(0);
+    setReceivablesRetainage(0);
+    setPayablesInvoiced(0);
+    setPayablesPaid(0);
+    setPayablesRetainage(0);
+    setReceivablesPendingAmount(0);
+    setReceivablesPendingCount(0);
+    setPayablesPendingAmount(0);
+    setPayablesPendingCount(0);
+    setPayablesPendingInvoices([]);
+    setCoCostBreakdown(emptyBreakdown);
+    setCoPendingCostBreakdown(emptyBreakdown);
+    setCoMissingOwnerBudget(0);
+    setCoSellingAtLoss(0);
+    setMaterialInvoiced(0);
+    setMaterialPaid(0);
+    setGcPayablesInvoiced(0);
+    setOwnerBillingsTotal(0);
+    setOwnerBillingsCollected(0);
+    setGcOrgId(null);
+  };
 
   const fetchData = async () => {
+    resetVolatileFinancialState();
     if (!user || !projectId) { setLoading(false); return; }
     setLoading(true);
 
