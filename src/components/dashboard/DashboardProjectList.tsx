@@ -234,7 +234,7 @@ export function DashboardProjectList({
       </div>
 
       {/* Status Filter Tabs */}
-      <div className="px-4 pb-2.5 pill-row">
+      <div className={cn('px-4 pb-2.5 pill-row', preFiltered && 'hidden')}>
         {filters.map((f) => (
           <button
             key={f.key}
