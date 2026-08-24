@@ -214,11 +214,8 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
    * never what the owner pays, so an unpriced CO earns 0 revenue (and shows as a
    * margin leak) instead of silently borrowing the TC number.
    */
-  const coOwnerValue = (co: any) => co.gc_budget || 0;
-  const coIsPriced = (co: any) => (co.gc_budget || 0) > 0;
   const coRevenueTotal = financials.approvedCORevenue;
   const coCostTotal = financials.approvedCOCost;
-  const pendingCOCostTotal = financials.pendingCOCost;
   const coWord = isTM ? 'WO' : 'CO';
 
   // ─── RFIs ───
@@ -428,7 +425,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           paidParties: `${tcName} + suppliers`,
           approvedCOCount: approvedCOs.length,
           pendingCOCount: pendingCOs.length,
-          coWord: isTM ? 'WO' : 'CO',
+          coWord,
         }}
       />
 
