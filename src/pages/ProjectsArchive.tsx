@@ -172,6 +172,7 @@ export default function ProjectsArchive() {
         ) : (
           <DashboardProjectList
             projects={visibleProjects}
+            preFiltered
             statusFilter={(tab === 'all' ? 'active' : tab) as ProjectStatusFilter}
             onStatusFilterChange={(s) => setTab(s as ArchiveTab)}
             statusCounts={statusCounts}

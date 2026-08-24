@@ -51,6 +51,8 @@ interface DashboardProjectListProps {
   onArchive: (projectId: string) => void;
   onUnarchive: (projectId: string) => void;
   onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
+  /** When true, render `projects` as-is (caller already filtered) and hide the status tabs. */
+  preFiltered?: boolean;
 }
 
 const filters: { key: ProjectStatusFilter; label: string }[] = [
@@ -209,15 +211,17 @@ export function DashboardProjectList({
   onArchive,
   onUnarchive,
   onStatusChange,
+  preFiltered = false,
 }: DashboardProjectListProps) {
   const navigate = useNavigate();
 
   const filteredProjects = useMemo(() => {
+    if (preFiltered) return projects;
     if (statusFilter === 'setup') {
       return projects.filter((p) => p.status === 'setup' || p.status === 'draft');
     }
     return projects.filter((p) => p.status === statusFilter);
-  }, [projects, statusFilter]);
+  }, [projects, statusFilter, preFiltered]);
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC' || orgType === 'SUPPLIER';
 
@@ -230,7 +234,7 @@ export function DashboardProjectList({
       </div>
 
       {/* Status Filter Tabs */}
-      <div className="px-4 pb-2.5 pill-row">
+      <div className={cn('px-4 pb-2.5 pill-row', preFiltered && 'hidden')}>
         {filters.map((f) => (
           <button
             key={f.key}
