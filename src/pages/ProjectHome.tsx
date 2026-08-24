@@ -33,7 +33,6 @@ import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { ProjectOverviewHero } from '@/components/project/ProjectOverviewHero';
 
-import { BillingCashCard } from '@/components/project/BillingCashCard';
 import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
@@ -41,11 +40,6 @@ import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard'
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
 import { ResetSetupDialog } from '@/components/project/ResetSetupDialog';
 
-// New redesigned overview components
-import { ProjectFinancialCommand } from '@/components/project/ProjectFinancialCommand';
-import { MaterialsCommandCenter } from '@/components/project/MaterialsCommandCenter';
-import { COImpactCard } from '@/components/project/COImpactCard';
-import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';
@@ -405,7 +399,13 @@ export default function ProjectHome() {
                       <ProjectReadinessCard readiness={readiness} />
                     )}
 
-                    {isFC ? (
+                    {financials.loading ? (
+                      <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" aria-label="Loading project financials">
+                        {[...Array(6)].map((_, i) => (
+                          <Skeleton key={i} className="h-40 rounded-2xl" />
+                        ))}
+                      </div>
+                    ) : isFC ? (
                       <FCProjectOverview
                         projectId={id!}
                         projectName={project.name}

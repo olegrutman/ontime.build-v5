@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FileText, ClipboardEdit, ShoppingCart, HelpCircle, Hammer, type LucideIcon } from 'lucide-react';
-import { C, fontLabel } from '@/components/shared/KpiCard';
+import { Button } from '@/components/ui/button';
 
 type Role = 'GC' | 'TC' | 'FC';
 
@@ -19,9 +19,9 @@ interface Action {
 }
 
 /**
- * Project Overview quick-actions grid.
- * Equal-width cells (2 up on mobile, 4 up from sm) with neutral card styling —
- * no colored rails, so the accent colour stays reserved for real alerts.
+ * Project Overview quick-actions command bar.
+ * Uses the shared Button primitive and semantic tokens so it stays aligned with
+ * the command-center overview and never falls back to the old inline-card style.
  */
 export function QuickActionsBar({ projectId, role, isTM = false, onNavigate }: Props) {
   const navigate = useNavigate();
@@ -60,35 +60,24 @@ export function QuickActionsBar({ projectId, role, isTM = false, onNavigate }: P
 
   return (
     <div
-      className="grid grid-cols-2 sm:grid-cols-4 gap-2"
-      style={fontLabel}
+      className="grid grid-cols-2 gap-2 sm:grid-cols-4"
       aria-label="Project quick actions"
     >
       {actions.map((a) => {
         const Icon = a.icon;
         return (
-          <button
+          <Button
             key={a.key}
+            type="button"
+            variant="outline"
             onClick={a.onClick}
-            className="flex items-center gap-2 transition-colors hover:bg-muted/60 active:bg-muted"
-            style={{
-              padding: '11px 12px',
-              borderRadius: 12,
-              border: `1px solid ${C.border}`,
-              background: '#fff',
-              color: C.ink,
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.4px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              ...fontLabel,
-            }}
+            className="h-11 justify-start rounded-2xl border-border bg-card px-3 text-[0.68rem] font-bold uppercase tracking-normal text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground active:bg-muted"
           >
-            <Icon size={15} style={{ color: C.faint, flexShrink: 0 }} />
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Icon className="h-3.5 w-3.5" />
+            </span>
             <span className="truncate">{a.label}</span>
-          </button>
+          </Button>
         );
       })}
     </div>
