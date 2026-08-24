@@ -33,7 +33,6 @@ import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { ProjectOverviewHero } from '@/components/project/ProjectOverviewHero';
 
-import { BillingCashCard } from '@/components/project/BillingCashCard';
 import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
@@ -41,11 +40,6 @@ import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard'
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
 import { ResetSetupDialog } from '@/components/project/ResetSetupDialog';
 
-// New redesigned overview components
-import { ProjectFinancialCommand } from '@/components/project/ProjectFinancialCommand';
-import { MaterialsCommandCenter } from '@/components/project/MaterialsCommandCenter';
-import { COImpactCard } from '@/components/project/COImpactCard';
-import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';

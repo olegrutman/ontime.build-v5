@@ -5,14 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
-import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, BarRow, THead, TdN, TdM, TRow, WarnItem, cellStyle, type PillType } from '@/components/shared/KpiCard';
-import { KpiGrid } from '@/components/shared/KpiGrid';
+import { C, fontLabel, fmt, WarnItem, type PillType } from '@/components/shared/KpiCard';
 import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
 
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
-import { LadderCard } from '@/components/shared/LadderCard';
-import { Sparkline } from '@/components/shared/Sparkline';
-import { useProjectMonthlyBilling } from '@/hooks/useProjectMonthlyBilling';
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -143,13 +139,6 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const totalInvoiced = myInvoices
     .filter((i: any) => ['SUBMITTED', 'APPROVED', 'PAID'].includes(i.status))
     .reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
-
-
-  // 6-month invoice trend for sparklines
-  const { data: monthly = [] } = useProjectMonthlyBilling(projectId);
-  const billedSeries = monthly.map(m => m.billed);
-  const paidSeries = monthly.map(m => m.paid);
-  const hasTrend = monthly.some(m => m.billed > 0 || m.paid > 0);
 
   // Change orders / Work orders — scope + status only. No money columns.
   const { data: changeOrders = [] } = useQuery({

@@ -8,10 +8,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import type { OrgType } from '@/types/organization';
-import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, THead, TdN, TdM, TRow, WarnItem, type PillType } from '@/components/shared/KpiCard';
+import { C, fontLabel, fmt, type PillType } from '@/components/shared/KpiCard';
 import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
 
-import { KpiGrid } from '@/components/shared/KpiGrid';
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
