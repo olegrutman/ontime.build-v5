@@ -2,8 +2,8 @@
 // Enqueues into the same pgmq queue that `process-email-queue` drains.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const SENDER_DOMAIN = 'pm.ontime.build';
-const FROM = 'OnTime <noreply@pm.ontime.build>';
+const SENDER_DOMAIN = 'notify.pm.ontime.build';
+const FROM = 'OnTime <noreply@notify.pm.ontime.build>';
 
 export function serviceClient() {
   return createClient(
