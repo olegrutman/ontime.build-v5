@@ -211,10 +211,12 @@ export function DashboardProjectList({
   onArchive,
   onUnarchive,
   onStatusChange,
+  preFiltered = false,
 }: DashboardProjectListProps) {
   const navigate = useNavigate();
 
   const filteredProjects = useMemo(() => {
+    if (preFiltered) return projects;
     if (statusFilter === 'setup') {
       return projects.filter((p) => p.status === 'setup' || p.status === 'draft');
     }
