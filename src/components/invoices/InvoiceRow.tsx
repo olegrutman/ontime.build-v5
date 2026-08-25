@@ -40,7 +40,8 @@ function getAccent(status: string): string {
 }
 
 function ageDays(invoice: Invoice): number | null {
-  if (invoice.status === 'DRAFT' || invoice.status === 'PAID') return null;
+  if (invoice.status === 'DRAFT' || invoice.status === 'PAID' || invoice.status === 'VOIDED') return null;
+
   const ref = invoice.status === 'APPROVED'
     ? (invoice.approved_at || invoice.submitted_at || invoice.created_at)
     : (invoice.submitted_at || invoice.created_at);
