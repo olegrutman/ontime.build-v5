@@ -115,8 +115,9 @@ export function POTableView({
             <TableHead className="text-center"><SortHeader label="Items" sortKeyVal="items" /></TableHead>
             <TableHead><SortHeader label="Status" sortKeyVal="status" /></TableHead>
             <TableHead className="text-right"><SortHeader label="Total" sortKeyVal="total" /></TableHead>
-            <TableHead><SortHeader label="Date" sortKeyVal="created_at" /></TableHead>
+            <TableHead className="min-w-[200px]">Lifecycle</TableHead>
             <TableHead className="text-center"><SortHeader label="Age" sortKeyVal="age" /></TableHead>
+
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
