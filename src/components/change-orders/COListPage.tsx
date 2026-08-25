@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import { coLabel, coAbbrev, docTypeFromMode } from '@/lib/coLabel';
 
 import { COBoardCard } from './COBoardCard';
+import { COMoneyBar } from './COMoneyBar';
+import { CORow } from './CORow';
+
 
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
