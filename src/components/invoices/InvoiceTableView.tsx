@@ -8,16 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusColumn, INVOICE_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { Invoice } from '@/types/invoice';
+import { InvoiceMilestoneTrail } from './InvoiceMilestoneTrail';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+
 
 type SortKey =
   | 'invoice_number' | 'created_at' | 'total_amount' | 'status' | 'age'
   | 'submitted_at' | 'approved_at' | 'paid_at';
 
 const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
-const shortDate = (v: string | null | undefined) =>
-  v ? format(new Date(v), 'MMM d, yyyy') : '—';
 type SortDir = 'asc' | 'desc';
 
 interface InvoiceTableViewProps {
@@ -31,7 +31,8 @@ interface InvoiceTableViewProps {
 }
 
 function getAgeDays(invoice: Invoice): number | null {
-  if (invoice.status === 'DRAFT' || invoice.status === 'PAID') return null;
+  if (invoice.status === 'DRAFT' || invoice.status === 'PAID' || invoice.status === 'VOIDED') return null;
+
   const ref = invoice.status === 'APPROVED'
     ? (invoice.approved_at || invoice.submitted_at || invoice.created_at)
     : (invoice.submitted_at || invoice.created_at);
@@ -109,9 +110,10 @@ export function InvoiceTableView({
             <TableHead>Billing Period</TableHead>
             <TableHead className="text-right"><SortHeader label="Amount" sortKeyVal="total_amount" /></TableHead>
             <TableHead><SortHeader label="Status" sortKeyVal="status" /></TableHead>
-            <TableHead><SortHeader label="Submitted" sortKeyVal="submitted_at" /></TableHead>
-            <TableHead><SortHeader label="Approved" sortKeyVal="approved_at" /></TableHead>
-            <TableHead><SortHeader label="Paid" sortKeyVal="paid_at" /></TableHead>
+            <TableHead>
+              <SortHeader label="Milestones (S / A / P)" sortKeyVal="paid_at" />
+            </TableHead>
+
             <TableHead className="text-center"><SortHeader label="Age" sortKeyVal="age" /></TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -119,7 +121,7 @@ export function InvoiceTableView({
         <TableBody>
           {sorted.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                 No invoices found
               </TableCell>
             </TableRow>
@@ -127,14 +129,18 @@ export function InvoiceTableView({
             const { canSubmit, canApprove } = getPermissions(invoice);
             const age = getAgeDays(invoice);
             const isLoading = loadingId === invoice.id;
+            const isVoided = invoice.status === 'VOIDED';
 
             return (
               <TableRow
                 key={invoice.id}
-                className="cursor-pointer"
+                className={cn('cursor-pointer', isVoided && 'opacity-55')}
                 onClick={() => onView(invoice)}
               >
-                <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                <TableCell className={cn('font-medium', isVoided && 'line-through')}>
+                  {invoice.invoice_number}
+                </TableCell>
+
                 <TableCell className="text-muted-foreground">
                   {format(new Date(invoice.created_at), 'MMM d, yyyy')}
                 </TableCell>
@@ -153,17 +159,10 @@ export function InvoiceTableView({
                     disabled
                   />
                 </TableCell>
-                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
-                  {shortDate(invoice.submitted_at)}
+                <TableCell>
+                  <InvoiceMilestoneTrail invoice={invoice} />
                 </TableCell>
-                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
-                  {shortDate(invoice.approved_at)}
-                </TableCell>
-                <TableCell className="text-xs font-mono tabular-nums">
-                  {invoice.paid_at
-                    ? <span className="text-emerald-700 dark:text-emerald-300 font-semibold">{shortDate(invoice.paid_at)}</span>
-                    : <span className="text-muted-foreground">—</span>}
-                </TableCell>
+
                 <TableCell className="text-center">
                   <AgeBadge days={age} />
                 </TableCell>
