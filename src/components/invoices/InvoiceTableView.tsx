@@ -109,9 +109,10 @@ export function InvoiceTableView({
             <TableHead>Billing Period</TableHead>
             <TableHead className="text-right"><SortHeader label="Amount" sortKeyVal="total_amount" /></TableHead>
             <TableHead><SortHeader label="Status" sortKeyVal="status" /></TableHead>
-            <TableHead><SortHeader label="Submitted" sortKeyVal="submitted_at" /></TableHead>
-            <TableHead><SortHeader label="Approved" sortKeyVal="approved_at" /></TableHead>
-            <TableHead><SortHeader label="Paid" sortKeyVal="paid_at" /></TableHead>
+            <TableHead>
+              <SortHeader label="Milestones (S / A / P)" sortKeyVal="paid_at" />
+            </TableHead>
+
             <TableHead className="text-center"><SortHeader label="Age" sortKeyVal="age" /></TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
