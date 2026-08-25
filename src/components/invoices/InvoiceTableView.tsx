@@ -154,17 +154,10 @@ export function InvoiceTableView({
                     disabled
                   />
                 </TableCell>
-                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
-                  {shortDate(invoice.submitted_at)}
+                <TableCell>
+                  <InvoiceMilestoneTrail invoice={invoice} />
                 </TableCell>
-                <TableCell className="text-muted-foreground text-xs font-mono tabular-nums">
-                  {shortDate(invoice.approved_at)}
-                </TableCell>
-                <TableCell className="text-xs font-mono tabular-nums">
-                  {invoice.paid_at
-                    ? <span className="text-emerald-700 dark:text-emerald-300 font-semibold">{shortDate(invoice.paid_at)}</span>
-                    : <span className="text-muted-foreground">—</span>}
-                </TableCell>
+
                 <TableCell className="text-center">
                   <AgeBadge days={age} />
                 </TableCell>
