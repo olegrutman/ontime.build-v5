@@ -7,9 +7,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { POStatusBadge } from './POStatusBadge';
+import { POLifecycleMeter, poLifecycleLabel } from './POLifecycleMeter';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+
 
 type SortKey = 'po_number' | 'supplier' | 'items' | 'status' | 'total' | 'created_at' | 'age';
 type SortDir = 'asc' | 'desc';
@@ -113,8 +115,9 @@ export function POTableView({
             <TableHead className="text-center"><SortHeader label="Items" sortKeyVal="items" /></TableHead>
             <TableHead><SortHeader label="Status" sortKeyVal="status" /></TableHead>
             <TableHead className="text-right"><SortHeader label="Total" sortKeyVal="total" /></TableHead>
-            <TableHead><SortHeader label="Date" sortKeyVal="created_at" /></TableHead>
+            <TableHead className="min-w-[200px]">Lifecycle</TableHead>
             <TableHead className="text-center"><SortHeader label="Age" sortKeyVal="age" /></TableHead>
+
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -159,16 +162,15 @@ export function POTableView({
                 <TableCell className="text-right font-semibold">
                   {showPricing && po.po_total ? formatCurrency(po.po_total) : '—'}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  <div className="flex flex-col">
-                    <span>{format(new Date(po.created_at), 'MMM d, yyyy')}</span>
-                    {po.ready_for_delivery_at && (
-                      <span className="text-xs text-blue-600 dark:text-blue-400">
-                        Delivers {format(new Date(po.ready_for_delivery_at), 'MMM d')}
-                      </span>
-                    )}
+                <TableCell>
+                  <div className="min-w-[200px]">
+                    <POLifecycleMeter po={po} />
+                    <p className="mt-1 text-[0.6rem] uppercase tracking-wider text-muted-foreground truncate">
+                      {poLifecycleLabel(po)} · created {format(new Date(po.created_at), 'MMM d')}
+                    </p>
                   </div>
                 </TableCell>
+
                 <TableCell className="text-center">
                   <AgeBadge days={age} />
                 </TableCell>

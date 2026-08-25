@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ViewMode, ViewSwitcher } from '@/components/ui/view-switcher';
 import { toast } from 'sonner';
-import { POActionBar, POCard, PODetail, POTableView } from '@/components/purchase-orders';
+import { POMoneyBar, POCard, PODetail, POTableView } from '@/components/purchase-orders';
 import { POWizardV2 } from '@/components/po-wizard-v2';
 import { SupplierEmailPrompt } from '@/components/purchase-orders/SupplierEmailPrompt';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
@@ -882,7 +882,13 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           </Alert>
         )}
 
-        <POActionBar purchaseOrders={purchaseOrders} isSupplier={isSupplier} hidePricing={hidePricing} />
+        <POMoneyBar
+          purchaseOrders={purchaseOrders}
+          isSupplier={isSupplier}
+          hidePricing={hidePricing}
+          invoicedPOIds={invoicedPOIds}
+        />
+
 
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
