@@ -18,8 +18,6 @@ type SortKey =
   | 'submitted_at' | 'approved_at' | 'paid_at';
 
 const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
-const shortDate = (v: string | null | undefined) =>
-  v ? format(new Date(v), 'MMM d, yyyy') : '—';
 type SortDir = 'asc' | 'desc';
 
 interface InvoiceTableViewProps {
