@@ -276,10 +276,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     setGcOrgId(null);
   };
 
-  const fetchData = async () => {
-    resetVolatileFinancialState();
+  const fetchData = async ({ reset = false }: { reset?: boolean } = {}) => {
+    if (reset) {
+      resetVolatileFinancialState();
+      setLoading(true);
+    }
     if (!user || !projectId) { setLoading(false); return; }
-    setLoading(true);
 
     try {
       // 1. Determine viewer role — reuse cached org roles from AuthProvider
@@ -339,7 +341,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
             id: inv.id, invoice_number: inv.invoice_number, status: inv.status, total_amount: inv.total_amount, created_at: inv.created_at,
           })));
         }
-        setLoading(false);
         return;
       }
 
@@ -731,11 +732,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
     } catch (error) {
       console.error('Error fetching project financials:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [projectId, user, isSupplier, supplierOrgId]);
+  useEffect(() => { fetchData({ reset: true }); }, [projectId, user, isSupplier, supplierOrgId]);
 
   // Derived
   // Filter out placeholder/stale contracts — prefer ones with a non-null trade and non-zero sum
@@ -921,7 +923,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     coMissingOwnerBudget, coSellingAtLoss,
     payablesPaidToSubs: Math.max(0, payablesPaid - materialPaid),
     recentInvoices, fcParticipants,
-    refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
+    refetch: () => { void fetchData({ reset: false }); }, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
     updateOwnerContract, updateMaterialMarkup,
   };
 }
