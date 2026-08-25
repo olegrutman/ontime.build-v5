@@ -882,7 +882,13 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           </Alert>
         )}
 
-        <POActionBar purchaseOrders={purchaseOrders} isSupplier={isSupplier} hidePricing={hidePricing} />
+        <POMoneyBar
+          purchaseOrders={purchaseOrders}
+          isSupplier={isSupplier}
+          hidePricing={hidePricing}
+          invoicedPOIds={invoicedPOIds}
+        />
+
 
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
