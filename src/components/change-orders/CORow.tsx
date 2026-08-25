@@ -43,7 +43,7 @@ export function CORow({ co, onClick, needsAction = false }: CORowProps) {
           <span className="rounded bg-muted px-2 py-0.5 font-mono text-[0.65rem] font-semibold text-muted-foreground">
             {co.co_number ?? '—'}
           </span>
-          <EntrySourcePill source={(co as { entry_source?: string }).entry_source} />
+          <EntrySourcePill source={(co as { entry_source?: 'picker_v3' | 'ai_intake' | 'guided_v4' | 'field_pn' | null }).entry_source} />
           {co.pricing_type && (
             <Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px]">
               {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
