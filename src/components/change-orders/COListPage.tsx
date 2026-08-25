@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { coLabel, coAbbrev, docTypeFromMode } from '@/lib/coLabel';
 
-import { COBoardCard } from './COBoardCard';
 import { COMoneyBar } from './COMoneyBar';
 import { CORow } from './CORow';
 
