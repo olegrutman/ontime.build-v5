@@ -20,7 +20,7 @@ import { CreateInvoiceFromCOs } from './CreateInvoiceFromCOs';
 import { InvoiceCard } from './InvoiceCard';
 import { InvoiceRow } from './InvoiceRow';
 import { InvoiceTableView } from './InvoiceTableView';
-import { InvoiceActionBar } from './InvoiceActionBar';
+import { InvoiceMoneyBar } from './InvoiceMoneyBar';
 
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
@@ -591,7 +591,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     <div className="space-y-4 sm:space-y-6">
       {renderSOVAlert()}
       {renderHeader(showCreate, title)}
-      <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
+      <InvoiceMoneyBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
     </div>
   );
@@ -734,7 +734,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       {renderSOVAlert()}
       {renderHeader(true)}
 
-      <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
+      <InvoiceMoneyBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
 
       <CreateInvoiceFromCOs

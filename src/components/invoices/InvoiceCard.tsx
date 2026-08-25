@@ -1,4 +1,5 @@
 import { invoiceMilestoneSummary } from './InvoiceTimeline';
+import { InvoiceMilestoneTrail } from './InvoiceMilestoneTrail';
 import { format, differenceInDays } from 'date-fns';
 import { Calendar, DollarSign, Eye, Edit, Download, Send, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -123,6 +124,7 @@ export function InvoiceCard({
           <p className="text-[11px] text-muted-foreground/80 mt-0.5">
             {invoiceMilestoneSummary(invoice)}
           </p>
+          <InvoiceMilestoneTrail invoice={invoice} className="mt-2" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm">

@@ -1,4 +1,5 @@
 import { invoiceMilestoneSummary } from './InvoiceTimeline';
+import { InvoiceMilestoneTrail } from './InvoiceMilestoneTrail';
 import { format, differenceInDays } from 'date-fns';
 import { MoreVertical, Send, CheckCircle, Edit, Trash2, Eye, Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -124,6 +125,7 @@ export function InvoiceRow({
             <p className="text-[11px] text-muted-foreground/80 truncate">
               {invoiceMilestoneSummary(invoice)}
             </p>
+            <InvoiceMilestoneTrail invoice={invoice} className="mt-1.5 max-w-[160px]" />
           </div>
 
           <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
