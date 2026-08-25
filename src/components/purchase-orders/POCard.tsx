@@ -184,18 +184,14 @@ export function POCard({
           </div>
         )}
 
-        {/* Delivery tracking */}
-        {po.delivered_at && (
-          <div className="mt-3 pt-3 border-t text-sm">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Truck className="h-3.5 w-3.5 text-green-600" />
-                Delivered
-              </span>
-              <span className="font-medium text-green-600">{format(new Date(po.delivered_at), 'MMM d')}</span>
-            </div>
-          </div>
-        )}
+        {/* Lifecycle */}
+        <div className="mt-3 pt-3 border-t">
+          <POLifecycleMeter po={po} />
+          <p className="mt-1.5 text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground">
+            {poLifecycleLabel(po)}
+          </p>
+        </div>
+
 
         {/* Action buttons */}
         {(showSubmitButton || showEditButton || showApprovalButtons) && (
