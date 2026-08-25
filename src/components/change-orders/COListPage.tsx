@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { coLabel, coAbbrev, docTypeFromMode } from '@/lib/coLabel';
 
-import { COBoardCard } from './COBoardCard';
+import { COMoneyBar } from './COMoneyBar';
+import { CORow } from './CORow';
+
 
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,7 +36,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const canCreateCO = usePermission('canCreateChangeOrders');
   // Navigate to the new Picker v3 full-page wizard
   const openNewPicker = () => navigate(`/project/${projectId}/change-orders/start`);
-  const [filter, setFilter] = useState<FilterKey>('in_progress');
+  const [filter, setFilter] = useState<FilterKey>('all');
   function handleCardClick(id: string) {
     navigate(`/project/${projectId}/change-orders/${id}`);
   }
@@ -110,82 +112,65 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     );
   }
 
+  const needsAction = (co: typeof changeOrders[number]) =>
+    (co.status === 'submitted' && co.org_id === orgId) ||
+    (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
+    (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId);
+
   return (
     <div className="space-y-4 pb-20 md:pb-0">
       {/* Page Header */}
-      <div className="co-light-shell p-3 sm:p-4 md:p-5 space-y-3 sm:space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-base sm:text-xl font-semibold text-foreground">{coLabel(dt, true)}</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{total === 0 ? `No ${coLabel(dt, true).toLowerCase()} yet` : `${total} total`}</p>
-          </div>
-
-          {canCreateCO && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                size="sm"
-                onClick={openNewPicker}
-                className="gap-1.5"
-                aria-label={`New ${coLabel(dt, false)}`}
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">New {coAbbrev(dt)}</span>
-              </Button>
-            </div>
-          )}
-
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">{coLabel(dt, true)}</h2>
+          <p className="mt-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {total === 0 ? `No ${coLabel(dt, true).toLowerCase()} yet` : `${total} total records`}
+          </p>
         </div>
 
-        {/* Filter pills */}
-        <div className="pill-row pb-1">
-          {([
-            { key: 'all', label: 'All', count: total },
-            { key: 'my_action', label: 'Action', count: stats.myActionCount },
-            { key: 'in_progress', label: 'Active', count: stats.inProgressCount },
-            { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
-            ...(stats.withdrawnCount > 0 ? [{ key: 'withdrawn_filter' as FilterKey, label: 'Withdrawn', count: stats.withdrawnCount }] : []),
-          ] as { key: FilterKey; label: string; count: number }[]).map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                'inline-flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors border whitespace-nowrap',
-                filter === f.key
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-card text-muted-foreground border-border hover:bg-accent',
-              )}
-            >
-              {f.label}
-              <span className="text-[11px] sm:text-xs tabular-nums opacity-70 ml-0.5">
-                {f.count}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Stats row */}
-        <div className="pill-row sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-3">
-          {[
-            { label: `Total ${coAbbrev(dt)} value`, value: `$${stats.totalValue.toLocaleString()}`, color: '#F5A623' },
-            { label: 'Pending', value: String(stats.pendingApproval), color: '#F59E0B' },
-            { label: 'Pricing', value: String(stats.awaitingPricing), color: '#3B82F6' },
-            { label: 'Approved', value: `$${stats.approvedBillableValue.toLocaleString()}`, color: '#10B981' },
-          ].map(tile => (
-            <div
-              key={tile.label}
-              className="bg-card rounded-lg px-2.5 py-2 sm:px-3 sm:py-2.5 border border-border shrink-0 min-w-[80px] sm:min-w-0"
-              style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
-            >
-              <p className="text-[9px] sm:text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium">{tile.label}</p>
-              <p className="text-foreground leading-none mt-1 text-sm sm:text-[1.25rem]" style={{ fontWeight: 900 }}>
-                {tile.value}
-              </p>
-            </div>
-          ))}
-        </div>
+        {canCreateCO && (
+          <Button
+            onClick={openNewPicker}
+            className="gap-1.5 shrink-0"
+            aria-label={`New ${coLabel(dt, false)}`}
+          >
+            <Plus className="h-4 w-4" />
+            New {coAbbrev(dt)}
+          </Button>
+        )}
       </div>
 
-      {/* Card Grid */}
+      {/* Money hero + metric tiles */}
+      {total > 0 && <COMoneyBar changeOrders={changeOrders} abbrev={coAbbrev(dt)} />}
+
+      {/* Filter pills */}
+      <div className="pill-row pb-1">
+        {([
+          { key: 'all', label: 'All', count: total },
+          { key: 'my_action', label: 'Action', count: stats.myActionCount },
+          { key: 'in_progress', label: 'Active', count: stats.inProgressCount },
+          { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
+          ...(stats.withdrawnCount > 0 ? [{ key: 'withdrawn_filter' as FilterKey, label: 'Withdrawn', count: stats.withdrawnCount }] : []),
+        ] as { key: FilterKey; label: string; count: number }[]).map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors border whitespace-nowrap',
+              filter === f.key
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-card text-muted-foreground border-border hover:bg-accent',
+            )}
+          >
+            {f.label}
+            <span className="text-[11px] sm:text-xs tabular-nums opacity-70 ml-0.5">
+              {f.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Ledger */}
       {total === 0 ? (
         <div className="co-light-shell flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
           <p className="text-lg font-medium text-foreground">No {coLabel(dt, true).toLowerCase()} yet</p>
@@ -197,18 +182,32 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
             </Button>
           )}
         </div>
+      ) : sortedCOs.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-border py-14 text-center">
+          <p className="text-sm font-semibold text-foreground">Nothing in this view</p>
+          <p className="mt-1 text-sm text-muted-foreground">Try a different filter above.</p>
+        </div>
       ) : (
-        <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
+        <div className="space-y-3">
+          {/* Column headers — desktop only */}
+          <div className="hidden md:grid md:grid-cols-12 md:gap-4 px-6 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="col-span-5">Description &amp; reference</div>
+            <div className="col-span-3">Approval trail</div>
+            <div className="col-span-2 text-right">Amount</div>
+            <div className="col-span-2 text-right">Age</div>
+          </div>
+
           {sortedCOs.map(co => (
-            <COBoardCard
+            <CORow
               key={co.id}
               co={co}
-              isActive={false}
               onClick={handleCardClick}
+              needsAction={needsAction(co)}
             />
           ))}
         </div>
       )}
+
 
       {/* Legacy wizard removed — now using Picker v3 full-page route */}
 
