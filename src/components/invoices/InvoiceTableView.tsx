@@ -122,7 +122,7 @@ export function InvoiceTableView({
         <TableBody>
           {sorted.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                 No invoices found
               </TableCell>
             </TableRow>
@@ -130,14 +130,18 @@ export function InvoiceTableView({
             const { canSubmit, canApprove } = getPermissions(invoice);
             const age = getAgeDays(invoice);
             const isLoading = loadingId === invoice.id;
+            const isVoided = invoice.status === 'VOIDED';
 
             return (
               <TableRow
                 key={invoice.id}
-                className="cursor-pointer"
+                className={cn('cursor-pointer', isVoided && 'opacity-55')}
                 onClick={() => onView(invoice)}
               >
-                <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                <TableCell className={cn('font-medium', isVoided && 'line-through')}>
+                  {invoice.invoice_number}
+                </TableCell>
+
                 <TableCell className="text-muted-foreground">
                   {format(new Date(invoice.created_at), 'MMM d, yyyy')}
                 </TableCell>
