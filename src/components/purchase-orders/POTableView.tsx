@@ -162,16 +162,15 @@ export function POTableView({
                 <TableCell className="text-right font-semibold">
                   {showPricing && po.po_total ? formatCurrency(po.po_total) : '—'}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  <div className="flex flex-col">
-                    <span>{format(new Date(po.created_at), 'MMM d, yyyy')}</span>
-                    {po.ready_for_delivery_at && (
-                      <span className="text-xs text-blue-600 dark:text-blue-400">
-                        Delivers {format(new Date(po.ready_for_delivery_at), 'MMM d')}
-                      </span>
-                    )}
+                <TableCell>
+                  <div className="min-w-[200px]">
+                    <POLifecycleMeter po={po} />
+                    <p className="mt-1 text-[0.6rem] uppercase tracking-wider text-muted-foreground truncate">
+                      {poLifecycleLabel(po)} · created {format(new Date(po.created_at), 'MMM d')}
+                    </p>
                   </div>
                 </TableCell>
+
                 <TableCell className="text-center">
                   <AgeBadge days={age} />
                 </TableCell>
