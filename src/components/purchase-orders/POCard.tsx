@@ -1,12 +1,14 @@
 import { format } from 'date-fns';
-import { Eye, Edit, Download, Send, Loader2, Lock, Truck, Receipt, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, Edit, Download, Send, Loader2, Lock, Receipt, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { POStatusBadge } from './POStatusBadge';
+import { POLifecycleMeter, poLifecycleLabel } from './POLifecycleMeter';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
 import { useState } from 'react';
+
 
 interface POCardProps {
   po: PurchaseOrder;
