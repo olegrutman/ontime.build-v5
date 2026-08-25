@@ -16,7 +16,6 @@ import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
 import { OverviewAttentionStrip } from '@/components/project/OverviewAttentionStrip';
 import { ProjectHealthHero, computeHealthStatus, buildHealthSummary } from '@/components/project/overview/ProjectHealthHero';
-import { OverviewSummaryStrip } from '@/components/project/overview/OverviewSummaryStrip';
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
 
 
@@ -488,62 +487,30 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       {/* Needs Attention — TOP placement, compact horizontal chips */}
       <OverviewAttentionStrip warnings={warnings} projectName={projectName} onNavigate={onNavigate} />
 
-      {/* ─── Project Health Hero + 3-zone Summary ─── */}
+      {/* ─── Project Health Hero — sourced only from the canonical ledger ─── */}
       {(() => {
-        const approvedNet = approvedCoRevenue - approvedCoCost;
-        const pendingNetAtRisk = financials.pendingCONetAtRisk;
-        const projectedMargin = revisedGCTotal - revisedFCTotal;
-        const projectedMarginPct = revisedGCTotal > 0 ? (projectedMargin / revisedGCTotal) * 100 : 0;
-        const cashPosition = financials.marginToDateAmount;
-        const hasContract = revisedGCTotal > 0;
-        const status = computeHealthStatus(projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
+        const ledger = financials.ledger;
+        const approvedNet = ledger.coNetMargin.value;
+        const pendingNetAtRisk = ledger.pendingCONetAtRisk.value;
+        const cashPosition = ledger.marginToDate.value;
+        const hasContract = ledger.revisedContract.known;
+        const status = computeHealthStatus(ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
         const summary = buildHealthSummary({
-          projectedMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
+          projectedMarginPct: ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
           roleLabel: gcName,
         });
         return (
-          <>
-            <ProjectHealthHero
-              status={status}
-              projectedMargin={projectedMargin}
-              projectedMarginPct={projectedMarginPct}
-              summary={summary}
-              miniStats={[
-                { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
-                { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
-                { label: 'Pending at Risk', value: fmt(pendingNetAtRisk), tone: pendingNetAtRisk >= 0 ? 'neutral' : 'neg' },
-              ]}
-            />
-            <OverviewSummaryStrip
-              receivablePartyLabel={gcName}
-              payablePartyLabel={`${fcName || 'Field Crew'} + suppliers`}
-              contract={{
-                label: 'Trade Contract',
-                revisedIn: revisedGCTotal,
-                revisedOut: revisedFCTotal,
-                margin: projectedMargin,
-                marginPct: projectedMarginPct,
-                materialCommitment,
-                materialLabel,
-              }}
-              cashFlow={{
-                received: totalReceivedFromGC,
-                paid: totalPaidToFC,
-                cashPosition,
-                paidToSuppliers: financials.materialPaid,
-                paidToSubs: Math.max(0, totalPaidToFC - financials.materialPaid),
-                owedToYou: Math.max(0, revisedGCTotal - totalReceivedFromGC),
-                youOwe: Math.max(0, revisedFCTotal - totalPaidToFC),
-                retainage: financials.receivablesRetainage,
-              }}
-              changeOrders={{
-                approvedCount: approvedCOs.length,
-                pendingCount: pendingCOs.length,
-                approvedNet,
-                pendingNetAtRisk,
-              }}
-            />
-          </>
+          <ProjectHealthHero
+            status={status}
+            projectedMargin={ledger.forecastMargin.value}
+            projectedMarginPct={ledger.forecastMarginPct}
+            summary={summary}
+            miniStats={[
+              { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
+              { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
+              { label: 'Pending at Risk', value: fmt(pendingNetAtRisk), tone: pendingNetAtRisk >= 0 ? 'neutral' : 'neg' },
+            ]}
+          />
         );
       })()}
 
