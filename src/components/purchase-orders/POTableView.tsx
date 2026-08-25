@@ -7,9 +7,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { POStatusBadge } from './POStatusBadge';
+import { POLifecycleMeter, poLifecycleLabel } from './POLifecycleMeter';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+
 
 type SortKey = 'po_number' | 'supplier' | 'items' | 'status' | 'total' | 'created_at' | 'age';
 type SortDir = 'asc' | 'desc';
