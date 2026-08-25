@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusColumn, INVOICE_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { Invoice } from '@/types/invoice';
+import { InvoiceMilestoneTrail } from './InvoiceMilestoneTrail';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+
 
 type SortKey =
   | 'invoice_number' | 'created_at' | 'total_amount' | 'status' | 'age'
