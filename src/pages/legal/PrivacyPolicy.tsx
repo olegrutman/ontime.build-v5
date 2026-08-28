@@ -60,9 +60,33 @@ export default function PrivacyPolicy() {
       <h2>6. Your choices</h2>
       <ul>
         <li>Access, update, or correct your profile from account settings.</li>
-        <li>Request export or deletion of your personal data by contacting us.</li>
+        <li>Delete your account and personal data at any time from Settings &rarr; Danger Zone &rarr; Delete Account.</li>
+        <li>Request an export of your personal data by contacting us.</li>
         <li>Unsubscribe from non-essential email notifications via your notification preferences.</li>
       </ul>
+
+      <h2>6a. Delete your account</h2>
+      <p>
+        You can permanently delete your account from inside the app: open <strong>Settings</strong>, scroll to the{' '}
+        <strong>Danger Zone</strong>, and choose <strong>Delete Account</strong>. After you confirm, deletion is
+        immediate and irreversible — there is no grace period.
+      </p>
+      <p>
+        Deleted permanently: your sign-in credentials, profile (name, email, phone), settings and notification
+        preferences, notification history, push subscriptions, reminders, memberships and permissions, and the field
+        captures, photos, and files you uploaded. If you were the only member of your organization and it had no
+        projects, the organization is removed too.
+      </p>
+      <p>
+        Retained but anonymised: shared business records such as invoices, purchase orders, change orders, contracts,
+        and audit logs must remain intact for the other companies party to those records and for accounting and audit
+        obligations. Your account link and personal identifiers are removed from them, so those records can no longer be
+        traced back to you.
+      </p>
+      <p>
+        If you are the last remaining admin of an organization that still has other members or projects, you must
+        transfer admin ownership on the Team page before deleting your account, so your company's data is not orphaned.
+      </p>
 
       <h2>7. Security</h2>
       <p>

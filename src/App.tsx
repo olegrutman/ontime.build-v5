@@ -61,6 +61,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Install = lazy(() => import("./pages/Install"));
 const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
+const AccountDeleted = lazy(() => import("./pages/AccountDeleted"));
 const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
 const SecurityPage = lazy(() => import("./pages/legal/SecurityPage"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
@@ -198,6 +199,7 @@ function AppRoutes() {
             <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/account-deleted" element={<AccountDeleted />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/security" element={<SecurityPage />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />

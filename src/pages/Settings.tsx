@@ -6,21 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Lock, Bell, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { DeleteAccountDialog } from '@/components/settings/DeleteAccountDialog';
 
 export default function Settings() {
   const { signOut } = useAuth();
@@ -28,7 +17,6 @@ export default function Settings() {
     loading,
     profile,
     userSettings,
-    hasActiveProjects,
     updateUserSettings,
     changePassword,
   } = useProfile();
@@ -40,7 +28,6 @@ export default function Settings() {
   });
   const [showPasswords, setShowPasswords] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState('');
 
   const handleChangePassword = async () => {
     if (passwordForm.new !== passwordForm.confirm) return;
@@ -271,55 +258,14 @@ export default function Settings() {
               </Button>
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-medium">Delete Account</p>
                 <p className="text-sm text-muted-foreground">
-                  {hasActiveProjects
-                    ? 'You are active on projects. Contact support to delete your account.'
-                    : 'Permanently delete your account and all data'}
+                  Permanently delete your account and personal data. This cannot be undone.
                 </p>
               </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={hasActiveProjects}>
-                    Delete Account
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your account and remove all your data.
-                      <div className="mt-4 space-y-2">
-                        <Label>Type DELETE to confirm</Label>
-                        <Input
-                          value={deleteConfirm}
-                          onChange={(e) => setDeleteConfirm(e.target.value)}
-                          placeholder="DELETE"
-                        />
-                      </div>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeleteConfirm('')}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      disabled={deleteConfirm !== 'DELETE'}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toast({
-                          title: 'Account deletion requires support',
-                          description: 'For your safety, self-service account deletion is not enabled. Email support@ontime.build and we will delete your account within 1 business day.',
-                        });
-                        setDeleteConfirm('');
-                      }}
-                    >
-                      Request Deletion
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <DeleteAccountDialog />
             </div>
           </div>
         </div>
