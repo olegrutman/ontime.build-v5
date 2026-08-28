@@ -6,21 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Lock, Bell, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { DeleteAccountDialog } from '@/components/settings/DeleteAccountDialog';
 
 export default function Settings() {
   const { signOut } = useAuth();
@@ -28,7 +17,6 @@ export default function Settings() {
     loading,
     profile,
     userSettings,
-    hasActiveProjects,
     updateUserSettings,
     changePassword,
   } = useProfile();
@@ -40,7 +28,6 @@ export default function Settings() {
   });
   const [showPasswords, setShowPasswords] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState('');
 
   const handleChangePassword = async () => {
     if (passwordForm.new !== passwordForm.confirm) return;
