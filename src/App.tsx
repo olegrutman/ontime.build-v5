@@ -199,6 +199,7 @@ function AppRoutes() {
             <Route path="/reset-password" element={<AuthPage />} />
             <Route path="/install" element={<Install />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/account-deleted" element={<AccountDeleted />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/security" element={<SecurityPage />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
