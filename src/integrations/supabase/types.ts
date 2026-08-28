@@ -208,7 +208,7 @@ export type Database = {
           cost_type: string
           created_at: string
           description: string
-          entered_by: string
+          entered_by: string | null
           entry_date: string
           hourly_rate: number | null
           hours_per_man: number | null
@@ -223,7 +223,7 @@ export type Database = {
           cost_type?: string
           created_at?: string
           description?: string
-          entered_by: string
+          entered_by?: string | null
           entry_date?: string
           hourly_rate?: number | null
           hours_per_man?: number | null
@@ -238,7 +238,7 @@ export type Database = {
           cost_type?: string
           created_at?: string
           description?: string
-          entered_by?: string
+          entered_by?: string | null
           entry_date?: string
           hourly_rate?: number | null
           hours_per_man?: number | null
@@ -270,7 +270,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
-          created_by_user_id: string
+          created_by_user_id: string | null
           dispute_note: string | null
           gc_approved: boolean
           gc_approved_at: string | null
@@ -285,7 +285,7 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
-          created_by_user_id: string
+          created_by_user_id?: string | null
           dispute_note?: string | null
           gc_approved?: boolean
           gc_approved_at?: string | null
@@ -300,7 +300,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
-          created_by_user_id?: string
+          created_by_user_id?: string | null
           dispute_note?: string | null
           gc_approved?: boolean
           gc_approved_at?: string | null
@@ -555,7 +555,7 @@ export type Database = {
           completed_by_user_id: string | null
           created_at: string
           id: string
-          invited_by_user_id: string
+          invited_by_user_id: string | null
           organization_id: string
           rejected_at: string | null
           status: string
@@ -569,7 +569,7 @@ export type Database = {
           completed_by_user_id?: string | null
           created_at?: string
           id?: string
-          invited_by_user_id: string
+          invited_by_user_id?: string | null
           organization_id: string
           rejected_at?: string | null
           status?: string
@@ -583,7 +583,7 @@ export type Database = {
           completed_by_user_id?: string | null
           created_at?: string
           id?: string
-          invited_by_user_id?: string
+          invited_by_user_id?: string | null
           organization_id?: string
           rejected_at?: string | null
           status?: string
@@ -650,7 +650,7 @@ export type Database = {
           contracted_at: string | null
           created_at: string | null
           created_by_role: string
-          created_by_user_id: string
+          created_by_user_id: string | null
           document_type: string
           draft_shared_with_next: boolean
           entry_source: Database["public"]["Enums"]["co_entry_source"]
@@ -729,7 +729,7 @@ export type Database = {
           contracted_at?: string | null
           created_at?: string | null
           created_by_role: string
-          created_by_user_id: string
+          created_by_user_id?: string | null
           document_type?: string
           draft_shared_with_next?: boolean
           entry_source?: Database["public"]["Enums"]["co_entry_source"]
@@ -808,7 +808,7 @@ export type Database = {
           contracted_at?: string | null
           created_at?: string | null
           created_by_role?: string
-          created_by_user_id?: string
+          created_by_user_id?: string | null
           document_type?: string
           draft_shared_with_next?: boolean
           entry_source?: Database["public"]["Enums"]["co_entry_source"]
@@ -942,7 +942,7 @@ export type Database = {
         Row: {
           action: string
           actor_role: string
-          actor_user_id: string
+          actor_user_id: string | null
           amount: number | null
           co_id: string
           created_at: string | null
@@ -953,7 +953,7 @@ export type Database = {
         Insert: {
           action: string
           actor_role: string
-          actor_user_id: string
+          actor_user_id?: string | null
           amount?: number | null
           co_id: string
           created_at?: string | null
@@ -964,7 +964,7 @@ export type Database = {
         Update: {
           action?: string
           actor_role?: string
-          actor_user_id?: string
+          actor_user_id?: string | null
           amount?: number | null
           co_id?: string
           created_at?: string | null
@@ -1006,7 +1006,7 @@ export type Database = {
       co_ai_intakes: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           error_message: string | null
           finalized_co_id: string | null
           id: string
@@ -1022,7 +1022,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           error_message?: string | null
           finalized_co_id?: string | null
           id?: string
@@ -1038,7 +1038,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           error_message?: string | null
           finalized_co_id?: string | null
           id?: string
@@ -1263,7 +1263,7 @@ export type Database = {
           file_type: string
           file_url: string
           id: string
-          uploaded_by_user_id: string
+          uploaded_by_user_id: string | null
         }
         Insert: {
           caption?: string | null
@@ -1273,7 +1273,7 @@ export type Database = {
           file_type?: string
           file_url: string
           id?: string
-          uploaded_by_user_id: string
+          uploaded_by_user_id?: string | null
         }
         Update: {
           caption?: string | null
@@ -1283,7 +1283,7 @@ export type Database = {
           file_type?: string
           file_url?: string
           id?: string
-          uploaded_by_user_id?: string
+          uploaded_by_user_id?: string | null
         }
         Relationships: [
           {
@@ -1693,7 +1693,7 @@ export type Database = {
           new_cap_after_approval: number | null
           rejected_at: string | null
           rejection_note: string | null
-          requested_by_user_id: string
+          requested_by_user_id: string | null
           requested_increase: number
           running_total_at_request: number
         }
@@ -1707,7 +1707,7 @@ export type Database = {
           new_cap_after_approval?: number | null
           rejected_at?: string | null
           rejection_note?: string | null
-          requested_by_user_id: string
+          requested_by_user_id?: string | null
           requested_increase: number
           running_total_at_request: number
         }
@@ -1721,7 +1721,7 @@ export type Database = {
           new_cap_after_approval?: number | null
           rejected_at?: string | null
           rejection_note?: string | null
-          requested_by_user_id?: string
+          requested_by_user_id?: string | null
           requested_increase?: number
           running_total_at_request?: number
         }
@@ -1767,7 +1767,7 @@ export type Database = {
           storage_path: string
           taken_at: string
           uploaded_by_role: string
-          uploaded_by_user_id: string
+          uploaded_by_user_id: string | null
         }
         Insert: {
           caption?: string | null
@@ -1779,7 +1779,7 @@ export type Database = {
           storage_path: string
           taken_at?: string
           uploaded_by_role?: string
-          uploaded_by_user_id: string
+          uploaded_by_user_id?: string | null
         }
         Update: {
           caption?: string | null
@@ -1791,7 +1791,7 @@ export type Database = {
           storage_path?: string
           taken_at?: string
           uploaded_by_role?: string
-          uploaded_by_user_id?: string
+          uploaded_by_user_id?: string | null
         }
         Relationships: [
           {
@@ -1979,7 +1979,7 @@ export type Database = {
           co_line_item_id: string
           confidence: number | null
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           kind: string
           photo_path: string | null
@@ -1991,7 +1991,7 @@ export type Database = {
           co_line_item_id: string
           confidence?: number | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           kind: string
           photo_path?: string | null
@@ -2003,7 +2003,7 @@ export type Database = {
           co_line_item_id?: string
           confidence?: number | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           kind?: string
           photo_path?: string | null
@@ -2632,7 +2632,7 @@ export type Database = {
       daily_logs: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           delay_hours: number | null
           id: string
           log_date: string
@@ -2647,7 +2647,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           delay_hours?: number | null
           id?: string
           log_date?: string
@@ -2662,7 +2662,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           delay_hours?: number | null
           id?: string
           log_date?: string
@@ -2938,7 +2938,7 @@ export type Database = {
           parsed_result: Json | null
           status: string
           uploaded_at: string
-          uploaded_by: string
+          uploaded_by: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -2951,7 +2951,7 @@ export type Database = {
           parsed_result?: Json | null
           status?: string
           uploaded_at?: string
-          uploaded_by: string
+          uploaded_by?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -2964,7 +2964,7 @@ export type Database = {
           parsed_result?: Json | null
           status?: string
           uploaded_at?: string
-          uploaded_by?: string
+          uploaded_by?: string | null
         }
         Relationships: [
           {
@@ -3254,7 +3254,7 @@ export type Database = {
           co_ids: string[] | null
           contract_id: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           invoice_number: string
           notes: string | null
@@ -3289,7 +3289,7 @@ export type Database = {
           co_ids?: string[] | null
           contract_id?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           invoice_number: string
           notes?: string | null
@@ -3324,7 +3324,7 @@ export type Database = {
           co_ids?: string[] | null
           contract_id?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           invoice_number?: string
           notes?: string | null
@@ -3894,7 +3894,7 @@ export type Database = {
           address: Json | null
           allow_join_requests: boolean
           created_at: string
-          created_by: string
+          created_by: string | null
           default_equipment_markup_pct: number
           default_materials_markup_pct: number
           default_project_scope: string
@@ -3915,7 +3915,7 @@ export type Database = {
           address?: Json | null
           allow_join_requests?: boolean
           created_at?: string
-          created_by: string
+          created_by?: string | null
           default_equipment_markup_pct?: number
           default_materials_markup_pct?: number
           default_project_scope?: string
@@ -3936,7 +3936,7 @@ export type Database = {
           address?: Json | null
           allow_join_requests?: boolean
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           default_equipment_markup_pct?: number
           default_materials_markup_pct?: number
           default_project_scope?: string
@@ -4825,7 +4825,7 @@ export type Database = {
           id: string
           invite_status: string
           invited_at: string
-          invited_by: string
+          invited_by: string | null
           material_responsibility: string | null
           no_estimate_confirmed: boolean | null
           organization_id: string
@@ -4838,7 +4838,7 @@ export type Database = {
           id?: string
           invite_status?: string
           invited_at?: string
-          invited_by: string
+          invited_by?: string | null
           material_responsibility?: string | null
           no_estimate_confirmed?: boolean | null
           organization_id: string
@@ -4851,7 +4851,7 @@ export type Database = {
           id?: string
           invite_status?: string
           invited_at?: string
-          invited_by?: string
+          invited_by?: string | null
           material_responsibility?: string | null
           no_estimate_confirmed?: boolean | null
           organization_id?: string
@@ -5183,7 +5183,7 @@ export type Database = {
           status: string
           subject: string
           submitted_by_org_id: string
-          submitted_by_user_id: string
+          submitted_by_user_id: string | null
           updated_at: string
         }
         Insert: {
@@ -5203,7 +5203,7 @@ export type Database = {
           status?: string
           subject: string
           submitted_by_org_id: string
-          submitted_by_user_id: string
+          submitted_by_user_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -5223,7 +5223,7 @@ export type Database = {
           status?: string
           subject?: string
           submitted_by_org_id?: string
-          submitted_by_user_id?: string
+          submitted_by_user_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -5977,7 +5977,7 @@ export type Database = {
           city: string | null
           contract_mode: string
           created_at: string
-          created_by: string
+          created_by: string | null
           created_by_org_id: string | null
           description: string | null
           id: string
@@ -6014,7 +6014,7 @@ export type Database = {
           city?: string | null
           contract_mode?: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           created_by_org_id?: string | null
           description?: string | null
           id?: string
@@ -6051,7 +6051,7 @@ export type Database = {
           city?: string | null
           contract_mode?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           created_by_org_id?: string | null
           description?: string | null
           id?: string
@@ -6472,7 +6472,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           created_by_org_id: string
-          created_by_user_id: string
+          created_by_user_id: string | null
           credit_subtotal: number | null
           id: string
           instructions: string | null
@@ -6498,7 +6498,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           created_by_org_id: string
-          created_by_user_id: string
+          created_by_user_id?: string | null
           credit_subtotal?: number | null
           id?: string
           instructions?: string | null
@@ -6524,7 +6524,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           created_by_org_id?: string
-          created_by_user_id?: string
+          created_by_user_id?: string | null
           credit_subtotal?: number | null
           id?: string
           instructions?: string | null
@@ -8370,6 +8370,10 @@ export type Database = {
         }
         Returns: Json
       }
+      anonymize_user_references: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       approve_join_request: {
         Args: { _request_id: string }
         Returns: undefined
@@ -8443,7 +8447,7 @@ export type Database = {
           completed_by_user_id: string | null
           created_at: string
           id: string
-          invited_by_user_id: string
+          invited_by_user_id: string | null
           organization_id: string
           rejected_at: string | null
           status: string
@@ -8521,6 +8525,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_own_account: { Args: never; Returns: Json }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -8561,7 +8566,7 @@ export type Database = {
           contracted_at: string | null
           created_at: string | null
           created_by_role: string
-          created_by_user_id: string
+          created_by_user_id: string | null
           document_type: string
           draft_shared_with_next: boolean
           entry_source: Database["public"]["Enums"]["co_entry_source"]
@@ -8857,7 +8862,7 @@ export type Database = {
           completed_by_user_id: string | null
           created_at: string
           id: string
-          invited_by_user_id: string
+          invited_by_user_id: string | null
           organization_id: string
           rejected_at: string | null
           status: string
