@@ -271,55 +271,14 @@ export default function Settings() {
               </Button>
             </div>
             <Separator />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-medium">Delete Account</p>
                 <p className="text-sm text-muted-foreground">
-                  {hasActiveProjects
-                    ? 'You are active on projects. Contact support to delete your account.'
-                    : 'Permanently delete your account and all data'}
+                  Permanently delete your account and personal data. This cannot be undone.
                 </p>
               </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={hasActiveProjects}>
-                    Delete Account
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your account and remove all your data.
-                      <div className="mt-4 space-y-2">
-                        <Label>Type DELETE to confirm</Label>
-                        <Input
-                          value={deleteConfirm}
-                          onChange={(e) => setDeleteConfirm(e.target.value)}
-                          placeholder="DELETE"
-                        />
-                      </div>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeleteConfirm('')}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      disabled={deleteConfirm !== 'DELETE'}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toast({
-                          title: 'Account deletion requires support',
-                          description: 'For your safety, self-service account deletion is not enabled. Email support@ontime.build and we will delete your account within 1 business day.',
-                        });
-                        setDeleteConfirm('');
-                      }}
-                    >
-                      Request Deletion
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <DeleteAccountDialog />
             </div>
           </div>
         </div>
