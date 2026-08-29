@@ -678,7 +678,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       </span>
                       {/* Internal cost + inline edit pencil */}
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                        <span className="w-28 text-right inline-flex items-center justify-end gap-1">
+                        <span className="w-24 text-right inline-flex items-center justify-end gap-1">
                           {matchingActual ? (
                             <>
                               <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
