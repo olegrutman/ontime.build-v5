@@ -29,7 +29,7 @@ const SYSTEM_PROMPT = `You split a contractor change-order request into reviewab
 Return strict JSON: { "lines": [ {
   "order": number,
   "title": string,          // <= 80 chars, action-led
-  "problem": string,        // 1-2 sentences, plain English
+  "problem": string,        // 1-2 sentences, professional trade language
   "location_hint": string|null,  // e.g. "2nd floor bath", "north wall"
   "qty": number|null,
   "unit": string|null,      // EA, LF, SF, HR, LS
@@ -40,8 +40,15 @@ Return strict JSON: { "lines": [ {
 Rules:
 - Split only on real scope changes; do not invent items.
 - Keep titles short and concrete. No prices, no markup, no schedule talk.
+- problem field: be direct and professional. Lead with the action, state the location, end with the handoff condition. Avoid passive voice, "must be", "is required", "to provide", or vague explanations.
 - If qty is unclear, set qty=null and unit=null.
-- Max 12 lines. Prefer fewer, clearer items.`;
+- Max 12 lines. Prefer fewer, clearer items.
+
+Example problem descriptions:
+- "Remove and dispose of existing soffit and fascia boards along the exterior roof perimeter. Leave framing clean and ready for new material."
+- "Install vented soffit at roof overhangs per plan. Secure to framing and terminate at fascia lines."
+- "Install new fascia board at roof rake and eave edges. Align with soffit and leave ready for gutter mounting."
+`;
 
 interface ModelLine {
   order: number;
