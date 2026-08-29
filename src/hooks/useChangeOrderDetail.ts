@@ -97,7 +97,7 @@ export function useChangeOrderDetail(coId: string | null) {
         .eq('co_id', coId!)
         .order('entry_date', { ascending: false });
       if (error) throw error;
-      return data as COLaborEntry[];
+      return data as unknown as COLaborEntry[];
     },
   });
 
