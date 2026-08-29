@@ -125,7 +125,14 @@ export function LaborEntryForm({
 
 
 
-  const hoursValue = parseFloat(hours) || 0;
+  const crewSizeValue = parseFloat(crewSize) || 0;
+  const daysValue = parseFloat(days) || 0;
+  const hoursPerDayValue = parseFloat(hoursPerDay) || 0;
+  const crewMathHours = crewSizeValue > 0 && daysValue > 0 && hoursPerDayValue > 0
+    ? crewSizeValue * daysValue * hoursPerDayValue
+    : 0;
+  const rawHoursValue = parseFloat(hours) || 0;
+  const hoursValue = useCrewMath ? crewMathHours : rawHoursValue;
   const rateValue = parseFloat(rate) || 0;
   const lumpSumValue = parseFloat(lumpSum) || 0;
   const markupPct = parseFloat(markup) || 0;
@@ -146,6 +153,12 @@ export function LaborEntryForm({
   const validationMessage =
     !entryDate ? 'Select a date.'
     : mode === 'lump_sum' ? (lumpSumValue <= 0 ? 'Enter an amount greater than zero.' : null)
+    : useCrewMath
+      ? (crewSizeValue <= 0 ? 'Enter crew size.'
+        : daysValue <= 0 ? 'Enter days.'
+        : hoursPerDayValue <= 0 ? 'Enter hours per day.'
+        : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
+        : null)
     : hoursValue <= 0 ? 'Enter hours greater than zero.'
     : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
     : null;
