@@ -519,7 +519,7 @@ export function LaborEntryForm({
               </div>
               {useCrewMath && hoursValue > 0 && (
                 <span className="text-xs font-bold" style={{ ...mono, color: 'hsl(var(--amber-d))' }}>
-                  {money(hoursValue)} hrs total
+                  {fmtHours(hoursValue)} hrs total
                 </span>
               )}
             </div>
@@ -535,7 +535,7 @@ export function LaborEntryForm({
                 <div className="text-right">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block">Total hours</span>
                   <span className="text-lg font-bold" style={{ ...mono, color: 'hsl(var(--amber-d))' }}>
-                    {money(hoursValue)}
+                    {fmtHours(hoursValue)}
                   </span>
                 </div>
               </div>
