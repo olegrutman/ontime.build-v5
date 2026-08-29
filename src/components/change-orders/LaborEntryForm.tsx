@@ -218,6 +218,8 @@ export function LaborEntryForm({
 
     setSaving(true);
     try {
+      const crewFields = getCrewFields();
+
       if (isEditing && editingEntry) {
         const { error } = await supabase
           .from('co_labor_entries')
@@ -231,6 +233,9 @@ export function LaborEntryForm({
             hourly_rate: billableHourly(),
             lump_sum: billableLump(),
             description: description.trim() || null,
+            crew_size: crewFields.crew_size,
+            days: crewFields.days,
+            hours_per_day: crewFields.hours_per_day,
           })
           .eq('id', editingEntry.id);
         if (error) throw error;
@@ -250,6 +255,9 @@ export function LaborEntryForm({
         hourly_rate: billableHourly(),
         lump_sum: billableLump(),
         description: description.trim() || null, is_actual_cost: isActualCost,
+        crew_size: crewFields.crew_size,
+        days: crewFields.days,
+        hours_per_day: crewFields.hours_per_day,
       });
       if (error) throw error;
 
