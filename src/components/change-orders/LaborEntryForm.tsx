@@ -490,26 +490,75 @@ export function LaborEntryForm({
           )}
         </div>
 
-        {/* Quick-hour chip rail */}
-        {mode === 'hourly' && !isActualCost && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground shrink-0">Quick</span>
-            <div className="flex gap-2 flex-1">
-              {QUICK_HOURS.map(h => (
+        {/* Crew math toggle + workload summary */}
+        {mode === 'hourly' && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Entry mode</span>
                 <button
-                  key={h} type="button" onClick={() => handleQuickHour(h)}
+                  type="button"
+                  onClick={() => setUseCrewMath(v => !v)}
                   className={cn(
-                    'flex-1 h-8 rounded-lg text-xs font-bold border transition-colors',
-                    hoursValue === h
-                      ? 'border-transparent'
-                      : 'border-border bg-background text-muted-foreground hover:text-foreground hover:border-[hsl(var(--amber)/0.5)]',
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                    useCrewMath ? 'bg-[hsl(var(--amber))]' : 'bg-muted'
                   )}
-                  style={hoursValue === h ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
+                  aria-pressed={useCrewMath}
                 >
-                  {h}h
+                  <span
+                    className={cn(
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      useCrewMath ? 'translate-x-6' : 'translate-x-1'
+                    )}
+                  />
                 </button>
-              ))}
+                <span className="text-xs font-medium text-foreground">
+                  {useCrewMath ? 'Crew math' : 'Direct hours'}
+                </span>
+              </div>
+              {useCrewMath && hoursValue > 0 && (
+                <span className="text-xs font-bold" style={{ ...mono, color: 'hsl(var(--amber-d))' }}>
+                  {money(hoursValue)} hrs total
+                </span>
+              )}
             </div>
+
+            {useCrewMath ? (
+              <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Workload</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {crewSizeValue || 0} men × {daysValue || 0} days × {hoursPerDayValue || 0} hr/day
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block">Total hours</span>
+                  <span className="text-lg font-bold" style={{ ...mono, color: 'hsl(var(--amber-d))' }}>
+                    {money(hoursValue)}
+                  </span>
+                </div>
+              </div>
+            ) : !isActualCost && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground shrink-0">Quick</span>
+                <div className="flex gap-2 flex-1">
+                  {QUICK_HOURS.map(h => (
+                    <button
+                      key={h} type="button" onClick={() => handleQuickHour(h)}
+                      className={cn(
+                        'flex-1 h-8 rounded-lg text-xs font-bold border transition-colors',
+                        hoursValue === h
+                          ? 'border-transparent'
+                          : 'border-border bg-background text-muted-foreground hover:text-foreground hover:border-[hsl(var(--amber)/0.5)]',
+                      )}
+                      style={hoursValue === h ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
+                    >
+                      {h}h
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
