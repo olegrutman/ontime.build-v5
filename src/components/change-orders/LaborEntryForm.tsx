@@ -57,6 +57,13 @@ export function LaborEntryForm({
   const [internalCost, setInternalCost] = useState('');
   const [costType, setCostType] = useState('labor_wages');
 
+  // Crew workload math: crew_size × days × hours_per_day = total hours.
+  const hasCrewFields = !!(editingEntry?.crew_size ?? editingEntry?.days ?? editingEntry?.hours_per_day);
+  const [useCrewMath, setUseCrewMath] = useState(hasCrewFields);
+  const [crewSize, setCrewSize] = useState(editingEntry?.crew_size != null ? String(editingEntry.crew_size) : '6');
+  const [days, setDays] = useState(editingEntry?.days != null ? String(editingEntry.days) : '10');
+  const [hoursPerDay, setHoursPerDay] = useState(editingEntry?.hours_per_day != null ? String(editingEntry.hours_per_day) : '8');
+
   useEffect(() => {
     let cancelled = false;
     async function loadDefaults() {
