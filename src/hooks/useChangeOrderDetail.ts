@@ -389,7 +389,7 @@ export function useChangeOrderDetail(coId: string | null) {
         .select()
         .single();
       if (error) throw error;
-      return data as COLaborEntry;
+      return data as unknown as COLaborEntry;
     },
     onSuccess: invalidate,
   });
@@ -403,7 +403,7 @@ export function useChangeOrderDetail(coId: string | null) {
         .select()
         .single();
       if (error) throw error;
-      return data as COLaborEntry;
+      return data as unknown as COLaborEntry;
     },
     onSuccess: invalidate,
   });
