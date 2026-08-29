@@ -11,6 +11,10 @@ import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 
+function fmtHours(n: number) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 interface LaborEntryFormProps {
   coId: string;
   lineItemId: string;
