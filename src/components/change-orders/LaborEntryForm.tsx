@@ -11,6 +11,10 @@ import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 
+function fmtHours(n: number) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 interface LaborEntryFormProps {
   coId: string;
   lineItemId: string;
@@ -56,6 +60,14 @@ export function LaborEntryForm({
   const [internalCostOpen, setInternalCostOpen] = useState(true);
   const [internalCost, setInternalCost] = useState('');
   const [costType, setCostType] = useState('labor_wages');
+
+  // Crew workload math: crew_size × days × hours_per_day = total hours.
+  const hasCrewFields = !!(editingEntry?.crew_size ?? editingEntry?.days ?? editingEntry?.hours_per_day);
+  // Default new entries to crew math; existing flat-hour entries stay in direct-hours mode.
+  const [useCrewMath, setUseCrewMath] = useState(editingEntry ? hasCrewFields : true);
+  const [crewSize, setCrewSize] = useState(editingEntry?.crew_size != null ? String(editingEntry.crew_size) : '6');
+  const [days, setDays] = useState(editingEntry?.days != null ? String(editingEntry.days) : '10');
+  const [hoursPerDay, setHoursPerDay] = useState(editingEntry?.hours_per_day != null ? String(editingEntry.hours_per_day) : '8');
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +130,14 @@ export function LaborEntryForm({
 
 
 
-  const hoursValue = parseFloat(hours) || 0;
+  const crewSizeValue = parseFloat(crewSize) || 0;
+  const daysValue = parseFloat(days) || 0;
+  const hoursPerDayValue = parseFloat(hoursPerDay) || 0;
+  const crewMathHours = crewSizeValue > 0 && daysValue > 0 && hoursPerDayValue > 0
+    ? crewSizeValue * daysValue * hoursPerDayValue
+    : 0;
+  const rawHoursValue = parseFloat(hours) || 0;
+  const hoursValue = useCrewMath ? crewMathHours : rawHoursValue;
   const rateValue = parseFloat(rate) || 0;
   const lumpSumValue = parseFloat(lumpSum) || 0;
   const markupPct = parseFloat(markup) || 0;
@@ -139,6 +158,12 @@ export function LaborEntryForm({
   const validationMessage =
     !entryDate ? 'Select a date.'
     : mode === 'lump_sum' ? (lumpSumValue <= 0 ? 'Enter an amount greater than zero.' : null)
+    : useCrewMath
+      ? (crewSizeValue <= 0 ? 'Enter crew size.'
+        : daysValue <= 0 ? 'Enter days.'
+        : hoursPerDayValue <= 0 ? 'Enter hours per day.'
+        : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
+        : null)
     : hoursValue <= 0 ? 'Enter hours greater than zero.'
     : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
     : null;
@@ -149,17 +174,30 @@ export function LaborEntryForm({
     ? `Today, ${format(new Date(), 'MMM d')}`
     : format(new Date(entryDate + 'T12:00:00'), 'EEE, MMM d');
 
-  function handleQuickHour(h: number) { setHours(String(h)); setMode('hourly'); }
+  function handleQuickHour(h: number) {
+    setHours(String(h));
+    setMode('hourly');
+    setUseCrewMath(false);
+  }
 
   function resetForm() {
     setHours(''); setLumpSum(''); setDescription('');
     setInternalCost(''); setInternalCostOpen(true); setCostType('labor_wages');
     setImportedFC(false);
     setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
+    setCrewSize('6'); setDays('10'); setHoursPerDay('8'); setUseCrewMath(true);
   }
 
   function getDbMode(): COPricingMode { return mode === 'lump_sum' ? 'lump_sum' : 'hourly'; }
   function getDbHours() { return mode === 'hourly' ? hoursValue : null; }
+  function getCrewFields() {
+    if (mode !== 'hourly' || !useCrewMath) return { crew_size: null, days: null, hours_per_day: null };
+    return {
+      crew_size: crewSizeValue > 0 ? crewSizeValue : null,
+      days: daysValue > 0 ? daysValue : null,
+      hours_per_day: hoursPerDayValue > 0 ? hoursPerDayValue : null,
+    };
+  }
 
   // Base = TC internal cost, billable = post-markup amount GC sees.
   const effectiveMarkup = isTC && markupPct > 0 ? markupPct : 0;
@@ -185,6 +223,8 @@ export function LaborEntryForm({
 
     setSaving(true);
     try {
+      const crewFields = getCrewFields();
+
       if (isEditing && editingEntry) {
         const { error } = await supabase
           .from('co_labor_entries')
@@ -198,6 +238,9 @@ export function LaborEntryForm({
             hourly_rate: billableHourly(),
             lump_sum: billableLump(),
             description: description.trim() || null,
+            crew_size: crewFields.crew_size,
+            days: crewFields.days,
+            hours_per_day: crewFields.hours_per_day,
           })
           .eq('id', editingEntry.id);
         if (error) throw error;
@@ -217,6 +260,9 @@ export function LaborEntryForm({
         hourly_rate: billableHourly(),
         lump_sum: billableLump(),
         description: description.trim() || null, is_actual_cost: isActualCost,
+        crew_size: crewFields.crew_size,
+        days: crewFields.days,
+        hours_per_day: crewFields.hours_per_day,
       });
       if (error) throw error;
 
@@ -350,18 +396,56 @@ export function LaborEntryForm({
         <div className="grid grid-cols-12 gap-3">
           {mode === 'hourly' ? (
             <>
-              <div className="col-span-6 sm:col-span-4 space-y-1.5">
-                <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hours</label>
-                <div className="relative">
-                  <input
-                    type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
-                    className={cn(fieldInput, 'text-right text-base font-semibold pr-12')}
-                    style={{ ...mono, color: 'hsl(var(--amber-d))' }}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold uppercase text-muted-foreground pointer-events-none">hrs</span>
+              {useCrewMath ? (
+                <>
+                  <div className="col-span-4 space-y-1.5">
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Crew</label>
+                    <div className="relative">
+                      <input
+                        type="number" step="1" min="0" value={crewSize} onChange={e => setCrewSize(e.target.value)} placeholder="0"
+                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">men</span>
+                    </div>
+                  </div>
+                  <div className="col-span-4 space-y-1.5">
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Days</label>
+                    <div className="relative">
+                      <input
+                        type="number" step="0.5" min="0" value={days} onChange={e => setDays(e.target.value)} placeholder="0"
+                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">days</span>
+                    </div>
+                  </div>
+                  <div className="col-span-4 space-y-1.5">
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hrs/Day</label>
+                    <div className="relative">
+                      <input
+                        type="number" step="0.25" min="0" value={hoursPerDay} onChange={e => setHoursPerDay(e.target.value)} placeholder="0"
+                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">hr/d</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="col-span-6 sm:col-span-4 space-y-1.5">
+                  <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hours</label>
+                  <div className="relative">
+                    <input
+                      type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
+                      className={cn(fieldInput, 'text-right text-base font-semibold pr-12')}
+                      style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold uppercase text-muted-foreground pointer-events-none">hrs</span>
+                  </div>
                 </div>
-              </div>
-              <div className="col-span-6 sm:col-span-4 space-y-1.5">
+              )}
+              <div className={useCrewMath ? 'col-span-12 sm:col-span-4 space-y-1.5' : 'col-span-6 sm:col-span-4 space-y-1.5'}>
                 <label className={microLabel}>Rate</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
@@ -411,26 +495,75 @@ export function LaborEntryForm({
           )}
         </div>
 
-        {/* Quick-hour chip rail */}
-        {mode === 'hourly' && !isActualCost && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground shrink-0">Quick</span>
-            <div className="flex gap-2 flex-1">
-              {QUICK_HOURS.map(h => (
+        {/* Crew math toggle + workload summary */}
+        {mode === 'hourly' && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Entry mode</span>
                 <button
-                  key={h} type="button" onClick={() => handleQuickHour(h)}
+                  type="button"
+                  onClick={() => setUseCrewMath(v => !v)}
                   className={cn(
-                    'flex-1 h-8 rounded-lg text-xs font-bold border transition-colors',
-                    hoursValue === h
-                      ? 'border-transparent'
-                      : 'border-border bg-background text-muted-foreground hover:text-foreground hover:border-[hsl(var(--amber)/0.5)]',
+                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                    useCrewMath ? 'bg-[hsl(var(--amber))]' : 'bg-muted'
                   )}
-                  style={hoursValue === h ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
+                  aria-pressed={useCrewMath}
                 >
-                  {h}h
+                  <span
+                    className={cn(
+                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      useCrewMath ? 'translate-x-6' : 'translate-x-1'
+                    )}
+                  />
                 </button>
-              ))}
+                <span className="text-xs font-medium text-foreground">
+                  {useCrewMath ? 'Crew math' : 'Direct hours'}
+                </span>
+              </div>
+              {useCrewMath && hoursValue > 0 && (
+                <span className="text-xs font-bold" style={{ ...mono, color: 'hsl(var(--amber-d))' }}>
+                  {fmtHours(hoursValue)} hrs total
+                </span>
+              )}
             </div>
+
+            {useCrewMath ? (
+              <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Workload</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {crewSizeValue || 0} men × {daysValue || 0} days × {hoursPerDayValue || 0} hr/day
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block">Total hours</span>
+                  <span className="text-lg font-bold" style={{ ...mono, color: 'hsl(var(--amber-d))' }}>
+                    {fmtHours(hoursValue)}
+                  </span>
+                </div>
+              </div>
+            ) : !isActualCost && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground shrink-0">Quick</span>
+                <div className="flex gap-2 flex-1">
+                  {QUICK_HOURS.map(h => (
+                    <button
+                      key={h} type="button" onClick={() => handleQuickHour(h)}
+                      className={cn(
+                        'flex-1 h-8 rounded-lg text-xs font-bold border transition-colors',
+                        hoursValue === h
+                          ? 'border-transparent'
+                          : 'border-border bg-background text-muted-foreground hover:text-foreground hover:border-[hsl(var(--amber)/0.5)]',
+                      )}
+                      style={hoursValue === h ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
+                    >
+                      {h}h
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

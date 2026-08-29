@@ -230,10 +230,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       if (equipmentRes.error) throw equipmentRes.error;
       if (cosRes.error) throw cosRes.error;
 
-      const labor = (laborRes.data ?? []) as COLaborEntry[];
-      const scopeItems = (lineItemsRes.data ?? []) as COLineItem[];
-      const materials = (materialsRes.data ?? []) as COMaterialItem[];
-      const equipment = (equipmentRes.data ?? []) as COEquipmentItem[];
+      const labor = (laborRes.data ?? []) as unknown as COLaborEntry[];
+      const scopeItems = (lineItemsRes.data ?? []) as unknown as COLineItem[];
+      const materials = (materialsRes.data ?? []) as unknown as COMaterialItem[];
+      const equipment = (equipmentRes.data ?? []) as unknown as COEquipmentItem[];
 
       // Per-CO procurement responsibility — when GC procures, the supplier bills GC
       // directly via PO. The TC must NOT invoice GC for those buckets or it double-charges.

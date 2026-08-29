@@ -45,6 +45,28 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function fmtHours(n: number) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+function formatWorkload(entry: COLaborEntry): string {
+  if (entry.pricing_mode === 'lump_sum') return '—';
+  const hasCrew = entry.crew_size != null && entry.days != null && entry.hours_per_day != null;
+  if (hasCrew) {
+    return `${entry.crew_size}×${entry.days}×${entry.hours_per_day}=${fmtHours(entry.hours ?? 0)}`;
+  }
+  return `${entry.hours ?? 0}`;
+}
+
+function formatWorkloadTooltip(entry: COLaborEntry): string | null {
+  if (entry.pricing_mode === 'lump_sum') return null;
+  const hasCrew = entry.crew_size != null && entry.days != null && entry.hours_per_day != null;
+  if (hasCrew) {
+    return `${entry.crew_size} men × ${entry.days} days × ${entry.hours_per_day} hr/day = ${fmtHours(entry.hours ?? 0)} hrs`;
+  }
+  return null;
+}
+
 type StatusColor = 'gray' | 'amber' | 'green';
 
 function getStatusColor(entries: COLaborEntry[], showGCApproval: boolean): StatusColor {
@@ -604,10 +626,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <div className="flex items-center text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-5 py-2 border-b border-border/50">
                 <span className="w-20">Date</span>
                 <span className="flex-1">Description</span>
-                <span className="w-14 text-right">Hours</span>
+                <span className="w-28 text-right">Workload</span>
                 <span className="w-24 text-right">Billable</span>
                 {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                  <span className="w-28 text-right flex items-center justify-end gap-1">
+                  <span className="w-24 text-right flex items-center justify-end gap-1">
                     <Lock className="h-2.5 w-2.5" /> Int. Cost
                   </span>
                 )}
@@ -633,8 +655,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       )}
                       <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
                       <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
-                      <span className="w-14 text-right font-mono text-muted-foreground">
-                        {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
+                      <span
+                        className="w-28 text-right font-mono text-muted-foreground truncate"
+                        title={formatWorkloadTooltip(entry) ?? undefined}
+                      >
+                        {formatWorkload(entry)}
                       </span>
                       {/* Billable amount + inline edit pencil */}
                       <span className="w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1">
@@ -653,7 +678,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       </span>
                       {/* Internal cost + inline edit pencil */}
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                        <span className="w-28 text-right inline-flex items-center justify-end gap-1">
+                        <span className="w-24 text-right inline-flex items-center justify-end gap-1">
                           {matchingActual ? (
                             <>
                               <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
@@ -724,8 +749,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           <div className="flex items-center text-xs px-5 py-2 hover:bg-accent/40">
                             <span className="w-20 text-muted-foreground">{a.entry_date}</span>
                             <span className="flex-1 text-muted-foreground truncate">{a.description || '—'}</span>
-                            <span className="w-14 text-right font-mono text-muted-foreground">
-                              {a.pricing_mode === 'lump_sum' ? '—' : `${a.hours ?? 0}`}
+                            <span
+                              className="w-20 text-right font-mono text-muted-foreground truncate"
+                              title={formatWorkloadTooltip(a) ?? undefined}
+                            >
+                              {formatWorkload(a)}
                             </span>
                             <span className="w-24 text-right font-mono text-muted-foreground/40">—</span>
                             <span className="w-28 text-right inline-flex items-center justify-end gap-1">
@@ -775,7 +803,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="w-20">{entry.entry_date}</span>
                       <span className="flex-1 truncate">{rl.FC} · {entry.description || '—'}</span>
-                      <span className="w-14 text-right font-mono">{entry.hours ?? '—'}</span>
+                      <span
+                        className="w-20 text-right font-mono truncate"
+                        title={formatWorkloadTooltip(entry) ?? undefined}
+                      >
+                        {formatWorkload(entry)}
+                      </span>
                       <span className="w-24 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
                     </div>
                   ))}

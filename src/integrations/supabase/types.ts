@@ -1384,6 +1384,8 @@ export type Database = {
           co_id: string
           co_line_item_id: string
           created_at: string | null
+          crew_size: number | null
+          days: number | null
           description: string | null
           entered_by_role: string
           entry_date: string
@@ -1391,6 +1393,7 @@ export type Database = {
           gc_approved_at: string | null
           hourly_rate: number | null
           hours: number | null
+          hours_per_day: number | null
           id: string
           is_actual_cost: boolean
           line_total: number | null
@@ -1407,6 +1410,8 @@ export type Database = {
           co_id: string
           co_line_item_id: string
           created_at?: string | null
+          crew_size?: number | null
+          days?: number | null
           description?: string | null
           entered_by_role: string
           entry_date?: string
@@ -1414,6 +1419,7 @@ export type Database = {
           gc_approved_at?: string | null
           hourly_rate?: number | null
           hours?: number | null
+          hours_per_day?: number | null
           id?: string
           is_actual_cost?: boolean
           line_total?: number | null
@@ -1430,6 +1436,8 @@ export type Database = {
           co_id?: string
           co_line_item_id?: string
           created_at?: string | null
+          crew_size?: number | null
+          days?: number | null
           description?: string | null
           entered_by_role?: string
           entry_date?: string
@@ -1437,6 +1445,7 @@ export type Database = {
           gc_approved_at?: string | null
           hourly_rate?: number | null
           hours?: number | null
+          hours_per_day?: number | null
           id?: string
           is_actual_cost?: boolean
           line_total?: number | null
@@ -7933,6 +7942,8 @@ export type Database = {
           co_id: string | null
           co_line_item_id: string | null
           created_at: string | null
+          crew_size: number | null
+          days: number | null
           description: string | null
           entered_by_role: string | null
           entry_date: string | null
@@ -7940,6 +7951,7 @@ export type Database = {
           gc_approved_at: string | null
           hourly_rate: number | null
           hours: number | null
+          hours_per_day: number | null
           id: string | null
           is_actual_cost: boolean | null
           line_total: number | null
@@ -7956,6 +7968,8 @@ export type Database = {
           co_id?: string | null
           co_line_item_id?: string | null
           created_at?: string | null
+          crew_size?: number | null
+          days?: number | null
           description?: string | null
           entered_by_role?: string | null
           entry_date?: string | null
@@ -7963,6 +7977,7 @@ export type Database = {
           gc_approved_at?: string | null
           hourly_rate?: number | null
           hours?: number | null
+          hours_per_day?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
           line_total?: number | null
@@ -7979,6 +7994,8 @@ export type Database = {
           co_id?: string | null
           co_line_item_id?: string | null
           created_at?: string | null
+          crew_size?: number | null
+          days?: number | null
           description?: string | null
           entered_by_role?: string | null
           entry_date?: string | null
@@ -7986,6 +8003,7 @@ export type Database = {
           gc_approved_at?: string | null
           hourly_rate?: number | null
           hours?: number | null
+          hours_per_day?: number | null
           id?: string | null
           is_actual_cost?: boolean | null
           line_total?: number | null
