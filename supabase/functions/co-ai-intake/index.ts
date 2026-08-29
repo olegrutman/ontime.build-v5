@@ -47,7 +47,8 @@ Rules:
 Example problem descriptions:
 - "Remove and dispose of existing soffit and fascia boards along the exterior roof perimeter. Leave framing clean and ready for new material."
 - "Install vented soffit at roof overhangs per plan. Secure to framing and terminate at fascia lines."
-- "Install new fascia board at roof rake and eave edges. Align with soffit and leave ready for gutter mounting.";
+- "Install new fascia board at roof rake and eave edges. Align with soffit and leave ready for gutter mounting."
+`;
 
 interface ModelLine {
   order: number;
