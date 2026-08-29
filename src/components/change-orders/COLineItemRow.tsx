@@ -656,7 +656,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
                       <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
                       <span
-                        className="w-20 text-right font-mono text-muted-foreground truncate"
+                        className="w-28 text-right font-mono text-muted-foreground truncate"
                         title={formatWorkloadTooltip(entry) ?? undefined}
                       >
                         {formatWorkload(entry)}
