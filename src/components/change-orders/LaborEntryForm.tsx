@@ -59,7 +59,8 @@ export function LaborEntryForm({
 
   // Crew workload math: crew_size × days × hours_per_day = total hours.
   const hasCrewFields = !!(editingEntry?.crew_size ?? editingEntry?.days ?? editingEntry?.hours_per_day);
-  const [useCrewMath, setUseCrewMath] = useState(hasCrewFields);
+  // Default new entries to crew math; existing flat-hour entries stay in direct-hours mode.
+  const [useCrewMath, setUseCrewMath] = useState(editingEntry ? hasCrewFields : true);
   const [crewSize, setCrewSize] = useState(editingEntry?.crew_size != null ? String(editingEntry.crew_size) : '6');
   const [days, setDays] = useState(editingEntry?.days != null ? String(editingEntry.days) : '10');
   const [hoursPerDay, setHoursPerDay] = useState(editingEntry?.hours_per_day != null ? String(editingEntry.hours_per_day) : '8');
