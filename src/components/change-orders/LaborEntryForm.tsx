@@ -391,18 +391,56 @@ export function LaborEntryForm({
         <div className="grid grid-cols-12 gap-3">
           {mode === 'hourly' ? (
             <>
-              <div className="col-span-6 sm:col-span-4 space-y-1.5">
-                <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hours</label>
-                <div className="relative">
-                  <input
-                    type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
-                    className={cn(fieldInput, 'text-right text-base font-semibold pr-12')}
-                    style={{ ...mono, color: 'hsl(var(--amber-d))' }}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold uppercase text-muted-foreground pointer-events-none">hrs</span>
+              {useCrewMath ? (
+                <>
+                  <div className="col-span-4 space-y-1.5">
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Crew</label>
+                    <div className="relative">
+                      <input
+                        type="number" step="1" min="0" value={crewSize} onChange={e => setCrewSize(e.target.value)} placeholder="0"
+                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">men</span>
+                    </div>
+                  </div>
+                  <div className="col-span-4 space-y-1.5">
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Days</label>
+                    <div className="relative">
+                      <input
+                        type="number" step="0.5" min="0" value={days} onChange={e => setDays(e.target.value)} placeholder="0"
+                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">days</span>
+                    </div>
+                  </div>
+                  <div className="col-span-4 space-y-1.5">
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hrs/Day</label>
+                    <div className="relative">
+                      <input
+                        type="number" step="0.25" min="0" value={hoursPerDay} onChange={e => setHoursPerDay(e.target.value)} placeholder="0"
+                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">hr/d</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="col-span-6 sm:col-span-4 space-y-1.5">
+                  <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hours</label>
+                  <div className="relative">
+                    <input
+                      type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} placeholder="0"
+                      className={cn(fieldInput, 'text-right text-base font-semibold pr-12')}
+                      style={{ ...mono, color: 'hsl(var(--amber-d))' }}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold uppercase text-muted-foreground pointer-events-none">hrs</span>
+                  </div>
                 </div>
-              </div>
-              <div className="col-span-6 sm:col-span-4 space-y-1.5">
+              )}
+              <div className={useCrewMath ? 'col-span-12 sm:col-span-4 space-y-1.5' : 'col-span-6 sm:col-span-4 space-y-1.5'}>
                 <label className={microLabel}>Rate</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
