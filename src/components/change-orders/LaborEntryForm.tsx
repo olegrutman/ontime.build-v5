@@ -133,9 +133,8 @@ export function LaborEntryForm({
   const crewSizeValue = parseFloat(crewSize) || 0;
   const daysValue = parseFloat(days) || 0;
   const hoursPerDayValue = parseFloat(hoursPerDay) || 0;
-  const crewMathHours = crewSizeValue > 0 && daysValue > 0 && hoursPerDayValue > 0
-    ? crewSizeValue * daysValue * hoursPerDayValue
-    : 0;
+  const crewMathHours = computeCrewHours(crewSizeValue, daysValue, hoursPerDayValue);
+
   const rawHoursValue = parseFloat(hours) || 0;
   const hoursValue = useCrewMath ? crewMathHours : rawHoursValue;
   const rateValue = parseFloat(rate) || 0;
