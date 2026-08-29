@@ -749,8 +749,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           <div className="flex items-center text-xs px-5 py-2 hover:bg-accent/40">
                             <span className="w-20 text-muted-foreground">{a.entry_date}</span>
                             <span className="flex-1 text-muted-foreground truncate">{a.description || '—'}</span>
-                            <span className="w-14 text-right font-mono text-muted-foreground">
-                              {a.pricing_mode === 'lump_sum' ? '—' : `${a.hours ?? 0}`}
+                            <span
+                              className="w-20 text-right font-mono text-muted-foreground truncate"
+                              title={formatWorkloadTooltip(a) ?? undefined}
+                            >
+                              {formatWorkload(a)}
                             </span>
                             <span className="w-24 text-right font-mono text-muted-foreground/40">—</span>
                             <span className="w-28 text-right inline-flex items-center justify-end gap-1">
