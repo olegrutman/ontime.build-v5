@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { fmtHours, formatWorkload, formatWorkloadTooltip } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LaborEntryForm } from './LaborEntryForm';
@@ -45,27 +46,7 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function fmtHours(n: number) {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-}
 
-function formatWorkload(entry: COLaborEntry): string {
-  if (entry.pricing_mode === 'lump_sum') return '—';
-  const hasCrew = entry.crew_size != null && entry.days != null && entry.hours_per_day != null;
-  if (hasCrew) {
-    return `${entry.crew_size}×${entry.days}×${entry.hours_per_day}=${fmtHours(entry.hours ?? 0)}`;
-  }
-  return `${entry.hours ?? 0}`;
-}
-
-function formatWorkloadTooltip(entry: COLaborEntry): string | null {
-  if (entry.pricing_mode === 'lump_sum') return null;
-  const hasCrew = entry.crew_size != null && entry.days != null && entry.hours_per_day != null;
-  if (hasCrew) {
-    return `${entry.crew_size} men × ${entry.days} days × ${entry.hours_per_day} hr/day = ${fmtHours(entry.hours ?? 0)} hrs`;
-  }
-  return null;
-}
 
 type StatusColor = 'gray' | 'amber' | 'green';
 

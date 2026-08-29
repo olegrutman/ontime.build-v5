@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Check, Clock, DollarSign, Lock, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { computeCrewHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
@@ -133,9 +134,8 @@ export function LaborEntryForm({
   const crewSizeValue = parseFloat(crewSize) || 0;
   const daysValue = parseFloat(days) || 0;
   const hoursPerDayValue = parseFloat(hoursPerDay) || 0;
-  const crewMathHours = crewSizeValue > 0 && daysValue > 0 && hoursPerDayValue > 0
-    ? crewSizeValue * daysValue * hoursPerDayValue
-    : 0;
+  const crewMathHours = computeCrewHours(crewSizeValue, daysValue, hoursPerDayValue);
+
   const rawHoursValue = parseFloat(hours) || 0;
   const hoursValue = useCrewMath ? crewMathHours : rawHoursValue;
   const rateValue = parseFloat(rate) || 0;
