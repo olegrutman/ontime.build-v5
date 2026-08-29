@@ -655,8 +655,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       )}
                       <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
                       <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
-                      <span className="w-14 text-right font-mono text-muted-foreground">
-                        {entry.pricing_mode === 'lump_sum' ? '—' : `${entry.hours ?? 0}`}
+                      <span
+                        className="w-20 text-right font-mono text-muted-foreground truncate"
+                        title={formatWorkloadTooltip(entry) ?? undefined}
+                      >
+                        {formatWorkload(entry)}
                       </span>
                       {/* Billable amount + inline edit pencil */}
                       <span className="w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1">
