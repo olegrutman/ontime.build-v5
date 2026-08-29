@@ -626,7 +626,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <div className="flex items-center text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-5 py-2 border-b border-border/50">
                 <span className="w-20">Date</span>
                 <span className="flex-1">Description</span>
-                <span className="w-14 text-right">Hours</span>
+                <span className="w-20 text-right">Workload</span>
                 <span className="w-24 text-right">Billable</span>
                 {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                   <span className="w-28 text-right flex items-center justify-end gap-1">
