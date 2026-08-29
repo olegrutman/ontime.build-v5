@@ -169,17 +169,30 @@ export function LaborEntryForm({
     ? `Today, ${format(new Date(), 'MMM d')}`
     : format(new Date(entryDate + 'T12:00:00'), 'EEE, MMM d');
 
-  function handleQuickHour(h: number) { setHours(String(h)); setMode('hourly'); }
+  function handleQuickHour(h: number) {
+    setHours(String(h));
+    setMode('hourly');
+    setUseCrewMath(false);
+  }
 
   function resetForm() {
     setHours(''); setLumpSum(''); setDescription('');
     setInternalCost(''); setInternalCostOpen(true); setCostType('labor_wages');
     setImportedFC(false);
     setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
+    setCrewSize('6'); setDays('10'); setHoursPerDay('8'); setUseCrewMath(true);
   }
 
   function getDbMode(): COPricingMode { return mode === 'lump_sum' ? 'lump_sum' : 'hourly'; }
   function getDbHours() { return mode === 'hourly' ? hoursValue : null; }
+  function getCrewFields() {
+    if (mode !== 'hourly' || !useCrewMath) return { crew_size: null, days: null, hours_per_day: null };
+    return {
+      crew_size: crewSizeValue > 0 ? crewSizeValue : null,
+      days: daysValue > 0 ? daysValue : null,
+      hours_per_day: hoursPerDayValue > 0 ? hoursPerDayValue : null,
+    };
+  }
 
   // Base = TC internal cost, billable = post-markup amount GC sees.
   const effectiveMarkup = isTC && markupPct > 0 ? markupPct : 0;
