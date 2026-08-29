@@ -142,6 +142,10 @@ export interface COLaborEntry {
   is_actual_cost: boolean;
   actual_cost_note: string | null;
   created_at: string;
+  /** Crew workload breakdown: crew size × days × hours/day = hours */
+  crew_size: number | null;
+  days: number | null;
+  hours_per_day: number | null;
 }
 
 export interface COMaterialItem {
@@ -326,6 +330,9 @@ export interface NewCOLaborEntry {
   description?: string;
   is_actual_cost?: boolean;
   actual_cost_note?: string;
+  crew_size?: number | null;
+  days?: number | null;
+  hours_per_day?: number | null;
 }
 
 export interface NewCOMaterialItem {
