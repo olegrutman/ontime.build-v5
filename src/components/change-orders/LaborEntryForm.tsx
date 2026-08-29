@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Check, Clock, DollarSign, Lock, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { computeCrewHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
