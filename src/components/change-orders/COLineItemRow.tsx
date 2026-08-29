@@ -803,7 +803,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="w-20">{entry.entry_date}</span>
                       <span className="flex-1 truncate">{rl.FC} · {entry.description || '—'}</span>
-                      <span className="w-14 text-right font-mono">{entry.hours ?? '—'}</span>
+                      <span
+                        className="w-20 text-right font-mono truncate"
+                        title={formatWorkloadTooltip(entry) ?? undefined}
+                      >
+                        {formatWorkload(entry)}
+                      </span>
                       <span className="w-24 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
                     </div>
                   ))}
