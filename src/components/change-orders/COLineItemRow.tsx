@@ -575,7 +575,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
       {expanded && (
         <div className="bg-accent/30 border-t border-border">
           {hideGCBreakdown ? (
-            <div className="px-5 py-4 space-y-2">
+            <div className="px-3 sm:px-5 py-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Approved line total</span>
                 <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
@@ -585,7 +585,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               )}
             </div>
           ) : gcSummaryOnly ? (
-            <div className="px-5 py-4 space-y-2">
+            <div className="px-3 sm:px-5 py-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Labor Total</span>
                 <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
@@ -604,13 +604,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           ) : (
             <>
               {/* Column headers */}
-              <div className="flex items-center text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-5 py-2 border-b border-border/50">
+              <div className="flex items-center text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-3 sm:px-5 py-2 border-b border-border/50">
                 <span className="w-20">Date</span>
                 <span className="flex-1">Description</span>
-                <span className="w-28 text-right">Workload</span>
-                <span className="w-24 text-right">Billable</span>
+                <span className="w-20 sm:w-28 text-right">Workload</span>
+                <span className="w-20 sm:w-24 text-right">Billable</span>
                 {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                  <span className="w-24 text-right flex items-center justify-end gap-1">
+                  <span className="w-20 sm:w-24 text-right flex items-center justify-end gap-1">
                     <Lock className="h-2.5 w-2.5" /> Int. Cost
                   </span>
                 )}
@@ -626,7 +626,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
                 return (
                   <div key={entry.id} className="border-b border-border/30">
-                    <div className="flex items-center text-xs px-5 py-2.5 hover:bg-accent/40">
+                    <div className="flex items-center text-xs px-3 sm:px-5 py-2.5 hover:bg-accent/40">
                       {showGCApproval && (
                         <Checkbox
                           checked={!!gcApproved}
@@ -634,16 +634,16 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           className="h-3.5 w-3.5 mr-2"
                         />
                       )}
-                      <span className="w-20 text-muted-foreground">{entry.entry_date}</span>
+                      <span className="w-14 sm:w-20 text-muted-foreground">{entry.entry_date}</span>
                       <span className="flex-1 text-foreground truncate">{entry.description || '—'}</span>
                       <span
-                        className="w-28 text-right font-mono text-muted-foreground truncate"
+                        className="w-20 sm:w-28 text-right font-mono text-muted-foreground truncate"
                         title={formatWorkloadTooltip(entry) ?? undefined}
                       >
                         {formatWorkload(entry)}
                       </span>
                       {/* Billable amount + inline edit pencil */}
-                      <span className="w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1">
+                      <span className="w-20 sm:w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1">
                         ${fmt(entry.line_total ?? 0)}
                         {billableEditable && (
                           <button
@@ -659,7 +659,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       </span>
                       {/* Internal cost + inline edit pencil */}
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                        <span className="w-24 text-right inline-flex items-center justify-end gap-1">
+                        <span className="w-20 sm:w-24 text-right inline-flex items-center justify-end gap-1">
                           {matchingActual ? (
                             <>
                               <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
@@ -695,7 +695,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     {isEditingThisRow && (() => {
                       const editingObj = editEntryId === entry.id ? entry : matchingActual!;
                       return (
-                        <div className="px-5 pb-3 pt-1 bg-accent/20">
+                        <div className="px-3 sm:px-5 pb-3 pt-1 bg-accent/20">
                           <LaborEntryForm
                             coId={coId} lineItemId={item.id} orgId={orgId}
                             enteredByRole={enteredByRole} pricingType={pricingType}
@@ -719,7 +719,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 if (orphanActuals.length === 0) return null;
                 return (
                   <div className="border-t border-border/40 bg-emerald-50/30 dark:bg-emerald-950/10">
-                    <div className="px-5 py-1.5 text-[10px] uppercase tracking-wider text-emerald-700/70 dark:text-emerald-400/70 font-semibold flex items-center gap-1">
+                    <div className="px-3 sm:px-5 py-1.5 text-[10px] uppercase tracking-wider text-emerald-700/70 dark:text-emerald-400/70 font-semibold flex items-center gap-1">
                       <Lock className="h-2.5 w-2.5" /> Internal-only entries
                     </div>
                     {orphanActuals.map(a => {
@@ -727,17 +727,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       const isEditingThisRow = editEntryId === a.id;
                       return (
                         <div key={a.id} className="border-b border-border/30 last:border-b-0">
-                          <div className="flex items-center text-xs px-5 py-2 hover:bg-accent/40">
-                            <span className="w-20 text-muted-foreground">{a.entry_date}</span>
+                          <div className="flex items-center text-xs px-3 sm:px-5 py-2 hover:bg-accent/40">
+                            <span className="w-14 sm:w-20 text-muted-foreground">{a.entry_date}</span>
                             <span className="flex-1 text-muted-foreground truncate">{a.description || '—'}</span>
                             <span
-                              className="w-20 text-right font-mono text-muted-foreground truncate"
+                              className="w-14 sm:w-20 text-right font-mono text-muted-foreground truncate"
                               title={formatWorkloadTooltip(a) ?? undefined}
                             >
                               {formatWorkload(a)}
                             </span>
-                            <span className="w-24 text-right font-mono text-muted-foreground/40">—</span>
-                            <span className="w-28 text-right inline-flex items-center justify-end gap-1">
+                            <span className="w-20 sm:w-24 text-right font-mono text-muted-foreground/40">—</span>
+                            <span className="w-20 sm:w-28 text-right inline-flex items-center justify-end gap-1">
                               <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium font-mono">
                                 <Lock className="h-2.5 w-2.5" /> ${fmt(a.line_total ?? 0)}
                               </span>
@@ -755,7 +755,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                             </span>
                           </div>
                           {isEditingThisRow && (
-                            <div className="px-5 pb-3 pt-1 bg-accent/20">
+                            <div className="px-3 sm:px-5 pb-3 pt-1 bg-accent/20">
                               <LaborEntryForm
                                 coId={coId} lineItemId={item.id} orgId={orgId}
                                 enteredByRole={enteredByRole} pricingType={pricingType}
@@ -776,7 +776,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
               {/* TC's cost for this scope item — field crew charges + own internal costs */}
               {isTC && (tcDownstreamCosts.length > 0 || actualTotal > 0) && (
-                <div className="border-t border-border px-5 py-2.5 bg-muted/20">
+                <div className="border-t border-border px-3 sm:px-5 py-2.5 bg-muted/20">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold mb-1.5 flex items-center gap-1">
                     <Lock className="h-2.5 w-2.5" /> Your cost for this item
                   </p>
@@ -785,18 +785,18 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       <span className="w-20">{entry.entry_date}</span>
                       <span className="flex-1 truncate">{rl.FC} · {entry.description || '—'}</span>
                       <span
-                        className="w-20 text-right font-mono truncate"
+                        className="w-14 sm:w-20 text-right font-mono truncate"
                         title={formatWorkloadTooltip(entry) ?? undefined}
                       >
                         {formatWorkload(entry)}
                       </span>
-                      <span className="w-24 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
+                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
                     </div>
                   ))}
                   {actualTotal > 0 && (
                     <div className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="flex-1 truncate">Own internal costs</span>
-                      <span className="w-24 text-right font-mono">${fmt(actualTotal)}</span>
+                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(actualTotal)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs font-bold text-foreground pt-1.5 border-t border-border/40">
@@ -825,7 +825,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   <button
                     type="button"
                     className={cn(
-                      'w-full flex items-center gap-2.5 px-5 py-3.5 text-xs transition-colors border-t border-border/50',
+                      'w-full flex items-center gap-2.5 px-3 sm:px-5 py-3.5 text-xs transition-colors border-t border-border/50',
                       formOpen
                         ? 'bg-[hsl(var(--amber)/0.05)]'
                         : 'hover:bg-accent/40',
@@ -842,7 +842,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 </CollapsibleTrigger>
               )}
               <CollapsibleContent>
-                <div className="px-5 pb-4 pt-2">
+                <div className="px-3 sm:px-5 pb-4 pt-2">
                   <LaborEntryForm
                     coId={coId} lineItemId={item.id} orgId={orgId}
                     enteredByRole={enteredByRole} pricingType={pricingType}
@@ -863,7 +863,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
-              className="w-full flex items-center gap-2.5 px-5 py-3 text-xs border-t border-border/50 hover:bg-accent/40 transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 sm:px-5 py-3 text-xs border-t border-border/50 hover:bg-accent/40 transition-colors"
             >
               <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
                 <Plus className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
@@ -877,7 +877,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
           {/* Actual cost form */}
           {showActualForm && (
-            <div className="px-5 pb-4 border-t border-border/50">
+            <div className="px-3 sm:px-5 pb-4 border-t border-border/50">
               <LaborEntryForm
                 coId={coId} lineItemId={item.id} orgId={orgId}
                 enteredByRole={enteredByRole} pricingType={pricingType}
