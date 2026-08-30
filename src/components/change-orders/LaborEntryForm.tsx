@@ -66,9 +66,9 @@ export function LaborEntryForm({
   const hasCrewFields = !!(editingEntry?.crew_size ?? editingEntry?.days ?? editingEntry?.hours_per_day);
   // Default new entries to crew math; existing flat-hour entries stay in direct-hours mode.
   const [useCrewMath, setUseCrewMath] = useState(editingEntry ? hasCrewFields : true);
-  const [crewSize, setCrewSize] = useState(editingEntry?.crew_size != null ? String(editingEntry.crew_size) : '6');
-  const [days, setDays] = useState(editingEntry?.days != null ? String(editingEntry.days) : '10');
-  const [hoursPerDay, setHoursPerDay] = useState(editingEntry?.hours_per_day != null ? String(editingEntry.hours_per_day) : '8');
+  const [crewSize, setCrewSize] = useState(editingEntry?.crew_size != null ? String(editingEntry.crew_size) : '');
+  const [days, setDays] = useState(editingEntry?.days != null ? String(editingEntry.days) : '');
+  const [hoursPerDay, setHoursPerDay] = useState(editingEntry?.hours_per_day != null ? String(editingEntry.hours_per_day) : '');
 
   useEffect(() => {
     let cancelled = false;
@@ -185,7 +185,7 @@ export function LaborEntryForm({
     setInternalCost(''); setInternalCostOpen(true); setCostType('labor_wages');
     setImportedFC(false);
     setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
-    setCrewSize('6'); setDays('10'); setHoursPerDay('8'); setUseCrewMath(true);
+    setCrewSize(''); setDays(''); setHoursPerDay(''); setUseCrewMath(true);
   }
 
   function getDbMode(): COPricingMode { return mode === 'lump_sum' ? 'lump_sum' : 'hourly'; }
