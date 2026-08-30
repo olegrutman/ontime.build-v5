@@ -254,7 +254,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
         className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Numbered index */}
             {index !== undefined && (
@@ -318,7 +318,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Right side — consolidated pricing module */}
-          <div className="shrink-0 flex items-center gap-2.5">
+          <div className="shrink-0 flex w-full sm:w-auto flex-wrap items-center justify-end gap-2.5">
             {(() => {
               const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
               // Prefer how the entries were actually priced; fall back to the CO pricing type.
@@ -451,7 +451,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-96 p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <PopoverContent align="end" className="w-[calc(100vw-2.5rem)] max-w-96 p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-bold text-foreground">Edit scope item</p>
                       <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Unit: {item.unit}</span>
