@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { fmtHours, formatWorkload, formatWorkloadTooltip } from '@/lib/crewWorkload';
+import { fmtHours, formatWorkload, formatWorkloadTooltip, hasCrewMath } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LaborEntryForm } from './LaborEntryForm';
@@ -329,6 +329,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               const totalHours = isHourly
                 ? visibleBillable.reduce((s, e) => s + (e.hours ?? 0), 0)
                 : 0;
+              // Crew math summary on the collapsed row: only when every hourly entry
+              // carries crew data, so the approver sees the workload without expanding.
+              const crewEntries = isHourly ? visibleBillable.filter(e => hasCrewMath(e as any)) : [];
+              const crewSummary = crewEntries.length > 0 && crewEntries.length === visibleBillable.length
+                ? crewEntries.map(e => formatWorkload(e as any).split('=')[0]).join(' + ')
+                : null;
+
 
               const isPriced = entryCount > 0 || totalForRole > 0;
               const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
@@ -371,7 +378,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     {entryCount > 0 && (
                       <span className="text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">
                         {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
-                        {isHourly && totalHours > 0 ? ` · ${totalHours}h` : ''}
+                        {isHourly && totalHours > 0 ? ` · ${fmtHours(totalHours)}h` : ''}
+                      </span>
+                    )}
+                    {crewSummary && (
+                      <span className="font-mono text-[9px] leading-tight text-muted-foreground/80" title="crew × days × hrs/day">
+                        {crewSummary}
                       </span>
                     )}
                   </div>
