@@ -49,14 +49,15 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
   return (
     <div className={cn('bg-card border border-border rounded-xl overflow-hidden shadow-sm', isWithdrawn && 'opacity-60')}>
       {/* Top section */}
-      <div className="px-5 py-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="px-3 py-3 sm:px-5 sm:py-4">
+        <div className="flex items-start justify-between gap-2 sm:gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <h1
-                className={cn('font-heading text-foreground truncate', isWithdrawn && 'line-through')}
-                style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.01em' }}
+                className={cn('font-heading text-foreground min-w-0 break-words text-[1.5rem] sm:text-[2rem]', isWithdrawn && 'line-through')}
+                style={{ fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.01em' }}
               >
+
                 {co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order')}
               </h1>
               <span className={cn(
