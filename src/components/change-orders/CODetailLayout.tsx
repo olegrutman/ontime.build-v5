@@ -517,15 +517,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               {/* ====== SCOPE & LABOR ====== */}
               <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {/* Card header */}
-                <div className="px-5 py-4 border-b border-border">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-3 min-w-0">
+                <div className="px-3 py-3 sm:px-5 sm:py-4 border-b border-border">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'hsl(var(--navy))' }}>
                         <Hammer className="h-4 w-4 text-white" />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none">Scope & Labor</h3>
-                        <div className="flex items-center gap-3 flex-wrap mt-1.5">
+                        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:gap-3 mt-1.5">
+
                           <p className="text-[11px] text-muted-foreground">
                             {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
                           </p>
