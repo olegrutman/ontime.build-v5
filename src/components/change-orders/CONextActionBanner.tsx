@@ -191,14 +191,15 @@ export function CONextActionBanner(props: CONextActionBannerProps) {
                 size="sm"
                 onClick={() => props.onAction(a.action)}
                 className={cn(
-                  'h-9 text-xs font-semibold rounded-lg flex-1 sm:flex-none min-w-[7rem] transition-transform active:scale-[0.97]',
+                  'h-auto min-h-9 py-2 text-xs font-semibold rounded-lg flex-1 sm:flex-none min-w-0 sm:min-w-[7rem] max-w-full whitespace-normal text-center leading-tight transition-transform active:scale-[0.97]',
                   a.primary
                     ? 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:opacity-90'
                     : 'bg-white/10 text-white hover:bg-white/20 border border-white/10',
                 )}
               >
-                {a.label}
+                <span className="block break-words">{a.label}</span>
               </Button>
+
             ))}
           </div>
         )}
