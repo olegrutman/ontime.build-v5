@@ -524,7 +524,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         <Hammer className="h-4 w-4 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none">Scope & Labor</h3>
+                        <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none whitespace-nowrap">Scope &amp; Labor</h3>
                         <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:gap-3 mt-1.5">
 
                           <p className="text-[11px] text-muted-foreground">
