@@ -656,15 +656,79 @@ Deno.serve(async (req) => {
     }
     y += 30;
 
+    // Approval trail (internal document only)
+    if (!isProposal) {
+      const trail: [string, string | null][] = [
+        ["Created", co.created_at],
+        ["Submitted", (co as any).submitted_at ?? null],
+        ["Approved", (co as any).approved_at ?? null],
+        ["Contracted", (co as any).contracted_at ?? null],
+      ];
+      if (y > 640) { doc.addPage(); y = margin; }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("APPROVAL TRAIL", margin, y);
+      y += 5;
+      doc.setDrawColor(30, 58, 95);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pw - margin, y);
+      y += 16;
+      doc.setFontSize(9);
+      for (const [label, ts] of trail) {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60);
+        doc.text(label, margin, y);
+        doc.setFont("helvetica", ts ? "bold" : "normal");
+        doc.setTextColor(ts ? 30 : 150, ts ? 58 : 150, ts ? 95 : 150);
+        doc.text(ts ? new Date(ts).toLocaleString() : "Pending", margin + 120, y);
+        y += 14;
+      }
+      y += 20;
+    }
+
+    // Proposal terms
+    if (isProposal) {
+      if (y > 620) { doc.addPage(); y = margin; }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("TERMS & CONDITIONS", margin, y);
+      y += 5;
+      doc.setDrawColor(30, 58, 95);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pw - margin, y);
+      y += 16;
+      const terms = [
+        `Pricing basis: ${(co.pricing_type ?? "fixed").toString().toUpperCase()}. Amounts above include all labor, materials, and equipment listed.`,
+        `Applicable sales tax of ${taxRate}% is ${totalTax > 0 ? "included as itemized above" : "not applicable"}.`,
+        retainagePct > 0 ? `Retainage of ${retainagePct}% applies to each progress payment.` : "Payment due upon completion of the scope described, net 30.",
+        "This proposal is valid for 30 days from the date above. Work outside the listed scope requires a written change order.",
+        "Schedule commences upon written acceptance and availability of the work area.",
+      ];
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(70);
+      for (const t of terms) {
+        for (const line of doc.splitTextToSize("• " + t, contentW)) {
+          if (y > 720) { doc.addPage(); y = margin; }
+          doc.text(line, margin, y);
+          y += 12;
+        }
+      }
+      y += 20;
+    }
+
     // Signature blocks
     if (y > 580) { doc.addPage(); y = margin; }
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
-    doc.text("SIGNATURES", margin, y);
+    doc.text(isProposal ? "ACCEPTANCE" : "SIGNATURES", margin, y);
     y += 20;
 
-    const sigLabels = ["CONTRACTOR", "OWNER"];
+    const sigLabels = isProposal ? ["PROPOSED BY", "ACCEPTED BY (CLIENT)"] : ["CONTRACTOR", "OWNER"];
+
 
     const sigW = (contentW - 20 * (sigLabels.length - 1)) / sigLabels.length;
     for (let i = 0; i < sigLabels.length; i++) {
