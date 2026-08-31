@@ -131,7 +131,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fallback: if we couldn't resolve, fail closed for non-platform users.
+    // Fallback: projects can legitimately have no formal contract row yet
+    // (e.g. a WO created before contracts are set up). As long as the viewer is
+    // a participant on this project, render the CO from the CO's own parties:
+    // the creating org bills, the assigned org receives.
+    if (!chosenContract && viewerOrgId) {
+      chosenContract = {
+        from_org_id: co.org_id,
+        to_org_id: co.assigned_to_org_id ?? co.org_id,
+        contract_sum: 0,
+      };
+    }
+
+    // Still nothing resolvable → the viewer isn't tied to this project.
     if (!chosenContract) {
       return new Response(JSON.stringify({ error: "No contract perspective available for this user on this change order." }), {
         status: 403,
@@ -141,6 +153,7 @@ Deno.serve(async (req) => {
 
     const billingOrgId: string = chosenContract.from_org_id;
     const receivingOrgId: string = chosenContract.to_org_id;
+
 
     // Fetch the two parties' org names
     const orgIds = Array.from(new Set([billingOrgId, receivingOrgId]));
