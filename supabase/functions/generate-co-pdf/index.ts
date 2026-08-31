@@ -273,11 +273,13 @@ Deno.serve(async (req) => {
 
     const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const docKindLabel = co.document_type === "WO" ? "Work Order" : "Change Order";
+
     // Header
     doc.setFontSize(9);
     doc.setTextColor(120);
-    doc.text("CHANGE ORDER DOCUMENT", margin, y);
-    doc.text("NOT AN AIA FORM", pw - margin, y, { align: "right" });
+    doc.text(isProposal ? "PROPOSAL" : `${docKindLabel.toUpperCase()} DOCUMENT`, margin, y);
+    doc.text(isProposal ? "PREPARED FOR CLIENT REVIEW" : "NOT AN AIA FORM", pw - margin, y, { align: "right" });
     y += 20;
 
     doc.setDrawColor(30, 58, 95);
@@ -288,18 +290,27 @@ Deno.serve(async (req) => {
     // Title
     doc.setFontSize(18);
     doc.setTextColor(30, 58, 95);
-    doc.text("Change Order Document", margin, y);
+    doc.text(isProposal ? "Proposal" : `${docKindLabel} Document`, margin, y);
     y += 30;
 
     // Info grid
     doc.setFontSize(9);
     doc.setTextColor(100);
-    const infoRows = [
-      ["Project:", project?.name ?? "—", "CO Number:", co.co_number ?? "—"],
-      ["Contractor:", orgName(billingOrgId), "Date:", new Date(co.created_at).toLocaleDateString()],
-      ["Owner:", orgName(receivingOrgId), "Status:", (co.status ?? "").toUpperCase()],
-      ["Document Type:", co.document_type === "WO" ? "Work Order" : "Change Order", "Perspective:", perspective === 'downstream' ? `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}` : `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}`],
-    ];
+    const numberLabel = co.document_type === "WO" ? "WO Number:" : "CO Number:";
+    const infoRows = isProposal
+      ? [
+          ["Project:", project?.name ?? "—", "Proposal No:", co.co_number ?? "—"],
+          ["Prepared by:", orgName(billingOrgId), "Date:", new Date().toLocaleDateString()],
+          ["Prepared for:", orgName(receivingOrgId), "Valid for:", "30 days"],
+          ["Site Address:", (project?.address ?? "—").substring(0, 40), "Pricing:", (co.pricing_type ?? "fixed").toUpperCase()],
+        ]
+      : [
+          ["Project:", project?.name ?? "—", numberLabel, co.co_number ?? "—"],
+          ["Contractor:", orgName(billingOrgId), "Date:", new Date(co.created_at).toLocaleDateString()],
+          ["Owner:", orgName(receivingOrgId), "Status:", (co.status ?? "").toUpperCase()],
+          ["Document Type:", docKindLabel, "Parties:", `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}`],
+        ];
+
     for (const row of infoRows) {
       doc.setFont("helvetica", "bold");
       doc.text(row[0], margin, y);
