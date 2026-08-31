@@ -28,7 +28,7 @@ export function ContextBar({ showNewButton, onNewClick, newButtonLabel = 'New' }
     : '?';
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/80 backdrop-blur-xl border-b border-border">
+    <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/95 backdrop-blur-xl border-b border-border">
       {/* Left — Logo */}
       <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity shrink-0">
         <OntimeLogo className="w-10 h-10" />

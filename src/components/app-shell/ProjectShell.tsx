@@ -95,7 +95,7 @@ export function ProjectShell({
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Context Bar */}
-      <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/80 backdrop-blur-xl border-b border-border">
+      <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/95 backdrop-blur-xl border-b border-border">
       {/* Left — Logo + Project name */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
