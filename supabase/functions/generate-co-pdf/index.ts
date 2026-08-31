@@ -49,6 +49,11 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const co_id: string | undefined = body.co_id;
     const requestedPerspective: Perspective | undefined = body.perspective;
+    // 'work_order' = internal/contractual full-ledger document (default)
+    // 'proposal'   = client-facing quote: rolled-up pricing, no crew math / unit costs
+    const mode: 'work_order' | 'proposal' = body.mode === 'proposal' ? 'proposal' : 'work_order';
+    const isProposal = mode === 'proposal';
+
     if (!co_id) {
       return new Response(JSON.stringify({ error: "co_id required" }), {
         status: 400,
@@ -268,11 +273,13 @@ Deno.serve(async (req) => {
 
     const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const docKindLabel = co.document_type === "WO" ? "Work Order" : "Change Order";
+
     // Header
     doc.setFontSize(9);
     doc.setTextColor(120);
-    doc.text("CHANGE ORDER DOCUMENT", margin, y);
-    doc.text("NOT AN AIA FORM", pw - margin, y, { align: "right" });
+    doc.text(isProposal ? "PROPOSAL" : `${docKindLabel.toUpperCase()} DOCUMENT`, margin, y);
+    doc.text(isProposal ? "PREPARED FOR CLIENT REVIEW" : "NOT AN AIA FORM", pw - margin, y, { align: "right" });
     y += 20;
 
     doc.setDrawColor(30, 58, 95);
@@ -283,18 +290,27 @@ Deno.serve(async (req) => {
     // Title
     doc.setFontSize(18);
     doc.setTextColor(30, 58, 95);
-    doc.text("Change Order Document", margin, y);
+    doc.text(isProposal ? "Proposal" : `${docKindLabel} Document`, margin, y);
     y += 30;
 
     // Info grid
     doc.setFontSize(9);
     doc.setTextColor(100);
-    const infoRows = [
-      ["Project:", project?.name ?? "—", "CO Number:", co.co_number ?? "—"],
-      ["Contractor:", orgName(billingOrgId), "Date:", new Date(co.created_at).toLocaleDateString()],
-      ["Owner:", orgName(receivingOrgId), "Status:", (co.status ?? "").toUpperCase()],
-      ["Document Type:", co.document_type === "WO" ? "Work Order" : "Change Order", "Perspective:", perspective === 'downstream' ? `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}` : `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}`],
-    ];
+    const numberLabel = co.document_type === "WO" ? "WO Number:" : "CO Number:";
+    const infoRows = isProposal
+      ? [
+          ["Project:", project?.name ?? "—", "Proposal No:", co.co_number ?? "—"],
+          ["Prepared by:", orgName(billingOrgId), "Date:", new Date().toLocaleDateString()],
+          ["Prepared for:", orgName(receivingOrgId), "Valid for:", "30 days"],
+          ["Site Address:", (project?.address ?? "—").substring(0, 40), "Pricing:", (co.pricing_type ?? "fixed").toUpperCase()],
+        ]
+      : [
+          ["Project:", project?.name ?? "—", numberLabel, co.co_number ?? "—"],
+          ["Contractor:", orgName(billingOrgId), "Date:", new Date(co.created_at).toLocaleDateString()],
+          ["Owner:", orgName(receivingOrgId), "Status:", (co.status ?? "").toUpperCase()],
+          ["Document Type:", docKindLabel, "Parties:", `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}`],
+        ];
+
     for (const row of infoRows) {
       doc.setFont("helvetica", "bold");
       doc.text(row[0], margin, y);
@@ -325,7 +341,9 @@ Deno.serve(async (req) => {
           [`Net Change by This Change Order (${thisCONumber}):`, fmt(subtotal)],
           [newSumLabel, fmt(originalContractSum + subtotal), true],
         ];
+    if (!isProposal) {
     const boxHeight = 28 + summaryRows.length * 15 + 10;
+
     doc.setFillColor(245, 247, 250);
     doc.roundedRect(margin, y, contentW, boxHeight, 4, 4, "F");
     y += 18;
@@ -395,12 +413,43 @@ Deno.serve(async (req) => {
       doc.text(fmt(priorTotal), pw - margin - 5, y + 6, { align: "right" });
       y += 26;
     }
+    } // end !isProposal contract-summary section
+
+    // Proposal narrative
+    if (isProposal) {
+      const narrative: string =
+        (co as any).problem_summary ?? (co as any).reason_note ?? co.title ?? "";
+      if (narrative) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 58, 95);
+        doc.text("PROPOSED WORK", margin, y);
+        y += 5;
+        doc.setDrawColor(30, 58, 95);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pw - margin, y);
+        y += 16;
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60);
+        for (const line of doc.splitTextToSize(narrative, contentW)) {
+          if (y > 720) { doc.addPage(); y = margin; }
+          doc.text(line, margin, y);
+          y += 13;
+        }
+        y += 12;
+      }
+    }
+
+
 
     // Description of Work
+    if (y > 660) { doc.addPage(); y = margin; }
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
-    doc.text("DESCRIPTION OF WORK", margin, y);
+    doc.text(isProposal ? "SCOPE OF WORK" : "DESCRIPTION OF WORK", margin, y);
+
     y += 5;
     doc.setDrawColor(30, 58, 95);
     doc.setLineWidth(0.5);
@@ -439,6 +488,57 @@ Deno.serve(async (req) => {
     }
     y += 10;
 
+    // Labor detail (internal document only — includes crew math)
+    if (!isProposal && !isGCPerspective && laborForView.length > 0) {
+      if (y > 620) { doc.addPage(); y = margin; }
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("LABOR", margin, y);
+      y += 15;
+
+      doc.setFontSize(8);
+      doc.setFillColor(235, 238, 243);
+      doc.rect(margin, y - 10, contentW, 16, "F");
+      doc.setTextColor(80);
+      doc.text("DATE", margin + 5, y);
+      doc.text("DESCRIPTION", margin + 60, y);
+      doc.text("WORKLOAD", margin + 230, y);
+      doc.text("HOURS", margin + 350, y, { align: "right" });
+      doc.text("RATE", margin + 410, y, { align: "right" });
+      doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(40);
+      let laborHours = 0;
+      for (const e of laborForView) {
+        if (y > 700) { doc.addPage(); y = margin; }
+        const crew = Number(e.crew_size ?? 0);
+        const days = Number(e.days ?? 0);
+        const hpd = Number(e.hours_per_day ?? 0);
+        const hours = Number(e.hours ?? 0);
+        laborHours += hours;
+        const workload = crew > 0 && days > 0 && hpd > 0
+          ? `${crew} crew x ${days} d x ${hpd} h`
+          : "—";
+        doc.text(e.entry_date ? new Date(e.entry_date).toLocaleDateString() : "—", margin + 5, y);
+        doc.text(String(e.description ?? "Labor").substring(0, 34), margin + 60, y);
+        doc.text(workload, margin + 230, y);
+        doc.text(hours.toFixed(1), margin + 350, y, { align: "right" });
+        doc.text(fmt(Number(e.hourly_rate ?? 0)), margin + 410, y, { align: "right" });
+        doc.text(fmt(Number(e.line_total ?? 0)), pw - margin - 5, y, { align: "right" });
+        y += 14;
+      }
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text(`TOTAL LABOR — ${laborHours.toFixed(1)} hrs`, margin + 60, y + 6);
+      doc.text(fmt(laborSum), pw - margin - 5, y + 6, { align: "right" });
+      y += 28;
+    }
+
     // Materials
     if (materials.length > 0) {
       if (y > 650) { doc.addPage(); y = margin; }
@@ -454,7 +554,7 @@ Deno.serve(async (req) => {
       doc.setTextColor(80);
       doc.text("DESCRIPTION", margin + 5, y);
       doc.text("QTY", margin + 250, y);
-      doc.text("UNIT COST", margin + 300, y);
+      if (!isProposal) doc.text("UNIT COST", margin + 300, y);
       doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
       y += 18;
 
@@ -464,19 +564,64 @@ Deno.serve(async (req) => {
         if (y > 700) { doc.addPage(); y = margin; }
         doc.text((m.description ?? "").substring(0, 45), margin + 5, y);
         doc.text(String(m.quantity ?? ""), margin + 250, y);
-        doc.text(fmt(m.unit_cost ?? 0), margin + 300, y);
+        if (!isProposal) doc.text(fmt(m.unit_cost ?? 0), margin + 300, y);
         doc.text(fmt(m.billed_amount ?? 0), pw - margin - 5, y, { align: "right" });
         y += 14;
       }
-      y += 10;
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("TOTAL MATERIALS", margin + 5, y + 6);
+      doc.text(fmt(materialsTotal), pw - margin - 5, y + 6, { align: "right" });
+      y += 28;
     }
+
+    // Equipment
+    if (equipment.length > 0) {
+      if (y > 650) { doc.addPage(); y = margin; }
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("EQUIPMENT", margin, y);
+      y += 15;
+
+      doc.setFontSize(8);
+      doc.setFillColor(235, 238, 243);
+      doc.rect(margin, y - 10, contentW, 16, "F");
+      doc.setTextColor(80);
+      doc.text("DESCRIPTION", margin + 5, y);
+      doc.text("DURATION / NOTE", margin + 250, y);
+      doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(40);
+      for (const eq of equipment) {
+        if (y > 700) { doc.addPage(); y = margin; }
+        doc.text(String(eq.description ?? "").substring(0, 45), margin + 5, y);
+        doc.text(String(eq.duration_note ?? "—").substring(0, 24), margin + 250, y);
+        doc.text(fmt(Number(eq.billed_amount ?? 0)), pw - margin - 5, y, { align: "right" });
+        y += 14;
+      }
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("TOTAL EQUIPMENT", margin + 5, y + 6);
+      doc.text(fmt(equipmentTotal), pw - margin - 5, y + 6, { align: "right" });
+      y += 28;
+    }
+
+
 
     // Financial Summary
     if (y > 600) { doc.addPage(); y = margin; }
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
-    doc.text("FINANCIAL SUMMARY", margin, y);
+    doc.text(isProposal ? "INVESTMENT SUMMARY" : "FINANCIAL SUMMARY", margin, y);
+
     y += 5;
     doc.line(margin, y, pw - margin, y);
     y += 18;
@@ -510,15 +655,79 @@ Deno.serve(async (req) => {
     }
     y += 30;
 
+    // Approval trail (internal document only)
+    if (!isProposal) {
+      const trail: [string, string | null][] = [
+        ["Created", co.created_at],
+        ["Submitted", (co as any).submitted_at ?? null],
+        ["Approved", (co as any).approved_at ?? null],
+        ["Contracted", (co as any).contracted_at ?? null],
+      ];
+      if (y > 640) { doc.addPage(); y = margin; }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("APPROVAL TRAIL", margin, y);
+      y += 5;
+      doc.setDrawColor(30, 58, 95);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pw - margin, y);
+      y += 16;
+      doc.setFontSize(9);
+      for (const [label, ts] of trail) {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60);
+        doc.text(label, margin, y);
+        doc.setFont("helvetica", ts ? "bold" : "normal");
+        doc.setTextColor(ts ? 30 : 150, ts ? 58 : 150, ts ? 95 : 150);
+        doc.text(ts ? new Date(ts).toLocaleString() : "Pending", margin + 120, y);
+        y += 14;
+      }
+      y += 20;
+    }
+
+    // Proposal terms
+    if (isProposal) {
+      if (y > 620) { doc.addPage(); y = margin; }
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("TERMS & CONDITIONS", margin, y);
+      y += 5;
+      doc.setDrawColor(30, 58, 95);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pw - margin, y);
+      y += 16;
+      const terms = [
+        `Pricing basis: ${(co.pricing_type ?? "fixed").toString().toUpperCase()}. Amounts above include all labor, materials, and equipment listed.`,
+        `Applicable sales tax of ${taxRate}% is ${totalTax > 0 ? "included as itemized above" : "not applicable"}.`,
+        retainagePct > 0 ? `Retainage of ${retainagePct}% applies to each progress payment.` : "Payment due upon completion of the scope described, net 30.",
+        "This proposal is valid for 30 days from the date above. Work outside the listed scope requires a written change order.",
+        "Schedule commences upon written acceptance and availability of the work area.",
+      ];
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(70);
+      for (const t of terms) {
+        for (const line of doc.splitTextToSize("• " + t, contentW)) {
+          if (y > 720) { doc.addPage(); y = margin; }
+          doc.text(line, margin, y);
+          y += 12;
+        }
+      }
+      y += 20;
+    }
+
     // Signature blocks
     if (y > 580) { doc.addPage(); y = margin; }
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
-    doc.text("SIGNATURES", margin, y);
+    doc.text(isProposal ? "ACCEPTANCE" : "SIGNATURES", margin, y);
     y += 20;
 
-    const sigLabels = ["CONTRACTOR", "OWNER"];
+    const sigLabels = isProposal ? ["PROPOSED BY", "ACCEPTED BY (CLIENT)"] : ["CONTRACTOR", "OWNER"];
+
 
     const sigW = (contentW - 20 * (sigLabels.length - 1)) / sigLabels.length;
     for (let i = 0; i < sigLabels.length; i++) {
@@ -549,7 +758,9 @@ Deno.serve(async (req) => {
       doc.setFontSize(7);
       doc.setTextColor(150);
       doc.text(
-        `Page ${p} of ${pageCount} — Generated ${new Date().toLocaleDateString()} — This is not an AIA document`,
+        isProposal
+          ? `Page ${p} of ${pageCount} — Proposal ${co.co_number ?? ""} — Generated ${new Date().toLocaleDateString()}`
+          : `Page ${p} of ${pageCount} — Generated ${new Date().toLocaleDateString()} — This is not an AIA document`,
         pw / 2,
         doc.internal.pageSize.getHeight() - 20,
         { align: "center" }
@@ -562,9 +773,10 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="CO-${co.co_number ?? co_id}.pdf"`,
+        "Content-Disposition": `attachment; filename="${isProposal ? "Proposal" : co.document_type === "WO" ? "WO" : "CO"}-${co.co_number ?? co_id}.pdf"`,
       },
     });
+
   } catch (err: any) {
     console.error("generate-co-pdf error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
