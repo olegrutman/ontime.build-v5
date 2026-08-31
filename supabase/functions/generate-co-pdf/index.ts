@@ -759,7 +759,9 @@ Deno.serve(async (req) => {
       doc.setFontSize(7);
       doc.setTextColor(150);
       doc.text(
-        `Page ${p} of ${pageCount} — Generated ${new Date().toLocaleDateString()} — This is not an AIA document`,
+        isProposal
+          ? `Page ${p} of ${pageCount} — Proposal ${co.co_number ?? ""} — Generated ${new Date().toLocaleDateString()}`
+          : `Page ${p} of ${pageCount} — Generated ${new Date().toLocaleDateString()} — This is not an AIA document`,
         pw / 2,
         doc.internal.pageSize.getHeight() - 20,
         { align: "center" }
@@ -772,9 +774,10 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="CO-${co.co_number ?? co_id}.pdf"`,
+        "Content-Disposition": `attachment; filename="${isProposal ? "Proposal" : co.document_type === "WO" ? "WO" : "CO"}-${co.co_number ?? co_id}.pdf"`,
       },
     });
+
   } catch (err: any) {
     console.error("generate-co-pdf error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
