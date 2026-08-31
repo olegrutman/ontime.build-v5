@@ -143,7 +143,7 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
     const Icon = status === 'approved' ? ShieldCheck : status === 'rejected' ? X : Clock;
 
     return (
-      <div key={type} className="flex items-start gap-3 px-5 py-3.5 border-t border-border first:border-t-0">
+      <div key={type} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-3 py-3 sm:px-5 sm:py-3.5 border-t border-border first:border-t-0">
         <Icon
           className={cn(
             'h-4 w-4 mt-0.5 shrink-0',
@@ -153,15 +153,15 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
             : 'text-muted-foreground',
           )}
         />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-[8rem]">
           <p className="text-sm font-medium text-foreground">
             {labelFor(type)} approval
-            <span className="ml-2 text-[0.68rem] uppercase tracking-wider text-muted-foreground">
-              {status === 'not_required' ? 'Not sent'
-                : status === 'pending' ? 'Waiting'
-                : status === 'approved' ? 'Approved'
-                : 'Rejected'}
-            </span>
+          </p>
+          <p className="mt-0.5 text-[0.68rem] uppercase tracking-wider text-muted-foreground">
+            {status === 'not_required' ? 'Not sent'
+              : status === 'pending' ? 'Waiting'
+              : status === 'approved' ? 'Approved'
+              : 'Rejected'}
           </p>
           <p className="text-xs text-muted-foreground truncate">
             {approver ? `Signed by ${approver}` : emailOnFile ?? 'No email on file'}
@@ -170,7 +170,7 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
             <p className="text-xs text-red-600 dark:text-red-400 italic mt-0.5">{note}</p>
           )}
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           {token && status !== 'not_required' && (
             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => copyLink(type)}>
               <Copy className="h-3 w-3" />
@@ -182,6 +182,7 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
           </Button>
         </div>
       </div>
+
     );
   }
 
