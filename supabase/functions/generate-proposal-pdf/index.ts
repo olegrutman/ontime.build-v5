@@ -56,6 +56,12 @@ Deno.serve(async (req) => {
       .order("sort_order");
     if (items.length === 0) return json({ error: "This proposal has no work orders." }, 400);
 
+    const { data: milestones = [] } = await supabase
+      .from("co_proposal_milestones")
+      .select("*")
+      .eq("proposal_id", proposal_id)
+      .order("sort_order");
+
     const coIds = items.map((i: any) => i.change_order_id);
 
     const [
@@ -134,8 +140,8 @@ Deno.serve(async (req) => {
     const infoRows: string[][] = [
       ["Project:", String(project?.name ?? "—"), "Proposal No:", String(proposal.proposal_number ?? "—")],
       ["Prepared by:", orgName(billingOrgId), "Date:", new Date(proposal.created_at).toLocaleDateString()],
-      ["Prepared for:", orgName(receivingOrgId), "Valid for:", `${num(proposal.validity_days) || 30} days`],
-      ["Site Address:", addressLine.substring(0, 40), "Items:", `${items.length} work orders`],
+      ["Prepared for:", String(proposal.client_company || proposal.client_name || orgName(receivingOrgId)).substring(0, 38), "Valid for:", `${num(proposal.validity_days) || 30} days`],
+      ["Site Address:", String(proposal.site_address || addressLine).substring(0, 40), "Items:", `${items.length} work orders`],
     ];
     for (const row of infoRows) {
       doc.setFont("helvetica", "bold");
@@ -149,6 +155,26 @@ Deno.serve(async (req) => {
       y += 16;
     }
     y += 12;
+
+    const clientLines = [
+      proposal.client_name ? String(proposal.client_name) : null,
+      proposal.client_company ? String(proposal.client_company) : null,
+      proposal.client_address ? String(proposal.client_address) : null,
+      [proposal.client_email, proposal.client_phone].filter(Boolean).join("  |  ") || null,
+    ].filter(Boolean) as string[];
+
+    if (clientLines.length > 0) {
+      heading("CLIENT");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60);
+      for (const line of clientLines) {
+        brk();
+        doc.text(line.substring(0, 95), margin, y);
+        y += 13;
+      }
+      y += 12;
+    }
 
     if (proposal.intro) {
       heading("OVERVIEW");
@@ -312,7 +338,9 @@ Deno.serve(async (req) => {
     const subtotal = summary.reduce((s, r) => s + r.amount, 0);
     const markupPct = num(proposal.markup_percent);
     const markupAmt = subtotal * markupPct / 100;
-    const grandTotal = subtotal + markupAmt;
+    const proposalTaxPct = num(proposal.tax_percent);
+    const taxAmt = (subtotal + markupAmt) * proposalTaxPct / 100;
+    const grandTotal = subtotal + markupAmt + taxAmt;
 
     doc.setDrawColor(200);
     doc.line(margin, y - 4, pw - margin, y - 4);
@@ -320,7 +348,8 @@ Deno.serve(async (req) => {
 
     const finRows: [string, string, boolean?][] = [["Subtotal:", fmt(subtotal), true]];
     if (markupPct > 0) finRows.push([`Contractor fee (${markupPct}%):`, fmt(markupAmt)]);
-    finRows.push(["Total Proposal Amount:", fmt(grandTotal), true]);
+    if (proposalTaxPct > 0) finRows.push([`Sales tax (${proposalTaxPct}%):`, fmt(taxAmt)]);
+    finRows.push(["Total Quote Amount:", fmt(grandTotal), true]);
 
     doc.setFontSize(9.5);
     for (const [label, val, bold] of finRows) {
@@ -333,15 +362,90 @@ Deno.serve(async (req) => {
     }
     y += 20;
 
+    // Payment schedule
+    if (milestones.length > 0) {
+      heading("PAYMENT SCHEDULE");
+      doc.setFontSize(8);
+      doc.setFillColor(235, 238, 243);
+      doc.rect(margin, y - 10, contentW, 16, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(80);
+      doc.text("#", margin + 5, y);
+      doc.text("MILESTONE", margin + 25, y);
+      doc.text("DUE", margin + 190, y);
+      doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(40);
+      let scheduled = 0;
+      milestones.forEach((m: any, i: number) => {
+        brk(700);
+        const amt = m.basis === "percent" ? grandTotal * num(m.percent) / 100 : num(m.amount);
+        scheduled += amt;
+        const label = String(m.label ?? `Payment ${i + 1}`) +
+          (m.basis === "percent" ? ` (${num(m.percent)}%)` : "");
+        doc.text(String(i + 1), margin + 5, y);
+        doc.text(label.substring(0, 46), margin + 25, y);
+        doc.text(String(m.due_trigger ?? "—").substring(0, 34), margin + 190, y);
+        doc.text(fmt(amt), pw - margin - 5, y, { align: "right" });
+        y += 14;
+      });
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      y += 10;
+      brk(710);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.setFontSize(9);
+      doc.text("Total scheduled:", margin + contentW / 2, y);
+      doc.text(fmt(scheduled), pw - margin, y, { align: "right" });
+      y += 16;
+      if (proposal.deposit_note) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(70);
+        for (const line of doc.splitTextToSize(String(proposal.deposit_note), contentW)) {
+          brk();
+          doc.text(line, margin, y);
+          y += 12;
+        }
+      }
+      y += 16;
+    }
+
+    const bulletBlock = (title: string, text: string) => {
+      heading(title);
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(70);
+      for (const raw of String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean)) {
+        for (const line of doc.splitTextToSize("• " + raw, contentW)) {
+          brk();
+          doc.text(line, margin, y);
+          y += 12;
+        }
+      }
+      y += 16;
+    };
+
+    if (proposal.scope_notes) bulletBlock("INCLUSIONS & CLARIFICATIONS", proposal.scope_notes);
+    if (proposal.exclusions) bulletBlock("EXCLUSIONS", proposal.exclusions);
+
     // Terms
     heading("TERMS & CONDITIONS");
     const taxRate = num(project?.sales_tax_rate);
     const terms = [
       "Amounts above include all labor, materials, and equipment described for each work order.",
-      taxRate > 0 ? `Applicable sales tax of ${taxRate}% is included where required.` : "Sales tax is not applicable to this proposal.",
+      proposalTaxPct > 0
+        ? `Sales tax of ${proposalTaxPct}% is shown as a separate line above.`
+        : taxRate > 0
+          ? `Applicable sales tax of ${taxRate}% is included where required.`
+          : "Sales tax is not applicable to this quote.",
       proposal.payment_terms ? String(proposal.payment_terms) : "Payment due upon completion of the scope described, net 30.",
       `This proposal is valid for ${num(proposal.validity_days) || 30} days from the date above. Work outside the listed scope requires a written change order.`,
       "Schedule commences upon written acceptance and availability of the work area.",
+      ...String(proposal.terms_text ?? "").split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean),
     ];
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
@@ -399,7 +503,7 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="Proposal-${proposal.proposal_number ?? proposal_id}.pdf"`,
+        "Content-Disposition": `attachment; filename="Quote-${proposal.proposal_number ?? proposal_id}.pdf"`,
       },
     });
   } catch (err: any) {
