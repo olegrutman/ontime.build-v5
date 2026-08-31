@@ -274,6 +274,9 @@ Deno.serve(async (req) => {
     const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const docKindLabel = co.document_type === "WO" ? "Work Order" : "Change Order";
+    const pricingLabel = ((co.pricing_type ?? "fixed") as string).toLowerCase() === "tm"
+      ? "T&M"
+      : ((co.pricing_type ?? "fixed") as string).toUpperCase();
     const addr: any = project?.address;
     const addressLine = String(
       typeof addr === "string"
@@ -308,7 +311,7 @@ Deno.serve(async (req) => {
           ["Project:", project?.name ?? "—", "Proposal No:", co.co_number ?? "—"],
           ["Prepared by:", orgName(billingOrgId), "Date:", new Date().toLocaleDateString()],
           ["Prepared for:", orgName(receivingOrgId), "Valid for:", "30 days"],
-          ["Site Address:", addressLine.substring(0, 40), "Pricing:", (co.pricing_type ?? "fixed").toUpperCase()],
+          ["Site Address:", addressLine.substring(0, 40), "Pricing:", pricingLabel],
         ]
       : [
           ["Project:", project?.name ?? "—", numberLabel, co.co_number ?? "—"],
@@ -705,7 +708,7 @@ Deno.serve(async (req) => {
       doc.line(margin, y, pw - margin, y);
       y += 16;
       const terms = [
-        `Pricing basis: ${(co.pricing_type ?? "fixed").toString().toUpperCase()}. Amounts above include all labor, materials, and equipment listed.`,
+        `Pricing basis: ${pricingLabel}. Amounts above include all labor, materials, and equipment listed.`,
         `Applicable sales tax of ${taxRate}% is ${totalTax > 0 ? "included as itemized above" : "not applicable"}.`,
         retainagePct > 0 ? `Retainage of ${retainagePct}% applies to each progress payment.` : "Payment due upon completion of the scope described, net 30.",
         "This proposal is valid for 30 days from the date above. Work outside the listed scope requires a written change order.",
