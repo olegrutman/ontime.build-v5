@@ -489,7 +489,7 @@ Deno.serve(async (req) => {
     y += 10;
 
     // Labor detail (internal document only — includes crew math)
-    if (!isProposal && laborForView.length > 0) {
+    if (!isProposal && !isGCPerspective && laborForView.length > 0) {
       if (y > 620) { doc.addPage(); y = margin; }
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
