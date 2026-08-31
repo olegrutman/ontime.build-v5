@@ -341,7 +341,9 @@ Deno.serve(async (req) => {
           [`Net Change by This Change Order (${thisCONumber}):`, fmt(subtotal)],
           [newSumLabel, fmt(originalContractSum + subtotal), true],
         ];
+    if (!isProposal) {
     const boxHeight = 28 + summaryRows.length * 15 + 10;
+
     doc.setFillColor(245, 247, 250);
     doc.roundedRect(margin, y, contentW, boxHeight, 4, 4, "F");
     y += 18;
