@@ -329,6 +329,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               const totalHours = isHourly
                 ? visibleBillable.reduce((s, e) => s + (e.hours ?? 0), 0)
                 : 0;
+              // Crew math summary on the collapsed row: only when every hourly entry
+              // carries crew data, so the approver sees the workload without expanding.
+              const crewEntries = isHourly ? visibleBillable.filter(e => hasCrewMath(e as any)) : [];
+              const crewSummary = crewEntries.length > 0 && crewEntries.length === visibleBillable.length
+                ? crewEntries.map(e => formatWorkload(e as any).split('=')[0]).join(' + ')
+                : null;
+
 
               const isPriced = entryCount > 0 || totalForRole > 0;
               const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
