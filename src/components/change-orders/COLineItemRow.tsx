@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { fmtHours, formatWorkload, formatWorkloadTooltip } from '@/lib/crewWorkload';
+import { fmtHours, formatWorkload, formatWorkloadTooltip, hasCrewMath } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LaborEntryForm } from './LaborEntryForm';
@@ -378,7 +378,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     {entryCount > 0 && (
                       <span className="text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">
                         {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
-                        {isHourly && totalHours > 0 ? ` · ${totalHours}h` : ''}
+                        {isHourly && totalHours > 0 ? ` · ${fmtHours(totalHours)}h` : ''}
+                      </span>
+                    )}
+                    {crewSummary && (
+                      <span className="font-mono text-[9px] leading-tight text-muted-foreground/80" title="crew × days × hrs/day">
+                        {crewSummary}
                       </span>
                     )}
                   </div>
