@@ -452,105 +452,148 @@ Deno.serve(async (req) => {
 
 
 
-    // Description of Work
-    if (y > 660) { doc.addPage(); y = margin; }
+    // ===== Priced scope: one block per scope item (Design B) =====
+    const laborByItem = new Map<string, any[]>();
+    const unassignedLabor: any[] = [];
+    for (const e of laborForView) {
+      const key = e.co_line_item_id as string | null;
+      if (key) {
+        const arr = laborByItem.get(key) ?? [];
+        arr.push(e);
+        laborByItem.set(key, arr);
+      } else {
+        unassignedLabor.push(e);
+      }
+    }
+    const showCostDetail = !isProposal && !isGCPerspective;
+    const num = (v: any) => Number(v ?? 0);
+    const workloadOf = (e: any) => {
+      const crew = num(e.crew_size), days = num(e.days), hpd = num(e.hours_per_day);
+      return crew > 0 && days > 0 && hpd > 0 ? `${crew} crew x ${days} d x ${hpd} h = ` : "";
+    };
+
+    if (y > 640) { doc.addPage(); y = margin; }
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
-    doc.text(isProposal ? "SCOPE OF WORK" : "DESCRIPTION OF WORK", margin, y);
-
+    doc.text(isProposal ? "SCOPE OF WORK & PRICING" : "PRICED SCOPE OF WORK", margin, y);
     y += 5;
     doc.setDrawColor(30, 58, 95);
     doc.setLineWidth(0.5);
     doc.line(margin, y, pw - margin, y);
-    y += 15;
+    y += 16;
 
-    // Line items table header
-    doc.setFontSize(8);
-    doc.setFillColor(235, 238, 243);
-    doc.rect(margin, y - 10, contentW, 16, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(80);
-    doc.text("#", margin + 5, y);
-    doc.text("ITEM", margin + 25, y);
-    doc.text("UNIT", margin + 280, y);
-    doc.text("QTY", margin + 330, y);
-    y += 18;
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(40);
-    if (lineItems.length === 0) {
+    if (lineItems.length === 0 && unassignedLabor.length === 0) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
       doc.setTextColor(140);
       doc.text("No scope items on this contract.", margin + 5, y);
-      y += 14;
       doc.setTextColor(40);
-    } else {
-      for (let i = 0; i < lineItems.length; i++) {
-        const li = lineItems[i];
-        if (y > 700) { doc.addPage(); y = margin; }
-        doc.text(String(i + 1), margin + 5, y);
-        doc.text((li.item_name ?? "").substring(0, 50), margin + 25, y);
-        doc.text(li.unit ?? "", margin + 280, y);
-        doc.text(String(li.qty ?? "—"), margin + 330, y);
-        y += 14;
-      }
-    }
-    y += 10;
-
-    // Labor detail (internal document only — includes crew math)
-    if (!isProposal && !isGCPerspective && laborForView.length > 0) {
-      if (y > 620) { doc.addPage(); y = margin; }
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 58, 95);
-      doc.text("LABOR", margin, y);
-      y += 15;
-
-      doc.setFontSize(8);
-      doc.setFillColor(235, 238, 243);
-      doc.rect(margin, y - 10, contentW, 16, "F");
-      doc.setTextColor(80);
-      doc.text("DATE", margin + 5, y);
-      doc.text("DESCRIPTION", margin + 60, y);
-      doc.text("WORKLOAD", margin + 230, y);
-      doc.text("HOURS", margin + 350, y, { align: "right" });
-      doc.text("RATE", margin + 410, y, { align: "right" });
-      doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
       y += 18;
-
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(40);
-      let laborHours = 0;
-      for (const e of laborForView) {
-        if (y > 700) { doc.addPage(); y = margin; }
-        const crew = Number(e.crew_size ?? 0);
-        const days = Number(e.days ?? 0);
-        const hpd = Number(e.hours_per_day ?? 0);
-        const hours = Number(e.hours ?? 0);
-        laborHours += hours;
-        const workload = crew > 0 && days > 0 && hpd > 0
-          ? `${crew} crew x ${days} d x ${hpd} h`
-          : "—";
-        doc.text(e.entry_date ? new Date(e.entry_date).toLocaleDateString() : "—", margin + 5, y);
-        doc.text(String(e.description ?? "Labor").substring(0, 34), margin + 60, y);
-        doc.text(workload, margin + 230, y);
-        doc.text(hours.toFixed(1), margin + 350, y, { align: "right" });
-        doc.text(fmt(Number(e.hourly_rate ?? 0)), margin + 410, y, { align: "right" });
-        doc.text(fmt(Number(e.line_total ?? 0)), pw - margin - 5, y, { align: "right" });
-        y += 14;
-      }
-      doc.setDrawColor(200);
-      doc.line(margin, y - 4, pw - margin, y - 4);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 58, 95);
-      doc.text(`TOTAL LABOR — ${laborHours.toFixed(1)} hrs`, margin + 60, y + 6);
-      doc.text(fmt(laborSum), pw - margin - 5, y + 6, { align: "right" });
-      y += 28;
     }
 
-    // Materials
+    const renderItemBlock = (
+      label: string,
+      title: string,
+      description: string | null,
+      unitQty: string,
+      labor: any[],
+      itemTotal: number,
+    ) => {
+      const estRows = 1 + (description ? 1 : 0) + (showCostDetail ? labor.length : labor.length > 0 ? 1 : 0);
+      if (y + estRows * 14 > 715) { doc.addPage(); y = margin; }
+
+      // Item header band
+      doc.setFillColor(240, 243, 248);
+      doc.rect(margin, y - 10, contentW, 17, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text(`${label} — ${title}`.substring(0, 68), margin + 5, y);
+      doc.text(fmt(itemTotal), pw - margin - 5, y, { align: "right" });
+      y += 20;
+
+      if (unitQty) {
+        doc.setFontSize(7.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(120);
+        doc.text(unitQty, margin + 12, y);
+        y += 12;
+      }
+
+      if (description) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(90);
+        for (const line of doc.splitTextToSize(description, contentW - 24)) {
+          if (y > 720) { doc.addPage(); y = margin; }
+          doc.text(line, margin + 12, y);
+          y += 11;
+        }
+        y += 4;
+      }
+
+      if (labor.length > 0) {
+        doc.setFontSize(8);
+        doc.setTextColor(60);
+        if (showCostDetail) {
+          for (const e of labor) {
+            if (y > 720) { doc.addPage(); y = margin; }
+            doc.setFont("helvetica", "bold");
+            doc.text("Labor", margin + 12, y);
+            doc.setFont("helvetica", "normal");
+            const detail = `${workloadOf(e)}${num(e.hours).toFixed(1)} hrs @ ${fmt(num(e.hourly_rate))}/hr${e.description ? ` — ${String(e.description).substring(0, 30)}` : ""}`;
+            doc.text(detail.substring(0, 74), margin + 60, y);
+            doc.text(fmt(num(e.line_total)), pw - margin - 5, y, { align: "right" });
+            y += 13;
+          }
+        } else {
+          const hrs = labor.reduce((s, e) => s + num(e.hours), 0);
+          const amt = labor.reduce((s, e) => s + num(e.line_total), 0);
+          if (y > 720) { doc.addPage(); y = margin; }
+          doc.setFont("helvetica", "bold");
+          doc.text("Labor", margin + 12, y);
+          doc.setFont("helvetica", "normal");
+          doc.text(`${hrs.toFixed(1)} hrs`, margin + 60, y);
+          doc.text(fmt(amt), pw - margin - 5, y, { align: "right" });
+          y += 13;
+        }
+      }
+      y += 8;
+    };
+
+    for (let i = 0; i < lineItems.length; i++) {
+      const li = lineItems[i];
+      const labor = laborByItem.get(li.id) ?? [];
+      const itemTotal = labor.reduce((s, e) => s + num(e.line_total), 0);
+      const unitQty = li.qty != null || li.unit
+        ? `Qty ${li.qty ?? "—"} ${li.unit ?? ""}`.trim()
+        : "";
+      renderItemBlock(
+        `ITEM ${i + 1}`,
+        String(li.item_name ?? "Scope item"),
+        li.description ? String(li.description) : null,
+        unitQty,
+        labor,
+        itemTotal,
+      );
+    }
+
+    if (unassignedLabor.length > 0) {
+      const total = unassignedLabor.reduce((s, e) => s + num(e.line_total), 0);
+      renderItemBlock(
+        "GENERAL",
+        "Labor not allocated to a single scope item",
+        null,
+        "",
+        unassignedLabor,
+        total,
+      );
+    }
+
+    // Materials & Equipment (not line-item scoped in the data model)
     if (materials.length > 0) {
-      if (y > 650) { doc.addPage(); y = margin; }
+      if (y > 640) { doc.addPage(); y = margin; }
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(30, 58, 95);
@@ -563,7 +606,7 @@ Deno.serve(async (req) => {
       doc.setTextColor(80);
       doc.text("DESCRIPTION", margin + 5, y);
       doc.text("QTY", margin + 250, y);
-      if (!isProposal) doc.text("UNIT COST", margin + 300, y);
+      if (showCostDetail) doc.text("UNIT COST", margin + 300, y);
       doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
       y += 18;
 
@@ -573,7 +616,7 @@ Deno.serve(async (req) => {
         if (y > 700) { doc.addPage(); y = margin; }
         doc.text((m.description ?? "").substring(0, 45), margin + 5, y);
         doc.text(String(m.quantity ?? ""), margin + 250, y);
-        if (!isProposal) doc.text(fmt(m.unit_cost ?? 0), margin + 300, y);
+        if (showCostDetail) doc.text(fmt(m.unit_cost ?? 0), margin + 300, y);
         doc.text(fmt(m.billed_amount ?? 0), pw - margin - 5, y, { align: "right" });
         y += 14;
       }
@@ -586,7 +629,6 @@ Deno.serve(async (req) => {
       y += 28;
     }
 
-    // Equipment
     if (equipment.length > 0) {
       if (y > 650) { doc.addPage(); y = margin; }
       doc.setFontSize(10);
@@ -610,7 +652,7 @@ Deno.serve(async (req) => {
         if (y > 700) { doc.addPage(); y = margin; }
         doc.text(String(eq.description ?? "").substring(0, 45), margin + 5, y);
         doc.text(String(eq.duration_note ?? "—").substring(0, 24), margin + 250, y);
-        doc.text(fmt(Number(eq.billed_amount ?? 0)), pw - margin - 5, y, { align: "right" });
+        doc.text(fmt(num(eq.billed_amount)), pw - margin - 5, y, { align: "right" });
         y += 14;
       }
       doc.setDrawColor(200);
@@ -621,6 +663,7 @@ Deno.serve(async (req) => {
       doc.text(fmt(equipmentTotal), pw - margin - 5, y + 6, { align: "right" });
       y += 28;
     }
+
 
 
 
