@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
         doc.text(String(i + 1), margin + 5, y);
         doc.text((p.co_number ?? "—").toString().substring(0, 22), margin + 25, y);
         doc.text(dateStr, margin + 145, y);
-        doc.text((p.title ?? "").substring(0, 38), margin + 230, y);
+        doc.text(String(p.title ?? "").substring(0, 38), margin + 230, y);
         doc.text(fmt(p._amount), pw - margin - 5, y, { align: "right" });
         y += 14;
       }
@@ -614,7 +614,7 @@ Deno.serve(async (req) => {
       doc.setTextColor(40);
       for (const m of materials) {
         if (y > 700) { doc.addPage(); y = margin; }
-        doc.text((m.description ?? "").substring(0, 45), margin + 5, y);
+        doc.text(String(m.description ?? "").substring(0, 45), margin + 5, y);
         doc.text(String(m.quantity ?? ""), margin + 250, y);
         if (showCostDetail) doc.text(fmt(m.unit_cost ?? 0), margin + 300, y);
         doc.text(fmt(m.billed_amount ?? 0), pw - margin - 5, y, { align: "right" });
