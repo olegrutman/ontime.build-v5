@@ -101,10 +101,42 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
               <Button size="sm" variant="ghost" onClick={() => download(p.id, p.proposal_number)} aria-label="Download proposal PDF">
                 {busyId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => setPendingDelete({ id: p.id, number: p.proposal_number })}
+                aria-label={`Delete proposal ${p.proposal_number}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </li>
         ))}
       </ul>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={open => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {pendingDelete?.number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the proposal bundle and its cover details. The work orders inside it stay untouched and can be
+              bundled into a new proposal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteProposal.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProposal.isPending ? 'Deleting…' : 'Delete proposal'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
+
