@@ -49,6 +49,11 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const co_id: string | undefined = body.co_id;
     const requestedPerspective: Perspective | undefined = body.perspective;
+    // 'work_order' = internal/contractual full-ledger document (default)
+    // 'proposal'   = client-facing quote: rolled-up pricing, no crew math / unit costs
+    const mode: 'work_order' | 'proposal' = body.mode === 'proposal' ? 'proposal' : 'work_order';
+    const isProposal = mode === 'proposal';
+
     if (!co_id) {
       return new Response(JSON.stringify({ error: "co_id required" }), {
         status: 400,
