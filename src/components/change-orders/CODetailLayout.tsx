@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -77,7 +77,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfPerspectiveOpen, setPdfPerspectiveOpen] = useState(false);
 
-  async function downloadPdfWithPerspective(perspective?: 'upstream' | 'downstream') {
+  async function downloadPdfWithPerspective(
+    perspective?: 'upstream' | 'downstream',
+    mode: 'work_order' | 'proposal' = 'work_order',
+  ) {
     if (!co) return;
     setDownloadingPdf(true);
     try {
@@ -91,7 +94,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             Authorization: `Bearer ${session?.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ co_id: co.id, perspective }),
+          body: JSON.stringify({ co_id: co.id, perspective, mode }),
         }
       );
       if (!res.ok) {
@@ -103,14 +106,25 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       const a = document.createElement('a');
       a.href = url;
       const suffix = perspective === 'downstream' ? '-to-FC' : perspective === 'upstream' ? '-to-GC' : '';
-      a.download = `CO-${co.co_number ?? co.id}${suffix}.pdf`;
+      const prefix = mode === 'proposal' ? 'Proposal' : co.document_type === 'WO' ? 'WO' : 'CO';
+      a.download = `${prefix}-${co.co_number ?? co.id}${suffix}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('PDF downloaded');
+      toast.success(mode === 'proposal' ? 'Proposal downloaded' : 'PDF downloaded');
     } catch (e: any) {
       toast.error(e.message ?? 'Failed to download PDF');
     } finally {
       setDownloadingPdf(false);
+    }
+  }
+
+  const [downloadingProposal, setDownloadingProposal] = useState(false);
+  async function handleDownloadProposal() {
+    setDownloadingProposal(true);
+    try {
+      await downloadPdfWithPerspective(isTC ? 'upstream' : undefined, 'proposal');
+    } finally {
+      setDownloadingProposal(false);
     }
   }
 
@@ -415,6 +429,17 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             >
               {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} PDF
             </Button>
+            {co.document_type === 'WO' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1 text-muted-foreground"
+                onClick={handleDownloadProposal}
+                disabled={downloadingProposal || downloadingPdf}
+              >
+                {downloadingProposal ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} Proposal
+              </Button>
+            )}
             {/* Invoice: show linked or generate */}
             {linkedInvoice ? (
               <Button
