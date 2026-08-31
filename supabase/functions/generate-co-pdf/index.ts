@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
           doc.setFont("helvetica", "bold");
           doc.text("Labor", margin + 12, y);
           doc.setFont("helvetica", "normal");
-          doc.text(`${hrs.toFixed(1)} hrs`, margin + 60, y);
+          if (!isProposal) doc.text(`${hrs.toFixed(1)} hrs`, margin + 60, y);
           doc.text(fmt(amt), pw - margin - 5, y, { align: "right" });
           y += 13;
         }
@@ -566,9 +566,9 @@ Deno.serve(async (req) => {
       const li = lineItems[i];
       const labor = laborByItem.get(li.id) ?? [];
       const itemTotal = labor.reduce((s, e) => s + num(e.line_total), 0);
-      const unitQty = li.qty != null || li.unit
-        ? `Qty ${li.qty ?? "—"} ${li.unit ?? ""}`.trim()
-        : "";
+      const unitQty = li.qty != null
+        ? `Qty ${li.qty} ${li.unit ?? ""}`.trim()
+        : (li.unit ? `Unit: ${li.unit}` : "");
       renderItemBlock(
         `ITEM ${i + 1}`,
         String(li.item_name ?? "Scope item"),
