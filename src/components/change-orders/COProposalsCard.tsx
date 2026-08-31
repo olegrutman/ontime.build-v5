@@ -1,9 +1,25 @@
 import { useState } from 'react';
-import { Download, FileText, Loader2 } from 'lucide-react';
+import { Download, FileText, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useCOProposals, downloadProposalPdf, useUpdateProposalStatus, type ProposalStatus } from '@/hooks/useCOProposals';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  useCOProposals,
+  downloadProposalPdf,
+  useUpdateProposalStatus,
+  useDeleteProposal,
+  type ProposalStatus,
+} from '@/hooks/useCOProposals';
 
 const money = (v: number) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -17,9 +33,24 @@ const STATUS_STYLES: Record<ProposalStatus, string> = {
 export function COProposalsCard({ projectId }: { projectId: string }) {
   const { data: proposals = [], isLoading } = useCOProposals(projectId);
   const updateStatus = useUpdateProposalStatus(projectId);
+  const deleteProposal = useDeleteProposal(projectId);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; number: string } | null>(null);
 
   if (isLoading || proposals.length === 0) return null;
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    try {
+      await deleteProposal.mutateAsync(pendingDelete.id);
+      toast.success(`${pendingDelete.number} deleted`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not delete the proposal');
+    } finally {
+      setPendingDelete(null);
+    }
+  }
+
 
   async function download(id: string, number: string) {
     setBusyId(id);
@@ -70,10 +101,42 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
               <Button size="sm" variant="ghost" onClick={() => download(p.id, p.proposal_number)} aria-label="Download proposal PDF">
                 {busyId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => setPendingDelete({ id: p.id, number: p.proposal_number })}
+                aria-label={`Delete proposal ${p.proposal_number}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </li>
         ))}
       </ul>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={open => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {pendingDelete?.number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the proposal bundle and its cover details. The work orders inside it stay untouched and can be
+              bundled into a new proposal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteProposal.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProposal.isPending ? 'Deleting…' : 'Delete proposal'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
+
