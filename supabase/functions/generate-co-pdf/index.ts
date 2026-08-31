@@ -274,6 +274,12 @@ Deno.serve(async (req) => {
     const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const docKindLabel = co.document_type === "WO" ? "Work Order" : "Change Order";
+    const addr: any = project?.address;
+    const addressLine = String(
+      typeof addr === "string"
+        ? addr
+        : [addr?.street ?? addr?.line1, addr?.city, addr?.state, addr?.zip].filter(Boolean).join(", ") || "—"
+    );
 
     // Header
     doc.setFontSize(9);
@@ -302,13 +308,13 @@ Deno.serve(async (req) => {
           ["Project:", project?.name ?? "—", "Proposal No:", co.co_number ?? "—"],
           ["Prepared by:", orgName(billingOrgId), "Date:", new Date().toLocaleDateString()],
           ["Prepared for:", orgName(receivingOrgId), "Valid for:", "30 days"],
-          ["Site Address:", String(typeof project?.address === "string" ? project?.address : (project as any)?.address?.line1 ?? "—").substring(0, 40), "Pricing:", (co.pricing_type ?? "fixed").toUpperCase()],
+          ["Site Address:", addressLine.substring(0, 40), "Pricing:", (co.pricing_type ?? "fixed").toUpperCase()],
         ]
       : [
           ["Project:", project?.name ?? "—", numberLabel, co.co_number ?? "—"],
           ["Contractor:", orgName(billingOrgId), "Date:", new Date(co.created_at).toLocaleDateString()],
           ["Owner:", orgName(receivingOrgId), "Status:", (co.status ?? "").toUpperCase()],
-          ["Document Type:", docKindLabel, "Parties:", `${orgName(billingOrgId)} → ${orgName(receivingOrgId)}`],
+          ["Document Type:", docKindLabel, "Parties:", `${orgName(billingOrgId)} to ${orgName(receivingOrgId)}`],
         ];
 
     for (const row of infoRows) {
@@ -326,19 +332,19 @@ Deno.serve(async (req) => {
 
     // Contract Summary Box (AIA G701-style)
     const hasPriors = priorCOsWithTotals.length > 0;
-    const thisCONumber = co.co_number ?? "this Change Order";
+    const thisCONumber = co.co_number ?? `this ${docKindLabel}`;
     const newSumLabel = thisCOApproved ? "New Contract Sum:" : "New Contract Sum (Pending Approval):";
     const summaryRows: [string, string, boolean?][] = hasPriors
       ? [
           ["Original Contract Sum:", fmt(originalContractSum)],
-          ["Net Change by Previously Authorized Change Orders:", fmt(priorTotal)],
-          ["Contract Sum Prior to This Change Order:", fmt(originalContractSum + priorTotal), true],
-          [`Net Change by This Change Order (${thisCONumber}):`, fmt(subtotal)],
+          [`Net Change by Previously Authorized ${docKindLabel}s:`, fmt(priorTotal)],
+          [`Contract Sum Prior to This ${docKindLabel}:`, fmt(originalContractSum + priorTotal), true],
+          [`Net Change by This ${docKindLabel} (${thisCONumber}):`, fmt(subtotal)],
           [newSumLabel, fmt(originalContractSum + priorTotal + subtotal), true],
         ]
       : [
           ["Original Contract Sum:", fmt(originalContractSum)],
-          [`Net Change by This Change Order (${thisCONumber}):`, fmt(subtotal)],
+          [`Net Change by This ${docKindLabel} (${thisCONumber}):`, fmt(subtotal)],
           [newSumLabel, fmt(originalContractSum + subtotal), true],
         ];
     if (!isProposal) {
@@ -370,7 +376,7 @@ Deno.serve(async (req) => {
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(30, 58, 95);
-      doc.text("PREVIOUSLY AUTHORIZED CHANGE ORDERS", margin, y);
+      doc.text(`PREVIOUSLY AUTHORIZED ${docKindLabel.toUpperCase()}S`, margin, y);
       y += 5;
       doc.setDrawColor(30, 58, 95);
       doc.setLineWidth(0.5);
@@ -383,7 +389,7 @@ Deno.serve(async (req) => {
       doc.setFont("helvetica", "bold");
       doc.setTextColor(80);
       doc.text("#", margin + 5, y);
-      doc.text("CO NUMBER", margin + 25, y);
+      doc.text(co.document_type === "WO" ? "WO NUMBER" : "CO NUMBER", margin + 25, y);
       doc.text("DATE APPROVED", margin + 145, y);
       doc.text("DESCRIPTION", margin + 230, y);
       doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
