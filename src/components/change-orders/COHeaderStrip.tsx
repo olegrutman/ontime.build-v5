@@ -72,29 +72,30 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
               </span>
             </div>
             {userName && (
-              <p className="text-sm text-muted-foreground mt-1 truncate">{userName}</p>
+              <p className="text-sm text-muted-foreground mt-1 break-words">{userName}</p>
             )}
           </div>
 
           {/* TC name / role */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 max-w-[45%]">
             <span className={cn(
-              'inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white',
+              'inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white shrink-0',
               ROLE_PILL_COLORS[role] ?? 'bg-muted',
             )}>
               {role.charAt(0)}{role.charAt(1)}
             </span>
-            <div className="text-right">
-              <p className="text-xs font-semibold text-foreground">{myOrgName}</p>
-              <p className="text-[10px] text-muted-foreground">{rl.label(role)}</p>
+            <div className="hidden min-[380px]:block text-right min-w-0">
+              <p className="text-xs font-semibold text-foreground truncate">{myOrgName}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{rl.label(role)}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Status Pipeline */}
-      <div className="border-t border-border bg-accent/50 px-5 py-3.5">
-        <div className="flex items-center justify-between">
+      <div className="border-t border-border bg-accent/50 px-3 sm:px-5 py-3.5 overflow-x-auto">
+        <div className="flex items-center justify-between min-w-[300px]">
+
           {PIPELINE_STEPS.map((step, i) => {
             const isCompleted = i < activeStep;
             const isActive = i === activeStep;
