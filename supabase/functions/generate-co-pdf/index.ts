@@ -413,6 +413,35 @@ Deno.serve(async (req) => {
       doc.text(fmt(priorTotal), pw - margin - 5, y + 6, { align: "right" });
       y += 26;
     }
+    } // end !isProposal contract-summary section
+
+    // Proposal narrative
+    if (isProposal) {
+      const narrative: string =
+        (co as any).scope_description ?? (co as any).description ?? co.title ?? "";
+      if (narrative) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 58, 95);
+        doc.text("PROPOSED WORK", margin, y);
+        y += 5;
+        doc.setDrawColor(30, 58, 95);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pw - margin, y);
+        y += 16;
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60);
+        for (const line of doc.splitTextToSize(narrative, contentW)) {
+          if (y > 720) { doc.addPage(); y = margin; }
+          doc.text(line, margin, y);
+          y += 13;
+        }
+        y += 12;
+      }
+    }
+
+
 
     // Description of Work
     doc.setFontSize(11);
