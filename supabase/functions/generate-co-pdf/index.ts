@@ -302,7 +302,7 @@ Deno.serve(async (req) => {
           ["Project:", project?.name ?? "—", "Proposal No:", co.co_number ?? "—"],
           ["Prepared by:", orgName(billingOrgId), "Date:", new Date().toLocaleDateString()],
           ["Prepared for:", orgName(receivingOrgId), "Valid for:", "30 days"],
-          ["Site Address:", (project?.address ?? "—").substring(0, 40), "Pricing:", (co.pricing_type ?? "fixed").toUpperCase()],
+          ["Site Address:", String(typeof project?.address === "string" ? project?.address : (project as any)?.address?.line1 ?? "—").substring(0, 40), "Pricing:", (co.pricing_type ?? "fixed").toUpperCase()],
         ]
       : [
           ["Project:", project?.name ?? "—", numberLabel, co.co_number ?? "—"],
