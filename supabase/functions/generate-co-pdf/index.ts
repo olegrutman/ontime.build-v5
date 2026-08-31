@@ -418,7 +418,7 @@ Deno.serve(async (req) => {
     // Proposal narrative
     if (isProposal) {
       const narrative: string =
-        (co as any).scope_description ?? (co as any).description ?? co.title ?? "";
+        (co as any).problem_summary ?? (co as any).reason_note ?? co.title ?? "";
       if (narrative) {
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
@@ -523,10 +523,10 @@ Deno.serve(async (req) => {
           ? `${crew} crew x ${days} d x ${hpd} h`
           : "—";
         doc.text(e.entry_date ? new Date(e.entry_date).toLocaleDateString() : "—", margin + 5, y);
-        doc.text(String(e.description ?? e.worker_name ?? "Labor").substring(0, 34), margin + 60, y);
+        doc.text(String(e.description ?? "Labor").substring(0, 34), margin + 60, y);
         doc.text(workload, margin + 230, y);
         doc.text(hours.toFixed(1), margin + 350, y, { align: "right" });
-        doc.text(fmt(Number(e.hourly_rate ?? e.rate ?? 0)), margin + 410, y, { align: "right" });
+        doc.text(fmt(Number(e.hourly_rate ?? 0)), margin + 410, y, { align: "right" });
         doc.text(fmt(Number(e.line_total ?? 0)), pw - margin - 5, y, { align: "right" });
         y += 14;
       }
@@ -591,7 +591,7 @@ Deno.serve(async (req) => {
       doc.rect(margin, y - 10, contentW, 16, "F");
       doc.setTextColor(80);
       doc.text("DESCRIPTION", margin + 5, y);
-      doc.text("QTY / DURATION", margin + 250, y);
+      doc.text("DURATION / NOTE", margin + 250, y);
       doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
       y += 18;
 
@@ -599,9 +599,8 @@ Deno.serve(async (req) => {
       doc.setTextColor(40);
       for (const eq of equipment) {
         if (y > 700) { doc.addPage(); y = margin; }
-        doc.text(String(eq.description ?? eq.name ?? "").substring(0, 45), margin + 5, y);
-        const dur = [eq.quantity, eq.rental_duration ?? eq.duration_unit].filter(Boolean).join(" ");
-        doc.text(String(dur || "—").substring(0, 20), margin + 250, y);
+        doc.text(String(eq.description ?? "").substring(0, 45), margin + 5, y);
+        doc.text(String(eq.duration_note ?? "—").substring(0, 24), margin + 250, y);
         doc.text(fmt(Number(eq.billed_amount ?? 0)), pw - margin - 5, y, { align: "right" });
         y += 14;
       }
