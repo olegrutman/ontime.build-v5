@@ -1833,6 +1833,136 @@ export type Database = {
           },
         ]
       }
+      co_proposal_items: {
+        Row: {
+          amount_snapshot: number
+          change_order_id: string
+          created_at: string
+          id: string
+          proposal_id: string
+          sort_order: number
+        }
+        Insert: {
+          amount_snapshot?: number
+          change_order_id: string
+          created_at?: string
+          id?: string
+          proposal_id: string
+          sort_order?: number
+        }
+        Update: {
+          amount_snapshot?: number
+          change_order_id?: string
+          created_at?: string
+          id?: string
+          proposal_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_proposal_items_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_proposal_items_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "co_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_proposals: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          created_by_user_id: string
+          declined_at: string | null
+          id: string
+          intro: string | null
+          markup_percent: number
+          org_id: string
+          payment_terms: string | null
+          perspective: string
+          project_id: string
+          proposal_number: string
+          sent_at: string | null
+          status: string
+          subtotal: number
+          title: string
+          total: number
+          updated_at: string
+          validity_days: number
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          declined_at?: string | null
+          id?: string
+          intro?: string | null
+          markup_percent?: number
+          org_id: string
+          payment_terms?: string | null
+          perspective?: string
+          project_id: string
+          proposal_number: string
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          title?: string
+          total?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          declined_at?: string | null
+          id?: string
+          intro?: string | null
+          markup_percent?: number
+          org_id?: string
+          payment_terms?: string | null
+          perspective?: string
+          project_id?: string
+          proposal_number?: string
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          title?: string
+          total?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_proposals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_proposals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_scenario_builder_map: {
         Row: {
           child_scenario_ids: string[]

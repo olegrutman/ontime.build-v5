@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus } from 'lucide-react';
+import { CheckSquare, FileText, Loader2, Plus, X } from 'lucide-react';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -9,11 +9,14 @@ import { coLabel, coAbbrev, docTypeFromMode } from '@/lib/coLabel';
 
 import { COMoneyBar } from './COMoneyBar';
 import { CORow } from './CORow';
+import { COProposalsCard } from './COProposalsCard';
 
 
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
+import { useCOsInProposals } from '@/hooks/useCOProposals';
+
 
 
 
@@ -37,12 +40,26 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   // Navigate to the new Picker v3 full-page wizard
   const openNewPicker = () => navigate(`/project/${projectId}/change-orders/start`);
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const bundledMap = useCOsInProposals(projectId);
+
   function handleCardClick(id: string) {
     navigate(`/project/${projectId}/change-orders/${id}`);
   }
 
+  function toggleSelect(id: string, selected: boolean) {
+    setSelectedIds(prev => (selected ? [...prev, id] : prev.filter(x => x !== id)));
+  }
+
+  function exitSelection() {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  }
+
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
   const total = changeOrders.length;
+
 
   // Stats — preserves BUG 2, 3 fixes
   const stats = useMemo(() => {
@@ -128,20 +145,40 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           </p>
         </div>
 
-        {canCreateCO && (
-          <Button
-            onClick={openNewPicker}
-            className="gap-1.5 shrink-0"
-            aria-label={`New ${coLabel(dt, false)}`}
-          >
-            <Plus className="h-4 w-4" />
-            New {coAbbrev(dt)}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isTM && total > 0 && (
+            selectionMode ? (
+              <Button variant="outline" onClick={exitSelection} className="gap-1.5 shrink-0">
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setSelectionMode(true)} className="gap-1.5 shrink-0">
+                <CheckSquare className="h-4 w-4" />
+                Select for proposal
+              </Button>
+            )
+          )}
+
+          {canCreateCO && (
+            <Button
+              onClick={openNewPicker}
+              className="gap-1.5 shrink-0"
+              aria-label={`New ${coLabel(dt, false)}`}
+            >
+              <Plus className="h-4 w-4" />
+              New {coAbbrev(dt)}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Money hero + metric tiles */}
       {total > 0 && <COMoneyBar changeOrders={changeOrders} abbrev={coAbbrev(dt)} />}
+
+      {/* Saved proposals */}
+      {isTM && <COProposalsCard projectId={projectId} />}
+
 
       {/* Filter pills */}
       <div className="pill-row pb-1">
@@ -203,15 +240,37 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
               co={co}
               onClick={handleCardClick}
               needsAction={needsAction(co)}
+              selectable={selectionMode}
+              isSelected={selectedIds.includes(co.id)}
+              onSelect={toggleSelect}
+              bundledLabel={bundledMap.get(co.id)?.proposal_number ?? null}
             />
           ))}
         </div>
       )}
 
-
-      {/* Legacy wizard removed — now using Picker v3 full-page route */}
-
-      
+      {/* Proposal selection bar */}
+      {selectionMode && (
+        <div className="fixed inset-x-0 bottom-16 z-30 border-t border-border bg-card/95 px-4 py-3 backdrop-blur md:bottom-0">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+            <p className="text-sm font-medium text-foreground">
+              {selectedIds.length} selected
+              <span className="ml-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                for one proposal
+              </span>
+            </p>
+            <Button
+              disabled={selectedIds.length === 0}
+              onClick={() => navigate(`/project/${projectId}/proposals/new?ids=${selectedIds.join(',')}`)}
+              className="gap-1.5"
+            >
+              <FileText className="h-4 w-4" />
+              Create proposal
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 }
