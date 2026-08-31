@@ -621,7 +621,8 @@ Deno.serve(async (req) => {
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
-    doc.text("FINANCIAL SUMMARY", margin, y);
+    doc.text(isProposal ? "INVESTMENT SUMMARY" : "FINANCIAL SUMMARY", margin, y);
+
     y += 5;
     doc.line(margin, y, pw - margin, y);
     y += 18;
