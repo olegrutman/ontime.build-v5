@@ -488,6 +488,57 @@ Deno.serve(async (req) => {
     }
     y += 10;
 
+    // Labor detail (internal document only — includes crew math)
+    if (!isProposal && laborForView.length > 0) {
+      if (y > 620) { doc.addPage(); y = margin; }
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("LABOR", margin, y);
+      y += 15;
+
+      doc.setFontSize(8);
+      doc.setFillColor(235, 238, 243);
+      doc.rect(margin, y - 10, contentW, 16, "F");
+      doc.setTextColor(80);
+      doc.text("DATE", margin + 5, y);
+      doc.text("DESCRIPTION", margin + 60, y);
+      doc.text("WORKLOAD", margin + 230, y);
+      doc.text("HOURS", margin + 350, y, { align: "right" });
+      doc.text("RATE", margin + 410, y, { align: "right" });
+      doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(40);
+      let laborHours = 0;
+      for (const e of laborForView) {
+        if (y > 700) { doc.addPage(); y = margin; }
+        const crew = Number(e.crew_size ?? 0);
+        const days = Number(e.days ?? 0);
+        const hpd = Number(e.hours_per_day ?? 0);
+        const hours = Number(e.hours ?? 0);
+        laborHours += hours;
+        const workload = crew > 0 && days > 0 && hpd > 0
+          ? `${crew} crew x ${days} d x ${hpd} h`
+          : "—";
+        doc.text(e.entry_date ? new Date(e.entry_date).toLocaleDateString() : "—", margin + 5, y);
+        doc.text(String(e.description ?? e.worker_name ?? "Labor").substring(0, 34), margin + 60, y);
+        doc.text(workload, margin + 230, y);
+        doc.text(hours.toFixed(1), margin + 350, y, { align: "right" });
+        doc.text(fmt(Number(e.hourly_rate ?? e.rate ?? 0)), margin + 410, y, { align: "right" });
+        doc.text(fmt(Number(e.line_total ?? 0)), pw - margin - 5, y, { align: "right" });
+        y += 14;
+      }
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text(`TOTAL LABOR — ${laborHours.toFixed(1)} hrs`, margin + 60, y + 6);
+      doc.text(fmt(laborSum), pw - margin - 5, y + 6, { align: "right" });
+      y += 28;
+    }
+
     // Materials
     if (materials.length > 0) {
       if (y > 650) { doc.addPage(); y = margin; }
@@ -503,7 +554,7 @@ Deno.serve(async (req) => {
       doc.setTextColor(80);
       doc.text("DESCRIPTION", margin + 5, y);
       doc.text("QTY", margin + 250, y);
-      doc.text("UNIT COST", margin + 300, y);
+      if (!isProposal) doc.text("UNIT COST", margin + 300, y);
       doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
       y += 18;
 
@@ -513,12 +564,57 @@ Deno.serve(async (req) => {
         if (y > 700) { doc.addPage(); y = margin; }
         doc.text((m.description ?? "").substring(0, 45), margin + 5, y);
         doc.text(String(m.quantity ?? ""), margin + 250, y);
-        doc.text(fmt(m.unit_cost ?? 0), margin + 300, y);
+        if (!isProposal) doc.text(fmt(m.unit_cost ?? 0), margin + 300, y);
         doc.text(fmt(m.billed_amount ?? 0), pw - margin - 5, y, { align: "right" });
         y += 14;
       }
-      y += 10;
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("TOTAL MATERIALS", margin + 5, y + 6);
+      doc.text(fmt(materialsTotal), pw - margin - 5, y + 6, { align: "right" });
+      y += 28;
     }
+
+    // Equipment
+    if (equipment.length > 0) {
+      if (y > 650) { doc.addPage(); y = margin; }
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("EQUIPMENT", margin, y);
+      y += 15;
+
+      doc.setFontSize(8);
+      doc.setFillColor(235, 238, 243);
+      doc.rect(margin, y - 10, contentW, 16, "F");
+      doc.setTextColor(80);
+      doc.text("DESCRIPTION", margin + 5, y);
+      doc.text("QTY / DURATION", margin + 250, y);
+      doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
+      y += 18;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(40);
+      for (const eq of equipment) {
+        if (y > 700) { doc.addPage(); y = margin; }
+        doc.text(String(eq.description ?? eq.name ?? "").substring(0, 45), margin + 5, y);
+        const dur = [eq.quantity, eq.rental_duration ?? eq.duration_unit].filter(Boolean).join(" ");
+        doc.text(String(dur || "—").substring(0, 20), margin + 250, y);
+        doc.text(fmt(Number(eq.billed_amount ?? 0)), pw - margin - 5, y, { align: "right" });
+        y += 14;
+      }
+      doc.setDrawColor(200);
+      doc.line(margin, y - 4, pw - margin, y - 4);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 58, 95);
+      doc.text("TOTAL EQUIPMENT", margin + 5, y + 6);
+      doc.text(fmt(equipmentTotal), pw - margin - 5, y + 6, { align: "right" });
+      y += 28;
+    }
+
+
 
     // Financial Summary
     if (y > 600) { doc.addPage(); y = margin; }
