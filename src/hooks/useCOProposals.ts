@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
+export type MilestoneBasis = 'percent' | 'amount';
 
 export interface COProposal {
   id: string;
@@ -14,6 +15,7 @@ export interface COProposal {
   validity_days: number;
   payment_terms: string | null;
   markup_percent: number;
+  tax_percent: number;
   subtotal: number;
   total: number;
   status: ProposalStatus;
@@ -24,6 +26,17 @@ export interface COProposal {
   declined_at: string | null;
   created_at: string;
   updated_at: string;
+  /* Quote fields */
+  client_name: string | null;
+  client_company: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  client_address: string | null;
+  site_address: string | null;
+  scope_notes: string | null;
+  exclusions: string | null;
+  terms_text: string | null;
+  deposit_note: string | null;
 }
 
 export interface COProposalItem {
@@ -34,7 +47,40 @@ export interface COProposalItem {
   amount_snapshot: number;
 }
 
-export interface NewProposalInput {
+export interface COProposalMilestone {
+  id: string;
+  proposal_id: string;
+  sort_order: number;
+  label: string;
+  due_trigger: string | null;
+  basis: MilestoneBasis;
+  percent: number;
+  amount: number;
+}
+
+export interface MilestoneInput {
+  label: string;
+  due_trigger?: string | null;
+  basis: MilestoneBasis;
+  percent: number;
+  amount: number;
+}
+
+export interface QuoteFields {
+  client_name?: string | null;
+  client_company?: string | null;
+  client_email?: string | null;
+  client_phone?: string | null;
+  client_address?: string | null;
+  site_address?: string | null;
+  scope_notes?: string | null;
+  exclusions?: string | null;
+  terms_text?: string | null;
+  deposit_note?: string | null;
+  tax_percent?: number;
+}
+
+export interface NewProposalInput extends QuoteFields {
   title: string;
   intro?: string | null;
   validity_days: number;
@@ -42,21 +88,55 @@ export interface NewProposalInput {
   markup_percent: number;
   perspective?: 'upstream' | 'downstream';
   items: { change_order_id: string; amount: number }[];
+  milestones?: MilestoneInput[];
 }
+
+export type ProposalWithDetails = COProposal & {
+  items: COProposalItem[];
+  milestones: COProposalMilestone[];
+};
+
+const SELECT = '*, items:co_proposal_items(*), milestones:co_proposal_milestones(*)';
+
+/** Subtotal → markup → tax roll-up used by the builder, list and PDF. */
+export function computeProposalTotals(
+  amounts: number[],
+  markupPercent: number,
+  taxPercent: number,
+) {
+  const subtotal = amounts.reduce((s, a) => s + Number(a || 0), 0);
+  const markupAmount = (subtotal * (Number(markupPercent) || 0)) / 100;
+  const taxable = subtotal + markupAmount;
+  const taxAmount = (taxable * (Number(taxPercent) || 0)) / 100;
+  return { subtotal, markupAmount, taxAmount, total: taxable + taxAmount };
+}
+
+export function milestoneAmount(m: MilestoneInput | COProposalMilestone, total: number) {
+  return m.basis === 'percent'
+    ? (total * (Number(m.percent) || 0)) / 100
+    : Number(m.amount) || 0;
+}
+
+const sortDetails = (rows: ProposalWithDetails[]) =>
+  rows.map(p => ({
+    ...p,
+    items: [...(p.items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+    milestones: [...(p.milestones ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+  }));
 
 /** All proposals on a project (participants can read). */
 export function useCOProposals(projectId: string | null) {
   return useQuery({
     queryKey: ['co-proposals', projectId],
     enabled: !!projectId,
-    queryFn: async (): Promise<(COProposal & { items: COProposalItem[] })[]> => {
+    queryFn: async (): Promise<ProposalWithDetails[]> => {
       const { data, error } = await supabase
         .from('co_proposals')
-        .select('*, items:co_proposal_items(*)')
+        .select(SELECT)
         .eq('project_id', projectId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as (COProposal & { items: COProposalItem[] })[];
+      return sortDetails((data ?? []) as unknown as ProposalWithDetails[]);
     },
   });
 }
@@ -65,14 +145,15 @@ export function useCOProposal(proposalId: string | null) {
   return useQuery({
     queryKey: ['co-proposal', proposalId],
     enabled: !!proposalId,
-    queryFn: async (): Promise<(COProposal & { items: COProposalItem[] }) | null> => {
+    queryFn: async (): Promise<ProposalWithDetails | null> => {
       const { data, error } = await supabase
         .from('co_proposals')
-        .select('*, items:co_proposal_items(*)')
+        .select(SELECT)
         .eq('id', proposalId!)
         .maybeSingle();
       if (error) throw error;
-      return (data ?? null) as unknown as (COProposal & { items: COProposalItem[] }) | null;
+      if (!data) return null;
+      return sortDetails([data as unknown as ProposalWithDetails])[0];
     },
   });
 }
@@ -86,6 +167,61 @@ export function useCOsInProposals(projectId: string | null) {
     for (const it of p.items ?? []) map.set(it.change_order_id, p);
   }
   return map;
+}
+
+function quotePayload(input: QuoteFields) {
+  const t = (v?: string | null) => (v && v.trim() ? v.trim() : null);
+  return {
+    client_name: t(input.client_name),
+    client_company: t(input.client_company),
+    client_email: t(input.client_email),
+    client_phone: t(input.client_phone),
+    client_address: t(input.client_address),
+    site_address: t(input.site_address),
+    scope_notes: t(input.scope_notes),
+    exclusions: t(input.exclusions),
+    terms_text: t(input.terms_text),
+    deposit_note: t(input.deposit_note),
+    tax_percent: Number(input.tax_percent || 0),
+  };
+}
+
+async function writeChildren(
+  proposalId: string,
+  items: NewProposalInput['items'],
+  milestones: MilestoneInput[],
+  total: number,
+  replace: boolean,
+) {
+  if (replace) {
+    await supabase.from('co_proposal_items').delete().eq('proposal_id', proposalId);
+    await supabase.from('co_proposal_milestones').delete().eq('proposal_id', proposalId);
+  }
+  if (items.length > 0) {
+    const { error } = await supabase.from('co_proposal_items').insert(
+      items.map((it, idx) => ({
+        proposal_id: proposalId,
+        change_order_id: it.change_order_id,
+        sort_order: idx,
+        amount_snapshot: Number(it.amount || 0),
+      })),
+    );
+    if (error) throw error;
+  }
+  if (milestones.length > 0) {
+    const { error } = await supabase.from('co_proposal_milestones').insert(
+      milestones.map((m, idx) => ({
+        proposal_id: proposalId,
+        sort_order: idx,
+        label: m.label.trim() || `Payment ${idx + 1}`,
+        due_trigger: m.due_trigger?.trim() || null,
+        basis: m.basis,
+        percent: m.basis === 'percent' ? Number(m.percent || 0) : 0,
+        amount: milestoneAmount(m, total),
+      })),
+    );
+    if (error) throw error;
+  }
 }
 
 export function useCreateProposal(projectId: string | null) {
@@ -103,8 +239,11 @@ export function useCreateProposal(projectId: string | null) {
         .eq('project_id', projectId);
 
       const proposalNumber = `PROP-${String((count ?? 0) + 1).padStart(3, '0')}`;
-      const subtotal = input.items.reduce((s, i) => s + Number(i.amount || 0), 0);
-      const total = subtotal * (1 + Number(input.markup_percent || 0) / 100);
+      const { subtotal, total } = computeProposalTotals(
+        input.items.map(i => i.amount),
+        input.markup_percent,
+        input.tax_percent ?? 0,
+      );
 
       const { data: proposal, error } = await supabase
         .from('co_proposals')
@@ -121,27 +260,51 @@ export function useCreateProposal(projectId: string | null) {
           total,
           perspective: input.perspective ?? 'upstream',
           created_by_user_id: user.id,
+          ...quotePayload(input),
         })
         .select('*')
         .single();
       if (error) throw error;
 
-      if (input.items.length > 0) {
-        const { error: itemsError } = await supabase.from('co_proposal_items').insert(
-          input.items.map((it, idx) => ({
-            proposal_id: proposal.id,
-            change_order_id: it.change_order_id,
-            sort_order: idx,
-            amount_snapshot: Number(it.amount || 0),
-          })),
-        );
-        if (itemsError) throw itemsError;
-      }
-
+      await writeChildren(proposal.id, input.items, input.milestones ?? [], total, false);
       return proposal as unknown as COProposal;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['co-proposals', projectId] });
+    },
+  });
+}
+
+/** Edits a saved quote: cover, client, terms, bundled work orders and payment schedule. */
+export function useUpdateProposal(projectId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: NewProposalInput }) => {
+      const { subtotal, total } = computeProposalTotals(
+        input.items.map(i => i.amount),
+        input.markup_percent,
+        input.tax_percent ?? 0,
+      );
+      const { error } = await supabase
+        .from('co_proposals')
+        .update({
+          title: input.title,
+          intro: input.intro ?? null,
+          validity_days: input.validity_days,
+          payment_terms: input.payment_terms ?? null,
+          markup_percent: input.markup_percent,
+          subtotal,
+          total,
+          ...quotePayload(input),
+        })
+        .eq('id', id);
+      if (error) throw error;
+
+      await writeChildren(id, input.items, input.milestones ?? [], total, true);
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['co-proposals', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['co-proposal', vars.id] });
     },
   });
 }

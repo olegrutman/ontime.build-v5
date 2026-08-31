@@ -1882,12 +1882,66 @@ export type Database = {
           },
         ]
       }
+      co_proposal_milestones: {
+        Row: {
+          amount: number
+          basis: string
+          created_at: string
+          due_trigger: string | null
+          id: string
+          label: string
+          percent: number
+          proposal_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          basis?: string
+          created_at?: string
+          due_trigger?: string | null
+          id?: string
+          label: string
+          percent?: number
+          proposal_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          basis?: string
+          created_at?: string
+          due_trigger?: string | null
+          id?: string
+          label?: string
+          percent?: number
+          proposal_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_proposal_milestones_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "co_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_proposals: {
         Row: {
           accepted_at: string | null
+          client_address: string | null
+          client_company: string | null
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
           created_at: string
           created_by_user_id: string
           declined_at: string | null
+          deposit_note: string | null
+          exclusions: string | null
           id: string
           intro: string | null
           markup_percent: number
@@ -1896,9 +1950,13 @@ export type Database = {
           perspective: string
           project_id: string
           proposal_number: string
+          scope_notes: string | null
           sent_at: string | null
+          site_address: string | null
           status: string
           subtotal: number
+          tax_percent: number
+          terms_text: string | null
           title: string
           total: number
           updated_at: string
@@ -1906,9 +1964,16 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           created_at?: string
           created_by_user_id?: string
           declined_at?: string | null
+          deposit_note?: string | null
+          exclusions?: string | null
           id?: string
           intro?: string | null
           markup_percent?: number
@@ -1917,9 +1982,13 @@ export type Database = {
           perspective?: string
           project_id: string
           proposal_number: string
+          scope_notes?: string | null
           sent_at?: string | null
+          site_address?: string | null
           status?: string
           subtotal?: number
+          tax_percent?: number
+          terms_text?: string | null
           title?: string
           total?: number
           updated_at?: string
@@ -1927,9 +1996,16 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           created_at?: string
           created_by_user_id?: string
           declined_at?: string | null
+          deposit_note?: string | null
+          exclusions?: string | null
           id?: string
           intro?: string | null
           markup_percent?: number
@@ -1938,9 +2014,13 @@ export type Database = {
           perspective?: string
           project_id?: string
           proposal_number?: string
+          scope_notes?: string | null
           sent_at?: string | null
+          site_address?: string | null
           status?: string
           subtotal?: number
+          tax_percent?: number
+          terms_text?: string | null
           title?: string
           total?: number
           updated_at?: string
