@@ -77,7 +77,7 @@ export default function ProposalBuilder() {
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Proposal saved, but the PDF failed to generate');
       }
-      navigate(`/project/${projectId}/proposals/${proposal.id}`);
+      navigate(`/project/${projectId}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not create the proposal');
     } finally {
