@@ -444,10 +444,12 @@ Deno.serve(async (req) => {
 
 
     // Description of Work
+    if (y > 660) { doc.addPage(); y = margin; }
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
-    doc.text("DESCRIPTION OF WORK", margin, y);
+    doc.text(isProposal ? "SCOPE OF WORK" : "DESCRIPTION OF WORK", margin, y);
+
     y += 5;
     doc.setDrawColor(30, 58, 95);
     doc.setLineWidth(0.5);
