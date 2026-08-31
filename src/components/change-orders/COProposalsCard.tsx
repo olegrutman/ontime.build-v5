@@ -1,9 +1,25 @@
 import { useState } from 'react';
-import { Download, FileText, Loader2 } from 'lucide-react';
+import { Download, FileText, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useCOProposals, downloadProposalPdf, useUpdateProposalStatus, type ProposalStatus } from '@/hooks/useCOProposals';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  useCOProposals,
+  downloadProposalPdf,
+  useUpdateProposalStatus,
+  useDeleteProposal,
+  type ProposalStatus,
+} from '@/hooks/useCOProposals';
 
 const money = (v: number) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -17,9 +33,24 @@ const STATUS_STYLES: Record<ProposalStatus, string> = {
 export function COProposalsCard({ projectId }: { projectId: string }) {
   const { data: proposals = [], isLoading } = useCOProposals(projectId);
   const updateStatus = useUpdateProposalStatus(projectId);
+  const deleteProposal = useDeleteProposal(projectId);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; number: string } | null>(null);
 
   if (isLoading || proposals.length === 0) return null;
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    try {
+      await deleteProposal.mutateAsync(pendingDelete.id);
+      toast.success(`${pendingDelete.number} deleted`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not delete the proposal');
+    } finally {
+      setPendingDelete(null);
+    }
+  }
+
 
   async function download(id: string, number: string) {
     setBusyId(id);
