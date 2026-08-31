@@ -68,6 +68,8 @@ const CODetailPage = lazy(() => import("./pages/CODetail"));
 const COPickerV3Page = lazy(() => import("./pages/COPickerV3"));
 const CONewIntakePage = lazy(() => import("./pages/CONewIntake"));
 const CONewStartPage = lazy(() => import("./pages/CONewStart"));
+const ProposalBuilderPage = lazy(() => import("./pages/ProposalBuilder"));
+
 const COGuidedBuilderPage = lazy(() => import("./pages/COGuidedBuilder"));
 const FinishProjectSetup = lazy(() => import("./pages/FinishProjectSetup"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
@@ -216,6 +218,8 @@ function AppRoutes() {
             <Route path="/project/:id/change-orders/quick" element={<RequireAuth><QuickCapture /></RequireAuth>} />
             
             <Route path="/project/:id/change-orders/start" element={<RequireAuth><CONewStartPage /></RequireAuth>} />
+            <Route path="/project/:id/proposals/new" element={<RequireAuth><ProposalBuilderPage /></RequireAuth>} />
+
             <Route path="/project/:id/change-orders/new" element={<RequireAuth><CONewIntakePage /></RequireAuth>} />
             <Route path="/project/:id/change-orders/new/manual" element={<RequireAuth><COPickerV3Page /></RequireAuth>} />
             <Route path="/project/:id/change-orders/guided" element={<RequireAuth><COGuidedBuilderPage /></RequireAuth>} />
