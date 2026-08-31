@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Download, FileText, Loader2, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Download, FileText, Loader2, Pencil, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ const STATUS_STYLES: Record<ProposalStatus, string> = {
 };
 
 export function COProposalsCard({ projectId }: { projectId: string }) {
+  const navigate = useNavigate();
   const { data: proposals = [], isLoading } = useCOProposals(projectId);
   const updateStatus = useUpdateProposalStatus(projectId);
   const deleteProposal = useDeleteProposal(projectId);
@@ -55,7 +57,7 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
   async function download(id: string, number: string) {
     setBusyId(id);
     try {
-      await downloadProposalPdf(id, `Proposal-${number}`);
+      await downloadProposalPdf(id, `Quote-${number}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not generate the proposal PDF');
     } finally {
@@ -66,7 +68,7 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
   return (
     <section className="rounded-2xl border border-border bg-card p-4">
       <h2 className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        Proposals ({proposals.length})
+        Quotes / proposals ({proposals.length})
       </h2>
       <ul className="mt-2 divide-y divide-border">
         {proposals.map(p => (
@@ -85,6 +87,19 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
                 </span>
               </div>
               <p className="mt-0.5 truncate text-sm font-medium text-foreground">{p.title}</p>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.65rem] text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {p.client_company || p.client_name || 'No client set'}
+                </span>
+                {(p.milestones ?? []).length > 0 && (
+                  <span className="font-mono">
+                    {(p.milestones ?? [])
+                      .map(m => (m.basis === 'percent' ? `${Number(m.percent)}%` : money(Number(m.amount))))
+                      .join(' / ')}
+                  </span>
+                )}
+              </p>
             </div>
             <span className="font-mono tabular-nums text-sm font-semibold text-foreground">{money(p.total)}</span>
             <div className="flex items-center gap-1.5">
@@ -98,6 +113,14 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
                   Accepted
                 </Button>
               )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => navigate(`/project/${projectId}/proposals/${p.id}/edit`)}
+                aria-label={`Edit quote ${p.proposal_number}`}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => download(p.id, p.proposal_number)} aria-label="Download proposal PDF">
                 {busyId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               </Button>
