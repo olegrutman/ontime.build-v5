@@ -9,6 +9,7 @@ import { CatalogCategory } from '@/types/supplier';
 
 interface CatalogItem {
   id: string;
+  supplier_id?: string;
   supplier_sku: string;
   name: string | null;
   description: string;
@@ -23,7 +24,13 @@ interface CatalogItem {
   bundle_type: string | null;
   bundle_qty: number | null;
   uom_default: string;
+  is_active?: boolean;
+  lead_time_days?: number | null;
+  min_order_qty?: number | null;
+  list_price?: number | null;
+  price_uom?: string | null;
 }
+
 
 interface Props {
   open: boolean;
@@ -56,6 +63,11 @@ export function EditProductDialog({ open, onOpenChange, item, onSaved }: Props) 
         bundle_type: item.bundle_type || '',
         bundle_qty: item.bundle_qty?.toString() || '',
         uom_default: item.uom_default || 'EA',
+        list_price: item.list_price != null ? String(item.list_price) : '',
+        price_uom: item.price_uom || item.uom_default || 'EA',
+        lead_time_days: item.lead_time_days != null ? String(item.lead_time_days) : '',
+        min_order_qty: item.min_order_qty != null ? String(item.min_order_qty) : '',
+        is_active: item.is_active ?? true,
       });
       setErrors({});
     }
@@ -86,7 +98,29 @@ export function EditProductDialog({ open, onOpenChange, item, onSaved }: Props) 
       bundle_type: form.bundle_type || null,
       bundle_qty: form.bundle_qty ? parseInt(form.bundle_qty) : null,
       uom_default: form.uom_default,
+      is_active: form.is_active,
+      discontinued_at: form.is_active ? null : (item.is_active === false ? undefined : new Date().toISOString()),
+      lead_time_days: form.lead_time_days ? parseInt(form.lead_time_days) : null,
+      min_order_qty: form.min_order_qty ? Number(form.min_order_qty) : null,
     }).eq('id', item.id);
+
+    if (!error) {
+      const priceStr = form.list_price.trim();
+      if (priceStr === '' || Number.isNaN(Number(priceStr))) {
+        await supabase.from('catalog_prices').delete().eq('catalog_item_id', item.id);
+      } else if (item.supplier_id) {
+        await supabase.from('catalog_prices').upsert(
+          {
+            catalog_item_id: item.id,
+            supplier_id: item.supplier_id,
+            list_price: Number(priceStr),
+            price_uom: form.price_uom,
+          },
+          { onConflict: 'catalog_item_id' },
+        );
+      }
+    }
+
 
     setSaving(false);
 

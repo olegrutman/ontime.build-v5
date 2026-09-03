@@ -17,6 +17,11 @@ export interface ProductFormData {
   bundle_type: string;
   bundle_qty: string;
   uom_default: string;
+  list_price: string;
+  price_uom: string;
+  lead_time_days: string;
+  min_order_qty: string;
+  is_active: boolean;
 }
 
 export const EMPTY_FORM: ProductFormData = {
@@ -34,7 +39,13 @@ export const EMPTY_FORM: ProductFormData = {
   bundle_type: '',
   bundle_qty: '',
   uom_default: 'EA',
+  list_price: '',
+  price_uom: 'EA',
+  lead_time_days: '',
+  min_order_qty: '',
+  is_active: true,
 };
+
 
 interface Props {
   form: ProductFormData;
@@ -44,8 +55,9 @@ interface Props {
 }
 
 export function ProductFormFields({ form, onChange, errors, skuDisabled }: Props) {
-  const set = (field: keyof ProductFormData, value: string) =>
-    onChange({ ...form, [field]: value });
+  const set = (field: keyof ProductFormData, value: string | boolean) =>
+    onChange({ ...form, [field]: value } as ProductFormData);
+
 
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
@@ -146,6 +158,68 @@ export function ProductFormFields({ form, onChange, errors, skuDisabled }: Props
           <Input type="number" value={form.bundle_qty} onChange={(e) => set('bundle_qty', e.target.value)} placeholder="0" />
         </div>
       </div>
+
+      {/* Pricing & availability */}
+      <div className="border-t border-border pt-3 space-y-3">
+        <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Pricing & availability</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm font-medium">List Price</label>
+            <Input
+              value={form.list_price}
+              onChange={(e) => set('list_price', e.target.value)}
+              placeholder="0.00"
+              inputMode="decimal"
+              className="font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Price UOM</label>
+            <Select value={form.price_uom} onValueChange={(v) => set('price_uom', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {UOM_OPTIONS.map((u) => (
+                  <SelectItem key={u} value={u}>{u}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm font-medium">Lead Time (days)</label>
+            <Input
+              type="number"
+              value={form.lead_time_days}
+              onChange={(e) => set('lead_time_days', e.target.value)}
+              placeholder="0"
+              className="font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Min Order Qty</label>
+            <Input
+              type="number"
+              value={form.min_order_qty}
+              onChange={(e) => set('min_order_qty', e.target.value)}
+              placeholder="0"
+              className="font-mono"
+            />
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) => set('is_active', e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          Active — available to order
+        </label>
+      </div>
+
     </div>
   );
 }
