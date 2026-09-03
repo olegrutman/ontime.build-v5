@@ -131,6 +131,9 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     const pack = po.source_pack_name || po.po_name || 'Other';
     orderedByPack[pack] = (orderedByPack[pack] || 0) + poOrderedAmount(po);
   });
+  const packByPoId: Record<string, string> = {};
+  pos.forEach(po => { packByPoId[po.id] = po.source_pack_name || po.po_name || 'Other'; });
+
 
   // Deliveries
   const deliveredPOs = pos.filter(p => p.status === 'DELIVERED');
