@@ -7,6 +7,7 @@ import {
   Handshake,
   Bell,
   LogOut,
+  Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,6 +59,13 @@ export function DashboardSidebar() {
   const orgName = currentOrg?.name || 'My Organization';
   const orgType = currentOrg?.type || '';
 
+  const sections: NavSection[] = orgType === 'supplier'
+    ? [
+        ...NAV_SECTIONS,
+        { label: 'Catalog', items: [{ label: 'Catalog Management', icon: Package, path: '/supplier/inventory' }] },
+      ]
+    : NAV_SECTIONS;
+
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
@@ -93,7 +101,7 @@ export function DashboardSidebar() {
 
       {/* Nav sections */}
       <nav className="flex flex-col gap-0.5 p-3 pt-2 flex-1 overflow-y-auto">
-        {NAV_SECTIONS.map((section, si) => (
+        {sections.map((section, si) => (
           <div key={section.label} className={cn(si > 0 && 'mt-3')}>
             <div className="px-3 mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
               {section.label}

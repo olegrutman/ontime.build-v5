@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Handshake, Bell, MessageSquareMore, MoreHorizontal, Users } from 'lucide-react';
+import { Home, Handshake, Bell, MessageSquareMore, MoreHorizontal, Users, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
@@ -14,7 +14,8 @@ interface NavItem {
 export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { permissions } = useAuth();
+  const { permissions, userOrgRoles } = useAuth();
+  const isSupplier = userOrgRoles?.[0]?.organization?.type === 'supplier';
   const [moreOpen, setMoreOpen] = useState(false);
 
   const canManageOrg = permissions?.canManageOrg ?? false;
@@ -41,6 +42,7 @@ export function MobileBottomNav() {
   ];
 
   const moreItems: NavItem[] = [
+    ...(isSupplier ? [{ label: 'Catalog', icon: Package, path: '/supplier/inventory' }] : []),
     ...(canManageOrg ? [{ label: 'My Team', icon: Users, path: '/org/team' }] : []),
   ];
 

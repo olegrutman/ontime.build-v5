@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { Package } from 'lucide-react';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
