@@ -439,15 +439,19 @@ export type Database = {
           description: string
           diameter: string | null
           dimension: string | null
+          discontinued_at: string | null
           edge_type: string | null
           finish: string | null
           id: string
+          is_active: boolean
+          lead_time_days: number | null
           length: string | null
           length_increment: number | null
           length_unit: string | null
           manufacturer: string | null
           max_length: number | null
           min_length: number | null
+          min_order_qty: number | null
           name: string | null
           normalized_search: string | null
           product_type: string | null
@@ -455,6 +459,7 @@ export type Database = {
           search_vector: unknown
           secondary_category: string | null
           size_or_spec: string | null
+          superseded_by: string | null
           supplier_id: string
           supplier_sku: string
           thickness: string | null
@@ -475,15 +480,19 @@ export type Database = {
           description: string
           diameter?: string | null
           dimension?: string | null
+          discontinued_at?: string | null
           edge_type?: string | null
           finish?: string | null
           id?: string
+          is_active?: boolean
+          lead_time_days?: number | null
           length?: string | null
           length_increment?: number | null
           length_unit?: string | null
           manufacturer?: string | null
           max_length?: number | null
           min_length?: number | null
+          min_order_qty?: number | null
           name?: string | null
           normalized_search?: string | null
           product_type?: string | null
@@ -491,6 +500,7 @@ export type Database = {
           search_vector?: unknown
           secondary_category?: string | null
           size_or_spec?: string | null
+          superseded_by?: string | null
           supplier_id: string
           supplier_sku: string
           thickness?: string | null
@@ -511,15 +521,19 @@ export type Database = {
           description?: string
           diameter?: string | null
           dimension?: string | null
+          discontinued_at?: string | null
           edge_type?: string | null
           finish?: string | null
           id?: string
+          is_active?: boolean
+          lead_time_days?: number | null
           length?: string | null
           length_increment?: number | null
           length_unit?: string | null
           manufacturer?: string | null
           max_length?: number | null
           min_length?: number | null
+          min_order_qty?: number | null
           name?: string | null
           normalized_search?: string | null
           product_type?: string | null
@@ -527,6 +541,7 @@ export type Database = {
           search_vector?: unknown
           secondary_category?: string | null
           size_or_spec?: string | null
+          superseded_by?: string | null
           supplier_id?: string
           supplier_sku?: string
           thickness?: string | null
@@ -538,7 +553,68 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "catalog_items_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "catalog_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_prices: {
+        Row: {
+          catalog_item_id: string
+          created_at: string
+          effective_from: string
+          id: string
+          list_price: number
+          notes: string | null
+          price_uom: string
+          supplier_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          catalog_item_id: string
+          created_at?: string
+          effective_from?: string
+          id?: string
+          list_price: number
+          notes?: string | null
+          price_uom?: string
+          supplier_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          catalog_item_id?: string
+          created_at?: string
+          effective_from?: string
+          id?: string
+          list_price?: number
+          notes?: string | null
+          price_uom?: string
+          supplier_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_prices_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_prices_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
