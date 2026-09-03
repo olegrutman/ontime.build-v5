@@ -153,6 +153,35 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const outstanding = totalBilled - totalReceived;
   const futureUnbilled = totalOrdered - totalBilled;
 
+  // Per-pack billed / received (invoices roll up through their PO's pack)
+  const billedByPack: Record<string, number> = {};
+  nonDraftInvoices.forEach(i => {
+    const pack = i.po_id ? packByPoId[i.po_id] : undefined;
+    if (!pack) return;
+    billedByPack[pack] = (billedByPack[pack] || 0) + (i.total_amount || 0);
+  });
+  const receivedByPack: Record<string, number> = {};
+  paidInvoices.forEach(i => {
+    const pack = i.po_id ? packByPoId[i.po_id] : undefined;
+    if (!pack) return;
+    receivedByPack[pack] = (receivedByPack[pack] || 0) + (i.total_amount || 0);
+  });
+
+  const ledgerRows: LedgerRow[] = Array.from(new Set([...packNames, ...Object.keys(orderedByPack)])).map(pack => {
+    const est = packTotals[pack] || 0;
+    const ord = orderedByPack[pack] || 0;
+    const bill = billedByPack[pack] || 0;
+    const recd = receivedByPack[pack] || 0;
+    const status = recd > 0 && recd >= bill && bill > 0 ? 'Paid'
+      : bill > 0 ? 'Invoiced'
+      : ord > 0 ? 'Ordered'
+      : 'Not ordered';
+    const statusColor = status === 'Paid' ? C.green : status === 'Invoiced' ? C.blue : status === 'Ordered' ? C.amberD : C.muted;
+    return { key: pack, name: pack, estimated: est, ordered: ord, billed: bill, received: recd, status, statusColor };
+  });
+
+
+
   // GC name from financials
   const gcName = financials.upstreamContract?.from_org_name || financials.upstreamContract?.to_org_name || 'General Contractor';
 
