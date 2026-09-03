@@ -55,8 +55,9 @@ interface Props {
 }
 
 export function ProductFormFields({ form, onChange, errors, skuDisabled }: Props) {
-  const set = (field: keyof ProductFormData, value: string) =>
-    onChange({ ...form, [field]: value });
+  const set = (field: keyof ProductFormData, value: string | boolean) =>
+    onChange({ ...form, [field]: value } as ProductFormData);
+
 
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
