@@ -210,8 +210,8 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
       await supabase
         .from('project_contracts')
         .update({ material_estimate_total: totalBudget } as any)
-        .eq('project_id', projectId)
-        .not('material_responsibility', 'is', null);
+        .eq('project_id', projectId);
+
     } catch (err) {
       console.error('Failed to update material estimate total:', err);
     }
