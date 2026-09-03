@@ -59,7 +59,7 @@ export function DashboardSidebar() {
   const orgName = currentOrg?.name || 'My Organization';
   const orgType = currentOrg?.type || '';
 
-  const sections: NavSection[] = orgType === 'supplier'
+  const sections: NavSection[] = String(orgType).toUpperCase() === 'SUPPLIER'
     ? [
         ...NAV_SECTIONS,
         { label: 'Catalog', items: [{ label: 'Catalog Management', icon: Package, path: '/supplier/inventory' }] },

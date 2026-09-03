@@ -15,7 +15,7 @@ export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { permissions, userOrgRoles } = useAuth();
-  const isSupplier = userOrgRoles?.[0]?.organization?.type === 'supplier';
+  const isSupplier = userOrgRoles?.[0]?.organization?.type  ? String(userOrgRoles[0].organization.type).toUpperCase() === 'SUPPLIER' : false;
   const [moreOpen, setMoreOpen] = useState(false);
 
   const canManageOrg = permissions?.canManageOrg ?? false;
