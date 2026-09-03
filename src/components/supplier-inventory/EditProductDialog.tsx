@@ -9,6 +9,7 @@ import { CatalogCategory } from '@/types/supplier';
 
 interface CatalogItem {
   id: string;
+  supplier_id?: string;
   supplier_sku: string;
   name: string | null;
   description: string;
@@ -23,7 +24,13 @@ interface CatalogItem {
   bundle_type: string | null;
   bundle_qty: number | null;
   uom_default: string;
+  is_active?: boolean;
+  lead_time_days?: number | null;
+  min_order_qty?: number | null;
+  list_price?: number | null;
+  price_uom?: string | null;
 }
+
 
 interface Props {
   open: boolean;
