@@ -32,7 +32,7 @@ export function AddProductDialog({ open, onOpenChange, supplierId, onSaved }: Pr
     if (!validate()) return;
     setSaving(true);
 
-    const { error } = await supabase.from('catalog_items').insert({
+    const { data: inserted, error } = await supabase.from('catalog_items').insert({
       supplier_id: supplierId,
       supplier_sku: form.supplier_sku.trim(),
       name: form.name || null,
@@ -48,7 +48,23 @@ export function AddProductDialog({ open, onOpenChange, supplierId, onSaved }: Pr
       bundle_type: form.bundle_type || null,
       bundle_qty: form.bundle_qty ? parseInt(form.bundle_qty) : null,
       uom_default: form.uom_default,
-    });
+      is_active: form.is_active,
+      discontinued_at: form.is_active ? null : new Date().toISOString(),
+      lead_time_days: form.lead_time_days ? parseInt(form.lead_time_days) : null,
+      min_order_qty: form.min_order_qty ? Number(form.min_order_qty) : null,
+    }).select('id').single();
+
+    if (!error && inserted && form.list_price.trim() && !Number.isNaN(Number(form.list_price))) {
+      await supabase.from('catalog_prices').upsert(
+        {
+          catalog_item_id: inserted.id,
+          supplier_id: supplierId,
+          list_price: Number(form.list_price),
+          price_uom: form.price_uom,
+        },
+        { onConflict: 'catalog_item_id' },
+      );
+    }
 
     setSaving(false);
 
@@ -63,6 +79,7 @@ export function AddProductDialog({ open, onOpenChange, supplierId, onSaved }: Pr
       onSaved();
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
