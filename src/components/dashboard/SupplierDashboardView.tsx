@@ -12,6 +12,8 @@ import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCa
 import { SupplierProjectSnapshot } from '@/components/dashboard/supplier/SupplierProjectSnapshot';
 import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
 import { SupplierNeedsAction } from '@/components/dashboard/supplier/SupplierNeedsAction';
+import { SupplierProjectSwitcher } from '@/components/dashboard/supplier/SupplierProjectSwitcher';
+
 
 
 /* ─── Types ─── */
