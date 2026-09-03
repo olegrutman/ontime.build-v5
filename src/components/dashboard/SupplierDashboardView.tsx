@@ -176,6 +176,21 @@ export function SupplierDashboardView({
             onMarkSoleMember={onSetSoleMember} onMarkPartOfTeam={onSetPartOfTeam} />
         )}
 
+        {/* ─── Catalog management entry ─── */}
+        <button
+          onClick={() => navigate('/supplier/inventory')}
+          className="w-full flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left hover:border-primary transition-colors"
+        >
+          <span className="flex items-center gap-2.5">
+            <Package className="w-4 h-4 text-primary" strokeWidth={1.8} />
+            <span>
+              <span className="block text-[0.85rem] font-bold text-foreground">Catalog Management</span>
+              <span className="block text-[0.7rem] uppercase tracking-wider text-muted-foreground">Products, pricing, import &amp; export</span>
+            </span>
+          </span>
+          <span className="text-[0.75rem] font-semibold text-primary">Open →</span>
+        </button>
+
         <OrgInviteBanner />
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={handleRefresh} />}
 
