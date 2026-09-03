@@ -17,6 +17,11 @@ export interface ProductFormData {
   bundle_type: string;
   bundle_qty: string;
   uom_default: string;
+  list_price: string;
+  price_uom: string;
+  lead_time_days: string;
+  min_order_qty: string;
+  is_active: boolean;
 }
 
 export const EMPTY_FORM: ProductFormData = {
@@ -34,7 +39,13 @@ export const EMPTY_FORM: ProductFormData = {
   bundle_type: '',
   bundle_qty: '',
   uom_default: 'EA',
+  list_price: '',
+  price_uom: 'EA',
+  lead_time_days: '',
+  min_order_qty: '',
+  is_active: true,
 };
+
 
 interface Props {
   form: ProductFormData;
