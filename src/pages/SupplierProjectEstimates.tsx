@@ -460,14 +460,10 @@ export default function SupplierProjectEstimates() {
       setShowCsvPreview(false);
       setCsvPreview([]);
       fetchEstimateItems(selectedEstimate.id);
-      
-      // Update total
-      const total = items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-      await supabase
-        .from('supplier_estimates')
-        .update({ total_amount: total })
-        .eq('id', selectedEstimate.id);
+      // total_amount is recalculated in the backend from line items + tax
+      fetchEstimates();
     }
+
 
     if (fileInputRef.current) fileInputRef.current.value = '';
   };

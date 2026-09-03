@@ -82,29 +82,33 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
       const { data: contracts } = await supabase
         .from('project_contracts')
         .select('material_responsibility, from_org_id, to_org_id')
-        .eq('project_id', projectId)
-        .not('material_responsibility', 'is', null);
+        .eq('project_id', projectId);
 
-      if (contracts && contracts.length > 0) {
-        // Can approve/reject: only the material-responsible party
-        const responsible = contracts.some((c: any) => {
+      const all = (contracts || []) as any[];
+      const defined = all.filter(c => c.material_responsibility);
+
+      if (defined.length > 0) {
+        // Explicit responsibility set on at least one contract
+        setIsResponsible(defined.some(c => {
           if (c.material_responsibility === 'GC') return c.to_org_id === currentOrgId;
           if (c.material_responsibility === 'TC') return c.from_org_id === currentOrgId;
           return false;
-        });
-        setIsResponsible(responsible);
-
-        // Can view estimates + pricing: both GC and TC on the contract
-        const canView = contracts.some((c: any) =>
-          c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
-        );
-        setCanViewEstimates(canView);
+        }));
+      } else {
+        // Fallback: no responsibility configured yet — any contract party
+        // (GC or TC) on this project may review supplier estimates so a
+        // submitted estimate never gets stuck without an approver.
+        setIsResponsible(all.some(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId));
       }
+
+      // Can view estimates + pricing: any party on a project contract
+      setCanViewEstimates(all.some(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId));
       setCheckingPermission(false);
     };
 
     checkMaterialResponsibility();
   }, [projectId, currentOrgId]);
+
 
   // Fetch estimates for this project
   useEffect(() => {
@@ -206,8 +210,8 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
       await supabase
         .from('project_contracts')
         .update({ material_estimate_total: totalBudget } as any)
-        .eq('project_id', projectId)
-        .not('material_responsibility', 'is', null);
+        .eq('project_id', projectId);
+
     } catch (err) {
       console.error('Failed to update material estimate total:', err);
     }
