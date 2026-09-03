@@ -10,6 +10,9 @@ import { SupplierProjectAnalyticsSection } from './SupplierProjectAnalyticsSecti
 import { LadderCard } from '@/components/shared/LadderCard';
 import { SupplierProjectFunnel } from './supplier/SupplierProjectFunnel';
 import { SupplierStatStrip, type StatTile } from './supplier/SupplierStatStrip';
+import { SupplierPackLedger, type LedgerRow } from './supplier/SupplierPackLedger';
+import { StackedRow } from './supplier/StackedRow';
+
 import { isCountedEstimate, isPendingEstimate, isOrderedPO, isBilledInvoice, isReceivedInvoice, poOrderedAmount } from '@/lib/supplierMetrics';
 
 
@@ -131,6 +134,9 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     const pack = po.source_pack_name || po.po_name || 'Other';
     orderedByPack[pack] = (orderedByPack[pack] || 0) + poOrderedAmount(po);
   });
+  const packByPoId: Record<string, string> = {};
+  pos.forEach(po => { packByPoId[po.id] = po.source_pack_name || po.po_name || 'Other'; });
+
 
   // Deliveries
   const deliveredPOs = pos.filter(p => p.status === 'DELIVERED');
@@ -149,6 +155,35 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const pendingInvoices = invoices.filter(i => ['SUBMITTED', 'APPROVED'].includes(i.status));
   const outstanding = totalBilled - totalReceived;
   const futureUnbilled = totalOrdered - totalBilled;
+
+  // Per-pack billed / received (invoices roll up through their PO's pack)
+  const billedByPack: Record<string, number> = {};
+  nonDraftInvoices.forEach(i => {
+    const pack = i.po_id ? packByPoId[i.po_id] : undefined;
+    if (!pack) return;
+    billedByPack[pack] = (billedByPack[pack] || 0) + (i.total_amount || 0);
+  });
+  const receivedByPack: Record<string, number> = {};
+  paidInvoices.forEach(i => {
+    const pack = i.po_id ? packByPoId[i.po_id] : undefined;
+    if (!pack) return;
+    receivedByPack[pack] = (receivedByPack[pack] || 0) + (i.total_amount || 0);
+  });
+
+  const ledgerRows: LedgerRow[] = Array.from(new Set([...packNames, ...Object.keys(orderedByPack)])).map(pack => {
+    const est = packTotals[pack] || 0;
+    const ord = orderedByPack[pack] || 0;
+    const bill = billedByPack[pack] || 0;
+    const recd = receivedByPack[pack] || 0;
+    const status = recd > 0 && recd >= bill && bill > 0 ? 'Paid'
+      : bill > 0 ? 'Invoiced'
+      : ord > 0 ? 'Ordered'
+      : 'Not ordered';
+    const statusColor = status === 'Paid' ? C.green : status === 'Invoiced' ? C.blue : status === 'Ordered' ? C.amberD : C.muted;
+    return { key: pack, name: pack, estimated: est, ordered: ord, billed: bill, received: recd, status, statusColor };
+  });
+
+
 
   // GC name from financials
   const gcName = financials.upstreamContract?.from_org_name || financials.upstreamContract?.to_org_name || 'General Contractor';
@@ -264,27 +299,41 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         </div>
       )}
 
+      {/* Full-width pack ledger — one place for Estimated / Ordered / Billed / Received */}
+      {ledgerRows.length > 0 && (
+        <SupplierPackLedger
+          title={`📊 Pack Ledger — ${projectName}`}
+          rows={ledgerRows}
+          totals={{ estimated: totalEstimate, ordered: totalOrdered, billed: totalBilled, received: totalReceived, outstanding }}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {/* Compact strip for stages with no data yet */}
       <SupplierStatStrip tiles={emptyTiles} onNavigate={onNavigate} />
+
 
       {/* KPI cards — only stages that actually have data */}
       {anyCardVisible && (
       <KpiGrid>
-        {/* Card 1 — Estimate Value */}
+        {/* Card 1 — Estimate Value (stacked line items — never scrolls sideways) */}
         {cardHasData.estimate && (
         <KpiCard accent={C.navy} icon="📐" iconBg={C.surface2} label="MATERIAL CONTRACT (APPROVED ESTIMATE)" value={totalEstimate > 0 ? fmt(totalEstimate) : '—'} sub={`Approved estimate = your material contract on ${projectName}`} pills={totalEstimate > 0 ? [{ type: 'pn', text: 'Contract' }] : [{ type: 'pm', text: 'No Estimate' }]} idx={0}>
 
           <div style={{ padding: 12 }}>
             {packNames.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={['Pack', 'Estimated', 'Notes']} />
-                <tbody>
-                  {packNames.map(pack => (
-                    <TRow key={pack} cells={[<TdN>{pack}</TdN>, <TdM>{fmt(packTotals[pack])}</TdM>, '—']} />
-                  ))}
-                  <TRow cells={[<TdN>Total Estimate</TdN>, <TdM>{fmt(totalEstimate)}</TdM>, '—']} isTotal />
-                </tbody>
-              </table>
+              <div>
+                {packNames.map(pack => (
+                  <StackedRow
+                    key={pack}
+                    name={pack}
+                    values={[{ k: 'est', v: fmt(packTotals[pack]) }]}
+                  />
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, fontSize: '0.76rem', fontWeight: 800, color: C.ink }}>
+                  <span>Total estimate</span><span style={fontMono}>{fmt(totalEstimate)}</span>
+                </div>
+              </div>
             ) : (
               <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>
                 {estimates.length > 0 ? `${estimates.length} estimate(s) · ${fmt(totalEstimate)} total` : 'No estimates submitted'}
@@ -294,46 +343,44 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         </KpiCard>
         )}
 
-        {/* Card 2 — Total Ordered */}
+        {/* Card 2 — Total Ordered (stacked line items with Δ) */}
         {cardHasData.ordered && (
         <KpiCard accent={C.amber} icon="📦" iconBg={C.amberPale} label="TOTAL ORDERED (POs ISSUED)" value={totalOrdered > 0 ? fmt(totalOrdered) : '$0'} sub={totalEstimate > 0 ? `${orderedPct}% of estimate · ${fmt(totalEstimate - totalOrdered)} remaining to order` : `${orderedPOs.length} POs`} pills={orderedPct > 0 ? [{ type: 'pa', text: `${orderedPct}% of est` }] : [{ type: 'pm', text: 'No orders' }]} idx={1}>
 
           <div style={{ padding: 12 }}>
             {packNames.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <THead cols={['Pack', 'Estimated', 'Ordered', 'Δ', 'Usage %']} />
-                <tbody>
-                  {packNames.map(pack => {
-                    const est = packTotals[pack];
-                    const ord = orderedByPack[pack] || 0;
-                    const delta = ord - est;
-                    const usage = est > 0 ? Math.round((ord / est) * 100) : 0;
-                    return (
-                      <TRow key={pack} cells={[
-                        <TdN>{pack}</TdN>,
-                        <TdM>{fmt(est)}</TdM>,
-                        <TdM>{fmt(ord)}</TdM>,
-                        <span style={{ color: delta <= 0 ? C.green : C.red, fontWeight: 600, fontSize: '0.76rem' }}>{delta <= 0 ? '' : '+'}{fmt(Math.abs(delta))}</span>,
-                        <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>{usage}%</span>,
-                      ]} />
-                    );
-                  })}
-                  <TRow cells={[<TdN>Total</TdN>, <TdM>{fmt(totalEstimate)}</TdM>, <TdM>{fmt(totalOrdered)}</TdM>, <span style={{ color: C.green, fontWeight: 600 }}>{fmt(totalEstimate - totalOrdered)}</span>, `${orderedPct}%`]} isTotal />
-                </tbody>
-              </table>
+              <div>
+                {packNames.map(pack => {
+                  const est = packTotals[pack];
+                  const ord = orderedByPack[pack] || 0;
+                  const delta = ord - est;
+                  return (
+                    <StackedRow
+                      key={pack}
+                      name={pack}
+                      values={[
+                        { k: 'est', v: fmt(est) },
+                        { k: 'ord', v: fmt(ord), color: ord > est ? C.red : C.ink2 },
+                        { k: 'Δ', v: ord === 0 ? 'open' : delta === 0 ? 'full' : `${delta > 0 ? '+' : '-'}${fmt(Math.abs(delta))}`, color: delta <= 0 ? C.green : C.red },
+                      ]}
+                    />
+                  );
+                })}
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, fontSize: '0.76rem', fontWeight: 800, color: C.ink }}>
+                  <span>Total ordered</span><span style={fontMono}>{fmt(totalOrdered)} · {orderedPct}%</span>
+                </div>
+              </div>
             ) : (
-              <div style={{ padding: 12 }}>
+              <div>
                 {orderedPOs.map(po => (
-                  <div key={po.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}`, fontSize: '0.76rem' }}>
-                    <TdN>{po.po_number || po.po_name || 'PO'}</TdN>
-                    <TdM>{fmt(po.po_total || 0)}</TdM>
-                  </div>
+                  <StackedRow key={po.id} name={po.po_name || po.po_number || 'PO'} values={[{ k: 'ord', v: fmt(poOrderedAmount(po)) }]} />
                 ))}
               </div>
             )}
           </div>
         </KpiCard>
         )}
+
 
         {/* Card 3 — Deliveries */}
         {cardHasData.deliveries && (
