@@ -296,8 +296,19 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         </div>
       )}
 
+      {/* Full-width pack ledger — one place for Estimated / Ordered / Billed / Received */}
+      {ledgerRows.length > 0 && (
+        <SupplierPackLedger
+          title={`📊 Pack Ledger — ${projectName}`}
+          rows={ledgerRows}
+          totals={{ estimated: totalEstimate, ordered: totalOrdered, billed: totalBilled, received: totalReceived, outstanding }}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {/* Compact strip for stages with no data yet */}
       <SupplierStatStrip tiles={emptyTiles} onNavigate={onNavigate} />
+
 
       {/* KPI cards — only stages that actually have data */}
       {anyCardVisible && (
