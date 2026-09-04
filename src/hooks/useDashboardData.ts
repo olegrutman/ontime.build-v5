@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES } from '@/hooks/coAggregation';
 import { baseContractSum } from '@/lib/contractSums';
-import { dedupeContracts } from '@/lib/kpiLedger';
+import { dedupeContracts, findCostContracts, findRevenueContract, isAwardedContract } from '@/lib/kpiLedger';
 
 // contract_sum already includes approved COs (DB trigger). Dashboard cards add
 // approved CO value separately, so contract totals must use the base value.
@@ -86,6 +86,8 @@ interface FinancialSummary {
   coPendingCount: number;
   coApprovedNet: number;
   coPendingNetAtRisk: number;
+  /** Invited / unsigned downstream contracts — exposure, not committed cost. */
+  pendingAwardCost: number;
 }
 
 export interface RecentDoc {
@@ -186,6 +188,7 @@ export function useDashboardData(): DashboardData {
     coPendingCount: 0,
     coApprovedNet: 0,
     coPendingNetAtRisk: 0,
+    pendingAwardCost: 0,
   });
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
@@ -410,28 +413,19 @@ export function useDashboardData(): DashboardData {
         let contractValue: number | null = null;
         const projectContracts = contracts.filter(c => c.project_id === project.id);
         
+        // Same resolution the project overview ledger uses, so a project card
+        // and the project's own header can never print different values.
         if (orgType === 'GC') {
-      // GC revenue = sum of contracts where GC is to_org
-          const gcContracts = projectContracts.filter(c => 
-            c.to_org_id === currentOrg.id
-          );
-          contractValue = gcContracts.length > 0
-            ? gcContracts.reduce((sum, c) => sum + baseSum(c), 0)
-            : null;
-        } else if (orgType === 'TC') {
-          // TC revenue = sum of all contracts where TC is from_org (what TC earns from GC)
-          const tcRevenueContracts = projectContracts.filter(c => c.from_org_id === currentOrg.id);
-          contractValue = tcRevenueContracts.length > 0
-            ? tcRevenueContracts.reduce((sum, c) => sum + baseSum(c), 0)
-            : null;
-        } else if (orgType === 'FC') {
-          // FC revenue = sum of contracts where FC is from_org
-          const fcContracts = projectContracts.filter(c => 
-            c.from_org_id === currentOrg.id
-          );
-          contractValue = fcContracts.length > 0
-            ? fcContracts.reduce((sum, c) => sum + baseSum(c), 0)
-            : null;
+          // GC revenue is the OWNER instrument only — sub contracts pointing at
+          // the GC are its cost, not its revenue.
+          const ownerVal = projectContracts
+            .map(c => Number((c as any).owner_contract_value || 0))
+            .find(v => v > 0);
+          const ownerRow = projectContracts.find(c => c.from_role === 'Owner');
+          contractValue = ownerVal ?? (ownerRow ? baseSum(ownerRow) : null);
+        } else {
+          const rev = findRevenueContract(projectContracts as any, [currentOrg.id]);
+          contractValue = rev ? baseSum(rev) : null;
         }
 
         const projectPendingInvoices = pendingInvoices.filter(inv => inv.project_id === project.id).length;
@@ -688,19 +682,31 @@ export function useDashboardData(): DashboardData {
       });
 
       // 7. Calculate financial summary
-      const totalContractValue = contracts.reduce((sum, c) => {
-        // TC & FC receive money via from_org_id; GC receives via to_org_id
-        if (orgType === 'TC' && c.from_org_id === currentOrg.id) {
-          return sum + baseSum(c);
-        }
-        if (orgType === 'GC' && c.to_org_id === currentOrg.id) {
-          return sum + baseSum(c);
-        }
-        if (orgType === 'FC' && c.from_org_id === currentOrg.id) {
-          return sum + baseSum(c);
-        }
-        return sum;
-      }, 0);
+      // Revenue instrument per project, resolved exactly like the project ledger.
+      const ownerValueFor = (pid: string) => {
+        const rows = contracts.filter(c => c.project_id === pid);
+        const v = rows.map(c => Number((c as any).owner_contract_value || 0)).find(x => x > 0);
+        const ownerRow = rows.find(c => c.from_role === 'Owner');
+        return v ?? (ownerRow ? baseSum(ownerRow) : 0);
+      };
+      const revenueContractByProject = new Map<string, any>();
+      projectIds.forEach(pid => {
+        const rev = findRevenueContract(contracts.filter(c => c.project_id === pid) as any, [currentOrg.id]);
+        if (rev) revenueContractByProject.set(pid, rev);
+      });
+      // Committed cost = AWARDED downstream contracts only; supplier material
+      // contracts are excluded (materials arrive via the commitment below).
+      const costContracts = projectIds.flatMap(pid =>
+        findCostContracts(contracts.filter(c => c.project_id === pid) as any, [currentOrg.id]),
+      );
+      const awardedCostContracts = costContracts.filter(isAwardedContract);
+      const pendingAwardCost = costContracts
+        .filter(c => !isAwardedContract(c))
+        .reduce((sum, c) => sum + baseSum(c), 0);
+
+      const totalContractValue = orgType === 'GC'
+        ? projectIds.reduce((sum, pid) => sum + ownerValueFor(pid), 0)
+        : [...revenueContractByProject.values()].reduce((sum, c) => sum + baseSum(c), 0);
 
       let totalRevenue = 0;
       let totalCosts = 0;
@@ -742,6 +748,8 @@ export function useDashboardData(): DashboardData {
       // Portfolio materials rollup — real estimate vs ordered vs forecast.
       // (The dashboard card previously received contract costs and a hardcoded
       // ×1.04 forecast, which had nothing to do with materials.)
+      let materialCommitment = 0;
+      const materialByProject = new Map<string, number>();
       if (projectIds.length > 0) {
         const [estRes, poRes] = await Promise.all([
           supabase
@@ -751,7 +759,7 @@ export function useDashboardData(): DashboardData {
             .eq('status', 'APPROVED'),
           supabase
             .from('purchase_orders')
-            .select('id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
+            .select('id, project_id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
             .in('project_id', projectIds),
         ]);
         const matEstimate = (estRes.data || []).reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
@@ -766,6 +774,17 @@ export function useDashboardData(): DashboardData {
         const IN_FLIGHT = ['SENT', 'ACTIVE', 'PENDING_APPROVAL', 'SUBMITTED', 'PRICED'];
         const matOrdered = ownedPOs.filter((po: any) => COMMITTED.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
         const matInFlight = ownedPOs.filter((po: any) => IN_FLIGHT.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
+        // An estimate becomes a PO, so take the max instead of adding both.
+        materialCommitment = Math.max(matEstimate, matOrdered);
+        projectIds.forEach(pid => {
+          const est = (estRes.data || [])
+            .filter((e: any) => e.project_id === pid)
+            .reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
+          const ord = ownedPOs
+            .filter((po: any) => po.project_id === pid && COMMITTED.includes(po.status))
+            .reduce((s2: number, po: any) => s2 + poTotal(po), 0);
+          materialByProject.set(pid, Math.max(est, ord));
+        });
         setMaterials({
           estimate: matEstimate,
           ordered: matOrdered,
@@ -777,43 +796,15 @@ export function useDashboardData(): DashboardData {
         setMaterials({ estimate: 0, ordered: 0, forecast: 0 });
       }
 
-      if (orgType === 'TC') {
-        contracts.forEach(c => {
-          if (c.from_org_id === currentOrg.id) {
-            totalRevenue += baseSum(c);
-          }
-          if (c.to_org_id === currentOrg.id) {
-            totalCosts += baseSum(c);
-          }
-        });
-      } else if (orgType === 'GC') {
-        contracts.forEach(c => {
-          if (c.to_org_id === currentOrg.id) {
-            totalCosts += baseSum(c);
-          }
-        });
-
-        const ownerValues = contracts
-          .filter(c => c.to_org_id === currentOrg.id)
-          .map(c => (c as any).owner_contract_value)
-          .filter((v: any) => v != null && v > 0);
-        if (ownerValues.length > 0) {
-          totalRevenue = ownerValues.reduce((sum: number, v: number) => sum + v, 0);
-        } else {
-          // Fallback: use total contract value (sum of TC contracts), not costs
-          totalRevenue = totalContractValue;
-        }
-      } else if (orgType === 'FC') {
-        contracts.forEach(c => {
-          if (c.from_org_id === currentOrg.id) {
-            totalRevenue += baseSum(c);
-          }
-        });
-
-        const fcContracts = contracts.filter(c => c.from_org_id === currentOrg.id);
-        fcContracts.forEach(c => {
-          totalCosts += (c as any).labor_budget || 0;
-        });
+      totalRevenue = totalContractValue;
+      totalCosts = awardedCostContracts.reduce((sum, c) => sum + baseSum(c), 0);
+      if (orgType === 'GC' || orgType === 'TC') {
+        // Materials the org actually owns (approved estimates / POs it prices).
+        totalCosts += materialCommitment;
+      }
+      if (orgType === 'FC') {
+        totalCosts += [...revenueContractByProject.values()]
+          .reduce((sum, c) => sum + Number((c as any).labor_budget || 0), 0);
       }
 
       // Cash collected on the revenue side (owner ledger for GCs, paid invoices
@@ -940,6 +931,7 @@ export function useDashboardData(): DashboardData {
         coPendingCount,
         coApprovedNet,
         coPendingNetAtRisk,
+        pendingAwardCost,
       });
 
       // Build per-project financial details
@@ -948,27 +940,20 @@ export function useDashboardData(): DashboardData {
         pfMap.set(p.id, { projectId: p.id, projectName: p.name, revenue: 0, costs: 0, paidToYou: 0, paidByYou: 0, pendingToCollect: 0, pendingToPay: 0 });
       });
 
-      contracts.forEach(c => {
-        const pf = pfMap.get(c.project_id);
+      // Per-project revenue/cost use the SAME resolution as the project ledger.
+      projectIds.forEach(pid => {
+        const pf = pfMap.get(pid);
         if (!pf) return;
-        if (orgType === 'TC') {
-          if (c.from_org_id === currentOrg.id) pf.revenue += baseSum(c);
-          if (c.to_org_id === currentOrg.id) pf.costs += baseSum(c);
-        } else if (orgType === 'GC') {
-          // Owner leg: identified by populated owner_contract_value (or from_role='Owner').
-          // Sub leg: identified by from_org_id != GC and contract_sum > 0.
-          const ownerValue = (c as any).owner_contract_value;
-          const isOwnerLeg = ownerValue != null && Number(ownerValue) > 0;
-          if (isOwnerLeg) {
-            pf.revenue += Number(ownerValue) || 0;
-          } else if (c.to_org_id === currentOrg.id) {
-            pf.costs += baseSum(c);
-          }
-      } else if (orgType === 'FC') {
-          if (c.from_org_id === currentOrg.id) {
-            pf.revenue += baseSum(c);
-            pf.costs += (c as any).labor_budget || 0;
-          }
+        const rows = contracts.filter(c => c.project_id === pid) as any[];
+        pf.revenue = orgType === 'GC'
+          ? ownerValueFor(pid)
+          : baseSum((findRevenueContract(rows, [currentOrg.id]) as any) || { contract_sum: 0 });
+        pf.costs = findCostContracts(rows, [currentOrg.id])
+          .filter(isAwardedContract)
+          .reduce((sum, c) => sum + baseSum(c), 0);
+        if (orgType === 'GC' || orgType === 'TC') pf.costs += materialByProject.get(pid) || 0;
+        if (orgType === 'FC') {
+          pf.costs += Number((findRevenueContract(rows, [currentOrg.id]) as any)?.labor_budget || 0);
         }
       });
 

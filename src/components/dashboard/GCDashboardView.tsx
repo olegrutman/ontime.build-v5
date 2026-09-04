@@ -219,13 +219,13 @@ export function GCDashboardView({
           {/* Card 2: GC Profit Margin */}
           <KpiCard idx={1} accent={C.green} icon={<TrendingUp size={18} color={C.green} />} iconBg={C.greenBg}
             label="GENERAL CONTRACTOR PROFIT MARGIN" value={margin !== 0 ? fmt(margin) : '—'}
-            sub={marginPct > 0 ? `${marginPct}% overall · Owner budget minus Trade Contractor contracts` : 'Revenue minus costs'}
+            sub={marginPct > 0 ? `${marginPct}% overall · Owner budget minus committed cost` : 'Revenue minus costs'}
             pills={marginPct > 0 ? [{ type: 'pg', text: `↑ ${marginPct}%` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Metric', 'Value']} />
               <tbody>
                 <TRow cells={[<TdN>Owner Budget (Revenue)</TdN>, <TdM>{fmt(financials.totalRevenue)}</TdM>]} />
-                <TRow cells={[<TdN>Trade Contractor Contracts (Costs)</TdN>, <TdM>{fmt(financials.totalCosts)}</TdM>]} />
+                <TRow cells={[<TdN>Committed cost (awarded subs + materials)</TdN>, <TdM>{fmt(financials.totalCosts)}</TdM>]} />
                 <TRow cells={[<TdN>Paid by You</TdN>, <TdM>{fmt(financials.paidByYou)}</TdM>]} />
                 <TRow cells={[<TdN>Collected from Owners</TdN>, <TdM>{fmt((financials as any).receivedToDate ?? financials.paidToYou)}</TdM>]} />
                 <TRow isTotal cells={[<TdN>Net Margin</TdN>, <TdM>{fmt(margin)}</TdM>]} />
