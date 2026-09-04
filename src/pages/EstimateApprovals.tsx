@@ -158,12 +158,20 @@ export default function EstimateApprovals() {
           (sum, est) => sum + (est.total_amount || 0), 0
         );
 
-        // Update all material-responsible contracts for this project
+        // Only construction contracts carry the material budget — never the
+        // owner contract or the supplier's own material contract.
         await supabase
           .from('project_contracts')
           .update({ material_estimate_total: totalBudget } as any)
           .eq('project_id', approvedEstimate.project_id)
-          .not('material_responsibility', 'is', null);
+          .not('from_role', 'in', '("Owner","Supplier")');
+
+        await supabase
+          .from('project_contracts')
+          .update({ material_estimate_total: null } as any)
+          .eq('project_id', approvedEstimate.project_id)
+          .in('from_role', ['Owner', 'Supplier']);
+
       } catch (err) {
         console.error('Failed to update material estimate total:', err);
       }
