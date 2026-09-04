@@ -9104,6 +9104,10 @@ export type Database = {
         Returns: number
       }
       normalize_phone: { Args: { phone: string }; Returns: string }
+      notify_estimate_decision: {
+        Args: { _approved: boolean; _estimate_id: string; _reason?: string }
+        Returns: number
+      }
       org_shares_project_with_user: {
         Args: { _org_id: string }
         Returns: boolean
