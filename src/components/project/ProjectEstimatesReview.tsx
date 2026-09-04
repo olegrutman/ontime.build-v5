@@ -195,6 +195,17 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
     queryClient.invalidateQueries({ queryKey: ['project-financials', projectId] });
     queryClient.invalidateQueries({ queryKey: ['project-readiness', projectId] });
 
+    // Notify the supplier's team (non-critical)
+    try {
+      await (supabase.rpc as any)('notify_estimate_decision', {
+        _estimate_id: estimateId,
+        _approved: true,
+      });
+    } catch (err) {
+      console.warn('Estimate approval notification failed:', err);
+    }
+
+
     // Update material_estimate_total
     try {
       const { data: approvedEstimates } = await supabase
