@@ -273,15 +273,29 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   };
 
   // ── Cost side ───────────────────────────────────────────────────────────
-  const baseCostVal = costContracts.reduce((s, c) => s + base(c), 0);
+  // Only AWARDED contracts are committed cost. An invited-but-unsigned sub is
+  // exposure, reported separately so it can never inflate the cost KPI.
+  const awardedCostContracts = costContracts.filter(isAwardedContract);
+  const pendingAwardContracts = costContracts.filter((c) => !isAwardedContract(c));
+  const baseCostVal = awardedCostContracts.reduce((s, c) => s + base(c), 0);
   const baseCost: LedgerTerm = {
     value: baseCostVal,
     basis: 'contract',
-    known: costContracts.length > 0,
-    formula: costContracts.length
-      ? `Σ base of ${costContracts.length} downstream contract${costContracts.length > 1 ? 's' : ''}`
-      : 'No downstream contracts',
+    known: awardedCostContracts.length > 0,
+    formula: awardedCostContracts.length
+      ? `Σ base of ${awardedCostContracts.length} awarded downstream contract${awardedCostContracts.length > 1 ? 's' : ''}`
+      : 'No awarded downstream contracts',
   };
+  const pendingAwardVal = pendingAwardContracts.reduce((s, c) => s + base(c), 0);
+  const pendingAwardCost: LedgerTerm = {
+    value: pendingAwardVal,
+    basis: 'forecast',
+    known: pendingAwardContracts.length > 0,
+    formula: pendingAwardContracts.length
+      ? `Σ base of ${pendingAwardContracts.length} invited / unsigned contract${pendingAwardContracts.length > 1 ? 's' : ''} — excluded from cost`
+      : 'No pending awards',
+  };
+
   const coCost: LedgerTerm = {
     value: approvedCOCost,
     basis: 'contract',
