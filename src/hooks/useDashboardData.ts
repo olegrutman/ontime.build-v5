@@ -957,31 +957,6 @@ export function useDashboardData(): DashboardData {
         }
       });
 
-      const LEGACY_PF = false;
-      if (LEGACY_PF) contracts.forEach(c => {
-        const pf = pfMap.get(c.project_id);
-        if (!pf) return;
-        if (orgType === 'TC') {
-          if (c.from_org_id === currentOrg.id) pf.revenue += baseSum(c);
-          if (c.to_org_id === currentOrg.id) pf.costs += baseSum(c);
-        } else if (orgType === 'GC') {
-          // Owner leg: identified by populated owner_contract_value (or from_role='Owner').
-          // Sub leg: identified by from_org_id != GC and contract_sum > 0.
-          const ownerValue = (c as any).owner_contract_value;
-          const isOwnerLeg = ownerValue != null && Number(ownerValue) > 0;
-          if (isOwnerLeg) {
-            pf.revenue += Number(ownerValue) || 0;
-          } else if (c.to_org_id === currentOrg.id) {
-            pf.costs += baseSum(c);
-          }
-      } else if (orgType === 'FC') {
-          if (c.from_org_id === currentOrg.id) {
-            pf.revenue += baseSum(c);
-            pf.costs += (c as any).labor_budget || 0;
-          }
-        }
-      });
-
       allInvoices.forEach(inv => {
         const pf = pfMap.get(inv.project_id);
         if (!pf) return;
