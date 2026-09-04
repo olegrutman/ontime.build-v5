@@ -190,7 +190,20 @@ export function dedupeContracts(contracts: LedgerContract[]): LedgerContract[] {
   return [...byPair.values()];
 }
 
-/** Contracts where somebody bills the viewer (subs / crew / suppliers). */
+/** Statuses that are NOT a committed cost yet (awaiting award / declined). */
+const UNAWARDED = new Set(['invited', 'pending', 'draft']);
+const REJECTED = new Set(['rejected', 'declined', 'void', 'voided']);
+export const isAwardedContract = (c: LedgerContract) =>
+  !UNAWARDED.has((c.status || '').toLowerCase()) && !REJECTED.has((c.status || '').toLowerCase());
+
+/**
+ * Contracts where somebody bills the viewer (subs / crew).
+ *
+ * Supplier contracts are deliberately excluded: material spend already reaches
+ * the ledger through `materialCommitment` (approved estimates + POs), so
+ * counting the supplier contract row here double-booked the same dollars.
+ * Rejected rows are dropped entirely.
+ */
 export function findCostContracts(
   contracts: LedgerContract[],
   myOrgIds: string[],
@@ -201,10 +214,13 @@ export function findCostContracts(
         c.to_org_id &&
         myOrgIds.includes(c.to_org_id) &&
         c.from_role !== 'Owner' &&
+        c.from_role !== 'Supplier' &&
+        !REJECTED.has((c.status || '').toLowerCase()) &&
         !isWO(c),
     ),
   );
 }
+
 
 
 export function buildProjectLedger(input: LedgerInput): ProjectLedger {
