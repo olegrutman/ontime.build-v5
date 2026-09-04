@@ -29,7 +29,7 @@ interface MyProjectsHeroProps {
 }
 
 const ROLE_LABELS: Record<string, { contract: string; cost: string }> = {
-  GC: { contract: 'Owner Contract', cost: 'Subs Cost' },
+  GC: { contract: 'Owner Contract', cost: 'Subs + Materials' },
   TC: { contract: 'GC Contract', cost: 'FC + Materials' },
   FC: { contract: 'TC/GC Contract', cost: 'Labor Cost' },
 };

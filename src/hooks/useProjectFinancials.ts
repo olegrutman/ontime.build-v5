@@ -386,6 +386,17 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         }
       }
 
+      // Fallback: no explicit `material_responsibility` on the contracts (the
+      // common case when the project was set up from a supplier estimate). The
+      // party the supplier bills IS the party carrying the material cost.
+      const supplierBillsMe = contractsWithNames.some(
+        (c: any) => c.from_role === 'Supplier' && orgIds.includes(c.to_org_id || ''),
+      );
+      if (supplierBillsMe) {
+        if (detectedRole === 'General Contractor') setIsGCMaterialResponsible(true);
+        if (detectedRole === 'Trade Contractor') setIsTCMaterialResponsible(true);
+      }
+
       // Fetch approved estimate sum as fallback for material budget.
       // BASE scope only: CHANGE-scope estimates cover CO materials, whose cost
       // already lands in `approvedCOCost`. Summing both double-counted them.
