@@ -100,6 +100,8 @@ export interface ProjectLedger {
   pendingCOAdds: LedgerTerm;
   revisedContract: LedgerTerm;
   baseCost: LedgerTerm;
+  /** Invited / unsigned downstream contracts — exposure, not committed cost. */
+  pendingAwardCost: LedgerTerm;
   coCost: LedgerTerm;
   materialCommitment: LedgerTerm;
   revisedCost: LedgerTerm;
@@ -410,7 +412,7 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   return {
     role,
     baseContract, approvedCOAdds, pendingCOAdds, revisedContract,
-    baseCost, coCost, materialCommitment, revisedCost,
+    baseCost, pendingAwardCost, coCost, materialCommitment, revisedCost,
     forecastMargin, forecastMarginPct,
     billed: billedTerm, collected: collectedTerm, retainageHeld: retainageTerm,
     percentComplete,
