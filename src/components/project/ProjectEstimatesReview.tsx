@@ -207,10 +207,14 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
         (sum, est) => sum + (est.total_amount || 0), 0
       );
 
+      // Only construction contracts carry the material budget (never the
+      // owner contract or the supplier's own material contract).
       await supabase
         .from('project_contracts')
         .update({ material_estimate_total: totalBudget } as any)
-        .eq('project_id', projectId);
+        .eq('project_id', projectId)
+        .not('from_role', 'in', '("Owner","Supplier")');
+
 
     } catch (err) {
       console.error('Failed to update material estimate total:', err);
