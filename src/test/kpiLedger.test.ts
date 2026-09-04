@@ -152,3 +152,30 @@ describe('duplicate contract rows (re-invites)', () => {
     expect(findRevenueContract([stale, active], [TC])?.id).toBe('tcgc');
   });
 });
+
+describe('committed vs pending cost (audit: GC cost read 1.7M)', () => {
+  const live = [
+    { id: 'owner', from_role: 'Owner', to_role: 'General Contractor', from_org_id: null, to_org_id: GC, contract_sum: 1000000, original_contract_sum: 1000000, co_approved_sum: 0, status: 'Active' },
+    { id: 'sup', from_role: 'Supplier', to_role: 'General Contractor', from_org_id: 'sup', to_org_id: GC, contract_sum: 855934.33, original_contract_sum: 855934.33, co_approved_sum: 0, status: 'Accepted' },
+    { id: 'tc', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, original_contract_sum: 800000, co_approved_sum: 0, status: 'Invited' },
+  ];
+
+  const gc = () => buildProjectLedger(baseInput({
+    role: 'General Contractor', myOrgIds: [GC], contracts: live,
+    ownerContractValue: 1000000, materialCommitment: 855934.33, materialsAreMine: true,
+  }));
+
+  it('never counts the supplier contract as cost — materials come from the commitment', () => {
+    expect(findCostContracts(live, [GC]).map((c) => c.id)).toEqual(['tc']);
+  });
+
+  it('excludes an invited (unsigned) sub from committed cost', () => {
+    const l = gc();
+    expect(l.baseCost.value).toBe(0);
+    expect(l.pendingAwardCost.value).toBe(800000);
+  });
+
+  it('revised cost is the material commitment only, not 1.66M', () => {
+    expect(gc().revisedCost.value).toBeCloseTo(855934.33, 2);
+  });
+});
