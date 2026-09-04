@@ -272,7 +272,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('project_contracts')
-              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, original_contract_sum, from_org_id, to_org_id, trade, status, owner_contract_value')
+              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, original_contract_sum, from_org_id, to_org_id, trade, status, owner_contract_value, material_responsibility')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         Promise.resolve({ data: [] }),
@@ -762,7 +762,24 @@ export function useDashboardData(): DashboardData {
             .select('id, project_id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
             .in('project_id', projectIds),
         ]);
-        const matEstimate = (estRes.data || []).reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
+        // Materials only count as YOUR cost when you carry material responsibility
+        // on that project — mirrors kpiLedger/useProjectFinancials (`materialsAreMine`),
+        // otherwise the dashboard inflates cost with the counterparty's materials.
+        const respCode = orgType === 'GC' ? 'GC' : 'TC';
+        const materialsMine = new Set<string>(
+          projectIds.filter(pid => {
+            const rows = contracts.filter((c: any) => c.project_id === pid);
+            if (rows.some((c: any) => c.material_responsibility === respCode &&
+              (c.from_org_id === currentOrg.id || c.to_org_id === currentOrg.id))) return true;
+            if (rows.some((c: any) => c.material_responsibility != null)) return false;
+            // Fallback: the party a supplier bills carries the material cost.
+            return rows.some((c: any) => c.from_role === 'Supplier' && c.to_org_id === currentOrg.id);
+          }),
+        );
+        const mineOnly = (pid: string) => orgType === 'SUPPLIER' || materialsMine.has(pid);
+        const matEstimate = (estRes.data || [])
+          .filter((e: any) => mineOnly(e.project_id))
+          .reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
         const ownedPOs = (poRes.data || []).filter((po: any) =>
           orgType === 'SUPPLIER' ? true : po.pricing_owner_org_id === currentOrg.id,
         );
@@ -778,7 +795,7 @@ export function useDashboardData(): DashboardData {
         materialCommitment = Math.max(matEstimate, matOrdered);
         projectIds.forEach(pid => {
           const est = (estRes.data || [])
-            .filter((e: any) => e.project_id === pid)
+            .filter((e: any) => e.project_id === pid && mineOnly(pid))
             .reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
           const ord = ownedPOs
             .filter((po: any) => po.project_id === pid && COMMITTED.includes(po.status))

@@ -233,12 +233,17 @@ export function useCreateProposal(projectId: string | null) {
     mutationFn: async (input: NewProposalInput): Promise<COProposal> => {
       if (!projectId || !orgId || !user) throw new Error('Missing project or organization context');
 
-      const { count } = await supabase
+      // Derive the next number from the highest existing one, not the row count:
+      // counting breaks as soon as a proposal is deleted (duplicate number).
+      const { data: existingNumbers } = await supabase
         .from('co_proposals')
-        .select('id', { count: 'exact', head: true })
+        .select('proposal_number')
         .eq('project_id', projectId);
-
-      const proposalNumber = `PROP-${String((count ?? 0) + 1).padStart(3, '0')}`;
+      const maxSeq = (existingNumbers ?? []).reduce((max: number, r: any) => {
+        const n = parseInt(String(r.proposal_number ?? '').replace(/\D/g, ''), 10);
+        return Number.isFinite(n) && n > max ? n : max;
+      }, 0);
+      const proposalNumber = `PROP-${String(maxSeq + 1).padStart(3, '0')}`;
       const { subtotal, total } = computeProposalTotals(
         input.items.map(i => i.amount),
         input.markup_percent,
