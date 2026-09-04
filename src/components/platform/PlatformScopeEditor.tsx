@@ -49,18 +49,25 @@ export function PlatformScopeEditor({ projectId, projectStatus, onRefresh }: Pro
 
   const fetchData = async () => {
     setLoading(true);
-    const [selRes, detRes, orgRes, teamRes] = await Promise.all([
-      supabase.from('contract_scope_selections').select('*').eq('project_id', projectId),
-      supabase.from('contract_scope_details').select('*'),
+    const selRes = await supabase
+      .from('contract_scope_selections')
+      .select('*')
+      .eq('project_id', projectId);
+    const selectionIds = (selRes.data || []).map((s: any) => s.id);
+
+    const [detRes, orgRes, teamRes] = await Promise.all([
+      // Scope details to this project's selections — a full-table select times out
+      // once the table grows.
+      selectionIds.length > 0
+        ? supabase.from('contract_scope_details').select('*').in('selection_id', selectionIds)
+        : Promise.resolve({ data: [] as any[] }),
       supabase.from('organizations').select('id, name, type').order('name'),
       supabase.from('project_team').select('id, org_id, role, organization:organizations!project_team_org_id_fkey(name)').eq('project_id', projectId),
     ]);
 
     setSelections((selRes.data || []) as unknown as ScopeSelection[]);
 
-    // Filter details to only those belonging to our selections
-    const selIds = new Set((selRes.data || []).map((s: any) => s.id));
-    setDetails(((detRes.data || []) as unknown as ScopeDetail[]).filter(d => selIds.has(d.selection_id)));
+    setDetails((detRes.data || []) as unknown as ScopeDetail[]);
 
     setOrgs((orgRes.data || []) as unknown as OrgOption[]);
     setTeamOrgs(((teamRes.data || []) as unknown as any[]).map(t => ({
