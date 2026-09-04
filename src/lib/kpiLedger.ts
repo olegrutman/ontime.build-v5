@@ -100,6 +100,8 @@ export interface ProjectLedger {
   pendingCOAdds: LedgerTerm;
   revisedContract: LedgerTerm;
   baseCost: LedgerTerm;
+  /** Invited / unsigned downstream contracts — exposure, not committed cost. */
+  pendingAwardCost: LedgerTerm;
   coCost: LedgerTerm;
   materialCommitment: LedgerTerm;
   revisedCost: LedgerTerm;
@@ -190,7 +192,20 @@ export function dedupeContracts(contracts: LedgerContract[]): LedgerContract[] {
   return [...byPair.values()];
 }
 
-/** Contracts where somebody bills the viewer (subs / crew / suppliers). */
+/** Statuses that are NOT a committed cost yet (awaiting award / declined). */
+const UNAWARDED = new Set(['invited', 'pending', 'draft']);
+const REJECTED = new Set(['rejected', 'declined', 'void', 'voided']);
+export const isAwardedContract = (c: LedgerContract) =>
+  !UNAWARDED.has((c.status || '').toLowerCase()) && !REJECTED.has((c.status || '').toLowerCase());
+
+/**
+ * Contracts where somebody bills the viewer (subs / crew).
+ *
+ * Supplier contracts are deliberately excluded: material spend already reaches
+ * the ledger through `materialCommitment` (approved estimates + POs), so
+ * counting the supplier contract row here double-booked the same dollars.
+ * Rejected rows are dropped entirely.
+ */
 export function findCostContracts(
   contracts: LedgerContract[],
   myOrgIds: string[],
@@ -201,10 +216,13 @@ export function findCostContracts(
         c.to_org_id &&
         myOrgIds.includes(c.to_org_id) &&
         c.from_role !== 'Owner' &&
+        c.from_role !== 'Supplier' &&
+        !REJECTED.has((c.status || '').toLowerCase()) &&
         !isWO(c),
     ),
   );
 }
+
 
 
 export function buildProjectLedger(input: LedgerInput): ProjectLedger {
@@ -257,15 +275,29 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   };
 
   // ── Cost side ───────────────────────────────────────────────────────────
-  const baseCostVal = costContracts.reduce((s, c) => s + base(c), 0);
+  // Only AWARDED contracts are committed cost. An invited-but-unsigned sub is
+  // exposure, reported separately so it can never inflate the cost KPI.
+  const awardedCostContracts = costContracts.filter(isAwardedContract);
+  const pendingAwardContracts = costContracts.filter((c) => !isAwardedContract(c));
+  const baseCostVal = awardedCostContracts.reduce((s, c) => s + base(c), 0);
   const baseCost: LedgerTerm = {
     value: baseCostVal,
     basis: 'contract',
-    known: costContracts.length > 0,
-    formula: costContracts.length
-      ? `Σ base of ${costContracts.length} downstream contract${costContracts.length > 1 ? 's' : ''}`
-      : 'No downstream contracts',
+    known: awardedCostContracts.length > 0,
+    formula: awardedCostContracts.length
+      ? `Σ base of ${awardedCostContracts.length} awarded downstream contract${awardedCostContracts.length > 1 ? 's' : ''}`
+      : 'No awarded downstream contracts',
   };
+  const pendingAwardVal = pendingAwardContracts.reduce((s, c) => s + base(c), 0);
+  const pendingAwardCost: LedgerTerm = {
+    value: pendingAwardVal,
+    basis: 'forecast',
+    known: pendingAwardContracts.length > 0,
+    formula: pendingAwardContracts.length
+      ? `Σ base of ${pendingAwardContracts.length} invited / unsigned contract${pendingAwardContracts.length > 1 ? 's' : ''} — excluded from cost`
+      : 'No pending awards',
+  };
+
   const coCost: LedgerTerm = {
     value: approvedCOCost,
     basis: 'contract',
@@ -380,7 +412,7 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   return {
     role,
     baseContract, approvedCOAdds, pendingCOAdds, revisedContract,
-    baseCost, coCost, materialCommitment, revisedCost,
+    baseCost, pendingAwardCost, coCost, materialCommitment, revisedCost,
     forecastMargin, forecastMarginPct,
     billed: billedTerm, collected: collectedTerm, retainageHeld: retainageTerm,
     percentComplete,

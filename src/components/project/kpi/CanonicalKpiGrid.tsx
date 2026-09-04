@@ -42,7 +42,14 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
       note: ledger.materialCommitment.formula, excluded: !ledger.materialCommitment.known,
     },
     { label: 'Revised cost', value: money(ledger.revisedCost.value), emphasis: true },
+    ...(ledger.pendingAwardCost.value > 0
+      ? [{
+          label: 'Pending award', value: money(ledger.pendingAwardCost.value),
+          excluded: true, note: ledger.pendingAwardCost.formula,
+        }]
+      : []),
   ];
+
 
   const marginRows: DrilldownRow[] = [
     { label: 'Revised revenue', value: money(ledger.revisedContract.value) },

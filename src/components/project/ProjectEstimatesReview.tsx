@@ -218,13 +218,22 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
         (sum, est) => sum + (est.total_amount || 0), 0
       );
 
-      // Only construction contracts carry the material budget (never the
-      // owner contract or the supplier's own material contract).
+      // Only construction contracts carry the material budget. The owner
+      // contract and the supplier's own material contract must stay clean, or
+      // the same dollars get counted twice in the cost KPI.
       await supabase
         .from('project_contracts')
         .update({ material_estimate_total: totalBudget } as any)
         .eq('project_id', projectId)
         .not('from_role', 'in', '("Owner","Supplier")');
+
+      await supabase
+        .from('project_contracts')
+        .update({ material_estimate_total: null } as any)
+        .eq('project_id', projectId)
+        .in('from_role', ['Owner', 'Supplier']);
+
+
 
 
     } catch (err) {
