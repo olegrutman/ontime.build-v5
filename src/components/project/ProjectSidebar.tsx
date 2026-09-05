@@ -18,6 +18,8 @@ import {
   LogOut,
   Search,
   ChevronDown,
+  Users,
+
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
@@ -60,9 +62,11 @@ const ITEMS = {
   returns: { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
   backcharges: { key: 'backcharges', label: 'Backcharges', icon: AlertTriangle, route: 'backcharges' },
   paymentApps: { key: 'payment-apps', label: 'Payment Apps', icon: FileText, route: 'payment-apps' },
+  team: { key: 'team', label: 'Team', icon: Users, route: 'team' },
   projectInfo: { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
   settings: { key: 'settings', label: 'Settings', icon: Settings, route: 'settings' },
 } satisfies Record<string, NavItem | ((isTM: boolean) => NavItem)>;
+
 
 /**
  * Nav is ordered by frequency of use, not by taxonomy:
@@ -71,14 +75,26 @@ const ITEMS = {
  *  - "More" = long tail, collapsed by default
  * Each destination appears exactly once — no pinned duplicates.
  */
-export function getNavGroups(isTM: boolean, isSupplier: boolean): { groups: NavGroup[]; more: NavItem[] } {
+export function getNavGroups(isTM: boolean, isSupplier: boolean, isFC = false): { groups: NavGroup[]; more: NavItem[] } {
   if (isSupplier) {
     return {
       groups: [
         { key: 'primary', items: [ITEMS.overview, ITEMS.estimates, ITEMS.purchaseOrders] },
         { key: 'financials', label: 'Financials', items: [ITEMS.invoices, ITEMS.returns] },
       ],
-      more: [ITEMS.projectInfo, ITEMS.settings],
+      more: [ITEMS.team, ITEMS.projectInfo, ITEMS.settings],
+    };
+  }
+
+  // Field crews execute work and bill their hirer. They never own the
+  // contract-level money surfaces (SOV, POs, backcharges, payment apps).
+  if (isFC) {
+    return {
+      groups: [
+        { key: 'primary', items: [ITEMS.overview, ITEMS.changeOrders(isTM), ITEMS.invoices] },
+        { key: 'field', label: 'Field', items: [ITEMS.schedule, ITEMS.dailyLog] },
+      ],
+      more: [ITEMS.rfis, ITEMS.team, ITEMS.projectInfo, ITEMS.settings],
     };
   }
 
@@ -97,9 +113,11 @@ export function getNavGroups(isTM: boolean, isSupplier: boolean): { groups: NavG
       ITEMS.returns,
       ITEMS.backcharges,
       ITEMS.paymentApps,
+      ITEMS.team,
       ITEMS.projectInfo,
       ITEMS.settings,
     ],
+
   };
 }
 
@@ -154,9 +172,10 @@ function NavRow({
 interface ProjectSidebarProps {
   isSupplier?: boolean;
   isTM?: boolean;
+  isFC?: boolean;
 }
 
-export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSidebarProps) {
+export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false }: ProjectSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -172,7 +191,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
   const pathParts = location.pathname.split('/');
   const activeSection = pathParts[3] || 'overview';
 
-  const { groups, more } = useMemo(() => getNavGroups(isTM, isSupplier), [isTM, isSupplier]);
+  const { groups, more } = useMemo(() => getNavGroups(isTM, isSupplier, isFC), [isTM, isSupplier, isFC]);
 
   const allItems = useMemo(
     () => [...groups.flatMap((g) => g.items), ...more],

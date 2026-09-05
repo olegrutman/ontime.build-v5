@@ -31,12 +31,12 @@ interface BottomItem {
   route: string;
 }
 
-function getPrimaryItems(isTM: boolean): BottomItem[] {
+function getPrimaryItems(isTM: boolean, isFC = false): BottomItem[] {
   return [
     { label: 'Overview', icon: LayoutDashboard, route: 'overview' },
     { label: isTM ? 'WOs' : 'COs', icon: AlertTriangle, route: 'change-orders' },
     { label: 'Invoices', icon: Receipt, route: 'invoices' },
-    { label: 'Orders', icon: Package, route: 'purchase-orders' },
+    ...(isFC ? [] : [{ label: 'Orders', icon: Package, route: 'purchase-orders' } as BottomItem]),
   ];
 }
 
@@ -46,6 +46,7 @@ interface MoreItem {
   route: string;
   featureKey?: string;
   hideForSupplier?: boolean;
+  hideForFC?: boolean;
 }
 
 interface MoreGroup {
@@ -60,6 +61,7 @@ function getMoreGroups(isTM: boolean): MoreGroup[] {
       key: 'pulse',
       label: 'Pulse',
       items: [
+        { label: 'Team', icon: Users, route: 'team' },
         { label: 'Project Info', icon: Settings2, route: 'setup' },
       ],
     },
@@ -68,19 +70,19 @@ function getMoreGroups(isTM: boolean): MoreGroup[] {
       label: 'Scope',
       items: [
         ...(!isTM
-          ? [{ label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true } as MoreItem]
+          ? [{ label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true, hideForFC: true } as MoreItem]
           : []),
         { label: 'RFIs', icon: MessageSquareMore, route: 'rfis' },
-        { label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
+        { label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates', hideForFC: true },
       ],
     },
     {
       key: 'money',
       label: 'Money',
       items: [
-        { label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
-        { label: 'Backcharges', icon: AlertTriangle, route: 'backcharges' },
-        { label: 'Payment Apps', icon: FileText, route: 'payment-apps', hideForSupplier: true },
+        { label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking', hideForFC: true },
+        { label: 'Backcharges', icon: AlertTriangle, route: 'backcharges', hideForFC: true },
+        { label: 'Payment Apps', icon: FileText, route: 'payment-apps', hideForSupplier: true, hideForFC: true },
       ],
     },
     {
@@ -138,9 +140,10 @@ function MoreItemRow({
 interface ProjectBottomNavProps {
   isSupplier?: boolean;
   isTM?: boolean;
+  isFC?: boolean;
 }
 
-export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBottomNavProps) {
+export function ProjectBottomNav({ isSupplier = false, isTM = false, isFC = false }: ProjectBottomNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -172,7 +175,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
         style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-stretch justify-around h-[56px]">
-          {getPrimaryItems(isTM).map((item) => {
+          {getPrimaryItems(isTM, isFC).map((item) => {
             const active = activeSection === item.route;
             const Icon = item.icon;
             return (
@@ -209,7 +212,7 @@ export function ProjectBottomNav({ isSupplier = false, isTM = false }: ProjectBo
           <DrawerTitle className="sr-only">More sections</DrawerTitle>
           <div className="flex flex-col gap-3 p-4 pb-8 overflow-y-auto">
             {groups.map((group) => {
-              const visible = group.items.filter((i) => !(i.hideForSupplier && isSupplier));
+              const visible = group.items.filter((i) => !(i.hideForSupplier && isSupplier) && !(i.hideForFC && isFC));
               if (visible.length === 0) return null;
               return (
                 <div key={group.key} className="flex flex-col gap-0.5">
