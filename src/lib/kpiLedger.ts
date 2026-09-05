@@ -359,7 +359,10 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
       ? `${money(revisedRevenue)} revenue − ${money(revisedCostVal)} cost`
       : 'No cost side tracked on this project — margin not computable',
   };
-  const forecastMarginPct = revisedRevenue > 0 ? (forecastMarginVal / revisedRevenue) * 100 : 0;
+  // No cost side tracked → percentage is meaningless (it would read 100%).
+  const forecastMarginPct =
+    forecastMargin.known && revisedRevenue > 0 ? (forecastMarginVal / revisedRevenue) * 100 : 0;
+
 
 
   // ── Billing / cash ──────────────────────────────────────────────────────
@@ -435,7 +438,7 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
 
   return {
     role,
-    baseContract, approvedCOAdds, pendingCOAdds, revisedContract,
+    baseContract, pendingAwardRevenue, approvedCOAdds, pendingCOAdds, revisedContract,
     baseCost, pendingAwardCost, coCost, materialCommitment, revisedCost,
     forecastMargin, forecastMarginPct,
     billed: billedTerm, collected: collectedTerm, retainageHeld: retainageTerm,
