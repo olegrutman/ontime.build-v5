@@ -172,9 +172,10 @@ function NavRow({
 interface ProjectSidebarProps {
   isSupplier?: boolean;
   isTM?: boolean;
+  isFC?: boolean;
 }
 
-export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSidebarProps) {
+export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false }: ProjectSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -190,7 +191,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false }: ProjectSide
   const pathParts = location.pathname.split('/');
   const activeSection = pathParts[3] || 'overview';
 
-  const { groups, more } = useMemo(() => getNavGroups(isTM, isSupplier), [isTM, isSupplier]);
+  const { groups, more } = useMemo(() => getNavGroups(isTM, isSupplier, isFC), [isTM, isSupplier, isFC]);
 
   const allItems = useMemo(
     () => [...groups.flatMap((g) => g.items), ...more],
