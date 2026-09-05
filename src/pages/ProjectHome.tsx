@@ -433,6 +433,12 @@ export default function ProjectHome() {
                         isTM={isTM}
                       />
                     )}
+
+                    {/* Team lives on the overview for the parties who hire:
+                        a GC adds trades/crews/suppliers, a TC adds its crews. */}
+                    {!isFC && !financials.loading && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC') && (
+                      <ProjectOverviewTeamCard projectId={id!} />
+                    )}
                   </div>
                 )}
               </>
