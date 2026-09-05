@@ -115,8 +115,8 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
       <FinancialKpiCard
         idx={2} label="FORECAST MARGIN"
         term={ledger.forecastMargin} accent={C.green} icon="📈" iconBg={C.greenBg}
-        suffix={ledger.revisedContract.known ? `· ${pct(ledger.forecastMarginPct)}` : undefined}
-        pills={ledger.revisedContract.known ? [{ type: marginPillType, text: pct(ledger.forecastMarginPct) }] : []}
+        suffix={ledger.forecastMargin.known ? `· ${pct(ledger.forecastMarginPct)}` : undefined}
+        pills={ledger.forecastMargin.known ? [{ type: marginPillType, text: pct(ledger.forecastMarginPct) }] : []}
         rows={marginRows}
       />
       <FinancialKpiCard

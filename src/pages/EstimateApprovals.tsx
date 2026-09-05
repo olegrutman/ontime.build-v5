@@ -160,17 +160,21 @@ export default function EstimateApprovals() {
 
         // Only construction contracts carry the material budget — never the
         // owner contract or the supplier's own material contract.
+        // Only the contract of the party that actually buys the materials may
+        // carry this number. Writing it onto every construction row put the
+        // GC's material budget on the TC's contract, so the TC's cost KPI read
+        // material spend it never pays.
+        await supabase
+          .from('project_contracts')
+          .update({ material_estimate_total: null } as any)
+          .eq('project_id', approvedEstimate.project_id);
+
         await supabase
           .from('project_contracts')
           .update({ material_estimate_total: totalBudget } as any)
           .eq('project_id', approvedEstimate.project_id)
+          .not('material_responsibility', 'is', null)
           .not('from_role', 'in', '("Owner","Supplier")');
-
-        await supabase
-          .from('project_contracts')
-          .update({ material_estimate_total: null } as any)
-          .eq('project_id', approvedEstimate.project_id)
-          .in('from_role', ['Owner', 'Supplier']);
 
       } catch (err) {
         console.error('Failed to update material estimate total:', err);
