@@ -179,3 +179,31 @@ describe('committed vs pending cost (audit: GC cost read 1.7M)', () => {
     expect(gc().revisedCost.value).toBeCloseTo(855934.33, 2);
   });
 });
+
+describe('unsigned upstream contract (regression: fake 100% margin)', () => {
+  const invited = [
+    { id: 'owner', from_role: 'Owner', to_role: 'General Contractor', from_org_id: null, to_org_id: GC, contract_sum: 1_000_000, co_approved_sum: 0, status: 'Active' },
+    { id: 'tcgc', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800_000, co_approved_sum: 0, status: 'Invited' },
+  ];
+
+  it('keeps an Invited contract out of TC revenue and shows it as awaiting signature', () => {
+    const l = buildProjectLedger(baseInput({ contracts: invited }));
+    expect(l.baseContract.value).toBe(0);
+    expect(l.baseContract.known).toBe(false);
+    expect(l.revisedContract.value).toBe(0);
+    expect(l.pendingAwardRevenue.value).toBe(800_000);
+  });
+
+  it('never reports a margin percentage when no cost side is tracked', () => {
+    const l = buildProjectLedger(baseInput({ contracts: invited }));
+    expect(l.forecastMargin.known).toBe(false);
+    expect(l.forecastMarginPct).toBe(0);
+  });
+
+  it('counts the contract once it is awarded', () => {
+    const awarded = invited.map((c) => (c.id === 'tcgc' ? { ...c, status: 'Active' } : c));
+    const l = buildProjectLedger(baseInput({ contracts: awarded }));
+    expect(l.baseContract.value).toBe(800_000);
+    expect(l.pendingAwardRevenue.value).toBe(0);
+  });
+});
