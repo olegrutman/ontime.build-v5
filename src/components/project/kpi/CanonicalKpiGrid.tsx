@@ -61,7 +61,7 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
   const marginRows: DrilldownRow[] = [
     { label: 'Revised revenue', value: money(ledger.revisedContract.value) },
     { label: 'Revised cost', value: money(ledger.revisedCost.value) },
-    { label: 'Forecast margin', value: `${money(ledger.forecastMargin.value)} · ${pct(ledger.forecastMarginPct)}`, emphasis: true },
+    { label: 'Forecast margin', value: ledger.forecastMargin.known ? `${money(ledger.forecastMargin.value)} · ${pct(ledger.forecastMarginPct)}` : 'Not computable — no costs tracked', emphasis: true },
     { label: `Pending ${co} net at risk`, value: money(ledger.pendingCONetAtRisk.value), excluded: true, note: ledger.pendingCONetAtRisk.formula },
   ];
 
