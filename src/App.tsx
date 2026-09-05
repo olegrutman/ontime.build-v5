@@ -195,7 +195,7 @@ function AppRoutes() {
             <Route path="/for/:slug" element={<RolePage />} />
             
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/auth/callback" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/verify-email" element={<AuthPage />} />
             <Route path="/signup" element={<AuthPage />} />
             <Route path="/reset-password" element={<AuthPage />} />
