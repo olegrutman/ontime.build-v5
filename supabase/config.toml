@@ -1,65 +1,47 @@
 project_id = "gzqgbfazwvmwmirbqfwf"
 
-[functions.generate-work-order-description]
-verify_jwt = false
-
-[functions.send-notification-email]
-verify_jwt = false
-
-[functions.parse-estimate-pdf]
-verify_jwt = false
-
-[functions.invoice-download]
-verify_jwt = false
-
-[functions.po-download]
-verify_jwt = false
-
-[functions.sasha-guide]
-verify_jwt = false
-
-[functions.work-order-download]
-verify_jwt = false
-
-[functions.generate-scope-description]
-verify_jwt = false
-
-[functions.send-po]
-verify_jwt = false
-
-[functions.seed-test-users]
-verify_jwt = false
-
-[functions.return-credit-memo]
-verify_jwt = false
-
-[functions.seed-platform-owner]
-verify_jwt = false
-
-[functions.generate-sov]
-verify_jwt = false
-
-[functions.generate-project-description]
-verify_jwt = false
-
-[functions.generate-framing-scope-summary]
-verify_jwt = false
-
-[functions.seed-qa-environment]
-verify_jwt = false
-
-[functions.co-public-access]
-verify_jwt = false
-
-[functions.process-email-queue]
-verify_jwt = true
-
-[functions.invoice-public-access]
-verify_jwt = false
-
-[functions.send-co-approval-email]
-verify_jwt = false
-
-[functions.send-co-external-invite]
-verify_jwt = false
-
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.co-public-access]
+    verify_jwt = false
+  [functions.generate-framing-scope-summary]
+    verify_jwt = false
+  [functions.generate-project-description]
+    verify_jwt = false
+  [functions.generate-scope-description]
+    verify_jwt = false
+  [functions.generate-sov]
+    verify_jwt = false
+  [functions.generate-work-order-description]
+    verify_jwt = false
+  [functions.invoice-download]
+    verify_jwt = false
+  [functions.invoice-public-access]
+    verify_jwt = false
+  [functions.parse-estimate-pdf]
+    verify_jwt = false
+  [functions.po-download]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.return-credit-memo]
+    verify_jwt = false
+  [functions.sasha-guide]
+    verify_jwt = false
+  [functions.seed-platform-owner]
+    verify_jwt = false
+  [functions.seed-qa-environment]
+    verify_jwt = false
+  [functions.seed-test-users]
+    verify_jwt = false
+  [functions.send-co-approval-email]
+    verify_jwt = false
+  [functions.send-co-external-invite]
+    verify_jwt = false
+  [functions.send-notification-email]
+    verify_jwt = false
+  [functions.send-po]
+    verify_jwt = false
+  [functions.work-order-download]
+    verify_jwt = false
