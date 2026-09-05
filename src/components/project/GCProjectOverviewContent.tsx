@@ -359,10 +359,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
         const pendingNetAtRisk = ledger.pendingCONetAtRisk.value;
         const cashPosition = ledger.marginToDate.value;
         const hasContract = ledger.revisedContract.known;
-        const status = computeHealthStatus(ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
+        const status = computeHealthStatus(ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract, ledger.forecastMargin.known);
         const summary = buildHealthSummary({
           projectedMarginPct: ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
-          roleLabel: 'owner',
+          roleLabel: 'owner', marginKnown: ledger.forecastMargin.known,
         });
         return (
           <ProjectHealthHero
