@@ -19,71 +19,86 @@ export default function AuthCallback() {
   const [resent, setResent] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const finish = async (userId: string) => {
+      if (cancelled) return;
+      setState('success');
+      const { data: roles } = await supabase
+        .from('user_org_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+      const hasOrg = (roles?.length ?? 0) > 0;
+      setTimeout(() => {
+        navigate(hasOrg ? '/dashboard' : '/signup', { replace: true });
+      }, 1200);
+    };
+
+    const fail = (message: string) => {
+      if (cancelled) return;
+      setState('error');
+      setErrorMessage(message);
+    };
+
     const processCallback = async () => {
-      // Check URL hash for error params (Supabase puts them in the hash)
-      const hash = window.location.hash;
-      if (hash) {
-        const params = new URLSearchParams(hash.substring(1));
-        const error = params.get('error');
-        const errorDescription = params.get('error_description');
-
-        if (error) {
-          setState('error');
-          setErrorMessage(
-            errorDescription?.replace(/\+/g, ' ') ||
-            'The verification link is invalid or has expired.'
-          );
-          return;
-        }
-      }
-
-      // Check URL query params for error (some flows use query params)
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const searchParams = new URLSearchParams(window.location.search);
-      const errorParam = searchParams.get('error');
-      const errorDesc = searchParams.get('error_description');
 
-      if (errorParam) {
-        setState('error');
-        setErrorMessage(
-          errorDesc?.replace(/\+/g, ' ') ||
-          'The verification link is invalid or has expired.'
+      const error = hashParams.get('error') || searchParams.get('error');
+      const errorDescription =
+        hashParams.get('error_description') || searchParams.get('error_description');
+      if (error) {
+        fail(
+          errorDescription?.replace(/\+/g, ' ') ||
+            'The verification link is invalid or has expired.'
         );
         return;
       }
 
-      // Try to get the session (Supabase auto-processes the hash)
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        setState('error');
-        setErrorMessage(sessionError.message);
-        return;
+      // 1) PKCE / magic-link style: ?code=...
+      const code = searchParams.get('code');
+      if (code) {
+        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (data?.session) return finish(data.session.user.id);
+        if (exchangeError) return fail(exchangeError.message);
       }
 
-      if (session) {
-        setState('success');
-
-        // Check whether the user already has an organization. If not, resume
-        // the signup wizard so they can pick a role + company.
-        const { data: roles } = await supabase
-          .from('user_org_roles')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .limit(1);
-        const hasOrg = (roles?.length ?? 0) > 0;
-
-        setTimeout(() => {
-          navigate(hasOrg ? '/dashboard' : '/signup', { replace: true });
-        }, 1500);
-      } else {
-        // No session, no error — might be a stale or already-used link
-        setState('error');
-        setErrorMessage('This verification link may have already been used or expired.');
+      // 2) OTP style: ?token_hash=...&type=signup
+      const tokenHash = searchParams.get('token_hash') || searchParams.get('token');
+      const otpType = (searchParams.get('type') || 'signup') as
+        | 'signup'
+        | 'recovery'
+        | 'invite'
+        | 'magiclink'
+        | 'email_change';
+      if (tokenHash) {
+        const { data, error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType,
+        });
+        if (data?.session) return finish(data.session.user.id);
+        if (otpError) return fail(otpError.message);
       }
+
+      // 3) Implicit style: tokens land in the hash and the client picks them up
+      //    asynchronously — poll briefly instead of checking once.
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) return finish(session.user.id);
+        if (cancelled) return;
+        await new Promise(r => setTimeout(r, 300));
+      }
+
+      fail('This verification link may have already been used or expired.');
     };
 
     processCallback();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
+
 
   const handleResend = async () => {
     if (!resendEmail) return;
