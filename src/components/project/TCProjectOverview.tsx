@@ -494,10 +494,10 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         const pendingNetAtRisk = ledger.pendingCONetAtRisk.value;
         const cashPosition = ledger.marginToDate.value;
         const hasContract = ledger.revisedContract.known;
-        const status = computeHealthStatus(ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract);
+        const status = computeHealthStatus(ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract, ledger.forecastMargin.known);
         const summary = buildHealthSummary({
           projectedMarginPct: ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
-          roleLabel: gcName,
+          roleLabel: gcName, marginKnown: ledger.forecastMargin.known,
         });
         return (
           <ProjectHealthHero
