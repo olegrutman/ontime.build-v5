@@ -18,6 +18,8 @@ import {
   LogOut,
   Search,
   ChevronDown,
+  Users,
+
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
@@ -60,9 +62,11 @@ const ITEMS = {
   returns: { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },
   backcharges: { key: 'backcharges', label: 'Backcharges', icon: AlertTriangle, route: 'backcharges' },
   paymentApps: { key: 'payment-apps', label: 'Payment Apps', icon: FileText, route: 'payment-apps' },
+  team: { key: 'team', label: 'Team', icon: Users, route: 'team' },
   projectInfo: { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
   settings: { key: 'settings', label: 'Settings', icon: Settings, route: 'settings' },
 } satisfies Record<string, NavItem | ((isTM: boolean) => NavItem)>;
+
 
 /**
  * Nav is ordered by frequency of use, not by taxonomy:
