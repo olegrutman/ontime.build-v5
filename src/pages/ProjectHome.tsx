@@ -170,11 +170,14 @@ export default function ProjectHome() {
     queryKey: ['buyer-has-contract', id, currentOrg?.id],
     enabled: !!id && !!currentOrg?.id && !isSupplier && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC'),
     queryFn: async () => {
+      // A contract can sit on either side of the viewer's org: a GC receives its
+      // owner contract (to_org_id), while a TC issues its contract to the GC
+      // (from_org_id). Checking only one side made TCs look un-set-up forever.
       const { data } = await supabase
         .from('project_contracts')
         .select('id')
         .eq('project_id', id!)
-        .eq('to_org_id', currentOrg!.id)
+        .or(`to_org_id.eq.${currentOrg!.id},from_org_id.eq.${currentOrg!.id}`)
         .limit(1);
       return (data?.length ?? 0) > 0;
     },
@@ -322,7 +325,7 @@ export default function ProjectHome() {
       onStatusChange={handleStatusChange}
     >
       <div className="flex flex-1 overflow-hidden md:pr-3 md:pt-3">
-        <ProjectSidebar isSupplier={isSupplier} isTM={isTM} />
+        <ProjectSidebar isSupplier={isSupplier} isTM={isTM} isFC={isFC} />
         <main className="flex-1 overflow-auto md:ml-[200px] xl:ml-[220px]">
           <div className={cn(
             "max-w-7xl mx-auto w-full",
@@ -435,6 +438,12 @@ export default function ProjectHome() {
               </>
             )}
 
+            {activeTab === 'team' && (
+              <div className="max-w-2xl">
+                <ProjectOverviewTeamCard projectId={id!} />
+              </div>
+            )}
+
             {activeTab === 'setup' && (
               <ProjectSetupFlow
                 projectId={id!}
@@ -518,7 +527,7 @@ export default function ProjectHome() {
       </div>
       {/* Mobile + tablet: project-specific bottom nav */}
       <div className="lg:hidden">
-        <ProjectBottomNav isSupplier={isSupplier} isTM={isTM} />
+        <ProjectBottomNav isSupplier={isSupplier} isTM={isTM} isFC={isFC} />
       </div>
     </ProjectShell>
   );
