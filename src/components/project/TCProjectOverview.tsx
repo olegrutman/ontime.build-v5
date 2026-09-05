@@ -504,6 +504,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             status={status}
             projectedMargin={ledger.forecastMargin.value}
             projectedMarginPct={ledger.forecastMarginPct}
+            awaitingUpstream={!ledger.forecastMargin.known}
             summary={summary}
             miniStats={[
               { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },

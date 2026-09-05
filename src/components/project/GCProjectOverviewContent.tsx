@@ -369,6 +369,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             status={status}
             projectedMargin={ledger.forecastMargin.value}
             projectedMarginPct={ledger.forecastMarginPct}
+            awaitingUpstream={!ledger.forecastMargin.known}
             summary={summary}
             awaitingUpstream={!hasContract}
             miniStats={[
