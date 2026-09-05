@@ -1,3 +1,4 @@
+import { deepClone } from '@/lib/deepClone';
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { type DemoRole, type DemoWorkOrder, type DemoInvoice, type DemoPurchaseOrder, type DemoRFI, type DemoSOVItem, type DemoAttentionItem, type DemoContract, type DemoPOLineItem, type DemoInvoiceLineItem, type DemoWorkOrderDetail, DEMO_WORK_ORDERS, DEMO_PURCHASE_ORDERS, DEMO_INVOICES, DEMO_RFIS, DEMO_SOV_ITEMS, DEMO_ATTENTION_ITEMS, DEMO_CONTRACTS, DEMO_PO_LINE_ITEMS, DEMO_INVOICE_LINE_ITEMS, DEMO_WORK_ORDER_DETAILS } from '@/data/demoData';
 
@@ -17,16 +18,16 @@ export interface DemoDataStore {
 
 function createInitialStore(): DemoDataStore {
   return {
-    workOrders: structuredClone(DEMO_WORK_ORDERS),
-    purchaseOrders: structuredClone(DEMO_PURCHASE_ORDERS),
-    invoices: structuredClone(DEMO_INVOICES),
-    rfis: structuredClone(DEMO_RFIS),
-    sovItems: structuredClone(DEMO_SOV_ITEMS),
-    attentionItems: structuredClone(DEMO_ATTENTION_ITEMS),
-    contracts: structuredClone(DEMO_CONTRACTS),
-    poLineItems: structuredClone(DEMO_PO_LINE_ITEMS),
-    invoiceLineItems: structuredClone(DEMO_INVOICE_LINE_ITEMS),
-    workOrderDetails: structuredClone(DEMO_WORK_ORDER_DETAILS),
+    workOrders: deepClone(DEMO_WORK_ORDERS),
+    purchaseOrders: deepClone(DEMO_PURCHASE_ORDERS),
+    invoices: deepClone(DEMO_INVOICES),
+    rfis: deepClone(DEMO_RFIS),
+    sovItems: deepClone(DEMO_SOV_ITEMS),
+    attentionItems: deepClone(DEMO_ATTENTION_ITEMS),
+    contracts: deepClone(DEMO_CONTRACTS),
+    poLineItems: deepClone(DEMO_PO_LINE_ITEMS),
+    invoiceLineItems: deepClone(DEMO_INVOICE_LINE_ITEMS),
+    workOrderDetails: deepClone(DEMO_WORK_ORDER_DETAILS),
   };
 }
 
