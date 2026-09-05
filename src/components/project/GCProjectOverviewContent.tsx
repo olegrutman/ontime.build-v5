@@ -371,7 +371,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             projectedMarginPct={ledger.forecastMarginPct}
             awaitingUpstream={!ledger.forecastMargin.known}
             summary={summary}
-            awaitingUpstream={!hasContract}
+            
             miniStats={[
               { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
               { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
