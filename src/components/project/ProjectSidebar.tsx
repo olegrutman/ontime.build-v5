@@ -75,14 +75,26 @@ const ITEMS = {
  *  - "More" = long tail, collapsed by default
  * Each destination appears exactly once — no pinned duplicates.
  */
-export function getNavGroups(isTM: boolean, isSupplier: boolean): { groups: NavGroup[]; more: NavItem[] } {
+export function getNavGroups(isTM: boolean, isSupplier: boolean, isFC = false): { groups: NavGroup[]; more: NavItem[] } {
   if (isSupplier) {
     return {
       groups: [
         { key: 'primary', items: [ITEMS.overview, ITEMS.estimates, ITEMS.purchaseOrders] },
         { key: 'financials', label: 'Financials', items: [ITEMS.invoices, ITEMS.returns] },
       ],
-      more: [ITEMS.projectInfo, ITEMS.settings],
+      more: [ITEMS.team, ITEMS.projectInfo, ITEMS.settings],
+    };
+  }
+
+  // Field crews execute work and bill their hirer. They never own the
+  // contract-level money surfaces (SOV, POs, backcharges, payment apps).
+  if (isFC) {
+    return {
+      groups: [
+        { key: 'primary', items: [ITEMS.overview, ITEMS.changeOrders(isTM), ITEMS.invoices] },
+        { key: 'field', label: 'Field', items: [ITEMS.schedule, ITEMS.dailyLog] },
+      ],
+      more: [ITEMS.rfis, ITEMS.team, ITEMS.projectInfo, ITEMS.settings],
     };
   }
 
@@ -101,9 +113,11 @@ export function getNavGroups(isTM: boolean, isSupplier: boolean): { groups: NavG
       ITEMS.returns,
       ITEMS.backcharges,
       ITEMS.paymentApps,
+      ITEMS.team,
       ITEMS.projectInfo,
       ITEMS.settings,
     ],
+
   };
 }
 
