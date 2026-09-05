@@ -96,9 +96,12 @@ export interface LedgerTerm {
 export interface ProjectLedger {
   role: LedgerRole;
   baseContract: LedgerTerm;
+  /** Unsigned upstream contract I bill on — exposure, not committed revenue. */
+  pendingAwardRevenue: LedgerTerm;
   approvedCOAdds: LedgerTerm;
   pendingCOAdds: LedgerTerm;
   revisedContract: LedgerTerm;
+
   baseCost: LedgerTerm;
   /** Invited / unsigned downstream contracts — exposure, not committed cost. */
   pendingAwardCost: LedgerTerm;
@@ -241,19 +244,40 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   // ── Revenue side ────────────────────────────────────────────────────────
   // GC bills the owner, so its revenue instrument is owner_contract_value and
   // never the TC contract (which is a GC *cost*).
-  const baseVal = isGC ? Number(ownerContractValue || 0) : revContract ? base(revContract) : 0;
-  const baseKnown = isGC ? (ownerContractValue ?? null) !== null && baseVal > 0 : !!revContract;
+  //
+  // Symmetry rule: an invited / unsigned contract is excluded from cost, so it
+  // must also be excluded from revenue. Counting an unsigned $800K contract as
+  // revenue while its cost side was still empty produced a fake "100% margin".
+  const revAwarded = revContract ? isAwardedContract(revContract) : false;
+  const revContractBase = revContract ? base(revContract) : 0;
+  const baseVal = isGC ? Number(ownerContractValue || 0) : revAwarded ? revContractBase : 0;
+  const baseKnown = isGC
+    ? (ownerContractValue ?? null) !== null && baseVal > 0
+    : revAwarded && revContractBase > 0;
   const baseContract: LedgerTerm = {
     value: baseVal,
     basis: 'contract',
     known: baseKnown,
     formula: isGC
       ? 'Owner contract value'
-      : revContract
+      : revAwarded
         ? `Original signed contract ${money(baseVal)}`
-        : 'No contract yet',
+        : revContract
+          ? `Contract ${money(revContractBase)} not signed yet — excluded from revenue`
+          : 'No contract yet',
 
   };
+
+  const pendingAwardRevenue: LedgerTerm = {
+    value: !isGC && revContract && !revAwarded ? revContractBase : 0,
+    basis: 'forecast',
+    known: !isGC && !!revContract && !revAwarded,
+    formula:
+      !isGC && revContract && !revAwarded
+        ? `${money(revContractBase)} invited / unsigned contract — excluded from revenue until awarded`
+        : 'No pending contract award',
+  };
+
 
   const approvedCOAdds: LedgerTerm = {
     value: approvedCORevenue,
@@ -335,7 +359,10 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
       ? `${money(revisedRevenue)} revenue − ${money(revisedCostVal)} cost`
       : 'No cost side tracked on this project — margin not computable',
   };
-  const forecastMarginPct = revisedRevenue > 0 ? (forecastMarginVal / revisedRevenue) * 100 : 0;
+  // No cost side tracked → percentage is meaningless (it would read 100%).
+  const forecastMarginPct =
+    forecastMargin.known && revisedRevenue > 0 ? (forecastMarginVal / revisedRevenue) * 100 : 0;
+
 
 
   // ── Billing / cash ──────────────────────────────────────────────────────
@@ -411,7 +438,7 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
 
   return {
     role,
-    baseContract, approvedCOAdds, pendingCOAdds, revisedContract,
+    baseContract, pendingAwardRevenue, approvedCOAdds, pendingCOAdds, revisedContract,
     baseCost, pendingAwardCost, coCost, materialCommitment, revisedCost,
     forecastMargin, forecastMarginPct,
     billed: billedTerm, collected: collectedTerm, retainageHeld: retainageTerm,

@@ -28,11 +28,18 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
     { label: 'Base contract', value: money(ledger.baseContract.value), note: ledger.baseContract.formula },
     { label: `Approved ${coPlural}`, value: money(ledger.approvedCOAdds.value), note: `${extras.approvedCOCount ?? 0} approved` },
     { label: 'Revised total', value: money(ledger.revisedContract.value), emphasis: true },
+    ...(ledger.pendingAwardRevenue.value > 0
+      ? [{
+          label: 'Awaiting signature', value: money(ledger.pendingAwardRevenue.value),
+          excluded: true, note: ledger.pendingAwardRevenue.formula,
+        }]
+      : []),
     {
       label: `Pending ${coPlural}`, value: money(ledger.pendingCOAdds.value), excluded: true,
       note: `${extras.pendingCOCount ?? 0} awaiting approval — not counted in revenue`,
     },
   ];
+
 
   const costRows: DrilldownRow[] = [
     { label: 'Subs & crew contracts', value: money(ledger.baseCost.value), note: ledger.baseCost.formula },
@@ -108,8 +115,8 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
       <FinancialKpiCard
         idx={2} label="FORECAST MARGIN"
         term={ledger.forecastMargin} accent={C.green} icon="📈" iconBg={C.greenBg}
-        suffix={ledger.revisedContract.known ? `· ${pct(ledger.forecastMarginPct)}` : undefined}
-        pills={ledger.revisedContract.known ? [{ type: marginPillType, text: pct(ledger.forecastMarginPct) }] : []}
+        suffix={ledger.forecastMargin.known ? `· ${pct(ledger.forecastMarginPct)}` : undefined}
+        pills={ledger.forecastMargin.known ? [{ type: marginPillType, text: pct(ledger.forecastMarginPct) }] : []}
         rows={marginRows}
       />
       <FinancialKpiCard

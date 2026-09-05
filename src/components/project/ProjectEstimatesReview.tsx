@@ -221,17 +221,19 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
       // Only construction contracts carry the material budget. The owner
       // contract and the supplier's own material contract must stay clean, or
       // the same dollars get counted twice in the cost KPI.
+      // Only the contract of the party that actually buys the materials may
+      // carry this number (see EstimateApprovals for the same rule).
+      await supabase
+        .from('project_contracts')
+        .update({ material_estimate_total: null } as any)
+        .eq('project_id', projectId);
+
       await supabase
         .from('project_contracts')
         .update({ material_estimate_total: totalBudget } as any)
         .eq('project_id', projectId)
+        .not('material_responsibility', 'is', null)
         .not('from_role', 'in', '("Owner","Supplier")');
-
-      await supabase
-        .from('project_contracts')
-        .update({ material_estimate_total: null } as any)
-        .eq('project_id', projectId)
-        .in('from_role', ['Owner', 'Supplier']);
 
 
 
