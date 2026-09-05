@@ -1,0 +1,1 @@
+UPDATE public.project_contracts SET material_estimate_total = NULL WHERE material_estimate_total IS NOT NULL AND (material_responsibility IS NULL OR from_role IN ('Owner','Supplier'));
