@@ -58,6 +58,13 @@ export default defineConfig(({ mode }) => ({
       },
     }),
   ].filter(Boolean),
+  build: {
+    // Explicit browser-support floor: Safari 14+, so newer syntax is downleveled.
+    target: ["es2020", "safari14", "chrome87", "firefox78", "edge88"],
+  },
+  esbuild: {
+    target: "es2020",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
