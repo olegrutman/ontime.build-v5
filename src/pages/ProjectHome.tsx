@@ -182,14 +182,19 @@ export default function ProjectHome() {
       return (data?.length ?? 0) > 0;
     },
   });
+  // `setup_completion_required` is a project-wide flag, so it can't decide this on
+  // its own: once a party has its own contract in place, that party is set up —
+  // otherwise a TC keeps getting pushed into the GC's adoption wizard forever.
   const showAdoptionBanner =
     !isSupplier &&
     (currentOrg?.type === 'GC' || currentOrg?.type === 'TC') &&
+    buyerHasContract === false &&
     (
       project?.setup_completion_required === true ||
-      (!!project?.adopted_from_supplier_org_id && buyerHasContract === false) ||
-      (!!projectSupplierOrgId && buyerHasContract === false)
+      !!project?.adopted_from_supplier_org_id ||
+      !!projectSupplierOrgId
     );
+
 
   useEffect(() => {
     if (activeTab !== 'work-orders') return;
