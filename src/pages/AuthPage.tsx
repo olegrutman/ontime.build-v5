@@ -60,6 +60,9 @@ export default function AuthPage() {
       if (screen === 'callback' || screen === 'reset-password') return;
       if (isPlatformUser) { navigate('/platform'); return; }
       if (userOrgRoles.length > 0) { navigate('/dashboard'); return; }
+      // Signed in but no organization yet — finish account setup instead of
+      // leaving the user stuck on the sign-in form.
+      if (screen !== 'signup' && screen !== 'success') { navigate('/signup', { replace: true }); }
     }
   }, [authLoading, user, userOrgRoles, isPlatformUser, navigate, screen]);
 
