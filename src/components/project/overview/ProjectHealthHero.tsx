@@ -143,8 +143,11 @@ export function computeHealthStatus(
   pendingNetAtRisk: number,
   approvedNet: number,
   hasContract: boolean,
+  /** False when no cost side is tracked yet — a 0% margin would be a lie. */
+  marginKnown: boolean = true,
 ): HealthStatus {
   if (!hasContract) return 'neutral';
+  if (!marginKnown) return 'neutral';
   // Red: thin margin or pending CO losses exceed approved gains
   if (projectedMarginPct < 5) return 'red';
   if (pendingNetAtRisk < 0 && Math.abs(pendingNetAtRisk) > Math.max(approvedNet, 0)) return 'red';
@@ -161,14 +164,20 @@ export function buildHealthSummary(opts: {
   approvedNet: number;
   hasContract: boolean;
   roleLabel: string;
+  marginKnown?: boolean;
 }): string {
-  const { projectedMarginPct, cashPosition, pendingNetAtRisk, hasContract, roleLabel } = opts;
+  const { projectedMarginPct, cashPosition, pendingNetAtRisk, hasContract, roleLabel, marginKnown = true } = opts;
   if (!hasContract) {
     const article = /^[aeiou]/i.test(roleLabel) ? 'an' : 'a';
     return `Set ${article} ${roleLabel} contract to see your projected margin and health.`;
   }
-  const pct = Math.round(projectedMarginPct);
   const parts: string[] = [];
+  if (!marginKnown) {
+    parts.push('Contract in place, but no costs tracked yet — margin can\'t be projected.');
+    if (cashPosition < 0) parts.push(`Cash position ${fmt(cashPosition)} — you've paid out more than collected.`);
+    return parts.join(' ');
+  }
+  const pct = Math.round(projectedMarginPct);
   if (projectedMarginPct >= 20) parts.push(`Healthy ${pct}% projected margin.`);
   else if (projectedMarginPct >= 5) parts.push(`Margin tight at ${pct}% — watch costs.`);
   else parts.push(`Margin critical at ${pct}% — review pricing or costs.`);
@@ -176,3 +185,4 @@ export function buildHealthSummary(opts: {
   if (pendingNetAtRisk < -1000) parts.push(`${fmt(Math.abs(pendingNetAtRisk))} at risk in pending COs.`);
   return parts.join(' ');
 }
+
