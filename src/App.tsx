@@ -103,10 +103,25 @@ const PlatformCOScenarios = lazy(() => import("./pages/platform/PlatformCOScenar
 
 
 // 4. Route protection wrapper
+function ConnectionErrorScreen() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-6 text-center">
+      <h1 className="text-2xl font-bold">Unable to connect to Ontime.Build</h1>
+      <p className="text-muted-foreground max-w-md text-sm">
+        We couldn't reach the Ontime.Build service. This is usually a network or
+        firewall restriction. Check your connection, or ask your network
+        administrator to allow access to Ontime.Build and its backend service.
+      </p>
+      <Button onClick={() => window.location.reload()}>Try again</Button>
+    </div>
+  );
+}
+
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, connectionError } = useAuth();
   const { isDemoMode } = useDemo();
   if (isDemoMode) return <>{children}</>;
+  if (connectionError && !user) return <ConnectionErrorScreen />;
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -138,6 +153,10 @@ class ErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Application error:", error, errorInfo);
+    const w = window as unknown as { __ontimeErrors?: unknown[] };
+    if (Array.isArray(w.__ontimeErrors)) {
+      w.__ontimeErrors.push({ message: error.message, stack: error.stack, info: errorInfo.componentStack });
+    }
   }
 
   render() {

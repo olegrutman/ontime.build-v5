@@ -23,6 +23,7 @@ interface AuthContextType {
   isPlatformUser: boolean;
   twoFactorVerified: boolean;
   loading: boolean;
+  connectionError: boolean;
   needsOrgSetup: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [platformRole, setPlatformRole] = useState<PlatformRole | null>(null);
   const [twoFactorVerified, setTwoFactorVerified] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
 
   const fetchUserData = async (userId: string) => {
     // Fetch all data in parallel to avoid race conditions
@@ -115,18 +117,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchUserData(session.user.id);
+    // THEN check initial session. If the backend host is unreachable (corporate
+    // firewall, offline, DNS filtering) this must fail loudly instead of leaving
+    // the app in a permanent loading state.
+    const startupTimeout = setTimeout(() => {
+      if (isMounted) {
+        setConnectionError(true);
+        setLoading(false);
       }
-      if (isMounted) setLoading(false);
-    });
+    }, 12000);
+
+    supabase.auth
+      .getSession()
+      .then(async ({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchUserData(session.user.id);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setConnectionError(true);
+      })
+      .finally(() => {
+        clearTimeout(startupTimeout);
+        if (isMounted) setLoading(false);
+      });
 
     return () => {
       isMounted = false;
+      clearTimeout(startupTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -189,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPlatformUser,
         twoFactorVerified,
         loading,
+        connectionError,
         needsOrgSetup,
         signUp,
         signIn,
