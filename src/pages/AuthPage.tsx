@@ -39,6 +39,19 @@ export default function AuthPage() {
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [successData, setSuccessData] = useState({ name: '', email: '', role: '', company: '' });
 
+  // React Router can reuse this component when moving between /auth and
+  // /signup. Keep the visible screen aligned with the route instead of
+  // leaving the previously mounted sign-in form on screen.
+  useEffect(() => {
+    if (location.pathname === '/signup' || location.pathname === '/verify-email') {
+      setScreen('signup');
+    } else if (location.pathname === '/reset-password') {
+      setScreen('reset-password');
+    } else if (location.pathname === '/auth') {
+      setScreen('signin');
+    }
+  }, [location.pathname]);
+
   // Handle callback route
   useEffect(() => {
     if (location.pathname === '/auth/callback') {
