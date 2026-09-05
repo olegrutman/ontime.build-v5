@@ -34,6 +34,8 @@ const RolePage = lazy(() => import("./pages/RolePage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 const AuthPage = lazy(() => import("./pages/AuthPage"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+
 const CreateProjectNew = lazy(() => import("./pages/CreateProjectNew"));
 const ProjectHome = lazy(() => import("./pages/ProjectHome"));
 const EditProjectScope = lazy(() => import("./pages/EditProjectScope"));
