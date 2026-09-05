@@ -1,5 +1,4 @@
 export { ProjectRelationships } from './ProjectRelationships';
-export { ProjectTeamSection } from './ProjectTeamSection';
 export { ProjectScopeSection } from './ProjectScopeSection';
 export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
@@ -21,7 +20,6 @@ export { BudgetTracking } from './BudgetTracking';
 
 export { BillingCashCard } from './BillingCashCard';
 export { UrgentTasksCard } from './UrgentTasksCard';
-export { TeamMembersCard } from './TeamMembersCard';
 export { SupplierMaterialsControlCard } from './SupplierMaterialsControlCard';
 export { SupplierMaterialsChart } from './SupplierMaterialsChart';
 export { SupplierMaterialsOverview } from './SupplierMaterialsOverview';
