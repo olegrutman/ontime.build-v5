@@ -52,9 +52,24 @@ export function LaborEntryForm({
   );
   const [entryDate, setEntryDate] = useState(editingEntry?.entry_date ?? format(new Date(), 'yyyy-MM-dd'));
   const [hours, setHours] = useState(editingEntry?.hours != null ? String(editingEntry.hours) : '');
-  const [rate, setRate] = useState(editingEntry?.hourly_rate != null ? String(editingEntry.hourly_rate) : '');
-  const [markup, setMarkup] = useState('');
-  const [lumpSum, setLumpSum] = useState(editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '');
+  // Seed from the stored BASE rate/amount (pre-markup) so re-saving an edited
+  // entry reproduces the same billable figure instead of stacking markup again.
+  const [rate, setRate] = useState(() => {
+    const base = (editingEntry as any)?.base_hourly_rate;
+    if (base != null) return String(base);
+    return editingEntry?.hourly_rate != null ? String(editingEntry.hourly_rate) : '';
+  });
+  const [markup, setMarkup] = useState(
+    (editingEntry as any)?.markup_percent != null && Number((editingEntry as any).markup_percent) > 0
+      ? String((editingEntry as any).markup_percent)
+      : '',
+  );
+  const [lumpSum, setLumpSum] = useState(() => {
+    const base = (editingEntry as any)?.base_lump_sum;
+    if (base != null) return String(base);
+    return editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '';
+  });
+
   const [description, setDescription] = useState(editingEntry?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
