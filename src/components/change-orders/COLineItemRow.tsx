@@ -17,6 +17,7 @@ import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { canRemoveLaborEntry } from '@/lib/laborEntryDelete';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -79,6 +80,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [editHeaderOpen, setEditHeaderOpen] = useState(false);
   const [savingHeader, setSavingHeader] = useState(false);
   const [draftName, setDraftName] = useState(item.item_name);
@@ -150,9 +152,37 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   }
 
   function canEditEntry(entry: COLaborEntry): boolean {
-    if (entry.entered_by_role !== myRoleStr) return false;
-    if (entry.org_id !== orgId) return false;
-    return entry.is_actual_cost ? canEditInternal : canEditExternal;
+    return canRemoveLaborEntry({
+      entryRole: entry.entered_by_role,
+      entryOrgId: entry.org_id,
+      isActualCost: entry.is_actual_cost,
+      myRole: myRoleStr,
+      myOrgId: orgId,
+      canEditExternal,
+      canEditInternal,
+    });
+  }
+
+  async function deleteEntry(entry: COLaborEntry) {
+    if (!canEditEntry(entry)) {
+      toast.error('This entry is locked — it belongs to an agreed amount.');
+      return;
+    }
+    const amount = `$${fmt(entry.line_total ?? 0)}`;
+    const label = entry.is_actual_cost ? 'internal cost entry' : 'entry';
+    if (!window.confirm(`Remove this ${label}? ${amount} will come off this scope item.`)) return;
+    setDeletingEntryId(entry.id);
+    try {
+      const { error } = await supabase.from('co_labor_entries').delete().eq('id', entry.id);
+      if (error) throw error;
+      toast.success('Entry removed');
+      setEditEntryId(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to remove entry');
+    } finally {
+      setDeletingEntryId(null);
+    }
   }
 
   const billable = laborEntries.filter(e => !e.is_actual_cost);
@@ -666,10 +696,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                             className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                             title="Edit billable entry"
                           >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                        )}
-                      </span>
+                             <Pencil className="h-3 w-3" />
+                           </button>
+                         )}
+                         {billableEditable && (
+                           <button
+                             type="button"
+                             aria-label="Remove billable entry"
+                             onClick={(e) => { e.stopPropagation(); deleteEntry(entry); }}
+                             disabled={deletingEntryId === entry.id}
+                             className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                             title="Remove entry"
+                           >
+                             {deletingEntryId === entry.id
+                               ? <Loader2 className="h-3 w-3 animate-spin" />
+                               : <Trash2 className="h-3 w-3" />}
+                           </button>
+                         )}
+                       </span>
                       {/* Internal cost + inline edit pencil */}
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                         <span className="w-20 sm:w-24 text-right inline-flex items-center justify-end gap-1">
@@ -687,10 +731,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                   title="Edit internal cost"
                                 >
                                   <Pencil className="h-3 w-3" />
-                                </button>
-                              )}
-                            </>
-                          ) : (
+                                 </button>
+                               )}
+                               {internalEditable && (
+                                 <button
+                                   type="button"
+                                   aria-label="Remove internal cost"
+                                   onClick={(e) => { e.stopPropagation(); deleteEntry(matchingActual); }}
+                                   disabled={deletingEntryId === matchingActual.id}
+                                   className="p-0.5 rounded hover:bg-destructive/10 text-emerald-700 hover:text-destructive"
+                                   title="Remove internal cost"
+                                 >
+                                   {deletingEntryId === matchingActual.id
+                                     ? <Loader2 className="h-3 w-3 animate-spin" />
+                                     : <Trash2 className="h-3 w-3" />}
+                                 </button>
+                               )}
+                             </>
+                           ) : (
                             canEditInternal && (
                               <button
                                 type="button"
@@ -716,11 +774,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                             isActualCost={editingObj.is_actual_cost}
                             editingEntry={editingObj}
                             onSaved={() => { setEditEntryId(null); onRefresh(); }}
-                            onCancel={() => setEditEntryId(null)}
-                          />
-                        </div>
-                      );
-                    })()}
+                             onCancel={() => setEditEntryId(null)}
+                             onDelete={() => deleteEntry(editingObj)}
+                           />
+                         </div>
+                       );
+                     })()}
                   </div>
                 );
               })}
@@ -762,11 +821,25 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                   className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
                                   title="Edit internal cost"
                                 >
-                                  <Pencil className="h-3 w-3" />
-                                </button>
-                              )}
-                            </span>
-                          </div>
+                                   <Pencil className="h-3 w-3" />
+                                 </button>
+                               )}
+                               {editable && (
+                                 <button
+                                   type="button"
+                                   aria-label="Remove internal cost"
+                                   onClick={(e) => { e.stopPropagation(); deleteEntry(a); }}
+                                   disabled={deletingEntryId === a.id}
+                                   className="p-0.5 rounded hover:bg-destructive/10 text-emerald-700 hover:text-destructive"
+                                   title="Remove internal cost"
+                                 >
+                                   {deletingEntryId === a.id
+                                     ? <Loader2 className="h-3 w-3 animate-spin" />
+                                     : <Trash2 className="h-3 w-3" />}
+                                 </button>
+                               )}
+                             </span>
+                           </div>
                           {isEditingThisRow && (
                             <div className="px-3 sm:px-5 pb-3 pt-1 bg-accent/20">
                               <LaborEntryForm
@@ -777,6 +850,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                 editingEntry={a}
                                 onSaved={() => { setEditEntryId(null); onRefresh(); }}
                                 onCancel={() => setEditEntryId(null)}
+                                onDelete={() => deleteEntry(a)}
                               />
                             </div>
                           )}
