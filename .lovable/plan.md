@@ -1,112 +1,37 @@
-# Supplier Dashboard: Get Into a Project Fast
+# Deleting a labor/pricing entry
 
-Today the supplier dashboard opens with a funnel snapshot, cash pipeline, needs-action list, and a metric strip. "My Projects" cards sit far down the page, so on a phone you scroll past 4 large blocks before you can open a project. Below are 5 ways to put project entry front and center. Pick one (or a combo) and I'll build it.
+## What's happening now
 
----
+- The entry form requires real numbers before it will save: zero hours, zero rate or a zero lump sum all trigger "Enter hours greater than zero" and the Update button stays disabled. So "zero it out" can never work — by design, and it should stay that way.
+- A delete action already exists behind the scenes (`deleteLaborEntry` in `useChangeOrderDetail`), but nothing in the interface calls it. That's the actual gap: there is no button anywhere to remove an entry.
 
-## Option 1 — Project Switcher Bar (sticky, top of page)
+## Proposed approach
 
-A single horizontal strip directly under the greeting: current/last project pinned first, the rest as chips, plus a search field. Sticks to the top while scrolling.
+1. **Remove button inside the open entry (editing only)**
+   In `LaborEntryForm.tsx`, when an existing entry is open for editing, add a quiet "Remove entry" text button on the left of the footer, next to Cancel. Not shown when adding a new entry.
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Good morning, Oleg — ABC Supply            3 active projects │
-├──────────────────────────────────────────────────────────────┤
-│ ▸ OPEN PROJECT   [ Maple St ✓]  [ 12 Oak ]  [ Ridge Ph2 ]  › │
-│                  🔍 search projects…                         │
-└──────────────────────────────────────────────────────────────┘
-    (sticky — stays visible as you scroll the rest of the page)
-```
+2. **Swipe/row-level remove in the list**
+   In `COLineItemRow.tsx`, each saved entry row gets a small trash icon (appears on hover on desktop, always visible on mobile) so a line can be removed without opening it.
 
-Best when: few projects, you want one tap from anywhere on the page.
+3. **One confirmation step**
+   A short confirm dialog: "Remove this entry? $X,XXX will come off the work order total." Confirm removes, toast confirms, totals refresh through the existing invalidation.
 
----
+4. **Who is allowed to remove, and when**
+   - Only the org that entered the line can remove it (a GC can't delete a TC's line, a TC can't delete a field crew's line).
+   - Allowed while the work order is still open for pricing (draft / shared / work in progress / closed for pricing).
+   - Once it's submitted, approved or contracted, the amounts are part of an agreed number — removal is blocked with a short note explaining a change is needed instead.
 
-## Option 2 — Projects First (reorder + big cards)
+5. **Keep imported field hours honest**
+   If the removed line was built from imported field crew hours, clear its import tags so those same hours can be imported again later instead of being permanently consumed.
 
-Move "My Projects" to the very top as the hero. Each card shows risk pill, Estimate / Ordered / Billed, and the count of things waiting on you. Financial rollups move below.
-
-```text
-┌── MY PROJECTS ─────────────────────────── View archive → ────┐
-│ ┌───────────────────┐ ┌───────────────────┐ ┌──────────────┐ │
-│ │ Maple St Duplex   │ │ 12 Oak Remodel    │ │ Ridge Ph2    │ │
-│ │ ● On Track  Resid │ │ ● Over Budget     │ │ ● Watch      │ │
-│ │ EST   ORD   BILL  │ │ EST   ORD   BILL  │ │ ...          │ │
-│ │ 82k   61k   40k   │ │ 44k   51k   38k   │ │              │ │
-│ │ 2 need action  →  │ │ 3 need action  →  │ │ — →          │ │
-│ └───────────────────┘ └───────────────────┘ └──────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-┌── CASH PIPELINE (moves below) ───────────────────────────────┐
-```
-
-Best when: the project is always the starting point of your day.
-
----
-
-## Option 3 — Left Project Rail (desktop) + top scroller (mobile)
-
-Persistent narrow rail listing every project with a risk dot and AR balance. Click = go to project. On mobile it becomes a single-line horizontal scroller pinned under the header.
-
-```text
-┌────────────┬─────────────────────────────────────────────────┐
-│ PROJECTS   │  Dashboard content (pipeline, actions, tables)   │
-│ ● Maple St │                                                  │
-│   AR 12.4k │                                                  │
-│ ● 12 Oak   │                                                  │
-│   AR  3.1k │                                                  │
-│ ● Ridge Ph2│                                                  │
-│   AR   —   │                                                  │
-│ + archive  │                                                  │
-└────────────┴─────────────────────────────────────────────────┘
-mobile:  [● Maple St] [● 12 Oak] [● Ridge Ph2]  →  (swipe)
-```
-
-Best when: you jump between projects constantly all day.
-
----
-
-## Option 4 — Make the Snapshot Rows Clickable + "Open" column
-
-Keep today's layout, but every project name in the funnel snapshot, deliveries table, and forecast table becomes an obvious link with an explicit "Open →" button, plus a project filter at the top of each table.
-
-```text
-┌── PROJECT BUDGET FORECAST ───────────────────────────────────┐
-│ Filter: [ All projects ▾ ]                                    │
-│ PROJECT        EST     ORDERED   BILLED   RISK      ACTION    │
-│ Maple St ↗     82,000   61,000   40,000   ● Track  [Open →]  │
-│ 12 Oak ↗       44,000   51,000   38,000   ● Over   [Open →]  │
-└──────────────────────────────────────────────────────────────┘
-```
-
-Best when: you don't want the layout to change, just less hunting.
-
----
-
-## Option 5 — Command Palette + Floating "Go to project" button
-
-A floating action button (bottom-right on mobile, `Cmd/Ctrl-K` on desktop) opens a searchable project list with recent projects on top. Works from any page, not just the dashboard.
-
-```text
-   dashboard …                       ┌─────────────────────────┐
-                                     │ 🔍 go to project…       │
-                                     │─────────────────────────│
-                  ╭───────────────╮  │ RECENT                  │
-                  │ ⌘K  Go to     │  │ Maple St Duplex   ● 12.4k│
-                  │     project   │  │ 12 Oak Remodel    ● 3.1k │
-                  ╰───────────────╯  │ ALL                     │
-                                     │ Ridge Ph2, Birch Ln …   │
-                                     └─────────────────────────┘
-```
-
-Best when: many projects and you know the name you want.
-
----
-
-## My recommendation
-
-**Option 1 + Option 2 together**: a sticky project switcher bar at the very top for one-tap access, and "My Projects" promoted above the financial rollups. That fixes both the "front and center" ask and the deep-scroll problem on mobile without adding new navigation concepts.
+6. **Proof before I call it done**
+   - Confirm the database rules actually allow the correct party to delete and block the wrong one.
+   - Delete an entry as a TC and as a field crew user, and check the work order total on screen matches the stored total.
+   - A regression test covering: remove allowed while pricing, blocked after approval, other-org line not removable, and totals recomputed.
 
 ## Technical notes
 
-- Changes are confined to `SupplierDashboardView.tsx` plus one new presentation component under `src/components/dashboard/supplier/`; existing data from `useSupplierDashboardData` already carries name, risk, estimate/ordered/billed and AR per project — no query or schema changes.
-- Sticky positioning respects the existing app header offset and stays below the `z-40` sidebar layer.
+- `LaborEntryForm.tsx`: add `onDelete` prop; render only when `isEditing`.
+- `COLineItemRow.tsx`: wire the row trash icon to `deleteLaborEntry` from `useChangeOrderDetail`.
+- Guard by `entry.org_id === myOrgId` plus the CO status list above; verify a DELETE policy on `co_labor_entries` exists and is scoped to the entering org (add one in a migration if it is missing or too broad).
+- Reset `source_fc_entry_ids` bookkeeping on delete so re-import stays possible.
