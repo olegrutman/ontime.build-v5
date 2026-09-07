@@ -88,12 +88,15 @@ export function LaborEntryForm({
         supabase.from('profiles').select('hourly_rate').eq('user_id', user.id).single(),
       ]);
       if (cancelled) return;
-      const orgRate = orgRes.data?.default_hourly_rate;
-      const profileRate = profileRes.data?.hourly_rate;
-      if (orgRate) setRate(String(orgRate));
-      else if (profileRate) setRate(String(profileRate));
-      const orgMarkup = orgRes.data?.labor_markup_percent;
-      if (orgMarkup && isTC) setMarkup(String(orgMarkup));
+      const seed = seedForNewEntry({
+        orgRate: orgRes.data?.default_hourly_rate,
+        profileRate: profileRes.data?.hourly_rate,
+        orgMarkup: orgRes.data?.labor_markup_percent,
+        isTC,
+      });
+      if (seed.rate) setRate(seed.rate);
+      if (seed.markup) setMarkup(seed.markup);
+
     }
     loadDefaults();
     return () => { cancelled = true; };
