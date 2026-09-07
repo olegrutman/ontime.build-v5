@@ -54,21 +54,11 @@ export function LaborEntryForm({
   const [hours, setHours] = useState(editingEntry?.hours != null ? String(editingEntry.hours) : '');
   // Seed from the stored BASE rate/amount (pre-markup) so re-saving an edited
   // entry reproduces the same billable figure instead of stacking markup again.
-  const [rate, setRate] = useState(() => {
-    const base = (editingEntry as any)?.base_hourly_rate;
-    if (base != null) return String(base);
-    return editingEntry?.hourly_rate != null ? String(editingEntry.hourly_rate) : '';
-  });
-  const [markup, setMarkup] = useState(
-    (editingEntry as any)?.markup_percent != null && Number((editingEntry as any).markup_percent) > 0
-      ? String((editingEntry as any).markup_percent)
-      : '',
-  );
-  const [lumpSum, setLumpSum] = useState(() => {
-    const base = (editingEntry as any)?.base_lump_sum;
-    if (base != null) return String(base);
-    return editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '';
-  });
+  const entrySeed = editingEntry ? seedFromEntry(editingEntry as any) : null;
+  const [rate, setRate] = useState(entrySeed?.rate ?? '');
+  const [markup, setMarkup] = useState(entrySeed?.markup ?? '');
+  const [lumpSum, setLumpSum] = useState(entrySeed?.lumpSum ?? '');
+
 
   const [description, setDescription] = useState(editingEntry?.description ?? '');
   const [saving, setSaving] = useState(false);
