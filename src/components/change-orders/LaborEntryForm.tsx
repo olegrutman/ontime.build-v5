@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Check, Clock, DollarSign, Lock, CalendarDays } from 'lucide-react';
+import { Loader2, Check, Clock, DollarSign, Lock, CalendarDays, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { computeCrewHours } from '@/lib/crewWorkload';
@@ -31,6 +31,8 @@ interface LaborEntryFormProps {
   editingEntry?: COLaborEntry;
   onSaved: () => void;
   onCancel?: () => void;
+  /** When provided and editing, shows a "Remove entry" action. */
+  onDelete?: () => void | Promise<void>;
   nteCap?: number | null;
   nteUsed?: number;
 }
@@ -42,7 +44,7 @@ export function LaborEntryForm({
   coId, lineItemId, orgId, enteredByRole, pricingType,
   isTC = false, isFC = false, isActualCost = false,
   editingEntry,
-  onSaved, onCancel, nteCap, nteUsed = 0,
+  onSaved, onCancel, onDelete, nteCap, nteUsed = 0,
 }: LaborEntryFormProps) {
   const { user } = useAuth();
   const isEditing = !!editingEntry;
@@ -692,6 +694,16 @@ export function LaborEntryForm({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {isEditing && onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete()}
+                disabled={saving}
+                className="px-3 py-2 text-sm font-bold text-destructive/80 hover:text-destructive transition-colors inline-flex items-center gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Remove entry
+              </button>
+            )}
             {onCancel && (
               <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
             )}
