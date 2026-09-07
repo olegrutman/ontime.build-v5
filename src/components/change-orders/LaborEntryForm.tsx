@@ -88,6 +88,8 @@ export function LaborEntryForm({
   useEffect(() => {
     let cancelled = false;
     async function loadDefaults() {
+      // Never override a saved entry's own rate/markup with settings defaults.
+      if (isEditing) return;
       if (!user || !orgId) return;
       const [orgRes, profileRes] = await Promise.all([
         supabase.from('org_settings').select('default_hourly_rate, labor_markup_percent').eq('organization_id', orgId).maybeSingle(),
@@ -103,7 +105,8 @@ export function LaborEntryForm({
     }
     loadDefaults();
     return () => { cancelled = true; };
-  }, [user, orgId, isTC]);
+  }, [user, orgId, isTC, isEditing]);
+
 
   // Field-crew logged hours on this line item — importable as internal cost (TC only).
   const [fcHours, setFcHours] = useState(0);
