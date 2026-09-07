@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
+import { seedFromEntry, seedForNewEntry } from '@/lib/laborEntrySeed';
+
 
 function fmtHours(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -52,9 +54,14 @@ export function LaborEntryForm({
   );
   const [entryDate, setEntryDate] = useState(editingEntry?.entry_date ?? format(new Date(), 'yyyy-MM-dd'));
   const [hours, setHours] = useState(editingEntry?.hours != null ? String(editingEntry.hours) : '');
-  const [rate, setRate] = useState(editingEntry?.hourly_rate != null ? String(editingEntry.hourly_rate) : '');
-  const [markup, setMarkup] = useState('');
-  const [lumpSum, setLumpSum] = useState(editingEntry?.lump_sum != null ? String(editingEntry.lump_sum) : '');
+  // Seed from the stored BASE rate/amount (pre-markup) so re-saving an edited
+  // entry reproduces the same billable figure instead of stacking markup again.
+  const entrySeed = editingEntry ? seedFromEntry(editingEntry as any) : null;
+  const [rate, setRate] = useState(entrySeed?.rate ?? '');
+  const [markup, setMarkup] = useState(entrySeed?.markup ?? '');
+  const [lumpSum, setLumpSum] = useState(entrySeed?.lumpSum ?? '');
+
+
   const [description, setDescription] = useState(editingEntry?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
@@ -73,22 +80,28 @@ export function LaborEntryForm({
   useEffect(() => {
     let cancelled = false;
     async function loadDefaults() {
+      // Never override a saved entry's own rate/markup with settings defaults.
+      if (isEditing) return;
       if (!user || !orgId) return;
       const [orgRes, profileRes] = await Promise.all([
         supabase.from('org_settings').select('default_hourly_rate, labor_markup_percent').eq('organization_id', orgId).maybeSingle(),
         supabase.from('profiles').select('hourly_rate').eq('user_id', user.id).single(),
       ]);
       if (cancelled) return;
-      const orgRate = orgRes.data?.default_hourly_rate;
-      const profileRate = profileRes.data?.hourly_rate;
-      if (orgRate) setRate(String(orgRate));
-      else if (profileRate) setRate(String(profileRate));
-      const orgMarkup = orgRes.data?.labor_markup_percent;
-      if (orgMarkup && isTC) setMarkup(String(orgMarkup));
+      const seed = seedForNewEntry({
+        orgRate: orgRes.data?.default_hourly_rate,
+        profileRate: profileRes.data?.hourly_rate,
+        orgMarkup: orgRes.data?.labor_markup_percent,
+        isTC,
+      });
+      if (seed.rate) setRate(seed.rate);
+      if (seed.markup) setMarkup(seed.markup);
+
     }
     loadDefaults();
     return () => { cancelled = true; };
-  }, [user, orgId, isTC]);
+  }, [user, orgId, isTC, isEditing]);
+
 
   // Field-crew logged hours on this line item — importable as internal cost (TC only).
   const [fcHours, setFcHours] = useState(0);
