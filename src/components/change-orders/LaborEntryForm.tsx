@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
+import { seedFromEntry, seedForNewEntry } from '@/lib/laborEntrySeed';
+
 
 function fmtHours(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
