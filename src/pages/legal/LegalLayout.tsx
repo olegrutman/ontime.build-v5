@@ -25,7 +25,7 @@ export function LegalLayout({ title, description, path, updated, children }: Leg
       canonical.rel = 'canonical';
       document.head.appendChild(canonical);
     }
-    canonical.href = `https://pm.ontime.build${path}`;
+    canonical.href = `https://ontime.build${path}`;
 
     return () => {
       document.title = prevTitle;
