@@ -3849,6 +3849,7 @@ export type Database = {
           action_url: string
           body: string | null
           created_at: string
+          created_by: string | null
           entity_id: string
           entity_type: string
           id: string
@@ -3862,6 +3863,7 @@ export type Database = {
           action_url: string
           body?: string | null
           created_at?: string
+          created_by?: string | null
           entity_id: string
           entity_type: string
           id?: string
@@ -3875,6 +3877,7 @@ export type Database = {
           action_url?: string
           body?: string | null
           created_at?: string
+          created_by?: string | null
           entity_id?: string
           entity_type?: string
           id?: string
@@ -8708,6 +8711,10 @@ export type Database = {
         Args: { _co_id: string; _user_id?: string }
         Returns: boolean
       }
+      can_notify_user: {
+        Args: { _recipient_org_id: string; _recipient_user_id: string }
+        Returns: boolean
+      }
       can_request_fc_change_order_input: {
         Args: { _co_id: string; _fc_org_id: string; _user_id?: string }
         Returns: boolean
@@ -8817,6 +8824,7 @@ export type Database = {
         }
         Returns: Json
       }
+      current_user_verified_email: { Args: never; Returns: string }
       decline_org_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -8937,6 +8945,7 @@ export type Database = {
       generate_po_number: { Args: { org_id: string }; Returns: string }
       get_actor_info: { Args: never; Returns: Record<string, unknown> }
       get_invite_by_token_v2: { Args: { _token: string }; Returns: Json }
+      get_my_hourly_rate: { Args: never; Returns: number }
       get_my_notifications: {
         Args: { _limit?: number; _offset?: number }
         Returns: {
