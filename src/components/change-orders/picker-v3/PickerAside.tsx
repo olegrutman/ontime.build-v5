@@ -17,6 +17,7 @@ interface PickerAsideProps {
 export function PickerAside({
   state, onSwitchItem, onAddItem, onBack, onNext, onSubmit, canGoBack,
 }: PickerAsideProps) {
+  const rl = useRoleLabelsContext();
   const isReview = state.step === REVIEW_STEP;
   const isRoutingStep = state.step >= REVIEW_STEP - 1;
   const cur = state.items[state.currentItemIndex];
