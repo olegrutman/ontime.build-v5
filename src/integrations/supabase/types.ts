@@ -3815,6 +3815,39 @@ export type Database = {
           },
         ]
       }
+      notification_email_log: {
+        Row: {
+          created_at: string
+          id: string
+          notification_id: string | null
+          notification_type: string
+          reason: string | null
+          recipient_email: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notification_id?: string | null
+          notification_type: string
+          reason?: string | null
+          recipient_email: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notification_id?: string | null
+          notification_type?: string
+          reason?: string | null
+          recipient_email?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_reads: {
         Row: {
           id: string
@@ -7740,17 +7773,23 @@ export type Database = {
           id: string
           notify_change_orders: boolean | null
           notify_email: boolean | null
+          notify_estimate: boolean
           notify_inv_approved: boolean
+          notify_inv_paid: boolean
           notify_inv_rejected: boolean
           notify_inv_submitted: boolean
           notify_invites: boolean | null
           notify_invoices: boolean | null
+          notify_join_request: boolean
+          notify_po: boolean
           notify_project_invite: boolean
           notify_push: boolean
           notify_sms: boolean | null
           notify_wo_approved: boolean
           notify_wo_assigned: boolean
+          notify_wo_input_requested: boolean
           notify_wo_rejected: boolean
+          notify_wo_submitted: boolean
           onboarding_dismissed: boolean
           updated_at: string
           user_id: string
@@ -7761,17 +7800,23 @@ export type Database = {
           id?: string
           notify_change_orders?: boolean | null
           notify_email?: boolean | null
+          notify_estimate?: boolean
           notify_inv_approved?: boolean
+          notify_inv_paid?: boolean
           notify_inv_rejected?: boolean
           notify_inv_submitted?: boolean
           notify_invites?: boolean | null
           notify_invoices?: boolean | null
+          notify_join_request?: boolean
+          notify_po?: boolean
           notify_project_invite?: boolean
           notify_push?: boolean
           notify_sms?: boolean | null
           notify_wo_approved?: boolean
           notify_wo_assigned?: boolean
+          notify_wo_input_requested?: boolean
           notify_wo_rejected?: boolean
+          notify_wo_submitted?: boolean
           onboarding_dismissed?: boolean
           updated_at?: string
           user_id: string
@@ -7782,17 +7827,23 @@ export type Database = {
           id?: string
           notify_change_orders?: boolean | null
           notify_email?: boolean | null
+          notify_estimate?: boolean
           notify_inv_approved?: boolean
+          notify_inv_paid?: boolean
           notify_inv_rejected?: boolean
           notify_inv_submitted?: boolean
           notify_invites?: boolean | null
           notify_invoices?: boolean | null
+          notify_join_request?: boolean
+          notify_po?: boolean
           notify_project_invite?: boolean
           notify_push?: boolean
           notify_sms?: boolean | null
           notify_wo_approved?: boolean
           notify_wo_assigned?: boolean
+          notify_wo_input_requested?: boolean
           notify_wo_rejected?: boolean
+          notify_wo_submitted?: boolean
           onboarding_dismissed?: boolean
           updated_at?: string
           user_id?: string
@@ -9413,6 +9464,10 @@ export type Database = {
         Args: { p_sov_id: string }
         Returns: boolean
       }
+      verify_notification_trigger_secret: {
+        Args: { _candidate: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "GC_PM" | "TC_PM" | "FS" | "SUPPLIER" | "FC_PM"
@@ -9473,6 +9528,10 @@ export type Database = {
         | "CO_WITHDRAWN"
         | "BACKCHARGE_CREATED"
         | "RETAINAGE_RELEASED"
+        | "INVOICE_PAID"
+        | "PO_APPROVED"
+        | "ESTIMATE_SUBMITTED"
+        | "ESTIMATE_APPROVED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -9684,6 +9743,10 @@ export const Constants = {
         "CO_WITHDRAWN",
         "BACKCHARGE_CREATED",
         "RETAINAGE_RELEASED",
+        "INVOICE_PAID",
+        "PO_APPROVED",
+        "ESTIMATE_SUBMITTED",
+        "ESTIMATE_APPROVED",
       ],
       order_status: [
         "DRAFT",
