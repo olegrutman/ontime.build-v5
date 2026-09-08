@@ -63,6 +63,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const coV4 = useCoV4Flag();
+  const rl = useRoleLabelsContext();
   const { data: coRouting } = useCORoutingTargets(projectId);
 
   const scopeRef = useRef<HTMLDivElement>(null);
