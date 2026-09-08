@@ -212,7 +212,9 @@ export function COStatusActions({
       if (c.status === 'active') orgIds.add(c.organization_id);
     }
     orgIds.delete(currentOrgId);
-    await Promise.allSettled([...orgIds].map(oid => notifyOrg(oid, type, amount)));
+    await Promise.allSettled(
+      [...orgIds].map(oid => notifyOrg(oid, type, amount, excludeUserIds)),
+    );
   }
 
   async function doShare() {
@@ -411,7 +413,11 @@ export function COStatusActions({
         await approveCO.mutateAsync(co.id);
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
-        await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined);
+        // The DB trigger notify_co_status_change already alerts the CO creator,
+        // so exclude them here to avoid duplicate notifications.
+        await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined, [
+          co.created_by_user_id,
+        ]);
 
         // Auto-create backcharge for damaged_by_others COs
         if (isDamagedByOthers && user) {
@@ -449,7 +455,8 @@ export function COStatusActions({
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
       await logActivity('rejected', rejectNote.trim());
-      await notifyAllCOParties('CHANGE_REJECTED');
+      // Creator is notified by the notify_co_status_change DB trigger.
+      await notifyAllCOParties('CHANGE_REJECTED', undefined, [co.created_by_user_id]);
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
