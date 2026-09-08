@@ -120,7 +120,9 @@ export async function queueEmail(
     label: opts.label,
     message_id: crypto.randomUUID(),
     idempotency_key: crypto.randomUUID(),
+    unsubscribe_token: unsubscribeToken,
     queued_at: new Date().toISOString(),
+
   };
 
   const { error } = await supabase.rpc('enqueue_email', {
