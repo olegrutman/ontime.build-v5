@@ -37,9 +37,19 @@ interface Layout {
   ctaLabel: string;
   ctaUrl: string;
   footnote?: string;
+  status?: 'success' | 'danger' | 'warning' | 'info';
 }
 
-export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote }: Layout): string {
+const LOGO_URL = 'https://ontime.build/ontime-logo.png';
+
+const STATUS_BANDS: Record<string, { bg: string; text: string; label: string }> = {
+  success: { bg: '#16a34a', text: '#ffffff', label: 'Approved' },
+  danger: { bg: '#dc2626', text: '#ffffff', label: 'Needs attention' },
+  warning: { bg: '#f59e0b', text: '#0f172a', label: 'Action required' },
+  info: { bg: '#f97316', text: '#ffffff', label: 'Update' },
+};
+
+export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, status }: Layout): string {
   const rowsHtml = rows
     .filter(([, v]) => v)
     .map(
@@ -51,13 +61,27 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote }
     )
     .join('');
 
+  const band = status ? STATUS_BANDS[status] : null;
+  const bandHtml = band
+    ? `<tr><td style="background:${band.bg};padding:9px 24px;color:${band.text};font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">${escapeHtml(band.label)}</td></tr>`
+    : '';
+
   return `<!doctype html>
 <html><body style="margin:0;padding:24px;background:#f1f5f9;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
     <tr><td style="background:#0f172a;padding:20px 24px;">
-      <div style="color:#f97316;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">OnTime</div>
-      <div style="color:#ffffff;font-size:19px;font-weight:700;margin-top:4px;">${escapeHtml(heading)}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="padding-right:10px;" valign="middle">
+          <img src="${LOGO_URL}" width="34" height="34" alt="Ontime.Build" style="display:block;border:0;width:34px;height:34px;" />
+        </td>
+        <td valign="middle">
+          <div style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:0.3px;">Ontime<span style="color:#f97316;">.Build</span></div>
+        </td>
+      </tr></table>
+      <div style="height:2px;background:#f97316;margin:16px 0 14px;width:52px;"></div>
+      <div style="color:#ffffff;font-size:19px;font-weight:700;">${escapeHtml(heading)}</div>
     </td></tr>
+    ${bandHtml}
     <tr><td style="padding:24px;">
       <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.55;">${escapeHtml(intro)}</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;margin-bottom:20px;">
@@ -67,9 +91,13 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote }
       ${footnote ? `<p style="margin:18px 0 0;color:#94a3b8;font-size:12px;line-height:1.5;">${escapeHtml(footnote)}</p>` : ''}
       <p style="margin:16px 0 0;color:#94a3b8;font-size:12px;word-break:break-all;">${escapeHtml(ctaUrl)}</p>
     </td></tr>
+    <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 24px;color:#94a3b8;font-size:11px;line-height:1.5;">
+      Ontime.Build — construction project, change order and billing management.
+    </td></tr>
   </table>
 </body></html>`;
 }
+
 
 // The email API rejects transactional sends without an unsubscribe token, so
 // every recipient address gets a stable token reused across sends.
