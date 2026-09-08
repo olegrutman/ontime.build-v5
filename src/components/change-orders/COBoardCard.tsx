@@ -115,11 +115,18 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
             </span>
             <EntrySourcePill source={(co as any).entry_source} />
           </div>
-          {co.pricing_type && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 shrink-0">
-              {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
-            </Badge>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {co.collaboratorOrgId && co.collaboratorStatus === 'active' && (
+              <Badge className="text-[10px] px-1.5 py-0 h-5 bg-[hsl(var(--amber))] text-[hsl(var(--navy))] hover:bg-[hsl(var(--amber))]">
+                Input needed
+              </Badge>
+            )}
+            {co.pricing_type && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
+              </Badge>
+            )}
+          </div>
         </div>
 
         <h4 className={cn(
