@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserData = async (userId: string) => {
     // Fetch all data in parallel to avoid race conditions
     const [profileResult, rolesResult, platformResult] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('profiles').select('id, user_id, email, full_name, first_name, last_name, phone, preferred_contact_method, timezone, language, job_title, view_preference, address, created_at, updated_at').eq('user_id', userId).maybeSingle(),
       supabase.from('user_org_roles').select('*, organization:organizations(*)').eq('user_id', userId),
       supabase.from('platform_users').select('platform_role, two_factor_verified').eq('user_id', userId).maybeSingle(),
     ]);

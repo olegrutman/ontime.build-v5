@@ -89,7 +89,7 @@ export function useProfile() {
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, email, full_name, first_name, last_name, phone, preferred_contact_method, timezone, language, job_title, view_preference, address, created_at, updated_at')
         .eq('user_id', user.id)
         .maybeSingle();
       

@@ -85,7 +85,7 @@ export default function PlatformUserDetail() {
   const refreshData = async () => {
     if (!userId) return;
     const [profileRes, rolesRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', userId).single(),
+      supabase.from('profiles').select('id, user_id, email, full_name, first_name, last_name, phone, preferred_contact_method, timezone, language, job_title, view_preference, address, created_at, updated_at').eq('user_id', userId).single(),
       supabase
         .from('user_org_roles')
         .select('id, role, is_admin, organization:organizations(id, name, type)')
