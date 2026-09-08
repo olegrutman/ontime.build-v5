@@ -4,13 +4,13 @@ import * as React from 'npm:react@18.3.1'
 
 import { Img, Section, Text } from 'npm:@react-email/components@0.0.22'
 
-export const LOGO_URL = 'https://ontime.build/ontime-logo.png'
+export const LOGO_URL = 'https://ontime.build/ontime-logo-email.png'
 
 export const brandColors = {
   navy: '#0f172a',
   orange: '#f97316',
   body: '#475569',
-  muted: '#94a3b8',
+  muted: '#64748b',
   border: '#e2e8f0',
 }
 
