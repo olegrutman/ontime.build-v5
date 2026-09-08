@@ -39,8 +39,8 @@ interface ContractsStepProps {
 }
 
 const MATERIAL_OPTIONS = [
-  { value: 'GC', label: 'GC supplies materials' },
-  { value: 'TC', label: 'TC supplies materials' },
+  { value: 'GC', label: 'General contractor supplies materials' },
+  { value: 'TC', label: 'Subcontractor supplies materials' },
   { value: 'SPLIT', label: 'Split responsibility' },
 ] as const;
 

@@ -681,11 +681,11 @@ export default function EditProject() {
                             }}
                             className="justify-start"
                           >
-                            <ToggleGroupItem value="GC" aria-label="GC provides materials" className="px-4">
-                              GC
+                            <ToggleGroupItem value="GC" aria-label="General contractor provides materials" className="px-4">
+                              General Contractor
                             </ToggleGroupItem>
-                            <ToggleGroupItem value="TC" aria-label="TC provides materials" className="px-4">
-                              TC
+                            <ToggleGroupItem value="TC" aria-label="Subcontractor provides materials" className="px-4">
+                              Subcontractor
                             </ToggleGroupItem>
                           </ToggleGroup>
                           <p className="text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-2">

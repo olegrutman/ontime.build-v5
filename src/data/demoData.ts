@@ -691,7 +691,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
   { id: 'att-3', project_id: 'demo-proj-1', type: 'purchase_order', title: 'PO-2025-001 not yet sent to supplier', description: 'Lumber order drafted but unsent', urgency: 'medium', role_visibility: ['GC', 'TC', 'SUPPLIER'] },
   // Project 2
   { id: 'att-4', project_id: 'demo-proj-2', type: 'work_order', title: 'Drywall WO missing assignment', description: 'No crew assigned to drywall scope', urgency: 'high', role_visibility: ['GC', 'TC'] },
-  { id: 'att-5', project_id: 'demo-proj-2', type: 'invoice', title: 'Invoice INV-007 submitted — review needed', description: 'December billing submitted by TC', urgency: 'high', role_visibility: ['GC'] },
+  { id: 'att-5', project_id: 'demo-proj-2', type: 'invoice', title: 'Invoice INV-007 submitted — review needed', description: 'December billing submitted by the subcontractor', urgency: 'high', role_visibility: ['GC'] },
   { id: 'att-6', project_id: 'demo-proj-2', type: 'purchase_order', title: 'PO-2025-005 priced — ready for approval', description: 'Supplier has entered pricing', urgency: 'medium', role_visibility: ['GC', 'TC', 'SUPPLIER'] },
   // Project 3
   { id: 'att-7', project_id: 'demo-proj-3', type: 'work_order', title: 'Siding WO needs scope finalized', description: 'Draft — scope description incomplete', urgency: 'high', role_visibility: ['GC', 'TC', 'FC'] },
@@ -703,7 +703,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
   { id: 'att-12', project_id: 'demo-proj-4', type: 'purchase_order', title: 'Glazing PO-2025-015 awaiting pricing', description: '$88K curtain wall order needs supplier quote', urgency: 'medium', role_visibility: ['GC', 'SUPPLIER'] },
   // Project 5
   { id: 'att-13', project_id: 'demo-proj-5', type: 'work_order', title: 'Kitchen equipment WO not started', description: 'Commercial kitchen scope needs review', urgency: 'medium', role_visibility: ['GC', 'TC'] },
-  { id: 'att-14', project_id: 'demo-proj-5', type: 'invoice', title: 'Invoice INV-028 needs GC approval', description: 'October billing submitted by TC', urgency: 'high', role_visibility: ['GC'] },
+  { id: 'att-14', project_id: 'demo-proj-5', type: 'invoice', title: 'Invoice INV-028 needs contractor approval', description: 'October billing submitted by the subcontractor', urgency: 'high', role_visibility: ['GC'] },
   // Project 6
   { id: 'att-15', project_id: 'demo-proj-6', type: 'work_order', title: 'Pool WO needs scope definition', description: 'Infinity edge pool design not finalized', urgency: 'high', role_visibility: ['GC', 'TC'] },
   { id: 'att-16', project_id: 'demo-proj-6', type: 'invoice', title: 'Two invoices submitted awaiting review', description: 'INV-032 and INV-033 need approval', urgency: 'high', role_visibility: ['GC'] },
@@ -713,7 +713,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
   { id: 'att-19', project_id: 'demo-proj-7', type: 'invoice', title: 'Invoice INV-038 awaiting approval', description: 'HVAC work billing submitted', urgency: 'high', role_visibility: ['GC'] },
   // Project 8
   { id: 'att-20', project_id: 'demo-proj-8', type: 'work_order', title: 'Storefront glazing WO in draft', description: 'Need to finalize tenant bay specifications', urgency: 'medium', role_visibility: ['GC', 'TC'] },
-  { id: 'att-21', project_id: 'demo-proj-8', type: 'invoice', title: 'Two invoices submitted — review needed', description: 'INV-044 and INV-045 awaiting GC approval', urgency: 'high', role_visibility: ['GC'] },
+  { id: 'att-21', project_id: 'demo-proj-8', type: 'invoice', title: 'Two invoices submitted — review needed', description: 'INV-044 and INV-045 awaiting contractor approval', urgency: 'high', role_visibility: ['GC'] },
   { id: 'att-22', project_id: 'demo-proj-8', type: 'purchase_order', title: 'Storefront PO awaiting vendor response', description: 'PO-2025-029 sent to Kawneer — no response', urgency: 'medium', role_visibility: ['GC', 'SUPPLIER'] },
   // Project 9
   { id: 'att-23', project_id: 'demo-proj-9', type: 'invoice', title: 'MEP invoice INV-050 under review', description: '$520K MEP billing needs verification', urgency: 'high', role_visibility: ['GC'] },

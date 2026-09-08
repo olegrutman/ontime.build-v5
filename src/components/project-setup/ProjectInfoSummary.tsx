@@ -57,8 +57,8 @@ const GARAGE_OPTIONS = [
 ];
 
 const MATERIAL_RESP_OPTIONS = [
-  { value: 'gc', label: 'GC' },
-  { value: 'tc', label: 'TC' },
+  { value: 'gc', label: 'General Contractor' },
+  { value: 'tc', label: 'Subcontractor' },
   { value: 'split', label: 'Split' },
 ];
 
