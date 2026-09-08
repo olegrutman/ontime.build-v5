@@ -10,7 +10,7 @@ export const brandColors = {
   navy: '#0f172a',
   orange: '#f97316',
   body: '#475569',
-  muted: '#94a3b8',
+  muted: '#64748b',
   border: '#e2e8f0',
 }
 

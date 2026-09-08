@@ -63,4 +63,4 @@ const codeStyle = {
   textAlign: 'center' as const,
   margin: '0 0 20px',
 }
-const footer = { fontSize: '12px', color: '#94a3b8', margin: '20px 0 0' }
+const footer = { fontSize: '12px', color: '#64748b', margin: '20px 0 0' }

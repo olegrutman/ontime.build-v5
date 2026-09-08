@@ -88,10 +88,10 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, 
         ${rowsHtml}
       </table>
       <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px;">${escapeHtml(ctaLabel)}</a>
-      ${footnote ? `<p style="margin:18px 0 0;color:#94a3b8;font-size:12px;line-height:1.5;">${escapeHtml(footnote)}</p>` : ''}
-      <p style="margin:16px 0 0;color:#94a3b8;font-size:12px;word-break:break-all;">${escapeHtml(ctaUrl)}</p>
+      ${footnote ? `<p style="margin:18px 0 0;color:#64748b;font-size:12px;line-height:1.5;">${escapeHtml(footnote)}</p>` : ''}
+      <p style="margin:16px 0 0;color:#64748b;font-size:12px;word-break:break-all;">${escapeHtml(ctaUrl)}</p>
     </td></tr>
-    <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 24px;color:#94a3b8;font-size:11px;line-height:1.5;">
+    <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 24px;color:#64748b;font-size:11px;line-height:1.5;">
       Ontime.Build — construction project, change order and billing management.
     </td></tr>
   </table>
