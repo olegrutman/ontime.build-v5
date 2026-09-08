@@ -15,21 +15,21 @@ interface RoleLabelOverrides {
 /** Spelled-out role names — use anywhere there is no project context. NEVER use the bare 2-letter code in UI. */
 export const ROLE_LONG_NAMES: Record<RoleCode, string> = {
   GC: 'General Contractor',
-  TC: 'Trade Contractor',
-  FC: 'Field Crew',
+  TC: 'Subcontractor',
+  FC: 'Crew',
 };
 
 /** Plural form when more than one org holds that role on a project. */
 const ROLE_LONG_NAMES_PLURAL: Record<RoleCode, string> = {
   GC: 'General Contractors',
-  TC: 'Trade Contractors',
-  FC: 'Field Crews',
+  TC: 'Subcontractors',
+  FC: 'Crews',
 };
 
 const DEFAULTS: Record<RoleCode, { long: string; short: string }> = {
-  GC: { long: ROLE_LONG_NAMES.GC, short: 'GC' },
-  TC: { long: ROLE_LONG_NAMES.TC, short: 'TC' },
-  FC: { long: ROLE_LONG_NAMES.FC, short: 'FC' },
+  GC: { long: ROLE_LONG_NAMES.GC, short: 'General Contractor' },
+  TC: { long: ROLE_LONG_NAMES.TC, short: 'Subcontractor' },
+  FC: { long: ROLE_LONG_NAMES.FC, short: 'Crew' },
 };
 
 export interface RoleLabels {
@@ -47,6 +47,8 @@ export interface RoleLabels {
   short: (code: RoleCode) => string;
   /** Resolve a specific organization id to its display name (falls back to the role's long name, then ''). */
   forOrg: (orgId: string | null | undefined) => string;
+  /** 1-2 letter avatar initials taken from the resolved company name (never the raw role code). */
+  initials: (code: RoleCode) => string;
 }
 
 interface ParticipantRow {
@@ -78,6 +80,8 @@ function buildLabels(
   const resolveShort = (code: RoleCode, long: string): string => {
     const ovShort = overrides[`${code}_short` as keyof RoleLabelOverrides];
     if (ovShort && ovShort.trim()) return ovShort.trim();
+    // Generic fallbacks stay spelled out — never shorten to a two-letter code.
+    if (long === DEFAULTS[code].long || long === ROLE_LONG_NAMES_PLURAL[code]) return DEFAULTS[code].short;
     return abbreviate(long);
   };
 
@@ -100,7 +104,16 @@ function buildLabels(
       if (!orgId) return '';
       return orgNameById.get(orgId) ?? '';
     },
+    initials: (code) => makeInitials(longMap[code] ?? ROLE_LONG_NAMES[code] ?? ''),
   };
+}
+
+/** Up to two initials from a display name, e.g. "Northline Builders" -> "NB". */
+export function makeInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
 }
 
 /** First word of a long name, used as the short form when no explicit override is set. */
