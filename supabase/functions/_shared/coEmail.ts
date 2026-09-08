@@ -71,10 +71,44 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote }
 </body></html>`;
 }
 
+// The email API rejects transactional sends without an unsubscribe token, so
+// every recipient address gets a stable token reused across sends.
+async function ensureUnsubscribeToken(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from('email_unsubscribe_tokens')
+    .select('token')
+    .eq('email', email)
+    .is('used_at', null)
+    .limit(1)
+    .maybeSingle();
+  if (existing?.token) return existing.token as string;
+
+  const token = crypto.randomUUID().replaceAll('-', '');
+  const { error } = await supabase
+    .from('email_unsubscribe_tokens')
+    .insert({ token, email });
+  if (error) {
+    const { data: raced } = await supabase
+      .from('email_unsubscribe_tokens')
+      .select('token')
+      .eq('email', email)
+      .limit(1)
+      .maybeSingle();
+    if (raced?.token) return raced.token as string;
+    throw new Error(`Failed to prepare unsubscribe token: ${error.message}`);
+  }
+  return token;
+}
+
 export async function queueEmail(
   supabase: ReturnType<typeof createClient>,
   opts: { to: string; subject: string; html: string; text: string; label: string },
 ) {
+  const unsubscribeToken = await ensureUnsubscribeToken(supabase, opts.to);
+
   const payload = {
     to: opts.to,
     from: FROM,
@@ -86,7 +120,9 @@ export async function queueEmail(
     label: opts.label,
     message_id: crypto.randomUUID(),
     idempotency_key: crypto.randomUUID(),
+    unsubscribe_token: unsubscribeToken,
     queued_at: new Date().toISOString(),
+
   };
 
   const { error } = await supabase.rpc('enqueue_email', {
