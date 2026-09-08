@@ -70,10 +70,10 @@ interface Props {
 }
 
 const roleDotColors: Record<string, string> = {
-  'General Contractor': C.blue, 'Trade Contractor': C.green, 'Field Crew': C.navy, 'Supplier': C.amber,
+  'General Contractor': C.blue, 'Subcontractor': C.green, 'Crew': C.navy, 'Supplier': C.amber,
 };
 const roleLabel: Record<string, string> = {
-  'General Contractor': 'General Contractor', 'Trade Contractor': 'Trade Contractor', 'Field Crew': 'Field Crew', 'Supplier': 'Supplier',
+  'General Contractor': 'General Contractor', 'Subcontractor': 'Subcontractor', 'Crew': 'Crew', 'Supplier': 'Supplier',
 };
 
 export function TCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
@@ -175,7 +175,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
     const targetOrg = selectedFcOrg;
 
     if (!targetOrg?.org_id) {
-      toast.error('Please select a Field Crew organization first');
+      toast.error('Please select a Crew organization first');
       return;
     }
 
@@ -186,13 +186,13 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
 
     try {
       // Check if FC is already on the team
-      const isAlreadyOnTeam = team.some(m => m.invited_org_name === targetOrg.org_name || m.role === 'Field Crew');
+      const isAlreadyOnTeam = team.some(m => m.invited_org_name === targetOrg.org_name || m.role === 'Crew');
 
       if (!isAlreadyOnTeam) {
         // Auto-invite: insert into project_team
         const { error: teamErr } = await supabase.from('project_team').insert({
           project_id: projectId,
-          role: 'Field Crew',
+          role: 'Crew',
           org_id: targetOrg.org_id,
           invited_org_name: targetOrg.org_name,
           invited_name: targetOrg.contact_name || null,
@@ -219,14 +219,14 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             recipient_org_id: targetOrg.org_id,
             type: 'PROJECT_INVITE' as const,
             title: 'Project Invitation',
-            body: `You have been invited to join a project as Field Crew`,
+            body: `You have been invited to join a project as Crew`,
             entity_id: projectId,
             entity_type: 'project',
             action_url: `/project/${projectId}/overview`,
           });
         }
 
-        toast.success(`${targetOrg.org_name} invited as Field Crew`);
+        toast.success(`${targetOrg.org_name} invited as Crew`);
       }
 
       // Create or update the FC contract
@@ -241,8 +241,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           project_id: projectId,
           from_org_id: currentOrgId,
           to_org_id: targetOrg.org_id,
-          from_role: 'Trade Contractor',
-          to_role: 'Field Crew',
+          from_role: 'Subcontractor',
+          to_role: 'Crew',
           contract_sum: newVal,
         });
         if (insertErr) throw insertErr;
@@ -280,7 +280,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   // (labor line items + non-GC-procured materials/equipment). The old local
   // helpers read `display_total` / `fc_cost_total`, columns that do not exist on
   // change_orders — cost always resolved to 0, so the card claimed "$0 paid to
-  // Field Crew" and net margin equalled gross revenue.
+  // Crew" and net margin equalled gross revenue.
   const coRevenue = financials.approvedCORevenue + financials.pendingCORevenue;
   const coCost = financials.approvedCOCost + financials.pendingCOCost;
   const coNetMargin = coRevenue - coCost;
@@ -422,7 +422,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
     warnings.push({ color: C.yellow, icon: '💰', title: `Invoice Awaiting ${gcName} Approval`, sub: `${pendingFromGCCount} invoice${pendingFromGCCount > 1 ? 's' : ''} pending`, value: fmt(totalPendingSubmittedFromGC), pill: `Chasing ${gcName}`, pillType: 'pw', tab: 'invoices' });
   }
   if (fcPendingSubmitted > 0) {
-    warnings.push({ color: C.red, icon: '💰', title: `${fcName || 'Field Crew'} Invoice Awaiting Your Approval`, sub: `${fcPendingCount} invoice${fcPendingCount > 1 ? 's' : ''} from ${fcName || 'Field Crew'} / suppliers`, value: fmt(fcPendingSubmitted), pill: `You owe ${fcName || 'Field Crew'}`, pillType: 'pr', tab: 'invoices' });
+    warnings.push({ color: C.red, icon: '💰', title: `${fcName || 'Crew'} Invoice Awaiting Your Approval`, sub: `${fcPendingCount} invoice${fcPendingCount > 1 ? 's' : ''} from ${fcName || 'Crew'} / suppliers`, value: fmt(fcPendingSubmitted), pill: `You owe ${fcName || 'Crew'}`, pillType: 'pr', tab: 'invoices' });
   }
   if (openRfis.length > 0) {
     warnings.push({ color: C.blue, icon: '❓', title: `${openRfis.length} Open RFI${openRfis.length > 1 ? 's' : ''} Need Response`, sub: `${gcName} waiting on answers`, value: `${openRfis.length} RFIs`, pill: 'Action Needed', pillType: 'pb', tab: 'rfis' });
@@ -474,7 +474,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.green, flexShrink: 0 }} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '1.4px', fontWeight: 800, color: C.faint }}>Contract Party</div>
-            <div className="truncate" style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink }}>Trade Contractor · {userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
+            <div className="truncate" style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink }}>Subcontractor · {userOrgRoles[0]?.organization?.name || 'Your Company'}</div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
@@ -523,7 +523,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         ledger={financials.ledger}
         extras={{
           billsTo: gcName,
-          paidParties: `${fcName || 'Field Crew'} + suppliers`,
+          paidParties: `${fcName || 'Crew'} + suppliers`,
           approvedCOCount: approvedCOs.length,
           pendingCOCount: pendingCOs.length,
           coWord: isTM ? 'WO' : 'CO',

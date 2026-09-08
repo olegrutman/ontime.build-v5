@@ -227,7 +227,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'request_fc':
         if (fcOrgOptions.length === 0) {
-          toast.info('No field crews found on this project');
+          toast.info('No crews found on this project');
         } else if (fcOrgOptions.length === 1) {
           try {
             await requestFCInput.mutateAsync(fcOrgOptions[0].id);
@@ -241,7 +241,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             el.scrollIntoView({ behavior: 'smooth' });
           } else {
             const labels = fcOrgOptions.map((o, i) => `${i + 1}. ${o.name}`).join('\n');
-            const choice = window.prompt(`Pick a field crew to request hours from:\n${labels}\n\nEnter number 1-${fcOrgOptions.length}`);
+            const choice = window.prompt(`Pick a crew to request hours from:\n${labels}\n\nEnter number 1-${fcOrgOptions.length}`);
             const idx = choice ? parseInt(choice, 10) - 1 : -1;
             if (idx >= 0 && idx < fcOrgOptions.length) {
               try {
@@ -267,7 +267,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             } else {
               await completeFCInput.mutateAsync();
             }
-            toast.success('Submitted to Trade Contractor');
+            toast.success('Submitted to Subcontractor');
           } catch (e: any) { toast.error(e?.message ?? `Failed to submit to ${rl.TC}`); }
         }
         break;
@@ -757,7 +757,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <DialogHeader>
             <DialogTitle>Which contract should this PDF show?</DialogTitle>
             <DialogDescription>
-              You sit between the General Contractor and Field Crew. Pick which side this document represents.
+              You sit between the General Contractor and Crew. Pick which side this document represents.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
@@ -765,7 +765,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               variant="outline"
               onClick={() => { setPdfPerspectiveOpen(false); void downloadPdfWithPerspective('downstream'); }}
             >
-              Field Crew → Me
+              Crew → Me
             </Button>
             <Button
               onClick={() => { setPdfPerspectiveOpen(false); void downloadPdfWithPerspective('upstream'); }}

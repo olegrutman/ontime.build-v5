@@ -48,7 +48,7 @@ export function DemoRFIsTab() {
       status: 'open',
       priority: 'medium',
       created_by: demoRole === 'GC' ? 'You (GC)' : 'You (TC)',
-      assigned_to: demoRole === 'GC' ? 'Trade Contractor' : 'General Contractor',
+      assigned_to: demoRole === 'GC' ? 'Subcontractor' : 'General Contractor',
       created_at: new Date().toISOString(),
       answered_at: null,
     };

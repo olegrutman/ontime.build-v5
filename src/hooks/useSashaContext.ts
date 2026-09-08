@@ -19,8 +19,8 @@ export function useSashaContext(): string {
   if (isDemoMode) {
     const roleLabels: Record<string, string> = {
       GC: 'General Contractor Project Manager',
-      TC: 'Trade Contractor Project Manager',
-      FC: 'Field Crew member',
+      TC: 'Subcontractor Project Manager',
+      FC: 'Crew member',
       SUPPLIER: 'Material Supplier',
     };
     context = `[DEMO MODE] The user is exploring Ontime.Build as a ${roleLabels[demoRole || ''] || demoRole}. `;
@@ -28,7 +28,7 @@ export function useSashaContext(): string {
   }
 
   if (path === '/dashboard') return context + 'Dashboard — Shows: list of projects with status badges, quick stats (active projects, pending items), financial snapshot tiles, needs-attention panel highlighting urgent items, reminders tile, and a "New Project" button. Users can click any project to open it.';
-  if (path === '/demo') return context + 'Demo role selection page — Shows: role cards for General Contractor, Trade Contractor, Field Crew, and Supplier. Users pick a role to explore a demo project from that perspective.';
+  if (path === '/demo') return context + 'Demo role selection page — Shows: role cards for General Contractor, Subcontractor, Crew, and Supplier. Users pick a role to explore a demo project from that perspective.';
   if (path.startsWith('/project/') && path.endsWith('/edit')) return context + 'Edit Project page — Shows: editable project details like name, address, type, and status. Users can update project information and save changes.';
   if (path.startsWith('/projects/') && path.endsWith('/scope')) return context + 'Edit Project Scope page — Shows: structures and levels defined for the project. Users can add, remove, or rename structures (e.g. Building A, Building B) and levels (e.g. Level 1, Level 2).';
 

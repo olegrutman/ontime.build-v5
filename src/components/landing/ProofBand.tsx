@@ -1,8 +1,8 @@
 export function ProofBand() {
   const stats = [
     { num: '12+', label: 'General Contractors' },
-    { num: '40+', label: 'Trade Contractors' },
-    { num: '180+', label: 'Field Crews' },
+    { num: '40+', label: 'Subcontractors' },
+    { num: '180+', label: 'Crews' },
     { num: '$4.2M', label: 'reconciled in COs' },
   ];
   return (

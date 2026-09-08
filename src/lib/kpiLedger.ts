@@ -19,8 +19,8 @@ import { baseContractSum } from '@/lib/contractSums';
 
 export type LedgerRole =
   | 'General Contractor'
-  | 'Trade Contractor'
-  | 'Field Crew'
+  | 'Subcontractor'
+  | 'Crew'
   | 'Supplier';
 
 /** How a number was measured — printed on every card so a basis can't be mixed silently. */
@@ -348,7 +348,7 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
   // ── Forecast margin ─────────────────────────────────────────────────────
   const revisedRevenue = revisedContract.value;
   const forecastMarginVal = revisedRevenue - revisedCostVal;
-  // A viewer with revenue but no cost side at all (e.g. a field crew, whose own
+  // A viewer with revenue but no cost side at all (e.g. a crew, whose own
   // labor burden is not tracked here) would otherwise read "100% margin".
   const hasCostSide = revisedCost.known && revisedCostVal > 0;
   const forecastMargin: LedgerTerm = {

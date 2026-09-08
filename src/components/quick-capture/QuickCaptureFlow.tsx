@@ -232,7 +232,7 @@ export function QuickCaptureFlow({ projectId }: QuickCaptureFlowProps) {
       });
 
       setCreatedCoId(co.id);
-      setSubmitTarget(upstreamOrg?.name || (detectedRole === 'FC' ? (rl?.TC || 'Trade Contractor') : (rl?.GC || 'General Contractor')));
+      setSubmitTarget(upstreamOrg?.name || (detectedRole === 'FC' ? (rl?.TC || 'Subcontractor') : (rl?.GC || 'General Contractor')));
       setScreen('success');
       toast.success('Capture submitted');
     } catch (err: any) {
@@ -428,7 +428,7 @@ export function QuickCaptureFlow({ projectId }: QuickCaptureFlowProps) {
               Submitting…
             </span>
           ) : (
-            `Submit to ${upstreamOrg?.name || (detectedRole === 'FC' ? (rl?.TC || 'Trade Contractor') : detectedRole === 'TC' ? (rl?.GC || 'General Contractor') : 'Team')}`
+            `Submit to ${upstreamOrg?.name || (detectedRole === 'FC' ? (rl?.TC || 'Subcontractor') : detectedRole === 'TC' ? (rl?.GC || 'General Contractor') : 'Team')}`
           )}
         </button>
       </div>

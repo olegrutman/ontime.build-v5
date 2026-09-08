@@ -219,7 +219,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           </h3>
           <p className="text-sm text-muted-foreground mb-2 max-w-md">
             {isFC 
-              ? 'The Trade Contractor has not created a Schedule of Values for this project yet.'
+              ? 'The Subcontractor has not created a Schedule of Values for this project yet.'
               : `Create SOVs for your ${contracts.length} contract${contracts.length > 1 ? 's' : ''}. Each contract will get matching line items with percentage allocations.`}
           </p>
           {!isFC && (

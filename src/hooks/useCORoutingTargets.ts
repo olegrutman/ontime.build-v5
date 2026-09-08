@@ -15,7 +15,7 @@ const initialsOf = (name: string) =>
 /**
  * Candidate orgs a CO/WO can be routed to ("Assigned to"), based on the
  * creator's role on this project:
- *   GC -> Trade Contractors on the project
+ *   GC -> Subcontractors on the project
  *   TC -> the project's GC
  *   FC -> the org that hired them (upstream contract), fallback TC/GC
  */

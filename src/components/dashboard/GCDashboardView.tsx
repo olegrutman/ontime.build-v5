@@ -384,7 +384,7 @@ export function GCDashboardView({
                       <Pill type={p.status === 'active' ? 'pg' : 'pm'}>{p.status}</Pill>,
                     ]} />
                   )) : (
-                    <TRow cells={[<span style={{ color: C.faint }}>No Trade Contractor contracts yet</span>, '', '']} />
+                    <TRow cells={[<span style={{ color: C.faint }}>No Subcontractor contracts yet</span>, '', '']} />
                   )}
                 {financials.totalCosts > 0 && <TRow isTotal cells={['Total', <TdM>{fmt(financials.totalCosts)}</TdM>, '']} />}
               </tbody>

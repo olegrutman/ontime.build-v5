@@ -192,14 +192,14 @@ export function FCDashboardView({
             accent={C.amber} icon="🤝" iconBg={C.amberPale}
             label="CONTRACT WITH TRADE CONTRACTOR"
             value={fmt(contractValue)}
-            sub={primaryProject ? `${organization?.name || 'Trade Contractor'} · ${primaryProject.name}` : 'No project'}
+            sub={primaryProject ? `${organization?.name || 'Subcontractor'} · ${primaryProject.name}` : 'No project'}
             pills={[{ type: 'pa', text: primaryProject?.status === 'active' ? 'Active' : (primaryProject?.status || 'Setup') }]}
             idx={0}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value', 'Notes']} />
               <tbody>
-                <TRow cells={[<TdN>Base Contract with Trade Contractor</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}{primaryProject ? ` · ${primaryProject.name}` : ''}</span>]} />
+                <TRow cells={[<TdN>Base Contract with Subcontractor</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}{primaryProject ? ` · ${primaryProject.name}` : ''}</span>]} />
                 <TRow cells={[<TdN>Approved CO Additions</TdN>, <TdM>+{fmt(coTotal)}</TdM>, <span>{approvedCOs.length} approved COs</span>]} />
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{fmt(costs)}</TdM>, <span>Labor + materials cost</span>]} />
                 <TRow cells={[
@@ -223,7 +223,7 @@ export function FCDashboardView({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Item', 'Value', 'Notes']} />
               <tbody>
-                <TRow cells={[<TdN>Base Contract with Trade Contractor</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}</span>]} />
+                <TRow cells={[<TdN>Base Contract with Subcontractor</TdN>, <TdM>{fmt(contractValue)}</TdM>, <span>{organization?.name || '—'}</span>]} />
                 <TRow cells={[<TdN>Approved CO Additions</TdN>, <TdM>+{fmt(coTotal)}</TdM>, <span>{approvedCOs.length} approved COs</span>]} />
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{fmt(costs)}</TdM>, <span>Labor + materials cost</span>]} />
                 <TRow cells={[
@@ -293,7 +293,7 @@ export function FCDashboardView({
                     <TdN>{inv.title}</TdN>,
                     <span>{inv.projectName}</span>,
                     <TdM>{fmt(inv.amount || 0)}</TdM>,
-                     <Pill type="pw">Pending Trade Contractor</Pill>,
+                     <Pill type="pw">Pending Subcontractor</Pill>,
                   ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
                 ))}
               </tbody>
@@ -305,8 +305,8 @@ export function FCDashboardView({
             accent={C.yellow} icon="⏳" iconBg={C.yellowBg}
             label="PENDING FROM TRADE CONTRACTOR"
             value={pendingTotal > 0 ? fmt(pendingTotal) : '—'}
-            sub={pendingInvoiceDocs.length > 0 ? `Awaiting Trade Contractor approval · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
-            pills={pendingTotal > 0 ? [{ type: 'pw', text: 'Pending Trade Contractor' }] : [{ type: 'pm', text: 'None' }]}
+            sub={pendingInvoiceDocs.length > 0 ? `Awaiting Subcontractor approval · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
+            pills={pendingTotal > 0 ? [{ type: 'pw', text: 'Pending Subcontractor' }] : [{ type: 'pm', text: 'None' }]}
             idx={4}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -320,7 +320,7 @@ export function FCDashboardView({
                     <TdN>{inv.title}</TdN>,
                     <span>{inv.projectName}</span>,
                     <TdM>{fmt(inv.amount || 0)}</TdM>,
-                    <Pill type="pw">Pending Trade Contractor</Pill>,
+                    <Pill type="pw">Pending Subcontractor</Pill>,
                   ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
                 ))}
               </tbody>
@@ -375,8 +375,8 @@ export function FCDashboardView({
             {pendingInvoiceDocs.map(inv => (
               <WarnItem key={inv.id}
                 color={C.amber} icon="💰"
-                title={`${inv.title} — Awaiting Trade Contractor Approval`}
-                sub={`${inv.projectName} · ${organization?.name || 'Trade Contractor'}`}
+                title={`${inv.title} — Awaiting Subcontractor Approval`}
+                sub={`${inv.projectName} · ${organization?.name || 'Subcontractor'}`}
                 value={fmt(inv.amount || 0)} pill="Pending" pillType="pw"
                 onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)}
               />

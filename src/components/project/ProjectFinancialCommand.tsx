@@ -51,7 +51,7 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
     );
   }
 
-  if (viewerRole === 'Trade Contractor') {
+  if (viewerRole === 'Subcontractor') {
     const contractIn = baseContractSum(upstreamContract);
     const coAdds = approvedCORevenue;
     const revised = contractIn + coAdds;

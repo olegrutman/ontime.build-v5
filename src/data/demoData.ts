@@ -690,7 +690,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
   { id: 'att-2', project_id: 'demo-proj-1', type: 'invoice', title: 'Invoice INV-001 awaiting approval', description: 'Submitted 3 days ago — no action taken', urgency: 'high', role_visibility: ['GC'] },
   { id: 'att-3', project_id: 'demo-proj-1', type: 'purchase_order', title: 'PO-2025-001 not yet sent to supplier', description: 'Lumber order drafted but unsent', urgency: 'medium', role_visibility: ['GC', 'TC', 'SUPPLIER'] },
   // Project 2
-  { id: 'att-4', project_id: 'demo-proj-2', type: 'work_order', title: 'Drywall WO missing assignment', description: 'No field crew assigned to drywall scope', urgency: 'high', role_visibility: ['GC', 'TC'] },
+  { id: 'att-4', project_id: 'demo-proj-2', type: 'work_order', title: 'Drywall WO missing assignment', description: 'No crew assigned to drywall scope', urgency: 'high', role_visibility: ['GC', 'TC'] },
   { id: 'att-5', project_id: 'demo-proj-2', type: 'invoice', title: 'Invoice INV-007 submitted — review needed', description: 'December billing submitted by TC', urgency: 'high', role_visibility: ['GC'] },
   { id: 'att-6', project_id: 'demo-proj-2', type: 'purchase_order', title: 'PO-2025-005 priced — ready for approval', description: 'Supplier has entered pricing', urgency: 'medium', role_visibility: ['GC', 'TC', 'SUPPLIER'] },
   // Project 3
@@ -732,7 +732,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
 export const DEMO_TEAM: DemoTeamMember[] = [
   { id: 'tm-1', name: 'Alex Rivera', role: 'GC', email: 'alex@summitbuilders.com', org_name: 'Summit Builders' },
   { id: 'tm-2', name: 'Jordan Lee', role: 'TC', email: 'jordan@peakframing.com', org_name: 'Peak Framing' },
-  { id: 'tm-3', name: 'Sam Torres', role: 'FC', email: 'sam@fieldcrew.com', org_name: 'Torres Field Crew' },
+  { id: 'tm-3', name: 'Sam Torres', role: 'FC', email: 'sam@fieldcrew.com', org_name: 'Torres Crew' },
   { id: 'tm-4', name: 'Casey Nguyen', role: 'SUPPLIER', email: 'casey@austinlumber.com', org_name: 'Austin Lumber Co' },
   { id: 'tm-5', name: 'Morgan Chen', role: 'GC', email: 'morgan@summitbuilders.com', org_name: 'Summit Builders' },
   { id: 'tm-6', name: 'Taylor Brooks', role: 'TC', email: 'taylor@coolairhvac.com', org_name: 'CoolAir HVAC' },
@@ -741,7 +741,7 @@ export const DEMO_TEAM: DemoTeamMember[] = [
   { id: 'tm-9', name: 'Dakota Kim', role: 'TC', email: 'dakota@ironworkpros.com', org_name: 'Ironwork Pros' },
   { id: 'tm-10', name: 'Jamie Sullivan', role: 'GC', email: 'jamie@summitbuilders.com', org_name: 'Summit Builders' },
   { id: 'tm-11', name: 'Quinn Adams', role: 'TC', email: 'quinn@allsideexteriors.com', org_name: 'AllSide Exteriors' },
-  { id: 'tm-12', name: 'Skyler Reeves', role: 'FC', email: 'skyler@torrescrew.com', org_name: 'Torres Field Crew' },
+  { id: 'tm-12', name: 'Skyler Reeves', role: 'FC', email: 'skyler@torrescrew.com', org_name: 'Torres Crew' },
   { id: 'tm-13', name: 'Drew Watkins', role: 'SUPPLIER', email: 'drew@abcroofing.com', org_name: 'ABC Roofing Supply' },
   { id: 'tm-14', name: 'Blake Harrison', role: 'TC', email: 'blake@medbuildmech.com', org_name: 'MedBuild Mechanical' },
   { id: 'tm-15', name: 'Cameron Ortiz', role: 'FC', email: 'cameron@ortizelectric.com', org_name: 'Ortiz Electrical Services' },

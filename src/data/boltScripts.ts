@@ -20,17 +20,17 @@ const GC_STEPS: BoltStep[] = [
 ];
 
 const TC_STEPS: BoltStep[] = [
-  { id: 'tc-1', pose: 'wave', instruction: 'Welcome, Trade Contractor! Your financial snapshot lives on the overview.', explanation: 'TCs see contract value vs. billed-to-date, open WOs, and any items needing action.', targetTab: 'overview', targetSelector: '[data-demo-target="financial-signal"]' },
-  { id: 'tc-2', pose: 'point', instruction: 'Work Orders are your mini-projects. They move from Draft → Active → Locked.', explanation: 'As a subcontractor you price WOs, assign field crews, and track labor & materials per order.', targetTab: 'work-orders', targetSelector: '[data-demo-target="wo-list"]' },
+  { id: 'tc-1', pose: 'wave', instruction: 'Welcome, Subcontractor! Your financial snapshot lives on the overview.', explanation: 'TCs see contract value vs. billed-to-date, open WOs, and any items needing action.', targetTab: 'overview', targetSelector: '[data-demo-target="financial-signal"]' },
+  { id: 'tc-2', pose: 'point', instruction: 'Work Orders are your mini-projects. They move from Draft → Active → Locked.', explanation: 'As a subcontractor you price WOs, assign crews, and track labor & materials per order.', targetTab: 'work-orders', targetSelector: '[data-demo-target="wo-list"]' },
   { id: 'tc-3', pose: 'thinking', instruction: 'Create a PO to order materials for a Work Order.', explanation: 'POs tie directly to a WO. Material costs roll up into the WO total.', targetTab: 'purchase-orders' },
   { id: 'tc-4', pose: 'point', instruction: 'When a supplier prices a PO, it shows here. You approve and commit the cost.', explanation: 'Pricing visibility depends on material responsibility set in the contract.' },
   { id: 'tc-5', pose: 'thumbsup', instruction: 'Pricing visibility protects margins. What the general contractor sees depends on the contract.', explanation: 'If material responsibility = subcontractor, the general contractor sees the final WO price but not individual supplier costs.' },
   { id: 'tc-co', pose: 'thinking', instruction: 'Your CO scorecard lives here — the truth about how COs hit your bottom line.', explanation: 'Revenue = the tc_submitted_price you locked in with the general contractor. Cost = your labor + materials + equipment on approved COs. Margin = revenue − cost. Pending exposure = COs you have sent up the chain that have not yet been approved or rejected.', targetTab: 'overview', targetSelector: '[data-demo-target="co-impact-card"]' },
-  { id: 'tc-6', pose: 'celebrate', instruction: 'Tour complete! Set up your org, invite your field crews, and start building.', explanation: 'Your next step: complete your company profile and invite at least one field crew.' },
+  { id: 'tc-6', pose: 'celebrate', instruction: 'Tour complete! Set up your org, invite your crews, and start building.', explanation: 'Your next step: complete your company profile and invite at least one crew.' },
 ];
 
 const FC_STEPS: BoltStep[] = [
-  { id: 'fc-1', pose: 'wave', instruction: 'Welcome, Field Crew! You\'ll see Work Orders assigned to you right here.', explanation: 'FCs only see WOs they\'re assigned to — keeping the interface clean and focused.', targetTab: 'overview', targetSelector: '[data-demo-target="wo-section"]' },
+  { id: 'fc-1', pose: 'wave', instruction: 'Welcome, Crew! You\'ll see Work Orders assigned to you right here.', explanation: 'FCs only see WOs they\'re assigned to — keeping the interface clean and focused.', targetTab: 'overview', targetSelector: '[data-demo-target="wo-section"]' },
   { id: 'fc-2', pose: 'point', instruction: 'Open a Work Order to see what needs to be done and fill in required fields.', explanation: 'Each WO has scope, location, and any special instructions from the subcontractor.', targetTab: 'work-orders', targetSelector: '[data-demo-target="wo-card-0"]' },
   { id: 'fc-3', pose: 'thinking', instruction: 'Add photos and notes as you complete work in the field.', explanation: 'Documentation protects everyone. Photos are attached to the WO for the record.' },
   { id: 'fc-4', pose: 'thumbsup', instruction: 'When work is done, submit for approval. The TC reviews and locks it.', explanation: 'Once locked, labor hours and materials are finalized for billing.' },

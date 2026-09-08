@@ -335,8 +335,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     if (currentOrgType === 'GC') {
       if (gcSubTab === 'from_tc') {
         return { 
-          message: 'Invoices sent to you by Trade Contractors for completed work.',
-          emptyMessage: 'No invoices received from Trade Contractors yet.'
+          message: 'Invoices sent to you by Subcontractors for completed work.',
+          emptyMessage: 'No invoices received from Subcontractors yet.'
         };
       } else {
         return { 
@@ -355,17 +355,17 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         };
       } else {
         return { 
-          message: 'Invoices received from Field Crews and Suppliers.',
-          emptyMessage: 'No invoices received from Field Crews or Suppliers yet.'
+          message: 'Invoices received from Crews and Suppliers.',
+          emptyMessage: 'No invoices received from Crews or Suppliers yet.'
         };
       }
     }
     if (currentOrgType === 'FC') {
       return { 
-        message: 'Invoices you send to the Trade Contractor for your labor.',
+        message: 'Invoices you send to the Subcontractor for your labor.',
         emptyMessage: contractsWhereUserCanInvoice.length > 0 
           ? 'Create your first invoice to start billing for completed work.'
-          : 'No contract with a Trade Contractor found.'
+          : 'No contract with a Subcontractor found.'
       };
     }
     if (currentOrgType === 'SUPPLIER') {
@@ -615,7 +615,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <TabsTrigger value="from_tc" className="flex items-center gap-1.5 text-xs sm:text-sm">
               <Inbox className="h-4 w-4 hidden sm:block" />
               <span className="sm:hidden">Trade</span>
-              <span className="hidden sm:inline">From Trade Contractors</span>
+              <span className="hidden sm:inline">From Subcontractors</span>
               {receivedFromContracts.length > 0 && (
                 <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium">
                   {receivedFromContracts.length}
@@ -635,7 +635,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           </TabsList>
 
           <TabsContent value="from_tc" className="mt-6">
-            {renderTabContent(false, 'From Trade Contractors')}
+            {renderTabContent(false, 'From Subcontractors')}
           </TabsContent>
 
           <TabsContent value="from_supplier" className="mt-6">
@@ -681,7 +681,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <TabsTrigger value="received" className="flex items-center gap-1.5 text-xs sm:text-sm">
               <Inbox className="h-4 w-4 hidden sm:block" />
               <span className="sm:hidden">Received</span>
-              <span className="hidden sm:inline truncate">From Field Crews & Suppliers</span>
+              <span className="hidden sm:inline truncate">From Crews & Suppliers</span>
               {allReceivedInvoices.length > 0 && (
                 <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium">
                   {allReceivedInvoices.length}
@@ -695,7 +695,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           </TabsContent>
 
           <TabsContent value="received" className="mt-6">
-            {renderTabContent(false, 'From Field Crews & Suppliers')}
+            {renderTabContent(false, 'From Crews & Suppliers')}
           </TabsContent>
         </Tabs>
 

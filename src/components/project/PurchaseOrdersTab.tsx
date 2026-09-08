@@ -535,7 +535,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       if (!updated || updated.length === 0) {
         throw new Error('You do not have permission to return this PO');
       }
-      toast.success('PO returned to the trade contractor');
+      toast.success('PO returned to the subcontractor');
       fetchPurchaseOrders();
     } catch (err: any) {
       toast.error('Failed to reject PO: ' + (err?.message || 'Unknown error'));
@@ -867,7 +867,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   }
 
   const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplier;
-  const receivedTabLabel = isGC ? 'From Trade Contractors' : 'From General Contractor';
+  const receivedTabLabel = isGC ? 'From Subcontractors' : 'From General Contractor';
 
   return (
     <>

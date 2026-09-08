@@ -38,7 +38,7 @@ export function Footer() {
             </span>
           </div>
           <p className="text-[0.85rem] leading-[1.75] max-w-[270px] text-white/60">
-            Construction operations software that connects General Contractors, Trade Contractors, Field Crews, and Suppliers in one real-time platform.
+            Construction operations software that connects General Contractors, Subcontractors, Crews, and Suppliers in one real-time platform.
           </p>
         </div>
 

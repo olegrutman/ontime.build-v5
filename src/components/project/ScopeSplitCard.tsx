@@ -67,13 +67,13 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
     return result;
   }, [visibleSections, items, profile, typeSlug, onSelections]);
 
-  const fcAssignedCount = existingAssignments.filter(a => a.assigned_role === 'Field Crew').length;
+  const fcAssignedCount = existingAssignments.filter(a => a.assigned_role === 'Crew').length;
 
   const handleOpenDialog = () => {
     // Initialize from existing assignments
     const fcSet = new Set<string>();
     for (const a of existingAssignments) {
-      if (a.assigned_role === 'Field Crew') {
+      if (a.assigned_role === 'Crew') {
         fcSet.add(a.scope_item_id);
       }
     }
@@ -92,7 +92,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
 
   const handleSave = async () => {
     if (fcOrgs.length === 0) {
-      toast({ title: 'No Field Crew', description: 'Add a Field Crew to the project first.', variant: 'destructive' });
+      toast({ title: 'No Crew', description: 'Add a Crew to the project first.', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -108,7 +108,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
           project_id: projectId,
           scope_item_id: item.id,
           assigned_to_org_id: isFc ? fcOrgs[0].id : tcOrgId,
-          assigned_role: isFc ? 'Field Crew' : 'Trade Contractor',
+          assigned_role: isFc ? 'Crew' : 'Subcontractor',
         });
       }
 
@@ -138,7 +138,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary">{activeItems.length} total items</Badge>
               <span className="text-sm text-muted-foreground">
-                · {fcAssignedCount} assigned to {fcOrgs[0]?.name || 'Field Crew'}
+                · {fcAssignedCount} assigned to {fcOrgs[0]?.name || 'Crew'}
               </span>
             </div>
           </div>
@@ -154,7 +154,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
             </DialogHeader>
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Check items to assign to <strong>{fcOrgs[0]?.name || 'Field Crew'}</strong>. Unchecked items stay with your team.
+                Check items to assign to <strong>{fcOrgs[0]?.name || 'Crew'}</strong>. Unchecked items stay with your team.
               </p>
               <Button
                 variant="outline"
@@ -225,13 +225,13 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="secondary">{activeItems.length} total items</Badge>
             <span className="text-sm text-muted-foreground">
-              · {fcAssignedCount} assigned to {fcOrgs[0]?.name || 'Field Crew'}
+              · {fcAssignedCount} assigned to {fcOrgs[0]?.name || 'Crew'}
               · {activeItems.length - fcAssignedCount} kept by your team
             </span>
           </div>
           {fcAssignedCount === 0 && (
             <p className="text-sm text-muted-foreground">
-              All scope items are assigned to your team. Use "Split Scope" to assign items to {fcOrgs[0]?.name || 'your field crew'}.
+              All scope items are assigned to your team. Use "Split Scope" to assign items to {fcOrgs[0]?.name || 'your crew'}.
             </p>
           )}
         </CardContent>
@@ -244,7 +244,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
           </DialogHeader>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Check items to assign to <strong>{fcOrgs[0]?.name || 'Field Crew'}</strong>. Unchecked items stay with your team.
+              Check items to assign to <strong>{fcOrgs[0]?.name || 'Crew'}</strong>. Unchecked items stay with your team.
             </p>
             <Button
               variant="outline"

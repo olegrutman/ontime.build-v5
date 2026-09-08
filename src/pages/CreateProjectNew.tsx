@@ -102,7 +102,7 @@ export default function CreateProjectNew() {
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
   const creatorRole = currentOrg?.type === 'GC' ? 'General Contractor' : 
-                      currentOrg?.type === 'TC' ? 'Trade Contractor' :
+                      currentOrg?.type === 'TC' ? 'Subcontractor' :
                       currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
 
   const wizard = useSetupWizardV2(
@@ -233,8 +233,8 @@ export default function CreateProjectNew() {
       const pid = project.id;
 
       const roleLabel = currentOrg.type === 'GC' ? 'General Contractor'
-        : currentOrg.type === 'TC' ? 'Trade Contractor'
-        : currentOrg.type === 'FC' ? 'Field Crew'
+        : currentOrg.type === 'TC' ? 'Subcontractor'
+        : currentOrg.type === 'FC' ? 'Crew'
         : 'Supplier';
 
       await Promise.all([

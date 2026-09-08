@@ -11,8 +11,8 @@ import { US_STATES } from '@/types/projectWizard';
 
 const ORG_TYPE_OPTIONS = [
   { value: 'GC', label: 'General Contractor' },
-  { value: 'TC', label: 'Trade Contractor' },
-  { value: 'FC', label: 'Field Crew' },
+  { value: 'TC', label: 'Subcontractor' },
+  { value: 'FC', label: 'Crew' },
   { value: 'SUPPLIER', label: 'Supplier' },
 ] as const;
 

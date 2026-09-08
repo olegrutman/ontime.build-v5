@@ -8,8 +8,8 @@ import type { OrgType } from '@/types/organization';
 
 const ORG_TYPE_CONFIG: Record<string, { label: string; icon: typeof Building2 }> = {
   GC: { label: 'General Contractors', icon: Building2 },
-  TC: { label: 'Trade Contractors', icon: Wrench },
-  FC: { label: 'Field Crews', icon: HardHat },
+  TC: { label: 'Subcontractors', icon: Wrench },
+  FC: { label: 'Crews', icon: HardHat },
   SUPPLIER: { label: 'Suppliers', icon: Package },
 };
 

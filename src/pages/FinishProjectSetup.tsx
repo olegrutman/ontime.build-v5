@@ -66,7 +66,7 @@ export default function FinishProjectSetup() {
   const creatorOrgType = currentOrg?.type as OrgType | undefined;
   const isGC = creatorOrgType === 'GC';
   const isTC = creatorOrgType === 'TC';
-  const downstreamRoleLabel = isGC ? 'Trade Contractor' : isTC ? 'Field Crew' : null;
+  const downstreamRoleLabel = isGC ? 'Subcontractor' : isTC ? 'Crew' : null;
 
   const wizard = useSetupWizardV2(projectId);
 
@@ -290,7 +290,7 @@ export default function FinishProjectSetup() {
       }
 
       // 3. Upsert downstream contracts (one row per invited team member).
-      const myToRole = isGC ? 'General Contractor' : isTC ? 'Trade Contractor' : null;
+      const myToRole = isGC ? 'General Contractor' : isTC ? 'Subcontractor' : null;
       if (myToRole && !selfPerform) {
         const downstreamMembers = (teamData || []).filter(
           t => downstreamRoleLabel && (t.role || '').toLowerCase() === downstreamRoleLabel.toLowerCase(),
@@ -382,8 +382,8 @@ export default function FinishProjectSetup() {
               <h2 className="text-lg font-semibold">Invite Your Team</h2>
               <p className="text-sm text-muted-foreground">
                 {isGC
-                  ? 'Add the trade contractors who will work on this project. You\'ll enter what you\'re paying each one on the next step.'
-                  : 'Add the field crews who will work for you on this project. You\'ll enter what you\'re paying each one on the next step.'}
+                  ? 'Add the subcontractors who will work on this project. You\'ll enter what you\'re paying each one on the next step.'
+                  : 'Add the crews who will work for you on this project. You\'ll enter what you\'re paying each one on the next step.'}
               </p>
             </div>
 

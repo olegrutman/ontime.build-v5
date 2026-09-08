@@ -9,7 +9,7 @@ export default function SecurityPage() {
       updated="May 21, 2026"
     >
       <p>
-        Ontime.Build connects multiple organizations on the same project — General Contractors, Trade Contractors, Field Crews, and Suppliers. Keeping each party's data private from every other party is a core requirement, not an afterthought. This page describes how we do it.
+        Ontime.Build connects multiple organizations on the same project — General Contractors, Subcontractors, Crews, and Suppliers. Keeping each party's data private from every other party is a core requirement, not an afterthought. This page describes how we do it.
       </p>
 
       <h2>1. Row-Level Security on every table</h2>
@@ -21,7 +21,7 @@ export default function SecurityPage() {
       <ul>
         <li><strong>General contractors don't see subcontractor labor margins.</strong> Subcontractor cost breakdowns and labor markup are invisible to the general contractor by default. Per-project markup disclosure can be set to hidden, summary, or detailed.</li>
         <li><strong>Subcontractors don't see supplier pricing when the general contractor procures materials.</strong> Supplier estimates and purchase order pricing are masked from downstream subcontractors.</li>
-        <li><strong>Field Crews see only their assigned work.</strong> Their dashboards never expose upstream contract values or supplier negotiations.</li>
+        <li><strong>Crews see only their assigned work.</strong> Their dashboards never expose upstream contract values or supplier negotiations.</li>
       </ul>
 
       <h2>3. Authentication</h2>

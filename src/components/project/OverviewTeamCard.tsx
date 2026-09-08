@@ -23,15 +23,15 @@ interface ContractData {
 
 const ROLE_DOTS: Record<string, string> = {
   'General Contractor': 'bg-blue-500',
-  'Trade Contractor': 'bg-emerald-500',
-  'Field Crew': 'bg-purple-500',
+  'Subcontractor': 'bg-emerald-500',
+  'Crew': 'bg-purple-500',
   'Supplier': 'bg-amber-500',
 };
 
 const ROLE_SHORT: Record<string, string> = {
   'General Contractor': 'GC',
-  'Trade Contractor': 'TC',
-  'Field Crew': 'FC',
+  'Subcontractor': 'TC',
+  'Crew': 'FC',
   'Supplier': 'SUP',
 };
 
@@ -98,7 +98,7 @@ export function OverviewTeamCard({ projectId, isTCMaterialResponsible, isGCMater
       .from('project_contracts')
       .select('id, material_responsibility, from_org_id, to_org_id')
       .eq('project_id', projectId)
-      .eq('from_role', 'Trade Contractor')
+      .eq('from_role', 'Subcontractor')
       .or('trade.is.null,trade.neq.Work Order')
       .limit(1);
     if (data && data.length > 0) {
@@ -155,7 +155,7 @@ export function OverviewTeamCard({ projectId, isTCMaterialResponsible, isGCMater
       setContract({ ...contract, material_responsibility: value });
       onResponsibilityChange?.(value);
       setShowSelector(false);
-      toast({ title: `Material responsibility set to ${value === 'GC' ? 'General Contractor' : 'Trade Contractor'}` });
+      toast({ title: `Material responsibility set to ${value === 'GC' ? 'General Contractor' : 'Subcontractor'}` });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
@@ -222,7 +222,7 @@ export function OverviewTeamCard({ projectId, isTCMaterialResponsible, isGCMater
 
       {/* Materials line */}
       {materialLabel && (() => {
-        const responsibleRole = isTCMaterialResponsible ? 'Trade Contractor' : 'General Contractor';
+        const responsibleRole = isTCMaterialResponsible ? 'Subcontractor' : 'General Contractor';
         const responsibleOrg = members.find(m => m.role === responsibleRole);
         const dotColor = ROLE_DOTS[responsibleRole] || 'bg-muted-foreground';
         return (
@@ -233,7 +233,7 @@ export function OverviewTeamCard({ projectId, isTCMaterialResponsible, isGCMater
             <span className="text-[10px] font-semibold text-foreground truncate">
               {responsibleOrg?.org_name || materialLabel}
             </span>
-            <span className="text-[10px] text-muted-foreground">({isTCMaterialResponsible ? 'Trade Contractor' : 'General Contractor'})</span>
+            <span className="text-[10px] text-muted-foreground">({isTCMaterialResponsible ? 'Subcontractor' : 'General Contractor'})</span>
           </div>
         );
       })()}

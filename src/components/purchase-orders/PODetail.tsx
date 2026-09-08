@@ -334,7 +334,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         .select('id');
       if (error) throw error;
       if (!updated?.length) throw new Error('You do not have permission to return this PO');
-      toast.success('PO returned to the trade contractor');
+      toast.success('PO returned to the subcontractor');
       fetchPO();
       onUpdate();
     } catch (error: unknown) {

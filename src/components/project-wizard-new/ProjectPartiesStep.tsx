@@ -22,15 +22,15 @@ interface ProjectPartiesStepProps {
 /** Roles that sit above the creator in the billing chain (creator bills them). */
 export function upstreamRolesFor(orgType?: OrgType | null): TeamRole[] {
   if (orgType === 'TC') return ['General Contractor'];
-  if (orgType === 'FC') return ['Trade Contractor', 'General Contractor'];
-  if (orgType === 'SUPPLIER') return ['General Contractor', 'Trade Contractor'];
+  if (orgType === 'FC') return ['Subcontractor', 'General Contractor'];
+  if (orgType === 'SUPPLIER') return ['General Contractor', 'Subcontractor'];
   return [];
 }
 
 /** Roles that sit below the creator in the billing chain (they bill the creator). */
 export function downstreamRolesFor(orgType?: OrgType | null): TeamRole[] {
-  if (orgType === 'GC') return ['Trade Contractor', 'Field Crew'];
-  if (orgType === 'TC') return ['Field Crew'];
+  if (orgType === 'GC') return ['Subcontractor', 'Crew'];
+  if (orgType === 'TC') return ['Crew'];
   return [];
 }
 

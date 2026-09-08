@@ -28,7 +28,7 @@ export function MaterialsBudgetStatusCard({ projectId, supplierOrgId, financials
   // Not responsible — show minimal line
   if (!isResponsible) {
     const responsibleParty = financials.viewerRole === 'General Contractor'
-      ? 'Trade Contractor'
+      ? 'Subcontractor'
       : 'General Contractor';
     return (
       <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">

@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const TABS = [
   { key: 'gc', label: 'General Contractor' },
-  { key: 'tc', label: 'Trade Contractor' },
+  { key: 'tc', label: 'Subcontractor' },
   { key: 'fc', label: 'Field Contractor' },
   { key: 'supplier', label: 'Supplier' },
 ];

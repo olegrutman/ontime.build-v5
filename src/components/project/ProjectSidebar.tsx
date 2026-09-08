@@ -86,7 +86,7 @@ export function getNavGroups(isTM: boolean, isSupplier: boolean, isFC = false): 
     };
   }
 
-  // Field crews execute work and bill their hirer. They never own the
+  // Crews execute work and bill their hirer. They never own the
   // contract-level money surfaces (SOV, POs, backcharges, payment apps).
   if (isFC) {
     return {

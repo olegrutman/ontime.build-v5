@@ -12,7 +12,7 @@ const faqs = [
   },
   {
     q: 'Does it actually work on a phone on the jobsite?',
-    a: 'Yes. The Field Crew interface is mobile-first with a Today / Up Next / Done task board, photo + voice capture, and offline-tolerant submissions. Install it as a PWA — no app store required. Push notifications work on both iOS and Android.',
+    a: 'Yes. The Crew interface is mobile-first with a Today / Up Next / Done task board, photo + voice capture, and offline-tolerant submissions. Install it as a PWA — no app store required. Push notifications work on both iOS and Android.',
   },
   {
     q: 'How is this different from Procore?',

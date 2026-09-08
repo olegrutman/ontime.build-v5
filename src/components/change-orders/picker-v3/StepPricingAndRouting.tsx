@@ -140,7 +140,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
                 <div className={cn('w-4 h-4 rounded-full border-2 shrink-0', collab.assignedTcOrgId === tc.id ? 'border-amber-500 bg-amber-500' : 'border-muted-foreground/40')} />
               </button>
             ))}
-            {tcOrgs.length === 0 && <p className="text-[0.78rem] text-muted-foreground text-center py-4">No trade contractors on this project.</p>}
+            {tcOrgs.length === 0 && <p className="text-[0.78rem] text-muted-foreground text-center py-4">No subcontractors on this project.</p>}
           </div>
         </div>
       )}

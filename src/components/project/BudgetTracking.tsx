@@ -19,12 +19,12 @@ export function BudgetTracking({ financials, projectId, onNavigate }: BudgetTrac
 
   if (loading) return null;
 
-  const showLabor = viewerRole === 'Field Crew' || (viewerRole === 'Trade Contractor' && isTCSelfPerforming);
+  const showLabor = viewerRole === 'Crew' || (viewerRole === 'Subcontractor' && isTCSelfPerforming);
 
   if (!showLabor) return null;
 
   // FC updates labor budget on TC↔FC contract; GC on GC↔TC contract
-  const budgetContract = viewerRole === 'Field Crew' ? downstreamContract : upstreamContract;
+  const budgetContract = viewerRole === 'Crew' ? downstreamContract : upstreamContract;
 
   return (
     <LaborBudgetCard

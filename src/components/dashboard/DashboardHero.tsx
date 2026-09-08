@@ -11,8 +11,8 @@ interface DashboardHeroProps {
 
 const ORG_TYPE_LABELS: Record<string, string> = {
   GC: 'General Contractor',
-  TC: 'Trade Contractor',
-  FC: 'Field Crew',
+  TC: 'Subcontractor',
+  FC: 'Crew',
   SUPPLIER: 'Supplier',
 };
 

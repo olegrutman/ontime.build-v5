@@ -35,8 +35,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
   /* ─── The FC's own contract row — the ONLY source of this crew's money ───
-     Contracts are stored biller → payer, so a Field Crew row has the crew as
-     from_org_id (from_role = 'Field Crew'). Match either side to be safe. */
+     Contracts are stored biller → payer, so a Crew row has the crew as
+     from_org_id (from_role = 'Crew'). Match either side to be safe. */
   const { data: contractData = null, isLoading: contractLoading } = useQuery({
     queryKey: ['fc-own-contract', projectId, currentOrgId],
     queryFn: async () => {
@@ -53,9 +53,9 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
       );
       // Prefer the crew's own billing row (crew is the biller)
       const primary =
-        rows.find((c: any) => c.from_org_id === currentOrgId && c.from_role === 'Field Crew') ||
+        rows.find((c: any) => c.from_org_id === currentOrgId && c.from_role === 'Crew') ||
         rows.find((c: any) => c.from_org_id === currentOrgId) ||
-        rows.find((c: any) => c.to_role === 'Field Crew') ||
+        rows.find((c: any) => c.to_role === 'Crew') ||
         rows[0] ||
         null;
       // Work-order contracts are still this crew's money: their invoices must be
@@ -106,11 +106,11 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
   const tcName = (() => {
     const c = myContract || financials.downstreamContract || financials.upstreamContract;
-    if (!c) return 'Trade Contractor';
+    if (!c) return 'Subcontractor';
     const anyC = c as any;
-    if (currentOrgId && anyC.from_org_id === currentOrgId) return anyC.to_org_name || 'Trade Contractor';
-    if (currentOrgId && anyC.to_org_id === currentOrgId) return anyC.from_org_name || 'Trade Contractor';
-    return anyC.from_org_name || anyC.to_org_name || 'Trade Contractor';
+    if (currentOrgId && anyC.from_org_id === currentOrgId) return anyC.to_org_name || 'Subcontractor';
+    if (currentOrgId && anyC.to_org_id === currentOrgId) return anyC.from_org_name || 'Subcontractor';
+    return anyC.from_org_name || anyC.to_org_name || 'Subcontractor';
   })();
 
   /* Invoices — the crew's OWN billing only. The shared financials hook totals
@@ -255,7 +255,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.purple, flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: '0.64rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, color: C.faint }}>Contract Party</div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.ink }}>Field Crew · {tcName}</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.ink }}>Crew · {tcName}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

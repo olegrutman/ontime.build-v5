@@ -141,7 +141,7 @@ export function LaborEntryForm({
     if (fcHours > 0 && !hours) { setHours(String(fcHours)); setMode('hourly'); }
     setCostType('labor_wages');
     setImportedFC(true);
-    toast.success(`Imported ${fcHours}h of field crew time`);
+    toast.success(`Imported ${fcHours}h of crew time`);
   }
 
 
@@ -291,7 +291,7 @@ export function LaborEntryForm({
           lump_sum: internalCostValue,
           description: description.trim() ? `Internal: ${description.trim()}` : `Internal cost (${costType.replace(/_/g, ' ')})`,
           is_actual_cost: true,
-          // Provenance: ties this internal cost row back to the field crew time it came from.
+          // Provenance: ties this internal cost row back to the crew time it came from.
           source_fc_entry_ids: importedFC && fcEntryIds.length > 0 ? fcEntryIds : null,
         });
       }

@@ -244,7 +244,7 @@ export function COStatusActions({
         fallbackOrgId: fallbackAssignee,
       });
       if (!assignee) {
-        toast.error('No trade contractor on this project to send this to.');
+        toast.error('No subcontractor on this project to send this to.');
         return;
       }
       await updateCO.mutateAsync({

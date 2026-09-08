@@ -62,7 +62,7 @@ export default function EditProject() {
     companyName: '',
     contactName: '',
     contactEmail: '',
-    role: 'Trade Contractor',
+    role: 'Subcontractor',
   });
   
   // New member contract values
@@ -75,7 +75,7 @@ export default function EditProject() {
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorRole = currentOrg?.type === 'GC' ? 'General Contractor' : 
-                      currentOrg?.type === 'TC' ? 'Trade Contractor' : null;
+                      currentOrg?.type === 'TC' ? 'Subcontractor' : null;
 
   const defaultTab = searchParams.get('step') || 'team';
 
@@ -127,13 +127,13 @@ export default function EditProject() {
     if (creatorRole === 'General Contractor') {
       return role !== 'General Contractor';
     }
-    if (creatorRole === 'Trade Contractor') {
-      return role === 'General Contractor' || role === 'Field Crew' || role === 'Supplier';
+    if (creatorRole === 'Subcontractor') {
+      return role === 'General Contractor' || role === 'Crew' || role === 'Supplier';
     }
     return true;
   });
 
-  const requiresTrade = newMember.role === 'Trade Contractor' || newMember.role === 'Field Crew';
+  const requiresTrade = newMember.role === 'Subcontractor' || newMember.role === 'Crew';
 
   const addMember = async () => {
     if (!newMember.companyName || !newMember.contactEmail || !newMember.role) return;
@@ -180,7 +180,7 @@ export default function EditProject() {
         // Worker (invoice sender) = from_org, Payer = to_org
         const isCreatorUpstream = 
           (creatorRole === 'General Contractor') ||
-          (creatorRole === 'Trade Contractor' && newMember.role === 'Field Crew');
+          (creatorRole === 'Subcontractor' && newMember.role === 'Crew');
 
         const contractPayload = isCreatorUpstream ? {
           // Invitee is worker, creator is payer
@@ -218,7 +218,7 @@ export default function EditProject() {
         companyName: '',
         contactName: '',
         contactEmail: '',
-        role: 'Trade Contractor',
+        role: 'Subcontractor',
       });
       setNewContractSum(0);
       setNewRetainagePercent(0);
@@ -666,7 +666,7 @@ export default function EditProject() {
                       </div>
 
                       {/* Material Responsibility - only show for TC contracts */}
-                      {(contract.from_role === 'Trade Contractor' || contract.to_role === 'Trade Contractor') && (
+                      {(contract.from_role === 'Subcontractor' || contract.to_role === 'Subcontractor') && (
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-muted-foreground" />

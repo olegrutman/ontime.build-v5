@@ -1673,7 +1673,7 @@ export function useSetupWizardV2(
       }
     } else {
       // TC (or FC) is the contractor billing upstream
-      const fromRole = isTC ? 'Trade Contractor' : 'Field Crew';
+      const fromRole = isTC ? 'Subcontractor' : 'Crew';
       primaryResult = await _saveContractAndSov(
         pid, contractValue,
         fromRole, creatorOrgId || null,
@@ -1689,9 +1689,9 @@ export function useSetupWizardV2(
     if (isTC && fcContractValue > 0) {
       fcResult = await _saveContractAndSov(
         pid, fcContractValue,
-        'Field Crew',       // from_role: FC is the contractor billing
+        'Crew',       // from_role: FC is the contractor billing
         null,               // from_org_id: FC org not yet known
-        'Trade Contractor', // to_role: TC is the client paying
+        'Subcontractor', // to_role: TC is the client paying
         creatorOrgId || null, // to_org_id: TC's org (the payer)
         'Subcontractor → Crew SOV',
         scopeData, answers, userId,
@@ -1713,7 +1713,7 @@ export function useSetupWizardV2(
 
       fcResult = await _saveContractAndSov(
         pid, gcTcContractValue,
-        'Trade Contractor',                  // from_role: TC bills GC
+        'Subcontractor',                  // from_role: TC bills GC
         tcParticipant?.organization_id || null, // from_org_id: invited TC if known
         'General Contractor',                // to_role: GC is the payer
         creatorOrgId || null,                // to_org_id: GC's org

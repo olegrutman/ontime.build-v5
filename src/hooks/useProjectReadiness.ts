@@ -97,7 +97,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
 
       // Helper: find contracts by role
       const gcContract = contracts.find(c => c.to_role === 'General Contractor' || c.from_role === 'General Contractor');
-      const fcContract = contracts.find(c => c.to_role === 'Field Crew' || c.from_role === 'Field Crew');
+      const fcContract = contracts.find(c => c.to_role === 'Crew' || c.from_role === 'Crew');
 
       // Helper: check SOV exists AND is locked for a contract
       const hasSovForContract = (contractId: string) => sovs.some(s => s.contract_id === contractId);
@@ -213,11 +213,11 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       } else {
         // GC-Created Project Checklist — items only shown if the role exists
         const tcParticipants = getParticipantsByRole('TC');
-        const hasTCRole = tcParticipants.length > 0 || contracts.some(c => c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor');
+        const hasTCRole = tcParticipants.length > 0 || contracts.some(c => c.from_role === 'Subcontractor' || c.to_role === 'Subcontractor');
 
         if (hasTCRole) {
           const hasTCContractSum = contracts.some(c => 
-            (c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor') &&
+            (c.from_role === 'Subcontractor' || c.to_role === 'Subcontractor') &&
             c.contract_sum != null && c.contract_sum > 0
           );
           items.push({ key: 'tc_contract_sum', label: 'Contract sum with the subcontractor entered', complete: hasTCContractSum });

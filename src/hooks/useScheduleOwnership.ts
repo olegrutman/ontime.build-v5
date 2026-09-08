@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const ROLE_PRIORITY: Record<string, number> = {
   'General Contractor': 1,
-  'Trade Contractor': 2,
+  'Subcontractor': 2,
   'Finishing Contractor': 3,
 };
 

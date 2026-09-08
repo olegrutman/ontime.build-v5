@@ -14,18 +14,18 @@ const personas = [
   },
   {
     id: 'tc',
-    label: 'Trade Contractor',
+    label: 'Subcontractor',
     short: 'TC',
     headline: 'Get paid faster, lose less material, stop chasing approvals.',
     bullets: [
       'SOV invoicing with auto-revision tracking',
-      'Crew tasks routed to Field Crews — no group texts',
+      'Crew tasks routed to Crews — no group texts',
       'Closed-loop returns recover real money each project',
     ],
   },
   {
     id: 'fc',
-    label: 'Field Crew',
+    label: 'Crew',
     short: 'FC',
     headline: 'See what to build, log hours, attach photos — that\'s it.',
     bullets: [

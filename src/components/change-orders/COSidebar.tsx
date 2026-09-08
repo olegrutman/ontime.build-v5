@@ -360,7 +360,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
       {/* SOV Panel */}
       <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={myOrgId} />
 
-      {/* Field Crew Card */}
+      {/* Crew Card */}
       {isTC && (
         <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-border">

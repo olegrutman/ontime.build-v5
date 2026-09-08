@@ -3,7 +3,7 @@ const plans = [
     tier: 'Essentials',
     price: '$49',
     period: '/mo',
-    desc: 'For small trade contractors starting to bring operations into one platform.',
+    desc: 'For small subcontractors starting to bring operations into one platform.',
     features: [
       { text: 'Unlimited projects' },
       { text: 'Unlimited users' },

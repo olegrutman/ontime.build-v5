@@ -112,7 +112,7 @@ export function buildCONotification(
     },
     FC_PRICING_SUBMITTED: {
       title: 'Crew pricing submitted',
-      body: `Field crew has submitted pricing on ${label}.`,
+      body: `Crew has submitted pricing on ${label}.`,
     },
     CO_WITHDRAWN: {
       title: `${coWord} withdrawn`,

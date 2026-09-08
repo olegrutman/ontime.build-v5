@@ -9,13 +9,13 @@ const roles = [
     tags: ['Budget Control', 'Approvals', 'Trade Oversight', 'Material Visibility'],
   },
   {
-    icon: '🔧', name: 'Trade Contractors',
+    icon: '🔧', name: 'Subcontractors',
     desc: 'Run framing operations with tighter labor control, cleaner invoicing, faster supplier coordination, and full visibility into change order status.',
     slug: 'trade-contractors',
     tags: ['Change Orders', 'Invoicing', 'Crew Management', 'Contract Tracking'],
   },
   {
-    icon: '👷', name: 'Field Crews',
+    icon: '👷', name: 'Crews',
     desc: 'See exactly what work is assigned, submit field updates, attach jobsite proof, and keep the office informed without endless phone calls.',
     slug: 'field-crews',
     tags: ['Assigned Tasks', 'Field Updates', 'Photo Proof', 'Simple Mobile'],

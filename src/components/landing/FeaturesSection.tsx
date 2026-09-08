@@ -16,7 +16,7 @@ const features = [
   },
   {
     num: '04', icon: '💰', title: 'Invoicing',
-    desc: 'Move invoices through approval faster with a clear financial record for every company. Trade Contractors submit, GCs approve, and payment status updates in real time — no email chains.',
+    desc: 'Move invoices through approval faster with a clear financial record for every company. Subcontractors submit, GCs approve, and payment status updates in real time — no email chains.',
     tags: ['Fast Approvals', 'Payment Status', 'Financial Trail', 'Multi-party'],
   },
   {

@@ -92,7 +92,7 @@ function ContractRow({ contract, currentOrgId, teamMembers, canEdit, onContractU
   const isPending = relatedMember?.status === 'Invited';
   const displayTrade = formatTrade(contract.trade);
   const retainageAmount = (contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100);
-  const isTCContract = contract.from_role === 'Trade Contractor' || contract.to_role === 'Trade Contractor';
+  const isTCContract = contract.from_role === 'Subcontractor' || contract.to_role === 'Subcontractor';
 
   const [editOpen, setEditOpen] = useState(false);
   const [editValue, setEditValue] = useState<string>(contract.material_responsibility || 'TC');
