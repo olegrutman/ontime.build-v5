@@ -22,6 +22,7 @@ import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';

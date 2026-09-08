@@ -20,7 +20,7 @@ const ROLE_PILL_COLORS: Record<string, string> = {
 const PIPELINE_STEPS = [
   { key: 'draft', label: 'Draft' },
   { key: 'pricing', label: 'Pricing' },
-  { key: 'review', label: 'GC Review' },
+  { key: 'review', label: 'Review' },
   { key: 'approved', label: 'Approved' },
   { key: 'invoiced', label: 'Invoiced' },
 ] as const;
