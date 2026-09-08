@@ -18,18 +18,13 @@ export function HourlyRateSetting() {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('profiles')
-      .select('hourly_rate')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.hourly_rate != null) {
-          setCurrent(data.hourly_rate);
-          setRate(String(data.hourly_rate));
-        }
-        setLoading(false);
-      });
+    (supabase.rpc as any)('get_my_hourly_rate').then(({ data }: { data: number | null }) => {
+      if (data != null) {
+        setCurrent(Number(data));
+        setRate(String(Number(data)));
+      }
+      setLoading(false);
+    });
   }, [user]);
 
   async function save() {
