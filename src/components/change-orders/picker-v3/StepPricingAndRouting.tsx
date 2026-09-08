@@ -161,7 +161,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
               />
               <div>
                 <p className="text-[0.82rem] font-bold text-foreground">Request {rl.FC} hours</p>
-                <p className="text-[0.68rem] text-muted-foreground">FC will log hours before pricing.</p>
+                <p className="text-[0.68rem] text-muted-foreground">{rl.FC} will log hours before pricing.</p>
               </div>
             </div>
             {collab.requestFcInput && fcOrgs.length > 0 && (
