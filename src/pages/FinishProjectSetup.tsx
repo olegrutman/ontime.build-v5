@@ -700,7 +700,7 @@ export default function FinishProjectSetup() {
                     <EditableInfoRow label="Retainage" value={p.retainage_percent} type="percent" mono onSave={saveProject('retainage_percent')} />
                     <EditableInfoRow label="Retainage Release" value={p.retainage_release_trigger} type="text" onSave={saveProject('retainage_release_trigger')} />
                     <EditableInfoRow label="Mobilization" value={!!p.mobilization_enabled} type="boolean" onSave={saveProject('mobilization_enabled')} />
-                    <EditableInfoRow label="TC Markup Visibility" value={p.tc_markup_visibility} type="select" options={markupVisOpts} onSave={saveProject('tc_markup_visibility')} />
+                    <EditableInfoRow label="Subcontractor Markup Visibility" value={p.tc_markup_visibility} type="select" options={markupVisOpts} onSave={saveProject('tc_markup_visibility')} />
                   </SectionCard>
 
                   <SectionCard id="approvals" title="Approvals & Compliance">

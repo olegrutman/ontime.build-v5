@@ -565,20 +565,20 @@ export const DEMO_INVOICES: DemoInvoice[] = [
 // ════════════════════════════════════════════════════════
 
 export const DEMO_CONTRACTS: DemoContract[] = [
-  { id: 'demo-c-1', project_id: 'demo-proj-1', title: 'GC–TC Framing Contract', from_org: 'Summit Builders (GC)', to_org: 'Peak Framing (TC)', contract_value: 185000, status: 'executed' },
-  { id: 'demo-c-2', project_id: 'demo-proj-2', title: 'GC–TC Mechanical Contract', from_org: 'Summit Builders (GC)', to_org: 'CoolAir HVAC (TC)', contract_value: 320000, status: 'executed' },
-  { id: 'demo-c-3', project_id: 'demo-proj-3', title: 'GC–TC Exterior Package', from_org: 'Summit Builders (GC)', to_org: 'AllSide Exteriors (TC)', contract_value: 412000, status: 'approved' },
-  { id: 'demo-c-4', project_id: 'demo-proj-4', title: 'GC–TC Steel Erection', from_org: 'Summit Builders (GC)', to_org: 'Ironwork Pros (TC)', contract_value: 680000, status: 'executed' },
-  { id: 'demo-c-4b', project_id: 'demo-proj-4', title: 'GC–TC MEP Package', from_org: 'Summit Builders (GC)', to_org: 'MedBuild Mechanical (TC)', contract_value: 890000, status: 'executed' },
-  { id: 'demo-c-5', project_id: 'demo-proj-5', title: 'GC–TC General Trades', from_org: 'Summit Builders (GC)', to_org: 'Scholastic Builders (TC)', contract_value: 520000, status: 'executed' },
-  { id: 'demo-c-6', project_id: 'demo-proj-6', title: 'GC–TC Luxury Build Package', from_org: 'Summit Builders (GC)', to_org: 'Prestige Custom Homes (TC)', contract_value: 1250000, status: 'executed' },
-  { id: 'demo-c-6b', project_id: 'demo-proj-6', title: 'GC–TC Stone & Masonry', from_org: 'Summit Builders (GC)', to_org: 'Hill Country Masons (TC)', contract_value: 185000, status: 'approved' },
-  { id: 'demo-c-7', project_id: 'demo-proj-7', title: 'GC–TC Brewery Build-Out', from_org: 'Summit Builders (GC)', to_org: 'ATX Commercial (TC)', contract_value: 380000, status: 'executed' },
-  { id: 'demo-c-8', project_id: 'demo-proj-8', title: 'GC–TC Shell Construction', from_org: 'Summit Builders (GC)', to_org: 'Metro Concrete (TC)', contract_value: 620000, status: 'executed' },
-  { id: 'demo-c-9', project_id: 'demo-proj-9', title: 'GC–TC Concrete & Structure', from_org: 'Summit Builders (GC)', to_org: 'Metro Concrete (TC)', contract_value: 1450000, status: 'executed' },
-  { id: 'demo-c-9b', project_id: 'demo-proj-9', title: 'GC–TC Wood Frame', from_org: 'Summit Builders (GC)', to_org: 'Peak Framing (TC)', contract_value: 580000, status: 'executed' },
-  { id: 'demo-c-10', project_id: 'demo-proj-10', title: 'GC–TC Tilt-Wall & Steel', from_org: 'Summit Builders (GC)', to_org: 'Ironwork Pros (TC)', contract_value: 780000, status: 'executed' },
-  { id: 'demo-c-10b', project_id: 'demo-proj-10', title: 'GC–TC Site & Paving', from_org: 'Summit Builders (GC)', to_org: 'Roadway Construction (TC)', contract_value: 340000, status: 'approved' },
+  { id: 'demo-c-1', project_id: 'demo-proj-1', title: 'Contractor–Sub Framing Contract', from_org: 'Summit Builders (General Contractor)', to_org: 'Peak Framing (Subcontractor)', contract_value: 185000, status: 'executed' },
+  { id: 'demo-c-2', project_id: 'demo-proj-2', title: 'Contractor–Sub Mechanical Contract', from_org: 'Summit Builders (General Contractor)', to_org: 'CoolAir HVAC (Subcontractor)', contract_value: 320000, status: 'executed' },
+  { id: 'demo-c-3', project_id: 'demo-proj-3', title: 'Contractor–Sub Exterior Package', from_org: 'Summit Builders (General Contractor)', to_org: 'AllSide Exteriors (Subcontractor)', contract_value: 412000, status: 'approved' },
+  { id: 'demo-c-4', project_id: 'demo-proj-4', title: 'Contractor–Sub Steel Erection', from_org: 'Summit Builders (General Contractor)', to_org: 'Ironwork Pros (Subcontractor)', contract_value: 680000, status: 'executed' },
+  { id: 'demo-c-4b', project_id: 'demo-proj-4', title: 'Contractor–Sub MEP Package', from_org: 'Summit Builders (General Contractor)', to_org: 'MedBuild Mechanical (Subcontractor)', contract_value: 890000, status: 'executed' },
+  { id: 'demo-c-5', project_id: 'demo-proj-5', title: 'Contractor–Sub General Trades', from_org: 'Summit Builders (General Contractor)', to_org: 'Scholastic Builders (Subcontractor)', contract_value: 520000, status: 'executed' },
+  { id: 'demo-c-6', project_id: 'demo-proj-6', title: 'Contractor–Sub Luxury Build Package', from_org: 'Summit Builders (General Contractor)', to_org: 'Prestige Custom Homes (Subcontractor)', contract_value: 1250000, status: 'executed' },
+  { id: 'demo-c-6b', project_id: 'demo-proj-6', title: 'Contractor–Sub Stone & Masonry', from_org: 'Summit Builders (General Contractor)', to_org: 'Hill Country Masons (Subcontractor)', contract_value: 185000, status: 'approved' },
+  { id: 'demo-c-7', project_id: 'demo-proj-7', title: 'Contractor–Sub Brewery Build-Out', from_org: 'Summit Builders (General Contractor)', to_org: 'ATX Commercial (Subcontractor)', contract_value: 380000, status: 'executed' },
+  { id: 'demo-c-8', project_id: 'demo-proj-8', title: 'Contractor–Sub Shell Construction', from_org: 'Summit Builders (General Contractor)', to_org: 'Metro Concrete (Subcontractor)', contract_value: 620000, status: 'executed' },
+  { id: 'demo-c-9', project_id: 'demo-proj-9', title: 'Contractor–Sub Concrete & Structure', from_org: 'Summit Builders (General Contractor)', to_org: 'Metro Concrete (Subcontractor)', contract_value: 1450000, status: 'executed' },
+  { id: 'demo-c-9b', project_id: 'demo-proj-9', title: 'Contractor–Sub Wood Frame', from_org: 'Summit Builders (General Contractor)', to_org: 'Peak Framing (Subcontractor)', contract_value: 580000, status: 'executed' },
+  { id: 'demo-c-10', project_id: 'demo-proj-10', title: 'Contractor–Sub Tilt-Wall & Steel', from_org: 'Summit Builders (General Contractor)', to_org: 'Ironwork Pros (Subcontractor)', contract_value: 780000, status: 'executed' },
+  { id: 'demo-c-10b', project_id: 'demo-proj-10', title: 'Contractor–Sub Site & Paving', from_org: 'Summit Builders (General Contractor)', to_org: 'Roadway Construction (Subcontractor)', contract_value: 340000, status: 'approved' },
 ];
 
 // ════════════════════════════════════════════════════════
@@ -1037,9 +1037,9 @@ export const DEMO_INVOICE_LINE_ITEMS: DemoInvoiceLineItem[] = [
 const CL = (loc: boolean, scope: boolean, tc: boolean, mat: boolean, fc: boolean) => [
   { label: 'Location set', done: loc },
   { label: 'Scope written', done: scope },
-  { label: 'TC pricing entered', done: tc },
+  { label: 'Subcontractor pricing entered', done: tc },
   { label: 'Materials priced', done: mat },
-  { label: 'FC hours locked', done: fc },
+  { label: 'Crew hours locked', done: fc },
 ];
 
 export const DEMO_WORK_ORDER_DETAILS: DemoWorkOrderDetail[] = [

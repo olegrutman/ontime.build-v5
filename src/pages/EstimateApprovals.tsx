@@ -68,7 +68,7 @@ export default function EstimateApprovals() {
     if (!authLoading && !user) {
       navigate('/auth');
     } else if (!authLoading && !canAccess) {
-      toast.error('Only GC or TC Project Managers can approve estimates');
+      toast.error('Only general contractor or subcontractor project managers can approve estimates');
       navigate('/dashboard');
     }
   }, [user, canAccess, authLoading, navigate]);
@@ -260,7 +260,7 @@ export default function EstimateApprovals() {
         <div className="p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
           <Card>
             <CardContent className="py-8 text-center">
-              <p className="text-muted-foreground">Only GC or TC Project Managers can approve estimates</p>
+              <p className="text-muted-foreground">Only general contractor or subcontractor project managers can approve estimates</p>
             </CardContent>
           </Card>
         </div>

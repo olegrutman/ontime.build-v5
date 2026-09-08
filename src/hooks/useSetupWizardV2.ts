@@ -615,7 +615,7 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
       'LP SmartSide panels',
       'Plywood (paint-grade)',
       'T&G wood (cedar / pine)',
-      'GC specifies',
+      'Contractor specifies',
     ],
     tag: 'conditional',
     conditionalOn: 'soffit_in_scope=yes',
@@ -1693,7 +1693,7 @@ export function useSetupWizardV2(
         null,               // from_org_id: FC org not yet known
         'Trade Contractor', // to_role: TC is the client paying
         creatorOrgId || null, // to_org_id: TC's org (the payer)
-        'TC → FC SOV',
+        'Subcontractor → Crew SOV',
         scopeData, answers, userId,
       );
     }
@@ -1717,7 +1717,7 @@ export function useSetupWizardV2(
         tcParticipant?.organization_id || null, // from_org_id: invited TC if known
         'General Contractor',                // to_role: GC is the payer
         creatorOrgId || null,                // to_org_id: GC's org
-        'GC → TC SOV',
+        'Contractor → Subcontractor SOV',
         scopeData, answers, userId,
       );
     }

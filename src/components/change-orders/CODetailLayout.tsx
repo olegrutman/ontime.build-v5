@@ -107,7 +107,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const suffix = perspective === 'downstream' ? '-to-FC' : perspective === 'upstream' ? '-to-GC' : '';
+      const suffix = perspective === 'downstream' ? '-to-crew' : perspective === 'upstream' ? '-to-contractor' : '';
       const prefix = mode === 'proposal' ? 'Proposal' : co.document_type === 'WO' ? 'WO' : 'CO';
       a.download = `${prefix}-${co.co_number ?? co.id}${suffix}.pdf`;
       a.click();

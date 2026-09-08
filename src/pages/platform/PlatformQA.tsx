@@ -245,10 +245,10 @@ export default function PlatformQA() {
                         </td>
                         <td className="p-2 text-center">
                           <div className="flex justify-center gap-0.5 flex-wrap">
-                            {p.gcConnected && <Badge className="bg-green-600 text-[9px] px-1">GC</Badge>}
-                            {p.tcConnected && <Badge className="bg-blue-600 text-[9px] px-1">TC</Badge>}
-                            {p.fcConnected && <Badge className="bg-purple-600 text-[9px] px-1">FC</Badge>}
-                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 border-orange-400 text-orange-500">FC⏳</Badge>}
+                            {p.gcConnected && <Badge className="bg-green-600 text-[9px] px-1">Contractor</Badge>}
+                            {p.tcConnected && <Badge className="bg-blue-600 text-[9px] px-1">Sub</Badge>}
+                            {p.fcConnected && <Badge className="bg-purple-600 text-[9px] px-1">Crew</Badge>}
+                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 border-orange-400 text-orange-500">Crew ⏳</Badge>}
                             {p.suppConnected && <Badge className="bg-amber-600 text-[9px] px-1">SUP</Badge>}
                           </div>
                         </td>
@@ -266,7 +266,7 @@ export default function PlatformQA() {
                             {p.hasRejectedCO && <Badge variant="destructive" className="text-[9px] px-1">Rej CO</Badge>}
                             {p.hasPaidInvoice && <Badge className="bg-green-600 text-[9px] px-1">Paid</Badge>}
                             {!p.hasSov && <Badge variant="outline" className="text-[9px] px-1 text-orange-500">No SOV</Badge>}
-                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 text-orange-500">FC Pending</Badge>}
+                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 text-orange-500">Crew Pending</Badge>}
                             {p.status === 'setup' && <Badge variant="outline" className="text-[9px] px-1">Setup</Badge>}
                           </div>
                         </td>
