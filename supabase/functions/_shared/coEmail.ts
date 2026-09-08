@@ -40,7 +40,7 @@ interface Layout {
   status?: 'success' | 'danger' | 'warning' | 'info';
 }
 
-const LOGO_URL = 'https://ontime.build/ontime-logo.png';
+const LOGO_URL = 'https://ontime.build/ontime-logo-email.png';
 
 const STATUS_BANDS: Record<string, { bg: string; text: string; label: string }> = {
   success: { bg: '#16a34a', text: '#ffffff', label: 'Approved' },
