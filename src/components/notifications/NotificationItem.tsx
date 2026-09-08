@@ -58,6 +58,9 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   CO_ACKNOWLEDGED: CheckCircle2,
   CO_SCOPE_ADDED: PlusCircle,
   FC_PRICING_SUBMITTED: DollarSign,
+  CO_WITHDRAWN: Undo2,
+  BACKCHARGE_CREATED: AlertTriangle,
+  RETAINAGE_RELEASED: DollarSign,
 
   // NTE
   NTE_REQUESTED: DollarSign,
@@ -101,6 +104,9 @@ const typeColors: Record<string, string> = {
   CO_ACKNOWLEDGED: 'text-success',
   CO_SCOPE_ADDED: 'text-primary',
   FC_PRICING_SUBMITTED: 'text-primary',
+  CO_WITHDRAWN: 'text-muted-foreground',
+  BACKCHARGE_CREATED: 'text-destructive',
+  RETAINAGE_RELEASED: 'text-success',
 
   // NTE
   NTE_REQUESTED: 'text-warning',

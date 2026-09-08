@@ -9470,6 +9470,9 @@ export type Database = {
         | "NTE_WARNING_80"
         | "NTE_BLOCKED_100"
         | "FC_PRICING_SUBMITTED"
+        | "CO_WITHDRAWN"
+        | "BACKCHARGE_CREATED"
+        | "RETAINAGE_RELEASED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -9678,6 +9681,9 @@ export const Constants = {
         "NTE_WARNING_80",
         "NTE_BLOCKED_100",
         "FC_PRICING_SUBMITTED",
+        "CO_WITHDRAWN",
+        "BACKCHARGE_CREATED",
+        "RETAINAGE_RELEASED",
       ],
       order_status: [
         "DRAFT",

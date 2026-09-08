@@ -158,7 +158,12 @@ export function COStatusActions({
     });
   }
 
-  async function notifyOrg(targetOrgId: string | null, type: string, amount?: number) {
+  async function notifyOrg(
+    targetOrgId: string | null,
+    type: string,
+    amount?: number,
+    excludeUserIds: (string | null | undefined)[] = [],
+  ) {
     if (!targetOrgId) return;
 
     try {
@@ -171,8 +176,11 @@ export function COStatusActions({
       if (!members || members.length === 0) return;
 
       const { title, body } = buildCONotification(type, co.title, amount);
-      // Exclude the actor from receiving their own notification
-      const recipients = members.filter(m => m.user_id !== user?.id);
+      // Exclude the actor (and anyone already notified by a DB trigger)
+      const excluded = new Set(
+        [user?.id, ...excludeUserIds].filter(Boolean) as string[],
+      );
+      const recipients = members.filter(m => !excluded.has(m.user_id));
       await Promise.allSettled(
         recipients.map(member =>
           sendCONotification({
@@ -192,7 +200,11 @@ export function COStatusActions({
     }
   }
 
-  async function notifyAllCOParties(type: string, amount?: number) {
+  async function notifyAllCOParties(
+    type: string,
+    amount?: number,
+    excludeUserIds: (string | null | undefined)[] = [],
+  ) {
     const orgIds = new Set<string>();
     if (co.org_id) orgIds.add(co.org_id);
     if (co.assigned_to_org_id) orgIds.add(co.assigned_to_org_id);
@@ -200,7 +212,9 @@ export function COStatusActions({
       if (c.status === 'active') orgIds.add(c.organization_id);
     }
     orgIds.delete(currentOrgId);
-    await Promise.allSettled([...orgIds].map(oid => notifyOrg(oid, type, amount)));
+    await Promise.allSettled(
+      [...orgIds].map(oid => notifyOrg(oid, type, amount, excludeUserIds)),
+    );
   }
 
   async function doShare() {
@@ -399,7 +413,11 @@ export function COStatusActions({
         await approveCO.mutateAsync(co.id);
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
-        await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined);
+        // The DB trigger notify_co_status_change already alerts the CO creator,
+        // so exclude them here to avoid duplicate notifications.
+        await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined, [
+          co.created_by_user_id,
+        ]);
 
         // Auto-create backcharge for damaged_by_others COs
         if (isDamagedByOthers && user) {
@@ -437,7 +455,8 @@ export function COStatusActions({
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
       await logActivity('rejected', rejectNote.trim());
-      await notifyAllCOParties('CHANGE_REJECTED');
+      // Creator is notified by the notify_co_status_change DB trigger.
+      await notifyAllCOParties('CHANGE_REJECTED', undefined, [co.created_by_user_id]);
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
