@@ -3,8 +3,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 // Must be the verified delegated sending subdomain — the root domain is not verified.
-const SENDER_DOMAIN = 'notify.pm.ontime.build';
-const FROM = 'OnTime <noreply@notify.pm.ontime.build>';
+const SENDER_DOMAIN = 'notify.ontime.build';
+const FROM = 'Ontime.Build <noreply@notify.ontime.build>';
 
 
 export function serviceClient() {
