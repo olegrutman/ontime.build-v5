@@ -21,6 +21,7 @@ type StepState = 'pending' | 'active' | 'done' | 'failed';
 export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecorderProps) {
   const { user, userOrgRoles } = useAuth();
   const navigate = useNavigate();
+  const rl = useRoleLabelsContext();
   const [phase, setPhase] = useState<Phase>('idle');
   const [seconds, setSeconds] = useState(0);
   const [blob, setBlob] = useState<Blob | null>(null);
