@@ -85,14 +85,14 @@ export function LaborEntryForm({
       // Never override a saved entry's own rate/markup with settings defaults.
       if (isEditing) return;
       if (!user || !orgId) return;
-      const [orgRes, profileRes] = await Promise.all([
+      const [orgRes, rateRes] = await Promise.all([
         supabase.from('org_settings').select('default_hourly_rate, labor_markup_percent').eq('organization_id', orgId).maybeSingle(),
-        supabase.from('profiles').select('hourly_rate').eq('user_id', user.id).single(),
+        (supabase.rpc as any)('get_my_hourly_rate'),
       ]);
       if (cancelled) return;
       const seed = seedForNewEntry({
         orgRate: orgRes.data?.default_hourly_rate,
-        profileRate: profileRes.data?.hourly_rate,
+        profileRate: rateRes?.data != null ? Number(rateRes.data) : null,
         orgMarkup: orgRes.data?.labor_markup_percent,
         isTC,
       });
