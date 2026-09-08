@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { Mic, Square, Loader2, X, Send, RotateCcw, Check, ArrowRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -156,7 +157,7 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
         setReadyCoId(data.finalized_co_id as string);
         setReadyCoNumber(coNumber);
         setPhase('ready');
-        toast.success(`Draft ${coNumber} ready in GC inbox`);
+        toast.success(`Draft ${coNumber} sent to ${rl.GC}`);
         return;
       }
       if (data.status === 'failed') {
@@ -274,7 +275,7 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
             Voice Problem Note
           </DialogTitle>
           <DialogDescription>
-            Hold the field. Describe what you found. Sends a draft straight to the GC inbox.
+            Hold the field. Describe what you found. Sends a draft straight to your {rl.GC}.
           </DialogDescription>
         </DialogHeader>
 
@@ -377,7 +378,7 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
                 <RotateCcw className="h-4 w-4 mr-1.5" /> Re-record
               </Button>
               <Button onClick={submit}>
-                <Send className="h-4 w-4 mr-1.5" /> Send to GC
+                <Send className="h-4 w-4 mr-1.5" /> Send to {rl.GC}
               </Button>
             </div>
           )}
@@ -387,7 +388,7 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
                 <RotateCcw className="h-4 w-4 mr-1.5" /> Re-record
               </Button>
               <Button onClick={submit} disabled={!blob}>
-                <Send className="h-4 w-4 mr-1.5" /> Send to GC
+                <Send className="h-4 w-4 mr-1.5" /> Send to {rl.GC}
               </Button>
             </div>
           )}
