@@ -37,9 +37,9 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 
 // Configuration
 const SITE_NAME = "Ontime.Build"
-const SENDER_DOMAIN = "notify.pm.ontime.build"
-const ROOT_DOMAIN = "pm.ontime.build"
-const FROM_DOMAIN = "pm.ontime.build" // Domain shown in From address (may be root or sender subdomain)
+const SENDER_DOMAIN = "notify.ontime.build"
+const ROOT_DOMAIN = "ontime.build"
+const FROM_DOMAIN = "notify.ontime.build" // Domain shown in From address (may be root or sender subdomain)
 
 function redactEmail(email: string | null | undefined): string {
   if (!email) return '***'
