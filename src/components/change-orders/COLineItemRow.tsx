@@ -624,7 +624,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
               </div>
               {visibleBillable.length > 0 && (
-                <p className="text-[10px] text-muted-foreground">{visibleBillable.length} entr{visibleBillable.length === 1 ? 'y' : 'ies'} · TC rates and markup hidden</p>
+                <p className="text-[10px] text-muted-foreground">{visibleBillable.length} entr{visibleBillable.length === 1 ? 'y' : 'ies'} · rates and markup hidden</p>
               )}
             </div>
           ) : gcSummaryOnly ? (
