@@ -114,6 +114,24 @@ export function buildCONotification(
       title: 'FC pricing submitted',
       body: `Field crew has submitted pricing on ${label}.`,
     },
+    CO_WITHDRAWN: {
+      title: `${coWord} withdrawn`,
+      body: `${label} has been withdrawn and is no longer active.`,
+    },
+    BACKCHARGE_CREATED: {
+      title: 'Backcharge issued against you',
+      body:
+        amount != null
+          ? `A backcharge of ${fmtAmount(amount)} was issued on ${label}`
+          : `A backcharge was issued on ${label}`,
+    },
+    RETAINAGE_RELEASED: {
+      title: 'Retainage released',
+      body:
+        amount != null
+          ? `${fmtAmount(amount)} of retainage was released on ${label}`
+          : `Retainage was released on ${label}`,
+    },
   };
 
   return map[type] ?? { title: `${coWord} update`, body: label };

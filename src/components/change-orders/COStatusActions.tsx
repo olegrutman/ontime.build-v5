@@ -158,7 +158,12 @@ export function COStatusActions({
     });
   }
 
-  async function notifyOrg(targetOrgId: string | null, type: string, amount?: number) {
+  async function notifyOrg(
+    targetOrgId: string | null,
+    type: string,
+    amount?: number,
+    excludeUserIds: (string | null | undefined)[] = [],
+  ) {
     if (!targetOrgId) return;
 
     try {
@@ -171,8 +176,11 @@ export function COStatusActions({
       if (!members || members.length === 0) return;
 
       const { title, body } = buildCONotification(type, co.title, amount);
-      // Exclude the actor from receiving their own notification
-      const recipients = members.filter(m => m.user_id !== user?.id);
+      // Exclude the actor (and anyone already notified by a DB trigger)
+      const excluded = new Set(
+        [user?.id, ...excludeUserIds].filter(Boolean) as string[],
+      );
+      const recipients = members.filter(m => !excluded.has(m.user_id));
       await Promise.allSettled(
         recipients.map(member =>
           sendCONotification({
