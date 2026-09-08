@@ -21,6 +21,7 @@ interface Props {
 
 export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) {
   const { toast } = useToast();
+  const rl = useRoleLabelsContext();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
