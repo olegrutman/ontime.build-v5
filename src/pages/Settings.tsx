@@ -171,7 +171,21 @@ export default function Settings() {
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Change Orders</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm">Assigned to my org</p>
+                  <p className="text-sm">Submitted for my approval</p>
+                  <Switch
+                    checked={userSettings?.notify_wo_submitted ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_wo_submitted', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Input requested from my company</p>
+                  <Switch
+                    checked={userSettings?.notify_wo_input_requested ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_wo_input_requested', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Pricing submitted by my crew</p>
                   <Switch
                     checked={userSettings?.notify_wo_assigned ?? true}
                     onCheckedChange={(v) => handleNotificationChange('notify_wo_assigned', v)}
@@ -220,19 +234,66 @@ export default function Settings() {
                     onCheckedChange={(v) => handleNotificationChange('notify_inv_rejected', v)}
                   />
                 </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Payment recorded</p>
+                  <Switch
+                    checked={userSettings?.notify_inv_paid ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_inv_paid', v)}
+                  />
+                </div>
               </div>
             </div>
 
             <Separator />
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Invitations</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Purchase Orders</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">Sent, approved, and released</p>
+                    <p className="text-xs text-muted-foreground">Includes orders you receive as a supplier</p>
+                  </div>
+                  <Switch
+                    checked={userSettings?.notify_po ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_po', v)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Estimates</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Submitted and approved</p>
+                  <Switch
+                    checked={userSettings?.notify_estimate ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_estimate', v)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Invitations & Access</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm">Project invitations</p>
                   <Switch
                     checked={userSettings?.notify_project_invite ?? true}
                     onCheckedChange={(v) => handleNotificationChange('notify_project_invite', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Requests to join my company</p>
+                  <Switch
+                    checked={userSettings?.notify_join_request ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_join_request', v)}
                   />
                 </div>
               </div>
