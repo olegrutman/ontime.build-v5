@@ -28,12 +28,12 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
     const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
     const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
     costs = financials.fcLaborTotal + financials.tcActualCostTotal + ownMatCost + ownEqCost;
-    label = 'TC Profitability';
+    label = 'Profitability';
 
   } else {
     revenue = financials.fcLaborTotal;
     costs = financials.fcActualCostTotal;
-    label = 'FC Profitability';
+    label = 'Profitability';
   }
 
   const margin = revenue - costs;
