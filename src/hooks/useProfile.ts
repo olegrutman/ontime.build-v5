@@ -59,9 +59,15 @@ export interface UserSettings {
   notify_wo_assigned: boolean;
   notify_wo_approved: boolean;
   notify_wo_rejected: boolean;
+  notify_wo_submitted: boolean;
+  notify_wo_input_requested: boolean;
   notify_inv_submitted: boolean;
   notify_inv_approved: boolean;
   notify_inv_rejected: boolean;
+  notify_inv_paid: boolean;
+  notify_po: boolean;
+  notify_estimate: boolean;
+  notify_join_request: boolean;
   notify_project_invite: boolean;
   email_digest_frequency: string;
   // Onboarding
@@ -153,9 +159,15 @@ export function useProfile() {
           notify_wo_assigned: true,
           notify_wo_approved: true,
           notify_wo_rejected: true,
+          notify_wo_submitted: true,
+          notify_wo_input_requested: true,
           notify_inv_submitted: true,
           notify_inv_approved: true,
           notify_inv_rejected: true,
+          notify_inv_paid: true,
+          notify_po: true,
+          notify_estimate: true,
+          notify_join_request: true,
           notify_project_invite: true,
           email_digest_frequency: 'instant',
           onboarding_dismissed: false,
