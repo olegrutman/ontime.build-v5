@@ -3,16 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export function useSidebarAttention(projectId: string | undefined) {
-  const { user } = useAuth();
+  const { user, currentOrgId } = useAuth();
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!projectId || !user) return;
 
     const fetch = async () => {
-      const [coRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes, rfiNewRes] = await Promise.all([
-        supabase.from('change_orders').select('id', { count: 'exact', head: true })
+      // CO attention = COs submitted for review UNION active FC input requests.
+      // Fetch ids (not head counts) so the two sets can be unioned without
+      // double-counting a CO that is both submitted and input-requested.
+      const collabPromise = currentOrgId
+        ? supabase.from('change_order_collaborators')
+            .select('co_id, change_orders!inner(id, status)')
+            .eq('organization_id', currentOrgId)
+            .eq('status', 'active')
+            .eq('change_orders.project_id', projectId)
+        : Promise.resolve({ data: [] as any[] });
+
+      const [coRes, collabRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes, rfiNewRes] = await Promise.all([
+        supabase.from('change_orders').select('id')
           .eq('project_id', projectId).eq('status', 'SUBMITTED'),
+        collabPromise,
         supabase.from('invoices').select('id', { count: 'exact', head: true })
           .eq('project_id', projectId).eq('status', 'SUBMITTED'),
         supabase.from('purchase_orders').select('id', { count: 'exact', head: true })
@@ -27,8 +39,16 @@ export function useSidebarAttention(projectId: string | undefined) {
           .eq('project_id', projectId).eq('status', 'open'),
       ]);
 
+      const coIds = new Set((coRes.data || []).map((r: any) => r.id));
+      for (const c of (collabRes.data || []) as any[]) {
+        const co = c.change_orders;
+        if (co && !['approved', 'completed', 'contracted', 'rejected'].includes((co.status || '').toLowerCase())) {
+          coIds.add(c.co_id);
+        }
+      }
+
       const result: Record<string, number> = {};
-      if (coRes.count && coRes.count > 0) result['change-orders'] = coRes.count;
+      if (coIds.size > 0) result['change-orders'] = coIds.size;
       if (invRes.count && invRes.count > 0) result['invoices'] = invRes.count;
       // Combine SUBMITTED POs (need pricing) + ORDERED/READY (pending delivery)
       const poTotal = (poSubmittedRes.count || 0) + (poPendingRes.count || 0);
@@ -40,7 +60,7 @@ export function useSidebarAttention(projectId: string | undefined) {
     };
 
     fetch();
-  }, [projectId, user]);
+  }, [projectId, user, currentOrgId]);
 
   return counts;
 }
