@@ -44,7 +44,7 @@ export function DemoPurchaseOrdersTab({ projectId }: { projectId: string }) {
     if (!flow) return;
     updatePOStatus(po.id, flow.next);
     const messages: Record<string, string> = {
-      priced: `Pricing submitted for ${po.po_number}! 💰 The GC/TC will now review.`,
+      priced: `Pricing submitted for ${po.po_number}! 💰 The buyer will now review.`,
       approved: `${po.po_number} approved! ✅ Ready to be ordered from ${po.supplier_name}.`,
       ordered: `${po.po_number} marked as ordered! 📦 Materials are on the way.`,
     };

@@ -252,7 +252,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
       fetchTeam();
       setFcDirty(false);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save FC contract');
+      toast.error(err.message || 'Failed to save crew contract');
     }
   };
 

@@ -122,7 +122,7 @@ export const SCOPE_CATALOG: ScopeItem[] = [
   { id:'k2', name:'Inspection fix',                unit:'EA', workType:'backout' },
   { id:'k3', name:'Punch list item',               unit:'EA', workType:'backout' },
   { id:'k4', name:'Warranty callback',             unit:'EA', workType:'backout' },
-  { id:'k5', name:'GC-directed fix',               unit:'EA', workType:'backout' },
+  { id:'k5', name:'Contractor-directed fix',               unit:'EA', workType:'backout' },
   { id:'k6', name:'MEP backout',                   unit:'EA', workType:'backout' },
 
   // ── STAIRS ───────────────────────────────────────────
@@ -179,7 +179,7 @@ export const SMART_SUGGESTIONS: Record<string, Record<string, string[]>> = {
     framing:    ['New wall framing', 'Header installation'],
     structural: ['Structural column install', 'Hold-down anchor install'],
     wrb:        ['Housewrap (Tyvek) install', 'Sill pan flashing install'],
-    backout:    ['GC-directed fix'],
+    backout:    ['Contractor-directed fix'],
   },
   other: {
     framing:    ['New wall framing'],

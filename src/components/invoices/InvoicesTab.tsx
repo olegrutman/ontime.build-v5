@@ -350,7 +350,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         return { 
           message: 'Invoices you send to the General Contractor for completed work.',
           emptyMessage: contractsWhereUserCanInvoice.length > 0 
-            ? 'Create your first invoice to start billing the GC.'
+            ? 'Create your first invoice to start billing.'
             : 'No contract with a General Contractor found.'
         };
       } else {

@@ -714,7 +714,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                {needsUpstreamApproval ? 'Send to GC for Approval' : 'Submit to Supplier'}
+                {needsUpstreamApproval ? 'Send for Approval' : 'Submit to Supplier'}
               </Button>
             </>
           )}

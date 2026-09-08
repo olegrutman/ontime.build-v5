@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
       </p>
       <ul>
         <li>General Contractors cannot see Trade Contractor labor margins.</li>
-        <li>Trade Contractors cannot see Supplier pricing when materials are procured by the GC.</li>
+        <li>Subcontractors cannot see supplier pricing when materials are procured by the general contractor.</li>
         <li>Field Crews see only the work assigned to them and their own time and expenses.</li>
       </ul>
       <p>

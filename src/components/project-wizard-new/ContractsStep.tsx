@@ -229,7 +229,7 @@ export function ContractsStep({
   const upstreamFieldLabel = isGC
     ? "Owner contract value — your revenue from the property owner"
     : isTC
-    ? 'What is the GC paying you?'
+    ? 'What is the general contractor paying you?'
     : 'Total contract value';
 
   return (
@@ -244,7 +244,7 @@ export function ContractsStep({
         </div>
         <p className="text-sm text-muted-foreground">
           {isTC
-            ? 'These become the official upstream (GC) and downstream (FC) contracts for this project.'
+            ? 'These become the official upstream (general contractor) and downstream (crew) contracts for this project.'
             : isGC
             ? 'These become the official upstream (Owner) and downstream (Trade Contractor) contracts for this project.'
             : 'This becomes the official contract record for this project.'}

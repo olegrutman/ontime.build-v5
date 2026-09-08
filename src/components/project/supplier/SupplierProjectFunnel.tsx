@@ -82,7 +82,7 @@ export function SupplierProjectFunnel({
   // Wait state copy shown when the ball is in the GC's court
   const waitNote =
     estimate > 0 && ordered === 0
-      ? `Nothing ordered against ${fmt(estimate)} estimate — waiting on a purchase order from the GC`
+      ? `Nothing ordered against ${fmt(estimate)} estimate — waiting on a purchase order from the general contractor`
       : null;
 
   return (

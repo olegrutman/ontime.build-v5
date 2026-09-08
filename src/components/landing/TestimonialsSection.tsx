@@ -4,7 +4,7 @@ const pillars = [
   {
     icon: Hammer,
     title: 'Built with the trade, not at it',
-    body: 'Every workflow — SOV invoicing, closed-loop returns, change-order routing — was drafted from real GC and framing-crew job walks. If it does not survive a Monday morning on site, it does not ship.',
+    body: 'Every workflow — SOV invoicing, closed-loop returns, change-order routing — was drafted from real general contractor and framing-crew job walks. If it does not survive a Monday morning on site, it does not ship.',
   },
   {
     icon: ShieldCheck,

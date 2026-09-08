@@ -42,7 +42,7 @@ const plans = [
     tier: 'Enterprise',
     price: 'Custom',
     period: '',
-    desc: 'For large GC organizations, developers, and CM firms managing full portfolios.',
+    desc: 'For large general contractor organizations, developers, and CM firms managing full portfolios.',
     features: [
       { text: 'Everything in Operations' },
       { text: 'Portfolio-level reporting' },

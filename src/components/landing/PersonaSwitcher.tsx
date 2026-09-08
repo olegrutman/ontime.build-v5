@@ -9,7 +9,7 @@ const personas = [
     bullets: [
       'Approve invoices, COs and POs from one inbox',
       'Live budget — committed vs actual, no spreadsheets',
-      'GCs never see TC labor margins — privacy is default',
+      'General contractors never see subcontractor labor margins — privacy is default',
     ],
   },
   {
@@ -135,7 +135,7 @@ export function PersonaSwitcher() {
             <div className="flex flex-col gap-2">
               {[
                 { id: 'INV-1048', desc: 'Phase 1 labor', amt: '$18,400', st: 'Approved', stColor: 'hsl(153, 82%, 31%)' },
-                { id: 'INV-1049', desc: 'Phase 2 partial', amt: '$22,100', st: 'GC Review', stColor: 'hsl(var(--amber-d))' },
+                { id: 'INV-1049', desc: 'Phase 2 partial', amt: '$22,100', st: 'In Review', stColor: 'hsl(var(--amber-d))' },
                 { id: 'CO-045', desc: 'Roof sheathing', amt: '$9,800', st: 'Submitted', stColor: 'hsl(var(--amber-d))' },
                 { id: 'RET-12', desc: 'Excess lumber', amt: '+$1,240', st: 'Credit', stColor: 'hsl(153, 82%, 31%)' },
               ].map((r) => (

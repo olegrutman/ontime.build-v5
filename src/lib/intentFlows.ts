@@ -195,7 +195,7 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       },
       answers: [
         { id: 'us_haul',  label: 'We haul it',     icon: '🚚' },
-        { id: 'gc_dump',  label: 'GC has dumpster', icon: '🗑️' },
+        { id: 'gc_dump',  label: 'Contractor has dumpster', icon: '🗑️' },
         { id: 'unsure',   label: 'Not sure',       icon: '❓' },
       ],
     },
@@ -220,7 +220,7 @@ const TEAR_OUT_FLOW: ScopeFlow = {
       large: 'a large area of', full: 'the full extent of',
     }, val(a, 'extent'), '');
     const disposal = val(a, 'disposal') === 'us_haul' ? 'We haul debris.' :
-                     val(a, 'disposal') === 'gc_dump' ? 'GC dumpster on site.' : '';
+                     val(a, 'disposal') === 'gc_dump' ? 'Contractor dumpster on site.' : '';
     const protect = val(a, 'protection') === 'occupied' ? 'Occupied — full dust containment required.' :
                     val(a, 'protection') === 'plastic' ? 'Poly sheeting and zip walls.' : '';
     const bearingNote = whatId === 'wall_bearing'
@@ -343,7 +343,7 @@ const STRUCTURAL_FLOW: ScopeFlow = {
       answers: [
         { id: 'have_pe',     label: 'Yes — stamped',       icon: '✎', spec: true },
         { id: 'pending',     label: 'PE engaged, drawing pending', icon: '⏱' },
-        { id: 'unsure',      label: 'Not sure / GC handles', icon: '❓' },
+        { id: 'unsure',      label: 'Not sure / contractor handles', icon: '❓' },
       ],
     },
     {
@@ -488,7 +488,7 @@ const INSPECTION_FIX_FLOW: ScopeFlow = {
       answers: [
         { id: 'building',   label: 'Building inspector', icon: '📋' },
         { id: 'engineer',   label: 'Engineer of record', icon: '✎' },
-        { id: 'gc_punch',   label: 'GC punch list',      icon: '📝' },
+        { id: 'gc_punch',   label: 'Contractor punch list',      icon: '📝' },
         { id: 'owner',      label: 'Owner walkthrough',  icon: '👤' },
         { id: 'self',       label: 'We caught it',       icon: '👀' },
         { id: 'other',      label: 'Other',              icon: '•' },
@@ -535,7 +535,7 @@ const INSPECTION_FIX_FLOW: ScopeFlow = {
   summarize: (ctx, a) => {
     const flagger = lookup({
       building: 'Building inspector', engineer: 'Engineer of record',
-      gc_punch: 'GC punch list', owner: 'Owner walkthrough',
+      gc_punch: 'Contractor punch list', owner: 'Owner walkthrough',
       self: 'Self-caught', other: 'Authority',
     }, val(a, 'authority'), 'Authority');
     const cat = lookup({
@@ -632,7 +632,7 @@ const MODIFY_EXISTING_FLOW: ScopeFlow = {
       : '';
     const source = val(a, 'source') === 'rfi' ? 'Per approved RFI.'
                  : val(a, 'source') === 'plan_revision' ? 'Per plan revision.'
-                 : val(a, 'source') === 'field' ? 'Field decision — confirm with GC.'
+                 : val(a, 'source') === 'field' ? 'Field decision — confirm with the general contractor.'
                  : '';
     return `${change} the ${what} at ${loc(ctx)}. ${load} ${source}`.replace(/\s+/g, ' ').trim();
   },

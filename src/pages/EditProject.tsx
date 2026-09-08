@@ -690,8 +690,8 @@ export default function EditProject() {
                           </ToggleGroup>
                           <p className="text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-2">
                             {(editingData.material_responsibility || 'TC') === 'GC'
-                              ? 'GC will manage material ordering and see supplier pricing for this contract.'
-                              : 'TC will manage material ordering and see supplier pricing for this contract.'}
+                              ? 'The general contractor will manage material ordering and see supplier pricing for this contract.'
+                              : 'The subcontractor will manage material ordering and see supplier pricing for this contract.'}
                           </p>
                           <p className="text-[11px] text-muted-foreground">
                             The responsible party can view supplier pricing, finalize Purchase Orders, and control material ordering for this contract.

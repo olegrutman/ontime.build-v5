@@ -19,8 +19,8 @@ export default function SecurityPage() {
 
       <h2>2. Multi-party privacy by default</h2>
       <ul>
-        <li><strong>GCs don't see TC labor margins.</strong> Trade Contractor cost breakdowns and labor markup are invisible to the GC by default. Per-project markup disclosure can be set to hidden, summary, or detailed.</li>
-        <li><strong>TCs don't see supplier pricing when the GC procures materials.</strong> Supplier estimates and PO pricing are masked from downstream Trade Contractors.</li>
+        <li><strong>General contractors don't see subcontractor labor margins.</strong> Subcontractor cost breakdowns and labor markup are invisible to the general contractor by default. Per-project markup disclosure can be set to hidden, summary, or detailed.</li>
+        <li><strong>Subcontractors don't see supplier pricing when the general contractor procures materials.</strong> Supplier estimates and purchase order pricing are masked from downstream subcontractors.</li>
         <li><strong>Field Crews see only their assigned work.</strong> Their dashboards never expose upstream contract values or supplier negotiations.</li>
       </ul>
 

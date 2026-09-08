@@ -12,7 +12,7 @@ const features = [
   {
     num: '03', icon: '📄', title: 'Change Orders',
     desc: 'Document and approve scope changes with a proper financial trail. Every change order flows directly into project cost tracking — no more verbal agreements that disappear.',
-    tags: ['Scope Documentation', 'GC Approval', 'Cost Integration', 'Audit Trail'],
+    tags: ['Scope Documentation', 'Contractor Approval', 'Cost Integration', 'Audit Trail'],
   },
   {
     num: '04', icon: '💰', title: 'Invoicing',

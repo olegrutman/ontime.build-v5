@@ -35,7 +35,7 @@ interface PortfolioOverviewHeaderProps {
 const ROLE_COPY: Record<string, { receivable: string; payable: string; contractLabel: string }> = {
   GC: { receivable: 'owners', payable: 'subs', contractLabel: 'owner' },
   TC: { receivable: 'GCs', payable: 'crews & suppliers', contractLabel: 'GC' },
-  FC: { receivable: 'TCs/GCs', payable: 'labor & expenses', contractLabel: 'TC/GC' },
+  FC: { receivable: 'contractors', payable: 'labor & expenses', contractLabel: 'Contract' },
 };
 
 export function PortfolioOverviewHeader({

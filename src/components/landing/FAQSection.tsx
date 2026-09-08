@@ -16,19 +16,19 @@ const faqs = [
   },
   {
     q: 'How is this different from Procore?',
-    a: "Flat $89 per company per month — not $$$ per seat. All four roles (GC, Trade, Field Crew, Supplier) included. Purpose-built for change orders, SOV reconciliation, and material returns — the three things that quietly cost teams the most money. And it's actually usable on a phone.",
+    a: "Flat $89 per company per month — not $$$ per seat. All four roles (general contractor, subcontractor, crew, supplier) included. Purpose-built for change orders, SOV reconciliation, and material returns — the three things that quietly cost teams the most money. And it's actually usable on a phone.",
   },
   {
     q: 'Is my QuickBooks or financial data safe?',
-    a: 'We never store your QuickBooks credentials. Integrations use OAuth on a per-user basis, and every organization owns its own data. Row-level security means a GC never sees a Trade\'s labor margins unless the Trade opts in.',
+    a: 'We never store your QuickBooks credentials. Integrations use OAuth on a per-user basis, and every organization owns its own data. Row-level security means a general contractor never sees a subcontractor's labor margins unless the subcontractor opts in.',
   },
   {
     q: 'Can I cancel? What happens to my data?',
     a: 'Yes, cancel anytime from Settings — no phone call, no retention team. You get a full export window for POs, invoices, COs, SOVs, and returns as PDFs and CSVs. Your data is yours.',
   },
   {
-    q: 'Can a GC see my labor margins as a Trade Contractor?',
-    a: 'No — by default your labor cost and markup are invisible to the GC. Per-project markup disclosure can be set to hidden, summary, or detailed if you want to share more. The default is privacy.',
+    q: 'Can a general contractor see my labor margins as a subcontractor?',
+    a: 'No — by default your labor cost and markup are invisible to the general contractor. Per-project markup disclosure can be set to hidden, summary, or detailed if you want to share more. The default is privacy.',
   },
 ];
 
