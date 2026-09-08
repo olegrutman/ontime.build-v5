@@ -79,7 +79,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
     : co.status.replace(/_/g, ' ');
 
   // Headline financial number — single source of truth for the dark command console
-  const headlineLabel = isGC ? 'Total Billable to GC' : isTC ? 'Total to GC' : 'Total to TC';
+  const headlineLabel = isGC ? 'Total billable to you' : isTC ? `Total to ${rl.GC}` : `Total to ${rl.TC}`;
   const headlineValue = isGC
     ? (props.tcBillableTotal ?? financials.tcBillableToGC)
     : financials.viewer.totalToUpstream;
@@ -137,12 +137,12 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             const matResp = props.materialResponsible ?? 'TC';
             const eqResp = props.equipmentResponsible ?? 'TC';
             const headline = matResp === 'GC' && eqResp === 'GC'
-              ? 'TC Labor'
+              ? `${rl.TC} labor`
               : matResp === 'GC'
-                ? 'TC Labor + Equipment'
+                ? `${rl.TC} labor + equipment`
                 : eqResp === 'GC'
-                  ? 'TC Labor + Materials'
-                  : 'TC Submitted';
+                  ? `${rl.TC} labor + materials`
+                  : `${rl.TC} submitted`;
             const billableTotal = props.tcBillableTotal ?? (financials.tcBillableToGC
               + (matResp === 'TC' ? financials.materialsTotal : 0)
               + (eqResp === 'TC' ? financials.equipmentTotal : 0));
@@ -158,7 +158,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 <div className="text-right">
                   <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>
                   {matResp === 'GC' && (
-                    <p className="text-[10px] italic text-muted-foreground leading-tight">GC-procured — billed separately</p>
+                    <p className="text-[10px] italic text-muted-foreground leading-tight">{rl.GC}-procured — billed separately</p>
                   )}
                 </div>
               </div>
@@ -167,7 +167,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 <div className="text-right">
                   <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>
                   {eqResp === 'GC' && (
-                    <p className="text-[10px] italic text-muted-foreground leading-tight">GC-procured — billed separately</p>
+                    <p className="text-[10px] italic text-muted-foreground leading-tight">{rl.GC}-procured — billed separately</p>
                   )}
                 </div>
               </div>
