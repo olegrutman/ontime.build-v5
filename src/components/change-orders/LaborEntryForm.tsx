@@ -232,7 +232,7 @@ export function LaborEntryForm({
     if (!canSave) { toast.error(validationMessage ?? 'Complete required fields.'); return; }
 
     if (!isActualCost && !isEditing && nteCap && nteCap > 0) {
-      if (nteUsed >= nteCap) { toast.error('NTE cap reached. GC must increase.'); return; }
+      if (nteUsed >= nteCap) { toast.error('NTE cap reached — an increase must be approved.'); return; }
       if (willExceed && !showNTEWarn) { setShowNTEWarn(true); return; }
     }
 

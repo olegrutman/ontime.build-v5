@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
@@ -230,7 +231,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           try {
             await requestFCInput.mutateAsync(fcOrgOptions[0].id);
             toast.success(`Requested hours from ${fcOrgOptions[0].name}`);
-          } catch { toast.error('Failed to request FC input'); }
+          } catch { toast.error(`Failed to request ${rl.FC} input`); }
         } else {
           // Multi-FC: prefer scrolling to the dedicated card; if it isn't on screen
           // (mobile/condensed sidebar) fall back to a simple prompt.
@@ -245,7 +246,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               try {
                 await requestFCInput.mutateAsync(fcOrgOptions[idx].id);
                 toast.success(`Requested hours from ${fcOrgOptions[idx].name}`);
-              } catch { toast.error('Failed to request FC input'); }
+              } catch { toast.error(`Failed to request ${rl.FC} input`); }
             }
           }
         }
@@ -266,7 +267,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               await completeFCInput.mutateAsync();
             }
             toast.success('Submitted to Trade Contractor');
-          } catch (e: any) { toast.error(e?.message ?? 'Failed to submit to TC'); }
+          } catch (e: any) { toast.error(e?.message ?? `Failed to submit to ${rl.TC}`); }
         }
         break;
       case 'close_for_pricing':
