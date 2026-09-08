@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export function useSidebarAttention(projectId: string | undefined) {
-  const { user, currentOrgId } = useAuth();
+  const { user, userOrgRoles } = useAuth();
+  const currentOrgId = userOrgRoles[0]?.organization_id;
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
