@@ -164,7 +164,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
       const owned = ownedRes.data || [];
       const collabCOs = (collabRes.data || [])
-        .map((c: any) => c.change_orders)
+        .map((c: any) => (c.change_orders ? { ...c.change_orders, _inputRequested: c.status === 'active' } : null))
         .filter(Boolean);
 
       const all = [...owned];
@@ -220,6 +220,21 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   }
   if (!isTM && remainingToEarn !== null && remainingToEarn > 0 && (progressPct ?? 0) < 100) {
     warnings.push({ color: C.blue, icon: '📅', title: 'Work Remaining', sub: `${100 - (progressPct ?? 0)}% of your contract not yet invoiced`, value: fmt(remainingToEarn), pill: 'Upcoming', pillType: 'pb', tab: 'invoices' });
+  }
+  const inputRequestedCOs = changeOrders.filter(
+    (co: any) => co._inputRequested && !['approved', 'completed', 'contracted', 'rejected'].includes(co.status),
+  );
+  if (inputRequestedCOs.length > 0) {
+    warnings.push({
+      color: C.yellow,
+      icon: '✋',
+      title: `${inputRequestedCOs.length} ${isTM ? 'WO' : 'CO'}${inputRequestedCOs.length > 1 ? 's' : ''} need your input`,
+      sub: `${tcName} requested your hours and materials`,
+      value: `${inputRequestedCOs.length}`,
+      pill: 'Action',
+      pillType: 'pw',
+      tab: 'change-orders',
+    });
   }
   if (isTM && pendingCOs.length > 0) {
     warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending WO${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Awaiting approval', value: `${pendingCOs.length} WOs`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });

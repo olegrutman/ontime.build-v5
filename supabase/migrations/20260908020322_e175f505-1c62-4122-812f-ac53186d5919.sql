@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.notify_fc_input_requested() FROM PUBLIC, anon, authenticated;

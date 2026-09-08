@@ -74,6 +74,19 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     const submitAction = canSubmitNow
       ? { label: `Submit to ${upstream}`, action: submitActionName }
       : { label: `Assign ${upstream} to submit`, action: 'noop' };
+    // FC was explicitly asked for input — say so plainly instead of a generic prompt.
+    if (isFC && isFCCollaborator && ['draft', 'shared', 'work_in_progress'].includes(status)) {
+      return {
+        icon: <ClipboardList className="h-5 w-5" />,
+        title: `${upstream} requested your input`,
+        subtitle: `Log your hours and materials, then submit to ${upstream}`,
+        actions: [
+          { label: `Submit to ${upstream}`, action: submitActionName, primary: true },
+          { label: 'Log Hours', action: 'log_hours' },
+          { label: 'Add Materials', action: 'scroll_materials' },
+        ],
+      };
+    }
     if (status === 'closed_for_pricing') {
       return {
         icon: <Send className="h-5 w-5" />,
