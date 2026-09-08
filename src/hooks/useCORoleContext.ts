@@ -76,7 +76,7 @@ export function useCORoleContext(
       currentCollaborator?.organization?.name ??
       collaborators[0]?.organization?.name ??
       fcCreatorOrg?.name ??
-      'Field crew';
+      'Crew';
 
     const canRequestFCInput = !!co && isTC && (
       ((co.assigned_to_org_id === myOrgId || co.org_id === myOrgId) &&

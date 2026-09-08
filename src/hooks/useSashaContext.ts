@@ -19,8 +19,8 @@ export function useSashaContext(): string {
   if (isDemoMode) {
     const roleLabels: Record<string, string> = {
       GC: 'General Contractor Project Manager',
-      TC: 'Trade Contractor Project Manager',
-      FC: 'Field Crew member',
+      TC: 'Subcontractor Project Manager',
+      FC: 'Crew member',
       SUPPLIER: 'Material Supplier',
     };
     context = `[DEMO MODE] The user is exploring Ontime.Build as a ${roleLabels[demoRole || ''] || demoRole}. `;
@@ -28,7 +28,7 @@ export function useSashaContext(): string {
   }
 
   if (path === '/dashboard') return context + 'Dashboard — Shows: list of projects with status badges, quick stats (active projects, pending items), financial snapshot tiles, needs-attention panel highlighting urgent items, reminders tile, and a "New Project" button. Users can click any project to open it.';
-  if (path === '/demo') return context + 'Demo role selection page — Shows: role cards for General Contractor, Trade Contractor, Field Crew, and Supplier. Users pick a role to explore a demo project from that perspective.';
+  if (path === '/demo') return context + 'Demo role selection page — Shows: role cards for General Contractor, Subcontractor, Crew, and Supplier. Users pick a role to explore a demo project from that perspective.';
   if (path.startsWith('/project/') && path.endsWith('/edit')) return context + 'Edit Project page — Shows: editable project details like name, address, type, and status. Users can update project information and save changes.';
   if (path.startsWith('/projects/') && path.endsWith('/scope')) return context + 'Edit Project Scope page — Shows: structures and levels defined for the project. Users can add, remove, or rename structures (e.g. Building A, Building B) and levels (e.g. Level 1, Level 2).';
 
@@ -36,10 +36,10 @@ export function useSashaContext(): string {
   if (path.match(/\/project\/[^/]+\/change-orders\/[^/]+/)) return context + 'Change Order Detail — Shows: CO title, status, pricing type (Lump Sum, T&M, NTE), line items with labor/material/equipment breakdowns, collaborator pricing inputs, approval/rejection actions, activity timeline, and NTE cap tracking. Users can edit pricing, submit for review, approve/reject, and track all CO activity.';
 
   if (path.startsWith('/project/')) {
-    if (tab === 'change-orders') return context + 'Project Change Orders tab — Shows: list of Change Orders with status badges (Draft, Shared, Submitted, Approved, Contracted, Completed), CO number, title, pricing type, and total amount. Users can create new COs, filter by status, and click into any CO to see line-item details, collaborator pricing, and approval workflows. COs flow through role-based pricing chains (GC→TC→FC).';
+    if (tab === 'change-orders') return context + 'Project Change Orders tab — Shows: list of Change Orders with status badges (Draft, Shared, Submitted, Approved, Contracted, Completed), CO number, title, pricing type, and total amount. Users can create new COs, filter by status, and click into any CO to see line-item details, collaborator pricing, and approval workflows. COs flow through role-based pricing chains (general contractor → subcontractor → crew).';
     if (tab === 'work-orders') return context + 'Project Change Orders tab — Redirects to Change Orders. Work orders have been replaced by Change Orders.';
     if (tab === 'purchase-orders') return context + 'Project Purchase Orders tab — Shows: PO cards with PO number, supplier name, status badge, and total amount. Users can create new POs, filter by status, and click into any PO to see line-item details and pricing. POs can be sent to suppliers, approved by GCs, and tracked through delivery.';
-    if (tab === 'invoices') return context + 'Project Invoices tab — Shows: invoice cards with invoice number, billing period, status (Draft, Submitted, Approved, Paid), subtotal, retainage, and total amount. Users can create new invoices from the Schedule of Values or from a PO. Invoices flow upstream: FC→TC→GC.';
+    if (tab === 'invoices') return context + 'Project Invoices tab — Shows: invoice cards with invoice number, billing period, status (Draft, Submitted, Approved, Paid), subtotal, retainage, and total amount. Users can create new invoices from the Schedule of Values or from a PO. Invoices flow upstream: crew → subcontractor → general contractor.';
     if (tab === 'sov') return context + 'Project Schedule of Values (SOV) tab — Shows: SOV line items with scheduled values, billed-to-date amounts, and remaining balances. A progress bar shows overall billing progress. Users can edit SOV items, lock the SOV for billing, and create invoices from them.';
     if (tab === 'rfis') return context + 'Project RFIs tab — Shows: list of Requests for Information with priority badges (Low, Medium, High, Critical), status (Open, Answered, Closed), subject, and assigned responder. Users can create new RFIs or click into existing ones.';
     if (tab === 'financials') return context + 'Project Financials tab — Shows: budget overview with contract value, total billed, total paid, retainage held, and remaining balance. Financial health charts show billing trends over time. Includes receivables vs payables breakdown for TCs, and profit position analysis.';

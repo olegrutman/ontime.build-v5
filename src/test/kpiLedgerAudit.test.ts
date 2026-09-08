@@ -8,11 +8,11 @@ import { buildProjectLedger, type LedgerInput } from '@/lib/kpiLedger';
  */
 
 const baseInput = (over: Partial<LedgerInput> = {}): LedgerInput => ({
-  role: 'Trade Contractor',
+  role: 'Subcontractor',
   myOrgIds: ['tc'],
   contracts: [
-    { id: 'c1', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: 'tc', to_org_id: 'gc', contract_sum: 814540.5, original_contract_sum: 800000, co_approved_sum: 14540.5, status: 'Active' },
-    { id: 'c2', from_role: 'Field Crew', to_role: 'Trade Contractor', from_org_id: 'fc', to_org_id: 'tc', contract_sum: 600000, original_contract_sum: 600000, co_approved_sum: 0, status: 'Active' },
+    { id: 'c1', from_role: 'Subcontractor', to_role: 'General Contractor', from_org_id: 'tc', to_org_id: 'gc', contract_sum: 814540.5, original_contract_sum: 800000, co_approved_sum: 14540.5, status: 'Active' },
+    { id: 'c2', from_role: 'Crew', to_role: 'Subcontractor', from_org_id: 'fc', to_org_id: 'tc', contract_sum: 600000, original_contract_sum: 600000, co_approved_sum: 0, status: 'Active' },
   ],
   ownerContractValue: null,
   approvedCORevenue: 14540.5,
@@ -59,7 +59,7 @@ describe('margin to date is real performance, not a slice of the forecast', () =
 describe('forecast margin needs a cost side', () => {
   it('FC with revenue but no downstream cost is not 100% margin', () => {
     const l = buildProjectLedger(baseInput({
-      role: 'Field Crew',
+      role: 'Crew',
       myOrgIds: ['fc'],
       approvedCORevenue: 0,
       approvedCOCost: 0,

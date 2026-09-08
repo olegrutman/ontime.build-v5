@@ -92,7 +92,7 @@ function ContractRow({ contract, currentOrgId, teamMembers, canEdit, onContractU
   const isPending = relatedMember?.status === 'Invited';
   const displayTrade = formatTrade(contract.trade);
   const retainageAmount = (contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100);
-  const isTCContract = contract.from_role === 'Trade Contractor' || contract.to_role === 'Trade Contractor';
+  const isTCContract = contract.from_role === 'Subcontractor' || contract.to_role === 'Subcontractor';
 
   const [editOpen, setEditOpen] = useState(false);
   const [editValue, setEditValue] = useState<string>(contract.material_responsibility || 'TC');
@@ -160,8 +160,8 @@ function ContractRow({ contract, currentOrgId, teamMembers, canEdit, onContractU
                         onValueChange={(v) => { if (v) setEditValue(v); }}
                         className="justify-start"
                       >
-                        <ToggleGroupItem value="GC" className="px-4 text-xs">GC</ToggleGroupItem>
-                        <ToggleGroupItem value="TC" className="px-4 text-xs">TC</ToggleGroupItem>
+                        <ToggleGroupItem value="GC" className="px-4 text-xs">General Contractor</ToggleGroupItem>
+                        <ToggleGroupItem value="TC" className="px-4 text-xs">Subcontractor</ToggleGroupItem>
                       </ToggleGroup>
                       <Button size="sm" className="w-full" onClick={handleSave} disabled={saving}>
                         {saving && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}

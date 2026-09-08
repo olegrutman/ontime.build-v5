@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { COCollaborator, COFCOrgOption } from '@/types/changeOrder';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface FCInputRequestCardProps {
   canRequest: boolean;
@@ -30,6 +31,7 @@ export function FCInputRequestCard({
   onRequest,
   onComplete,
 }: FCInputRequestCardProps) {
+  const rl = useRoleLabelsContext();
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
 
   const activeCollaborator = useMemo(
@@ -43,17 +45,17 @@ export function FCInputRequestCard({
   );
 
   const statusLabel = activeCollaborator
-    ? 'Waiting on FC input'
+    ? `Waiting on ${rl.FC}`
     : completedCollaborator
-      ? 'FC input complete'
-      : 'No FC requested yet';
+      ? `${rl.FC} input complete`
+      : `No ${rl.FC.toLowerCase()} requested yet`;
 
   const selectedValue = selectedOrgId || activeCollaborator?.organization_id || '';
 
   return (
     <div className="co-light-shell overflow-hidden">
       <div className="px-4 py-3 border-b border-border co-light-header">
-        <h3 className="text-sm font-semibold text-foreground">Field crew involvement</h3>
+        <h3 className="text-sm font-semibold text-foreground">{rl.FC} involvement</h3>
       </div>
       <div className="px-4 py-3 space-y-3">
         <div className="space-y-1">
@@ -68,10 +70,10 @@ export function FCInputRequestCard({
 
         {canRequest && (
           <div className="space-y-2">
-            <Label htmlFor="fc-org-select">Assign field crew</Label>
+            <Label htmlFor="fc-org-select">Assign {rl.FC.toLowerCase()}</Label>
             <Select value={selectedValue} onValueChange={setSelectedOrgId}>
               <SelectTrigger id="fc-org-select">
-                <SelectValue placeholder="Choose a field crew org" />
+                <SelectValue placeholder="Choose a company" />
               </SelectTrigger>
               <SelectContent>
                 {options.map(option => (
@@ -88,7 +90,7 @@ export function FCInputRequestCard({
               onClick={() => void onRequest(selectedValue)}
             >
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserRoundPlus className="h-3 w-3" />}
-              {activeCollaborator ? 'Re-request FC input' : 'Request FC input'}
+              {activeCollaborator ? `Re-request ${rl.FC} input` : `Request ${rl.FC} input`}
             </Button>
           </div>
         )}

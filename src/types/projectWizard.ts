@@ -23,8 +23,8 @@ export const US_STATES = [
 
 export const TEAM_ROLES = [
   'General Contractor',
-  'Trade Contractor', 
-  'Field Crew',
+  'Subcontractor', 
+  'Crew',
   'Supplier',
 ] as const;
 

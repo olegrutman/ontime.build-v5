@@ -71,16 +71,16 @@ export interface OrgInvitation {
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   GC_PM: 'General Contractor Manager',
-  TC_PM: 'Trade Contractor Manager',
-  FC_PM: 'Field Crew Manager',
+  TC_PM: 'Subcontractor Manager',
+  FC_PM: 'Crew Manager',
   FS: 'Field Supervisor',
   SUPPLIER: 'Supplier',
 };
 
 export const ORG_TYPE_LABELS: Record<OrgType, string> = {
   GC: 'General Contractor',
-  TC: 'Trade Contractor',
-  FC: 'Field Crew',
+  TC: 'Subcontractor',
+  FC: 'Crew',
   SUPPLIER: 'Supplier',
 };
 

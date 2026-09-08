@@ -43,7 +43,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
       return {
         icon: <CheckCircle className="h-5 w-5" />,
         title: `Review & approve ${fmtCurrency(priceToUpstream)}`,
-        subtitle: 'TC submitted this work order for your approval',
+        subtitle: `${rl.TC} submitted this work order for your approval`,
         actions: [
           { label: 'Approve', action: 'approve', primary: true },
           { label: 'Reject', action: 'reject' },
@@ -106,7 +106,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
           title: `Request hours from ${fcCollabName} and add materials`,
           subtitle: 'Build your price — add labor, materials, then close for pricing',
           actions: [
-            { label: 'Request FC Hours', action: 'request_fc', primary: true },
+            { label: `Request ${rl.FC} Hours`, action: 'request_fc', primary: true },
             { label: 'Add Materials', action: 'scroll_materials' },
             submitAction,
           ],

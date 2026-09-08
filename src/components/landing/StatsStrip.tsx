@@ -1,5 +1,5 @@
 const stats = [
-  { num: '4', label: 'Roles — GC · TC · Crew · Supplier' },
+  { num: '4', label: 'Roles — Contractor · Sub · Crew · Supplier' },
   { num: '1', label: 'Connected Financial Loop' },
   { num: '$89', label: 'Per Company / Month — Flat' },
   { num: '∞', label: 'Projects & Users Included' },

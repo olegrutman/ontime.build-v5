@@ -196,7 +196,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
 
-  // Field crew log hours without a rate — those hours carry no dollar value until
+  // Crew log hours without a rate — those hours carry no dollar value until
   // someone prices them, so surface it instead of letting the line read as $0.
   const unpricedFCHours = fcBillable
     .filter(e => (e.hours ?? 0) > 0 && (e.line_total ?? 0) === 0)
@@ -218,9 +218,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const statusColor = getStatusColor(visibleBillable, showGCApproval);
 
   // Cost per scope item.
-  // For a TC, what the field crew bills them IS a cost of this scope item, so it
+  // For a TC, what the crew bills them IS a cost of this scope item, so it
   // rolls into the private cost cell alongside any manually logged internal costs.
-  // Field crew entries that were already captured via "Import field hours" live
+  // Crew entries that were already captured via "Import field hours" live
   // inside an internal-cost row, so exclude them here to avoid double counting.
   const importedFCEntryIds = new Set<string>(
     actualCosts.flatMap(e => ((e as { source_fc_entry_ids?: string[] | null }).source_fc_entry_ids ?? [])),
@@ -624,7 +624,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
               </div>
               {visibleBillable.length > 0 && (
-                <p className="text-[10px] text-muted-foreground">{visibleBillable.length} entr{visibleBillable.length === 1 ? 'y' : 'ies'} · TC rates and markup hidden</p>
+                <p className="text-[10px] text-muted-foreground">{visibleBillable.length} entr{visibleBillable.length === 1 ? 'y' : 'ies'} · rates and markup hidden</p>
               )}
             </div>
           ) : gcSummaryOnly ? (
@@ -861,7 +861,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 );
               })()}
 
-              {/* TC's cost for this scope item — field crew charges + own internal costs */}
+              {/* TC's cost for this scope item — crew charges + own internal costs */}
               {isTC && (tcDownstreamCosts.length > 0 || actualTotal > 0) && (
                 <div className="border-t border-border px-3 sm:px-5 py-2.5 bg-muted/20">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold mb-1.5 flex items-center gap-1">

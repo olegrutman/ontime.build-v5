@@ -565,20 +565,20 @@ export const DEMO_INVOICES: DemoInvoice[] = [
 // ════════════════════════════════════════════════════════
 
 export const DEMO_CONTRACTS: DemoContract[] = [
-  { id: 'demo-c-1', project_id: 'demo-proj-1', title: 'GC–TC Framing Contract', from_org: 'Summit Builders (GC)', to_org: 'Peak Framing (TC)', contract_value: 185000, status: 'executed' },
-  { id: 'demo-c-2', project_id: 'demo-proj-2', title: 'GC–TC Mechanical Contract', from_org: 'Summit Builders (GC)', to_org: 'CoolAir HVAC (TC)', contract_value: 320000, status: 'executed' },
-  { id: 'demo-c-3', project_id: 'demo-proj-3', title: 'GC–TC Exterior Package', from_org: 'Summit Builders (GC)', to_org: 'AllSide Exteriors (TC)', contract_value: 412000, status: 'approved' },
-  { id: 'demo-c-4', project_id: 'demo-proj-4', title: 'GC–TC Steel Erection', from_org: 'Summit Builders (GC)', to_org: 'Ironwork Pros (TC)', contract_value: 680000, status: 'executed' },
-  { id: 'demo-c-4b', project_id: 'demo-proj-4', title: 'GC–TC MEP Package', from_org: 'Summit Builders (GC)', to_org: 'MedBuild Mechanical (TC)', contract_value: 890000, status: 'executed' },
-  { id: 'demo-c-5', project_id: 'demo-proj-5', title: 'GC–TC General Trades', from_org: 'Summit Builders (GC)', to_org: 'Scholastic Builders (TC)', contract_value: 520000, status: 'executed' },
-  { id: 'demo-c-6', project_id: 'demo-proj-6', title: 'GC–TC Luxury Build Package', from_org: 'Summit Builders (GC)', to_org: 'Prestige Custom Homes (TC)', contract_value: 1250000, status: 'executed' },
-  { id: 'demo-c-6b', project_id: 'demo-proj-6', title: 'GC–TC Stone & Masonry', from_org: 'Summit Builders (GC)', to_org: 'Hill Country Masons (TC)', contract_value: 185000, status: 'approved' },
-  { id: 'demo-c-7', project_id: 'demo-proj-7', title: 'GC–TC Brewery Build-Out', from_org: 'Summit Builders (GC)', to_org: 'ATX Commercial (TC)', contract_value: 380000, status: 'executed' },
-  { id: 'demo-c-8', project_id: 'demo-proj-8', title: 'GC–TC Shell Construction', from_org: 'Summit Builders (GC)', to_org: 'Metro Concrete (TC)', contract_value: 620000, status: 'executed' },
-  { id: 'demo-c-9', project_id: 'demo-proj-9', title: 'GC–TC Concrete & Structure', from_org: 'Summit Builders (GC)', to_org: 'Metro Concrete (TC)', contract_value: 1450000, status: 'executed' },
-  { id: 'demo-c-9b', project_id: 'demo-proj-9', title: 'GC–TC Wood Frame', from_org: 'Summit Builders (GC)', to_org: 'Peak Framing (TC)', contract_value: 580000, status: 'executed' },
-  { id: 'demo-c-10', project_id: 'demo-proj-10', title: 'GC–TC Tilt-Wall & Steel', from_org: 'Summit Builders (GC)', to_org: 'Ironwork Pros (TC)', contract_value: 780000, status: 'executed' },
-  { id: 'demo-c-10b', project_id: 'demo-proj-10', title: 'GC–TC Site & Paving', from_org: 'Summit Builders (GC)', to_org: 'Roadway Construction (TC)', contract_value: 340000, status: 'approved' },
+  { id: 'demo-c-1', project_id: 'demo-proj-1', title: 'Contractor–Sub Framing Contract', from_org: 'Summit Builders (General Contractor)', to_org: 'Peak Framing (Subcontractor)', contract_value: 185000, status: 'executed' },
+  { id: 'demo-c-2', project_id: 'demo-proj-2', title: 'Contractor–Sub Mechanical Contract', from_org: 'Summit Builders (General Contractor)', to_org: 'CoolAir HVAC (Subcontractor)', contract_value: 320000, status: 'executed' },
+  { id: 'demo-c-3', project_id: 'demo-proj-3', title: 'Contractor–Sub Exterior Package', from_org: 'Summit Builders (General Contractor)', to_org: 'AllSide Exteriors (Subcontractor)', contract_value: 412000, status: 'approved' },
+  { id: 'demo-c-4', project_id: 'demo-proj-4', title: 'Contractor–Sub Steel Erection', from_org: 'Summit Builders (General Contractor)', to_org: 'Ironwork Pros (Subcontractor)', contract_value: 680000, status: 'executed' },
+  { id: 'demo-c-4b', project_id: 'demo-proj-4', title: 'Contractor–Sub MEP Package', from_org: 'Summit Builders (General Contractor)', to_org: 'MedBuild Mechanical (Subcontractor)', contract_value: 890000, status: 'executed' },
+  { id: 'demo-c-5', project_id: 'demo-proj-5', title: 'Contractor–Sub General Trades', from_org: 'Summit Builders (General Contractor)', to_org: 'Scholastic Builders (Subcontractor)', contract_value: 520000, status: 'executed' },
+  { id: 'demo-c-6', project_id: 'demo-proj-6', title: 'Contractor–Sub Luxury Build Package', from_org: 'Summit Builders (General Contractor)', to_org: 'Prestige Custom Homes (Subcontractor)', contract_value: 1250000, status: 'executed' },
+  { id: 'demo-c-6b', project_id: 'demo-proj-6', title: 'Contractor–Sub Stone & Masonry', from_org: 'Summit Builders (General Contractor)', to_org: 'Hill Country Masons (Subcontractor)', contract_value: 185000, status: 'approved' },
+  { id: 'demo-c-7', project_id: 'demo-proj-7', title: 'Contractor–Sub Brewery Build-Out', from_org: 'Summit Builders (General Contractor)', to_org: 'ATX Commercial (Subcontractor)', contract_value: 380000, status: 'executed' },
+  { id: 'demo-c-8', project_id: 'demo-proj-8', title: 'Contractor–Sub Shell Construction', from_org: 'Summit Builders (General Contractor)', to_org: 'Metro Concrete (Subcontractor)', contract_value: 620000, status: 'executed' },
+  { id: 'demo-c-9', project_id: 'demo-proj-9', title: 'Contractor–Sub Concrete & Structure', from_org: 'Summit Builders (General Contractor)', to_org: 'Metro Concrete (Subcontractor)', contract_value: 1450000, status: 'executed' },
+  { id: 'demo-c-9b', project_id: 'demo-proj-9', title: 'Contractor–Sub Wood Frame', from_org: 'Summit Builders (General Contractor)', to_org: 'Peak Framing (Subcontractor)', contract_value: 580000, status: 'executed' },
+  { id: 'demo-c-10', project_id: 'demo-proj-10', title: 'Contractor–Sub Tilt-Wall & Steel', from_org: 'Summit Builders (General Contractor)', to_org: 'Ironwork Pros (Subcontractor)', contract_value: 780000, status: 'executed' },
+  { id: 'demo-c-10b', project_id: 'demo-proj-10', title: 'Contractor–Sub Site & Paving', from_org: 'Summit Builders (General Contractor)', to_org: 'Roadway Construction (Subcontractor)', contract_value: 340000, status: 'approved' },
 ];
 
 // ════════════════════════════════════════════════════════
@@ -690,8 +690,8 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
   { id: 'att-2', project_id: 'demo-proj-1', type: 'invoice', title: 'Invoice INV-001 awaiting approval', description: 'Submitted 3 days ago — no action taken', urgency: 'high', role_visibility: ['GC'] },
   { id: 'att-3', project_id: 'demo-proj-1', type: 'purchase_order', title: 'PO-2025-001 not yet sent to supplier', description: 'Lumber order drafted but unsent', urgency: 'medium', role_visibility: ['GC', 'TC', 'SUPPLIER'] },
   // Project 2
-  { id: 'att-4', project_id: 'demo-proj-2', type: 'work_order', title: 'Drywall WO missing assignment', description: 'No field crew assigned to drywall scope', urgency: 'high', role_visibility: ['GC', 'TC'] },
-  { id: 'att-5', project_id: 'demo-proj-2', type: 'invoice', title: 'Invoice INV-007 submitted — review needed', description: 'December billing submitted by TC', urgency: 'high', role_visibility: ['GC'] },
+  { id: 'att-4', project_id: 'demo-proj-2', type: 'work_order', title: 'Drywall WO missing assignment', description: 'No crew assigned to drywall scope', urgency: 'high', role_visibility: ['GC', 'TC'] },
+  { id: 'att-5', project_id: 'demo-proj-2', type: 'invoice', title: 'Invoice INV-007 submitted — review needed', description: 'December billing submitted by the subcontractor', urgency: 'high', role_visibility: ['GC'] },
   { id: 'att-6', project_id: 'demo-proj-2', type: 'purchase_order', title: 'PO-2025-005 priced — ready for approval', description: 'Supplier has entered pricing', urgency: 'medium', role_visibility: ['GC', 'TC', 'SUPPLIER'] },
   // Project 3
   { id: 'att-7', project_id: 'demo-proj-3', type: 'work_order', title: 'Siding WO needs scope finalized', description: 'Draft — scope description incomplete', urgency: 'high', role_visibility: ['GC', 'TC', 'FC'] },
@@ -703,7 +703,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
   { id: 'att-12', project_id: 'demo-proj-4', type: 'purchase_order', title: 'Glazing PO-2025-015 awaiting pricing', description: '$88K curtain wall order needs supplier quote', urgency: 'medium', role_visibility: ['GC', 'SUPPLIER'] },
   // Project 5
   { id: 'att-13', project_id: 'demo-proj-5', type: 'work_order', title: 'Kitchen equipment WO not started', description: 'Commercial kitchen scope needs review', urgency: 'medium', role_visibility: ['GC', 'TC'] },
-  { id: 'att-14', project_id: 'demo-proj-5', type: 'invoice', title: 'Invoice INV-028 needs GC approval', description: 'October billing submitted by TC', urgency: 'high', role_visibility: ['GC'] },
+  { id: 'att-14', project_id: 'demo-proj-5', type: 'invoice', title: 'Invoice INV-028 needs contractor approval', description: 'October billing submitted by the subcontractor', urgency: 'high', role_visibility: ['GC'] },
   // Project 6
   { id: 'att-15', project_id: 'demo-proj-6', type: 'work_order', title: 'Pool WO needs scope definition', description: 'Infinity edge pool design not finalized', urgency: 'high', role_visibility: ['GC', 'TC'] },
   { id: 'att-16', project_id: 'demo-proj-6', type: 'invoice', title: 'Two invoices submitted awaiting review', description: 'INV-032 and INV-033 need approval', urgency: 'high', role_visibility: ['GC'] },
@@ -713,7 +713,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
   { id: 'att-19', project_id: 'demo-proj-7', type: 'invoice', title: 'Invoice INV-038 awaiting approval', description: 'HVAC work billing submitted', urgency: 'high', role_visibility: ['GC'] },
   // Project 8
   { id: 'att-20', project_id: 'demo-proj-8', type: 'work_order', title: 'Storefront glazing WO in draft', description: 'Need to finalize tenant bay specifications', urgency: 'medium', role_visibility: ['GC', 'TC'] },
-  { id: 'att-21', project_id: 'demo-proj-8', type: 'invoice', title: 'Two invoices submitted — review needed', description: 'INV-044 and INV-045 awaiting GC approval', urgency: 'high', role_visibility: ['GC'] },
+  { id: 'att-21', project_id: 'demo-proj-8', type: 'invoice', title: 'Two invoices submitted — review needed', description: 'INV-044 and INV-045 awaiting contractor approval', urgency: 'high', role_visibility: ['GC'] },
   { id: 'att-22', project_id: 'demo-proj-8', type: 'purchase_order', title: 'Storefront PO awaiting vendor response', description: 'PO-2025-029 sent to Kawneer — no response', urgency: 'medium', role_visibility: ['GC', 'SUPPLIER'] },
   // Project 9
   { id: 'att-23', project_id: 'demo-proj-9', type: 'invoice', title: 'MEP invoice INV-050 under review', description: '$520K MEP billing needs verification', urgency: 'high', role_visibility: ['GC'] },
@@ -732,7 +732,7 @@ export const DEMO_ATTENTION_ITEMS: DemoAttentionItem[] = [
 export const DEMO_TEAM: DemoTeamMember[] = [
   { id: 'tm-1', name: 'Alex Rivera', role: 'GC', email: 'alex@summitbuilders.com', org_name: 'Summit Builders' },
   { id: 'tm-2', name: 'Jordan Lee', role: 'TC', email: 'jordan@peakframing.com', org_name: 'Peak Framing' },
-  { id: 'tm-3', name: 'Sam Torres', role: 'FC', email: 'sam@fieldcrew.com', org_name: 'Torres Field Crew' },
+  { id: 'tm-3', name: 'Sam Torres', role: 'FC', email: 'sam@fieldcrew.com', org_name: 'Torres Crew' },
   { id: 'tm-4', name: 'Casey Nguyen', role: 'SUPPLIER', email: 'casey@austinlumber.com', org_name: 'Austin Lumber Co' },
   { id: 'tm-5', name: 'Morgan Chen', role: 'GC', email: 'morgan@summitbuilders.com', org_name: 'Summit Builders' },
   { id: 'tm-6', name: 'Taylor Brooks', role: 'TC', email: 'taylor@coolairhvac.com', org_name: 'CoolAir HVAC' },
@@ -741,7 +741,7 @@ export const DEMO_TEAM: DemoTeamMember[] = [
   { id: 'tm-9', name: 'Dakota Kim', role: 'TC', email: 'dakota@ironworkpros.com', org_name: 'Ironwork Pros' },
   { id: 'tm-10', name: 'Jamie Sullivan', role: 'GC', email: 'jamie@summitbuilders.com', org_name: 'Summit Builders' },
   { id: 'tm-11', name: 'Quinn Adams', role: 'TC', email: 'quinn@allsideexteriors.com', org_name: 'AllSide Exteriors' },
-  { id: 'tm-12', name: 'Skyler Reeves', role: 'FC', email: 'skyler@torrescrew.com', org_name: 'Torres Field Crew' },
+  { id: 'tm-12', name: 'Skyler Reeves', role: 'FC', email: 'skyler@torrescrew.com', org_name: 'Torres Crew' },
   { id: 'tm-13', name: 'Drew Watkins', role: 'SUPPLIER', email: 'drew@abcroofing.com', org_name: 'ABC Roofing Supply' },
   { id: 'tm-14', name: 'Blake Harrison', role: 'TC', email: 'blake@medbuildmech.com', org_name: 'MedBuild Mechanical' },
   { id: 'tm-15', name: 'Cameron Ortiz', role: 'FC', email: 'cameron@ortizelectric.com', org_name: 'Ortiz Electrical Services' },
@@ -1037,9 +1037,9 @@ export const DEMO_INVOICE_LINE_ITEMS: DemoInvoiceLineItem[] = [
 const CL = (loc: boolean, scope: boolean, tc: boolean, mat: boolean, fc: boolean) => [
   { label: 'Location set', done: loc },
   { label: 'Scope written', done: scope },
-  { label: 'TC pricing entered', done: tc },
+  { label: 'Subcontractor pricing entered', done: tc },
   { label: 'Materials priced', done: mat },
-  { label: 'FC hours locked', done: fc },
+  { label: 'Crew hours locked', done: fc },
 ];
 
 export const DEMO_WORK_ORDER_DETAILS: DemoWorkOrderDetail[] = [

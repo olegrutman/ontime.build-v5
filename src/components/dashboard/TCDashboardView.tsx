@@ -182,7 +182,7 @@ export function TCDashboardView({
           {/* Card 2: FC / Labor Contracts (Cost) */}
           <KpiCard idx={1} accent={C.navy} icon={<Users size={18} color={C.navy} />} iconBg={C.surface2}
             label="FIELD CREW / LABOR CONTRACTS (COST)" value={fcCost > 0 ? fmt(fcCost) : '—'}
-            sub="Field crew and sub-contractor costs"
+            sub="Crew and sub-contractor costs"
             pills={[{ type: 'pm', text: 'Cost' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Project', 'Contract Cost']} />
@@ -192,7 +192,7 @@ export function TCDashboardView({
                     <TdN>{p.projectName}</TdN>,
                     <TdM>{fmt(p.costs)}</TdM>,
                   ]} />
-                )) : <TRow cells={[<span style={{ color: C.faint }}>No Field Crew contracts yet</span>, '']} />}
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No Crew contracts yet</span>, '']} />}
                 {fcCost > 0 && <TRow isTotal cells={['', <TdM>{fmt(fcCost)}</TdM>]} />}
               </tbody>
             </table>

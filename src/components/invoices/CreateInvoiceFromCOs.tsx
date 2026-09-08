@@ -145,7 +145,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
   // Load the upstream contracts this org can bill on, so duplicates are caught
   // BEFORE an invoice lands on the wrong contract.
-  const upstreamRole = invoicingRole === 'FC' ? 'Trade Contractor' : 'General Contractor';
+  const upstreamRole = invoicingRole === 'FC' ? 'Subcontractor' : 'General Contractor';
 
   useEffect(() => {
     if (!open || !projectId || !currentOrgId) return;

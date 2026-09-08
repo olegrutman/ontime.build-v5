@@ -59,7 +59,7 @@ export function DashboardKPIs({ financials, orgType }: DashboardKPIsProps) {
   // FC
   return (
     <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
-      <KPICard label="Contract Value" value={financials.totalRevenue} subtitle="From Trade Contractor / General Contractor contracts" delay={0} />
+      <KPICard label="Contract Value" value={financials.totalRevenue} subtitle="From Subcontractor / General Contractor contracts" delay={0} />
       <KPICard label="Collected" value={received} subtitle="Payments received" delay={40} />
       <KPICard label="Outstanding" value={Math.max(0, financials.totalRevenue - received)} subtitle="Remaining to collect" delay={80} />
       <KPICard label="Pending" value={pending} subtitle="Billed but not yet received" delay={120} />

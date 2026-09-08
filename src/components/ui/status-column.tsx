@@ -141,8 +141,8 @@ export const INVOICE_STATUS_OPTIONS: StatusOption[] = [
 
 export const CHANGE_ORDER_STATUS_OPTIONS: StatusOption[] = [
   { value: 'draft', label: 'In Progress', color: '#C4C4C4' },
-  { value: 'fc_input', label: 'FC Input', color: '#0086C0' },
-  { value: 'tc_pricing', label: 'TC Pricing', color: '#FDAB3D' },
+  { value: 'fc_input', label: 'Crew Input', color: '#0086C0' },
+  { value: 'tc_pricing', label: 'Subcontractor Pricing', color: '#FDAB3D' },
   { value: 'ready_for_approval', label: 'Ready', color: '#A25DDC' },
   { value: 'approved', label: 'Approved', color: '#00C875' },
   { value: 'rejected', label: 'Rejected', color: '#E2445C' },

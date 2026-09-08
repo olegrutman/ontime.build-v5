@@ -9,7 +9,7 @@ import { DollarSign, ArrowUp, ArrowDown, ShieldCheck, Lock, Building2, Info } fr
 export interface DownstreamContractRow {
   id: string;                    // project_contracts.id
   org_name: string;              // company being paid
-  role: string;                  // 'Trade Contractor' | 'Field Crew' | ...
+  role: string;                  // 'Subcontractor' | 'Crew' | ...
   trade?: string | null;
   contract_sum: number;
   invited_only?: boolean;        // true if invite not yet accepted
@@ -39,8 +39,8 @@ interface ContractsStepProps {
 }
 
 const MATERIAL_OPTIONS = [
-  { value: 'GC', label: 'GC supplies materials' },
-  { value: 'TC', label: 'TC supplies materials' },
+  { value: 'GC', label: 'General contractor supplies materials' },
+  { value: 'TC', label: 'Subcontractor supplies materials' },
   { value: 'SPLIT', label: 'Split responsibility' },
 ] as const;
 
@@ -167,7 +167,7 @@ export function ContractsStep({
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <ArrowUp className="h-4 w-4 text-accent-foreground" />
-              You → {isGC ? 'Trade Contractors' : 'Field Crews'} (Downstream)
+              You → {isGC ? 'Subcontractors' : 'Crews'} (Downstream)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -175,7 +175,7 @@ export function ContractsStep({
               <div className="text-sm text-muted-foreground flex items-start gap-2 p-3 rounded-md bg-muted/30">
                 <Info className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>
-                  No {isGC ? 'trade contractors' : 'field crews'} invited yet. Go back to the
+                  No {isGC ? 'subcontractors' : 'crews'} invited yet. Go back to the
                   <strong> Invite Team</strong> step to add them, or skip if self-performing.
                 </span>
               </div>
@@ -229,7 +229,7 @@ export function ContractsStep({
   const upstreamFieldLabel = isGC
     ? "Owner contract value — your revenue from the property owner"
     : isTC
-    ? 'What is the GC paying you?'
+    ? 'What is the general contractor paying you?'
     : 'Total contract value';
 
   return (
@@ -244,9 +244,9 @@ export function ContractsStep({
         </div>
         <p className="text-sm text-muted-foreground">
           {isTC
-            ? 'These become the official upstream (GC) and downstream (FC) contracts for this project.'
+            ? 'These become the official upstream (general contractor) and downstream (crew) contracts for this project.'
             : isGC
-            ? 'These become the official upstream (Owner) and downstream (Trade Contractor) contracts for this project.'
+            ? 'These become the official upstream (Owner) and downstream (Subcontractor) contracts for this project.'
             : 'This becomes the official contract record for this project.'}
         </p>
       </div>
@@ -311,12 +311,12 @@ export function ContractsStep({
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <ArrowUp className="h-4 w-4 text-accent-foreground" />
-                You → Field Crew (Downstream)
+                You → Crew (Downstream)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Label htmlFor="fc_contract_value" className="text-sm text-muted-foreground">
-                Field Crew contract value — what you'll pay your FC
+                Crew contract value — what you'll pay your FC
               </Label>
               <div className="relative mt-1.5">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -339,12 +339,12 @@ export function ContractsStep({
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <ArrowUp className="h-4 w-4 text-accent-foreground" />
-                You → Trade Contractor (Downstream)
+                You → Subcontractor (Downstream)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Label htmlFor="gc_tc_contract_value" className="text-sm text-muted-foreground">
-                Trade Contractor contract value — what you'll pay your TC
+                Subcontractor contract value — what you'll pay your TC
               </Label>
               <div className="relative mt-1.5">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>

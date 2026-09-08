@@ -27,7 +27,7 @@ export function MaterialMarkupEditor({ financials, projectId, projectStatus }: M
   const [saving, setSaving] = useState(false);
 
   if (loading) return null;
-  if (viewerRole !== 'Trade Contractor' || !isTCMaterialResponsible) return null;
+  if (viewerRole !== 'Subcontractor' || !isTCMaterialResponsible) return null;
 
   const handleSave = async () => {
     if (!upstreamContract) return;

@@ -74,12 +74,12 @@ interface Props {
 
 const roleDotColors: Record<string, string> = {
   'General Contractor': C.blue,
-  'Trade Contractor': C.green,
-  'Field Crew': C.purple,
+  'Subcontractor': C.green,
+  'Crew': C.purple,
   'Supplier': C.amber,
 };
 const roleLabel: Record<string, string> = {
-  'General Contractor': 'General Contractor', 'Trade Contractor': 'Trade Contractor', 'Field Crew': 'Field Crew', 'Supplier': 'Supplier',
+  'General Contractor': 'General Contractor', 'Subcontractor': 'Subcontractor', 'Crew': 'Crew', 'Supplier': 'Supplier',
 };
 
 export function GCProjectOverviewContent({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
@@ -96,10 +96,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const tcContractVal = baseContractSum(upContract as any);
 
   const tcName = (() => {
-    if (!upContract) return 'Trade Contractor';
-    if (currentOrgId && upContract.from_org_id === currentOrgId) return upContract.to_org_name || 'Trade Contractor';
-    if (currentOrgId && upContract.to_org_id === currentOrgId) return upContract.from_org_name || 'Trade Contractor';
-    return upContract.to_org_name || upContract.from_org_name || 'Trade Contractor';
+    if (!upContract) return 'Subcontractor';
+    if (currentOrgId && upContract.from_org_id === currentOrgId) return upContract.to_org_name || 'Subcontractor';
+    if (currentOrgId && upContract.to_org_id === currentOrgId) return upContract.from_org_name || 'Subcontractor';
+    return upContract.to_org_name || upContract.from_org_name || 'Subcontractor';
   })();
 
   // ─── Owner Budget editing ───

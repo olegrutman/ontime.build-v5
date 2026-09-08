@@ -167,7 +167,7 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
           <h3 className="text-lg font-medium mb-2">No Schedule of Values</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md">
             {isFC 
-              ? 'The Trade Contractor has not created a Schedule of Values for this project yet.'
+              ? 'The Subcontractor has not created a Schedule of Values for this project yet.'
               : 'Create a Schedule of Values from a template based on your project type and scope. The template will be customized based on your project details.'}
           </p>
           {!isFC && (

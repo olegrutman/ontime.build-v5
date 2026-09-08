@@ -337,7 +337,7 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
     phase: 'per_floor',
     label: 'Who is responsible for materials?',
     inputType: 'dropdown',
-    options: ['GC supplies materials', 'TC supplies materials', 'Split responsibility'],
+    options: ['General contractor supplies materials', 'Subcontractor supplies materials', 'Split responsibility'],
     tag: 'always',
     fieldKey: 'material_responsibility',
     buildingTypes: 'all',
@@ -587,7 +587,7 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
       'Fiber cement (HardieTrim)',
       'Cedar / paint-grade wood',
       'Engineered wood (LP SmartTrim)',
-      'GC specifies / match siding',
+      'Contractor specifies / match siding',
     ],
     tag: 'conditional',
     conditionalOn: 'fascia_in_scope=yes',
@@ -615,7 +615,7 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
       'LP SmartSide panels',
       'Plywood (paint-grade)',
       'T&G wood (cedar / pine)',
-      'GC specifies',
+      'Contractor specifies',
     ],
     tag: 'conditional',
     conditionalOn: 'soffit_in_scope=yes',
@@ -1673,7 +1673,7 @@ export function useSetupWizardV2(
       }
     } else {
       // TC (or FC) is the contractor billing upstream
-      const fromRole = isTC ? 'Trade Contractor' : 'Field Crew';
+      const fromRole = isTC ? 'Subcontractor' : 'Crew';
       primaryResult = await _saveContractAndSov(
         pid, contractValue,
         fromRole, creatorOrgId || null,
@@ -1689,11 +1689,11 @@ export function useSetupWizardV2(
     if (isTC && fcContractValue > 0) {
       fcResult = await _saveContractAndSov(
         pid, fcContractValue,
-        'Field Crew',       // from_role: FC is the contractor billing
+        'Crew',       // from_role: FC is the contractor billing
         null,               // from_org_id: FC org not yet known
-        'Trade Contractor', // to_role: TC is the client paying
+        'Subcontractor', // to_role: TC is the client paying
         creatorOrgId || null, // to_org_id: TC's org (the payer)
-        'TC → FC SOV',
+        'Subcontractor → Crew SOV',
         scopeData, answers, userId,
       );
     }
@@ -1713,11 +1713,11 @@ export function useSetupWizardV2(
 
       fcResult = await _saveContractAndSov(
         pid, gcTcContractValue,
-        'Trade Contractor',                  // from_role: TC bills GC
+        'Subcontractor',                  // from_role: TC bills GC
         tcParticipant?.organization_id || null, // from_org_id: invited TC if known
         'General Contractor',                // to_role: GC is the payer
         creatorOrgId || null,                // to_org_id: GC's org
-        'GC → TC SOV',
+        'Contractor → Subcontractor SOV',
         scopeData, answers, userId,
       );
     }

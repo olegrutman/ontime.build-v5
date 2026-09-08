@@ -12,7 +12,7 @@ import { buildProjectLedger, type ProjectLedger } from '@/lib/kpiLedger';
 
 
 
-export type ViewerRole = 'Trade Contractor' | 'General Contractor' | 'Field Crew' | 'Supplier';
+export type ViewerRole = 'Subcontractor' | 'General Contractor' | 'Crew' | 'Supplier';
 
 interface Contract {
   id: string;
@@ -155,7 +155,7 @@ export interface ProjectFinancials {
 export function useProjectFinancials(projectId: string, isSupplier?: boolean, supplierOrgId?: string | null): ProjectFinancials {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [viewerRole, setViewerRole] = useState<ViewerRole>('Trade Contractor');
+  const [viewerRole, setViewerRole] = useState<ViewerRole>('Subcontractor');
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
   const [billedToDate, setBilledToDate] = useState(0);
@@ -221,7 +221,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [gcOrgId, setGcOrgId] = useState<string | null>(null);
 
   const resetVolatileFinancialState = () => {
-    setViewerRole(isSupplier ? 'Supplier' : 'Trade Contractor');
+    setViewerRole(isSupplier ? 'Supplier' : 'Subcontractor');
     setContracts([]);
     setUserOrgIds([]);
     setBilledToDate(0);
@@ -289,7 +289,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       const orgIds = (userOrgRoles ?? []).map((r: any) => r.organization_id);
       setUserOrgIds(orgIds);
 
-      let detectedRole: ViewerRole = 'Trade Contractor';
+      let detectedRole: ViewerRole = 'Subcontractor';
       if (isSupplier) {
         detectedRole = 'Supplier';
       } else if (orgIds.length > 0) {
@@ -301,7 +301,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         if (teamMembers && teamMembers.length > 0) {
           detectedRole = teamMembers[0].role as ViewerRole;
           // Check if TC is self-performing
-          const tcRow = teamMembers.find((m: any) => m.role === 'Trade Contractor');
+          const tcRow = teamMembers.find((m: any) => m.role === 'Subcontractor');
           if (tcRow && (tcRow as any).is_self_performing) {
             setIsTCSelfPerforming(true);
           } else {
@@ -365,7 +365,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setContracts(contractsWithNames);
 
       // Detect material responsibility
-      if (detectedRole === 'Trade Contractor' && orgIds.length > 0) {
+      if (detectedRole === 'Subcontractor' && orgIds.length > 0) {
         const tcContract = contractsWithNames.find((c: any) =>
           c.material_responsibility === 'TC' &&
           (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
@@ -394,7 +394,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       );
       if (supplierBillsMe) {
         if (detectedRole === 'General Contractor') setIsGCMaterialResponsible(true);
-        if (detectedRole === 'Trade Contractor') setIsTCMaterialResponsible(true);
+        if (detectedRole === 'Subcontractor') setIsTCMaterialResponsible(true);
       }
 
       // Fetch approved estimate sum as fallback for material budget.
@@ -474,7 +474,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
       const materialEstTotalFromContract = contractsWithNames.find((c: any) =>
         c.material_responsibility != null &&
-        (detectedRole === 'Trade Contractor'
+        (detectedRole === 'Subcontractor'
           ? (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
           : true)
       );
@@ -508,7 +508,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       })));
 
       // TC split: classify invoices as receivables vs payables
-      if (detectedRole === 'Trade Contractor' && orgIds.length > 0) {
+      if (detectedRole === 'Subcontractor' && orgIds.length > 0) {
         // Receivables = invoices on contracts where TC is from_org (TC billed GC)
         // Payables = invoices on contracts where TC is to_org (FC billed TC) OR po_id set (supplier)
         const upstreamContractIds = new Set(
@@ -518,7 +518,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         );
         const downstreamContractIds = new Set(
           contractsWithNames
-            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Field Crew')
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Crew')
             .map(c => c.id)
         );
 
@@ -565,11 +565,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         })));
       }
 
-      // Field Crew: a crew only ever BILLS, but `billedToDate` sums every
+      // Crew: a crew only ever BILLS, but `billedToDate` sums every
       // invoice on the project — so the canonical grid showed the TC's and the
       // supplier's invoices as the crew's own revenue. Scope receivables to the
       // contracts where this crew is the billing party.
-      if (detectedRole === 'Field Crew' && orgIds.length > 0) {
+      if (detectedRole === 'Crew' && orgIds.length > 0) {
         const myContractIds = new Set(
           contractsWithNames
             .filter(c => c.from_org_id && orgIds.includes(c.from_org_id))
@@ -655,7 +655,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // Use material_estimate_total from the material-responsible contract (GC or TC) if set
       const materialContract = (contractsRes.data || []).find((c: any) =>
         c.material_responsibility != null && c.material_estimate_total != null &&
-        (detectedRole === 'Trade Contractor'
+        (detectedRole === 'Subcontractor'
           ? (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
           : true)
       );
@@ -693,15 +693,15 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       // Labor budget from primary contract
       const primaryC = contractsWithNames.find(c =>
-        ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
-         (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+        ((c.from_role === 'General Contractor' && c.to_role === 'Subcontractor') ||
+         (c.to_role === 'General Contractor' && c.from_role === 'Subcontractor')) &&
         c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
       );
       // FC reads labor budget from TC↔FC contract; others from GC↔TC
-      if (detectedRole === 'Field Crew') {
+      if (detectedRole === 'Crew') {
         const fcContract = contractsWithNames.find(c =>
-          ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
-           (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+          ((c.from_role === 'Subcontractor' && c.to_role === 'Crew') ||
+           (c.to_role === 'Subcontractor' && c.from_role === 'Crew')) &&
           c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
         );
         setLaborBudget((fcContract as any)?.labor_budget ?? null);
@@ -726,10 +726,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
 
       // Total paid to FC from invoices (TC view) — only downstream contract invoices
-      if (detectedRole === 'Trade Contractor') {
+      if (detectedRole === 'Subcontractor') {
         const downstreamIds = new Set(
           contractsWithNames
-            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Field Crew')
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Crew')
             .map(c => c.id)
         );
         const paidDownstream = allInvoices.filter(i => i.status === 'PAID' && i.contract_id && downstreamIds.has(i.contract_id));
@@ -761,20 +761,20 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   };
 
   const upstreamCandidates = contracts.filter(c =>
-    ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
-     (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+    ((c.from_role === 'General Contractor' && c.to_role === 'Subcontractor') ||
+     (c.to_role === 'General Contractor' && c.from_role === 'Subcontractor')) &&
     c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
   );
   const upstreamContract = pickBest(upstreamCandidates);
 
   const downstreamCandidates = contracts.filter(c =>
-    ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
-     (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+    ((c.from_role === 'Subcontractor' && c.to_role === 'Crew') ||
+     (c.to_role === 'Subcontractor' && c.from_role === 'Crew')) &&
     c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
   );
   const downstreamContract = pickBest(downstreamCandidates);
 
-  const primaryContract = viewerRole === 'Field Crew' ? downstreamContract : upstreamContract;
+  const primaryContract = viewerRole === 'Crew' ? downstreamContract : upstreamContract;
   const contractValue = primaryContract?.contract_sum || 0;
   const retainagePercent = primaryContract?.retainage_percent || 0;
 
@@ -787,7 +787,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const revenueBilledToDate =
     viewerRole === 'General Contractor'
       ? ownerBillingsTotal
-      : viewerRole === 'Trade Contractor' || viewerRole === 'Field Crew'
+      : viewerRole === 'Subcontractor' || viewerRole === 'Crew'
         ? receivablesInvoiced
         : billedToDate;
 
@@ -801,7 +801,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   // Earned = sum of PAID receivable invoices (collected).
   // Incurred = sum of PAID payable invoices.
   const earnedRevenueToDate = receivablesCollected;
-  const incurredCostToDate = viewerRole === 'Field Crew' ? 0 : payablesPaid;
+  const incurredCostToDate = viewerRole === 'Crew' ? 0 : payablesPaid;
   const marginToDateAmount = earnedRevenueToDate - incurredCostToDate;
   const marginToDatePct = earnedRevenueToDate > 0 ? (marginToDateAmount / earnedRevenueToDate) * 100 : 0;
 
@@ -812,7 +812,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
    * `co_approved_sum` keeps claiming it, and base math drifts by that amount.
    */
   const updateContract = async (id: string, sum: number, retainage: number): Promise<boolean> => {
-    if (viewerRole === 'Field Crew') return false;
+    if (viewerRole === 'Crew') return false;
     const coPortion = contracts.find(c => c.id === id)?.co_approved_sum || 0;
     const revised = sum + coPortion;
     const { error } = await supabase
@@ -832,7 +832,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     if (!currentOrgId || !user) return false;
     const { data, error } = await supabase.from('project_contracts').insert({
       project_id: projectId, from_org_id: currentOrgId, to_org_id: fcOrgId,
-      from_role: 'Trade Contractor', to_role: 'Field Crew',
+      from_role: 'Subcontractor', to_role: 'Crew',
       contract_sum: sum, retainage_percent: retainage, created_by_user_id: user.id,
     }).select().single();
     if (error || !data) return false;

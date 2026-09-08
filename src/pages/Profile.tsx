@@ -697,7 +697,7 @@ export default function Profile() {
                 <Separator />
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <Label className="font-medium">Use FC input as pricing base by default</Label>
+                    <Label className="font-medium">Use crew input as pricing base by default</Label>
                     <p className="text-xs text-muted-foreground">
                       When ON, new COs with FC involvement will auto-calculate TC pricing from FC submissions using your rate/markup above.
                     </p>

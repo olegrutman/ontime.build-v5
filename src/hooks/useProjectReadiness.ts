@@ -97,7 +97,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
 
       // Helper: find contracts by role
       const gcContract = contracts.find(c => c.to_role === 'General Contractor' || c.from_role === 'General Contractor');
-      const fcContract = contracts.find(c => c.to_role === 'Field Crew' || c.from_role === 'Field Crew');
+      const fcContract = contracts.find(c => c.to_role === 'Crew' || c.from_role === 'Crew');
 
       // Helper: check SOV exists AND is locked for a contract
       const hasSovForContract = (contractId: string) => sovs.some(s => s.contract_id === contractId);
@@ -163,14 +163,14 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
 
         if (gcContract) {
           const hasGCContractSum = gcContract.contract_sum != null && gcContract.contract_sum > 0;
-          items.push({ key: 'gc_contract_sum', label: 'Contract sum with GC entered', complete: hasGCContractSum });
-          items.push({ key: 'gc_sov', label: 'SOV for GC contract created & locked', complete: hasLockedSovForContract(gcContract.id) });
+          items.push({ key: 'gc_contract_sum', label: 'Contract sum with the general contractor entered', complete: hasGCContractSum });
+          items.push({ key: 'gc_sov', label: 'SOV for the general contractor contract created & locked', complete: hasLockedSovForContract(gcContract.id) });
         }
 
         if (fcContract) {
           const hasFCContractSum = fcContract.contract_sum != null && fcContract.contract_sum > 0;
-          items.push({ key: 'fc_contract_sum', label: 'Contract sum with FC entered', complete: hasFCContractSum });
-          items.push({ key: 'fc_sov', label: 'SOV for FC contract created & locked', complete: hasLockedSovForContract(fcContract.id) });
+          items.push({ key: 'fc_contract_sum', label: 'Contract sum with the crew entered', complete: hasFCContractSum });
+          items.push({ key: 'fc_sov', label: 'SOV for the crew contract created & locked', complete: hasLockedSovForContract(fcContract.id) });
         }
 
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
@@ -182,7 +182,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         if (hasGCRole) {
           items.push({
             key: 'gc_accepted',
-            label: gcAccepted ? 'GC accepted' : `Awaiting GC${gcPendingNames.length > 0 ? ': ' + gcPendingNames.join(', ') : ''}`,
+            label: gcAccepted ? 'General contractor accepted' : `Awaiting general contractor${gcPendingNames.length > 0 ? ': ' + gcPendingNames.join(', ') : ''}`,
             complete: gcAccepted,
           });
         }
@@ -190,7 +190,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         if (hasFCRole) {
           items.push({
             key: 'fc_accepted',
-            label: fcAccepted ? 'FC accepted' : `Awaiting FC${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
+            label: fcAccepted ? 'Crew accepted' : `Awaiting crew${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
             complete: fcAccepted,
           });
         }
@@ -213,18 +213,18 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       } else {
         // GC-Created Project Checklist — items only shown if the role exists
         const tcParticipants = getParticipantsByRole('TC');
-        const hasTCRole = tcParticipants.length > 0 || contracts.some(c => c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor');
+        const hasTCRole = tcParticipants.length > 0 || contracts.some(c => c.from_role === 'Subcontractor' || c.to_role === 'Subcontractor');
 
         if (hasTCRole) {
           const hasTCContractSum = contracts.some(c => 
-            (c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor') &&
+            (c.from_role === 'Subcontractor' || c.to_role === 'Subcontractor') &&
             c.contract_sum != null && c.contract_sum > 0
           );
-          items.push({ key: 'tc_contract_sum', label: 'Contract sum with TC entered', complete: hasTCContractSum });
+          items.push({ key: 'tc_contract_sum', label: 'Contract sum with the subcontractor entered', complete: hasTCContractSum });
 
           items.push({
             key: 'tc_accepted',
-            label: tcAccepted ? 'TC accepted' : `Awaiting TC${tcPendingNames.length > 0 ? ': ' + tcPendingNames.join(', ') : ''}`,
+            label: tcAccepted ? 'Subcontractor accepted' : `Awaiting subcontractor${tcPendingNames.length > 0 ? ': ' + tcPendingNames.join(', ') : ''}`,
             complete: tcAccepted,
           });
         }
@@ -257,7 +257,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         if (fcInvited) {
           items.push({
             key: 'fc_accepted',
-            label: fcAccepted ? 'FC accepted' : `Awaiting FC${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
+            label: fcAccepted ? 'Crew accepted' : `Awaiting crew${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
             complete: fcAccepted,
           });
         }

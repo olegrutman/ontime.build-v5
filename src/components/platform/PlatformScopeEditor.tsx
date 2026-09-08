@@ -116,7 +116,7 @@ export function PlatformScopeEditor({ projectId, projectStatus, onRefresh }: Pro
         toast.success('Project reassigned');
         onRefresh();
       } else {
-        toast.error('No GC team entry found');
+        toast.error('No general contractor team entry found');
       }
     } catch (e) {
       toast.error('Failed to reassign');

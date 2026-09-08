@@ -9,8 +9,8 @@ interface SuccessScreenProps {
 
 const ROLE_LABELS: Record<string, string> = {
   gc: 'General Contractor',
-  tc: 'Trade Contractor',
-  crew: 'Field Crew',
+  tc: 'Subcontractor',
+  crew: 'Crew',
   supplier: 'Supplier',
 };
 

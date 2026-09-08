@@ -30,7 +30,7 @@ export function RoleThemeBridge() {
 
 export const ROLE_LABEL: Record<string, string> = {
   GC: 'General Contractor',
-  TC: 'Trade Contractor',
-  FC: 'Field Crew',
+  TC: 'Subcontractor',
+  FC: 'Crew',
   SUPPLIER: 'Supplier',
 };

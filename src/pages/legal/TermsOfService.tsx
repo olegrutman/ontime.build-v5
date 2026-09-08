@@ -4,7 +4,7 @@ export default function TermsOfService() {
   return (
     <LegalLayout
       title="Terms of Service"
-      description="The terms governing use of the Ontime.Build construction operations platform by contractors, trade partners, field crews, and suppliers."
+      description="The terms governing use of the Ontime.Build construction operations platform by contractors, trade partners, crews, and suppliers."
       path="/terms"
       updated="May 21, 2026"
     >
@@ -14,7 +14,7 @@ export default function TermsOfService() {
 
       <h2>1. Accounts and organizations</h2>
       <p>
-        You must provide accurate information when creating an account. Each user belongs to one or more organizations (General Contractor, Trade Contractor, Field Crew, or Supplier). The organization owner is responsible for managing members, roles, and project access.
+        You must provide accurate information when creating an account. Each user belongs to one or more organizations (General Contractor, Subcontractor, Crew, or Supplier). The organization owner is responsible for managing members, roles, and project access.
       </p>
 
       <h2>2. Acceptable use</h2>

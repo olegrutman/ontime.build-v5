@@ -196,7 +196,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         return c.to_role === 'General Contractor';
       }
       if (currentOrgType === 'FC') {
-        return c.to_role === 'Trade Contractor';
+        return c.to_role === 'Subcontractor';
       }
       return false;
     });
@@ -746,7 +746,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No contracts available for invoicing. You can only create invoices for contracts where your organization is the contractor (Trade Contractor or Field Crew). Please accept a contract first.
+              No contracts available for invoicing. You can only create invoices for contracts where your organization is the contractor (Subcontractor or Crew). Please accept a contract first.
             </AlertDescription>
           </Alert>
         ) : sovs.length === 0 && approvedCOs.length === 0 ? (

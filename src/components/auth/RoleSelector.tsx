@@ -5,8 +5,8 @@ interface RoleSelectorProps {
 
 const ROLES = [
   { id: 'gc', icon: '🏗', name: 'General Contractor', desc: 'Manage all trades' },
-  { id: 'tc', icon: '⚒', name: 'Trade Contractor', desc: 'Receive work orders' },
-  { id: 'crew', icon: '👷', name: 'Field Crew', desc: 'Task assignments' },
+  { id: 'tc', icon: '⚒', name: 'Subcontractor', desc: 'Receive work orders' },
+  { id: 'crew', icon: '👷', name: 'Crew', desc: 'Task assignments' },
   { id: 'supplier', icon: '📦', name: 'Supplier', desc: 'Orders & deliveries' },
 ];
 

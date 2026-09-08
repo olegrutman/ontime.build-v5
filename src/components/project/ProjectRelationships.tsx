@@ -31,7 +31,7 @@ const roleColors: Record<string, string> = {
 
 const roleLabels: Record<string, string> = {
   GC: 'General Contractor',
-  TC: 'Trade Contractor',
+  TC: 'Subcontractor',
   FC: 'Finishing Contractor',
   SUPPLIER: 'Supplier',
 };

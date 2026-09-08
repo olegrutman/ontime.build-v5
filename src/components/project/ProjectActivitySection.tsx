@@ -59,7 +59,7 @@ const activityColors: Record<string, string> = {
 
 // Activity types relevant to each role
 const roleActivityTypes: Record<string, string[]> = {
-  'Field Crew': [
+  'Crew': [
     'INVITE_SENT',
     'INVITE_ACCEPTED',
     'FC_HOURS_SUBMITTED',
@@ -67,7 +67,7 @@ const roleActivityTypes: Record<string, string[]> = {
     'CHANGE_ORDER_APPROVED',
     'STATUS_CHANGED',
   ],
-  'Trade Contractor': [
+  'Subcontractor': [
     'INVITE_SENT',
     'INVITE_ACCEPTED',
     'SCOPE_UPDATED',
@@ -105,7 +105,7 @@ export function ProjectActivitySection({ projectId }: ProjectActivitySectionProp
   const { user } = useAuth();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
+  const [viewerRole, setViewerRole] = useState<string>('Subcontractor');
   const [userOrgId, setUserOrgId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -122,7 +122,7 @@ export function ProjectActivitySection({ projectId }: ProjectActivitySectionProp
         .eq('user_id', user.id);
       
       const userOrgIds = (memberships || []).map(m => m.organization_id);
-      let currentRole = 'Trade Contractor';
+      let currentRole = 'Subcontractor';
       let currentOrgId: string | null = null;
       
       if (userOrgIds.length > 0) {
@@ -142,7 +142,7 @@ export function ProjectActivitySection({ projectId }: ProjectActivitySectionProp
       setUserOrgId(currentOrgId);
 
       // Get relevant activity types for the role
-      const relevantTypes = roleActivityTypes[currentRole] || roleActivityTypes['Trade Contractor'];
+      const relevantTypes = roleActivityTypes[currentRole] || roleActivityTypes['Subcontractor'];
 
       // Fetch activities filtered by type
       const { data, error } = await supabase
@@ -159,7 +159,7 @@ export function ProjectActivitySection({ projectId }: ProjectActivitySectionProp
         // For FC, also filter to only show activities from their org or related to them
         let filteredData = data || [];
         
-        if (currentRole === 'Field Crew' && currentOrgId) {
+        if (currentRole === 'Crew' && currentOrgId) {
           filteredData = filteredData.filter(activity => {
             // Show activities where FC's company is mentioned or actor
             const isOwnActivity = activity.actor_user_id === user.id;
@@ -196,7 +196,7 @@ export function ProjectActivitySection({ projectId }: ProjectActivitySectionProp
         },
         (payload) => {
           const newActivity = payload.new as ActivityItem;
-          const relevantTypes = roleActivityTypes[viewerRole] || roleActivityTypes['Trade Contractor'];
+          const relevantTypes = roleActivityTypes[viewerRole] || roleActivityTypes['Subcontractor'];
           
           // Only add if relevant to this role
           if (relevantTypes.includes(newActivity.activity_type)) {

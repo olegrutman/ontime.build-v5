@@ -57,8 +57,8 @@ const GARAGE_OPTIONS = [
 ];
 
 const MATERIAL_RESP_OPTIONS = [
-  { value: 'gc', label: 'GC' },
-  { value: 'tc', label: 'TC' },
+  { value: 'gc', label: 'General Contractor' },
+  { value: 'tc', label: 'Subcontractor' },
   { value: 'split', label: 'Split' },
 ];
 
@@ -66,7 +66,7 @@ function prettifyKey(key: string): string {
   return key
     .replace(/_/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase())
-    .replace(/Fc /g, 'FC ').replace(/Gc /g, 'GC ').replace(/Tc /g, 'TC ').replace(/Sov /g, 'SOV ');
+    .replace(/Fc /g, 'Crew ').replace(/Gc /g, 'General Contractor ').replace(/Tc /g, 'Subcontractor ').replace(/Sov /g, 'SOV ');
 }
 
 function detectAnswerType(value: unknown): 'boolean' | 'number' | 'text' {

@@ -55,7 +55,7 @@ export default function AdminSuppliers() {
       toast({
         variant: 'destructive',
         title: 'Access Denied',
-        description: 'Only GC and TC managers can manage suppliers.',
+        description: 'Only general contractor and subcontractor managers can manage suppliers.',
       });
       navigate('/');
       return;

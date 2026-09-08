@@ -22,6 +22,7 @@ import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
@@ -60,6 +61,7 @@ export function COStatusActions({
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: routing } = useCORoutingTargets(projectId);
+  const rl = useRoleLabelsContext();
   /* A CO routed to nobody (or to its own creating org) still needs a Submit path:
      fall back to the default upstream target for this org. */
   const routedAssignee = co.assigned_to_org_id && co.assigned_to_org_id !== co.org_id
@@ -242,7 +244,7 @@ export function COStatusActions({
         fallbackOrgId: fallbackAssignee,
       });
       if (!assignee) {
-        toast.error('No trade contractor on this project to send this to.');
+        toast.error('No subcontractor on this project to send this to.');
         return;
       }
       await updateCO.mutateAsync({
@@ -253,7 +255,7 @@ export function COStatusActions({
           draft_shared_with_next: true,
         },
       });
-      toast.success('CO sent to TC as Work in Progress');
+      toast.success(`Sent to ${rl.TC} as work in progress`);
       await logActivity('sent_to_wip');
       await notifyOrg(assignee, 'CO_SHARED');
       onRefresh();
@@ -339,7 +341,7 @@ export function COStatusActions({
         const forwarded = Array.isArray(data) ? data[0] : data;
         const nextOrgId = forwarded?.assigned_to_org_id ?? null;
 
-        toast.success('FC scope approved and sent to GC');
+        toast.success(`${rl.FC} scope approved and sent to ${rl.GC}`);
         await logActivity('approved_fc', undefined, financials?.fcLaborTotal || undefined);
         await logActivity('forwarded_to_gc', undefined, financials?.grandTotal || undefined);
         await notifyOrg(nextOrgId, 'CHANGE_SUBMITTED', financials?.grandTotal || undefined);
@@ -519,7 +521,7 @@ export function COStatusActions({
           contracted_at: new Date().toISOString(),
         },
       });
-      toast.success('Completion acknowledged — TC can now invoice');
+      toast.success(`Completion acknowledged — ${rl.TC} can now invoice`);
       await logActivity('acknowledged_completion');
       await notifyOrg(co.assigned_to_org_id, 'CO_ACKNOWLEDGED');
       onRefresh();
@@ -739,7 +741,7 @@ export function COStatusActions({
           {(canSubmit || canSubmitFCPricing) && (
             <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              {canSubmitFCPricing ? 'Submit FC pricing' : 'Submit for approval'}
+              {canSubmitFCPricing ? `Submit ${rl.FC} pricing` : 'Submit for approval'}
             </Button>
           )}
           {canRecall && (
@@ -751,7 +753,7 @@ export function COStatusActions({
           {canApprove && (
             <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting}>
               <Check className="h-3 w-3" />
-              {forwardsToGC ? 'Approve & send to GC' : 'Approve'}
+              {forwardsToGC ? `Approve & send to ${rl.GC}` : 'Approve'}
             </Button>
           )}
           {canReject && (
@@ -805,10 +807,10 @@ export function COStatusActions({
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{forwardsToGC ? 'Approve FC scope and send to GC' : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
+            <AlertDialogTitle>{forwardsToGC ? `Approve ${rl.FC} scope and send to ${rl.GC}` : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
             <AlertDialogDescription>
               {forwardsToGC
-                ? `This approves the FC portion as TC cost and immediately forwards the ${co.document_type === 'WO' ? 'work order' : 'change order'} to GC review.`
+                ? `This approves the ${rl.FC} portion as ${rl.TC} cost and immediately forwards the ${co.document_type === 'WO' ? 'work order' : 'change order'} for review.`
                 : `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`}
               {!forwardsToGC && co.pricing_type === 'fixed' && (
                 <span className="block mt-1">

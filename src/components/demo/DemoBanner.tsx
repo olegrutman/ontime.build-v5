@@ -8,8 +8,8 @@ import type { DemoRole } from '@/data/demoData';
 
 const DEMO_ROLES: { value: DemoRole; label: string; short: string }[] = [
   { value: 'GC', label: 'General Contractor', short: 'GC' },
-  { value: 'TC', label: 'Trade Contractor', short: 'TC' },
-  { value: 'FC', label: 'Field Crew', short: 'FC' },
+  { value: 'TC', label: 'Subcontractor', short: 'TC' },
+  { value: 'FC', label: 'Crew', short: 'FC' },
   { value: 'SUPPLIER', label: 'Supplier', short: 'Supplier' },
 ];
 

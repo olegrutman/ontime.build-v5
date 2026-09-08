@@ -6,7 +6,7 @@ interface AssignToCardProps {
   targets: CORoutingTarget[];
   value: string | null;
   onChange: (orgId: string) => void;
-  /** e.g. "Trade Contractor" */
+  /** e.g. "Subcontractor" */
   roleLabel?: string;
   disabled?: boolean;
   className?: string;

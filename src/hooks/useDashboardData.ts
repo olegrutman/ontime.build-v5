@@ -355,8 +355,8 @@ export function useDashboardData(): DashboardData {
       const incomingInvitesList: PendingInvite[] = (incomingInvitesData as any[]).map((inv: any) => {
         const roleMap: Record<string, string> = {
           'GC': 'General Contractor',
-          'TC': 'Trade Contractor',
-          'FC': 'Field Crew',
+          'TC': 'Subcontractor',
+          'FC': 'Crew',
           'SUPPLIER': 'Supplier',
         };
         const inviterOrgName = inv.invited_by ? inviterOrgMap[inv.invited_by] : null;
@@ -406,8 +406,8 @@ export function useDashboardData(): DashboardData {
         
         if (!userRole && project.organization_id === currentOrg.id) {
           userRole = orgType === 'GC' ? 'General Contractor' : 
-                     orgType === 'TC' ? 'Trade Contractor' : 
-                     orgType === 'FC' ? 'Field Crew' : null;
+                     orgType === 'TC' ? 'Subcontractor' : 
+                     orgType === 'FC' ? 'Crew' : null;
         }
 
         let contractValue: number | null = null;

@@ -12,7 +12,7 @@ const pains = [
     after: 'Returns tracked from field to supplier credit',
   },
   {
-    before: 'GC, TC, Crew & Supplier stuck in 4 different apps',
+    before: 'Contractors, subs, crews & suppliers stuck in 4 different apps',
     after: 'One shared project — role-based privacy baked in',
   },
 ];

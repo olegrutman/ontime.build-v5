@@ -80,7 +80,7 @@ export function AddTeamMemberDialog({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   
   // Selected org role/trade state
-  const [selectedRole, setSelectedRole] = useState<TeamRole>('Trade Contractor');
+  const [selectedRole, setSelectedRole] = useState<TeamRole>('Subcontractor');
   const [selectedTrade, setSelectedTrade] = useState<Trade | undefined>();
   
   // Invite form state
@@ -88,7 +88,7 @@ export function AddTeamMemberDialog({
     companyName: '',
     contactName: '',
     contactEmail: '',
-    role: 'Trade Contractor' as TeamRole,
+    role: 'Subcontractor' as TeamRole,
     trade: undefined as Trade | undefined,
   });
   
@@ -100,17 +100,17 @@ export function AddTeamMemberDialog({
   
   // Filter available roles based on creator org type
   // Rules:
-  // - General Contractor can add: Trade Contractor, Supplier (NOT Field Crew)
-  // - Trade Contractor can add: General Contractor, Field Crew, Supplier (NOT another TC)
-  // - Field Crew cannot add anyone
+  // - General Contractor can add: Subcontractor, Supplier (NOT Crew)
+  // - Subcontractor can add: General Contractor, Crew, Supplier (NOT another TC)
+  // - Crew cannot add anyone
   const availableRoles = TEAM_ROLES.filter(role => {
     if (creatorOrgType === 'GC') {
-      // GC can add Trade Contractor, Field Crew, and Supplier, but NOT another GC
-      return role === 'Trade Contractor' || role === 'Field Crew' || role === 'Supplier';
+      // GC can add Subcontractor, Crew, and Supplier, but NOT another GC
+      return role === 'Subcontractor' || role === 'Crew' || role === 'Supplier';
     }
     if (creatorOrgType === 'TC') {
-      // TC can add General Contractor, Field Crew, and Supplier (NOT another TC)
-      return role === 'General Contractor' || role === 'Field Crew' || role === 'Supplier';
+      // TC can add General Contractor, Crew, and Supplier (NOT another TC)
+      return role === 'General Contractor' || role === 'Crew' || role === 'Supplier';
     }
     if (creatorOrgType === 'FC') {
       // FC cannot invite anyone
@@ -118,12 +118,12 @@ export function AddTeamMemberDialog({
     }
     if (creatorOrgType === 'SUPPLIER') {
       // Supplier can add GC and TC, but NOT FC or another Supplier
-      return role === 'General Contractor' || role === 'Trade Contractor';
+      return role === 'General Contractor' || role === 'Subcontractor';
     }
     return true;
   }).filter(role => !restrictRoles || restrictRoles.includes(role));
 
-  const requiresTrade = (role: TeamRole) => role === 'Trade Contractor' || role === 'Field Crew';
+  const requiresTrade = (role: TeamRole) => role === 'Subcontractor' || role === 'Crew';
 
   // Ensure default roles always comply with availableRoles
   useEffect(() => {
@@ -147,13 +147,13 @@ export function AddTeamMemberDialog({
       setSearchQuery('');
       setSearchResults([]);
       setSelectedResult(null);
-      setSelectedRole('Trade Contractor');
+      setSelectedRole('Subcontractor');
       setSelectedTrade(undefined);
       setInviteForm({
         companyName: '',
         contactName: '',
         contactEmail: '',
-        role: 'Trade Contractor',
+        role: 'Subcontractor',
         trade: undefined,
       });
       setEmailExists(false);
@@ -257,11 +257,11 @@ export function AddTeamMemberDialog({
     // Set default role based on org type
     const orgTypeToRole: Record<string, TeamRole> = {
       'GC': 'General Contractor',
-      'TC': 'Trade Contractor',
-      'FC': 'Field Crew',
+      'TC': 'Subcontractor',
+      'FC': 'Crew',
       'SUPPLIER': 'Supplier',
     };
-    const suggested = orgTypeToRole[result.org_type] || 'Trade Contractor';
+    const suggested = orgTypeToRole[result.org_type] || 'Subcontractor';
     const defaultRole = availableRoles.includes(suggested)
       ? suggested
       : (availableRoles[0] ?? suggested);
@@ -277,8 +277,8 @@ export function AddTeamMemberDialog({
   const roleToOrgType = (role: TeamRole): 'GC' | 'TC' | 'FC' | 'SUPPLIER' => {
     switch (role) {
       case 'General Contractor': return 'GC';
-      case 'Trade Contractor': return 'TC';
-      case 'Field Crew': return 'FC';
+      case 'Subcontractor': return 'TC';
+      case 'Crew': return 'FC';
       case 'Supplier': return 'SUPPLIER';
       default: return 'TC';
     }
@@ -364,11 +364,11 @@ export function AddTeamMemberDialog({
       // Worker (invoice sender) = from_org, Payer = to_org
       if (selectedRole !== 'Supplier' && currentOrgId) {
         const creatorRoleLabel = currentOrgType === 'GC' ? 'General Contractor' 
-          : currentOrgType === 'TC' ? 'Trade Contractor' : null;
+          : currentOrgType === 'TC' ? 'Subcontractor' : null;
         
         const isCreatorUpstream = 
           (currentOrgType === 'GC') ||
-          (currentOrgType === 'TC' && selectedRole === 'Field Crew');
+          (currentOrgType === 'TC' && selectedRole === 'Crew');
 
         // Check if a contract already exists for this org pair
         const { data: existingContract } = await supabase
@@ -505,11 +505,11 @@ export function AddTeamMemberDialog({
       // Use the same logic as handleAddExisting to determine contract direction
       if (inviteForm.role !== 'Supplier' && currentOrgId) {
         const creatorRoleLabel = currentOrgType === 'GC' ? 'General Contractor' 
-          : currentOrgType === 'TC' ? 'Trade Contractor' : null;
+          : currentOrgType === 'TC' ? 'Subcontractor' : null;
         
         const isCreatorUpstream = 
           (currentOrgType === 'GC') ||
-          (currentOrgType === 'TC' && inviteForm.role === 'Field Crew');
+          (currentOrgType === 'TC' && inviteForm.role === 'Crew');
 
         const contractPayload = isCreatorUpstream ? {
           // Invitee is worker, creator is payer

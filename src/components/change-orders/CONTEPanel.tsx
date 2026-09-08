@@ -125,7 +125,7 @@ export function CONTEPanel({
         requestedIncrease: amount,
         runningTotal: usedAmount,
       });
-      toast.success('Increase request sent to GC');
+      toast.success(`Increase request sent to ${rl.GC}`);
       await notifyGC('NTE_REQUESTED', amount);
       setRequestOpen(false);
       setIncreaseAmt('');
@@ -251,7 +251,7 @@ export function CONTEPanel({
               <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
               <p className="text-xs text-destructive">
                 {isOver
-                  ? 'The NTE cap has been reached. GC has been notified.'
+                  ? `The NTE cap has been reached. ${rl.GC} has been notified.`
                   : `You are at ${pct.toFixed(0)}% of the cap. Request an increase before logging more hours.`}
               </p>
             </div>
@@ -371,7 +371,7 @@ export function CONTEPanel({
               )}
             </div>
             <div>
-              <Label className="text-sm font-medium">Note to ${rl.GC} (optional)</Label>
+              <Label className="text-sm font-medium">Note to {rl.GC} (optional)</Label>
               <Textarea
                 value={increaseNote}
                 onChange={e => setIncreaseNote(e.target.value)}

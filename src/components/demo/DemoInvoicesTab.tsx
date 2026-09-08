@@ -41,7 +41,7 @@ export function DemoInvoicesTab({ projectId }: { projectId: string }) {
 
   const handleReject = (inv: DemoInvoice) => {
     updateInvoiceStatus(inv.id, 'rejected');
-    toast.info(`Invoice ${inv.invoice_number} rejected. The TC will need to revise and resubmit.`);
+    toast.info(`Invoice ${inv.invoice_number} rejected. The subcontractor will need to revise and resubmit.`);
     setSelectedInv(null);
   };
 
@@ -58,7 +58,7 @@ export function DemoInvoicesTab({ projectId }: { projectId: string }) {
       created_at: new Date().toISOString(),
     };
     addInvoice(newInv);
-    toast.success(`Invoice ${newInv.invoice_number} submitted! 📄 The GC will now review it.`);
+    toast.success(`Invoice ${newInv.invoice_number} submitted! 📄 The general contractor will now review it.`);
   };
 
   return (
@@ -173,7 +173,7 @@ export function DemoInvoicesTab({ projectId }: { projectId: string }) {
                 {isTC && selectedInv.status === 'draft' && (
                   <Button className="w-full" onClick={() => {
                     updateInvoiceStatus(selectedInv.id, 'submitted');
-                    toast.success(`Invoice submitted! 📤 Waiting for GC review.`);
+                    toast.success(`Invoice submitted! 📤 Waiting for review.`);
                     setSelectedInv(null);
                   }}>
                     Submit Invoice

@@ -331,10 +331,10 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               });
             if (collabError) {
               console.error('FC collaborator insert error:', collabError);
-              toast.error('Field crew assignment failed: ' + collabError.message);
+              toast.error('Crew assignment failed: ' + collabError.message);
             }
           } else if (state.collaboration.requestFcInput && !resolvedFcOrgId) {
-            toast.warning('No field crew on this project — FC request skipped.');
+            toast.warning('No crew on this project — the crew request was skipped.');
           }
         }
 

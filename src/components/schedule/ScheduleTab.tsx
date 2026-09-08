@@ -288,7 +288,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
       // Find TC→GC contract SOV, fall back to first available
       const tcGcSov = sovs?.find((s: any) => {
         const c = s.project_contracts;
-        return c?.from_role === 'Trade Contractor' && c?.to_role === 'General Contractor';
+        return c?.from_role === 'Subcontractor' && c?.to_role === 'General Contractor';
       }) ?? sovs?.[0];
 
       if (tcGcSov) {

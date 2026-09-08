@@ -4,8 +4,8 @@
 
 export type COViewerRole =
   | 'General Contractor'
-  | 'Trade Contractor'
-  | 'Field Crew'
+  | 'Subcontractor'
+  | 'Crew'
   | 'Supplier';
 
 export interface ContractLike {
@@ -108,29 +108,29 @@ export function resolveBillingOrgId(
 
   const upstream = contracts.find(
     (c) =>
-      ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
-        (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+      ((c.from_role === 'General Contractor' && c.to_role === 'Subcontractor') ||
+        (c.to_role === 'General Contractor' && c.from_role === 'Subcontractor')) &&
       notWO(c),
   );
   const downstream = contracts.find(
     (c) =>
-      ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
-        (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+      ((c.from_role === 'Subcontractor' && c.to_role === 'Crew') ||
+        (c.to_role === 'Subcontractor' && c.from_role === 'Crew')) &&
       notWO(c),
   );
 
   const tcOrgId = upstream
-    ? upstream.from_role === 'Trade Contractor'
+    ? upstream.from_role === 'Subcontractor'
       ? upstream.from_org_id
       : upstream.to_org_id
     : null;
   const fcOrgId = downstream
-    ? downstream.from_role === 'Field Crew'
+    ? downstream.from_role === 'Crew'
       ? downstream.from_org_id
       : downstream.to_org_id
     : null;
 
-  return viewerRole === 'Field Crew' ? fcOrgId : tcOrgId;
+  return viewerRole === 'Crew' ? fcOrgId : tcOrgId;
 }
 
 /**
@@ -144,7 +144,7 @@ export function resolveBillingOrgId(
  * cost / imported field hours) plus downstream field-crew billables that were
  * NOT already imported, + material/equipment line cost they carry. Billable
  * rows are never cost — counting them made cost mirror revenue and produced
- * phantom "field crew cost".
+ * phantom "crew cost".
  *
  * `fallbackResponsibility` mirrors the DB (`co_grand_total`): when a CO leaves
  * materials/equipment responsibility NULL, the contract's value decides.
@@ -194,7 +194,7 @@ export function aggregateCOTotals(
     // burden). An outside field-crew company never lands here.
     const actualRows = mine.filter((r) => r.is_actual_cost);
     const ownLaborCost = actualRows.reduce((s, r) => s + num(r.line_total), 0);
-    // Subcontract cost: an EXTERNAL field crew's billables that were not
+    // Subcontract cost: an EXTERNAL crew's billables that were not
     // already imported into an actual-cost row (imports carry the source ids,
     // so we dedupe on them).
     const importedFCIds = new Set<string>(

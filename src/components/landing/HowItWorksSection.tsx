@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 const steps = [
-  { num: '01', title: 'Set Up the Project', desc: 'Create the project, add scope, upload estimates, and invite your GC, trade contractors, crews, and suppliers. Role-based access is set automatically — everyone sees only what they need.' },
-  { num: '02', title: 'Order Materials & Assign Work', desc: 'Generate purchase orders directly from estimates. Create change orders for crews and trade contractors with clear scope. Everything connects to the project budget from day one.' },
-  { num: '03', title: 'Track, Approve & Adjust', desc: 'Field crews update work. Suppliers confirm deliveries. Invoices and change orders route for approval. The financial picture updates automatically — no manual reconciliation.' },
+  { num: '01', title: 'Set Up the Project', desc: 'Create the project, add scope, upload estimates, and invite your general contractor, subcontractors, crews, and suppliers. Role-based access is set automatically — everyone sees only what they need.' },
+  { num: '02', title: 'Order Materials & Assign Work', desc: 'Generate purchase orders directly from estimates. Create change orders for crews and subcontractors with clear scope. Everything connects to the project budget from day one.' },
+  { num: '03', title: 'Track, Approve & Adjust', desc: 'Crews update work. Suppliers confirm deliveries. Invoices and change orders route for approval. The financial picture updates automatically — no manual reconciliation.' },
   { num: '04', title: 'Close Out with Confidence', desc: 'Return unused materials, close open invoices, and see final project profitability in one screen. Every job ends with a complete, accurate financial record.' },
 ];
 
@@ -17,7 +17,7 @@ const docs = [
     { id: 'CO-045', desc: 'Roof sheathing — Bldg A', amt: '$9,800', status: 'Pending', statusClass: 'pending' },
   ]},
   { section: 'Invoices', items: [
-    { id: 'INV-1048', desc: 'Phase 1 labor billing', amt: '$18,400', status: 'GC Review', statusClass: 'pending' },
+    { id: 'INV-1048', desc: 'Phase 1 labor billing', amt: '$18,400', status: 'In Review', statusClass: 'pending' },
     { id: 'INV-1041', desc: 'Materials & install complete', amt: '$31,200', status: 'Paid', statusClass: 'approved' },
   ]},
 ];
@@ -96,7 +96,7 @@ export function HowItWorksSection() {
           <div className="mt-5 pt-[18px] flex gap-6" style={{ borderTop: '1px solid hsl(var(--border))' }}>
             {[
               { num: '$89', color: 'hsl(var(--amber-d))', label: 'Per Company / Mo', sub: 'Unlimited projects + users' },
-              { num: '4', color: 'hsl(153, 82%, 31%)', label: 'Roles Connected', sub: 'GC · TC · Crew · Supplier' },
+              { num: '4', color: 'hsl(153, 82%, 31%)', label: 'Roles Connected', sub: 'Contractor · Sub · Crew · Supplier' },
               { num: '0', color: 'hsl(var(--navy))', label: 'Spreadsheets Needed', sub: 'Everything lives here' },
             ].map((m) => (
               <div key={m.label}>

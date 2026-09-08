@@ -1,10 +1,10 @@
 const rows = [
-  { dim: 'Connects GC, TC, FC, and Suppliers in one project', spreadsheet: false, generic: 'Partial', ontime: true },
+  { dim: 'Connects general contractors, subcontractors, crews, and suppliers in one project', spreadsheet: false, generic: 'Partial', ontime: true },
   { dim: 'SOV invoicing with auto-revision tracking', spreadsheet: false, generic: 'Partial', ontime: true },
   { dim: 'Change Orders with financial trail to budget', spreadsheet: false, generic: true, ontime: true },
   { dim: 'Closed-loop material returns + credit memos', spreadsheet: false, generic: false, ontime: true },
   { dim: 'T&M / Remodel mode (Work Order driven)', spreadsheet: false, generic: false, ontime: true },
-  { dim: 'GCs can\'t see TC labor margins (privacy default)', spreadsheet: false, generic: false, ontime: true },
+  { dim: 'General contractors can\'t see subcontractor labor margins (privacy default)', spreadsheet: false, generic: false, ontime: true },
   { dim: 'AI estimate PDF → POs', spreadsheet: false, generic: false, ontime: true },
   { dim: 'Flat price · unlimited users · unlimited projects', spreadsheet: true, generic: false, ontime: true },
 ];

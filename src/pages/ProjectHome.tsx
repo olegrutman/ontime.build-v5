@@ -478,7 +478,7 @@ export default function ProjectHome() {
                   (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
                 ) ? (
                   <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-                    Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
+                    Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Subcontractor'} on this project.
                   </div>
                 ) : (
                   <ProjectEstimatesReview projectId={id!} />

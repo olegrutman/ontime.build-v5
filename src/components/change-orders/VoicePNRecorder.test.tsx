@@ -180,7 +180,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
     await startAndStopRecording();
 
     // After stop → enters "recorded" phase with Send / Re-record buttons.
-    const sendBtn = await screen.findByRole('button', { name: /send to gc/i });
+    const sendBtn = await screen.findByRole('button', { name: /send to general contractor/i });
     expect(screen.getByRole('button', { name: /re-record/i })).toBeInTheDocument();
 
     fireEvent.click(sendBtn);
@@ -223,7 +223,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
       <VoicePNRecorder projectId="proj-1" open onOpenChange={() => {}} />,
     );
     await startAndStopRecording();
-    fireEvent.click(await screen.findByRole('button', { name: /send to gc/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /send to general contractor/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const form = fetchMock.mock.calls[0][1].body as FormData;
@@ -243,7 +243,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
       <VoicePNRecorder projectId="proj-1" open onOpenChange={() => {}} />,
     );
     await startAndStopRecording();
-    fireEvent.click(await screen.findByRole('button', { name: /send to gc/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /send to general contractor/i }));
 
     await waitFor(() =>
       expect(toastErrorMock).toHaveBeenCalledWith(
@@ -253,7 +253,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
     expect(navigateMock).not.toHaveBeenCalled();
     // Send button is available again for retry.
     expect(
-      await screen.findByRole('button', { name: /send to gc/i }),
+      await screen.findByRole('button', { name: /send to general contractor/i }),
     ).toBeInTheDocument();
   });
 
@@ -289,7 +289,7 @@ describe('VoicePNRecorder — end-to-end flow', () => {
 
     expect(FakeMediaRecorder.instances[0].state).toBe('inactive');
     expect(
-      await screen.findByRole('button', { name: /send to gc/i }),
+      await screen.findByRole('button', { name: /send to general contractor/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('2:00')).toBeInTheDocument();
   });

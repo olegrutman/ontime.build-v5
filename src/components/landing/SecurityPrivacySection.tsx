@@ -3,13 +3,13 @@ import { Shield, EyeOff, Lock, Layers } from 'lucide-react';
 const tenets = [
   {
     icon: EyeOff,
-    title: 'GCs don\'t see TC labor margins',
-    desc: 'Trade Contractor cost breakdowns and labor markup are invisible to the GC by default. Per-project markup disclosure can be set to hidden, summary, or detailed.',
+    title: 'General contractors don\'t see subcontractor labor margins',
+    desc: 'Subcontractor cost breakdowns and labor markup are invisible to the general contractor by default. Per-project markup disclosure can be set to hidden, summary, or detailed.',
   },
   {
     icon: Layers,
-    title: 'TCs don\'t see supplier pricing when GC procures',
-    desc: 'When materials are procured by the GC, supplier estimates and PO pricing are masked from downstream Trade Contractors. Responsibility resolution is enforced in the database.',
+    title: 'Subcontractors don\'t see supplier pricing when the contractor procures',
+    desc: 'When materials are procured by the general contractor, supplier estimates and purchase order pricing are masked from downstream subcontractors. Responsibility resolution is enforced in the database.',
   },
   {
     icon: Lock,

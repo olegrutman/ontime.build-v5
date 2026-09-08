@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import type { COFinancials, ChangeOrder } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import type { RoleLabels } from '@/hooks/useRoleLabels';
 
 interface COKPIStripProps {
   co: ChangeOrder;
@@ -45,7 +47,7 @@ const BADGE_CLASSES = {
   neutral: 'bg-accent text-muted-foreground',
 };
 
-function getTiles(props: COKPIStripProps): KPITile[] {
+function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   const { isGC, isTC, isFC, financials, markupVisibility = 'hidden' } = props;
   const matResp = props.materialResponsible ?? 'TC';
   const eqResp = props.equipmentResponsible ?? 'TC';
@@ -63,12 +65,12 @@ function getTiles(props: COKPIStripProps): KPITile[] {
     const tcEquipmentCost = eqResp === 'TC' ? financials.equipmentTotal : 0;
 
     const headlineLabel = matResp === 'GC' && eqResp === 'GC'
-      ? 'TC Labor'
-      : matResp === 'GC' ? 'TC Labor + Equipment'
-      : eqResp === 'GC' ? 'TC Labor + Materials'
-      : 'TC Submitted';
+      ? `${rl.TC} labor`
+      : matResp === 'GC' ? `${rl.TC} labor + equipment`
+      : eqResp === 'GC' ? `${rl.TC} labor + materials`
+      : `${rl.TC} submitted`;
     const headlineSub = (matResp === 'GC' || eqResp === 'GC')
-      ? `${matResp === 'GC' && eqResp === 'GC' ? 'Materials & equipment' : matResp === 'GC' ? 'Materials' : 'Equipment'} procured by GC — billed separately`
+      ? `${matResp === 'GC' && eqResp === 'GC' ? 'Materials & equipment' : matResp === 'GC' ? 'Materials' : 'Equipment'} procured by ${rl.GC} — billed separately`
       : 'What you will be billed';
 
     const tiles: KPITile[] = [
@@ -110,7 +112,7 @@ function getTiles(props: COKPIStripProps): KPITile[] {
         : 'What you bill the owner (click to set price or markup %)';
 
     tiles.push({
-      label: 'GC to Owner Budget',
+      label: 'Your price to owner',
       value: passedToOwner === false ? 'Absorbed' : gcBudget ? fmtCurrency(gcBudget) : '—',
       color: '#6366F1',
       editable: true,
@@ -135,7 +137,7 @@ function getTiles(props: COKPIStripProps): KPITile[] {
       const tcMargin = tcSubmitted - tcInternalCost;
       const tcMarginPct = tcSubmitted > 0 ? (tcMargin / tcSubmitted) * 100 : 0;
       tiles.push({
-        label: 'TC Margin',
+        label: `${rl.TC} margin`,
         value: fmtCurrency(tcMargin),
         color: tcMargin >= 0 ? '#059669' : '#DC2626',
         badge: tcInternalCost > 0 ? { text: `${tcMarginPct.toFixed(0)}%`, variant: tcMargin >= 0 ? 'healthy' as const : 'watch' as const } : undefined,
@@ -173,7 +175,7 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   }
 
   if (isTC || isFC) {
-    const upstream = isTC ? 'GC' : 'TC';
+    const upstream = isTC ? rl.GC : rl.TC;
     // Use viewer-scoped totals so FC collaborators don't pull TC's mats/eq
     const matCost = financials.viewer.ownMaterialsTotal;
     const eqCost = financials.viewer.ownEquipmentTotal;
@@ -185,7 +187,7 @@ function getTiles(props: COKPIStripProps): KPITile[] {
 
     if (isTC) {
       tiles.push({
-        label: 'FC Cost',
+        label: `${rl.FC} cost`,
         value: fmtCurrency(financials.fcLaborTotal),
         color: '#F5A623',
         sub: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs logged` : undefined,
@@ -362,7 +364,8 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
 }
 
 export function COKPIStrip(props: COKPIStripProps) {
-  const tiles = getTiles(props);
+  const rl = useRoleLabelsContext();
+  const tiles = getTiles(props, rl);
   const colCount = tiles.length;
   const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3';
 

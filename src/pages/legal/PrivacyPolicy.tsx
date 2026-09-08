@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
       updated="May 21, 2026"
     >
       <p>
-        This Privacy Policy explains how Ontime.Build ("Ontime", "we", "us") collects, uses, and protects information when you use our construction operations platform connecting General Contractors, Trade Contractors, Field Crews, and Suppliers.
+        This Privacy Policy explains how Ontime.Build ("Ontime", "we", "us") collects, uses, and protects information when you use our construction operations platform connecting General Contractors, Subcontractors, Crews, and Suppliers.
       </p>
 
       <h2>1. Information we collect</h2>
@@ -23,7 +23,7 @@ export default function PrivacyPolicy() {
       <h2>2. How we use information</h2>
       <ul>
         <li>Provide, maintain, and improve the platform and its features.</li>
-        <li>Enforce role-based access between General Contractors, Trade Contractors, Field Crews, and Suppliers.</li>
+        <li>Enforce role-based access between General Contractors, Subcontractors, Crews, and Suppliers.</li>
         <li>Send transactional notifications (invoice approvals, change order routing, RFI updates).</li>
         <li>Detect, investigate, and prevent fraud, abuse, or security incidents.</li>
         <li>Comply with legal obligations.</li>
@@ -34,9 +34,9 @@ export default function PrivacyPolicy() {
         Ontime is designed around a strict privacy hierarchy. By default:
       </p>
       <ul>
-        <li>General Contractors cannot see Trade Contractor labor margins.</li>
-        <li>Trade Contractors cannot see Supplier pricing when materials are procured by the GC.</li>
-        <li>Field Crews see only the work assigned to them and their own time and expenses.</li>
+        <li>General Contractors cannot see Subcontractor labor margins.</li>
+        <li>Subcontractors cannot see supplier pricing when materials are procured by the general contractor.</li>
+        <li>Crews see only the work assigned to them and their own time and expenses.</li>
       </ul>
       <p>
         These rules are enforced at the database layer through Row-Level Security policies, not only in the UI.

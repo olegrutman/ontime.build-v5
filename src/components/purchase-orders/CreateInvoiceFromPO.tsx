@@ -317,7 +317,7 @@ export function CreateInvoiceFromPO({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No Trade Contractor-to-General Contractor contract found for this project. A contract must exist before you can bill the General Contractor.
+              No Subcontractor-to-General Contractor contract found for this project. A contract must exist before you can bill the General Contractor.
             </AlertDescription>
           </Alert>
         ) : (
@@ -448,7 +448,7 @@ export function CreateInvoiceFromPO({
                 <Label>Contract</Label>
                 <Select value={selectedContractId} onValueChange={setSelectedContractId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Trade Contractor-to-General Contractor contract" />
+                    <SelectValue placeholder="Select Subcontractor-to-General Contractor contract" />
                   </SelectTrigger>
                   <SelectContent>
                     {contracts.map((c) => (

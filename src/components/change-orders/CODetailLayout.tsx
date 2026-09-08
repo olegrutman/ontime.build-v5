@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
@@ -62,6 +63,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const coV4 = useCoV4Flag();
+  const rl = useRoleLabelsContext();
   const { data: coRouting } = useCORoutingTargets(projectId);
 
   const scopeRef = useRef<HTMLDivElement>(null);
@@ -105,7 +107,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const suffix = perspective === 'downstream' ? '-to-FC' : perspective === 'upstream' ? '-to-GC' : '';
+      const suffix = perspective === 'downstream' ? '-to-crew' : perspective === 'upstream' ? '-to-contractor' : '';
       const prefix = mode === 'proposal' ? 'Proposal' : co.document_type === 'WO' ? 'WO' : 'CO';
       a.download = `${prefix}-${co.co_number ?? co.id}${suffix}.pdf`;
       a.click();
@@ -225,12 +227,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'request_fc':
         if (fcOrgOptions.length === 0) {
-          toast.info('No field crews found on this project');
+          toast.info('No crews found on this project');
         } else if (fcOrgOptions.length === 1) {
           try {
             await requestFCInput.mutateAsync(fcOrgOptions[0].id);
             toast.success(`Requested hours from ${fcOrgOptions[0].name}`);
-          } catch { toast.error('Failed to request FC input'); }
+          } catch { toast.error(`Failed to request ${rl.FC} input`); }
         } else {
           // Multi-FC: prefer scrolling to the dedicated card; if it isn't on screen
           // (mobile/condensed sidebar) fall back to a simple prompt.
@@ -239,13 +241,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             el.scrollIntoView({ behavior: 'smooth' });
           } else {
             const labels = fcOrgOptions.map((o, i) => `${i + 1}. ${o.name}`).join('\n');
-            const choice = window.prompt(`Pick a field crew to request hours from:\n${labels}\n\nEnter number 1-${fcOrgOptions.length}`);
+            const choice = window.prompt(`Pick a crew to request hours from:\n${labels}\n\nEnter number 1-${fcOrgOptions.length}`);
             const idx = choice ? parseInt(choice, 10) - 1 : -1;
             if (idx >= 0 && idx < fcOrgOptions.length) {
               try {
                 await requestFCInput.mutateAsync(fcOrgOptions[idx].id);
                 toast.success(`Requested hours from ${fcOrgOptions[idx].name}`);
-              } catch { toast.error('Failed to request FC input'); }
+              } catch { toast.error(`Failed to request ${rl.FC} input`); }
             }
           }
         }
@@ -265,8 +267,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             } else {
               await completeFCInput.mutateAsync();
             }
-            toast.success('Submitted to Trade Contractor');
-          } catch (e: any) { toast.error(e?.message ?? 'Failed to submit to TC'); }
+            toast.success('Submitted to Subcontractor');
+          } catch (e: any) { toast.error(e?.message ?? `Failed to submit to ${rl.TC}`); }
         }
         break;
       case 'close_for_pricing':
@@ -755,7 +757,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <DialogHeader>
             <DialogTitle>Which contract should this PDF show?</DialogTitle>
             <DialogDescription>
-              You sit between the General Contractor and Field Crew. Pick which side this document represents.
+              You sit between the General Contractor and Crew. Pick which side this document represents.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
@@ -763,7 +765,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               variant="outline"
               onClick={() => { setPdfPerspectiveOpen(false); void downloadPdfWithPerspective('downstream'); }}
             >
-              Field Crew → Me
+              Crew → Me
             </Button>
             <Button
               onClick={() => { setPdfPerspectiveOpen(false); void downloadPdfWithPerspective('upstream'); }}

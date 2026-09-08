@@ -12,11 +12,11 @@ const features = [
   {
     num: '03', icon: '📄', title: 'Change Orders',
     desc: 'Document and approve scope changes with a proper financial trail. Every change order flows directly into project cost tracking — no more verbal agreements that disappear.',
-    tags: ['Scope Documentation', 'GC Approval', 'Cost Integration', 'Audit Trail'],
+    tags: ['Scope Documentation', 'Contractor Approval', 'Cost Integration', 'Audit Trail'],
   },
   {
     num: '04', icon: '💰', title: 'Invoicing',
-    desc: 'Move invoices through approval faster with a clear financial record for every company. Trade Contractors submit, GCs approve, and payment status updates in real time — no email chains.',
+    desc: 'Move invoices through approval faster with a clear financial record for every company. Subcontractors submit, GCs approve, and payment status updates in real time — no email chains.',
     tags: ['Fast Approvals', 'Payment Status', 'Financial Trail', 'Multi-party'],
   },
   {

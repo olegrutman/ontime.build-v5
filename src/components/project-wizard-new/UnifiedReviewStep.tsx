@@ -228,7 +228,7 @@ export function UnifiedReviewStep({
             {/* Upstream / primary contract */}
             <div className="space-y-2">
               <div className="text-sm">
-                <p className="text-muted-foreground">{isTC ? 'General Contractor → Trade Contractor Contract' : isGC ? 'Owner → General Contractor Contract' : 'Contract Value'}</p>
+                <p className="text-muted-foreground">{isTC ? 'General Contractor → Subcontractor Contract' : isGC ? 'Owner → General Contractor Contract' : 'Contract Value'}</p>
                 <p className="font-medium text-lg">{contractValue > 0 ? formatCurrency(contractValue) : '—'}</p>
               </div>
               {sovLines.length > 0 && (
@@ -242,7 +242,7 @@ export function UnifiedReviewStep({
             {isTC && fcContractValue > 0 && (
               <div className="space-y-2">
                 <div className="text-sm">
-                  <p className="text-muted-foreground">Trade Contractor → Field Crew Contract</p>
+                  <p className="text-muted-foreground">Subcontractor → Crew Contract</p>
                   <p className="font-medium text-lg">{formatCurrency(fcContractValue)}</p>
                 </div>
                 {fcSovLines.length > 0 && (
@@ -257,7 +257,7 @@ export function UnifiedReviewStep({
             {isGC && gcTcContractValue > 0 && (
               <div className="space-y-2">
                 <div className="text-sm">
-                  <p className="text-muted-foreground">General Contractor → Trade Contractor Contract</p>
+                  <p className="text-muted-foreground">General Contractor → Subcontractor Contract</p>
                   <p className="font-medium text-lg">{formatCurrency(gcTcContractValue)}</p>
                 </div>
                 {gcTcSovLines.length > 0 && (

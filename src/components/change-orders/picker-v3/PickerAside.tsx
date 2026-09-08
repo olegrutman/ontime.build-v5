@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import { Plus, MapPin, Wrench, FileText, CheckCircle2, Circle, Users, ArrowRight } from 'lucide-react';
 import type { PickerState } from './types';
 import { locationShort, REVIEW_STEP } from './types';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface PickerAsideProps {
   state: PickerState;
@@ -16,6 +17,7 @@ interface PickerAsideProps {
 export function PickerAside({
   state, onSwitchItem, onAddItem, onBack, onNext, onSubmit, canGoBack,
 }: PickerAsideProps) {
+  const rl = useRoleLabelsContext();
   const isReview = state.step === REVIEW_STEP;
   const isRoutingStep = state.step >= REVIEW_STEP - 1;
   const cur = state.items[state.currentItemIndex];
@@ -148,12 +150,12 @@ export function PickerAside({
               </div>
               {state.collaboration.assignedTcOrgId && (
                 <div className="flex justify-between text-[0.7rem]">
-                  <span className="text-white/70">Assigned TC</span>
+                  <span className="text-white/70">Assigned {rl.TC}</span>
                   <span className="font-semibold text-amber-400">✓ Assigned</span>
                 </div>
               )}
               <div className="flex justify-between text-[0.7rem]">
-                <span className="text-white/70">FC Input</span>
+                <span className="text-white/70">{rl.FC} input</span>
                 <span className="font-semibold text-white">
                   {state.collaboration.requestFcInput ? '✓ Requested' : 'Not requested'}
                 </span>
@@ -162,13 +164,13 @@ export function PickerAside({
                 <div className="flex justify-between text-[0.7rem]">
                   <span className="text-white/70">Materials</span>
                   <span className="font-semibold text-white">
-                    {cur.materialsNeeded ? `Needed · ${cur.materialResponsible}` : 'None'}
+                    {cur.materialsNeeded ? `Needed · ${rl.label(cur.materialResponsible as 'GC' | 'TC' | 'FC')}` : 'None'}
                   </span>
                 </div>
                 <div className="flex justify-between text-[0.7rem]">
                   <span className="text-white/70">Equipment</span>
                   <span className="font-semibold text-white">
-                    {cur.equipmentNeeded ? `Needed · ${cur.equipmentResponsible}` : 'None'}
+                    {cur.equipmentNeeded ? `Needed · ${rl.label(cur.equipmentResponsible as 'GC' | 'TC' | 'FC')}` : 'None'}
                   </span>
                 </div>
               </div>

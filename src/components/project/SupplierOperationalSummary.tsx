@@ -32,15 +32,15 @@ interface InvoiceRow {
 
 const roleDotColors: Record<string, string> = {
   'General Contractor': 'bg-blue-500',
-  'Trade Contractor': 'bg-emerald-500',
-  'Field Crew': 'bg-purple-500',
+  'Subcontractor': 'bg-emerald-500',
+  'Crew': 'bg-purple-500',
   'Supplier': 'bg-amber-500',
 };
 
 const roleLabel: Record<string, string> = {
   'General Contractor': 'General Contractor',
-  'Trade Contractor': 'Trade Contractor',
-  'Field Crew': 'Field Crew',
+  'Subcontractor': 'Subcontractor',
+  'Crew': 'Crew',
   'Supplier': 'Supplier',
 };
 

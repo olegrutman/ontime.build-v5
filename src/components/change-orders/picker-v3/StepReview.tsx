@@ -5,6 +5,7 @@ import { useOpenRFIs } from '@/hooks/useRFIs';
 import { useParams } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquareMore } from 'lucide-react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface StepReviewProps {
   state: PickerState;
@@ -16,6 +17,7 @@ interface StepReviewProps {
 export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepReviewProps) {
   const { id: projectId } = useParams<{ id: string }>();
   const { data: openRFIs = [] } = useOpenRFIs(projectId);
+  const rl = useRoleLabelsContext();
 
   return (
     <div>
@@ -152,9 +154,9 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
           </div>
           <span className="text-muted-foreground/50 text-[0.85rem]">→</span>
           <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-muted/30 border rounded-lg">
-            <span className="w-[30px] h-[30px] rounded-full bg-blue-600 text-white flex items-center justify-center text-[0.78rem] font-extrabold">GC</span>
+            <span className="w-[30px] h-[30px] rounded-full bg-blue-600 text-white flex items-center justify-center text-[0.78rem] font-extrabold">{rl.initials('GC')}</span>
             <div>
-              <p className="text-[0.78rem] font-bold text-foreground">GC Approval</p>
+              <p className="text-[0.78rem] font-bold text-foreground">{rl.GC} approval</p>
               <p className="text-[0.62rem] text-muted-foreground">Required</p>
             </div>
           </div>
@@ -169,13 +171,13 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
       <div className="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
         <div className="p-3.5 bg-background border rounded-xl">
           <p className="text-[0.62rem] font-bold text-muted-foreground uppercase tracking-[1.2px] mb-1.5">Work Start</p>
-          <p className="text-[0.92rem] font-semibold text-foreground">After GC approval</p>
+          <p className="text-[0.92rem] font-semibold text-foreground">After {rl.GC} approval</p>
           <p className="text-[0.7rem] text-muted-foreground mt-0.5">Estimated 2 days from submit</p>
         </div>
         <div className="p-3.5 bg-background border rounded-xl">
           <p className="text-[0.62rem] font-bold text-muted-foreground uppercase tracking-[1.2px] mb-1.5">Pricing</p>
           <p className="text-[0.92rem] font-semibold text-foreground">After creation</p>
-          <p className="text-[0.7rem] text-muted-foreground mt-0.5">TC/FC will add pricing on the detail page</p>
+          <p className="text-[0.7rem] text-muted-foreground mt-0.5">Pricing is added on the detail page</p>
         </div>
       </div>
 

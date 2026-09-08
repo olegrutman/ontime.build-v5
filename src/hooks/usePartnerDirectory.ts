@@ -29,8 +29,8 @@ export const ORG_TYPE_ORDER = ['GC', 'TC', 'FC', 'SUPPLIER'] as const;
 
 const ROLE_TO_ORG_TYPE: Record<string, string> = {
   'General Contractor': 'GC',
-  'Trade Contractor': 'TC',
-  'Field Crew': 'FC',
+  'Subcontractor': 'TC',
+  'Crew': 'FC',
   'Supplier': 'SUPPLIER',
 };
 

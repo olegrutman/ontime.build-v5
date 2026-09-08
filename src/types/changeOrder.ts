@@ -31,7 +31,7 @@ export const CO_REASON_LABELS: Record<COReasonCode, string> = {
   rework:            'Rework',
   design_change:     'Design change',
   owner_request:     'Owner request',
-  gc_request:        'GC request',
+  gc_request:        'Contractor request',
   damaged_by_others: 'Damaged by others',
   other:             'Other',
 };

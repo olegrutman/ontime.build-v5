@@ -72,8 +72,8 @@ export function buildCONotification(
       title: 'NTE increase requested',
       body:
         amount != null
-          ? `TC is requesting a ${fmtAmount(amount)} increase on ${label}`
-          : `TC is requesting an NTE increase on ${label}`,
+          ? `A ${fmtAmount(amount)} increase is being requested on ${label}`
+          : `An NTE increase is being requested on ${label}`,
     },
     NTE_APPROVED: {
       title: 'NTE increase approved',
@@ -92,7 +92,7 @@ export function buildCONotification(
     },
     CO_COMPLETED: {
       title: 'Work marked complete',
-      body: `${label} has been marked as completed by TC. Acknowledgment required.`,
+      body: `${label} has been marked as completed. Acknowledgment required.`,
     },
     CO_ACKNOWLEDGED: {
       title: 'Completion acknowledged',
@@ -108,11 +108,11 @@ export function buildCONotification(
     },
     NTE_BLOCKED_100: {
       title: 'NTE cap reached — additions blocked',
-      body: `${label} has reached 100% of the NTE cap. GC must increase or close.`,
+      body: `${label} has reached 100% of the NTE cap. It must be increased or closed.`,
     },
     FC_PRICING_SUBMITTED: {
-      title: 'FC pricing submitted',
-      body: `Field crew has submitted pricing on ${label}.`,
+      title: 'Crew pricing submitted',
+      body: `Crew has submitted pricing on ${label}.`,
     },
     CO_WITHDRAWN: {
       title: `${coWord} withdrawn`,

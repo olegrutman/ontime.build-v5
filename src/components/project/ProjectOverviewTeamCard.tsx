@@ -27,15 +27,15 @@ interface TeamMember {
 
 const roleDotColors: Record<string, string> = {
   'General Contractor': 'bg-blue-500',
-  'Trade Contractor': 'bg-emerald-500',
-  'Field Crew': 'bg-purple-500',
+  'Subcontractor': 'bg-emerald-500',
+  'Crew': 'bg-purple-500',
   'Supplier': 'bg-amber-500',
 };
 
 const roleLabel: Record<string, string> = {
   'General Contractor': 'General Contractor',
-  'Trade Contractor': 'Trade Contractor',
-  'Field Crew': 'Field Crew',
+  'Subcontractor': 'Subcontractor',
+  'Crew': 'Crew',
   'Supplier': 'Supplier',
 };
 
@@ -93,7 +93,7 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
         <TooltipProvider delayDuration={300}>
           {team.map((member) => {
             const label = roleLabel[member.role] || member.role;
-            const memberOrgType = member.role === 'General Contractor' ? 'GC' : member.role === 'Trade Contractor' ? 'TC' : member.role === 'Field Crew' ? 'FC' : 'SUPPLIER';
+            const memberOrgType = member.role === 'General Contractor' ? 'GC' : member.role === 'Subcontractor' ? 'TC' : member.role === 'Crew' ? 'FC' : 'SUPPLIER';
             const hasMaterial = materialResp === memberOrgType;
             const isInvited = member.status === 'Invited';
             const isResending = resending === member.id;
@@ -139,7 +139,7 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
         {materialResp && (
           <div className="pt-2.5 border-t border-border/40 flex items-center gap-2 text-[0.75rem] text-muted-foreground">
             <Package className="h-3 w-3" />
-            <span>Materials: {materialResp === 'GC' ? 'General Contractor' : 'Trade Contractor'}</span>
+            <span>Materials: {materialResp === 'GC' ? 'General Contractor' : 'Subcontractor'}</span>
           </div>
         )}
 

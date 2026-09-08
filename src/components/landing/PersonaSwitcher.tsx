@@ -9,23 +9,23 @@ const personas = [
     bullets: [
       'Approve invoices, COs and POs from one inbox',
       'Live budget — committed vs actual, no spreadsheets',
-      'GCs never see TC labor margins — privacy is default',
+      'General contractors never see subcontractor labor margins — privacy is default',
     ],
   },
   {
     id: 'tc',
-    label: 'Trade Contractor',
+    label: 'Subcontractor',
     short: 'TC',
     headline: 'Get paid faster, lose less material, stop chasing approvals.',
     bullets: [
       'SOV invoicing with auto-revision tracking',
-      'Crew tasks routed to Field Crews — no group texts',
+      'Crew tasks routed to Crews — no group texts',
       'Closed-loop returns recover real money each project',
     ],
   },
   {
     id: 'fc',
-    label: 'Field Crew',
+    label: 'Crew',
     short: 'FC',
     headline: 'See what to build, log hours, attach photos — that\'s it.',
     bullets: [
@@ -135,7 +135,7 @@ export function PersonaSwitcher() {
             <div className="flex flex-col gap-2">
               {[
                 { id: 'INV-1048', desc: 'Phase 1 labor', amt: '$18,400', st: 'Approved', stColor: 'hsl(153, 82%, 31%)' },
-                { id: 'INV-1049', desc: 'Phase 2 partial', amt: '$22,100', st: 'GC Review', stColor: 'hsl(var(--amber-d))' },
+                { id: 'INV-1049', desc: 'Phase 2 partial', amt: '$22,100', st: 'In Review', stColor: 'hsl(var(--amber-d))' },
                 { id: 'CO-045', desc: 'Roof sheathing', amt: '$9,800', st: 'Submitted', stColor: 'hsl(var(--amber-d))' },
                 { id: 'RET-12', desc: 'Excess lumber', amt: '+$1,240', st: 'Credit', stColor: 'hsl(153, 82%, 31%)' },
               ].map((r) => (

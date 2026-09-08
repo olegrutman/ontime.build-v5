@@ -57,7 +57,7 @@ export function HeroSection() {
           style={{ color: 'hsl(var(--muted-foreground))' }}
         >
           Stop reconciling SOVs by hand, chasing change orders over text, and finding
-          $40k of unreturned material at closeout. One <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>flat $89/month per company</strong> — unlimited users, unlimited projects, all four roles (GC, Trade, Field Crew, Supplier).
+          $40k of unreturned material at closeout. One <strong className="font-semibold" style={{ color: 'hsl(var(--ink))' }}>flat $89/month per company</strong> — unlimited users, unlimited projects, all four roles (general contractor, subcontractor, crew, supplier).
         </p>
 
         {/* Actions */}
@@ -114,7 +114,7 @@ export function HeroSection() {
                     Re-frame bearing wall — Unit 3B
                   </h2>
                   <div className="text-[0.78rem] mt-2" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    Priced by <strong className="font-semibold" style={{ color: 'hsl(var(--ink2))' }}>Alvarez Framing</strong> → routed to <strong className="font-semibold" style={{ color: 'hsl(var(--ink2))' }}>Northline GC</strong>
+                    Priced by <strong className="font-semibold" style={{ color: 'hsl(var(--ink2))' }}>Alvarez Framing</strong> → routed to <strong className="font-semibold" style={{ color: 'hsl(var(--ink2))' }}>Northline Builders</strong>
                   </div>
                 </div>
                 <span

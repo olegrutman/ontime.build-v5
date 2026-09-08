@@ -15,7 +15,7 @@ export type BoardColumnKey = 'wip' | 'pending_pricing' | 'gc_review' | 'approved
 export const BOARD_COLUMNS: { key: BoardColumnKey; label: string; color: string }[] = [
   { key: 'wip', label: 'Work in progress', color: '#2563EB' },
   { key: 'pending_pricing', label: 'Pending pricing', color: '#F5A623' },
-  { key: 'gc_review', label: 'GC review', color: '#F5A623' },
+  { key: 'gc_review', label: 'In review', color: '#F5A623' },
   { key: 'approved', label: 'Approved — billable', color: '#059669' },
   { key: 'invoiced', label: 'Invoiced / Paid', color: '#6B7280' },
 ];

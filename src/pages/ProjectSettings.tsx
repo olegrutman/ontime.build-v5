@@ -117,7 +117,7 @@ export default function ProjectSettings() {
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <p className="text-muted-foreground">
           {isGC
-            ? 'Only GC admins or managers with "Manage Org" permission can edit project settings. Ask an admin for access.'
+            ? 'Only admins or managers with "Manage Org" permission can edit project settings. Ask an admin for access.'
             : 'Only the General Contractor on this project can manage these settings.'}
         </p>
         <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>Go back</Button>
@@ -223,21 +223,21 @@ export default function ProjectSettings() {
               <RadioGroupItem value="hidden" className="mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-foreground">Hidden</p>
-                <p className="text-xs text-muted-foreground">Lump sum / fixed price contracts. GC sees only the final submitted amount.</p>
+                <p className="text-xs text-muted-foreground">Lump sum / fixed price contracts. The general contractor sees only the final submitted amount.</p>
               </div>
             </label>
             <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
               <RadioGroupItem value="summary" className="mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-foreground">Summary</p>
-                <p className="text-xs text-muted-foreground">T&M contracts. GC sees labor and material totals, but not individual rates or hours.</p>
+                <p className="text-xs text-muted-foreground">T&M contracts. The general contractor sees labor and material totals, but not individual rates or hours.</p>
               </div>
             </label>
             <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
               <RadioGroupItem value="detailed" className="mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-foreground">Detailed</p>
-                <p className="text-xs text-muted-foreground">Cost-plus / GMP contracts. GC sees rates, hours, internal costs, and TC margin.</p>
+                <p className="text-xs text-muted-foreground">Cost-plus / GMP contracts. The general contractor sees rates, hours, internal costs, and subcontractor margin.</p>
               </div>
             </label>
           </RadioGroup>

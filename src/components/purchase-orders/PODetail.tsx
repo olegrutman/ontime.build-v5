@@ -334,7 +334,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         .select('id');
       if (error) throw error;
       if (!updated?.length) throw new Error('You do not have permission to return this PO');
-      toast.success('PO returned to the trade contractor');
+      toast.success('PO returned to the subcontractor');
       fetchPO();
       onUpdate();
     } catch (error: unknown) {
@@ -714,7 +714,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                {needsUpstreamApproval ? 'Send to GC for Approval' : 'Submit to Supplier'}
+                {needsUpstreamApproval ? 'Send for Approval' : 'Submit to Supplier'}
               </Button>
             </>
           )}

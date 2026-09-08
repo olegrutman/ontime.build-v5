@@ -113,9 +113,9 @@ export function ScopeDetailsTab({ projectId }: Props) {
   const fcTeamOrgs = isTCOrg
     ? Array.from(
         allTeamMembers
-          .filter(m => m.role === 'Field Crew' && m.org_id)
+          .filter(m => m.role === 'Crew' && m.org_id)
           .reduce((map, m) => {
-            if (!map.has(m.org_id!)) map.set(m.org_id!, { id: m.org_id!, name: m.invited_org_name || 'Field Crew' });
+            if (!map.has(m.org_id!)) map.set(m.org_id!, { id: m.org_id!, name: m.invited_org_name || 'Crew' });
             return map;
           }, new Map<string, { id: string; name: string }>())
           .values()
