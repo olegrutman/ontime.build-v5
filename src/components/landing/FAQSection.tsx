@@ -20,7 +20,7 @@ const faqs = [
   },
   {
     q: 'Is my QuickBooks or financial data safe?',
-    a: 'We never store your QuickBooks credentials. Integrations use OAuth on a per-user basis, and every organization owns its own data. Row-level security means a general contractor never sees a subcontractor's labor margins unless the subcontractor opts in.',
+    a: "We never store your QuickBooks credentials. Integrations use OAuth on a per-user basis, and every organization owns its own data. Row-level security means a general contractor never sees a subcontractor's labor margins unless the subcontractor opts in.",
   },
   {
     q: 'Can I cancel? What happens to my data?',
