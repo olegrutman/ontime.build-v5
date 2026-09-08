@@ -142,7 +142,9 @@ export default function Settings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-sm">Email Notifications</p>
-                    <p className="text-xs text-muted-foreground">Master toggle for all email alerts</p>
+                    <p className="text-xs text-muted-foreground">
+                      Master toggle — turn this off and no alert emails are sent to you
+                    </p>
                   </div>
                   <Switch
                     checked={userSettings?.notify_email ?? true}
