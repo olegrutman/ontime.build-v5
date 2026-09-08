@@ -200,7 +200,11 @@ export function COStatusActions({
     }
   }
 
-  async function notifyAllCOParties(type: string, amount?: number) {
+  async function notifyAllCOParties(
+    type: string,
+    amount?: number,
+    excludeUserIds: (string | null | undefined)[] = [],
+  ) {
     const orgIds = new Set<string>();
     if (co.org_id) orgIds.add(co.org_id);
     if (co.assigned_to_org_id) orgIds.add(co.assigned_to_org_id);
