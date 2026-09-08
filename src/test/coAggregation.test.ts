@@ -14,7 +14,7 @@ const OTHER = 'org-other';
 
 const upstream = (over: Partial<ContractLike> = {}): ContractLike => ({
   from_role: 'General Contractor',
-  to_role: 'Trade Contractor',
+  to_role: 'Subcontractor',
   from_org_id: GC,
   to_org_id: TC,
   trade: 'Framing',
@@ -22,8 +22,8 @@ const upstream = (over: Partial<ContractLike> = {}): ContractLike => ({
 });
 
 const downstream = (over: Partial<ContractLike> = {}): ContractLike => ({
-  from_role: 'Trade Contractor',
-  to_role: 'Field Crew',
+  from_role: 'Subcontractor',
+  to_role: 'Crew',
   from_org_id: TC,
   to_org_id: FC,
   trade: 'Framing',
@@ -35,22 +35,22 @@ describe('resolveBillingOrgId', () => {
     expect(resolveBillingOrgId([upstream()], 'General Contractor')).toBe(TC);
     expect(
       resolveBillingOrgId(
-        [upstream({ from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC })],
+        [upstream({ from_role: 'Subcontractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC })],
         'General Contractor',
       ),
     ).toBe(TC);
   });
 
   it('returns TC org for TC viewer', () => {
-    expect(resolveBillingOrgId([upstream(), downstream()], 'Trade Contractor')).toBe(TC);
+    expect(resolveBillingOrgId([upstream(), downstream()], 'Subcontractor')).toBe(TC);
   });
 
   it('returns FC org for FC viewer (regardless of contract direction)', () => {
-    expect(resolveBillingOrgId([upstream(), downstream()], 'Field Crew')).toBe(FC);
+    expect(resolveBillingOrgId([upstream(), downstream()], 'Crew')).toBe(FC);
     expect(
       resolveBillingOrgId(
-        [downstream({ from_role: 'Field Crew', to_role: 'Trade Contractor', from_org_id: FC, to_org_id: TC })],
-        'Field Crew',
+        [downstream({ from_role: 'Crew', to_role: 'Subcontractor', from_org_id: FC, to_org_id: TC })],
+        'Crew',
       ),
     ).toBe(FC);
   });
@@ -63,7 +63,7 @@ describe('resolveBillingOrgId', () => {
 
   it('returns null when no relevant contract exists', () => {
     expect(resolveBillingOrgId([], 'General Contractor')).toBeNull();
-    expect(resolveBillingOrgId([upstream()], 'Field Crew')).toBeNull();
+    expect(resolveBillingOrgId([upstream()], 'Crew')).toBeNull();
   });
 });
 

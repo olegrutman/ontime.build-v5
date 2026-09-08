@@ -9,13 +9,13 @@ const contracts = [
   // Owner → GC
   { id: 'owner', from_role: 'Owner', to_role: 'General Contractor', from_org_id: null, to_org_id: GC, contract_sum: 0, co_approved_sum: 0 },
   // TC bills GC: revised 800000 includes 11287.25 of approved COs
-  { id: 'tcgc', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, co_approved_sum: 11287.25 },
+  { id: 'tcgc', from_role: 'Subcontractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, co_approved_sum: 11287.25 },
   // FC bills TC
-  { id: 'fctc', from_role: 'Field Crew', to_role: 'Trade Contractor', from_org_id: FC, to_org_id: TC, contract_sum: 600000, co_approved_sum: 0 },
+  { id: 'fctc', from_role: 'Crew', to_role: 'Subcontractor', from_org_id: FC, to_org_id: TC, contract_sum: 600000, co_approved_sum: 0 },
 ];
 
 const baseInput = (over: Partial<LedgerInput>): LedgerInput => ({
-  role: 'Trade Contractor',
+  role: 'Subcontractor',
   myOrgIds: [TC],
   contracts,
   ownerContractValue: 1_400_000,
@@ -68,7 +68,7 @@ describe('revenue', () => {
   });
 
   it('marks revenue unknown when there is no contract', () => {
-    const l = buildProjectLedger(baseInput({ myOrgIds: ['nobody'], role: 'Field Crew' }));
+    const l = buildProjectLedger(baseInput({ myOrgIds: ['nobody'], role: 'Crew' }));
     expect(l.baseContract.known).toBe(false);
   });
 });
@@ -136,7 +136,7 @@ describe('duplicate contract rows (re-invites)', () => {
   const dupes = [
     ...contracts,
     // Same TC → GC pair re-invited: a second row for the same counterparties.
-    { id: 'tcgc-dupe', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, co_approved_sum: 0, original_contract_sum: 800000, status: 'Invited' },
+    { id: 'tcgc-dupe', from_role: 'Subcontractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, co_approved_sum: 0, original_contract_sum: 800000, status: 'Invited' },
   ];
 
   it('counts a re-invited contract once in GC subcontract cost', () => {
@@ -157,7 +157,7 @@ describe('committed vs pending cost (audit: GC cost read 1.7M)', () => {
   const live = [
     { id: 'owner', from_role: 'Owner', to_role: 'General Contractor', from_org_id: null, to_org_id: GC, contract_sum: 1000000, original_contract_sum: 1000000, co_approved_sum: 0, status: 'Active' },
     { id: 'sup', from_role: 'Supplier', to_role: 'General Contractor', from_org_id: 'sup', to_org_id: GC, contract_sum: 855934.33, original_contract_sum: 855934.33, co_approved_sum: 0, status: 'Accepted' },
-    { id: 'tc', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, original_contract_sum: 800000, co_approved_sum: 0, status: 'Invited' },
+    { id: 'tc', from_role: 'Subcontractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800000, original_contract_sum: 800000, co_approved_sum: 0, status: 'Invited' },
   ];
 
   const gc = () => buildProjectLedger(baseInput({
@@ -183,7 +183,7 @@ describe('committed vs pending cost (audit: GC cost read 1.7M)', () => {
 describe('unsigned upstream contract (regression: fake 100% margin)', () => {
   const invited = [
     { id: 'owner', from_role: 'Owner', to_role: 'General Contractor', from_org_id: null, to_org_id: GC, contract_sum: 1_000_000, co_approved_sum: 0, status: 'Active' },
-    { id: 'tcgc', from_role: 'Trade Contractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800_000, co_approved_sum: 0, status: 'Invited' },
+    { id: 'tcgc', from_role: 'Subcontractor', to_role: 'General Contractor', from_org_id: TC, to_org_id: GC, contract_sum: 800_000, co_approved_sum: 0, status: 'Invited' },
   ];
 
   it('keeps an Invited contract out of TC revenue and shows it as awaiting signature', () => {
