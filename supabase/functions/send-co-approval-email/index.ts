@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
 
   const html = renderEmail({
     heading: `${roleLabel} approval requested`,
+    status: 'warning',
     intro: `You've been asked to review and approve a change order${projectName ? ` on ${projectName}` : ''}. No account or password is needed — the link below opens the signed approval form.`,
     rows: [
       ['Project', projectName],

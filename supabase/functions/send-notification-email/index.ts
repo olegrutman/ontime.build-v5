@@ -192,15 +192,26 @@ Deno.serve(async (req) => {
 
       const heading = payload.title ?? 'Update on your project';
       const intro = payload.body ?? 'There is an update waiting for you in Ontime.Build.';
+      const t = type.toUpperCase();
+      const status: 'success' | 'danger' | 'warning' | 'info' =
+        t.includes('APPROVED') || t.includes('PAID') || t.includes('ACCEPTED')
+          ? 'success'
+          : t.includes('REJECTED') || t.includes('DECLINED') || t.includes('WITHDRAWN')
+            ? 'danger'
+            : t.includes('REQUEST') || t.includes('SUBMITTED') || t.includes('ASSIGNED')
+              ? 'warning'
+              : 'info';
       const html = renderEmail({
         heading,
         intro,
+        status,
         rows: [],
         ctaLabel: CTA_BY_TYPE[type] ?? 'Open in Ontime.Build',
         ctaUrl: actionUrl,
         footnote:
           'You are receiving this because this action needs your attention. Manage which alerts are emailed to you in Settings → Notifications.',
       });
+
 
       await queueEmail(supabase, {
         to: email,

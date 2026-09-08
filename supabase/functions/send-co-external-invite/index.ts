@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
   const html = renderEmail({
     heading: purpose.heading,
     intro: purpose.intro,
+    status: 'warning',
     rows: [
       ['Project', projectName],
       ['Change order', coNumber],
