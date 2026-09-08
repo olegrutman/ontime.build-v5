@@ -2,7 +2,7 @@
 // Called by the AFTER INSERT trigger on public.notifications, which only fires for
 // an allowlisted set of notification types.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { serviceClient, queueEmail, renderEmail, escapeHtml } from '../_shared/coEmail.ts';
+import { serviceClient, queueEmail, renderEmail } from '../_shared/coEmail.ts';
 
 const APP_URL = 'https://ontime.build';
 
@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
       results.push({ user_id: userId, status: 'sent' });
     }
 
-    return json({ ok: true, type, results, escaped: escapeHtml('') === '' });
+    return json({ ok: true, type, results });
   } catch (err) {
     console.error('send-notification-email failed', err);
     return json({ error: err instanceof Error ? err.message : 'unknown' }, 500);
