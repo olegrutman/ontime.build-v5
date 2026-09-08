@@ -10,6 +10,7 @@ import { useScopeSelections, useScopeSections, useScopeItems, filterSections, fi
 import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Layers, Save, Loader2 } from 'lucide-react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface Props {
   projectId: string;
