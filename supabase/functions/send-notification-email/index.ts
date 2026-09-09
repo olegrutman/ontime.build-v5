@@ -74,6 +74,7 @@ interface TriggerBody {
   type?: string;
   title?: string;
   body?: string | null;
+  entity_id?: string | null;
   action_url?: string | null;
 }
 
