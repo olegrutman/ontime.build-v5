@@ -46,6 +46,38 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const supplierId = supplierRec?.id;
   const supplierName = supplierRec?.name || 'Supplier';
 
+  // Who is responsible for procuring materials on this project (resolved to a company name)
+  const { data: relationships = [] } = useQuery({
+    queryKey: ['sup-proj-relationships', projectId],
+    queryFn: async () => {
+      const { data } = await supabase.rpc('get_project_relationships', { _project_id: projectId });
+      return (data || []) as {
+        upstream_org_name: string; upstream_role: string;
+        downstream_org_name: string; downstream_role: string;
+        material_responsibility: string | null;
+      }[];
+    },
+    enabled: !!projectId,
+  });
+  const roleCode = (r: string | null | undefined) => {
+    const v = (r || '').toUpperCase();
+    if (v.startsWith('GC') || v.includes('GENERAL CONTRACTOR')) return 'GC';
+    if (v.startsWith('TC') || v.includes('SUBCONTRACTOR') || v.includes('TRADE CONTRACTOR')) return 'TC';
+    if (v.startsWith('FC') || v.includes('CREW') || v.includes('FIELD')) return 'FC';
+    if (v.includes('SUPPLIER')) return 'SUPPLIER';
+    return v;
+  };
+  const materialsRel = relationships.find(r => r.material_responsibility);
+  const materialsResponsible = materialsRel
+    ? (roleCode(materialsRel.material_responsibility) === roleCode(materialsRel.upstream_role)
+        ? { name: materialsRel.upstream_org_name, role: roleCode(materialsRel.upstream_role) }
+        : { name: materialsRel.downstream_org_name, role: roleCode(materialsRel.downstream_role) })
+    : null;
+  const responsibleRoleName = materialsResponsible?.role === 'GC' ? 'General Contractor'
+    : materialsResponsible?.role === 'TC' ? 'Subcontractor'
+    : materialsResponsible?.role === 'FC' ? 'Crew'
+    : materialsResponsible?.role === 'SUPPLIER' ? 'Supplier' : materialsResponsible?.role;
+
   // Fetch POs for this project + supplier
   const { data: pos = [] } = useQuery({
     queryKey: ['sup-proj-pos', projectId, supplierId],
@@ -271,6 +303,24 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
           <button onClick={() => onNavigate('estimates')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>Estimates</button>
         </div>
       </div>
+
+      {/* Materials responsibility — who buys materials on this project */}
+      {materialsResponsible && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, flexWrap: 'wrap', ...fontLabel }}>
+          <span style={{ fontSize: '1rem' }}>🧱</span>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: C.muted }}>Materials responsibility</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: C.ink }}>
+              {materialsResponsible.name} <span style={{ fontWeight: 600, color: C.muted }}>({responsibleRoleName})</span>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.7rem', color: C.muted, fontWeight: 600 }}>
+            {materialsResponsible.role === 'SUPPLIER'
+              ? 'You procure materials for this project'
+              : `This party procures materials — send estimates & invoices to them`}
+          </div>
+        </div>
+      )}
 
       {/* ─── Project snapshot funnel — the one card that tells the whole story ─── */}
       <SupplierProjectFunnel
