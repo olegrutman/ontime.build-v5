@@ -558,6 +558,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   };
 
   const [exportLoading, setExportLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [estimateItemsMap, setEstimateItemsMap] = useState<Map<string, { description: string; supplier_sku: string | null; quantity: number; uom: string; unit_price: number }> | null>(null);
 
   useEffect(() => {
