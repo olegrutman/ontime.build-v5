@@ -296,6 +296,24 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
         </div>
       </div>
 
+      {/* Materials responsibility — who buys materials on this project */}
+      {materialsResponsible && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, flexWrap: 'wrap', ...fontLabel }}>
+          <span style={{ fontSize: '1rem' }}>🧱</span>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: C.muted }}>Materials responsibility</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: C.ink }}>
+              {materialsResponsible.name} <span style={{ fontWeight: 600, color: C.muted }}>({responsibleRoleName})</span>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.7rem', color: C.muted, fontWeight: 600 }}>
+            {materialsResponsible.role === 'SUPPLIER'
+              ? 'You procure materials for this project'
+              : `This party procures materials — send estimates & invoices to them`}
+          </div>
+        </div>
+      )}
+
       {/* ─── Project snapshot funnel — the one card that tells the whole story ─── */}
       <SupplierProjectFunnel
         projectName={projectName}
