@@ -1,0 +1,1 @@
+UPDATE public.supplier_estimates SET status = 'SUBMITTED', approved_at = NULL, approved_by = NULL WHERE project_id = '3ce62f86-ec48-48f5-9be1-55f463b98b8e' AND status = 'APPROVED';

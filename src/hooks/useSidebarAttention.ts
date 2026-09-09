@@ -22,7 +22,14 @@ export function useSidebarAttention(projectId: string | undefined) {
             .eq('change_orders.project_id', projectId)
         : Promise.resolve({ data: [] as any[] });
 
-      const [coRes, collabRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes, rfiNewRes] = await Promise.all([
+      // Supplier estimates waiting on the buyer's approval. Suppliers author
+      // them, so their own submissions must not badge their nav.
+      const estimatePromise = currentOrgId
+        ? supabase.from('supplier_estimates').select('id, supplier_org_id')
+            .eq('project_id', projectId).eq('status', 'SUBMITTED')
+        : Promise.resolve({ data: [] as any[] });
+
+      const [coRes, collabRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes, rfiNewRes, estRes] = await Promise.all([
         supabase.from('change_orders').select('id')
           .eq('project_id', projectId).eq('status', 'SUBMITTED'),
         collabPromise,
@@ -38,6 +45,7 @@ export function useSidebarAttention(projectId: string | undefined) {
           .eq('project_id', projectId).eq('status', 'pending'),
         supabase.from('rfis').select('id', { count: 'exact', head: true })
           .eq('project_id', projectId).eq('status', 'open'),
+        estimatePromise,
       ]);
 
       const coIds = new Set((coRes.data || []).map((r: any) => r.id));
@@ -57,6 +65,10 @@ export function useSidebarAttention(projectId: string | undefined) {
       const rfiTotal = (rfiRes.count || 0) + (rfiNewRes.count || 0);
       if (rfiTotal > 0) result['rfis'] = rfiTotal;
       if (bcRes.count && bcRes.count > 0) result['backcharges'] = bcRes.count;
+      const pendingEstimates = ((estRes as any).data || []).filter(
+        (e: any) => e.supplier_org_id !== currentOrgId
+      ).length;
+      if (pendingEstimates > 0) result['estimates'] = pendingEstimates;
       setCounts(result);
     };
 

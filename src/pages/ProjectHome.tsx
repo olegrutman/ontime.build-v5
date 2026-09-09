@@ -36,6 +36,7 @@ import { ProjectOverviewHero } from '@/components/project/ProjectOverviewHero';
 import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
+import { PendingEstimatesAlert } from '@/components/project/PendingEstimatesAlert';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
 import { ResetSetupDialog } from '@/components/project/ResetSetupDialog';
@@ -405,6 +406,10 @@ export default function ProjectHome() {
 
                     {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                       <ProjectReadinessCard readiness={readiness} />
+                    )}
+
+                    {!isFC && !isSupplier && (
+                      <PendingEstimatesAlert projectId={id!} onReview={() => handleTabChange('estimates')} />
                     )}
 
                     {financials.loading ? (
