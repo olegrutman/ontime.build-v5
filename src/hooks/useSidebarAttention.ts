@@ -65,6 +65,10 @@ export function useSidebarAttention(projectId: string | undefined) {
       const rfiTotal = (rfiRes.count || 0) + (rfiNewRes.count || 0);
       if (rfiTotal > 0) result['rfis'] = rfiTotal;
       if (bcRes.count && bcRes.count > 0) result['backcharges'] = bcRes.count;
+      const pendingEstimates = ((estRes as any).data || []).filter(
+        (e: any) => e.supplier_org_id !== currentOrgId
+      ).length;
+      if (pendingEstimates > 0) result['estimates'] = pendingEstimates;
       setCounts(result);
     };
 
