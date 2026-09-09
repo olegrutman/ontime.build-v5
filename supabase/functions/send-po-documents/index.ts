@@ -165,10 +165,10 @@ function buildPdf(
   doc.setFontSize(9);
   doc.setTextColor(15, 23, 42);
 
-  const descWidth = (includePrices ? right - 190 : right - 120) - (cols[2] + 4);
+  const descWidth = (includePrices ? right - 210 : right - 140) - (cols[2] + 4);
   items.forEach((item, idx) => {
     const descLines: string[] = doc.splitTextToSize(String(item.description ?? ''), descWidth);
-    const rowHeight = Math.max(14, descLines.length * 11);
+    const rowHeight = Math.max(18, descLines.length * 11 + 7);
     if (y + rowHeight > pageHeight - 60) {
       doc.addPage();
       y = 60;
@@ -183,7 +183,7 @@ function buildPdf(
     const qty = `${Number(item.quantity || 0)} ${item.uom ?? ''}`.trim();
     if (includePrices) {
       doc.text(qty, cols[3], y, { align: 'right' });
-      doc.text(money2(item.unit_price), cols[4], y, { align: 'right' });
+      doc.text(item.unit_price === null || item.unit_price === undefined ? '—' : money2(item.unit_price), cols[4], y, { align: 'right' });
       const lineTotal = item.line_total ?? Number(item.unit_price || 0) * Number(item.quantity || 0);
       doc.text(money2(lineTotal), cols[5] + 60, y, { align: 'right' });
     } else {
@@ -192,7 +192,7 @@ function buildPdf(
     }
     y += rowHeight;
     doc.setDrawColor(226, 232, 240);
-    doc.line(left, y - 4, right, y - 4);
+    doc.line(left, y - 5, right, y - 5);
   });
 
   if (includePrices) {
