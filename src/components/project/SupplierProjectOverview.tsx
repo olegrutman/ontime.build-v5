@@ -46,6 +46,30 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const supplierId = supplierRec?.id;
   const supplierName = supplierRec?.name || 'Supplier';
 
+  // Who is responsible for procuring materials on this project (resolved to a company name)
+  const { data: relationships = [] } = useQuery({
+    queryKey: ['sup-proj-relationships', projectId],
+    queryFn: async () => {
+      const { data } = await supabase.rpc('get_project_relationships', { _project_id: projectId });
+      return (data || []) as {
+        upstream_org_name: string; upstream_role: string;
+        downstream_org_name: string; downstream_role: string;
+        material_responsibility: string | null;
+      }[];
+    },
+    enabled: !!projectId,
+  });
+  const materialsRel = relationships.find(r => r.material_responsibility);
+  const materialsResponsible = materialsRel
+    ? (materialsRel.material_responsibility === materialsRel.upstream_role
+        ? { name: materialsRel.upstream_org_name, role: materialsRel.upstream_role }
+        : { name: materialsRel.downstream_org_name, role: materialsRel.downstream_role })
+    : null;
+  const responsibleRoleName = materialsResponsible?.role === 'GC' ? 'General Contractor'
+    : materialsResponsible?.role === 'TC' ? 'Subcontractor'
+    : materialsResponsible?.role === 'FC' ? 'Crew'
+    : materialsResponsible?.role === 'SUPPLIER' ? 'Supplier' : materialsResponsible?.role;
+
   // Fetch POs for this project + supplier
   const { data: pos = [] } = useQuery({
     queryKey: ['sup-proj-pos', projectId, supplierId],
