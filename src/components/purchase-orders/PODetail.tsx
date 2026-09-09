@@ -16,6 +16,8 @@ import {
   Receipt,
   Bell,
   CalendarClock,
+  Mail,
+  Sheet,
 } from 'lucide-react';
 import { ScheduleDeliveryDialog } from './ScheduleDeliveryDialog';
 import { useNudge } from '@/hooks/useNudge';
@@ -53,6 +55,8 @@ import { CreateInvoiceFromPO } from './CreateInvoiceFromPO';
 import { CreateSupplierInvoiceFromPO } from './CreateSupplierInvoiceFromPO';
 import { SupplierEmailPrompt } from './SupplierEmailPrompt';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
+import { EmailPODialog } from './EmailPODialog';
+import { buildPOCsv, poFileName, downloadCsv } from '@/lib/poExport';
 
 interface PODetailProps {
   poId: string;
@@ -592,6 +596,13 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       .filter(([id]) => !usedIds.has(id))
       .map(([id, item]) => ({ id, ...item }));
   })();
+
+  const handleDownloadCsv = () => {
+    if (!po) return;
+    const csv = buildPOCsv(po, lineItems, { includePrices: canViewPricing });
+    downloadCsv(poFileName(po, 'csv'), csv);
+    toast.success('Spreadsheet downloaded');
+  };
 
   const handleDownload = async () => {
     setExportLoading(true);
