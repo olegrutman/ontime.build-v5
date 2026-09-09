@@ -698,7 +698,17 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
             {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
-            Download
+            Download PDF
+          </Button>
+
+          <Button variant="outline" onClick={handleDownloadCsv}>
+            <Sheet className="h-4 w-4 mr-2" />
+            Download CSV
+          </Button>
+
+          <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+            <Mail className="h-4 w-4 mr-2" />
+            Email PO
           </Button>
 
           {/* ACTIVE: Edit, Delete, Submit */}
