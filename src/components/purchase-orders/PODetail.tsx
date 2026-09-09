@@ -1328,6 +1328,14 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         saving={actionLoading}
         onConfirm={handleScheduleDelivery}
       />
+
+      <EmailPODialog
+        poId={poId}
+        poNumber={po.po_number}
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipient={po.supplier?.contact_info ?? null}
+      />
     </div>
   );
 }
