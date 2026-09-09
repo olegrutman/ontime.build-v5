@@ -3818,6 +3818,7 @@ export type Database = {
       notification_email_log: {
         Row: {
           created_at: string
+          entity_id: string | null
           id: string
           notification_id: string | null
           notification_type: string
@@ -3828,6 +3829,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           notification_id?: string | null
           notification_type: string
@@ -3838,6 +3840,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entity_id?: string | null
           id?: string
           notification_id?: string | null
           notification_type?: string
