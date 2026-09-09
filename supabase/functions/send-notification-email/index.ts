@@ -74,6 +74,7 @@ interface TriggerBody {
   type?: string;
   title?: string;
   body?: string | null;
+  entity_id?: string | null;
   action_url?: string | null;
 }
 
@@ -139,10 +140,13 @@ Deno.serve(async (req) => {
     const cutoff = new Date(Date.now() - THROTTLE_MINUTES * 60_000).toISOString();
 
     for (const userId of userIds) {
+      const entityId = payload.entity_id ?? null;
+
       const logSkip = async (email: string, reason: string) => {
         await supabase.from('notification_email_log').insert({
           notification_id: payload.notification_id ?? null,
           user_id: userId,
+          entity_id: entityId,
           recipient_email: email,
           notification_type: type,
           status: 'skipped',
@@ -176,14 +180,19 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Collapse bursts: one email per person per event kind per window.
-      const { count } = await supabase
+      // Collapse duplicates: one email per person per event kind PER DOCUMENT
+      // per window. Different documents of the same kind each get their email.
+      let throttleQuery = supabase
         .from('notification_email_log')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('notification_type', type)
         .eq('status', 'sent')
         .gte('created_at', cutoff);
+      throttleQuery = entityId
+        ? throttleQuery.eq('entity_id', entityId)
+        : throttleQuery.is('entity_id', null);
+      const { count } = await throttleQuery;
 
       if ((count ?? 0) > 0) {
         await logSkip(email, 'throttled');
@@ -224,6 +233,7 @@ Deno.serve(async (req) => {
       await supabase.from('notification_email_log').insert({
         notification_id: payload.notification_id ?? null,
         user_id: userId,
+        entity_id: entityId,
         recipient_email: email,
         notification_type: type,
         status: 'sent',
