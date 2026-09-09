@@ -59,11 +59,19 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     },
     enabled: !!projectId,
   });
+  const roleCode = (r: string | null | undefined) => {
+    const v = (r || '').toUpperCase();
+    if (v.startsWith('GC') || v.includes('GENERAL CONTRACTOR')) return 'GC';
+    if (v.startsWith('TC') || v.includes('SUBCONTRACTOR') || v.includes('TRADE CONTRACTOR')) return 'TC';
+    if (v.startsWith('FC') || v.includes('CREW') || v.includes('FIELD')) return 'FC';
+    if (v.includes('SUPPLIER')) return 'SUPPLIER';
+    return v;
+  };
   const materialsRel = relationships.find(r => r.material_responsibility);
   const materialsResponsible = materialsRel
-    ? (materialsRel.material_responsibility === materialsRel.upstream_role
-        ? { name: materialsRel.upstream_org_name, role: materialsRel.upstream_role }
-        : { name: materialsRel.downstream_org_name, role: materialsRel.downstream_role })
+    ? (roleCode(materialsRel.material_responsibility) === roleCode(materialsRel.upstream_role)
+        ? { name: materialsRel.upstream_org_name, role: roleCode(materialsRel.upstream_role) }
+        : { name: materialsRel.downstream_org_name, role: roleCode(materialsRel.downstream_role) })
     : null;
   const responsibleRoleName = materialsResponsible?.role === 'GC' ? 'General Contractor'
     : materialsResponsible?.role === 'TC' ? 'Subcontractor'
