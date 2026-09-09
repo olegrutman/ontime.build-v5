@@ -407,6 +407,10 @@ export default function ProjectHome() {
                       <ProjectReadinessCard readiness={readiness} />
                     )}
 
+                    {!isFC && !isSupplier && (
+                      <PendingEstimatesAlert projectId={id!} onReview={() => handleTabChange('estimates')} />
+                    )}
+
                     {financials.loading ? (
                       <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" aria-label="Loading project financials">
                         {[...Array(6)].map((_, i) => (
