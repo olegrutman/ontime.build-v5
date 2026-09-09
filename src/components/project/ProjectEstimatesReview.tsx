@@ -81,13 +81,27 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
 
       const { data: contracts } = await supabase
         .from('project_contracts')
-        .select('material_responsibility, from_org_id, to_org_id')
+        .select('material_responsibility, from_org_id, to_org_id, from_role, to_role')
         .eq('project_id', projectId);
 
       const all = (contracts || []) as any[];
       const defined = all.filter(c => c.material_responsibility);
 
-      if (defined.length > 0) {
+      const isSupplierRole = (role: unknown) =>
+        typeof role === 'string' && /supplier/i.test(role);
+
+      // Whoever the supplier actually contracts with on this project buys the
+      // materials from them, so that party must be able to approve the
+      // estimate — regardless of the project-level material responsibility
+      // flag, which can point at a different party.
+      const isSupplierCounterparty = all.some(c =>
+        (isSupplierRole(c.from_role) && c.to_org_id === currentOrgId) ||
+        (isSupplierRole(c.to_role) && c.from_org_id === currentOrgId)
+      );
+
+      if (isSupplierCounterparty) {
+        setIsResponsible(true);
+      } else if (defined.length > 0) {
         // Explicit responsibility set on at least one contract
         setIsResponsible(defined.some(c => {
           if (c.material_responsibility === 'GC') return c.to_org_id === currentOrgId;
@@ -100,6 +114,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
         // submitted estimate never gets stuck without an approver.
         setIsResponsible(all.some(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId));
       }
+
 
       // Can view estimates + pricing: any party on a project contract
       setCanViewEstimates(all.some(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId));
