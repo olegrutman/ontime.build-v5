@@ -16,6 +16,8 @@ import {
   Receipt,
   Bell,
   CalendarClock,
+  Mail,
+  Sheet,
 } from 'lucide-react';
 import { ScheduleDeliveryDialog } from './ScheduleDeliveryDialog';
 import { useNudge } from '@/hooks/useNudge';
@@ -53,6 +55,8 @@ import { CreateInvoiceFromPO } from './CreateInvoiceFromPO';
 import { CreateSupplierInvoiceFromPO } from './CreateSupplierInvoiceFromPO';
 import { SupplierEmailPrompt } from './SupplierEmailPrompt';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
+import { EmailPODialog } from './EmailPODialog';
+import { buildPOCsv, poFileName, downloadCsv } from '@/lib/poExport';
 
 interface PODetailProps {
   poId: string;
@@ -554,6 +558,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   };
 
   const [exportLoading, setExportLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [estimateItemsMap, setEstimateItemsMap] = useState<Map<string, { description: string; supplier_sku: string | null; quantity: number; uom: string; unit_price: number }> | null>(null);
 
   useEffect(() => {
@@ -592,6 +597,13 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       .filter(([id]) => !usedIds.has(id))
       .map(([id, item]) => ({ id, ...item }));
   })();
+
+  const handleDownloadCsv = () => {
+    if (!po) return;
+    const csv = buildPOCsv(po, lineItems, { includePrices: canViewPricing });
+    downloadCsv(poFileName(po, 'csv'), csv);
+    toast.success('Spreadsheet downloaded');
+  };
 
   const handleDownload = async () => {
     setExportLoading(true);
@@ -698,7 +710,17 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
             {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
-            Download
+            Download PDF
+          </Button>
+
+          <Button variant="outline" onClick={handleDownloadCsv}>
+            <Sheet className="h-4 w-4 mr-2" />
+            Download CSV
+          </Button>
+
+          <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+            <Mail className="h-4 w-4 mr-2" />
+            Email PO
           </Button>
 
           {/* ACTIVE: Edit, Delete, Submit */}
@@ -1305,6 +1327,14 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         initialDate={po.ready_for_delivery_at}
         saving={actionLoading}
         onConfirm={handleScheduleDelivery}
+      />
+
+      <EmailPODialog
+        poId={poId}
+        poNumber={po.po_number}
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipient={po.supplier?.contact_info ?? null}
       />
     </div>
   );
