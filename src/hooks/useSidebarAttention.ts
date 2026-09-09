@@ -22,7 +22,14 @@ export function useSidebarAttention(projectId: string | undefined) {
             .eq('change_orders.project_id', projectId)
         : Promise.resolve({ data: [] as any[] });
 
-      const [coRes, collabRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes, rfiNewRes] = await Promise.all([
+      // Supplier estimates waiting on the buyer's approval. Suppliers author
+      // them, so their own submissions must not badge their nav.
+      const estimatePromise = currentOrgId
+        ? supabase.from('supplier_estimates').select('id, supplier_org_id')
+            .eq('project_id', projectId).eq('status', 'SUBMITTED')
+        : Promise.resolve({ data: [] as any[] });
+
+      const [coRes, collabRes, invRes, poSubmittedRes, poPendingRes, rfiRes, bcRes, rfiNewRes, estRes] = await Promise.all([
         supabase.from('change_orders').select('id')
           .eq('project_id', projectId).eq('status', 'SUBMITTED'),
         collabPromise,
