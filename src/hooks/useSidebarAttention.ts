@@ -45,6 +45,7 @@ export function useSidebarAttention(projectId: string | undefined) {
           .eq('project_id', projectId).eq('status', 'pending'),
         supabase.from('rfis').select('id', { count: 'exact', head: true })
           .eq('project_id', projectId).eq('status', 'open'),
+        estimatePromise,
       ]);
 
       const coIds = new Set((coRes.data || []).map((r: any) => r.id));
