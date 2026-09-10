@@ -328,30 +328,39 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 <span className="text-muted-foreground">Internal Costs</span>
                 <span className="font-mono font-medium">{fmtCurrency(costs)}</span>
               </div>
-              <div className={cn(
-                'rounded-lg px-3 py-2',
-                margin >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-red-50 dark:bg-red-950/20',
-              )}>
-                <div className="flex justify-between text-sm">
-                  <span className="font-semibold">Gross Margin</span>
-                  <div className="text-right">
-                    <span className={cn('font-mono font-bold', margin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
-                      {fmtCurrency(margin)}
-                    </span>
-                    <span className={cn('text-xs ml-1', margin >= 0 ? 'text-emerald-600' : 'text-red-600')}>
-                      ({marginPct.toFixed(1)}%)
-                    </span>
-                  </div>
+              {costs <= 0 ? (
+                <div className="rounded-lg px-3 py-2 bg-muted/40">
+                  <p className="text-sm font-semibold">Margin pending</p>
+                  <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                    No {isTC ? rl.FC : 'internal'} cost logged yet — margin can't be calculated.
+                  </p>
                 </div>
-                {revenue > 0 && (
-                  <div className="mt-1.5 h-1.5 rounded-full bg-muted/30 overflow-hidden">
-                    <div
-                      className={cn('h-full rounded-full', margin >= 0 ? 'bg-emerald-500' : 'bg-red-500')}
-                      style={{ width: `${Math.min(Math.max(marginPct, 0), 100)}%` }}
-                    />
+              ) : (
+                <div className={cn(
+                  'rounded-lg px-3 py-2',
+                  margin >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-red-50 dark:bg-red-950/20',
+                )}>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-semibold">Gross Margin</span>
+                    <div className="text-right">
+                      <span className={cn('font-mono font-bold', margin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
+                        {fmtCurrency(margin)}
+                      </span>
+                      <span className={cn('text-xs ml-1', margin >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                        ({marginPct.toFixed(1)}%)
+                      </span>
+                    </div>
                   </div>
-                )}
-              </div>
+                  {revenue > 0 && (
+                    <div className="mt-1.5 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                      <div
+                        className={cn('h-full rounded-full', margin >= 0 ? 'bg-emerald-500' : 'bg-red-500')}
+                        style={{ width: `${Math.min(Math.max(marginPct, 0), 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
