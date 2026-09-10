@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -478,7 +478,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
+      <div className="flex-1 overflow-y-auto pb-44 md:pb-8">
         <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
 
 
@@ -652,7 +652,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   <CollapsibleTrigger asChild>
                     <button type="button" className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-accent/30 transition-colors">
                       <h3 className="font-heading text-[0.75rem] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-2">
-                        💬 Activity
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Activity
                         <span className="text-[10px] bg-muted rounded-full px-2 py-0.5">{activity.length}</span>
                       </h3>
                       <span className={cn('h-4 w-4 text-muted-foreground transition-transform', activityOpen && 'rotate-180')}>▾</span>

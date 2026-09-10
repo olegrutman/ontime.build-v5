@@ -299,12 +299,12 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
       style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
       onClick={() => { if (!editing) open(); }}
     >
-      <div className="flex items-start justify-between gap-1">
+      <div className="flex flex-col gap-1 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
         <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium leading-tight">
           {tile.label}
         </p>
         {tile.badge && !editing && (
-          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${BADGE_CLASSES[tile.badge.variant]}`}>
+          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap self-start ${BADGE_CLASSES[tile.badge.variant]}`}>
             {tile.badge.text}
           </span>
         )}
@@ -380,12 +380,12 @@ export function COKPIStrip(props: COKPIStripProps) {
             className="bg-card rounded-xl px-3.5 py-3 border border-border shadow-sm"
             style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
           >
-            <div className="flex items-start justify-between gap-1">
+            <div className="flex flex-col gap-1 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
               <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium leading-tight">
                 {tile.label}
               </p>
               {tile.badge && (
-                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${BADGE_CLASSES[tile.badge.variant]}`}>
+                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap self-start ${BADGE_CLASSES[tile.badge.variant]}`}>
                   {tile.badge.text}
                 </span>
               )}

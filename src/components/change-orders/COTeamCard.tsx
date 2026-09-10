@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import type { ChangeOrder, COCollaborator } from '@/types/changeOrder';
@@ -144,8 +145,9 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
   return (
     <div id="co-team-card" className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="px-3.5 py-3 border-b border-border flex items-center justify-between gap-2">
-        <h3 className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground">
-          👥 Team
+        <h3 className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5" />
+          Team
         </h3>
         {canReroute && (
           <Button
@@ -189,18 +191,32 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
       <div className="divide-y divide-border">
         {members.map(member => (
           <div key={member.orgId} className="flex items-center gap-3 px-3.5 py-2.5">
-            <span
-              className={cn(
-                'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
-                ROLE_COLORS[member.roleCode] ?? ROLE_COLORS.OTHER,
-               )}
-             >
-               {member.roleCode === 'GC' ? 'G' : member.roleCode === 'TC' ? 'T' : member.roleCode === 'FC' ? 'F' : 'O'}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{member.orgName}</p>
-              <p className="text-[11px] text-muted-foreground">{['GC','TC','FC'].includes(member.roleLabel) ? rl.label(member.roleLabel as RoleCode) : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel}</p>
-            </div>
+            {(() => {
+              const roleName = ['GC', 'TC', 'FC'].includes(member.roleLabel)
+                ? rl.label(member.roleLabel as RoleCode)
+                : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel;
+              const initials = (member.orgName || roleName)
+                .split(/\s+/).filter(Boolean).slice(0, 2)
+                .map(w => w.charAt(0).toUpperCase()).join('') || '—';
+              const showRole = roleName.trim().toLowerCase() !== member.orgName.trim().toLowerCase();
+              return (
+                <>
+                  <span
+                    className={cn(
+                      'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
+                      ROLE_COLORS[member.roleCode] ?? ROLE_COLORS.OTHER,
+                    )}
+                    title={member.orgName}
+                  >
+                    {initials}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{member.orgName}</p>
+                    {showRole && <p className="text-[11px] text-muted-foreground truncate">{roleName}</p>}
+                  </div>
+                </>
+              );
+            })()}
             <span
               className={cn(
                 'text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0',

@@ -17,7 +17,7 @@ export function COPhotoNudgeBanner({ status, photos, onTakePhoto }: COPhotoNudge
   if (['work_in_progress', 'shared'].includes(status) && !hasAnyPhotos) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700/40 px-4 py-3">
-        <span className="text-lg">📸</span>
+        <Camera className="h-4 w-4 shrink-0" />
         <p className="flex-1 text-sm text-amber-900 dark:text-amber-200">
           <span className="font-semibold">Take a 'before' photo before starting work.</span>{' '}
           <span className="text-amber-700 dark:text-amber-400">It protects you in disputes.</span>
@@ -38,7 +38,7 @@ export function COPhotoNudgeBanner({ status, photos, onTakePhoto }: COPhotoNudge
   if (['submitted', 'approved', 'contracted'].includes(status) && hasBeforePhotos && !hasAfterPhotos) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-blue-300/50 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-700/40 px-4 py-3">
-        <span className="text-lg">📸</span>
+        <Camera className="h-4 w-4 shrink-0" />
         <p className="flex-1 text-sm text-blue-900 dark:text-blue-200">
           <span className="font-semibold">Add 'after' photos</span>{' '}
           <span className="text-blue-700 dark:text-blue-400">so the upstream party can see completed work.</span>

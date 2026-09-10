@@ -65,20 +65,26 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
           </span>
         </div>
         <div className="border-t border-border pt-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-foreground">Margin</span>
-            <div className="text-right">
-              <span
-                className={cn('font-bold', isPositive ? 'text-emerald-600' : 'text-destructive')}
-               
-              >
-                {fmtCurrency(margin)}
-              </span>
-              <span className={cn('text-xs ml-1', isPositive ? 'text-emerald-600' : 'text-destructive')}>
-                ({marginPct.toFixed(1)}%)
-              </span>
+          {costs <= 0 ? (
+            <div className="text-sm">
+              <span className="font-semibold text-foreground">Margin pending</span>
+              <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                No cost logged yet — margin can't be calculated.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-foreground">Margin</span>
+              <div className="text-right">
+                <span className={cn('font-bold', isPositive ? 'text-emerald-600' : 'text-destructive')}>
+                  {fmtCurrency(margin)}
+                </span>
+                <span className={cn('text-xs ml-1', isPositive ? 'text-emerald-600' : 'text-destructive')}>
+                  ({marginPct.toFixed(1)}%)
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

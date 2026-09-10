@@ -31,8 +31,11 @@ export function useCOMoney(changeOrders: ChangeOrderWithMembers[]) {
     const awaitingApproval = live.filter(co => AWAITING_APPROVAL.includes(co.status as COStatus));
     const awaitingApprovalTotal = awaitingApproval.reduce((s, co) => s + amountOf(co), 0);
 
-    const awaitingPricing = live.filter(co => AWAITING_PRICING.includes(co.status as COStatus));
-    const awaitingPricingTotal = awaitingPricing.reduce((s, co) => s + amountOf(co), 0);
+    // Not yet submitted = still on our side of the desk (drafts, pricing, in progress)
+    const notSubmitted = live.filter(co => AWAITING_PRICING.includes(co.status as COStatus));
+    const notSubmittedTotal = notSubmitted.reduce((s, co) => s + amountOf(co), 0);
+    // Genuinely unpriced — no amount on the document yet
+    const unpricedCount = notSubmitted.filter(co => amountOf(co) <= 0).length;
 
     const outstanding = requestedTotal - approvedTotal;
 
@@ -46,7 +49,7 @@ export function useCOMoney(changeOrders: ChangeOrderWithMembers[]) {
       approvedTotal, approvedCount: approved.length,
       requestedTotal, liveCount: live.length,
       awaitingApprovalTotal, awaitingApprovalCount: awaitingApproval.length,
-      awaitingPricingTotal, awaitingPricingCount: awaitingPricing.length,
+      notSubmittedTotal, notSubmittedCount: notSubmitted.length, unpricedCount,
       outstanding, openCount: openCOs.length,
       avgAge, approvedPct,
     };
@@ -134,11 +137,7 @@ export function COMoneyBar({ changeOrders, abbrev, className }: COMoneyBarProps)
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 md:text-right">
-            <div className="min-w-0">
-              <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/50">Outstanding</p>
-              <p className="font-mono tabular-nums text-base sm:text-xl text-white">{money(m.outstanding)}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 md:text-right">
             <div className="min-w-0">
               <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-secondary">Avg. age</p>
               <p className="font-mono tabular-nums text-base sm:text-xl text-secondary">
@@ -168,9 +167,13 @@ export function COMoneyBar({ changeOrders, abbrev, className }: COMoneyBarProps)
           sub={`${m.liveCount} live ${abbrev}${m.liveCount === 1 ? '' : 's'}`}
         />
         <Tile
-          label="Pending pricing"
-          value={money(m.awaitingPricingTotal)}
-          sub={`${m.awaitingPricingCount} awaiting price`}
+          label="Not yet submitted"
+          value={money(m.notSubmittedTotal)}
+          sub={
+            m.unpricedCount > 0
+              ? `${m.notSubmittedCount} open · ${m.unpricedCount} awaiting price`
+              : `${m.notSubmittedCount} priced, ready to send`
+          }
           tone="dark"
         />
         <Tile
