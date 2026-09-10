@@ -49,7 +49,7 @@ export function useCOMoney(changeOrders: ChangeOrderWithMembers[]) {
       approvedTotal, approvedCount: approved.length,
       requestedTotal, liveCount: live.length,
       awaitingApprovalTotal, awaitingApprovalCount: awaitingApproval.length,
-      awaitingPricingTotal, awaitingPricingCount: awaitingPricing.length,
+      notSubmittedTotal, notSubmittedCount: notSubmitted.length, unpricedCount,
       outstanding, openCount: openCOs.length,
       avgAge, approvedPct,
     };
