@@ -18,29 +18,31 @@ export function COMaterialResponsibilityToggle({
   canEdit,
   onSet,
 }: COMaterialResponsibilityToggleProps) {
+  const rl = useRoleLabelsContext();
   const label = type === 'material' ? 'Materials' : 'Equipment';
+  const partyName = (party: 'GC' | 'TC') => (party === 'GC' ? rl.GCShort : rl.TCShort);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
         {label} by:
       </span>
 
       {canEdit ? (
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {(['GC', 'TC'] as const).map(party => (
             <button
               key={party}
               type="button"
               onClick={() => onSet(party)}
               className={cn(
-                'px-2 py-0.5 rounded text-[10px] font-semibold transition-colors',
+                'px-2 py-0.5 rounded text-[10px] font-semibold transition-colors max-w-[10rem] truncate',
                 responsible === party
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80',
               )}
             >
-              {party}
+              {partyName(party)}
             </button>
           ))}
 
