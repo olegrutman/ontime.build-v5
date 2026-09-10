@@ -167,9 +167,13 @@ export function COMoneyBar({ changeOrders, abbrev, className }: COMoneyBarProps)
           sub={`${m.liveCount} live ${abbrev}${m.liveCount === 1 ? '' : 's'}`}
         />
         <Tile
-          label="Pending pricing"
-          value={money(m.awaitingPricingTotal)}
-          sub={`${m.awaitingPricingCount} awaiting price`}
+          label="Not yet submitted"
+          value={money(m.notSubmittedTotal)}
+          sub={
+            m.unpricedCount > 0
+              ? `${m.notSubmittedCount} open · ${m.unpricedCount} awaiting price`
+              : `${m.notSubmittedCount} priced, ready to send`
+          }
           tone="dark"
         />
         <Tile
