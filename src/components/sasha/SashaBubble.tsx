@@ -394,6 +394,17 @@ export function SashaBubble() {
             </div>
           </div>
 
+          {/* Voice stage */}
+          {voiceMode && (
+            <div className="border-b bg-muted/30">
+              <SashaAvatarStage
+                speaking={isSpeaking}
+                listening={isListening}
+                thinking={isLoading || isPreparing}
+              />
+            </div>
+          )}
+
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto bg-background" ref={scrollRef}>
             <div className="space-y-3 p-4">
