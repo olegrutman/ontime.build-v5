@@ -190,18 +190,32 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
       <div className="divide-y divide-border">
         {members.map(member => (
           <div key={member.orgId} className="flex items-center gap-3 px-3.5 py-2.5">
-            <span
-              className={cn(
-                'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
-                ROLE_COLORS[member.roleCode] ?? ROLE_COLORS.OTHER,
-               )}
-             >
-               {member.roleCode === 'GC' ? 'G' : member.roleCode === 'TC' ? 'T' : member.roleCode === 'FC' ? 'F' : 'O'}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{member.orgName}</p>
-              <p className="text-[11px] text-muted-foreground">{['GC','TC','FC'].includes(member.roleLabel) ? rl.label(member.roleLabel as RoleCode) : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel}</p>
-            </div>
+            {(() => {
+              const roleName = ['GC', 'TC', 'FC'].includes(member.roleLabel)
+                ? rl.label(member.roleLabel as RoleCode)
+                : member.roleLabel === 'SUPPLIER' ? 'Supplier' : member.roleLabel;
+              const initials = (member.orgName || roleName)
+                .split(/\s+/).filter(Boolean).slice(0, 2)
+                .map(w => w.charAt(0).toUpperCase()).join('') || '—';
+              const showRole = roleName.trim().toLowerCase() !== member.orgName.trim().toLowerCase();
+              return (
+                <>
+                  <span
+                    className={cn(
+                      'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
+                      ROLE_COLORS[member.roleCode] ?? ROLE_COLORS.OTHER,
+                    )}
+                    title={member.orgName}
+                  >
+                    {initials}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{member.orgName}</p>
+                    {showRole && <p className="text-[11px] text-muted-foreground truncate">{roleName}</p>}
+                  </div>
+                </>
+              );
+            })()}
             <span
               className={cn(
                 'text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0',
