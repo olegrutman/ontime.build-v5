@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Send, MousePointer2, RotateCcw, MoreHorizontal } from 'lucide-react';
+import { X, Send, MousePointer2, RotateCcw, MoreHorizontal, Mic, MicOff } from 'lucide-react';
+import { SashaAvatarStage } from './SashaAvatarStage';
+import { useSashaVoice } from '@/hooks/useSashaVoice';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { Button } from '@/components/ui/button';
 import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
@@ -154,8 +157,8 @@ export function SashaBubble() {
   );
 
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || isLoading) return;
+    async (text: string): Promise<string> => {
+      if (!text.trim() || isLoading) return '';
 
       const userMsg: SashaChatMessage = { role: 'user', content: text.trim() };
       const updatedMessages = [...messages, userMsg];
@@ -182,7 +185,7 @@ export function SashaBubble() {
           else if (resp.status === 402) toast.error('AI credits exhausted. Please add funds.');
           else toast.error(err.error || 'Something went wrong.');
           setIsLoading(false);
-          return;
+          return '';
         }
 
         const reader = resp.body!.getReader();
@@ -228,23 +231,74 @@ export function SashaBubble() {
           }
         }
 
+        let spoken = assistantText;
         try {
           const parsed = JSON.parse(assistantText);
           if (parsed.text) {
             upsert(parsed.text, parsed.actions || []);
+            spoken = parsed.text;
           }
         } catch {
           // Not JSON — keep raw text
         }
+        return spoken;
       } catch (e) {
         console.error('Sasha error:', e);
         toast.error('Could not reach Sasha. Please try again.');
+        return '';
       } finally {
         setIsLoading(false);
       }
     },
     [messages, isLoading, context]
   );
+
+  // ---- Voice conversation mode -------------------------------------------
+  const { speak, stop: stopSpeaking, isSpeaking, isPreparing } = useSashaVoice();
+  const {
+    isListening,
+    transcript,
+    startListening,
+    stopListening,
+    isSupported: micSupported,
+  } = useSpeechRecognition({ silenceTimeout: 2500 });
+  const [voiceMode, setVoiceMode] = useState(false);
+  const heardRef = useRef('');
+
+  useEffect(() => {
+    if (transcript) heardRef.current = transcript;
+  }, [transcript]);
+
+  // When the user stops talking, send what was heard and speak the answer.
+  useEffect(() => {
+    if (!voiceMode || isListening) return;
+    const heard = heardRef.current.trim();
+    heardRef.current = '';
+    if (!heard) return;
+    (async () => {
+      const reply = await sendMessage(heard);
+      if (reply) await speak(reply);
+    })();
+  }, [isListening, voiceMode, sendMessage, speak]);
+
+  // Hand the mic back to the user once Sasha is done.
+  useEffect(() => {
+    if (!voiceMode || !open) return;
+    if (isListening || isLoading || isSpeaking || isPreparing) return;
+    const t = setTimeout(() => startListening(), 400);
+    return () => clearTimeout(t);
+  }, [voiceMode, open, isListening, isLoading, isSpeaking, isPreparing, startListening]);
+
+  const toggleVoiceMode = useCallback(() => {
+    setVoiceMode((on) => {
+      if (on) {
+        stopListening();
+        stopSpeaking();
+        heardRef.current = '';
+      }
+      return !on;
+    });
+  }, [stopListening, stopSpeaking]);
 
   const handleClose = () => {
     setOpen(false);
