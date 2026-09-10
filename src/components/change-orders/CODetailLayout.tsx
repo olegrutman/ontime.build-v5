@@ -652,7 +652,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   <CollapsibleTrigger asChild>
                     <button type="button" className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-accent/30 transition-colors">
                       <h3 className="font-heading text-[0.75rem] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-2">
-                        💬 Activity
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Activity
                         <span className="text-[10px] bg-muted rounded-full px-2 py-0.5">{activity.length}</span>
                       </h3>
                       <span className={cn('h-4 w-4 text-muted-foreground transition-transform', activityOpen && 'rotate-180')}>▾</span>
