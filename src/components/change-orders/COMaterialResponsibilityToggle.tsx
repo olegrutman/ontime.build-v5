@@ -60,7 +60,7 @@ export function COMaterialResponsibilityToggle({
         </div>
       ) : (
         <span className="text-[10px] font-semibold text-foreground">
-          {responsible}
+          {partyName(responsible)}
           {isOverridden && (
             <span className="text-muted-foreground ml-1">(override)</span>
           )}
