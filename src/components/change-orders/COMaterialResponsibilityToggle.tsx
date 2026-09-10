@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface COMaterialResponsibilityToggleProps {
   type: 'material' | 'equipment';
