@@ -46,6 +46,17 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
   const activeStep = getActiveStep(status);
   const userName = co.title && co.title !== co.co_number ? co.title : null;
 
+  // Avatar shows the company's initials — never the internal role code.
+  const roleName = rl.label(role);
+  const orgInitials = (myOrgName || roleName)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w.charAt(0).toUpperCase())
+    .join('') || '—';
+  const showRoleLine =
+    !!myOrgName && roleName.trim().toLowerCase() !== myOrgName.trim().toLowerCase();
+
   return (
     <div className={cn('bg-card border border-border rounded-xl overflow-hidden shadow-sm', isWithdrawn && 'opacity-60')}>
       {/* Top section */}
