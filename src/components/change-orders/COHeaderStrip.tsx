@@ -78,15 +78,20 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
 
           {/* TC name / role */}
           <div className="flex items-center gap-2 shrink-0 max-w-[45%]">
-            <span className={cn(
-              'inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white shrink-0',
-              ROLE_PILL_COLORS[role] ?? 'bg-muted',
-            )}>
-              {role.charAt(0)}{role.charAt(1)}
+            <span
+              className={cn(
+                'inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white shrink-0',
+                ROLE_PILL_COLORS[role] ?? 'bg-muted',
+              )}
+              title={myOrgName}
+            >
+              {orgInitials}
             </span>
             <div className="hidden min-[380px]:block text-right min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{myOrgName}</p>
-              <p className="text-[10px] text-muted-foreground truncate">{rl.label(role)}</p>
+              <p className="text-xs font-semibold text-foreground truncate">{myOrgName || roleName}</p>
+              {showRoleLine && (
+                <p className="text-[10px] text-muted-foreground truncate">{roleName}</p>
+              )}
             </div>
           </div>
         </div>
