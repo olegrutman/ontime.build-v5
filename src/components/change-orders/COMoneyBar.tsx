@@ -137,11 +137,7 @@ export function COMoneyBar({ changeOrders, abbrev, className }: COMoneyBarProps)
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 md:text-right">
-            <div className="min-w-0">
-              <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/50">Outstanding</p>
-              <p className="font-mono tabular-nums text-base sm:text-xl text-white">{money(m.outstanding)}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 md:text-right">
             <div className="min-w-0">
               <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-secondary">Avg. age</p>
               <p className="font-mono tabular-nums text-base sm:text-xl text-secondary">
