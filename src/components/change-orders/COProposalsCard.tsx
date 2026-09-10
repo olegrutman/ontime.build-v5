@@ -72,37 +72,40 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
       </h2>
       <ul className="mt-2 divide-y divide-border">
         {proposals.map(p => (
-          <li key={p.id} className="flex flex-wrap items-center gap-3 py-2.5">
-            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6rem] font-semibold text-muted-foreground">
-                  {p.proposal_number}
-                </span>
-                <span className={cn('rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider', STATUS_STYLES[p.status])}>
-                  {p.status}
-                </span>
-                <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {(p.items ?? []).length} items
-                </span>
-              </div>
-              <p className="mt-0.5 truncate text-sm font-medium text-foreground">{p.title}</p>
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.65rem] text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {p.client_company || p.client_name || 'No client set'}
-                </span>
-                {(p.milestones ?? []).length > 0 && (
-                  <span className="font-mono">
-                    {(p.milestones ?? [])
-                      .map(m => (m.basis === 'percent' ? `${Number(m.percent)}%` : money(Number(m.amount))))
-                      .join(' / ')}
+          <li key={p.id} className="py-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+            <div className="flex items-start gap-2 sm:flex-1 sm:min-w-0">
+              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6rem] font-semibold text-muted-foreground">
+                    {p.proposal_number}
                   </span>
-                )}
-              </p>
+                  <span className={cn('rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider', STATUS_STYLES[p.status])}>
+                    {p.status}
+                  </span>
+                  <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {(p.items ?? []).length} items
+                  </span>
+                </div>
+                <p className="mt-1 break-words text-sm font-medium leading-snug text-foreground sm:truncate">{p.title}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.65rem] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <User className="h-3 w-3 shrink-0" />
+                    {p.client_company || p.client_name || 'No client set'}
+                  </span>
+                  {(p.milestones ?? []).length > 0 && (
+                    <span className="font-mono">
+                      {(p.milestones ?? [])
+                        .map(m => (m.basis === 'percent' ? `${Number(m.percent)}%` : money(Number(m.amount))))
+                        .join(' / ')}
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
-            <span className="font-mono tabular-nums text-sm font-semibold text-foreground">{money(p.total)}</span>
-            <div className="flex items-center gap-1.5">
+            <div className="mt-2 flex items-center justify-between gap-2 sm:mt-0 sm:gap-3">
+              <span className="font-mono tabular-nums text-sm font-semibold text-foreground whitespace-nowrap">{money(p.total)}</span>
+              <div className="flex items-center gap-1">
               {p.status === 'draft' && (
                 <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: p.id, status: 'sent' })}>
                   Mark sent
@@ -133,6 +136,7 @@ export function COProposalsCard({ projectId }: { projectId: string }) {
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+              </div>
             </div>
           </li>
         ))}
