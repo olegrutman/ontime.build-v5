@@ -34,7 +34,7 @@ export function CORFIBlockBanner({ blockedByRfiId, projectId }: CORFIBlockBanner
       <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-          🚧 Blocked: Waiting on {rfi.rfi_number} — {rfi.title}
+          Blocked: Waiting on {rfi.rfi_number} — {rfi.title}
         </p>
         <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
           This change order is paused until the linked RFI is answered.
