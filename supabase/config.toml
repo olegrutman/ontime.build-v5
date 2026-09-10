@@ -29,6 +29,8 @@ project_id = "gzqgbfazwvmwmirbqfwf"
     verify_jwt = false
   [functions.sasha-guide]
     verify_jwt = false
+  [functions.sasha-speak]
+    verify_jwt = false
   [functions.seed-platform-owner]
     verify_jwt = false
   [functions.seed-qa-environment]
