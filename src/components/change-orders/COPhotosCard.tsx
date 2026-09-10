@@ -49,8 +49,9 @@ export const COPhotosCard = forwardRef<COPhotosCardHandle, COPhotosCardProps>(fu
       {/* Header */}
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="font-heading text-[0.75rem] uppercase tracking-wider font-semibold text-muted-foreground">
-            📸 Photos
+          <h3 className="font-heading text-[0.75rem] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
+            <Camera className="h-3.5 w-3.5" />
+            Photos
           </h3>
           <span className="text-[10px] bg-muted rounded-full px-2 py-0.5 font-bold text-muted-foreground">
             {photos.length}
