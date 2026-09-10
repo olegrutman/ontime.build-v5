@@ -303,6 +303,9 @@ export function SashaBubble() {
   const handleClose = () => {
     setOpen(false);
     setHighlightMode(false);
+    setVoiceMode(false);
+    stopListening();
+    stopSpeaking();
   };
 
   const handleResetChat = () => {
@@ -342,6 +345,18 @@ export function SashaBubble() {
               <p className="text-sm font-semibold">Sasha</p>
             </div>
             <div className="flex items-center gap-0.5">
+              {micSupported && (
+                <Button
+                  variant={voiceMode ? 'default' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={toggleVoiceMode}
+                  aria-label={voiceMode ? 'Turn off voice conversation' : 'Talk to Sasha'}
+                  title={voiceMode ? 'Turn off voice conversation' : 'Talk to Sasha'}
+                >
+                  {voiceMode ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
