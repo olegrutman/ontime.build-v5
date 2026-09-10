@@ -31,8 +31,11 @@ export function useCOMoney(changeOrders: ChangeOrderWithMembers[]) {
     const awaitingApproval = live.filter(co => AWAITING_APPROVAL.includes(co.status as COStatus));
     const awaitingApprovalTotal = awaitingApproval.reduce((s, co) => s + amountOf(co), 0);
 
-    const awaitingPricing = live.filter(co => AWAITING_PRICING.includes(co.status as COStatus));
-    const awaitingPricingTotal = awaitingPricing.reduce((s, co) => s + amountOf(co), 0);
+    // Not yet submitted = still on our side of the desk (drafts, pricing, in progress)
+    const notSubmitted = live.filter(co => AWAITING_PRICING.includes(co.status as COStatus));
+    const notSubmittedTotal = notSubmitted.reduce((s, co) => s + amountOf(co), 0);
+    // Genuinely unpriced — no amount on the document yet
+    const unpricedCount = notSubmitted.filter(co => amountOf(co) <= 0).length;
 
     const outstanding = requestedTotal - approvedTotal;
 
