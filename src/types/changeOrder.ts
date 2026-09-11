@@ -265,6 +265,9 @@ export interface COFinancials {
     ownEquipmentCost: number;
     totalToUpstream: number;
     totalToUpstreamWithTax: number;
+    /** Retainage / net payable computed off the viewer's own billable amount. */
+    retainageAmount: number;
+    netPayableAmount: number;
   };
 }
 

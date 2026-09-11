@@ -535,7 +535,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               co={co}
               role={role}
               projectId={projectId}
-              coTotal={tcBillableTotal}
+              coTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
               onRefresh={refreshDetail}
             />
           )}
