@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useOrgType } from '@/hooks/useOrgType';
 
 export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
 export type MilestoneBasis = 'percent' | 'amount';
@@ -124,11 +125,13 @@ const sortDetails = (rows: ProposalWithDetails[]) =>
     milestones: [...(p.milestones ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   }));
 
-/** All proposals on a project (participants can read). */
+/** Proposals are upstream commercial documents; crew organizations cannot read them. */
 export function useCOProposals(projectId: string | null) {
+  const { isFC } = useOrgType();
+
   return useQuery({
     queryKey: ['co-proposals', projectId],
-    enabled: !!projectId,
+    enabled: !!projectId && !isFC,
     queryFn: async (): Promise<ProposalWithDetails[]> => {
       const { data, error } = await supabase
         .from('co_proposals')

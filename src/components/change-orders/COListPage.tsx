@@ -16,6 +16,7 @@ import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
 import { useCOsInProposals } from '@/hooks/useCOProposals';
+import { useOrgType } from '@/hooks/useOrgType';
 
 
 
@@ -33,6 +34,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { userOrgRoles } = useAuth();
+  const { isFC } = useOrgType();
   const { changeOrders, isLoading } = useChangeOrders(projectId);
 
 
@@ -182,7 +184,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       {total > 0 && <COMoneyBar changeOrders={changeOrders} abbrev={coAbbrev(dt)} />}
 
       {/* Saved proposals */}
-      {isTM && <COProposalsCard projectId={projectId} />}
+      {isTM && !isFC && <COProposalsCard projectId={projectId} />}
 
 
       {/* Filter pills */}
