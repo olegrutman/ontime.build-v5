@@ -169,34 +169,52 @@ export function COStatusActions({
     if (!targetOrgId) return;
 
     try {
-      const { data: members } = await supabase
-        .from('user_org_roles')
-        .select('user_id')
-        .eq('organization_id', targetOrgId)
-        .limit(10);
-
-      if (!members || members.length === 0) return;
-
       const { title, body } = buildCONotification(type, co.title, amount);
-      // Exclude the actor (and anyone already notified by a DB trigger)
-      const excluded = new Set(
-        [user?.id, ...excludeUserIds].filter(Boolean) as string[],
+
+      // One organization-wide alert: every member of the recipient company sees
+      // it, and the email sender fans it out to their inboxes. Reading the other
+      // company's member list from the browser is blocked, so we never do that.
+      const notifiedUserIds = new Set(
+        [...excludeUserIds].filter(Boolean) as string[],
       );
-      const recipients = members.filter(m => !excluded.has(m.user_id));
-      await Promise.allSettled(
-        recipients.map(member =>
-          sendCONotification({
-            recipient_user_id: member.user_id,
-            recipient_org_id: targetOrgId,
-            co_id: co.id,
-            project_id: projectId,
-            type,
-            title,
-            body,
-            amount,
-          })
-        )
-      );
+
+      if (targetOrgId === currentOrgId) {
+        // Same-company alert: skip the actor so people aren't pinged by themselves.
+        const { data: members } = await supabase
+          .from('user_org_roles')
+          .select('user_id')
+          .eq('organization_id', targetOrgId)
+          .limit(10);
+        const recipients = (members ?? [])
+          .map(m => m.user_id)
+          .filter(id => id && id !== user?.id && !notifiedUserIds.has(id));
+        await Promise.allSettled(
+          recipients.map(uid =>
+            sendCONotification({
+              recipient_user_id: uid,
+              recipient_org_id: targetOrgId,
+              co_id: co.id,
+              project_id: projectId,
+              type,
+              title,
+              body,
+              amount,
+            })
+          )
+        );
+        return;
+      }
+
+      await sendCONotification({
+        recipient_user_id: null,
+        recipient_org_id: targetOrgId,
+        co_id: co.id,
+        project_id: projectId,
+        type,
+        title,
+        body,
+        amount,
+      });
     } catch (err) {
       console.warn('Failed to notify org:', err);
     }
