@@ -36,7 +36,12 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
   const { co, isGC, isTC, isFC, isFCCollaborator, financials, fcCollabName, upstreamOrgId } = props;
   const status = co.status;
   // Single source of truth: price the GC sees == price the TC submits (responsibility-aware).
-  const priceToUpstream = financials.billableGrandTotal;
+  // A crew viewer must only ever see their OWN amount billed up-line — never the
+  // subcontractor's upstream price, or the sub's margin leaks.
+  const priceToUpstream = isFC
+    ? (financials.viewer?.totalToUpstream ?? financials.billableGrandTotal)
+    : financials.billableGrandTotal;
+
 
   if (isGC) {
     if (status === 'submitted') {
