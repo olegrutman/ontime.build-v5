@@ -169,6 +169,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const photosBlocked = requirePhotos && photos.length === 0;
   const markupVisibility = ((projectSettings as any)?.tc_markup_visibility ?? 'hidden') as import('@/hooks/useMarkupVisibility').MarkupVisibility;
 
+  // My own labor rate / markup — used to show the crew-derived amount on unpriced
+  // scope items so the item card matches the side panel.
+  const { data: myPricingSettings } = useQuery({
+    queryKey: ['org-settings-pricing', myOrgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('org_settings')
+        .select('default_hourly_rate, labor_markup_percent, use_fc_input_as_base')
+        .eq('organization_id', myOrgId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!myOrgId,
+  });
+
+
   // Check for existing invoice linked to this CO
   const { data: linkedInvoice } = useQuery({
     queryKey: ['co-linked-invoice', coId],
