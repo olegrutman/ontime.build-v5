@@ -194,6 +194,28 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
   } = useCORoleContext(co ?? null, collaborators, financials);
 
+  // My own labor rate / markup — used to show the crew-derived amount on unpriced
+  // scope items so the item card matches the side panel.
+  const { data: myPricingSettings } = useQuery({
+    queryKey: ['org-settings-pricing', myOrgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('org_settings')
+        .select('default_hourly_rate, labor_markup_percent, use_fc_input_as_base')
+        .eq('organization_id', myOrgId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!myOrgId,
+  });
+  const crewPricingBase = {
+    enabled: !!co?.use_fc_pricing_base,
+    hourlyRate: Number((myPricingSettings as any)?.default_hourly_rate ?? 0),
+    markupPercent: Number((myPricingSettings as any)?.labor_markup_percent ?? 0),
+  };
+
+
+
   const responsibility = useCOResponsibility(
     co?.id, projectId,
     (co as any)?.co_material_responsible_override,
