@@ -362,13 +362,27 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     finally { setSendingComment(false); }
   }
 
-  if (isLoading || !co) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
+  // Loaded, but nothing came back — this party isn't on this change order
+  // (e.g. a crew routed it to their subcontractor, not to the contractor).
+  if (!co) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 min-h-[400px] px-6 text-center">
+        <p className="text-sm font-semibold text-foreground">This item isn't shared with your company</p>
+        <p className="text-xs text-muted-foreground max-w-sm">
+          It may have been sent to another company for review, or removed. Go back to the list to see the ones you can act on.
+        </p>
+      </div>
+    );
+  }
+
 
   const status = co.status as COStatus;
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
