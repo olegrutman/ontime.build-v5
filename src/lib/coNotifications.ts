@@ -1,7 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
 interface CONotificationPayload {
-  recipient_user_id: string;
+  /** Leave null to alert the whole recipient organization. */
+  recipient_user_id?: string | null;
   recipient_org_id: string;
   co_id: string;
   project_id: string;
