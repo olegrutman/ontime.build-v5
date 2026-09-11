@@ -18,6 +18,8 @@ interface FCInputRequestCardProps {
   options: COFCOrgOption[];
   collaborators: COCollaborator[];
   acting: boolean;
+  /** Set when the crew company itself created this work order (no invite row exists). */
+  creatorCrewName?: string;
   onRequest: (orgId: string) => Promise<void>;
   onComplete: () => Promise<void>;
 }
@@ -28,6 +30,7 @@ export function FCInputRequestCard({
   options,
   collaborators,
   acting,
+  creatorCrewName,
   onRequest,
   onComplete,
 }: FCInputRequestCardProps) {
@@ -48,7 +51,9 @@ export function FCInputRequestCard({
     ? `Waiting on ${rl.FC}`
     : completedCollaborator
       ? `${rl.FC} input complete`
-      : `No ${rl.FC.toLowerCase()} requested yet`;
+      : creatorCrewName
+        ? `Input received from ${creatorCrewName}`
+        : `No ${rl.FC.toLowerCase()} requested yet`;
 
   const selectedValue = selectedOrgId || activeCollaborator?.organization_id || '';
 
@@ -61,11 +66,15 @@ export function FCInputRequestCard({
         <div className="space-y-1">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
           <p className="text-sm font-medium text-foreground">{statusLabel}</p>
-          {(activeCollaborator ?? completedCollaborator)?.organization?.name && (
+          {(activeCollaborator ?? completedCollaborator)?.organization?.name ? (
             <p className="text-xs text-muted-foreground">
               {(activeCollaborator ?? completedCollaborator)?.organization?.name}
             </p>
-          )}
+          ) : creatorCrewName ? (
+            <p className="text-xs text-muted-foreground">
+              {creatorCrewName} created this work order and logged their own pricing.
+            </p>
+          ) : null}
         </div>
 
         {canRequest && (

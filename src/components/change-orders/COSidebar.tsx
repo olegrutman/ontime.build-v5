@@ -328,7 +328,14 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                 <span className="text-muted-foreground">Internal Costs</span>
                 <span className="font-mono font-medium">{fmtCurrency(costs)}</span>
               </div>
-              {costs <= 0 ? (
+              {revenue <= 0 ? (
+                <div className="rounded-lg px-3 py-2 bg-muted/40">
+                  <p className="text-sm font-semibold">No price set yet</p>
+                  <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                    Margin appears once a price has been set for this work.
+                  </p>
+                </div>
+              ) : costs <= 0 ? (
                 <div className="rounded-lg px-3 py-2 bg-muted/40">
                   <p className="text-sm font-semibold">Margin pending</p>
                   <p className="text-[0.7rem] text-muted-foreground mt-0.5">
@@ -379,6 +386,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             <FCInputRequestCard
               canRequest={canRequestFCInput} canComplete={canCompleteFCInput}
               options={fcOrgOptions} collaborators={collaborators} acting={false}
+              creatorCrewName={co.created_by_role === 'FC' ? (fcCollabName || undefined) : undefined}
               onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); onRefresh(); }}
               onComplete={async () => { await completeFCInput.mutateAsync(); onRefresh(); }}
             />
