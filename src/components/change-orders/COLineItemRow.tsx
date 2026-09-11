@@ -202,6 +202,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     .filter(e => (e.hours ?? 0) > 0 && (e.line_total ?? 0) === 0)
     .reduce((s, e) => s + Number(e.hours ?? 0), 0);
 
+  // Any crew time logged on this scope item — used to tell a subcontractor there's
+  // already work here waiting to be priced.
+  const crewHoursOnItem = fcBillable.reduce((s, e) => s + Number(e.hours ?? 0), 0);
+
+
   // Markup visibility logic for GC
   const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
   const gcSummaryOnly = isGC && markupVisibility === 'summary';
