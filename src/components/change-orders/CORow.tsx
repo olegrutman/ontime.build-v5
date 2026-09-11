@@ -94,8 +94,9 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
       <div className="flex items-baseline justify-between gap-2 md:col-span-2 md:block md:text-right">
         <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground md:hidden">Amount</p>
         <p className="font-mono tabular-nums text-base font-semibold text-foreground md:text-lg">
-          {amount > 0 ? money(amount) : <span className="text-muted-foreground">TBD</span>}
+          {money(amount ?? 0)}
         </p>
+
       </div>
 
       {/* Age / flag */}
