@@ -643,6 +643,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         isEven={idx % 2 === 0}
                         index={idx + 1}
                         markupVisibility={markupVisibility}
+                        crewPricingBase={crewPricingBase}
                       />
                     ))
                   )}
