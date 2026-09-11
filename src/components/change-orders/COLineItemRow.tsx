@@ -447,6 +447,47 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               const isPriced = entryCount > 0 || totalForRole > 0;
               const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
 
+              const showProvisional = !isPriced && canAddLabor && isTC && provisionalAmount > 0;
+
+              if (showProvisional) {
+                return (
+                  <div className="flex items-stretch rounded-lg border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.06)] overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
+                      className="flex items-stretch text-left hover:bg-[hsl(var(--amber)/0.12)] transition-colors"
+                    >
+                      <span className="flex flex-col justify-center px-2.5 border-r border-amber-400/40">
+                        <span className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'hsl(var(--amber-d))' }}>
+                          {crewBase?.isHourly ? 'Hourly' : 'Lump sum'}
+                        </span>
+                      </span>
+                      <span className="px-3.5 py-1.5">
+                        <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Billable amount</span>
+                        <span className="flex items-baseline gap-0.5">
+                          <span className="font-mono text-sm" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
+                          <span className="font-mono text-base font-bold text-foreground">{fmt(provisionalAmount)}</span>
+                        </span>
+                        <span className="block text-[9px] font-semibold text-muted-foreground/80">
+                          from {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h ` : ''}{rl.FC} time — not saved yet
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={confirmingCrewPrice}
+                      onClick={(e) => { e.stopPropagation(); confirmCrewPrice(); }}
+                      className="flex shrink-0 items-center gap-1 border-l border-amber-400/40 px-3 text-[10px] font-bold uppercase tracking-tight text-[hsl(var(--amber-d))] hover:bg-[hsl(var(--amber)/0.18)] disabled:opacity-50 transition-colors"
+                    >
+                      {confirmingCrewPrice
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <CheckCircle className="h-3.5 w-3.5" />}
+                      Confirm
+                    </button>
+                  </div>
+                );
+              }
+
               if (!isPriced && canAddLabor) {
                 return (
                   <button
