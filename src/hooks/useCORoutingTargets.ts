@@ -14,10 +14,14 @@ const initialsOf = (name: string) =>
 
 /**
  * Candidate orgs a CO/WO can be routed to ("Assigned to"), based on the
- * creator's role on this project:
- *   GC -> Subcontractors on the project
- *   TC -> the project's GC
- *   FC -> the org that hired them (upstream contract), fallback TC/GC
+ * creator's role on this project. Hierarchy is strict — a company may only
+ * send work up to the company directly above it:
+ *   GC -> Subcontractors on the project (downstream issuance)
+ *   TC -> the company that hired them (their contract's upstream side, else the GC)
+ *   FC -> the company that hired them (never skipping to the GC)
+ *
+ * project_contracts direction: from_org_id = downstream (biller),
+ * to_org_id = upstream (payer). So "who hired me" = to_org_id where from_org_id = me.
  */
 export function useCORoutingTargets(projectId: string | null | undefined) {
   const { userOrgRoles } = useAuth();
@@ -54,29 +58,33 @@ export function useCORoutingTargets(projectId: string | null | undefined) {
         initials: initialsOf(r.name),
       });
 
-      let targets: CORoutingTarget[] = [];
-      let defaultId: string | null = null;
-
+      // GC issues work downstream to its subcontractors.
       if (myRole === 'GC') {
-        targets = rows.filter(r => r.type === 'TC').map(toTarget);
-        defaultId = targets[0]?.id ?? null;
-      } else if (myRole === 'TC') {
-        targets = rows.filter(r => r.type === 'GC').map(toTarget);
-        defaultId = targets[0]?.id ?? null;
-      } else {
-        // FC (or unknown): route upstream to whoever hired them
-        const { data: up } = await supabase
-          .from('project_contracts')
-          .select('from_org_id')
-          .eq('project_id', projectId!)
-          .eq('to_org_id', myOrgId!)
-          .maybeSingle();
-        const upstreamId = up?.from_org_id ?? null;
-        targets = rows.filter(r => r.orgId !== myOrgId && (r.type === 'TC' || r.type === 'GC')).map(toTarget);
-        defaultId = upstreamId ?? targets[0]?.id ?? null;
+        const targets = rows.filter(r => r.type === 'TC').map(toTarget);
+        return { targets, defaultId: targets[0]?.id ?? null, myRole };
       }
 
-      return { targets, defaultId, myRole };
+      // Everyone else routes strictly one step upstream: the company that hired them.
+      const { data: upstream } = await supabase
+        .from('project_contracts')
+        .select('to_org_id')
+        .eq('project_id', projectId!)
+        .eq('from_org_id', myOrgId!)
+        .limit(1)
+        .maybeSingle();
+
+      const upstreamId = upstream?.to_org_id ?? null;
+      let targets = upstreamId
+        ? rows.filter(r => r.orgId === upstreamId).map(toTarget)
+        : [];
+
+      if (targets.length === 0 && myRole === 'TC') {
+        // No contract row yet — a subcontractor's only valid recipient is the GC.
+        targets = rows.filter(r => r.type === 'GC').map(toTarget);
+      }
+
+      return { targets, defaultId: targets[0]?.id ?? null, myRole };
     },
   });
 }
+

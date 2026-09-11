@@ -263,26 +263,13 @@ export default function COGuidedBuilder() {
     try {
       const isTM = project?.contract_mode === 'tm';
 
-      // Routing target: explicit selection wins, else fall back to upstream resolution
-      let assignedToOrgId: string | null = assignedOrgId;
-      if (!assignedToOrgId && role === 'FC') {
-        const { data: up } = await supabase
-          .from('project_contracts')
-          .select('from_org_id')
-          .eq('project_id', projectId)
-          .eq('to_org_id', orgId)
-          .maybeSingle();
-        assignedToOrgId = up?.from_org_id ?? null;
-      } else if (!assignedToOrgId && role === 'TC') {
-        const { data: gc } = await supabase
-          .from('project_participants')
-          .select('organization_id')
-          .eq('project_id', projectId)
-          .eq('role', 'GC')
-          .eq('invite_status', 'ACCEPTED')
-          .maybeSingle();
-        assignedToOrgId = gc?.organization_id ?? null;
+      // Routing target: must be the company directly above the sender.
+      const allowedIds = (routing?.targets ?? []).map(t => t.id);
+      let assignedToOrgId: string | null = assignedOrgId ?? routing?.defaultId ?? null;
+      if (allowedIds.length > 0 && (!assignedToOrgId || !allowedIds.includes(assignedToOrgId))) {
+        throw new Error('That company cannot receive this item. Send it to the company directly above you.');
       }
+
 
       const coNumber = await generateCONumber({
         projectId,
