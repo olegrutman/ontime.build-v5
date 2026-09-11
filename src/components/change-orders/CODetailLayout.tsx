@@ -169,6 +169,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const photosBlocked = requirePhotos && photos.length === 0;
   const markupVisibility = ((projectSettings as any)?.tc_markup_visibility ?? 'hidden') as import('@/hooks/useMarkupVisibility').MarkupVisibility;
 
+
+
+
   // Check for existing invoice linked to this CO
   const { data: linkedInvoice } = useQuery({
     queryKey: ['co-linked-invoice', coId],
@@ -190,6 +193,28 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     canEdit, canEditExternal, canEditInternal, canRequestFCInput, canCompleteFCInput, nteBlocked,
     pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
   } = useCORoleContext(co ?? null, collaborators, financials);
+
+  // My own labor rate / markup — used to show the crew-derived amount on unpriced
+  // scope items so the item card matches the side panel.
+  const { data: myPricingSettings } = useQuery({
+    queryKey: ['org-settings-pricing', myOrgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('org_settings')
+        .select('default_hourly_rate, labor_markup_percent, use_fc_input_as_base')
+        .eq('organization_id', myOrgId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!myOrgId,
+  });
+  const crewPricingBase = {
+    enabled: !!co?.use_fc_pricing_base,
+    hourlyRate: Number((myPricingSettings as any)?.default_hourly_rate ?? 0),
+    markupPercent: Number((myPricingSettings as any)?.labor_markup_percent ?? 0),
+  };
+
+
 
   const responsibility = useCOResponsibility(
     co?.id, projectId,
@@ -618,6 +643,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         isEven={idx % 2 === 0}
                         index={idx + 1}
                         markupVisibility={markupVisibility}
+                        crewPricingBase={crewPricingBase}
                       />
                     ))
                   )}
