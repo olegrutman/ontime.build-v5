@@ -41,7 +41,14 @@ interface COLineItemRowProps {
   index?: number;
   /** How much TC cost breakdown to show GCs. Default 'hidden'. */
   markupVisibility?: MarkupVisibility;
+  /**
+   * Crew-time pricing base for this change order. When enabled, an unpriced item
+   * shows the amount derived from the crew's submitted time instead of "Set price",
+   * so the item card agrees with the side panel before anything is saved.
+   */
+  crewPricingBase?: { enabled: boolean; hourlyRate: number; markupPercent: number };
 }
+
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
