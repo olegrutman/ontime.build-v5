@@ -227,17 +227,17 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       });
     }
 
-    if (financials.retainagePercent > 0 && financials.retainageAmount > 0) {
+    if (financials.retainagePercent > 0 && financials.viewer.retainageAmount > 0) {
       tiles.push({
         label: 'Retainage Held',
-        value: fmtCurrency(financials.retainageAmount),
+        value: fmtCurrency(financials.viewer.retainageAmount),
         color: '#DC2626',
         sub: `${financials.retainagePercent}%`,
         badge: financials.retainageReleased ? { text: 'Released', variant: 'healthy' } : { text: 'Held', variant: 'watch' },
       });
       tiles.push({
         label: 'Net Payable',
-        value: fmtCurrency(financials.netPayableAmount),
+        value: fmtCurrency(financials.viewer.netPayableAmount),
         color: '#059669',
       });
     }

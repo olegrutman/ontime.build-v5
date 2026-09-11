@@ -313,6 +313,12 @@ export function useChangeOrderDetail(coId: string | null) {
   const viewerMatTax = scopedMaterialsTotal * taxPct;
   const viewerEqTax = scopedEquipmentTotal * taxPct;
   const viewerTotalToUpstreamWithTax = viewerTotalToUpstream + viewerLaborTax + viewerMatTax + viewerEqTax;
+  // Retainage scoped to the viewer's OWN billable amount. A crew must never see the
+  // subcontractor's upstream subtotal / retainage / net payable.
+  const viewerRetainageAmount = viewerTotalToUpstreamWithTax * retainagePercent / 100;
+  const viewerNetPayableAmount = retainageReleased
+    ? viewerTotalToUpstreamWithTax
+    : viewerTotalToUpstreamWithTax - viewerRetainageAmount;
 
   const financials: COFinancials = {
     laborTotal,
@@ -363,6 +369,8 @@ export function useChangeOrderDetail(coId: string | null) {
       ownEquipmentCost: scopedEquipmentCost,
       totalToUpstream: viewerTotalToUpstream,
       totalToUpstreamWithTax: viewerTotalToUpstreamWithTax,
+      retainageAmount: viewerRetainageAmount,
+      netPayableAmount: viewerNetPayableAmount,
     },
   };
 
