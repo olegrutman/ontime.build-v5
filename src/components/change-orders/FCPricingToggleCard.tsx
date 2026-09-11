@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
+import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
+
 
 function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -50,12 +52,14 @@ export function FCPricingToggleCard({
   const fcLumpSum = financials.fcLumpSumTotal;
   // Base the calculation on what the crew actually submitted, not on the work
   // order's pricing label — a fixed-price WO can still be priced from crew hours.
-  const isHourly = fcHours > 0 || (fcLumpSum <= 0 && (co.pricing_type === 'tm' || co.pricing_type === 'nte'));
-  const fcHasSubmitted = fcHours > 0 || fcLumpSum > 0;
+  const { isHourly, fcHasSubmitted, calculatedPrice } = computeFcPricingBase({
+    fcTotalHours: fcHours,
+    fcLumpSumTotal: fcLumpSum,
+    hourlyRate: rate,
+    markupPercent: markup,
+    pricingType: co.pricing_type,
+  });
 
-  const calculatedPrice = isHourly
-    ? fcHours * rate
-    : fcLumpSum * (1 + markup / 100);
 
   const lastWrittenPrice = useRef<number | null>(null);
 

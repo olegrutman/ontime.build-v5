@@ -123,7 +123,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
       {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
         <FCPricingToggleCard
           co={co} financials={financials} myOrgId={myOrgId}
-          onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName="GC"
+          onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName={rl.short('GC')}
         />
       )}
 
@@ -229,7 +229,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           })()}
 
           {(isTC || isFC) && (() => {
-            const upstream = isTC ? 'GC' : 'TC';
+            const upstream = isTC ? rl.short('GC') : rl.short('TC');
             const ownLabor = financials.viewer.ownLaborToUpstream;
             const ownMats = financials.viewer.ownMaterialsTotal;
             const ownEq = financials.viewer.ownEquipmentTotal;

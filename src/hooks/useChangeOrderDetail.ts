@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
+import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
+
 import type {
   ChangeOrder,
   COCollaborator,
@@ -280,10 +282,16 @@ export function useChangeOrderDetail(coId: string | null) {
 
   // ---- Viewer-scoped totals (prevents cross-org leakage) ----
   const ownerIsViewer = !!orgId && co?.org_id === orgId;
+  // The upstream biller is normally the owning org, but when a crew creates the
+  // work order and routes it to their subcontractor, that subcontractor is the
+  // one billing upstream — so they get the toggle-derived billable price, while
+  // the creating crew bills only its own labor down-line.
+  const upstreamBillerOrgId = resolveUpstreamBillerOrgId(co as any);
+  const isUpstreamBiller = !!orgId && orgId === upstreamBillerOrgId;
   const viewerLaborTotal = orgId
     ? billableLaborEntries.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.line_total ?? 0), 0)
     : 0;
-  const viewerOwnLaborToUpstream = ownerIsViewer ? tcBillableToGC : viewerLaborTotal;
+  const viewerOwnLaborToUpstream = isUpstreamBiller ? tcBillableToGC : viewerLaborTotal;
   const viewerMaterialsTotal = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.billed_amount ?? 0), 0) : 0;
   const viewerMaterialsCost  = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.line_cost ?? 0), 0) : 0;
   const viewerEquipmentTotal = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.billed_amount ?? 0), 0) : 0;
@@ -292,8 +300,9 @@ export function useChangeOrderDetail(coId: string | null) {
   // Responsibility gate: when the GC procures materials/equipment, the supplier bills
   // the GC directly. A TC viewer must NOT see those dollars (not their cost, not their
   // revenue) even when they own the CO — fall back to rows their own org entered.
-  const canRollUpMaterials = ownerIsViewer && matResp === 'TC';
-  const canRollUpEquipment = ownerIsViewer && eqResp === 'TC';
+  const canRollUpMaterials = (ownerIsViewer || isUpstreamBiller) && matResp === 'TC';
+  const canRollUpEquipment = (ownerIsViewer || isUpstreamBiller) && eqResp === 'TC';
+
   const scopedMaterialsTotal = canRollUpMaterials ? materialsTotal : viewerMaterialsTotal;
   const scopedEquipmentTotal = canRollUpEquipment ? equipmentTotal : viewerEquipmentTotal;
   const scopedMaterialsCost  = canRollUpMaterials ? materialsCost  : viewerMaterialsCost;
