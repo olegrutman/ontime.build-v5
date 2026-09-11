@@ -27,10 +27,13 @@ export async function sendCONotification(payload: CONotificationPayload): Promis
     }]);
 
     if (error) {
-      console.warn('Notification insert failed (non-critical):', error.message);
+      console.warn('Notification insert failed:', error.message);
+      return false;
     }
+    return true;
   } catch (err) {
-    console.warn('Notification send failed (non-critical):', err);
+    console.warn('Notification send failed:', err);
+    return false;
   }
 }
 
