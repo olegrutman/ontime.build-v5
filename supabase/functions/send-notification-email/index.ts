@@ -33,6 +33,7 @@ const CATEGORY_BY_TYPE: Record<string, Category> = {
   INVOICE_REJECTED: 'notify_inv_rejected',
   INVOICE_PAID: 'notify_inv_paid',
   CHANGE_SUBMITTED: 'notify_wo_submitted',
+  CO_SHARED: 'notify_wo_assigned',
   CHANGE_APPROVED: 'notify_wo_approved',
   CHANGE_REJECTED: 'notify_wo_rejected',
   WORK_ORDER_ASSIGNED: 'notify_wo_input_requested',
