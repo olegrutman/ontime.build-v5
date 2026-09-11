@@ -1,7 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
 interface CONotificationPayload {
-  recipient_user_id: string;
+  /** Leave null to alert the whole recipient organization. */
+  recipient_user_id?: string | null;
   recipient_org_id: string;
   co_id: string;
   project_id: string;
@@ -11,10 +12,10 @@ interface CONotificationPayload {
   amount?: number;
 }
 
-export async function sendCONotification(payload: CONotificationPayload) {
+export async function sendCONotification(payload: CONotificationPayload): Promise<boolean> {
   try {
     const { error } = await supabase.from('notifications').insert([{
-      recipient_user_id: payload.recipient_user_id,
+      recipient_user_id: payload.recipient_user_id ?? null,
       recipient_org_id: payload.recipient_org_id,
       type: payload.type as any,
       title: payload.title,
@@ -26,10 +27,13 @@ export async function sendCONotification(payload: CONotificationPayload) {
     }]);
 
     if (error) {
-      console.warn('Notification insert failed (non-critical):', error.message);
+      console.warn('Notification insert failed:', error.message);
+      return false;
     }
+    return true;
   } catch (err) {
-    console.warn('Notification send failed (non-critical):', err);
+    console.warn('Notification send failed:', err);
+    return false;
   }
 }
 
