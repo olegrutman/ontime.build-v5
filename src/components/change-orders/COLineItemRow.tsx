@@ -313,7 +313,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 {unpricedFCHours > 0 && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
                     <AlertTriangle className="h-2.5 w-2.5" />
-                    {unpricedFCHours}h {rl.FC.toLowerCase()} time unpriced
+                    {unpricedFCHours}h {rl.FC} time unpriced
                   </span>
                 )}
 
@@ -393,7 +393,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       </span>
                       {isTC && crewHoursOnItem > 0 && (
                         <span className="block text-[9px] font-semibold text-muted-foreground/80">
-                          {fmtHours(crewHoursOnItem)}h {rl.FC.toLowerCase()} time ready to price
+                          {fmtHours(crewHoursOnItem)}h {rl.FC} time ready to price
                         </span>
                       )}
                     </span>
@@ -451,7 +451,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                         </span>
                         {fcCostForTC > 0 && (
                           <span className="block text-[9px] font-medium text-muted-foreground/70 leading-tight">
-                            incl. ${fmt(fcCostForTC)} {rl.FC.toLowerCase()}
+                            incl. ${fmt(fcCostForTC)} {rl.FC}
                           </span>
                         )}
                       </div>
