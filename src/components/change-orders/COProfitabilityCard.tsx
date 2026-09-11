@@ -65,7 +65,14 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
           </span>
         </div>
         <div className="border-t border-border pt-2">
-          {costs <= 0 ? (
+          {revenue <= 0 ? (
+            <div className="text-sm">
+              <span className="font-semibold text-foreground">No price set yet</span>
+              <p className="text-[0.7rem] text-muted-foreground mt-0.5">
+                Margin appears once a price has been set for this work.
+              </p>
+            </div>
+          ) : costs <= 0 ? (
             <div className="text-sm">
               <span className="font-semibold text-foreground">Margin pending</span>
               <p className="text-[0.7rem] text-muted-foreground mt-0.5">
