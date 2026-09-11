@@ -12,7 +12,7 @@ interface CONotificationPayload {
   amount?: number;
 }
 
-export async function sendCONotification(payload: CONotificationPayload) {
+export async function sendCONotification(payload: CONotificationPayload): Promise<boolean> {
   try {
     const { error } = await supabase.from('notifications').insert([{
       recipient_user_id: payload.recipient_user_id ?? null,
