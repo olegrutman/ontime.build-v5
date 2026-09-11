@@ -212,12 +212,18 @@ export default function CONewIntakePage() {
         return addToCoId;
       }
 
+      const allowedIds = (routing?.targets ?? []).map(t => t.id);
+      if (allowedIds.length > 0 && (!assignedOrgId || !allowedIds.includes(assignedOrgId))) {
+        throw new Error('That company cannot receive this item. Send it to the company directly above you.');
+      }
+
       const coNumber = await generateCONumber({
         projectId,
         creatorOrgId: orgId,
         assignedToOrgId: assignedOrgId,
         isTM: isWO,
       });
+
 
       const { data: co, error: coErr } = await supabase
         .from('change_orders')
