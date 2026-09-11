@@ -15,7 +15,7 @@ interface CONotificationPayload {
 export async function sendCONotification(payload: CONotificationPayload) {
   try {
     const { error } = await supabase.from('notifications').insert([{
-      recipient_user_id: payload.recipient_user_id,
+      recipient_user_id: payload.recipient_user_id ?? null,
       recipient_org_id: payload.recipient_org_id,
       type: payload.type as any,
       title: payload.title,
