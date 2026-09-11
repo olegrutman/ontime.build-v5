@@ -18,6 +18,7 @@ import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricing
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { canRemoveLaborEntry } from '@/lib/laborEntryDelete';
+import { computeFcPricingBase } from '@/lib/fcPricingBase';
 
 interface COLineItemRowProps {
   item: COLineItem;
