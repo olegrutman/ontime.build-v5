@@ -386,6 +386,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             <FCInputRequestCard
               canRequest={canRequestFCInput} canComplete={canCompleteFCInput}
               options={fcOrgOptions} collaborators={collaborators} acting={false}
+              creatorCrewName={co.created_by_role === 'FC' ? (fcCollabName || undefined) : undefined}
               onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); onRefresh(); }}
               onComplete={async () => { await completeFCInput.mutateAsync(); onRefresh(); }}
             />
