@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
+import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
+
 
 function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
