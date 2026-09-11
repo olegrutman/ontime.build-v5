@@ -205,7 +205,7 @@ export function COStatusActions({
         return;
       }
 
-      await sendCONotification({
+      const ok = await sendCONotification({
         recipient_user_id: null,
         recipient_org_id: targetOrgId,
         co_id: co.id,
@@ -215,6 +215,9 @@ export function COStatusActions({
         body,
         amount,
       });
+      if (!ok) {
+        toast.warning("Saved, but we couldn't alert the other company. Let them know directly.");
+      }
     } catch (err) {
       console.warn('Failed to notify org:', err);
     }
