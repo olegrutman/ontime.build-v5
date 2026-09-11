@@ -213,6 +213,69 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // Any crew time logged on this scope item — used to tell a subcontractor there's
   // already work here waiting to be priced.
   const crewHoursOnItem = fcBillable.reduce((s, e) => s + Number(e.hours ?? 0), 0);
+  const crewLumpOnItem = fcBillable
+    .filter(e => e.pricing_mode === 'lump_sum')
+    .reduce((s, e) => s + Number(e.lump_sum ?? 0), 0);
+  const crewCostOnItem = fcBillable.reduce((s, e) => s + Number(e.line_total ?? 0), 0);
+
+  // Provisional billable amount straight from the crew's submitted time. Shown to a
+  // subcontractor while the item is still unpriced so the card and the side panel
+  // never disagree. Nothing is written until it's confirmed or edited.
+  const crewBase = crewPricingBase?.enabled
+    ? computeFcPricingBase({
+        fcTotalHours: crewHoursOnItem,
+        fcLumpSumTotal: crewLumpOnItem,
+        hourlyRate: crewPricingBase.hourlyRate,
+        markupPercent: crewPricingBase.markupPercent,
+        pricingType,
+      })
+    : null;
+  const provisionalAmount = crewBase?.fcHasSubmitted ? crewBase.calculatedPrice : 0;
+  const [confirmingCrewPrice, setConfirmingCrewPrice] = useState(false);
+
+  async function confirmCrewPrice() {
+    if (!crewBase || provisionalAmount <= 0) return;
+    setConfirmingCrewPrice(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const markupPct = crewBase.isHourly ? 0 : (crewPricingBase?.markupPercent ?? 0);
+      const { error } = await supabase.from('co_labor_entries').insert({
+        co_id: coId, co_line_item_id: item.id, org_id: orgId,
+        entered_by_role: 'TC', entry_date: today,
+        pricing_mode: crewBase.isHourly ? 'hourly' : 'lump_sum',
+        hours: crewBase.isHourly ? crewHoursOnItem : null,
+        base_hourly_rate: crewBase.isHourly ? (crewPricingBase?.hourlyRate ?? 0) : null,
+        base_lump_sum: crewBase.isHourly ? null : crewLumpOnItem,
+        markup_percent: markupPct,
+        hourly_rate: crewBase.isHourly ? (crewPricingBase?.hourlyRate ?? 0) : null,
+        lump_sum: crewBase.isHourly ? null : provisionalAmount,
+        description: `Priced from ${rl.FC} submitted time`,
+        is_actual_cost: false,
+      });
+      if (error) throw error;
+      if (crewCostOnItem > 0) {
+        await supabase.from('co_labor_entries').insert({
+          co_id: coId, co_line_item_id: item.id, org_id: orgId,
+          entered_by_role: 'TC', entry_date: today,
+          pricing_mode: 'lump_sum',
+          base_lump_sum: crewCostOnItem,
+          markup_percent: 0,
+          lump_sum: crewCostOnItem,
+          description: `Internal cost (${rl.FC} time)`,
+          is_actual_cost: true,
+          source_fc_entry_ids: fcBillable.map(e => e.id),
+        });
+      }
+      toast.success('Priced from crew time');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to price this item');
+    } finally {
+      setConfirmingCrewPrice(false);
+    }
+  }
+
+
 
 
   // Markup visibility logic for GC
