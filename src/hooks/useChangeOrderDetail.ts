@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
+import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
+
 import type {
   ChangeOrder,
   COCollaborator,
