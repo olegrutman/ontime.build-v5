@@ -26,7 +26,8 @@ const money = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigi
 export function CORow({ co, onClick, needsAction = false, selectable = false, isSelected = false, onSelect, bundledLabel = null }: CORowProps) {
 
   const status = co.status as COStatus;
-  const amount = (co as { display_total?: number }).display_total ?? co.tc_submitted_price ?? 0;
+  // Viewer-scoped amount only — never fall back to the upstream submitted price.
+  const amount = (co as { display_total?: number }).display_total ?? 0;
   const isApproved = status === 'approved' || status === 'contracted';
   const isClosed = status === 'withdrawn' || status === 'rejected';
   const days = differenceInDays(new Date(), new Date(co.created_at));

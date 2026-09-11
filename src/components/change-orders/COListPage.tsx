@@ -72,12 +72,17 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     let inProgressCount = 0;
     let withdrawnCount = 0;
 
+    // Always use the viewer-scoped amount: a crew must only ever total up its own
+    // billable rows, never the subcontractor's upstream price.
+    const amountOf = (co: typeof changeOrders[number]) =>
+      (co as { display_total?: number }).display_total ?? 0;
+
     for (const co of changeOrders) {
-      if (co.status !== 'draft' && co.status !== 'withdrawn') totalValue += (co.tc_submitted_price ?? 0);
+      if (co.status !== 'draft' && co.status !== 'withdrawn') totalValue += amountOf(co);
       if (co.status === 'submitted' && co.org_id === orgId) pendingApproval++;
       if (co.status === 'closed_for_pricing') awaitingPricing++;
       if (co.status === 'approved') {
-        approvedBillableValue += (co.tc_submitted_price ?? 0);
+        approvedBillableValue += amountOf(co);
         approvedCount++;
       }
       if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co.status)) {
