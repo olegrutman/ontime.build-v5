@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import { computeFcPricingBase } from '@/lib/fcPricingBase';
+
 
 /**
  * Shared submit-preparation helpers for change orders / work orders.
