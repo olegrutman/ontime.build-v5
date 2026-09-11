@@ -229,7 +229,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           })()}
 
           {(isTC || isFC) && (() => {
-            const upstream = isTC ? 'GC' : 'TC';
+            const upstream = isTC ? rl.short('GC') : rl.short('TC');
             const ownLabor = financials.viewer.ownLaborToUpstream;
             const ownMats = financials.viewer.ownMaterialsTotal;
             const ownEq = financials.viewer.ownEquipmentTotal;
