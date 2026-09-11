@@ -16,8 +16,9 @@ const AWAITING_APPROVAL: COStatus[] = ['submitted'];
 const AWAITING_PRICING: COStatus[] = ['closed_for_pricing', 'work_in_progress', 'shared', 'draft'];
 const EXCLUDED: COStatus[] = ['withdrawn', 'rejected'];
 
+// Viewer-scoped amount only — never fall back to the upstream submitted price.
 const amountOf = (co: ChangeOrderWithMembers) =>
-  (co as { display_total?: number }).display_total ?? co.tc_submitted_price ?? 0;
+  (co as { display_total?: number }).display_total ?? 0;
 
 export function useCOMoney(changeOrders: ChangeOrderWithMembers[]) {
   return useMemo(() => {

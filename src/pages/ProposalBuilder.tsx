@@ -101,7 +101,7 @@ export default function ProposalBuilder() {
       id: co.id,
       number: co.co_number ?? '—',
       title: co.title ?? 'Untitled',
-      amount: (co as { display_total?: number }).display_total ?? co.tc_submitted_price ?? 0,
+      amount: (co as { display_total?: number }).display_total ?? 0,
     }));
 
   const markupPct = Number(markup) || 0;
