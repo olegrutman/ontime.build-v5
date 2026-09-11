@@ -99,12 +99,18 @@ export async function snapshotCOSubmission({
       .maybeSingle();
     const rate = settings?.default_hourly_rate ?? 0;
     const markup = settings?.labor_markup_percent ?? 0;
-    const isHourly = pricingType === 'tm' || pricingType === 'nte';
     updates.tc_snapshot_hourly_rate = rate;
     updates.tc_snapshot_markup_percent = markup;
-    updates.tc_submitted_price = isHourly
-      ? (financials?.fcTotalHours ?? 0) * rate
-      : (financials?.fcLumpSumTotal ?? 0) * (1 + markup / 100);
+    // Same rule as the on-screen calculation: price from what the crew actually
+    // submitted (hours first, lump sum fallback), never from the pricing label.
+    updates.tc_submitted_price = computeFcPricingBase({
+      fcTotalHours: financials?.fcTotalHours ?? 0,
+      fcLumpSumTotal: financials?.fcLumpSumTotal ?? 0,
+      hourlyRate: rate,
+      markupPercent: markup,
+      pricingType,
+    }).calculatedPrice;
+
   } else if (isTC) {
     // Never freeze GC-procured materials/equipment into the price billed to the
     // GC — they pay those directly on their own PO.
