@@ -163,14 +163,21 @@ export function useChangeOrders(projectId: string | null) {
         if (r.added_by_role === 'GC') continue;
         eqByCo.set(r.co_id, (eqByCo.get(r.co_id) ?? 0) + Number(r.billed_amount ?? 0));
       }
+      const myRole = myParticipant?.role ?? null;
       const computeDisplayTotal = (c: ChangeOrder) => {
         const tcLabor = tcLaborByCo.get(c.id) ?? 0;
+        const fcLabor = fcLaborByCo.get(c.id) ?? 0;
         const tcSubmitted = Number((c as any).tc_submitted_price ?? 0);
         const tcBillableToGC = (c as any).use_fc_pricing_base && tcSubmitted > 0
           ? tcSubmitted
           : tcLabor;
-        return tcBillableToGC + (matByCo.get(c.id) ?? 0) + (eqByCo.get(c.id) ?? 0);
+        const shared = (matByCo.get(c.id) ?? 0) + (eqByCo.get(c.id) ?? 0);
+        // A crew (FC) viewer never sees the upstream billable price — their amount is
+        // what they bill for their own labor on this item.
+        if (myRole === 'FC') return fcLabor + shared;
+        return tcBillableToGC + shared;
       };
+
 
 
       return {
