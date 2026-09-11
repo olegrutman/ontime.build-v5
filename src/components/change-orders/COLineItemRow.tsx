@@ -386,7 +386,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                         <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />
                         <span className="font-heading text-base font-bold text-foreground">Set price</span>
                       </span>
+                      {isTC && crewHoursOnItem > 0 && (
+                        <span className="block text-[9px] font-semibold text-muted-foreground/80">
+                          {fmtHours(crewHoursOnItem)}h {rl.FC.toLowerCase()} time ready to price
+                        </span>
+                      )}
                     </span>
+
                   </button>
                 );
               }
