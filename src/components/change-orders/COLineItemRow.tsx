@@ -202,6 +202,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     .filter(e => (e.hours ?? 0) > 0 && (e.line_total ?? 0) === 0)
     .reduce((s, e) => s + Number(e.hours ?? 0), 0);
 
+  // Any crew time logged on this scope item — used to tell a subcontractor there's
+  // already work here waiting to be priced.
+  const crewHoursOnItem = fcBillable.reduce((s, e) => s + Number(e.hours ?? 0), 0);
+
+
   // Markup visibility logic for GC
   const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
   const gcSummaryOnly = isGC && markupVisibility === 'summary';
@@ -386,7 +391,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                         <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />
                         <span className="font-heading text-base font-bold text-foreground">Set price</span>
                       </span>
+                      {isTC && crewHoursOnItem > 0 && (
+                        <span className="block text-[9px] font-semibold text-muted-foreground/80">
+                          {fmtHours(crewHoursOnItem)}h {rl.FC.toLowerCase()} time ready to price
+                        </span>
+                      )}
                     </span>
+
                   </button>
                 );
               }

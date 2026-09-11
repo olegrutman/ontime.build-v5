@@ -110,15 +110,22 @@ export function LaborEntryForm({
   const [fcCost, setFcCost] = useState(0);
   const [fcEntryIds, setFcEntryIds] = useState<string[]>([]);
   const [importedFC, setImportedFC] = useState(false);
+  // Set when the crew's hours were auto-filled into the billable side because
+  // this change order is priced off the crew's submitted time.
+  const [prefilledFromCrew, setPrefilledFromCrew] = useState(false);
   useEffect(() => {
     let cancelled = false;
     async function loadFC() {
       if (!isTC || isActualCost || isEditing || !lineItemId) return;
-      const { data } = await supabase
-        .from('co_labor_entries')
-        .select('id, hours, hourly_rate, lump_sum, pricing_mode')
-        .eq('co_line_item_id', lineItemId)
-        .eq('entered_by_role', 'FC');
+      const [entriesRes, coRes] = await Promise.all([
+        supabase
+          .from('co_labor_entries')
+          .select('id, hours, hourly_rate, lump_sum, pricing_mode')
+          .eq('co_line_item_id', lineItemId)
+          .eq('entered_by_role', 'FC'),
+        supabase.from('change_orders').select('use_fc_pricing_base').eq('id', coId).maybeSingle(),
+      ]);
+      const data = entriesRes.data;
       if (cancelled || !data) return;
       let h = 0, c = 0;
       for (const e of data) {
@@ -127,13 +134,30 @@ export function LaborEntryForm({
           ? Number(e.lump_sum ?? 0)
           : Number(e.hours ?? 0) * Number(e.hourly_rate ?? 0);
       }
-      setFcHours(Math.round(h * 100) / 100);
-      setFcCost(Math.round(c * 100) / 100);
+      const totalHours = Math.round(h * 100) / 100;
+      const totalCost = Math.round(c * 100) / 100;
+      setFcHours(totalHours);
+      setFcCost(totalCost);
       setFcEntryIds(data.map((e: any) => e.id));
+
+      // When this change order bills off the crew's submitted time, open the form
+      // already populated: crew hours on the billable side at my own rate, and the
+      // crew's dollars as my private cost. Everything stays editable before saving.
+      if (coRes.data?.use_fc_pricing_base && totalHours > 0) {
+        setMode('hourly');
+        setUseCrewMath(false);
+        setHours(String(totalHours));
+        if (totalCost > 0) {
+          setInternalCost(String(totalCost));
+          setCostType('labor_wages');
+          setImportedFC(true);
+        }
+        setPrefilledFromCrew(true);
+      }
     }
     loadFC();
     return () => { cancelled = true; };
-  }, [lineItemId, isTC, isActualCost, isEditing]);
+  }, [lineItemId, coId, isTC, isActualCost, isEditing]);
 
   const fcAvailable = fcCost > 0 || fcHours > 0;
   function importFCHours() {
@@ -143,6 +167,7 @@ export function LaborEntryForm({
     setImportedFC(true);
     toast.success(`Imported ${fcHours}h of crew time`);
   }
+
 
 
 
@@ -582,7 +607,15 @@ export function LaborEntryForm({
           </div>
         )}
 
+        {/* Crew-time prefill note */}
+        {prefilledFromCrew && !isActualCost && (
+          <div className="rounded-lg px-3 py-2 text-[11px] font-medium" style={{ background: 'hsl(var(--amber)/0.12)', color: 'hsl(var(--amber-d))' }}>
+            Filled in from the crew's submitted time: {fmtHours(fcHours)} hrs at your rate. Change anything before you save.
+          </div>
+        )}
+
         {/* Live math expression */}
+
         <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5" style={mono}>
           {mode === 'hourly' ? (
             <>
