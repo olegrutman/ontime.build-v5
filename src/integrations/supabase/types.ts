@@ -750,6 +750,7 @@ export type Database = {
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
           org_id: string
+          originating_org_id: string | null
           owner_approval_status: string
           owner_approval_token: string | null
           owner_approved_at: string | null
@@ -829,6 +830,7 @@ export type Database = {
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
           org_id: string
+          originating_org_id?: string | null
           owner_approval_status?: string
           owner_approval_token?: string | null
           owner_approved_at?: string | null
@@ -908,6 +910,7 @@ export type Database = {
           nte_increase_approved?: boolean | null
           nte_increase_requested?: number | null
           org_id?: string
+          originating_org_id?: string | null
           owner_approval_status?: string
           owner_approval_token?: string | null
           owner_approved_at?: string | null
@@ -987,6 +990,13 @@ export type Database = {
           {
             foreignKeyName: "change_orders_org_id_fkey"
             columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_originating_org_id_fkey"
+            columns: ["originating_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -8956,6 +8966,7 @@ export type Database = {
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
           org_id: string
+          originating_org_id: string | null
           owner_approval_status: string
           owner_approval_token: string | null
           owner_approved_at: string | null
