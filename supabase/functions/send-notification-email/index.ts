@@ -54,6 +54,7 @@ const CTA_BY_TYPE: Record<string, string> = {
   INVOICE_REJECTED: 'Review and fix',
   INVOICE_PAID: 'View payment',
   CHANGE_SUBMITTED: 'Review and approve',
+  CO_SHARED: 'Open work order',
   CHANGE_APPROVED: 'View details',
   CHANGE_REJECTED: 'Review details',
   WORK_ORDER_ASSIGNED: 'Open work order',
