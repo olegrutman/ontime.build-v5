@@ -214,6 +214,9 @@ export async function materializeCrewPricing({
       description: 'Priced from crew submitted time',
       is_actual_cost: false,
     });
+    // Never swallow this: a rejected insert used to leave the frozen price with no
+    // saved rows behind it, which reads as "Not priced" and blocks sending upstream.
+    if (insertError) throw insertError;
 
     const hasInternalCost = itemRows.some(
       (r) => r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId,
