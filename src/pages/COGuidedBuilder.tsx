@@ -266,7 +266,10 @@ export default function COGuidedBuilder() {
       // Routing target: must be the company directly above the sender.
       const allowedIds = (routing?.targets ?? []).map(t => t.id);
       let assignedToOrgId: string | null = assignedOrgId ?? routing?.defaultId ?? null;
-      if (allowedIds.length > 0 && (!assignedToOrgId || !allowedIds.includes(assignedToOrgId))) {
+      if (!assignedToOrgId) {
+        throw new Error("Choose the company this goes to. If the list is empty, ask your project admin to confirm who hired you on this project.");
+      }
+      if (allowedIds.length > 0 && !allowedIds.includes(assignedToOrgId)) {
         throw new Error('That company cannot receive this item. Send it to the company directly above you.');
       }
 
