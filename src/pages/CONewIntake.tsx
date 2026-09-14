@@ -213,7 +213,10 @@ export default function CONewIntakePage() {
       }
 
       const allowedIds = (routing?.targets ?? []).map(t => t.id);
-      if (allowedIds.length > 0 && (!assignedOrgId || !allowedIds.includes(assignedOrgId))) {
+      if (!assignedOrgId) {
+        throw new Error("Choose the company this goes to. If the list is empty, ask your project admin to confirm who hired you on this project.");
+      }
+      if (allowedIds.length > 0 && !allowedIds.includes(assignedOrgId)) {
         throw new Error('That company cannot receive this item. Send it to the company directly above you.');
       }
 
