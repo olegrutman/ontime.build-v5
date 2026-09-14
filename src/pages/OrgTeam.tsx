@@ -22,7 +22,7 @@ import {
   ALLOWED_ROLES_BY_ORG_TYPE,
   AppRole,
 } from '@/types/organization';
-import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle, ShieldCheck } from 'lucide-react';
+import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle, ShieldCheck, Crown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { MemberDetailDialog } from '@/components/team/MemberDetailDialog';
@@ -285,12 +285,17 @@ export default function OrgTeam() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
                       {m.profile?.full_name || 'Unknown'}
-                      {m.is_admin && (
+                      {m.is_owner ? (
                         <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                          <Crown className="h-3 w-3 mr-0.5" />
+                          Owner
+                        </Badge>
+                      ) : m.is_admin ? (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           <ShieldCheck className="h-3 w-3 mr-0.5" />
                           Admin
                         </Badge>
-                      )}
+                      ) : null}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {m.profile?.email}

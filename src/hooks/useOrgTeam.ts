@@ -9,6 +9,8 @@ export interface OrgMember {
   user_id: string;
   role: AppRole;
   is_admin: boolean;
+  /** True for the person who registered the organization (organizations.created_by) */
+  is_owner?: boolean;
   created_at: string;
   profile: {
     full_name: string | null;
@@ -44,7 +46,7 @@ export function useOrgTeam() {
     if (!orgId) return;
     setLoading(true);
 
-    const [membersRes, invitesRes, permissionsRes] = await Promise.all([
+    const [membersRes, invitesRes, permissionsRes, orgRes] = await Promise.all([
       supabase
         .from('user_org_roles')
         .select('id, user_id, role, is_admin, created_at, profile:profiles(full_name, email, job_title)')
@@ -58,7 +60,14 @@ export function useOrgTeam() {
       supabase
         .from('member_permissions')
         .select('*'),
+      supabase
+        .from('organizations')
+        .select('created_by')
+        .eq('id', orgId)
+        .maybeSingle(),
     ]);
+
+    const ownerUserId = (orgRes?.data as { created_by: string | null } | null)?.created_by ?? null;
 
     // Build permissions map
     const permMap = new Map<string, MemberPermissions>();
@@ -92,6 +101,7 @@ export function useOrgTeam() {
       membersList = membersList.map(m => ({
         ...m,
         permissions: permMap.get(m.id) || null,
+        is_owner: !!ownerUserId && m.user_id === ownerUserId,
       }));
 
       setMembers(membersList);
