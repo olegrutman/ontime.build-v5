@@ -83,6 +83,19 @@ export function useCORoutingTargets(projectId: string | null | undefined) {
         targets = rows.filter(r => r.type === 'GC').map(toTarget);
       }
 
+      if (targets.length === 0 && myRole === 'FC') {
+        // Contract link not recorded yet. A crew's recipient is the
+        // subcontractor above them — only safe to infer when there is exactly
+        // one on the project; otherwise fall back to the GC if it's the only
+        // other company (direct-hire crew).
+        const subs = rows.filter(r => r.type === 'TC');
+        if (subs.length === 1) {
+          targets = subs.map(toTarget);
+        } else if (subs.length === 0) {
+          targets = rows.filter(r => r.type === 'GC').map(toTarget);
+        }
+      }
+
       return { targets, defaultId: targets[0]?.id ?? null, myRole };
     },
   });
