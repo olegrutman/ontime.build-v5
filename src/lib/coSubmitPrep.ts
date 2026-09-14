@@ -133,3 +133,106 @@ export async function snapshotCOSubmission({
   const { error } = await supabase.from('change_orders').update(updates).eq('id', coId);
   if (error) throw error;
 }
+
+interface MaterializeArgs {
+  coId: string;
+  orgId: string;
+  hourlyRate: number;
+  markupPercent: number;
+  pricingType?: string | null;
+}
+
+/**
+ * Turns the provisional "priced from crew time" amount into saved billable rows
+ * at submit time.
+ *
+ * Without this, a subcontractor could submit with `tc_submitted_price` frozen
+ * from crew hours while no billable row of their own existed — so every field
+ * derived from saved rows (own labor, retainage, net payable, line item card)
+ * read $0 while the snapshot read the real number. One scope item at a time,
+ * skipping items that already carry a billable row for this org.
+ */
+export async function materializeCrewPricing({
+  coId,
+  orgId,
+  hourlyRate,
+  markupPercent,
+  pricingType,
+}: MaterializeArgs): Promise<void> {
+  const { data: rows, error } = await supabase
+    .from('co_labor_entries')
+    .select('id, co_line_item_id, org_id, entered_by_role, is_actual_cost, pricing_mode, hours, lump_sum, line_total')
+    .eq('co_id', coId);
+  if (error || !rows) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const byItem = new Map<string, typeof rows>();
+  for (const r of rows) {
+    if (!r.co_line_item_id) continue;
+    const list = byItem.get(r.co_line_item_id) ?? [];
+    list.push(r);
+    byItem.set(r.co_line_item_id, list);
+  }
+
+  for (const [lineItemId, itemRows] of byItem) {
+    const alreadyPriced = itemRows.some(
+      (r) => !r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId,
+    );
+    if (alreadyPriced) continue;
+
+    const crew = itemRows.filter((r) => !r.is_actual_cost && r.entered_by_role === 'FC');
+    if (crew.length === 0) continue;
+
+    const crewHours = crew.reduce((s, r) => s + Number(r.hours ?? 0), 0);
+    const crewLump = crew
+      .filter((r) => r.pricing_mode === 'lump_sum')
+      .reduce((s, r) => s + Number(r.lump_sum ?? 0), 0);
+    const crewCost = crew.reduce((s, r) => s + Number(r.line_total ?? 0), 0);
+
+    const base = computeFcPricingBase({
+      fcTotalHours: crewHours,
+      fcLumpSumTotal: crewLump,
+      hourlyRate,
+      markupPercent,
+      pricingType,
+    });
+    if (!base.fcHasSubmitted || base.calculatedPrice <= 0) continue;
+
+    await supabase.from('co_labor_entries').insert({
+      co_id: coId,
+      co_line_item_id: lineItemId,
+      org_id: orgId,
+      entered_by_role: 'TC',
+      entry_date: today,
+      pricing_mode: base.isHourly ? 'hourly' : 'lump_sum',
+      hours: base.isHourly ? crewHours : null,
+      base_hourly_rate: base.isHourly ? hourlyRate : null,
+      base_lump_sum: base.isHourly ? null : crewLump,
+      markup_percent: base.isHourly ? 0 : markupPercent,
+      hourly_rate: base.isHourly ? hourlyRate : null,
+      lump_sum: base.isHourly ? null : base.calculatedPrice,
+      description: 'Priced from crew submitted time',
+      is_actual_cost: false,
+    });
+
+    const hasInternalCost = itemRows.some(
+      (r) => r.is_actual_cost && r.entered_by_role === 'TC' && r.org_id === orgId,
+    );
+    if (crewCost > 0 && !hasInternalCost) {
+      await supabase.from('co_labor_entries').insert({
+        co_id: coId,
+        co_line_item_id: lineItemId,
+        org_id: orgId,
+        entered_by_role: 'TC',
+        entry_date: today,
+        pricing_mode: 'lump_sum',
+        base_lump_sum: crewCost,
+        markup_percent: 0,
+        lump_sum: crewCost,
+        description: 'Internal cost (crew time)',
+        is_actual_cost: true,
+        source_fc_entry_ids: crew.map((r) => r.id),
+      });
+    }
+  }
+}
