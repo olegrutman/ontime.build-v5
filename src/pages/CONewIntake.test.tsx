@@ -71,6 +71,17 @@ vi.mock('@/hooks/useAiIntake', () => ({
     })),
 }));
 
+vi.mock('@/hooks/useCORoutingTargets', () => ({
+  useCORoutingTargets: () => ({
+    data: {
+      targets: [{ id: 'gc-org-1', name: 'Haley Custom Homes', role: 'GC' }],
+      defaultId: 'gc-org-1',
+      myRole: 'TC',
+    },
+    isLoading: false,
+  }),
+}));
+
 vi.mock('@/lib/generateCONumber', () => ({
   generateCONumber: (...args: any[]) => generateCONumberMock(...args),
 }));

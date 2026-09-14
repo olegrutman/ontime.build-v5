@@ -7956,6 +7956,7 @@ export type Database = {
           fc_input_needed: boolean | null
           fc_pricing_submitted_at: string | null
           gc_budget: number | null
+          gc_owner_markup_percent: number | null
           id: string | null
           labor_tax: number | null
           labor_taxable_snapshot: boolean | null
@@ -7964,15 +7965,18 @@ export type Database = {
           materials_on_site: boolean | null
           materials_responsible: string | null
           materials_tax: number | null
+          not_passed_reason: string | null
           nte_cap: number | null
           nte_increase_approved: boolean | null
           nte_increase_requested: number | null
           org_id: string | null
+          originating_org_id: string | null
           owner_approval_status: string | null
           owner_approved_at: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
           parent_co_id: string | null
+          passed_to_owner: boolean | null
           pricing_type: string | null
           problem_summary: string | null
           problem_voice_url: string | null
@@ -8030,6 +8034,7 @@ export type Database = {
           fc_input_needed?: boolean | null
           fc_pricing_submitted_at?: string | null
           gc_budget?: never
+          gc_owner_markup_percent?: never
           id?: string | null
           labor_tax?: never
           labor_taxable_snapshot?: boolean | null
@@ -8038,15 +8043,18 @@ export type Database = {
           materials_on_site?: boolean | null
           materials_responsible?: string | null
           materials_tax?: never
+          not_passed_reason?: never
           nte_cap?: never
           nte_increase_approved?: boolean | null
           nte_increase_requested?: never
           org_id?: string | null
+          originating_org_id?: string | null
           owner_approval_status?: string | null
           owner_approved_at?: string | null
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
           parent_co_id?: string | null
+          passed_to_owner?: never
           pricing_type?: string | null
           problem_summary?: string | null
           problem_voice_url?: string | null
@@ -8104,6 +8112,7 @@ export type Database = {
           fc_input_needed?: boolean | null
           fc_pricing_submitted_at?: string | null
           gc_budget?: never
+          gc_owner_markup_percent?: never
           id?: string | null
           labor_tax?: never
           labor_taxable_snapshot?: boolean | null
@@ -8112,15 +8121,18 @@ export type Database = {
           materials_on_site?: boolean | null
           materials_responsible?: string | null
           materials_tax?: never
+          not_passed_reason?: never
           nte_cap?: never
           nte_increase_approved?: boolean | null
           nte_increase_requested?: never
           org_id?: string | null
+          originating_org_id?: string | null
           owner_approval_status?: string | null
           owner_approved_at?: string | null
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
           parent_co_id?: string | null
+          passed_to_owner?: never
           pricing_type?: string | null
           problem_summary?: string | null
           problem_voice_url?: string | null
@@ -8193,6 +8205,13 @@ export type Database = {
           {
             foreignKeyName: "change_orders_org_id_fkey"
             columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_originating_org_id_fkey"
+            columns: ["originating_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
