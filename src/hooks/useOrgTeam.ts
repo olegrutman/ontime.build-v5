@@ -46,7 +46,7 @@ export function useOrgTeam() {
     if (!orgId) return;
     setLoading(true);
 
-    const [membersRes, invitesRes, permissionsRes] = await Promise.all([
+    const [membersRes, invitesRes, permissionsRes, orgRes] = await Promise.all([
       supabase
         .from('user_org_roles')
         .select('id, user_id, role, is_admin, created_at, profile:profiles(full_name, email, job_title)')
