@@ -198,7 +198,7 @@ export async function materializeCrewPricing({
     });
     if (!base.fcHasSubmitted || base.calculatedPrice <= 0) continue;
 
-    await supabase.from('co_labor_entries').insert({
+    const { error: insertError } = await supabase.from('co_labor_entries').insert({
       co_id: coId,
       co_line_item_id: lineItemId,
       org_id: orgId,

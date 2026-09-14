@@ -207,10 +207,14 @@ export function useChangeOrderDetail(coId: string | null) {
     : tcLaborTotal;
   // Bug 2: grandTotal uses tcBillableToGC to avoid double-counting when FC pricing is base
   const grandTotal = tcBillableToGC + materialsTotal + equipmentTotal;
-  const actualCostTotal = actualCostEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   // Bug 4: Split actual costs by role for privacy
   const tcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'TC').reduce((s, e) => s + (e.line_total ?? 0), 0);
   const fcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'FC').reduce((s, e) => s + (e.line_total ?? 0), 0);
+  // The subcontractor's "Internal cost (crew time)" row mirrors the crew's own
+  // cost rows, so count that cost once when pricing from crew time.
+  const actualCostTotal = co?.use_fc_pricing_base
+    ? (tcActualCostTotal > 0 ? tcActualCostTotal : fcActualCostTotal)
+    : tcActualCostTotal + fcActualCostTotal;
   const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
   // Bug 3: NTE tracks labor spend only, not materials/equipment
   const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0;
