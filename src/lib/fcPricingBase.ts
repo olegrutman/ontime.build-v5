@@ -53,9 +53,20 @@ export function resolveUpstreamBillerOrgId(co: {
   org_id?: string | null;
   assigned_to_org_id?: string | null;
   created_by_role?: string | null;
+  originating_org_id?: string | null;
 } | null | undefined): string | null {
   if (!co) return null;
-  if (co.created_by_role === 'FC' && co.assigned_to_org_id && co.assigned_to_org_id !== co.org_id) {
+  // Once the row has been forwarded upstream, the owning org (the
+  // subcontractor) is the one billing upstream — originating_org_id still
+  // records the crew that created it, so it no longer matches org_id.
+  const stillOwnedByCreatingCrew =
+    !co.originating_org_id || co.originating_org_id === co.org_id;
+  if (
+    co.created_by_role === 'FC' &&
+    stillOwnedByCreatingCrew &&
+    co.assigned_to_org_id &&
+    co.assigned_to_org_id !== co.org_id
+  ) {
     return co.assigned_to_org_id;
   }
   return co.org_id ?? null;
