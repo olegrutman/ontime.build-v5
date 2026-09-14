@@ -167,9 +167,11 @@ export function MemberDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {member.profile?.full_name || 'Team Member'}
-            {member.is_admin && (
-              <Badge variant="default" className="text-xs">Admin</Badge>
-            )}
+            {member.is_owner ? (
+              <Badge variant="default" className="text-xs">Owner</Badge>
+            ) : member.is_admin ? (
+              <Badge variant="secondary" className="text-xs">Admin</Badge>
+            ) : null}
           </DialogTitle>
           <DialogDescription>
             {member.profile?.email}
