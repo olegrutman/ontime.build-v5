@@ -677,7 +677,7 @@ export function COStatusActions({
           </span>
         </div>
         {canReleaseRetainage && (
-          <Button size="sm" variant="outline" className="h-8 text-xs gap-1 w-full" onClick={doReleaseRetainage} disabled={acting}>
+          <Button size="sm" variant="outline" className="min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1 w-full" onClick={doReleaseRetainage} disabled={acting}>
             {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
             Release Retainage
           </Button>
@@ -704,13 +704,13 @@ export function COStatusActions({
         <p className="text-xs text-muted-foreground">{co.rejection_note}</p>
         <div className="flex gap-2">
           {(canSubmit || canSubmitFCPricing) && (
-            <Button size="sm" className="flex-1 h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
+            <Button size="sm" className="flex-1 min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               Resubmit
             </Button>
           )}
           {canWithdraw && (
-            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs gap-1 text-muted-foreground" onClick={() => setWithdrawOpen(true)} disabled={acting}>
+            <Button size="sm" variant="outline" className="flex-1 min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1 text-muted-foreground" onClick={() => setWithdrawOpen(true)} disabled={acting}>
               <Trash2 className="h-3 w-3" />
               Withdraw
             </Button>
@@ -742,55 +742,55 @@ export function COStatusActions({
         </div>
         <div className="px-4 py-3 space-y-2">
           {canShare && (
-            <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1" onClick={doShare} disabled={acting}>
+            <Button variant="outline" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doShare} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
               Share with {co.assigned_to_org_id ? 'assigned party' : 'next party'}
             </Button>
           )}
           {canSendToWIP && (
-            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmitToWIP} disabled={acting}>
+            <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doSubmitToWIP} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               Send to {assignedOrgName ?? 'TC'} for pricing
             </Button>
           )}
           {canCloseForPricing && (
-            <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={doCloseForPricing} disabled={acting}>
+            <Button size="sm" variant="outline" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={doCloseForPricing} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
               Close CO for Final Pricing
             </Button>
           )}
           {(canSubmit || canSubmitFCPricing) && (
-            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
+            <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               {canSubmitFCPricing ? `Submit ${rl.FC} pricing` : 'Submit for approval'}
             </Button>
           )}
           {canRecall && (
-            <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1" onClick={doRecall} disabled={acting}>
+            <Button variant="outline" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doRecall} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
               Recall submission
             </Button>
           )}
           {canApprove && (
-            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting}>
+            <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting}>
               <Check className="h-3 w-3" />
               {forwardsToGC ? `Approve & send to ${rl.GC}` : 'Approve'}
             </Button>
           )}
           {canReject && (
-            <Button variant="destructive" size="sm" className="w-full h-8 text-xs gap-1" onClick={() => setRejectOpen(true)} disabled={acting}>
+            <Button variant="destructive" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setRejectOpen(true)} disabled={acting}>
               <X className="h-3 w-3" />
               Reject
             </Button>
           )}
           {canMarkCompleted && (
-            <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-1" onClick={doMarkCompleted} disabled={acting}>
+            <Button size="sm" variant="outline" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doMarkCompleted} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
               Mark Work Completed
             </Button>
           )}
           {canAcknowledge && (
-            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doAcknowledgeCompletion} disabled={acting}>
+            <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doAcknowledgeCompletion} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <ThumbsUp className="h-3 w-3" />}
               Acknowledge Completion
             </Button>
