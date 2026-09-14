@@ -22,7 +22,7 @@ import {
   ALLOWED_ROLES_BY_ORG_TYPE,
   AppRole,
 } from '@/types/organization';
-import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle, ShieldCheck } from 'lucide-react';
+import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle, ShieldCheck, Crown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { MemberDetailDialog } from '@/components/team/MemberDetailDialog';
