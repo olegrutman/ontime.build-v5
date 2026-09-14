@@ -112,8 +112,18 @@ export async function snapshotCOSubmission({
       markupPercent: markup,
       pricingType,
     }).calculatedPrice;
+    // Materialize the provisional crew-derived price into real billable rows so
+    // the frozen snapshot and everything computed from saved rows agree.
+    await materializeCrewPricing({
+      coId,
+      orgId: currentOrgId,
+      hourlyRate: rate,
+      markupPercent: markup,
+      pricingType,
+    });
 
   } else if (isTC) {
+
     // Never freeze GC-procured materials/equipment into the price billed to the
     // GC — they pay those directly on their own PO.
     updates.tc_submitted_price = financials?.billableGrandTotal ?? financials?.grandTotal ?? 0;
