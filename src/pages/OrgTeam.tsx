@@ -285,12 +285,17 @@ export default function OrgTeam() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
                       {m.profile?.full_name || 'Unknown'}
-                      {m.is_admin && (
+                      {m.is_owner ? (
                         <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                          <Crown className="h-3 w-3 mr-0.5" />
+                          Owner
+                        </Badge>
+                      ) : m.is_admin ? (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           <ShieldCheck className="h-3 w-3 mr-0.5" />
                           Admin
                         </Badge>
-                      )}
+                      ) : null}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {m.profile?.email}
