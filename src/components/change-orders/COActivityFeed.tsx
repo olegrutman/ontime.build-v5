@@ -63,9 +63,13 @@ function canSeeAmount(entry: COActivityEntry, viewerRole?: 'GC' | 'TC' | 'FC' | 
   // A company sees money it logged itself, and money logged by the company that
   // bills it directly — never figures from further down the chain.
   if (viewerTier - actorTier > 1) return false;
+  // Never expose amounts logged by a company further up the chain: those are
+  // upstream contract prices the viewer is not a party to.
+  if (actorTier > viewerTier) return false;
   if (CREW_SCOPED_ACTIONS.has(entry.action) && viewerTier > 1) return false;
   return true;
 }
+
 
 export function COActivityFeed({ activity, viewerRole = null, projectId = null }: COActivityFeedProps) {
   const rl = useRoleLabels(projectId);
