@@ -9,6 +9,8 @@ export interface OrgMember {
   user_id: string;
   role: AppRole;
   is_admin: boolean;
+  /** True for the person who registered the organization (organizations.created_by) */
+  is_owner?: boolean;
   created_at: string;
   profile: {
     full_name: string | null;
