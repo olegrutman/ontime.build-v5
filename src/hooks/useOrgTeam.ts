@@ -101,6 +101,7 @@ export function useOrgTeam() {
       membersList = membersList.map(m => ({
         ...m,
         permissions: permMap.get(m.id) || null,
+        is_owner: !!ownerUserId && m.user_id === ownerUserId,
       }));
 
       setMembers(membersList);
