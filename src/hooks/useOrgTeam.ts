@@ -60,7 +60,14 @@ export function useOrgTeam() {
       supabase
         .from('member_permissions')
         .select('*'),
+      supabase
+        .from('organizations')
+        .select('created_by')
+        .eq('id', orgId)
+        .maybeSingle(),
     ]);
+
+    const ownerUserId = (orgRes?.data as { created_by: string | null } | null)?.created_by ?? null;
 
     // Build permissions map
     const permMap = new Map<string, MemberPermissions>();
