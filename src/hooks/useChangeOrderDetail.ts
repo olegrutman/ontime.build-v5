@@ -189,7 +189,12 @@ export function useChangeOrderDetail(coId: string | null) {
     .filter(entry => entry.entered_by_role === 'TC')
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
 
-  const laborTotal = tcLaborTotal + fcLaborTotal;
+  // When the subcontractor prices from the crew's submitted time, their billable
+  // rows mirror the crew rows — the same work. Adding both would double the labor
+  // used for the NTE gauge, labor tax and margin, so only count it once.
+  const laborTotal = co?.use_fc_pricing_base
+    ? (tcLaborTotal > 0 ? tcLaborTotal : fcLaborTotal)
+    : tcLaborTotal + fcLaborTotal;
   const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
   const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
   const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0);
