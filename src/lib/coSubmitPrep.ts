@@ -236,3 +236,49 @@ export async function materializeCrewPricing({
     }
   }
 }
+
+/**
+ * Same as `materializeCrewPricing`, but reads the org's own rate / markup first.
+ *
+ * Used on the approve-and-forward path: a crew-created work order is submitted by
+ * the crew (so the subcontractor never presses Submit), yet the subcontractor's
+ * crew-derived price still has to become saved billable rows before it travels
+ * upstream — otherwise the header total and every per-line amount disagree.
+ *
+ * Returns how many billable rows this org owns on the CO afterwards, so callers
+ * can refuse to forward a priced total with nothing priced behind it.
+ */
+export async function materializeCrewPricingForOrg({
+  coId,
+  orgId,
+  pricingType,
+}: {
+  coId: string;
+  orgId: string;
+  pricingType?: string | null;
+}): Promise<number> {
+  const { data: settings } = await supabase
+    .from('org_settings')
+    .select('default_hourly_rate, labor_markup_percent')
+    .eq('organization_id', orgId)
+    .maybeSingle();
+
+  await materializeCrewPricing({
+    coId,
+    orgId,
+    hourlyRate: settings?.default_hourly_rate ?? 0,
+    markupPercent: settings?.labor_markup_percent ?? 0,
+    pricingType,
+  });
+
+  const { count } = await supabase
+    .from('co_labor_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('co_id', coId)
+    .eq('org_id', orgId)
+    .eq('entered_by_role', 'TC')
+    .eq('is_actual_cost', false);
+
+  return count ?? 0;
+}
+

@@ -25,7 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
-import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
+import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { toast } from 'sonner';
 import type { ChangeOrder, COCollaborator, COFinancials, COStatus } from '@/types/changeOrder';
 
@@ -353,11 +353,28 @@ export function COStatusActions({
     setActing(true);
     try {
       if (forwardsToGC) {
+        /* A crew-created work order is submitted by the crew, so this company
+           never pressed Submit — turn its crew-derived price into saved billable
+           rows here, before the work order travels upstream. Without this the
+           upstream party sees a total with every scope line reading "Not priced". */
+        if (isTC && co.use_fc_pricing_base) {
+          const pricedRows = await materializeCrewPricingForOrg({
+            coId: co.id,
+            orgId: currentOrgId,
+            pricingType: co.pricing_type,
+          });
+          if (pricedRows === 0 && (co.tc_submitted_price ?? 0) > 0) {
+            toast.error('Confirm the price on each scope item before sending this up.');
+            return;
+          }
+        }
+
         const { data, error } = await supabase.rpc('forward_change_order_to_upstream_gc', {
           _co_id: co.id,
         });
 
         if (error) throw error;
+
 
         const forwarded = Array.isArray(data) ? data[0] : data;
         const nextOrgId = forwarded?.assigned_to_org_id ?? null;
