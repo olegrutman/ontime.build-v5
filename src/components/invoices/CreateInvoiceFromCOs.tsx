@@ -100,21 +100,37 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
           .from(t.co)
-          .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, org_id, assigned_to_org_id, completion_acknowledged_at')
+          .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
           .order('created_at', { ascending: false });
         if (cosErr) throw cosErr;
 
-        // Filter: TC sees COs assigned to them; FC sees COs where they own it
+        // Crews stay billable after their work order is forwarded upstream: once a
+        // sub forwards, org_id is rewritten to the sub and the crew only survives in
+        // originating_org_id / the collaborator list. Owning it by any of those routes
+        // must keep it invoiceable.
+        let collabCoIds = new Set<string>();
+        if (invoicingRole === 'FC' && (cos ?? []).length > 0) {
+          const { data: collabs } = await supabase
+            .from('change_order_collaborators')
+            .select('co_id')
+            .eq('organization_id', currentOrgId)
+            .in('co_id', (cos ?? []).map((c: any) => c.id));
+          collabCoIds = new Set((collabs ?? []).map((c: any) => c.co_id as string));
+        }
+
+        // Filter: TC sees COs assigned to them; FC sees COs their own org performed
         const filtered = (cos ?? []).filter(co => {
           if (invoicingRole === 'TC') {
             // TC invoices GC: only COs assigned to TC's org with completion acknowledged
             return co.assigned_to_org_id === currentOrgId && co.completion_acknowledged_at;
           }
           if (invoicingRole === 'FC') {
-            // FC invoices TC: only COs created by FC's org
-            return co.org_id === currentOrgId;
+            // FC invoices TC: COs they created, originated, or collaborated on
+            return co.org_id === currentOrgId
+              || (co as any).originating_org_id === currentOrgId
+              || collabCoIds.has(co.id);
           }
           return false; // GC doesn't create invoices from COs
         });
