@@ -701,7 +701,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="px-5 py-2 border-t border-border">
-                      <COActivityFeed activity={activity} />
+                      <COActivityFeed activity={activity} viewerRole={role} projectId={projectId} />
                     </div>
                     <div className="border-t border-border px-5 py-3">
                       <div className="flex items-center gap-2">
