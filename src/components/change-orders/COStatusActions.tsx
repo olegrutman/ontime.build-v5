@@ -25,7 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
-import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
+import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { toast } from 'sonner';
 import type { ChangeOrder, COCollaborator, COFinancials, COStatus } from '@/types/changeOrder';
 
