@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppRole, MemberPermissions } from '@/types/organization';
 import { useToast } from '@/hooks/use-toast';
+import { sendCompanyInviteEmail, fetchOrgName } from '@/lib/sendCompanyInvite';
 
 export interface OrgMember {
   id: string;
@@ -129,6 +130,14 @@ export function useOrgTeam() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return false;
+    }
+
+    const orgName = await fetchOrgName(orgId);
+    if (orgName) {
+      await sendCompanyInviteEmail({
+        to: email.toLowerCase().trim(),
+        companyName: orgName,
+      });
     }
 
     toast({ title: 'Invite Sent', description: `Invitation sent to ${email}` });

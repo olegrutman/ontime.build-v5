@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { sendCompanyInviteEmail, fetchProjectName } from '@/lib/sendCompanyInvite';
 
 import {
   Dialog,
@@ -316,12 +317,13 @@ export function AddTeamMemberDialog({
       // Get current user's org info for contract creation
       const { data: userOrgData } = await supabase
         .from('user_org_roles')
-        .select('organization_id, organizations:organization_id (type)')
+        .select('organization_id, organizations:organization_id (type, name)')
         .eq('user_id', user.id)
         .single();
       
       const currentOrgId = userOrgData?.organization_id;
       const currentOrgType = (userOrgData?.organizations as any)?.type;
+      const currentOrgName = (userOrgData?.organizations as any)?.name as string | undefined;
 
       // Insert into project_team with status = Invited
       // Existing orgs should NOT be auto-accepted; they must accept via dashboard invite flow.
@@ -419,6 +421,16 @@ export function AddTeamMemberDialog({
         metadata: { org_name: selectedResult.org_name, role: selectedRole },
       });
 
+      if (currentOrgName && selectedResult.contact_email) {
+        await sendCompanyInviteEmail({
+          to: selectedResult.contact_email,
+          companyName: currentOrgName,
+          invitedName: selectedResult.contact_name,
+          projectName: await fetchProjectName(projectId),
+          roleLabel: selectedRole,
+        });
+      }
+
       toast.success(`Invitation sent to ${selectedResult.org_name}`);
       onMemberAdded();
       onOpenChange(false);
@@ -464,12 +476,13 @@ export function AddTeamMemberDialog({
       // Get current user's org info for contract creation
       const { data: userOrgData } = await supabase
         .from('user_org_roles')
-        .select('organization_id, organizations:organization_id (type)')
+        .select('organization_id, organizations:organization_id (type, name)')
         .eq('user_id', user.id)
         .single();
       
       const currentOrgId = userOrgData?.organization_id;
       const currentOrgType = (userOrgData?.organizations as any)?.type;
+      const currentOrgName = (userOrgData?.organizations as any)?.name as string | undefined;
 
       // Insert into project_team with status = Invited
       const { data: teamMember, error: teamError } = await supabase
@@ -551,6 +564,16 @@ export function AddTeamMemberDialog({
         actor_company: inviteForm.companyName,
         metadata: { org_name: inviteForm.companyName, email: inviteForm.contactEmail },
       });
+
+      if (currentOrgName) {
+        await sendCompanyInviteEmail({
+          to: inviteForm.contactEmail,
+          companyName: currentOrgName,
+          invitedName: inviteForm.contactName,
+          projectName: await fetchProjectName(projectId),
+          roleLabel: inviteForm.role,
+        });
+      }
 
       toast.success('Invitation sent');
       onMemberAdded();
