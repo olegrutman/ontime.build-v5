@@ -126,10 +126,23 @@ export function AddTeamMemberDialog({
 
   const requiresTrade = (role: TeamRole) => role === 'Subcontractor' || role === 'Crew';
 
-  // Ensure default roles always comply with availableRoles
+  // Ensure default roles always comply with availableRoles.
+  // When the dialog is scoped to a zone (restrictRoles), default to the zone's
+  // first role so the form opens in a valid, submittable state (e.g. a supplier's
+  // upstream zone defaults to General Contractor, which needs no trade).
   useEffect(() => {
     if (!open) return;
     if (availableRoles.length === 0) return;
+
+    if (restrictRoles && restrictRoles.length > 0) {
+      const preferred = availableRoles.includes(restrictRoles[0])
+        ? restrictRoles[0]
+        : availableRoles[0];
+      setSelectedRole(preferred);
+      setSelectedTrade(undefined);
+      setInviteForm((prev) => ({ ...prev, role: preferred, trade: undefined }));
+      return;
+    }
 
     if (!availableRoles.includes(selectedRole)) {
       setSelectedRole(availableRoles[0]);
