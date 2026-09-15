@@ -374,7 +374,11 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   // fall back to the direct lump-sum path.
   const selectedSOV = useMemo(() => {
     if (selectedCOId) {
-      return sovs.find(s => s.source_co_id === selectedCOId) || null;
+      // Only bill line-by-line when the CO's SOV lives on the same contract the
+      // viewer bills under. A crew billing its own upstream contract must fall
+      // back to lump-sum — the CO SOV belongs to the subcontractor's contract
+      // and carries the subcontractor's (higher) prices.
+      return sovs.find(s => s.source_co_id === selectedCOId && s.contract_id === selectedCO?.contract_id) || null;
     }
     const contractSovs = sovs.filter(
       s => s.contract_id === selectedContractId && (s.sov_kind ?? 'base') === 'base'
