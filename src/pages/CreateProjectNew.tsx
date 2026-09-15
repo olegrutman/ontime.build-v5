@@ -31,6 +31,7 @@ import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReview
 import { ProjectPartiesStep, partiesStepComplete } from '@/components/project-wizard-new/ProjectPartiesStep';
 import { ContractModeSelector, type ContractMode } from '@/components/project-wizard-new/ContractModeSelector';
 import { TMBuildingInfoStep, initialTMBuildingInfo, type TMBuildingInfo } from '@/components/project-wizard-new/TMBuildingInfoStep';
+import { sendCompanyInviteEmail } from '@/lib/sendCompanyInvite';
 
 interface StepDef {
   id: string;
@@ -319,6 +320,18 @@ export default function CreateProjectNew() {
             invited_org_name: member.companyName,
             invited_by_user_id: user.id,
           });
+
+          // Send the branded "[Company] has invited you to Ontime.Build" email.
+          // Non-fatal: the invite record exists even if email delivery fails.
+          if (member.contactEmail) {
+            await sendCompanyInviteEmail({
+              to: member.contactEmail,
+              companyName: currentOrg.name,
+              invitedName: member.contactName || undefined,
+              projectName: basics.name || undefined,
+              roleLabel: member.role,
+            });
+          }
         } catch (err: any) {
           console.error('Error saving team member:', err);
         }
