@@ -93,7 +93,7 @@ export function getNavGroups(isTM: boolean, isSupplier: boolean, isFC = false): 
       groups: [
         { key: 'primary', items: [ITEMS.overview, ITEMS.changeOrders(isTM), ITEMS.invoices] },
         // Crews see the Schedule of Values for their own contract (read-only).
-        { key: 'financials', label: 'Financials', items: [...(!isTM ? [ITEMS.sov] : [])] },
+        ...(!isTM ? [{ key: 'financials', label: 'Financials', items: [ITEMS.sov] }] : []),
         { key: 'field', label: 'Field', items: [ITEMS.schedule, ITEMS.dailyLog] },
       ],
       more: [ITEMS.rfis, ITEMS.team, ITEMS.projectInfo, ITEMS.settings],
