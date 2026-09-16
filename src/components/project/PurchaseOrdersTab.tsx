@@ -65,14 +65,16 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [emailPromptOpen, setEmailPromptOpen] = useState(false);
   const [pendingPOForEmail, setPendingPOForEmail] = useState<{ poId: string; poNumber: string; projectId: string } | null>(null);
   const [emailSending, setEmailSending] = useState(false);
+  const [ownSupplierId, setOwnSupplierId] = useState<string | null>(null);
+  const [buyerOrg, setBuyerOrg] = useState<{ id: string; name: string } | null>(null);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
   const isSupplier = currentOrgType === 'SUPPLIER';
   const isGC = currentOrgType === 'GC';
   const isTC = currentOrgType === 'TC';
-  // Suppliers never issue POs — they receive and price them.
-  const canCreatePO = !isSupplier && (permissions?.canCreatePOs ?? false);
+  // Suppliers may raise a PO, but it always needs the buying company's approval.
+  const canCreatePO = isSupplier ? true : (permissions?.canCreatePOs ?? false);
 
   const hidePricing = isTC && materialResponsibility === 'GC';
   // A TC-raised PO must route through the GC whenever the relationship asks for it OR
@@ -263,6 +265,35 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     fetchContractInfo();
   }, [currentOrgId, isTC, projectId]);
 
+  // Supplier context: their own supplier record and the company that pays for materials
+  useEffect(() => {
+    if (!isSupplier || !currentOrgId || !projectId) return;
+
+    const loadSupplierContext = async () => {
+      const { data: own } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('organization_id', currentOrgId)
+        .limit(1)
+        .maybeSingle();
+      if (own?.id) setOwnSupplierId(own.id);
+
+      const { data: buyerId } = await supabase.rpc('resolve_supplier_po_buyer_org', {
+        _project_id: projectId,
+        _supplier_org_id: currentOrgId,
+      });
+      if (!buyerId) return;
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('id', buyerId as string)
+        .maybeSingle();
+      if (org) setBuyerOrg({ id: org.id, name: org.name });
+    };
+
+    loadSupplierContext();
+  }, [currentOrgId, isSupplier, projectId]);
+
   const resolvePricingOwnerOrgId = useCallback(async (targetProjectId: string) => {
     const { data: contracts } = await supabase
       .from('project_contracts')
@@ -281,7 +312,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const createPurchaseOrderRecord = useCallback(async (data: POWizardV2Data) => {
     if (!currentOrgId) throw new Error('Missing organization');
 
-    const pricingOwnerOrgId = (await resolvePricingOwnerOrgId(data.project_id)) || currentOrgId;
+    const pricingOwnerOrgId = isSupplier
+      ? (buyerOrg?.id || (await resolvePricingOwnerOrgId(data.project_id)) || currentOrgId)
+      : ((await resolvePricingOwnerOrgId(data.project_id)) || currentOrgId);
     const salesTaxPercent = data.sales_tax_percent ?? 0;
 
     const { data: poNumber } = await supabase.rpc('generate_po_number', { org_id: currentOrgId });
@@ -365,7 +398,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
 
     return { newPO, poNumber: poNumber as string };
-  }, [currentOrgId, resolvePricingOwnerOrgId]);
+  }, [buyerOrg?.id, currentOrgId, isSupplier, resolvePricingOwnerOrgId]);
 
   const handleCreatePO = async (data: POWizardV2Data) => {
     setIsSubmitting(true);
@@ -384,6 +417,23 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   };
 
   const handleSubmitToSupplier = async (po: PurchaseOrder) => {
+    if (isSupplier && po.created_by_org_id === currentOrgId) {
+      try {
+        const { data: updated, error } = await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', po.id)
+          .select('id');
+        if (error) throw error;
+        if (!updated?.length) throw new Error('You do not have permission to send this PO for approval');
+        toast.success(`Sent to ${buyerOrg?.name || 'the buying company'} for approval`);
+        fetchPurchaseOrders();
+      } catch (err: any) {
+        toast.error('Failed to send for approval: ' + (err?.message || 'Unknown error'));
+      }
+      return;
+    }
+
     if (requiresGCApproval && po.created_by_org_id === currentOrgId) {
       try {
         const { error } = await supabase
@@ -410,7 +460,14 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     try {
       const { newPO, poNumber } = await createPurchaseOrderRecord(data);
 
-      if (requiresGCApproval) {
+      if (isSupplier) {
+        const { error: sendErr } = await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', newPO.id);
+        if (sendErr) throw sendErr;
+        toast.success(`PO ${poNumber} sent to ${buyerOrg?.name || 'the buying company'} for approval`);
+      } else if (requiresGCApproval) {
         await supabase
           .from('purchase_orders')
           .update({ status: 'PENDING_APPROVAL' as any })
@@ -468,8 +525,45 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
   };
 
+  const isSupplierRaisedPO = useCallback(
+    (po: PurchaseOrder) =>
+      !!po.created_by_org_id &&
+      (po.supplier as { organization_id?: string } | null)?.organization_id === po.created_by_org_id,
+    [],
+  );
+
+  const canApproveSupplierPO = useCallback(
+    (po: PurchaseOrder) =>
+      isSupplierRaisedPO(po) && !isSupplier && po.pricing_owner_org_id === currentOrgId,
+    [currentOrgId, isSupplier, isSupplierRaisedPO],
+  );
+
   const handleApprovePO = async (po: PurchaseOrder) => {
     if (!user) return;
+
+    // A supplier-raised PO becomes a live order on approval — nothing to send out.
+    if (isSupplierRaisedPO(po)) {
+      try {
+        const now = new Date().toISOString();
+        const { data: updated, error } = await supabase
+          .from('purchase_orders')
+          .update({
+            status: 'ORDERED' as any,
+            approved_by: user.id,
+            approved_at: now,
+            ordered_at: now,
+          })
+          .eq('id', po.id)
+          .select('id');
+        if (error) throw error;
+        if (!updated?.length) throw new Error('You do not have permission to approve this PO');
+        toast.success(`PO ${po.po_number} approved`);
+        fetchPurchaseOrders();
+      } catch (err: any) {
+        toast.error('Failed to approve PO: ' + (err?.message || 'Unknown error'));
+      }
+      return;
+    }
 
     try {
       let supplierEmail = '';
