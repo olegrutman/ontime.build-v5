@@ -359,6 +359,80 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
     }
   };
 
+  // Supplier sends its own draft PO to the buying company for approval
+  const handleSupplierSendForApproval = async () => {
+    if (!po) return;
+    setActionLoading(true);
+    try {
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'PENDING_APPROVAL' as never })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to send this PO for approval');
+      toast.success('Purchase order sent for approval');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send for approval');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Buying company approves a supplier-raised PO — it becomes a live order
+  const handleApproveSupplierPO = async () => {
+    if (!po || !user) return;
+    setActionLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'ORDERED' as never,
+          approved_by: user.id,
+          approved_at: now,
+          ordered_at: now,
+        })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to approve this PO');
+      toast.success('Purchase order approved');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to approve PO');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Buying company sends a supplier-raised PO back for revision
+  const handleReturnToSupplier = async () => {
+    if (!po) return;
+    setActionLoading(true);
+    try {
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'ACTIVE' as never })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to return this PO');
+      toast.success('Purchase order returned to the supplier');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to return PO');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+
+
   const handleSubmitToSupplier = async () => {
     if (!user || !po) return;
 
