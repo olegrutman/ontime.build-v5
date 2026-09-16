@@ -46,6 +46,8 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
 
   // POs
   PO_SENT: FileText,
+  PO_PENDING_APPROVAL: FileText,
+  PO_RETURNED: FileText,
 
   // Change orders / work orders
   CHANGE_SUBMITTED: Send,
@@ -92,6 +94,8 @@ const typeColors: Record<string, string> = {
 
   // POs
   PO_SENT: 'text-primary',
+  PO_PENDING_APPROVAL: 'text-amber-600',
+  PO_RETURNED: 'text-destructive',
 
   // Change orders / work orders
   CHANGE_SUBMITTED: 'text-warning',

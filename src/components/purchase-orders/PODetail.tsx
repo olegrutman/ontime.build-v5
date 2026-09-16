@@ -131,6 +131,17 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   
   const isSupplierOrg = currentOrgType === 'SUPPLIER';
   const effectiveIsSupplier = isSupplier || isSupplierOrg;
+
+  // A PO the supplier itself raised, which the buying company must approve
+  const isSupplierRaised =
+    !!po &&
+    !!po.supplier?.organization_id &&
+    po.created_by_org_id === po.supplier.organization_id;
+  const isSupplierPOBuyer =
+    isSupplierRaised &&
+    !!currentOrgId &&
+    po?.pricing_owner_org_id === currentOrgId &&
+    !isSupplierOrg;
   
   const canEdit = (currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && !effectiveIsSupplier;
   const canDelete = canEdit && po?.status === 'ACTIVE';
@@ -347,6 +358,80 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       setActionLoading(false);
     }
   };
+
+  // Supplier sends its own draft PO to the buying company for approval
+  const handleSupplierSendForApproval = async () => {
+    if (!po) return;
+    setActionLoading(true);
+    try {
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'PENDING_APPROVAL' as never })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to send this PO for approval');
+      toast.success('Purchase order sent for approval');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send for approval');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Buying company approves a supplier-raised PO — it becomes a live order
+  const handleApproveSupplierPO = async () => {
+    if (!po || !user) return;
+    setActionLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'ORDERED' as never,
+          approved_by: user.id,
+          approved_at: now,
+          ordered_at: now,
+        })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to approve this PO');
+      toast.success('Purchase order approved');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to approve PO');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Buying company sends a supplier-raised PO back for revision
+  const handleReturnToSupplier = async () => {
+    if (!po) return;
+    setActionLoading(true);
+    try {
+      const { data: updated, error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'ACTIVE' as never })
+        .eq('id', poId)
+        .select('id');
+      if (error) throw error;
+      if (!updated?.length) throw new Error('You do not have permission to return this PO');
+      toast.success('Purchase order returned to the supplier');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to return PO');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+
 
   const handleSubmitToSupplier = async () => {
     if (!user || !po) return;
@@ -758,7 +843,42 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
             </>
           )}
 
-          {status === 'PENDING_APPROVAL' && !isGCApprover && !effectiveIsSupplier && (
+          {/* Supplier sends its own draft order to the buying company */}
+          {status === 'ACTIVE' && isSupplierRaised && effectiveIsSupplier && (
+            <Button onClick={handleSupplierSendForApproval} disabled={actionLoading}>
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send for Approval
+            </Button>
+          )}
+
+          {/* Buying company approves or returns a supplier-raised order */}
+          {status === 'PENDING_APPROVAL' && isSupplierPOBuyer && (
+            <>
+              <Button variant="outline" onClick={handleReturnToSupplier} disabled={actionLoading}>
+                Return to Supplier
+              </Button>
+              <Button onClick={handleApproveSupplierPO} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Approve Order
+              </Button>
+            </>
+          )}
+
+          {status === 'PENDING_APPROVAL' && isSupplierRaised && effectiveIsSupplier && (
+            <span className="text-sm text-muted-foreground self-center">
+              Awaiting approval from the buying company
+            </span>
+          )}
+
+          {status === 'PENDING_APPROVAL' && !isGCApprover && !isSupplierPOBuyer && !effectiveIsSupplier && (
             <span className="text-sm text-muted-foreground self-center">
               Awaiting General Contractor approval
             </span>

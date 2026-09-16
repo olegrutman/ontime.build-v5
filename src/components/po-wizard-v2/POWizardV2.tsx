@@ -65,6 +65,10 @@ interface POWizardV2Props {
   editMode?: boolean;
   initialData?: Partial<POWizardV2Data>;
   hidePricing?: boolean;
+  /** Lock the wizard to a single supplier record (supplier-raised POs) */
+  restrictToSupplierId?: string;
+  /** Label for the primary send action on the review screen */
+  sendLabel?: string;
 }
 
 export function POWizardV2({
@@ -83,6 +87,8 @@ export function POWizardV2({
   editMode = false,
   initialData,
   hidePricing = false,
+  restrictToSupplierId,
+  sendLabel,
 }: POWizardV2Props) {
   const isMobile = useIsMobile();
   const pickerRef = useRef<ProductPickerHandle>(null);
@@ -153,6 +159,25 @@ export function POWizardV2({
           }
         }
 
+        if (restrictToSupplierId) {
+          projectSuppliers = projectSuppliers.filter((s) => s.id === restrictToSupplierId);
+          if (projectSuppliers.length === 0) {
+            const { data: own } = await supabase
+              .from('suppliers')
+              .select('id, name, supplier_code, organization_id')
+              .eq('id', restrictToSupplierId)
+              .maybeSingle();
+            if (own) {
+              projectSuppliers = [{
+                id: own.id,
+                name: own.name,
+                supplier_code: own.supplier_code,
+                organization_id: own.organization_id,
+              }];
+            }
+          }
+        }
+
         setSuppliers(projectSuppliers);
 
         if (projectSuppliers.length === 1) {
@@ -171,7 +196,7 @@ export function POWizardV2({
     };
 
     fetchSuppliers();
-  }, [open, projectId]);
+  }, [open, projectId, restrictToSupplierId]);
 
   // Reset when dialog opens
   useEffect(() => {
@@ -495,6 +520,7 @@ export function POWizardV2({
             isSending={isSending}
             hidePricing={hidePricing}
             onTaxChange={(tax) => setFormData(prev => ({ ...prev, sales_tax_percent: tax }))}
+            sendLabel={sendLabel}
             onDeliveryChange={handleChange}
           />
         )}

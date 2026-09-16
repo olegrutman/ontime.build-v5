@@ -37,6 +37,7 @@ interface ReviewScreenProps {
   onBack: () => void;
   onSubmit: () => void;
   onCreateAndSend?: () => void;
+  sendLabel?: string;
   isSubmitting: boolean;
   isSending?: boolean;
   hidePricing?: boolean;
@@ -51,6 +52,7 @@ export function ReviewScreen({
   onBack,
   onSubmit,
   onCreateAndSend,
+  sendLabel,
   isSubmitting,
   isSending = false,
   hidePricing = false,
@@ -388,7 +390,7 @@ export function ReviewScreen({
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Create & Send
+                {sendLabel || 'Create & Send'}
               </>
             )}
           </Button>

@@ -65,14 +65,16 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [emailPromptOpen, setEmailPromptOpen] = useState(false);
   const [pendingPOForEmail, setPendingPOForEmail] = useState<{ poId: string; poNumber: string; projectId: string } | null>(null);
   const [emailSending, setEmailSending] = useState(false);
+  const [ownSupplierId, setOwnSupplierId] = useState<string | null>(null);
+  const [buyerOrg, setBuyerOrg] = useState<{ id: string; name: string } | null>(null);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
   const isSupplier = currentOrgType === 'SUPPLIER';
   const isGC = currentOrgType === 'GC';
   const isTC = currentOrgType === 'TC';
-  // Suppliers never issue POs — they receive and price them.
-  const canCreatePO = !isSupplier && (permissions?.canCreatePOs ?? false);
+  // Suppliers may raise a PO, but it always needs the buying company's approval.
+  const canCreatePO = isSupplier ? true : (permissions?.canCreatePOs ?? false);
 
   const hidePricing = isTC && materialResponsibility === 'GC';
   // A TC-raised PO must route through the GC whenever the relationship asks for it OR
@@ -148,7 +150,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           return { pos: [] as PurchaseOrder[], invoicedIds: new Set<string>(), packTotals: new Map() };
         }
         query = query.in('supplier_id', supplierLinks.map((s) => s.id));
-        query = query.neq('status', 'ACTIVE');
+        // Hide buyers' drafts, but keep the supplier's own drafts visible
+        query = query.or(`status.neq.ACTIVE,created_by_org_id.eq.${currentOrgId}`);
       }
 
       const { data, error } = await query;
@@ -263,6 +266,35 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     fetchContractInfo();
   }, [currentOrgId, isTC, projectId]);
 
+  // Supplier context: their own supplier record and the company that pays for materials
+  useEffect(() => {
+    if (!isSupplier || !currentOrgId || !projectId) return;
+
+    const loadSupplierContext = async () => {
+      const { data: own } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('organization_id', currentOrgId)
+        .limit(1)
+        .maybeSingle();
+      if (own?.id) setOwnSupplierId(own.id);
+
+      const { data: buyerId } = await supabase.rpc('resolve_supplier_po_buyer_org', {
+        _project_id: projectId,
+        _supplier_org_id: currentOrgId,
+      });
+      if (!buyerId) return;
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .eq('id', buyerId as string)
+        .maybeSingle();
+      if (org) setBuyerOrg({ id: org.id, name: org.name });
+    };
+
+    loadSupplierContext();
+  }, [currentOrgId, isSupplier, projectId]);
+
   const resolvePricingOwnerOrgId = useCallback(async (targetProjectId: string) => {
     const { data: contracts } = await supabase
       .from('project_contracts')
@@ -281,7 +313,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const createPurchaseOrderRecord = useCallback(async (data: POWizardV2Data) => {
     if (!currentOrgId) throw new Error('Missing organization');
 
-    const pricingOwnerOrgId = (await resolvePricingOwnerOrgId(data.project_id)) || currentOrgId;
+    const pricingOwnerOrgId = isSupplier
+      ? (buyerOrg?.id || (await resolvePricingOwnerOrgId(data.project_id)) || currentOrgId)
+      : ((await resolvePricingOwnerOrgId(data.project_id)) || currentOrgId);
     const salesTaxPercent = data.sales_tax_percent ?? 0;
 
     const { data: poNumber } = await supabase.rpc('generate_po_number', { org_id: currentOrgId });
@@ -365,7 +399,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
 
     return { newPO, poNumber: poNumber as string };
-  }, [currentOrgId, resolvePricingOwnerOrgId]);
+  }, [buyerOrg?.id, currentOrgId, isSupplier, resolvePricingOwnerOrgId]);
 
   const handleCreatePO = async (data: POWizardV2Data) => {
     setIsSubmitting(true);
@@ -384,6 +418,23 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   };
 
   const handleSubmitToSupplier = async (po: PurchaseOrder) => {
+    if (isSupplier && po.created_by_org_id === currentOrgId) {
+      try {
+        const { data: updated, error } = await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', po.id)
+          .select('id');
+        if (error) throw error;
+        if (!updated?.length) throw new Error('You do not have permission to send this PO for approval');
+        toast.success(`Sent to ${buyerOrg?.name || 'the buying company'} for approval`);
+        fetchPurchaseOrders();
+      } catch (err: any) {
+        toast.error('Failed to send for approval: ' + (err?.message || 'Unknown error'));
+      }
+      return;
+    }
+
     if (requiresGCApproval && po.created_by_org_id === currentOrgId) {
       try {
         const { error } = await supabase
@@ -410,7 +461,14 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     try {
       const { newPO, poNumber } = await createPurchaseOrderRecord(data);
 
-      if (requiresGCApproval) {
+      if (isSupplier) {
+        const { error: sendErr } = await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', newPO.id);
+        if (sendErr) throw sendErr;
+        toast.success(`PO ${poNumber} sent to ${buyerOrg?.name || 'the buying company'} for approval`);
+      } else if (requiresGCApproval) {
         await supabase
           .from('purchase_orders')
           .update({ status: 'PENDING_APPROVAL' as any })
@@ -468,8 +526,45 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
   };
 
+  const isSupplierRaisedPO = useCallback(
+    (po: PurchaseOrder) =>
+      !!po.created_by_org_id &&
+      (po.supplier as { organization_id?: string } | null)?.organization_id === po.created_by_org_id,
+    [],
+  );
+
+  const canApproveSupplierPO = useCallback(
+    (po: PurchaseOrder) =>
+      isSupplierRaisedPO(po) && !isSupplier && po.pricing_owner_org_id === currentOrgId,
+    [currentOrgId, isSupplier, isSupplierRaisedPO],
+  );
+
   const handleApprovePO = async (po: PurchaseOrder) => {
     if (!user) return;
+
+    // A supplier-raised PO becomes a live order on approval — nothing to send out.
+    if (isSupplierRaisedPO(po)) {
+      try {
+        const now = new Date().toISOString();
+        const { data: updated, error } = await supabase
+          .from('purchase_orders')
+          .update({
+            status: 'ORDERED' as any,
+            approved_by: user.id,
+            approved_at: now,
+            ordered_at: now,
+          })
+          .eq('id', po.id)
+          .select('id');
+        if (error) throw error;
+        if (!updated?.length) throw new Error('You do not have permission to approve this PO');
+        toast.success(`PO ${po.po_number} approved`);
+        fetchPurchaseOrders();
+      } catch (err: any) {
+        toast.error('Failed to approve PO: ' + (err?.message || 'Unknown error'));
+      }
+      return;
+    }
 
     try {
       let supplierEmail = '';
@@ -760,7 +855,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     let filtered = pos;
 
     if (statusFilter === 'needs_action') {
-      const actionStatuses = isSupplier ? ['SUBMITTED'] : isGC ? ['ACTIVE', 'PENDING_APPROVAL'] : ['ACTIVE'];
+      const actionStatuses = isSupplier ? ['SUBMITTED', 'ACTIVE'] : isGC ? ['ACTIVE', 'PENDING_APPROVAL'] : ['ACTIVE'];
       filtered = pos.filter((po) => actionStatuses.includes(po.status));
     } else if (statusFilter !== 'all') {
       filtered = pos.filter((po) => po.status === statusFilter);
@@ -785,7 +880,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
             <h3 className="text-lg font-medium mb-2">No Purchase Orders</h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
               {isSupplier
-                ? 'No purchase orders have been sent to you for this project yet.'
+                ? 'No purchase orders yet. Raise one and send it to the buying company for approval.'
                 : statusFilter === 'needs_action'
                   ? 'No POs need your attention right now.'
                   : 'Create a purchase order to request materials from suppliers.'}
@@ -827,8 +922,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               onEdit={() => handleEditPO(po)}
               onDownload={handleDownload}
               onSubmit={handleSubmitToSupplier}
-              onApprove={isGC ? handleApprovePO : undefined}
-              onReject={isGC ? handleRejectPO : undefined}
+              onApprove={isGC || canApproveSupplierPO(po) ? handleApprovePO : undefined}
+              onReject={isGC || canApproveSupplierPO(po) ? handleRejectPO : undefined}
+              canApprove={canApproveSupplierPO(po)}
               canEdit={canCreatePO}
               canSubmit={canCreatePO}
               canViewPricing={getCanViewPricing(po)}
@@ -895,6 +991,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
             <h2 className="text-base sm:text-xl font-semibold truncate">Purchase Orders</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {purchaseOrders.length} PO{purchaseOrders.length !== 1 ? 's' : ''} on this project
+              {isSupplier && buyerOrg ? ` · Approvals go to ${buyerOrg.name}` : ''}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -923,7 +1020,11 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               </SelectContent>
             </Select>
             {canCreatePO && !isProjectNotActive && (
-              <Button size="sm" onClick={() => setWizardOpen(true)}>
+              <Button
+                size="sm"
+                onClick={() => setWizardOpen(true)}
+                disabled={isSupplier && (!ownSupplierId || !buyerOrg)}
+              >
                 <Plus className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">Create PO</span>
               </Button>
@@ -964,6 +1065,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         isSubmitting={isSubmitting}
         isSending={isSending}
         hidePricing={hidePricing}
+        restrictToSupplierId={isSupplier ? ownSupplierId || undefined : undefined}
+        sendLabel={isSupplier ? 'Send for Approval' : undefined}
       />
 
       {editInitialData && (

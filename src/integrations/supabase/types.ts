@@ -8786,6 +8786,10 @@ export type Database = {
         Args: { _name: string }
         Returns: boolean
       }
+      can_approve_supplier_po: {
+        Args: { _po_id: string; _user_id?: string }
+        Returns: boolean
+      }
       can_approve_upstream_po: {
         Args: { _po_id: string; _user_id: string }
         Returns: boolean
@@ -9139,6 +9143,7 @@ export type Database = {
         Args: { _po_id: string; _user_id?: string }
         Returns: boolean
       }
+      is_supplier_raised_po: { Args: { _po_id: string }; Returns: boolean }
       list_billable_change_orders: {
         Args: { p_from_org_id: string; p_project_id: string }
         Returns: {
@@ -9287,6 +9292,10 @@ export type Database = {
       reset_project_setup: {
         Args: { p_project_id: string }
         Returns: undefined
+      }
+      resolve_supplier_po_buyer_org: {
+        Args: { _project_id: string; _supplier_org_id: string }
+        Returns: string
       }
       search_catalog: {
         Args: {
@@ -9565,6 +9574,8 @@ export type Database = {
         | "PO_APPROVED"
         | "ESTIMATE_SUBMITTED"
         | "ESTIMATE_APPROVED"
+        | "PO_PENDING_APPROVAL"
+        | "PO_RETURNED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -9780,6 +9791,8 @@ export const Constants = {
         "PO_APPROVED",
         "ESTIMATE_SUBMITTED",
         "ESTIMATE_APPROVED",
+        "PO_PENDING_APPROVAL",
+        "PO_RETURNED",
       ],
       order_status: [
         "DRAFT",
