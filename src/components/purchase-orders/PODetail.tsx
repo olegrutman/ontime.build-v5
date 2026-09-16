@@ -131,6 +131,17 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   
   const isSupplierOrg = currentOrgType === 'SUPPLIER';
   const effectiveIsSupplier = isSupplier || isSupplierOrg;
+
+  // A PO the supplier itself raised, which the buying company must approve
+  const isSupplierRaised =
+    !!po &&
+    !!po.supplier?.organization_id &&
+    po.created_by_org_id === po.supplier.organization_id;
+  const isSupplierPOBuyer =
+    isSupplierRaised &&
+    !!currentOrgId &&
+    po?.pricing_owner_org_id === currentOrgId &&
+    !isSupplierOrg;
   
   const canEdit = (currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && !effectiveIsSupplier;
   const canDelete = canEdit && po?.status === 'ACTIVE';
