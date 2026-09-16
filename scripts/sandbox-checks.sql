@@ -36,7 +36,7 @@ WITH p AS (
     AND pr.name LIKE '[SANDBOX]%'
 
   UNION ALL
-  SELECT 2, 'four company types on the project', 'GC,TC,FC,SUPPLIER',
+  SELECT 2, 'four company types on the project', 'FC,GC,SUPPLIER,TC',
          string_agg(DISTINCT o.type::text, ',' ORDER BY o.type::text)
   FROM project_participants pp
   JOIN organizations o ON o.id = pp.organization_id, p
