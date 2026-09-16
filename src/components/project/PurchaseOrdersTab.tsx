@@ -150,7 +150,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           return { pos: [] as PurchaseOrder[], invoicedIds: new Set<string>(), packTotals: new Map() };
         }
         query = query.in('supplier_id', supplierLinks.map((s) => s.id));
-        query = query.neq('status', 'ACTIVE');
+        // Hide buyers' drafts, but keep the supplier's own drafts visible
+        query = query.or(`status.neq.ACTIVE,created_by_org_id.eq.${currentOrgId}`);
       }
 
       const { data, error } = await query;
@@ -854,7 +855,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     let filtered = pos;
 
     if (statusFilter === 'needs_action') {
-      const actionStatuses = isSupplier ? ['SUBMITTED'] : isGC ? ['ACTIVE', 'PENDING_APPROVAL'] : ['ACTIVE'];
+      const actionStatuses = isSupplier ? ['SUBMITTED', 'ACTIVE'] : isGC ? ['ACTIVE', 'PENDING_APPROVAL'] : ['ACTIVE'];
       filtered = pos.filter((po) => actionStatuses.includes(po.status));
     } else if (statusFilter !== 'all') {
       filtered = pos.filter((po) => po.status === statusFilter);
@@ -879,7 +880,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
             <h3 className="text-lg font-medium mb-2">No Purchase Orders</h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
               {isSupplier
-                ? 'No purchase orders have been sent to you for this project yet.'
+                ? 'No purchase orders yet. Raise one and send it to the buying company for approval.'
                 : statusFilter === 'needs_action'
                   ? 'No POs need your attention right now.'
                   : 'Create a purchase order to request materials from suppliers.'}
@@ -921,8 +922,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               onEdit={() => handleEditPO(po)}
               onDownload={handleDownload}
               onSubmit={handleSubmitToSupplier}
-              onApprove={isGC ? handleApprovePO : undefined}
-              onReject={isGC ? handleRejectPO : undefined}
+              onApprove={isGC || canApproveSupplierPO(po) ? handleApprovePO : undefined}
+              onReject={isGC || canApproveSupplierPO(po) ? handleRejectPO : undefined}
+              canApprove={canApproveSupplierPO(po)}
               canEdit={canCreatePO}
               canSubmit={canCreatePO}
               canViewPricing={getCanViewPricing(po)}
@@ -989,6 +991,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
             <h2 className="text-base sm:text-xl font-semibold truncate">Purchase Orders</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {purchaseOrders.length} PO{purchaseOrders.length !== 1 ? 's' : ''} on this project
+              {isSupplier && buyerOrg ? ` · Approvals go to ${buyerOrg.name}` : ''}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -1017,7 +1020,11 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               </SelectContent>
             </Select>
             {canCreatePO && !isProjectNotActive && (
-              <Button size="sm" onClick={() => setWizardOpen(true)}>
+              <Button
+                size="sm"
+                onClick={() => setWizardOpen(true)}
+                disabled={isSupplier && (!ownSupplierId || !buyerOrg)}
+              >
                 <Plus className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">Create PO</span>
               </Button>
@@ -1058,6 +1065,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         isSubmitting={isSubmitting}
         isSending={isSending}
         hidePricing={hidePricing}
+        restrictToSupplierId={isSupplier ? ownSupplierId || undefined : undefined}
+        sendLabel={isSupplier ? 'Send for Approval' : undefined}
       />
 
       {editInitialData && (
