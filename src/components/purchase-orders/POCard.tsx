@@ -23,6 +23,7 @@ interface POCardProps {
   canViewPricing?: boolean;
   isSupplier?: boolean;
   isGC?: boolean;
+  canApprove?: boolean;
   isInvoiced?: boolean;
   estimatePackTotal?: number | null;
   estimatePackItemCount?: number | null;
@@ -46,6 +47,7 @@ export function POCard({
   canSubmit = false,
   canViewPricing = false,
   isGC = false,
+  canApprove = false,
   isInvoiced = false,
   estimatePackTotal = null,
 }: POCardProps) {
@@ -90,7 +92,9 @@ export function POCard({
   // Only show submit on card for TC (approval gate). GC submits from detail view.
   const showSubmitButton = canSubmit && status === 'ACTIVE' && onSubmit && !isGC;
   const showEditButton = canEdit && status === 'ACTIVE' && onEdit;
-  const showApprovalButtons = isGC && status === 'PENDING_APPROVAL' && onApprove;
+  const supplierRaised =
+    !!po.created_by_org_id && po.supplier?.organization_id === po.created_by_org_id;
+  const showApprovalButtons = (isGC || canApprove) && status === 'PENDING_APPROVAL' && onApprove;
 
   const lineItemCount = po.line_items?.length || 0;
 
@@ -234,7 +238,7 @@ export function POCard({
                   className="bg-emerald-600 hover:bg-emerald-700"
                 >
                   {approving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
-                  Approve & Send
+                  {supplierRaised ? 'Approve Order' : 'Approve & Send'}
                 </Button>
               </>
             )}
