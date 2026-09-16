@@ -843,7 +843,42 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
             </>
           )}
 
-          {status === 'PENDING_APPROVAL' && !isGCApprover && !effectiveIsSupplier && (
+          {/* Supplier sends its own draft order to the buying company */}
+          {status === 'ACTIVE' && isSupplierRaised && effectiveIsSupplier && (
+            <Button onClick={handleSupplierSendForApproval} disabled={actionLoading}>
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send for Approval
+            </Button>
+          )}
+
+          {/* Buying company approves or returns a supplier-raised order */}
+          {status === 'PENDING_APPROVAL' && isSupplierPOBuyer && (
+            <>
+              <Button variant="outline" onClick={handleReturnToSupplier} disabled={actionLoading}>
+                Return to Supplier
+              </Button>
+              <Button onClick={handleApproveSupplierPO} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Approve Order
+              </Button>
+            </>
+          )}
+
+          {status === 'PENDING_APPROVAL' && isSupplierRaised && effectiveIsSupplier && (
+            <span className="text-sm text-muted-foreground self-center">
+              Awaiting approval from the buying company
+            </span>
+          )}
+
+          {status === 'PENDING_APPROVAL' && !isGCApprover && !isSupplierPOBuyer && !effectiveIsSupplier && (
             <span className="text-sm text-muted-foreground self-center">
               Awaiting General Contractor approval
             </span>
