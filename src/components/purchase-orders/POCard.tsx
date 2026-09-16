@@ -130,6 +130,11 @@ export function POCard({
                 Invoiced
               </span>
             )}
+            {supplierRaised && (
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[0.65rem] font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+                Supplier raised
+              </span>
+            )}
             <POStatusBadge status={status} />
           </div>
         </div>
@@ -211,7 +216,7 @@ export function POCard({
             {showSubmitButton && (
               <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
                 {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-                Submit to Supplier
+                {supplierRaised ? 'Send for Approval' : 'Submit to Supplier'}
               </Button>
             )}
             {showApprovalButtons && (
