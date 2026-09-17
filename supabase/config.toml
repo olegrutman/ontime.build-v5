@@ -23,8 +23,6 @@ project_id = "gzqgbfazwvmwmirbqfwf"
     verify_jwt = false
   [functions.po-download]
     verify_jwt = false
-  [functions.process-email-queue]
-    verify_jwt = true
   [functions.return-credit-memo]
     verify_jwt = false
   [functions.sasha-guide]
@@ -46,4 +44,6 @@ project_id = "gzqgbfazwvmwmirbqfwf"
   [functions.send-po]
     verify_jwt = false
   [functions.work-order-download]
+    verify_jwt = false
+  [functions.preview-transactional-email]
     verify_jwt = false

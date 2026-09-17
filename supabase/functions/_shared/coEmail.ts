@@ -1,6 +1,7 @@
 // Shared transactional email helper for change-order external flows.
-// Enqueues into the same pgmq queue that `process-email-queue` drains.
+// Sends through Lovable's managed email API.
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0';
 
 // Must be the verified delegated sending subdomain — the root domain is not verified.
 const SENDER_DOMAIN = 'notify.ontime.build';
