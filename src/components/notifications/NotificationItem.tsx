@@ -48,6 +48,11 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   PO_SENT: FileText,
   PO_PENDING_APPROVAL: FileText,
   PO_RETURNED: FileText,
+  PO_APPROVED: FileCheck,
+
+  // Supplier estimates
+  ESTIMATE_SUBMITTED: Receipt,
+  ESTIMATE_APPROVED: FileCheck,
 
   // Change orders / work orders
   CHANGE_SUBMITTED: Send,
@@ -75,6 +80,7 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   INVOICE_SUBMITTED: Receipt,
   INVOICE_APPROVED: FileCheck,
   INVOICE_REJECTED: FileX,
+  INVOICE_PAID: DollarSign,
 
   // RFIs
   RFI_SUBMITTED: HelpCircle,
@@ -96,6 +102,11 @@ const typeColors: Record<string, string> = {
   PO_SENT: 'text-primary',
   PO_PENDING_APPROVAL: 'text-amber-600',
   PO_RETURNED: 'text-destructive',
+  PO_APPROVED: 'text-success',
+
+  // Supplier estimates
+  ESTIMATE_SUBMITTED: 'text-primary',
+  ESTIMATE_APPROVED: 'text-success',
 
   // Change orders / work orders
   CHANGE_SUBMITTED: 'text-warning',
@@ -123,6 +134,7 @@ const typeColors: Record<string, string> = {
   INVOICE_SUBMITTED: 'text-primary',
   INVOICE_APPROVED: 'text-success',
   INVOICE_REJECTED: 'text-destructive',
+  INVOICE_PAID: 'text-success',
 
   // RFIs
   RFI_SUBMITTED: 'text-primary',
