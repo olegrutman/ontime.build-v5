@@ -38,7 +38,7 @@ interface JoinRequest {
 
 export default function OrgTeam() {
   const { user, userOrgRoles, refreshUserData, permissions } = useAuth();
-  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, updateMemberJobTitle, refetch } = useOrgTeam();
+  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, updateMemberProjectScope, transferAdmin, removeMember, updateMemberJobTitle, refetch } = useOrgTeam();
   const { toast } = useToast();
 
   const currentOrg = userOrgRoles[0]?.organization;

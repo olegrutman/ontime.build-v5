@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { getEffectivePermissions } from '@/types/organization';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
+import { ProjectPeopleCard } from '@/components/project/ProjectPeopleCard';
 
 export default function ProjectSettings() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -26,6 +27,8 @@ export default function ProjectSettings() {
   // GC admins can edit everything; GC PMs with Manage Org can edit non-financial project info.
   const canEditProjectInfo = isGC && (isAdmin || perms.canManageOrg);
   const canEditFinancials = isGC && isAdmin;
+  // Any company type can decide which of its own people work on this project
+  const canManagePeople = isAdmin || perms.canManageOrg;
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project-settings', projectId],
@@ -112,7 +115,7 @@ export default function ProjectSettings() {
     );
   }
 
-  if (!canEditProjectInfo && !canEditFinancials) {
+  if (!canEditProjectInfo && !canEditFinancials && !canManagePeople) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <p className="text-muted-foreground">
@@ -322,6 +325,8 @@ export default function ProjectSettings() {
             </Button>
           </div>
         </div>
+
+        {canManagePeople && projectId && <ProjectPeopleCard projectId={projectId} />}
       </div>
     </div>
   );
