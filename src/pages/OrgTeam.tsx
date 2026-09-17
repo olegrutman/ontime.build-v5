@@ -26,6 +26,19 @@ import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle, ShieldCheck,
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { MemberDetailDialog } from '@/components/team/MemberDetailDialog';
+import { MemberProjectAssignments } from '@/components/team/MemberProjectAssignments';
+import { ProjectAssignmentMatrix } from '@/components/team/ProjectAssignmentMatrix';
+import { useProjectAssignments } from '@/hooks/useProjectAssignments';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface JoinRequest {
   id: string;
@@ -54,6 +67,38 @@ export default function OrgTeam() {
   const [joinRequestsLoading, setJoinRequestsLoading] = useState(true);
   const [allowJoinRequests, setAllowJoinRequests] = useState(true);
   const [selectedMember, setSelectedMember] = useState<typeof members[0] | null>(null);
+
+  const {
+    projects: assignableProjects,
+    assignmentsByUser,
+    loading: assignmentsLoading,
+    saving: assignmentSaving,
+    setAccess,
+    copyAssignments,
+    peopleOnProject,
+  } = useProjectAssignments(orgId);
+
+  const [pendingRemoval, setPendingRemoval] = useState<{ projectId: string; userId: string } | null>(null);
+
+  const restrictedMembers = members.filter(
+    (m) => !m.is_admin && !m.is_owner && (m.project_scope ?? 'org') === 'assigned',
+  );
+
+  const handleToggleAssignment = (projectId: string, userId: string, active: boolean) => {
+    if (!active && peopleOnProject(projectId) === 1) {
+      setPendingRemoval({ projectId, userId });
+      return;
+    }
+    setAccess(projectId, userId, active);
+  };
+
+  const matrixMembers = members
+    .filter((m) => !m.is_owner)
+    .map((m) => ({
+      userId: m.user_id,
+      name: m.profile?.full_name || m.profile?.email || 'Team member',
+      restricted: !m.is_admin && (m.project_scope ?? 'org') === 'assigned',
+    }));
 
   // Sync selectedMember with refreshed members array to avoid stale data in dialog
   useEffect(() => {
@@ -301,6 +346,20 @@ export default function OrgTeam() {
                       {m.profile?.email}
                       {m.profile?.job_title && ` · ${m.profile.job_title}`}
                     </p>
+                    {!m.is_owner && !m.is_admin && (m.project_scope ?? 'org') === 'assigned' && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {(() => {
+                          const ids = assignmentsByUser.get(m.user_id) ?? new Set<string>();
+                          const names = assignableProjects
+                            .filter((p) => ids.has(p.id))
+                            .map((p) => p.name);
+                          if (names.length === 0) return 'No projects assigned';
+                          return names.length === 1
+                            ? names[0]
+                            : `${names[0]} +${names.length - 1}`;
+                        })()}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
                     {showDropdown ? (
@@ -335,6 +394,18 @@ export default function OrgTeam() {
             )}
           </div>
         </div>
+
+        {/* Project Assignments grid */}
+        {canManageTeam && (
+          <ProjectAssignmentMatrix
+            members={matrixMembers}
+            projects={assignableProjects}
+            assignmentsByUser={assignmentsByUser}
+            loading={assignmentsLoading}
+            saving={assignmentSaving}
+            onToggle={handleToggleAssignment}
+          />
+        )}
 
         {/* Invite New Member */}
         <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
@@ -435,10 +506,58 @@ export default function OrgTeam() {
           if (ok) setSelectedMember((prev) => (prev ? { ...prev, project_scope: scope } : prev));
           return ok;
         }}
+        projectAssignmentsSlot={
+          selectedMember ? (
+            <MemberProjectAssignments
+              userId={selectedMember.user_id}
+              projects={assignableProjects}
+              assignedIds={assignmentsByUser.get(selectedMember.user_id) ?? new Set<string>()}
+              loading={assignmentsLoading}
+              saving={assignmentSaving}
+              onToggle={(projectId, active) =>
+                handleToggleAssignment(projectId, selectedMember.user_id, active)
+              }
+              teammates={members
+                .filter((m) => m.user_id !== selectedMember.user_id)
+                .map((m) => ({
+                  userId: m.user_id,
+                  name: m.profile?.full_name || m.profile?.email || 'Team member',
+                }))}
+              onCopyFrom={(fromUserId) => copyAssignments(fromUserId, selectedMember.user_id)}
+            />
+          ) : null
+        }
         onAfterTransfer={refreshUserData}
         isCurrentUserAdmin={isCurrentUserAdmin}
         isSelf={selectedMember?.user_id === user?.id}
       />
+
+      <AlertDialog open={!!pendingRemoval} onOpenChange={(o) => { if (!o) setPendingRemoval(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Last person on this project</AlertDialogTitle>
+            <AlertDialogDescription>
+              They are the only assigned person on{' '}
+              {assignableProjects.find((p) => p.id === pendingRemoval?.projectId)?.name ??
+                'this project'}
+              . Removing them leaves nobody assigned. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep them</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRemoval) {
+                  setAccess(pendingRemoval.projectId, pendingRemoval.userId, false);
+                }
+                setPendingRemoval(null);
+              }}
+            >
+              Remove anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
