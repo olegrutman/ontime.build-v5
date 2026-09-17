@@ -133,7 +133,12 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     if (markupVisibility === 'detailed') {
       const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
       const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
-      const tcInternalCost = financials.fcLaborTotal + financials.tcActualCostTotal + ownMatCost + ownEqCost;
+      // Crew-time pricing: crew billable rows and the TC internal-cost copy
+      // mirror the same work — count once to avoid a fake loss.
+      const tcLaborCost = financials.useFcPricingBase
+        ? (financials.tcActualCostTotal > 0 ? financials.tcActualCostTotal : financials.fcLaborTotal)
+        : financials.fcLaborTotal + financials.tcActualCostTotal;
+      const tcInternalCost = tcLaborCost + ownMatCost + ownEqCost;
       const tcMargin = tcSubmitted - tcInternalCost;
       const tcMarginPct = tcSubmitted > 0 ? (tcMargin / tcSubmitted) * 100 : 0;
       tiles.push({

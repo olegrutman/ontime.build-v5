@@ -27,7 +27,12 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
     revenue = financials.billableGrandTotal;
     const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
     const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
-    costs = financials.fcLaborTotal + financials.tcActualCostTotal + ownMatCost + ownEqCost;
+    // When priced from crew time, the crew's billable rows and the TC's
+    // "internal cost (crew time)" rows mirror the same work — count once.
+    const laborCost = financials.useFcPricingBase
+      ? (financials.tcActualCostTotal > 0 ? financials.tcActualCostTotal : financials.fcLaborTotal)
+      : financials.fcLaborTotal + financials.tcActualCostTotal;
+    costs = laborCost + ownMatCost + ownEqCost;
     label = 'Profitability';
 
   } else {
