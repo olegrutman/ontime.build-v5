@@ -280,6 +280,23 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                   {estimate.status === 'DRAFT' ? 'Submit' : 'Resubmit'}
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setConfirmMode('replace'); setDeleteConfirmId(estimate.id); }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Replace
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => { setConfirmMode('delete'); setDeleteConfirmId(estimate.id); }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
             </div>
           </div>
         )}
