@@ -365,18 +365,25 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Estimate</AlertDialogTitle>
+            <AlertDialogTitle>
+              {confirmMode === 'replace' ? 'Replace this estimate?' : 'Delete Estimate'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure? This will permanently delete this estimate and all its line items. This action cannot be undone.
+              {confirmMode === 'replace'
+                ? 'The current estimate and its line items will be removed and a fresh estimate opened so you can upload the new quote. This cannot be undone.'
+                : 'Are you sure? This will permanently delete this estimate and all its line items. This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}
+              onClick={() =>
+                deleteConfirmId &&
+                deleteMutation.mutate({ estimateId: deleteConfirmId, replace: confirmMode === 'replace' })
+              }
             >
-              Delete
+              {confirmMode === 'replace' ? 'Replace' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
