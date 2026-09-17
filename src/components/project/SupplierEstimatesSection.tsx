@@ -21,7 +21,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { EstimateSummaryCard } from '@/components/estimate-summary/EstimateSummaryCard';
-import { EstimateUploadWizard } from '@/components/estimate-upload';
+import { EstimateUploadWizard, type EstimateResumeData } from '@/components/estimate-upload';
 import {
   SupplierEstimateItem,
   ESTIMATE_STATUS_LABELS,
