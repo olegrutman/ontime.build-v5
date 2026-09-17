@@ -297,10 +297,22 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
                   {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
                 </Badge>
-                {parseStatus.isParsing && (
+                {parseStatus.stage === 'reading' && (
                   <Badge variant="outline" className="gap-1.5">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Reading your quote…
+                  </Badge>
+                )}
+                {parseStatus.stage === 'ready' && (
+                  <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+                    <Sparkles className="h-3 w-3" />
+                    Ready to review
+                  </Badge>
+                )}
+                {parseStatus.stage === 'failed' && (
+                  <Badge variant="outline" className="gap-1.5 border-destructive/40 text-destructive">
+                    <AlertTriangle className="h-3 w-3" />
+                    Couldn’t read quote
                   </Badge>
                 )}
               </div>
