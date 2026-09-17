@@ -9588,6 +9588,7 @@ export type Database = {
         | "ESTIMATE_APPROVED"
         | "PO_PENDING_APPROVAL"
         | "PO_RETURNED"
+        | "ESTIMATE_PARSED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -9805,6 +9806,7 @@ export const Constants = {
         "ESTIMATE_APPROVED",
         "PO_PENDING_APPROVAL",
         "PO_RETURNED",
+        "ESTIMATE_PARSED",
       ],
       order_status: [
         "DRAFT",

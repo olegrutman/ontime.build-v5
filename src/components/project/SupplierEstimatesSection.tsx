@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useEstimateParseStatus } from '@/hooks/useEstimateParseStatus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +21,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { EstimateSummaryCard } from '@/components/estimate-summary/EstimateSummaryCard';
-import { EstimateUploadWizard } from '@/components/estimate-upload';
+import { EstimateUploadWizard, type EstimateResumeData } from '@/components/estimate-upload';
 import {
   SupplierEstimateItem,
   ESTIMATE_STATUS_LABELS,
@@ -54,6 +54,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   const [uploadWizard, setUploadWizard] = useState<UploadWizardState>({
     open: false, estimateId: '', supplierId: '', projectName: '', estimateName: '',
   });
+  const [resumeData, setResumeData] = useState<EstimateResumeData | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -113,7 +114,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   const parseStatus = useEstimateParseStatus(estimate?.id, () => {
     invalidateEstimate();
     if (estimate?.id) fetchEstimateItems(estimate.id);
-    toast({ title: 'Quote read', description: 'Line items were extracted from your uploaded quote.' });
+    toast({ title: 'Quote read', description: 'Items are ready for you to review and match.' });
   });
 
   // Auto-create a default estimate and open upload wizard
@@ -225,6 +226,30 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
     });
   };
 
+  /** Continue a read that finished while the supplier was on another screen. */
+  const handleResumeReview = async () => {
+    if (!estimate) return;
+    const sid = await getSupplierId();
+    setResumeData({
+      packs: parseStatus.packs,
+      warnings: parseStatus.warnings,
+      estimateTotal: parseStatus.estimateTotal,
+      fileName: parseStatus.fileName,
+    });
+    setUploadWizard({
+      open: true,
+      estimateId: estimate.id,
+      supplierId: sid,
+      projectName: projectName || '',
+      estimateName: estimate.name,
+    });
+  };
+
+  const handleDiscardRead = async () => {
+    await parseStatus.discard();
+    toast({ title: 'Read discarded', description: 'Upload a quote again when you are ready.' });
+  };
+
   if (isLoading) {
     return (
       <Card className="overflow-hidden">
@@ -273,10 +298,22 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
                   {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
                 </Badge>
-                {parseStatus.isParsing && (
+                {parseStatus.stage === 'reading' && (
                   <Badge variant="outline" className="gap-1.5">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Reading your quote…
+                  </Badge>
+                )}
+                {parseStatus.stage === 'ready' && (
+                  <Badge variant="outline" className="gap-1.5 border-primary/40 text-primary">
+                    <Sparkles className="h-3 w-3" />
+                    Ready to review
+                  </Badge>
+                )}
+                {parseStatus.stage === 'failed' && (
+                  <Badge variant="outline" className="gap-1.5 border-destructive/40 text-destructive">
+                    <AlertTriangle className="h-3 w-3" />
+                    Couldn’t read quote
                   </Badge>
                 )}
               </div>
@@ -284,6 +321,60 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
+
+            {/* What happened with the uploaded PDF, and what to do next */}
+            {parseStatus.stage !== 'none' && (
+              <div
+                className="mt-3 rounded-lg border bg-muted/40 p-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {parseStatus.stage === 'reading' && (
+                  <p className="text-sm flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    Reading <span className="font-medium">{parseStatus.fileName}</span> — you can leave this
+                    screen, we&apos;ll keep going.
+                  </p>
+                )}
+
+                {parseStatus.stage === 'ready' && (
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">
+                        {parseStatus.totalItems} items ready to review
+                      </span>{' '}
+                      from {parseStatus.fileName}. Confirm them and match them to your catalog to finish.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={handleResumeReview}>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Review items
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleDiscardRead}>
+                        Start over
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {parseStatus.stage === 'failed' && (
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">We couldn&apos;t read {parseStatus.fileName}.</span>{' '}
+                      {parseStatus.errorMessage || 'Please try uploading it again.'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={handleUploadClick}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Try again
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleDiscardRead}>
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
               <Button variant="outline" size="sm" onClick={handleUploadClick}>
                 <Upload className="h-4 w-4 mr-2" />
@@ -407,16 +498,24 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
       {/* Upload Wizard */}
       <EstimateUploadWizard
         open={uploadWizard.open}
-        onOpenChange={(open) => setUploadWizard(prev => ({ ...prev, open }))}
+        onOpenChange={(open) => {
+          setUploadWizard(prev => ({ ...prev, open }));
+          if (!open) {
+            setResumeData(null);
+            parseStatus.refresh();
+          }
+        }}
         estimateId={uploadWizard.estimateId}
         supplierId={uploadWizard.supplierId}
         projectName={uploadWizard.projectName}
         estimateName={uploadWizard.estimateName}
+        resume={resumeData}
         onComplete={() => {
           if (estimate) {
             fetchEstimateItems(estimate.id);
           }
           invalidateEstimate();
+          parseStatus.refresh();
         }}
       />
     </Card>

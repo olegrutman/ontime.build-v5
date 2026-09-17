@@ -53,6 +53,7 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   // Supplier estimates
   ESTIMATE_SUBMITTED: Receipt,
   ESTIMATE_APPROVED: FileCheck,
+  ESTIMATE_PARSED: Receipt,
 
   // Change orders / work orders
   CHANGE_SUBMITTED: Send,
@@ -107,6 +108,7 @@ const typeColors: Record<string, string> = {
   // Supplier estimates
   ESTIMATE_SUBMITTED: 'text-primary',
   ESTIMATE_APPROVED: 'text-success',
+  ESTIMATE_PARSED: 'text-primary',
 
   // Change orders / work orders
   CHANGE_SUBMITTED: 'text-warning',

@@ -48,6 +48,7 @@ const CATEGORY_BY_TYPE: Record<string, Category> = {
   JOIN_REQUEST: 'notify_join_request',
   ESTIMATE_SUBMITTED: 'notify_estimate',
   ESTIMATE_APPROVED: 'notify_estimate',
+  ESTIMATE_PARSED: 'notify_estimate',
 };
 
 const CTA_BY_TYPE: Record<string, string> = {
@@ -71,6 +72,7 @@ const CTA_BY_TYPE: Record<string, string> = {
   JOIN_REQUEST: 'Review request',
   ESTIMATE_SUBMITTED: 'Review estimate',
   ESTIMATE_APPROVED: 'View estimate',
+  ESTIMATE_PARSED: 'Review items',
 };
 
 interface TriggerBody {

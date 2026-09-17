@@ -1,10 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { WizardProgress } from '@/components/ui/wizard-progress';
 import { parseEstimateCSV, ParsedPack, ParseResult } from '@/lib/parseEstimateCSV';
@@ -15,6 +15,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 type WizardStep = 'upload' | 'review' | 'match';
 
+export interface EstimateResumeData {
+  packs: ParsedPack[];
+  warnings?: string[];
+  estimateTotal?: number | null;
+  fileName?: string | null;
+}
+
 interface EstimateUploadWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,6 +30,8 @@ interface EstimateUploadWizardProps {
   projectName?: string;
   estimateName?: string;
   onComplete: () => void;
+  /** Items already read from a PDF while the supplier was away. */
+  resume?: EstimateResumeData | null;
 }
 
 export function EstimateUploadWizard({
@@ -33,6 +42,7 @@ export function EstimateUploadWizard({
   projectName,
   estimateName,
   onComplete,
+  resume,
 }: EstimateUploadWizardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<WizardStep>('upload');
@@ -40,6 +50,23 @@ export function EstimateUploadWizard({
   const [packs, setPacks] = useState<ParsedPack[]>([]);
   const [saving, setSaving] = useState(false);
   const [estimateTotal, setEstimateTotal] = useState<number | null>(null);
+  const [resumedFile, setResumedFile] = useState<string | null>(null);
+
+  // Opened to continue a read that finished while the supplier was elsewhere:
+  // land on the review step with the items already in place.
+  useEffect(() => {
+    if (!open || !resume?.packs?.length) return;
+    setPacks(resume.packs);
+    setParseResult({
+      packs: resume.packs,
+      totalItems: resume.packs.reduce((sum, p) => sum + p.items.length, 0),
+      discardedRows: 0,
+    });
+    if (resume.estimateTotal != null) setEstimateTotal(resume.estimateTotal);
+    setResumedFile(resume.fileName ?? null);
+    setStep('review');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleCsvFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,6 +167,7 @@ export function EstimateUploadWizard({
     setParseResult(null);
     setPacks([]);
     setEstimateTotal(null);
+    setResumedFile(null);
   };
 
   const handleClose = (open: boolean) => {
@@ -194,14 +222,26 @@ export function EstimateUploadWizard({
 
           {/* ── Review packs ─────────────────────────────────── */}
           {step === 'review' && (
-            <PackReviewStep
-              packs={packs}
-              totalItems={totalItems}
-              discardedRows={parseResult?.discardedRows || 0}
-              onConfirm={() => setStep('match')}
-              onCancel={() => handleClose(false)}
-              onRemovePack={handleRemovePack}
-            />
+            <div className="space-y-3">
+              {resumedFile && (
+                <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-sm">
+                    <span className="font-medium">Picking up where you left off.</span>{' '}
+                    We read <span className="font-medium">{resumedFile}</span> while you were away.
+                    Check the packs below, then match them to your catalog.
+                  </p>
+                </div>
+              )}
+              <PackReviewStep
+                packs={packs}
+                totalItems={totalItems}
+                discardedRows={parseResult?.discardedRows || 0}
+                onConfirm={() => setStep('match')}
+                onCancel={() => handleClose(false)}
+                onRemovePack={handleRemovePack}
+              />
+            </div>
           )}
 
           {/* ── Catalog matching ─────────────────────────────── */}
