@@ -62,7 +62,12 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
   let revenue = 0, costs = 0;
   if (isTC) {
     revenue = financials.viewer.totalToUpstream;
-    costs = financials.fcLaborTotal + financials.tcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
+    // Crew-time pricing: crew billable rows and the TC internal-cost copy
+    // mirror the same work — count once to avoid a fake loss.
+    const tcLaborCost = financials.useFcPricingBase
+      ? (financials.tcActualCostTotal > 0 ? financials.tcActualCostTotal : financials.fcLaborTotal)
+      : financials.fcLaborTotal + financials.tcActualCostTotal;
+    costs = tcLaborCost + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
   } else if (isFC) {
     revenue = financials.viewer.totalToUpstream;
     costs = financials.fcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;

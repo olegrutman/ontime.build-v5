@@ -355,6 +355,7 @@ export function useChangeOrderDetail(coId: string | null) {
     actualCostTotal,
     tcActualCostTotal,
     fcActualCostTotal,
+    useFcPricingBase: !!co?.use_fc_pricing_base,
     profitMargin,
     nteUsedPercent,
     materialsTax,

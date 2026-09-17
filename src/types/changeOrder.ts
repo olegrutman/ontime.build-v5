@@ -236,6 +236,13 @@ export interface COFinancials {
   actualCostTotal: number;
   tcActualCostTotal: number;
   fcActualCostTotal: number;
+  /**
+   * True when the subcontractor priced from the crew's submitted time. In that
+   * mode the crew's billable rows and the TC's "internal cost (crew time)" rows
+   * mirror the same work — cost cards must count that labor once:
+   * use tcActualCostTotal when present, else fcLaborTotal.
+   */
+  useFcPricingBase: boolean;
   tcBillableToGC: number;
   profitMargin: number | null;
   nteUsedPercent: number | null;
