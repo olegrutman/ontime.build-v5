@@ -346,6 +346,20 @@ export default function OrgTeam() {
                       {m.profile?.email}
                       {m.profile?.job_title && ` · ${m.profile.job_title}`}
                     </p>
+                    {!m.is_owner && !m.is_admin && (m.project_scope ?? 'org') === 'assigned' && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {(() => {
+                          const ids = assignmentsByUser.get(m.user_id) ?? new Set<string>();
+                          const names = assignableProjects
+                            .filter((p) => ids.has(p.id))
+                            .map((p) => p.name);
+                          if (names.length === 0) return 'No projects assigned';
+                          return names.length === 1
+                            ? names[0]
+                            : `${names[0]} +${names.length - 1}`;
+                        })()}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
                     {showDropdown ? (
@@ -380,6 +394,18 @@ export default function OrgTeam() {
             )}
           </div>
         </div>
+
+        {/* Project Assignments grid */}
+        {canManageTeam && (
+          <ProjectAssignmentMatrix
+            members={matrixMembers}
+            projects={assignableProjects}
+            assignmentsByUser={assignmentsByUser}
+            loading={assignmentsLoading}
+            saving={assignmentSaving}
+            onToggle={handleToggleAssignment}
+          />
+        )}
 
         {/* Invite New Member */}
         <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
