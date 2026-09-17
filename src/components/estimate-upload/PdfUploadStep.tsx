@@ -8,6 +8,11 @@ import { ParsedPack } from '@/lib/parseEstimateCSV';
 
 type Phase = 'idle' | 'uploading' | 'parsing' | 'polling' | 'error';
 
+/** How long a parse may sit unfinished before we call it dead. */
+const STALE_AFTER_MS = 5 * 60 * 1000;
+
+const inFlightKey = (estimateId: string) => `estimate-pdf-parse:${estimateId}`;
+
 interface PdfUploadStepProps {
   estimateId: string;
   onParsed: (packs: ParsedPack[], warnings: string[], estimateTotal?: number | null) => void;
@@ -23,6 +28,7 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
   const [isDragOver, setIsDragOver] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const doneRef = useRef(false);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -33,28 +39,123 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
     };
   }, []);
 
-  // On mount: check for in-progress or completed parses
+  const clearInFlight = useCallback(() => {
+    try { localStorage.removeItem(inFlightKey(estimateId)); } catch { /* ignore */ }
+  }, [estimateId]);
+
+  const rememberInFlight = useCallback((uploadId: string) => {
+    try { localStorage.setItem(inFlightKey(estimateId), uploadId); } catch { /* ignore */ }
+  }, [estimateId]);
+
+  /** Mark a parse that never finished as failed so the supplier can retry. */
+  const markStaleFailed = useCallback(async (uploadId: string) => {
+    await supabase
+      .from('estimate_pdf_uploads')
+      .update({ status: 'failed', error_message: 'Reading the quote never finished. Please try again.' } as never)
+      .eq('id', uploadId);
+    clearInFlight();
+  }, [clearInFlight]);
+
+  const finishWithResult = useCallback((result: Record<string, unknown>) => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    clearInFlight();
+    const packs = (result.packs as ParsedPack[]) || [];
+    const warnings = (result.warnings as string[]) || [];
+    setUploadProgress(100);
+    toast.success(`Extracted ${result.totalItems ?? packs.length} items from ${packs.length} packs`);
+    onParsed(packs, warnings, (result.estimate_total as number) ?? null);
+  }, [clearInFlight, onParsed]);
+
+  const startPolling = useCallback((uploadId: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+
+    const startedAt = Date.now();
+
+    pollingRef.current = setInterval(async () => {
+      if (!mountedRef.current) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        return;
+      }
+
+      try {
+        const { data } = await supabase
+          .from('estimate_pdf_uploads')
+          .select('status, parsed_result, error_message, uploaded_at')
+          .eq('id', uploadId)
+          .single();
+
+        if (!data || !mountedRef.current) return;
+
+        if (data.status === 'completed' && data.parsed_result) {
+          finishWithResult(data.parsed_result as Record<string, unknown>);
+          return;
+        }
+
+        if (data.status === 'failed') {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          clearInFlight();
+          setErrorMessage(data.error_message || 'Parsing failed');
+          setPhase('error');
+          return;
+        }
+
+        // Still pending/processing — give up once it is clearly stuck.
+        const uploadedAt = data.uploaded_at ? new Date(data.uploaded_at).getTime() : startedAt;
+        if (Date.now() - uploadedAt > STALE_AFTER_MS) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          await markStaleFailed(uploadId);
+          if (!mountedRef.current) return;
+          setErrorMessage('Reading the quote never finished. Please try again.');
+          setPhase('error');
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 3000);
+  }, [clearInFlight, finishWithResult, markStaleFailed]);
+
+  // On mount: pick up an in-progress or completed parse for this estimate
   useEffect(() => {
     let cancelled = false;
 
     async function checkExisting() {
       try {
-        const { data } = await supabase
+        let remembered: string | null = null;
+        try { remembered = localStorage.getItem(inFlightKey(estimateId)); } catch { /* ignore */ }
+
+        const query = supabase
           .from('estimate_pdf_uploads')
           .select('*')
-          .eq('estimate_id', estimateId)
-          .in('status', ['processing', 'completed'])
-          .order('uploaded_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .eq('estimate_id', estimateId);
+
+        const { data } = remembered
+          ? await query.eq('id', remembered).maybeSingle()
+          : await query
+              .in('status', ['pending', 'processing', 'completed'])
+              .order('uploaded_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
 
         if (cancelled || !data) return;
 
         if (data.status === 'completed' && data.parsed_result) {
-          const result = data.parsed_result as any;
-          toast.success(`Resumed: ${result.totalItems} items from ${result.packs.length} packs`);
-          onParsed(result.packs, result.warnings || [], result.estimate_total ?? null);
-        } else if (data.status === 'processing') {
+          finishWithResult(data.parsed_result as Record<string, unknown>);
+          return;
+        }
+
+        if (data.status === 'pending' || data.status === 'processing') {
+          const uploadedAt = data.uploaded_at ? new Date(data.uploaded_at).getTime() : Date.now();
+          if (Date.now() - uploadedAt > STALE_AFTER_MS) {
+            await markStaleFailed(data.id);
+            if (cancelled) return;
+            setFileName(data.file_name);
+            setErrorMessage('Reading the quote never finished. Please try again.');
+            setPhase('error');
+            return;
+          }
+          rememberInFlight(data.id);
           setFileName(data.file_name);
           setPhase('polling');
           setUploadProgress(70);
@@ -70,53 +171,6 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estimateId]);
 
-  const startPolling = useCallback((uploadId: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-
-    let elapsed = 0;
-    const maxWait = 120_000; // 2 minutes
-
-    pollingRef.current = setInterval(async () => {
-      elapsed += 3000;
-
-      if (!mountedRef.current) {
-        if (pollingRef.current) clearInterval(pollingRef.current);
-        return;
-      }
-
-      if (elapsed > maxWait) {
-        if (pollingRef.current) clearInterval(pollingRef.current);
-        setErrorMessage('Parsing timed out. Please try again.');
-        setPhase('error');
-        return;
-      }
-
-      try {
-        const { data } = await supabase
-          .from('estimate_pdf_uploads')
-          .select('status, parsed_result, error_message')
-          .eq('id', uploadId)
-          .single();
-
-        if (!data || !mountedRef.current) return;
-
-        if (data.status === 'completed' && data.parsed_result) {
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          const result = data.parsed_result as any;
-          setUploadProgress(100);
-          toast.success(`Extracted ${result.totalItems} items from ${result.packs.length} packs`);
-          onParsed(result.packs, result.warnings || [], result.estimate_total ?? null);
-        } else if (data.status === 'failed') {
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          setErrorMessage(data.error_message || 'Parsing failed');
-          setPhase('error');
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-      }
-    }, 3000);
-  }, [onParsed]);
-
   const processFile = useCallback(async (file: File) => {
     if (file.type !== 'application/pdf') {
       toast.error('Please select a PDF file.');
@@ -127,10 +181,13 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
       return;
     }
 
+    doneRef.current = false;
     setFileName(file.name);
     setErrorMessage('');
     setPhase('uploading');
     setUploadProgress(10);
+
+    let uploadRowId: string | null = null;
 
     try {
       // 1. Upload to storage
@@ -146,7 +203,6 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
 
       // 2. Record upload in tracking table
       const { data: { user } } = await supabase.auth.getUser();
-      let uploadRowId: string | null = null;
       if (user) {
         const { data: insertData } = await supabase.from('estimate_pdf_uploads').insert({
           estimate_id: estimateId,
@@ -155,47 +211,48 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
           file_size: file.size,
           uploaded_by: user.id,
           status: 'pending',
-        } as any).select('id').single();
+        } as never).select('id').single();
         uploadRowId = insertData?.id ?? null;
       }
       setUploadProgress(60);
 
-      // 3. Call AI parsing function
+      // 3. Kick off AI parsing. The server writes the result to the upload row,
+      //    so we watch that row instead of depending on this screen staying open.
       setPhase('parsing');
       setUploadProgress(70);
+
+      if (uploadRowId) {
+        rememberInFlight(uploadRowId);
+        startPolling(uploadRowId);
+      }
 
       const { data, error: fnError } = await supabase.functions.invoke('parse-estimate-pdf', {
         body: { estimateId, filePath },
       });
 
-      // If we're still mounted and got a response, use it directly
-      if (!mountedRef.current) return;
+      // Result came back while we're still open — use it directly.
+      if (!mountedRef.current || doneRef.current) return;
 
       setUploadProgress(95);
 
-      if (fnError) {
-        throw new Error(fnError.message || 'AI parsing failed');
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
+      if (fnError) throw new Error(fnError.message || 'AI parsing failed');
+      if (data?.error) throw new Error(data.error);
       if (!data?.packs || data.packs.length === 0) {
         throw new Error('No items could be extracted from this PDF.');
       }
 
-      setUploadProgress(100);
-
       const warnings: string[] = data.warnings || [];
       warnings.forEach((w: string) => toast.warning(w));
-
-      toast.success(`Extracted ${data.totalItems} items from ${data.packs.length} packs`);
-      onParsed(data.packs, warnings, data.estimate_total ?? null);
-    } catch (err: any) {
-      if (!mountedRef.current) return;
+      finishWithResult(data);
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Failed to process PDF';
       console.error('PDF processing error:', err);
-      const msg = err?.message || 'Failed to process PDF';
+
+      // If the row is being watched, let polling decide — the server may still finish.
+      if (uploadRowId && pollingRef.current && !doneRef.current) return;
+      if (!mountedRef.current) return;
+
+      clearInFlight();
       setErrorMessage(msg);
       setPhase('error');
 
@@ -207,7 +264,7 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
         toast.error(msg);
       }
     }
-  }, [estimateId, onParsed]);
+  }, [clearInFlight, estimateId, finishWithResult, rememberInFlight, startPolling]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -231,6 +288,8 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
 
   const handleRetry = () => {
     if (pollingRef.current) clearInterval(pollingRef.current);
+    clearInFlight();
+    doneRef.current = false;
     setPhase('idle');
     setErrorMessage('');
     setUploadProgress(0);
@@ -286,8 +345,8 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
             {(phase === 'parsing' || phase === 'polling') && (
               <p className="text-xs text-muted-foreground">
                 {phase === 'polling'
-                  ? 'Resuming — checking for results…'
-                  : 'This may take 15–30 seconds for large documents'}
+                  ? 'Still reading — you can leave this screen and come back'
+                  : 'This may take 15–30 seconds. You can leave this screen and come back.'}
               </p>
             )}
           </div>
