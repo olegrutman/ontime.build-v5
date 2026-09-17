@@ -113,7 +113,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   const parseStatus = useEstimateParseStatus(estimate?.id, () => {
     invalidateEstimate();
     if (estimate?.id) fetchEstimateItems(estimate.id);
-    toast({ title: 'Quote read', description: 'Line items were extracted from your uploaded quote.' });
+    toast({ title: 'Quote read', description: 'Items are ready for you to review and match.' });
   });
 
   // Auto-create a default estimate and open upload wizard
@@ -223,6 +223,30 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
       projectName: projectName || '',
       estimateName: estimate.name,
     });
+  };
+
+  /** Continue a read that finished while the supplier was on another screen. */
+  const handleResumeReview = async () => {
+    if (!estimate) return;
+    const sid = await getSupplierId();
+    setResumeData({
+      packs: parseStatus.packs,
+      warnings: parseStatus.warnings,
+      estimateTotal: parseStatus.estimateTotal,
+      fileName: parseStatus.fileName,
+    });
+    setUploadWizard({
+      open: true,
+      estimateId: estimate.id,
+      supplierId: sid,
+      projectName: projectName || '',
+      estimateName: estimate.name,
+    });
+  };
+
+  const handleDiscardRead = async () => {
+    await parseStatus.discard();
+    toast({ title: 'Read discarded', description: 'Upload a quote again when you are ready.' });
   };
 
   if (isLoading) {
