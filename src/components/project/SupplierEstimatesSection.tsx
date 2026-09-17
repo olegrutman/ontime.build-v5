@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { FileText, Upload, Send, Trash2, Package, Plus } from 'lucide-react';
+import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -44,6 +44,7 @@ interface UploadWizardState {
 
 export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId }: SupplierEstimatesSectionProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [confirmMode, setConfirmMode] = useState<'delete' | 'replace'>('delete');
   const [showDetail, setShowDetail] = useState(false);
   /* showDetail now controls inline expansion, not a Sheet */
   const [estimateItems, setEstimateItems] = useState<SupplierEstimateItem[]>([]);
@@ -141,21 +142,43 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (estimateId: string) => {
+    mutationFn: async ({ estimateId }: { estimateId: string; replace?: boolean }) => {
+      // Block deletion once orders were raised from this estimate
+      const { count } = await supabase
+        .from('purchase_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('source_estimate_id', estimateId);
+      if (count && count > 0) {
+        throw new Error('ORDERED');
+      }
+
       const { error } = await supabase
         .from('supplier_estimates')
         .delete()
         .eq('id', estimateId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast({ title: 'Deleted', description: 'Estimate deleted' });
+    onSuccess: (_data, variables) => {
       setDeleteConfirmId(null);
       setShowDetail(false);
+      setEstimateItems([]);
       invalidateEstimate();
+      if (variables.replace) {
+        toast({ title: 'Estimate removed', description: 'Creating a new estimate to replace it' });
+        createMutation.mutate();
+      } else {
+        toast({ title: 'Deleted', description: 'Estimate deleted' });
+      }
     },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete estimate', variant: 'destructive' });
+    onError: (err: Error) => {
+      toast({
+        title: 'Cannot delete',
+        description:
+          err.message === 'ORDERED'
+            ? 'Orders were already placed from this estimate. Upload an updated version instead.'
+            : 'Failed to delete estimate',
+        variant: 'destructive',
+      });
       setDeleteConfirmId(null);
     },
   });
@@ -258,6 +281,23 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                   {estimate.status === 'DRAFT' ? 'Submit' : 'Resubmit'}
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setConfirmMode('replace'); setDeleteConfirmId(estimate.id); }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Replace
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => { setConfirmMode('delete'); setDeleteConfirmId(estimate.id); }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
             </div>
           </div>
         )}
@@ -283,12 +323,22 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 {estimate.status === 'DRAFT' ? 'Submit for Review' : 'Resubmit for Review'}
               </Button>
             )}
-            {estimate.status === 'DRAFT' && (
-              <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(estimate.id)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setConfirmMode('replace'); setDeleteConfirmId(estimate.id); }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Delete & Replace
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => { setConfirmMode('delete'); setDeleteConfirmId(estimate.id); }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
           </div>
 
           {loadingItems ? (
@@ -316,18 +366,25 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Estimate</AlertDialogTitle>
+            <AlertDialogTitle>
+              {confirmMode === 'replace' ? 'Replace this estimate?' : 'Delete Estimate'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure? This will permanently delete this estimate and all its line items. This action cannot be undone.
+              {confirmMode === 'replace'
+                ? 'The current estimate and its line items will be removed and a fresh estimate opened so you can upload the new quote. This cannot be undone.'
+                : 'Are you sure? This will permanently delete this estimate and all its line items. This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}
+              onClick={() =>
+                deleteConfirmId &&
+                deleteMutation.mutate({ estimateId: deleteConfirmId, replace: confirmMode === 'replace' })
+              }
             >
-              Delete
+              {confirmMode === 'replace' ? 'Replace' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
