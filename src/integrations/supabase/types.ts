@@ -8798,6 +8798,10 @@ export type Database = {
         Args: { _co_id: string; _user_id?: string }
         Returns: boolean
       }
+      can_manage_project_access: {
+        Args: { _org_id: string; _user_id?: string }
+        Returns: boolean
+      }
       can_notify_user: {
         Args: { _recipient_org_id: string; _recipient_user_id: string }
         Returns: boolean
@@ -9437,6 +9441,14 @@ export type Database = {
           _recipient_org_id: string
           _work_order_title: string
         }
+        Returns: undefined
+      }
+      set_member_project_scope: {
+        Args: { _scope: string; _target_role_id: string }
+        Returns: undefined
+      }
+      set_project_member_access: {
+        Args: { _active: boolean; _project_id: string; _user_id: string }
         Returns: undefined
       }
       show_limit: { Args: never; Returns: number }

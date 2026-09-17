@@ -8,6 +8,13 @@
       "when": 1789658377185,
       "tag": "0000_notifications_all_user_orgs",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789658736225,
+      "tag": "0001_member_project_access_rpcs",
+      "breakpoints": true
     }
   ]
 }
