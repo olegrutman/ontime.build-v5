@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ContextBar } from './ContextBar';
 import { CommandPalette } from './CommandPalette';
@@ -27,6 +28,11 @@ export function AppShell({
 }: AppShellProps) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Top-level bottom-nav destinations have no back button on mobile
+  const TOP_LEVEL_PATHS = new Set(['/dashboard', '/partners', '/reminders', '/rfis']);
+  const showMobileBack = !TOP_LEVEL_PATHS.has(location.pathname);
 
   // Global ⌘K toggle
   useEffect(() => {
@@ -66,11 +72,22 @@ export function AppShell({
         {/* Page title band — mobile only */}
         {title && (
           <div className="pt-[52px] px-4 pb-0 lg:hidden">
-            <div className="pt-3 pb-2">
-              <h1 className="font-heading text-[1.4rem] font-black text-foreground leading-tight">{title}</h1>
-              {subtitle && (
-                <p className="text-[0.72rem] text-muted-foreground mt-0.5">{subtitle}</p>
+            <div className="pt-3 pb-2 flex items-start gap-1">
+              {showMobileBack && (
+                <button
+                  onClick={() => navigate(-1)}
+                  className="shrink-0 -ml-2 mt-0.5 p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Go back"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
               )}
+              <div className="min-w-0">
+                <h1 className="font-heading text-[1.4rem] font-black text-foreground leading-tight">{title}</h1>
+                {subtitle && (
+                  <p className="text-[0.72rem] text-muted-foreground mt-0.5">{subtitle}</p>
+                )}
+              </div>
             </div>
           </div>
         )}
