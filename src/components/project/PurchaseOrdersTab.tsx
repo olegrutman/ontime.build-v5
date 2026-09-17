@@ -971,7 +971,11 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   }
 
   const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplier;
-  const receivedTabLabel = isGC ? 'From Subcontractors' : 'From General Contractor';
+  const receivedTabLabel = isGC
+    ? (receivedPOs.some((po) => isSupplierRaisedPO(po))
+        ? 'From Subs & Suppliers'
+        : 'From Subcontractors')
+    : 'From General Contractor';
 
   return (
     <>
