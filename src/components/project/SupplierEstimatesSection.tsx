@@ -44,6 +44,7 @@ interface UploadWizardState {
 
 export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId }: SupplierEstimatesSectionProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [confirmMode, setConfirmMode] = useState<'delete' | 'replace'>('delete');
   const [showDetail, setShowDetail] = useState(false);
   /* showDetail now controls inline expansion, not a Sheet */
   const [estimateItems, setEstimateItems] = useState<SupplierEstimateItem[]>([]);
