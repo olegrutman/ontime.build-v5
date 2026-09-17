@@ -430,6 +430,11 @@ export default function OrgTeam() {
         onUpdateJobTitle={async (userId, jobTitle) => {
           return updateMemberJobTitle(userId, jobTitle);
         }}
+        onUpdateProjectScope={async (roleId, scope) => {
+          const ok = await updateMemberProjectScope(roleId, scope);
+          if (ok) setSelectedMember((prev) => (prev ? { ...prev, project_scope: scope } : prev));
+          return ok;
+        }}
         onAfterTransfer={refreshUserData}
         isCurrentUserAdmin={isCurrentUserAdmin}
         isSelf={selectedMember?.user_id === user?.id}

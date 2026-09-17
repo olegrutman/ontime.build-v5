@@ -29,7 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase } from 'lucide-react';
+import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase, FolderKanban } from 'lucide-react';
 import { ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_TO_DB_COLUMN, getJobTitlesForOrgType } from '@/types/organization';
 import { useAuth } from '@/hooks/useAuth';
 import type { OrgMember } from '@/hooks/useOrgTeam';
