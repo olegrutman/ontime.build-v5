@@ -10,6 +10,8 @@ export interface OrgMember {
   user_id: string;
   role: AppRole;
   is_admin: boolean;
+  /** 'org' = sees every company project, 'assigned' = only projects they are assigned to */
+  project_scope?: 'org' | 'assigned';
   /** True for the person who registered the organization (organizations.created_by) */
   is_owner?: boolean;
   created_at: string;
@@ -50,7 +52,7 @@ export function useOrgTeam() {
     const [membersRes, invitesRes, permissionsRes, orgRes] = await Promise.all([
       supabase
         .from('user_org_roles')
-        .select('id, user_id, role, is_admin, created_at, profile:profiles(full_name, email, job_title)')
+        .select('id, user_id, role, is_admin, project_scope, created_at, profile:profiles(full_name, email, job_title)')
         .eq('organization_id', orgId),
       supabase
         .from('org_invitations')
