@@ -1,6 +1,7 @@
 // Shared transactional email helper for change-order external flows.
-// Enqueues into the same pgmq queue that `process-email-queue` drains.
+// Sends through Lovable's managed email API.
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0';
 
 // Must be the verified delegated sending subdomain — the root domain is not verified.
 const SENDER_DOMAIN = 'notify.ontime.build';
@@ -99,70 +100,62 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, 
 }
 
 
-// The email API rejects transactional sends without an unsubscribe token, so
-// every recipient address gets a stable token reused across sends.
-async function ensureUnsubscribeToken(
-  supabase: ReturnType<typeof createClient>,
-  email: string,
-): Promise<string> {
-  const { data: existing } = await supabase
-    .from('email_unsubscribe_tokens')
-    .select('token')
-    .eq('email', email)
-    .is('used_at', null)
-    .limit(1)
-    .maybeSingle();
-  if (existing?.token) return existing.token as string;
-
-  const token = crypto.randomUUID().replaceAll('-', '');
-  const { error } = await supabase
-    .from('email_unsubscribe_tokens')
-    .insert({ token, email });
-  if (error) {
-    const { data: raced } = await supabase
-      .from('email_unsubscribe_tokens')
-      .select('token')
-      .eq('email', email)
-      .limit(1)
-      .maybeSingle();
-    if (raced?.token) return raced.token as string;
-    throw new Error(`Failed to prepare unsubscribe token: ${error.message}`);
-  }
-  return token;
-}
-
+// Sends through Lovable's managed email API. Delivery, retries, rate limits,
+// suppression and the unsubscribe page are handled on Lovable's side.
 export async function queueEmail(
   supabase: ReturnType<typeof createClient>,
   opts: { to: string; subject: string; html: string; text: string; label: string },
-) {
-  const unsubscribeToken = await ensureUnsubscribeToken(supabase, opts.to);
+): Promise<{ sent: boolean }> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) throw new Error('LOVABLE_API_KEY is not configured');
 
-  const payload = {
-    to: opts.to,
-    from: FROM,
-    sender_domain: SENDER_DOMAIN,
-    subject: opts.subject,
-    html: opts.html,
-    text: opts.text,
-    purpose: 'transactional',
-    label: opts.label,
-    message_id: crypto.randomUUID(),
-    idempotency_key: crypto.randomUUID(),
-    unsubscribe_token: unsubscribeToken,
-    queued_at: new Date().toISOString(),
+  const messageId = crypto.randomUUID();
 
+  const logRow = async (
+    status: 'sent' | 'suppressed' | 'failed',
+    errorMessage?: string,
+  ) => {
+    const { error } = await supabase.from('email_send_log').insert({
+      message_id: messageId,
+      template_name: opts.label,
+      recipient_email: opts.to,
+      status,
+      error_message: errorMessage ? errorMessage.slice(0, 1000) : null,
+    });
+    if (error) {
+      console.error('Failed to write email_send_log row', {
+        status,
+        code: error.code,
+        message: error.message,
+      });
+    }
   };
 
-  const { error } = await supabase.rpc('enqueue_email', {
-    queue_name: 'transactional_emails',
-    payload,
-  });
-  if (error) throw new Error(`Failed to queue email: ${error.message}`);
-
-  // Best effort: nudge the worker so the email goes out now.
   try {
-    await supabase.rpc('email_queue_wake');
-  } catch (_) {
-    // ignore
+    await sendLovableEmail(
+      {
+        to: opts.to,
+        from: FROM,
+        sender_domain: SENDER_DOMAIN,
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text,
+        purpose: 'transactional',
+        label: opts.label,
+        idempotency_key: messageId,
+      },
+      { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') },
+    );
+  } catch (error) {
+    if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
+      await logRow('suppressed', 'Recipient is suppressed');
+      return { sent: false };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    await logRow('failed', message);
+    throw error;
   }
+
+  await logRow('sent');
+  return { sent: true };
 }
