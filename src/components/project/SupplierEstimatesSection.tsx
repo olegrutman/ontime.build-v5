@@ -111,10 +111,18 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   }, [queryClient, projectId, supplierOrgId]);
 
   // Keeps the card honest while the AI reads an uploaded PDF in the background.
-  const parseStatus = useEstimateParseStatus(estimate?.id, () => {
+  const parseStatus = useEstimateParseStatus(estimate?.id, (stage, errorMessage) => {
     invalidateEstimate();
     if (estimate?.id) fetchEstimateItems(estimate.id);
-    toast({ title: 'Quote read', description: 'Items are ready for you to review and match.' });
+    if (stage === 'failed') {
+      toast({
+        variant: 'destructive',
+        title: "Couldn't read quote",
+        description: errorMessage || 'Please try uploading it again.',
+      });
+    } else if (stage === 'ready') {
+      toast({ title: 'Quote read', description: 'Items are ready for you to review and match.' });
+    }
   });
 
   // Auto-create a default estimate and open upload wizard
