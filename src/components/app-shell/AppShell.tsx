@@ -28,6 +28,11 @@ export function AppShell({
 }: AppShellProps) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Top-level bottom-nav destinations have no back button on mobile
+  const TOP_LEVEL_PATHS = new Set(['/dashboard', '/partners', '/reminders', '/rfis']);
+  const showMobileBack = !TOP_LEVEL_PATHS.has(location.pathname);
 
   // Global ⌘K toggle
   useEffect(() => {
