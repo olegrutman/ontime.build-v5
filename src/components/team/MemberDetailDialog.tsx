@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,8 @@ interface MemberDetailDialogProps {
   onRemoveMember?: (targetRoleId: string) => Promise<boolean>;
   onUpdateJobTitle?: (userId: string, jobTitle: string) => Promise<boolean>;
   onUpdateProjectScope?: (targetRoleId: string, scope: 'org' | 'assigned') => Promise<boolean>;
+  /** Per-person project checklist, rendered under Project Access */
+  projectAssignmentsSlot?: ReactNode;
   onAfterTransfer?: () => void;
   isCurrentUserAdmin: boolean;
   isSelf: boolean;
@@ -80,6 +82,7 @@ export function MemberDetailDialog({
   onRemoveMember,
   onUpdateJobTitle,
   onUpdateProjectScope,
+  projectAssignmentsSlot,
   onAfterTransfer,
   isCurrentUserAdmin,
   isSelf,
@@ -249,10 +252,13 @@ export function MemberDetailDialog({
                           <SelectItem value="assigned">Assigned projects only</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">
-                        With "Assigned projects only", pick their projects under Project Settings →
-                        Who works on this project.
-                      </p>
+                      {(member.project_scope ?? 'org') === 'assigned' ? (
+                        projectAssignmentsSlot ?? null
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Switch to "Assigned projects only" to pick their projects here.
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
