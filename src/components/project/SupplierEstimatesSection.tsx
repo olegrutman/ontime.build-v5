@@ -141,21 +141,43 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (estimateId: string) => {
+    mutationFn: async ({ estimateId }: { estimateId: string; replace?: boolean }) => {
+      // Block deletion once orders were raised from this estimate
+      const { count } = await supabase
+        .from('purchase_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('source_estimate_id', estimateId);
+      if (count && count > 0) {
+        throw new Error('ORDERED');
+      }
+
       const { error } = await supabase
         .from('supplier_estimates')
         .delete()
         .eq('id', estimateId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast({ title: 'Deleted', description: 'Estimate deleted' });
+    onSuccess: (_data, variables) => {
       setDeleteConfirmId(null);
       setShowDetail(false);
+      setEstimateItems([]);
       invalidateEstimate();
+      if (variables.replace) {
+        toast({ title: 'Estimate removed', description: 'Creating a new estimate to replace it' });
+        createMutation.mutate();
+      } else {
+        toast({ title: 'Deleted', description: 'Estimate deleted' });
+      }
     },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to delete estimate', variant: 'destructive' });
+    onError: (err: Error) => {
+      toast({
+        title: 'Cannot delete',
+        description:
+          err.message === 'ORDERED'
+            ? 'Orders were already placed from this estimate. Upload an updated version instead.'
+            : 'Failed to delete estimate',
+        variant: 'destructive',
+      });
       setDeleteConfirmId(null);
     },
   });
