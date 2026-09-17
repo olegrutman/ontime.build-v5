@@ -22,6 +22,13 @@
       "when": 1789660872050,
       "tag": "0002_project_scope_respect_participant_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789661315143,
+      "tag": "0003_project_scope_guard_remaining_policies",
+      "breakpoints": true
     }
   ]
 }
