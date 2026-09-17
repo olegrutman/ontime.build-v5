@@ -108,6 +108,13 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
     });
   }, [queryClient, projectId, supplierOrgId]);
 
+  // Keeps the card honest while the AI reads an uploaded PDF in the background.
+  const parseStatus = useEstimateParseStatus(estimate?.id, () => {
+    invalidateEstimate();
+    if (estimate?.id) fetchEstimateItems(estimate.id);
+    toast({ title: 'Quote read', description: 'Line items were extracted from your uploaded quote.' });
+  });
+
   // Auto-create a default estimate and open upload wizard
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -265,6 +272,12 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
                   {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
                 </Badge>
+                {parseStatus.isParsing && (
+                  <Badge variant="outline" className="gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Reading your quote…
+                  </Badge>
+                )}
               </div>
               <span className="text-sm font-medium">
                 ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
