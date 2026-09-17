@@ -15,7 +15,7 @@ const corsHeaders = {
 }
 
 // Configuration
-const SITE_NAME = "Ontime.Build V5"
+const SITE_NAME = "Ontime.Build"
 const SENDER_DOMAIN = "notify.ontime.build"
 const ROOT_DOMAIN = "ontime.build"
 const FROM_DOMAIN = "ontime.build"
