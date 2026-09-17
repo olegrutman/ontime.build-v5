@@ -68,6 +68,38 @@ export default function OrgTeam() {
   const [allowJoinRequests, setAllowJoinRequests] = useState(true);
   const [selectedMember, setSelectedMember] = useState<typeof members[0] | null>(null);
 
+  const {
+    projects: assignableProjects,
+    assignmentsByUser,
+    loading: assignmentsLoading,
+    saving: assignmentSaving,
+    setAccess,
+    copyAssignments,
+    peopleOnProject,
+  } = useProjectAssignments(orgId);
+
+  const [pendingRemoval, setPendingRemoval] = useState<{ projectId: string; userId: string } | null>(null);
+
+  const restrictedMembers = members.filter(
+    (m) => !m.is_admin && !m.is_owner && (m.project_scope ?? 'org') === 'assigned',
+  );
+
+  const handleToggleAssignment = (projectId: string, userId: string, active: boolean) => {
+    if (!active && peopleOnProject(projectId) === 1) {
+      setPendingRemoval({ projectId, userId });
+      return;
+    }
+    setAccess(projectId, userId, active);
+  };
+
+  const matrixMembers = members
+    .filter((m) => !m.is_owner)
+    .map((m) => ({
+      userId: m.user_id,
+      name: m.profile?.full_name || m.profile?.email || 'Team member',
+      restricted: !m.is_admin && (m.project_scope ?? 'org') === 'assigned',
+    }));
+
   // Sync selectedMember with refreshed members array to avoid stale data in dialog
   useEffect(() => {
     if (selectedMember) {
