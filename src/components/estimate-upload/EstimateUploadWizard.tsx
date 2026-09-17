@@ -167,6 +167,7 @@ export function EstimateUploadWizard({
     setParseResult(null);
     setPacks([]);
     setEstimateTotal(null);
+    setResumedFile(null);
   };
 
   const handleClose = (open: boolean) => {
@@ -221,14 +222,26 @@ export function EstimateUploadWizard({
 
           {/* ── Review packs ─────────────────────────────────── */}
           {step === 'review' && (
-            <PackReviewStep
-              packs={packs}
-              totalItems={totalItems}
-              discardedRows={parseResult?.discardedRows || 0}
-              onConfirm={() => setStep('match')}
-              onCancel={() => handleClose(false)}
-              onRemovePack={handleRemovePack}
-            />
+            <div className="space-y-3">
+              {resumedFile && (
+                <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-sm">
+                    <span className="font-medium">Picking up where you left off.</span>{' '}
+                    We read <span className="font-medium">{resumedFile}</span> while you were away.
+                    Check the packs below, then match them to your catalog.
+                  </p>
+                </div>
+              )}
+              <PackReviewStep
+                packs={packs}
+                totalItems={totalItems}
+                discardedRows={parseResult?.discardedRows || 0}
+                onConfirm={() => setStep('match')}
+                onCancel={() => handleClose(false)}
+                onRemovePack={handleRemovePack}
+              />
+            </div>
           )}
 
           {/* ── Catalog matching ─────────────────────────────── */}
