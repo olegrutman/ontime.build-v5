@@ -26,6 +26,19 @@ import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle, ShieldCheck,
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { MemberDetailDialog } from '@/components/team/MemberDetailDialog';
+import { MemberProjectAssignments } from '@/components/team/MemberProjectAssignments';
+import { ProjectAssignmentMatrix } from '@/components/team/ProjectAssignmentMatrix';
+import { useProjectAssignments } from '@/hooks/useProjectAssignments';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface JoinRequest {
   id: string;
