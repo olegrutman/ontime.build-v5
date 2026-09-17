@@ -260,8 +260,10 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
     po.created_by_org_id === currentOrgId &&
     !!po.pricing_owner_org_id &&
     po.pricing_owner_org_id !== currentOrgId;
+  // Supplier-raised POs use their own buyer approval path, never the TC→GC one.
   const isGCApprover =
     !!po &&
+    !isSupplierRaised &&
     currentOrgType === 'GC' &&
     po.created_by_org_id !== currentOrgId &&
     currentRole === 'GC_PM';

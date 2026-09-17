@@ -922,8 +922,16 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               onEdit={() => handleEditPO(po)}
               onDownload={handleDownload}
               onSubmit={handleSubmitToSupplier}
-              onApprove={isGC || canApproveSupplierPO(po) ? handleApprovePO : undefined}
-              onReject={isGC || canApproveSupplierPO(po) ? handleRejectPO : undefined}
+              onApprove={
+                isSupplierRaisedPO(po)
+                  ? (canApproveSupplierPO(po) ? handleApprovePO : undefined)
+                  : (isGC ? handleApprovePO : undefined)
+              }
+              onReject={
+                isSupplierRaisedPO(po)
+                  ? (canApproveSupplierPO(po) ? handleRejectPO : undefined)
+                  : (isGC ? handleRejectPO : undefined)
+              }
               canApprove={canApproveSupplierPO(po)}
               canEdit={canCreatePO}
               canSubmit={canCreatePO}
