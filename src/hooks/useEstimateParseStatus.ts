@@ -37,7 +37,7 @@ const EMPTY: Omit<EstimateParseState, 'refresh' | 'discard'> = {
  */
 export function useEstimateParseStatus(
   estimateId: string | null | undefined,
-  onFinished?: () => void,
+  onFinished?: (stage: EstimateParseStage, errorMessage: string | null) => void,
 ): EstimateParseState {
   const [state, setState] = useState(EMPTY);
   const [tick, setTick] = useState(0);
@@ -86,7 +86,7 @@ export function useEstimateParseStatus(
       else if (upload.status === 'failed') stage = 'failed';
       else if (upload.status === 'completed' && packs.length > 0 && savedItems === 0) stage = 'ready';
 
-      if (wasReadingRef.current && !reading) onFinished?.();
+      if (wasReadingRef.current && !reading) onFinished?.(stage, upload.error_message ?? null);
       wasReadingRef.current = reading;
 
       setState({
