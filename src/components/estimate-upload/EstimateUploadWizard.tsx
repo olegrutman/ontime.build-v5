@@ -1,10 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { WizardProgress } from '@/components/ui/wizard-progress';
 import { parseEstimateCSV, ParsedPack, ParseResult } from '@/lib/parseEstimateCSV';
@@ -15,6 +15,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 type WizardStep = 'upload' | 'review' | 'match';
 
+export interface EstimateResumeData {
+  packs: ParsedPack[];
+  warnings?: string[];
+  estimateTotal?: number | null;
+  fileName?: string | null;
+}
+
 interface EstimateUploadWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,6 +30,8 @@ interface EstimateUploadWizardProps {
   projectName?: string;
   estimateName?: string;
   onComplete: () => void;
+  /** Items already read from a PDF while the supplier was away. */
+  resume?: EstimateResumeData | null;
 }
 
 export function EstimateUploadWizard({
@@ -33,6 +42,7 @@ export function EstimateUploadWizard({
   projectName,
   estimateName,
   onComplete,
+  resume,
 }: EstimateUploadWizardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<WizardStep>('upload');
@@ -40,6 +50,23 @@ export function EstimateUploadWizard({
   const [packs, setPacks] = useState<ParsedPack[]>([]);
   const [saving, setSaving] = useState(false);
   const [estimateTotal, setEstimateTotal] = useState<number | null>(null);
+  const [resumedFile, setResumedFile] = useState<string | null>(null);
+
+  // Opened to continue a read that finished while the supplier was elsewhere:
+  // land on the review step with the items already in place.
+  useEffect(() => {
+    if (!open || !resume?.packs?.length) return;
+    setPacks(resume.packs);
+    setParseResult({
+      packs: resume.packs,
+      totalItems: resume.packs.reduce((sum, p) => sum + p.items.length, 0),
+      discardedRows: 0,
+    });
+    if (resume.estimateTotal != null) setEstimateTotal(resume.estimateTotal);
+    setResumedFile(resume.fileName ?? null);
+    setStep('review');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleCsvFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
