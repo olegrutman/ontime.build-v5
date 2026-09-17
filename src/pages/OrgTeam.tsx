@@ -506,10 +506,58 @@ export default function OrgTeam() {
           if (ok) setSelectedMember((prev) => (prev ? { ...prev, project_scope: scope } : prev));
           return ok;
         }}
+        projectAssignmentsSlot={
+          selectedMember ? (
+            <MemberProjectAssignments
+              userId={selectedMember.user_id}
+              projects={assignableProjects}
+              assignedIds={assignmentsByUser.get(selectedMember.user_id) ?? new Set<string>()}
+              loading={assignmentsLoading}
+              saving={assignmentSaving}
+              onToggle={(projectId, active) =>
+                handleToggleAssignment(projectId, selectedMember.user_id, active)
+              }
+              teammates={members
+                .filter((m) => m.user_id !== selectedMember.user_id)
+                .map((m) => ({
+                  userId: m.user_id,
+                  name: m.profile?.full_name || m.profile?.email || 'Team member',
+                }))}
+              onCopyFrom={(fromUserId) => copyAssignments(fromUserId, selectedMember.user_id)}
+            />
+          ) : null
+        }
         onAfterTransfer={refreshUserData}
         isCurrentUserAdmin={isCurrentUserAdmin}
         isSelf={selectedMember?.user_id === user?.id}
       />
+
+      <AlertDialog open={!!pendingRemoval} onOpenChange={(o) => { if (!o) setPendingRemoval(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Last person on this project</AlertDialogTitle>
+            <AlertDialogDescription>
+              They are the only assigned person on{' '}
+              {assignableProjects.find((p) => p.id === pendingRemoval?.projectId)?.name ??
+                'this project'}
+              . Removing them leaves nobody assigned. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep them</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRemoval) {
+                  setAccess(pendingRemoval.projectId, pendingRemoval.userId, false);
+                }
+                setPendingRemoval(null);
+              }}
+            >
+              Remove anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
