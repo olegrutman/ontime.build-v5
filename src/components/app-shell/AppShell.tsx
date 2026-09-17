@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ContextBar } from './ContextBar';
 import { CommandPalette } from './CommandPalette';
