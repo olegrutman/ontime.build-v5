@@ -15,6 +15,13 @@
       "when": 1789658736225,
       "tag": "0001_member_project_access_rpcs",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789660872050,
+      "tag": "0002_project_scope_respect_participant_policy",
+      "breakpoints": true
     }
   ]
 }
