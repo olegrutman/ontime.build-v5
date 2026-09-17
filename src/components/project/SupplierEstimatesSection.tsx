@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useEstimateParseStatus } from '@/hooks/useEstimateParseStatus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -320,6 +320,60 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
+
+            {/* What happened with the uploaded PDF, and what to do next */}
+            {parseStatus.stage !== 'none' && (
+              <div
+                className="mt-3 rounded-lg border bg-muted/40 p-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {parseStatus.stage === 'reading' && (
+                  <p className="text-sm flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    Reading <span className="font-medium">{parseStatus.fileName}</span> — you can leave this
+                    screen, we&apos;ll keep going.
+                  </p>
+                )}
+
+                {parseStatus.stage === 'ready' && (
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">
+                        {parseStatus.totalItems} items ready to review
+                      </span>{' '}
+                      from {parseStatus.fileName}. Confirm them and match them to your catalog to finish.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={handleResumeReview}>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Review items
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleDiscardRead}>
+                        Start over
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {parseStatus.stage === 'failed' && (
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">We couldn&apos;t read {parseStatus.fileName}.</span>{' '}
+                      {parseStatus.errorMessage || 'Please try uploading it again.'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" onClick={handleUploadClick}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Try again
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleDiscardRead}>
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
               <Button variant="outline" size="sm" onClick={handleUploadClick}>
                 <Upload className="h-4 w-4 mr-2" />
