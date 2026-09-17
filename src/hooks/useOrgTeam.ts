@@ -244,7 +244,28 @@ export function useOrgTeam() {
     return true;
   };
 
-  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, updateMemberJobTitle, refetch: fetchData };
+  const updateMemberProjectScope = async (targetRoleId: string, scope: 'org' | 'assigned') => {
+    const { error } = await supabase.rpc('set_member_project_scope', {
+      _target_role_id: targetRoleId,
+      _scope: scope,
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+
+    toast({
+      title: 'Project access updated',
+      description: scope === 'org'
+        ? 'This person can see all company projects.'
+        : 'This person can only see projects they are assigned to.',
+    });
+    fetchData();
+    return true;
+  };
+
+  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, updateMemberProjectScope, transferAdmin, removeMember, updateMemberJobTitle, refetch: fetchData };
 }
 
 /** Hook for the dashboard: fetch pending org invites for the current user */

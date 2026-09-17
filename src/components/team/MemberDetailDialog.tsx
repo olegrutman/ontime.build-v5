@@ -42,6 +42,7 @@ interface MemberDetailDialogProps {
   onTransferAdmin: (targetRoleId: string) => Promise<boolean>;
   onRemoveMember?: (targetRoleId: string) => Promise<boolean>;
   onUpdateJobTitle?: (userId: string, jobTitle: string) => Promise<boolean>;
+  onUpdateProjectScope?: (targetRoleId: string, scope: 'org' | 'assigned') => Promise<boolean>;
   onAfterTransfer?: () => void;
   isCurrentUserAdmin: boolean;
   isSelf: boolean;
@@ -78,6 +79,7 @@ export function MemberDetailDialog({
   onTransferAdmin,
   onRemoveMember,
   onUpdateJobTitle,
+  onUpdateProjectScope,
   onAfterTransfer,
   isCurrentUserAdmin,
   isSelf,
