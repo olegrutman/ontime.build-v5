@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw } from 'lucide-react';
+import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { useEstimateParseStatus } from '@/hooks/useEstimateParseStatus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
