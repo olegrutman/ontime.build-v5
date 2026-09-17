@@ -54,6 +54,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
   const [uploadWizard, setUploadWizard] = useState<UploadWizardState>({
     open: false, estimateId: '', supplierId: '', projectName: '', estimateName: '',
   });
+  const [resumeData, setResumeData] = useState<EstimateResumeData | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -497,16 +498,24 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
       {/* Upload Wizard */}
       <EstimateUploadWizard
         open={uploadWizard.open}
-        onOpenChange={(open) => setUploadWizard(prev => ({ ...prev, open }))}
+        onOpenChange={(open) => {
+          setUploadWizard(prev => ({ ...prev, open }));
+          if (!open) {
+            setResumeData(null);
+            parseStatus.refresh();
+          }
+        }}
         estimateId={uploadWizard.estimateId}
         supplierId={uploadWizard.supplierId}
         projectName={uploadWizard.projectName}
         estimateName={uploadWizard.estimateName}
+        resume={resumeData}
         onComplete={() => {
           if (estimate) {
             fetchEstimateItems(estimate.id);
           }
           invalidateEstimate();
+          parseStatus.refresh();
         }}
       />
     </Card>
