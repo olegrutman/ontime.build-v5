@@ -29,7 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase } from 'lucide-react';
+import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase, FolderKanban } from 'lucide-react';
 import { ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_TO_DB_COLUMN, getJobTitlesForOrgType } from '@/types/organization';
 import { useAuth } from '@/hooks/useAuth';
 import type { OrgMember } from '@/hooks/useOrgTeam';
@@ -42,6 +42,7 @@ interface MemberDetailDialogProps {
   onTransferAdmin: (targetRoleId: string) => Promise<boolean>;
   onRemoveMember?: (targetRoleId: string) => Promise<boolean>;
   onUpdateJobTitle?: (userId: string, jobTitle: string) => Promise<boolean>;
+  onUpdateProjectScope?: (targetRoleId: string, scope: 'org' | 'assigned') => Promise<boolean>;
   onAfterTransfer?: () => void;
   isCurrentUserAdmin: boolean;
   isSelf: boolean;
@@ -78,6 +79,7 @@ export function MemberDetailDialog({
   onTransferAdmin,
   onRemoveMember,
   onUpdateJobTitle,
+  onUpdateProjectScope,
   onAfterTransfer,
   isCurrentUserAdmin,
   isSelf,
@@ -90,6 +92,14 @@ export function MemberDetailDialog({
   const [removing, setRemoving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [savingJobTitle, setSavingJobTitle] = useState(false);
+  const [savingScope, setSavingScope] = useState(false);
+
+  const handleScopeChange = async (value: string) => {
+    if (!member || !onUpdateProjectScope) return;
+    setSavingScope(true);
+    await onUpdateProjectScope(member.id, value as 'org' | 'assigned');
+    setSavingScope(false);
+  };
 
   // Reset local state when member changes
   const initPerms = () => {
@@ -207,6 +217,44 @@ export function MemberDetailDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </>
+            )}
+
+            {/* Project Access Section */}
+            {onUpdateProjectScope && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <FolderKanban className="h-4 w-4" />
+                    Project Access
+                  </h3>
+                  {member.is_owner || member.is_admin ? (
+                    <p className="text-xs text-muted-foreground">
+                      Company admins always have access to every project.
+                    </p>
+                  ) : (
+                    <>
+                      <Select
+                        value={member.project_scope ?? 'org'}
+                        onValueChange={handleScopeChange}
+                        disabled={savingScope}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="org">All company projects</SelectItem>
+                          <SelectItem value="assigned">Assigned projects only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        With "Assigned projects only", pick their projects under Project Settings →
+                        Who works on this project.
+                      </p>
+                    </>
+                  )}
                 </div>
               </>
             )}

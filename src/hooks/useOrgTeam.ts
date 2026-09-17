@@ -10,6 +10,8 @@ export interface OrgMember {
   user_id: string;
   role: AppRole;
   is_admin: boolean;
+  /** 'org' = sees every company project, 'assigned' = only projects they are assigned to */
+  project_scope?: 'org' | 'assigned';
   /** True for the person who registered the organization (organizations.created_by) */
   is_owner?: boolean;
   created_at: string;
@@ -50,7 +52,7 @@ export function useOrgTeam() {
     const [membersRes, invitesRes, permissionsRes, orgRes] = await Promise.all([
       supabase
         .from('user_org_roles')
-        .select('id, user_id, role, is_admin, created_at, profile:profiles(full_name, email, job_title)')
+        .select('id, user_id, role, is_admin, project_scope, created_at, profile:profiles(full_name, email, job_title)')
         .eq('organization_id', orgId),
       supabase
         .from('org_invitations')
@@ -242,7 +244,28 @@ export function useOrgTeam() {
     return true;
   };
 
-  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, updateMemberJobTitle, refetch: fetchData };
+  const updateMemberProjectScope = async (targetRoleId: string, scope: 'org' | 'assigned') => {
+    const { error } = await supabase.rpc('set_member_project_scope', {
+      _target_role_id: targetRoleId,
+      _scope: scope,
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+
+    toast({
+      title: 'Project access updated',
+      description: scope === 'org'
+        ? 'This person can see all company projects.'
+        : 'This person can only see projects they are assigned to.',
+    });
+    fetchData();
+    return true;
+  };
+
+  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, updateMemberProjectScope, transferAdmin, removeMember, updateMemberJobTitle, refetch: fetchData };
 }
 
 /** Hook for the dashboard: fetch pending org invites for the current user */

@@ -38,7 +38,7 @@ interface JoinRequest {
 
 export default function OrgTeam() {
   const { user, userOrgRoles, refreshUserData, permissions } = useAuth();
-  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, updateMemberJobTitle, refetch } = useOrgTeam();
+  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, updateMemberProjectScope, transferAdmin, removeMember, updateMemberJobTitle, refetch } = useOrgTeam();
   const { toast } = useToast();
 
   const currentOrg = userOrgRoles[0]?.organization;
@@ -429,6 +429,11 @@ export default function OrgTeam() {
         }}
         onUpdateJobTitle={async (userId, jobTitle) => {
           return updateMemberJobTitle(userId, jobTitle);
+        }}
+        onUpdateProjectScope={async (roleId, scope) => {
+          const ok = await updateMemberProjectScope(roleId, scope);
+          if (ok) setSelectedMember((prev) => (prev ? { ...prev, project_scope: scope } : prev));
+          return ok;
         }}
         onAfterTransfer={refreshUserData}
         isCurrentUserAdmin={isCurrentUserAdmin}
