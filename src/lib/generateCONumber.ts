@@ -2,13 +2,17 @@ import { supabase } from '@/integrations/supabase/client';
 
 function getProjectCode(name: string | undefined | null, fallbackId: string): string {
   if (!name) return fallbackId.replace(/-/g, '').substring(0, 3).toUpperCase();
-  const cleaned = name.replace(/^(the\s+)/i, '').trim();
-  return cleaned.substring(0, 3).toUpperCase() || fallbackId.substring(0, 3).toUpperCase();
+  const cleaned = name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9 ]/gi, '').trim();
+  return cleaned.substring(0, 3).toUpperCase() || fallbackId.replace(/-/g, '').substring(0, 3).toUpperCase();
 }
 
 function getOrgInitials(name: string | undefined | null, fallbackId: string | null): string {
   if (!name) return (fallbackId ?? 'XX').replace(/-/g, '').substring(0, 2).toUpperCase();
-  return name.replace(/^(the\s+)/i, '').trim().substring(0, 2).toUpperCase() || (fallbackId ?? 'XX').substring(0, 2).toUpperCase();
+  return name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9 ]/gi, '').trim().substring(0, 2).toUpperCase() || (fallbackId ?? 'XX').substring(0, 2).toUpperCase();
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export async function generateCONumber({
@@ -48,7 +52,7 @@ export async function generateCONumber({
 
   let maxSeq = 0;
   if (existing) {
-    const pattern = new RegExp(`^${prefix}-(\\d+)$`);
+    const pattern = new RegExp(`^${escapeRegExp(prefix)}-(\\d+)$`);
     for (const row of existing) {
       if (!row.co_number) continue;
       const match = row.co_number.match(pattern);
