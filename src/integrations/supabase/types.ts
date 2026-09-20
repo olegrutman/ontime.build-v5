@@ -8924,16 +8924,7 @@ export type Database = {
         Args: { _project_id: string }
         Returns: undefined
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
       delete_own_account: { Args: never; Returns: Json }
-      email_queue_dispatch: { Args: never; Returns: undefined }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
-      }
       finalize_tm_work_order: {
         Args: {
           p_change_order_id: string
@@ -9196,15 +9187,6 @@ export type Database = {
         Args: { _notification_id: string }
         Returns: undefined
       }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
       normalize_phone: { Args: { phone: string }; Returns: string }
       notify_estimate_decision: {
         Args: { _approved: boolean; _estimate_id: string; _reason?: string }
@@ -9219,14 +9201,6 @@ export type Database = {
         Returns: boolean
       }
       projects_visible_via_org: { Args: { p_user: string }; Returns: string[] }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       recalc_po_totals: { Args: { _po_id: string }; Returns: undefined }
       recalc_sov_item_billing: {
         Args: { _sov_item_id: string }
