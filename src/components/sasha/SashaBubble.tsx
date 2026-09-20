@@ -131,7 +131,11 @@ export function SashaBubble() {
           [/overview|project home/, 'overview'],
         ];
         for (const [re, tab] of tabs) {
-          if (re.test(lower)) { navigate(`${projectPath}/${tab}`); return; }
+          if (re.test(lower)) {
+            navigate(`${projectPath}/${tab}`);
+            if (window.innerWidth < 640) handleClose();
+            return;
+          }
         }
       }
 
@@ -148,7 +152,11 @@ export function SashaBubble() {
         [/new project|create project/, '/create-project'],
       ];
       for (const [re, path] of global) {
-        if (re.test(lower)) { navigate(path); return; }
+        if (re.test(lower)) {
+          navigate(path);
+          if (window.innerWidth < 640) handleClose();
+          return;
+        }
       }
 
       sendMessage(action);
@@ -333,28 +341,29 @@ export function SashaBubble() {
       {/* Chat Panel */}
       {open && (
         <div
-          className="fixed z-50 shadow-2xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 right-2 left-2 sm:left-auto sm:right-4 sm:w-[400px] max-h-[70vh] sm:max-h-[min(560px,75vh)]"
-          style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6.5rem)',
-          }}
+          className="fixed inset-0 bottom-0 z-[60] h-[100dvh] bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 sm:inset-auto sm:left-auto sm:right-4 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] sm:w-[400px] sm:max-h-[min(560px,75vh)] sm:rounded-2xl sm:border sm:shadow-2xl"
         >
           {/* Header — avatar + name + kebab + close */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b bg-background">
+          <div className="flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b bg-background sm:py-2.5">
             <div className="flex items-center gap-2.5">
               <img src={sashaAvatar} alt="Sasha" className="h-8 w-8 rounded-full object-cover" />
-              <p className="text-sm font-semibold">Sasha</p>
+              <div>
+                <p className="text-sm font-semibold leading-tight">Sasha</p>
+                <p className="text-[10px] font-semibold uppercase text-muted-foreground">Assistant</p>
+              </div>
             </div>
             <div className="flex items-center gap-0.5">
               {micSupported && (
                 <Button
                   variant={voiceMode ? 'default' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-9 gap-1.5 px-2.5 sm:h-8 sm:w-8 sm:px-0"
                   onClick={toggleVoiceMode}
                   aria-label={voiceMode ? 'Turn off voice conversation' : 'Talk to Sasha'}
                   title={voiceMode ? 'Turn off voice conversation' : 'Talk to Sasha'}
                 >
                   {voiceMode ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  <span className="text-xs sm:sr-only">{voiceMode ? 'End' : 'Talk'}</span>
                 </Button>
               )}
               <DropdownMenu>
@@ -407,7 +416,7 @@ export function SashaBubble() {
 
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto bg-background" ref={scrollRef}>
-            <div className="space-y-3 p-4">
+            <div className="space-y-4 px-4 py-5 sm:space-y-3 sm:p-4">
               {messages.map((msg, i) => (
                 <SashaMessage
                   key={i}
@@ -425,7 +434,7 @@ export function SashaBubble() {
 
           {/* Input */}
           <form
-            className="flex items-center gap-2 px-3 py-2 border-t bg-background"
+            className="flex items-center gap-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t bg-background sm:px-3 sm:py-2"
             onSubmit={(e) => {
               e.preventDefault();
               sendMessage(input);
@@ -454,38 +463,34 @@ export function SashaBubble() {
       )}
 
       {/* Floating Bubble — calm resting state */}
-      <div
-        className="fixed right-4 z-50 flex items-center gap-2"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}
-      >
-        {!open && showIntro && (
+      {!open && (
+        <div
+          className="fixed right-4 z-50 flex items-center gap-2"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}
+        >
+          {showIntro && (
           <div className="animate-in fade-in zoom-in-95 duration-300 flex items-center">
             <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md whitespace-nowrap">
               Hi, I'm Sasha
             </div>
             <div className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[7px] border-l-primary shrink-0" />
           </div>
-        )}
-        <button
-          onClick={() => {
-            if (showIntro) {
-              setShowIntro(false);
-              localStorage.setItem('sasha_intro_seen', 'true');
-            }
-            setOpen((o) => !o);
-          }}
-          className="relative h-14 w-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform overflow-hidden ring-1 ring-primary/20"
-          aria-label={open ? 'Close Sasha' : 'Open Sasha guide'}
-        >
-          {open ? (
-            <div className="h-full w-full bg-primary flex items-center justify-center">
-              <X className="h-5 w-5 text-primary-foreground" />
-            </div>
-          ) : (
-            <img src={sashaAvatar} alt="Sasha" className="h-full w-full object-cover" />
           )}
-        </button>
-      </div>
+          <button
+            onClick={() => {
+              if (showIntro) {
+                setShowIntro(false);
+                localStorage.setItem('sasha_intro_seen', 'true');
+              }
+              setOpen(true);
+            }}
+            className="relative h-14 w-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform overflow-hidden ring-1 ring-primary/20"
+            aria-label="Open Sasha guide"
+          >
+            <img src={sashaAvatar} alt="Sasha" className="h-full w-full object-cover" />
+          </button>
+        </div>
+      )}
     </>
   );
 }
