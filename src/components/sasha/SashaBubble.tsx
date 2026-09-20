@@ -341,8 +341,7 @@ export function SashaBubble() {
       {/* Chat Panel */}
       {open && (
         <div
-          className="fixed inset-0 z-[60] h-[100dvh] bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 sm:inset-auto sm:left-auto sm:right-4 sm:w-[400px] sm:max-h-[min(560px,75vh)] sm:rounded-2xl sm:border sm:shadow-2xl"
-          style={{ bottom: 'var(--sasha-panel-bottom, 0px)' }}
+          className="fixed inset-0 bottom-0 z-[60] h-[100dvh] bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 sm:inset-auto sm:left-auto sm:right-4 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] sm:w-[400px] sm:max-h-[min(560px,75vh)] sm:rounded-2xl sm:border sm:shadow-2xl"
         >
           {/* Header — avatar + name + kebab + close */}
           <div className="flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b bg-background sm:py-2.5">
