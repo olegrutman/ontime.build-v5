@@ -53,7 +53,7 @@ const STATUS_BANDS: Record<string, { bg: string; text: string; label: string }> 
   info: { bg: '#f97316', text: '#ffffff', label: 'Update' },
 };
 
-export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, status }: Layout): string {
+export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, status, secondaryLabel, secondaryUrl }: Layout): string {
   const rowsHtml = rows
     .filter(([, v]) => v)
     .map(
