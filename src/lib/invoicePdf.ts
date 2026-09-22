@@ -16,10 +16,10 @@ export function setAttachPdfPreference(value: boolean) {
  * the notification email can carry it. Never throws — submitting must not fail
  * because a document could not be produced.
  */
-export async function attachInvoicePdf(invoiceId: string): Promise<string | null> {
+export async function attachInvoicePdf(invoiceId: string, submitting = false): Promise<string | null> {
   try {
     const { data, error } = await supabase.functions.invoke('generate-invoice-pdf', {
-      body: { invoice_id: invoiceId },
+      body: { invoice_id: invoiceId, submitting },
     });
     if (error) throw error;
     return (data as { url?: string })?.url ?? null;
