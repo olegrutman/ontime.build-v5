@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
 
     const [{ data: lines = [] }, { data: project }] = await Promise.all([
       svc.from('invoice_line_items').select('*').eq('invoice_id', invoiceId).order('sort_order'),
-      svc.from('projects').select('name, address, city, state, zip_code').eq('id', invoice.project_id).maybeSingle(),
+      svc.from('projects').select('name, address, city, state, zip').eq('id', invoice.project_id).maybeSingle(),
     ]);
 
     let senderId: string | null = null;
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
     };
 
     const projectAddress = addressLine(project?.address ?? null) ||
-      [project?.address, project?.city, project?.state, project?.zip_code].filter(Boolean).join(', ');
+      [typeof project?.address === 'string' ? project.address : '', project?.city, project?.state, project?.zip].filter(Boolean).join(', ');
     drawHeader();
     const gap = 10;
     const panelWidth = (contentWidth - gap) / 2;
