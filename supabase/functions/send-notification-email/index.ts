@@ -237,6 +237,8 @@ Deno.serve(async (req) => {
         rows: [],
         ctaLabel: CTA_BY_TYPE[type] ?? 'Open in Ontime.Build',
         ctaUrl: actionUrl,
+        secondaryLabel: invoicePdfUrl ? 'Download invoice PDF' : undefined,
+        secondaryUrl: invoicePdfUrl ?? undefined,
         footnote:
           'You are receiving this because this action needs your attention. Manage which alerts are emailed to you in Settings → Notifications.',
       });
