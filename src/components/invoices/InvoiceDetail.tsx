@@ -29,6 +29,12 @@ import { useNudge } from '@/hooks/useNudge';
 import { InvoiceExternalInviteDialog } from './InvoiceExternalInviteDialog';
 import { InvoiceTimeline, invoicePaceLabel } from './InvoiceTimeline';
 import { RecordPaymentDialog, PaymentDetails } from './RecordPaymentDialog';
+import {
+  attachInvoicePdf,
+  clearInvoicePdf,
+  getAttachPdfPreference,
+  setAttachPdfPreference,
+} from '@/lib/invoicePdf';
 
 function extractScopeOfWork(desc: string | null | undefined): string | null {
   if (!desc) return null;
