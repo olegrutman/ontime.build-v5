@@ -140,6 +140,18 @@ Deno.serve(async (req) => {
       return json({ skipped: 'no_recipients' });
     }
 
+    // Invoice alerts can carry a download link to the invoice PDF, when the
+    // sender chose to include one at submit time.
+    let invoicePdfUrl: string | null = null;
+    if (type.startsWith('INVOICE_') && payload.entity_id) {
+      const { data: inv } = await supabase
+        .from('invoices')
+        .select('invoice_pdf_url')
+        .eq('id', payload.entity_id)
+        .maybeSingle();
+      invoicePdfUrl = (inv as { invoice_pdf_url?: string | null } | null)?.invoice_pdf_url ?? null;
+    }
+
     const actionUrl = payload.action_url
       ? `${APP_URL}${payload.action_url.startsWith('/') ? '' : '/'}${payload.action_url}`
       : `${APP_URL}/dashboard`;
