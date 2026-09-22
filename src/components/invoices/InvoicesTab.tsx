@@ -252,7 +252,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   const handleQuickSubmit = async (invoice: Invoice) => {
     try {
       // Same choice the detail screen offers — remembered per user.
-      if (getAttachPdfPreference()) await attachInvoicePdf(invoice.id);
+      if (getAttachPdfPreference()) await attachInvoicePdf(invoice.id, true);
       const { error } = await supabase
         .from('invoices')
         .update({ 

@@ -279,7 +279,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     setActionLoading(true);
     // The document has to exist before the status change fires the alert email.
     if (attachPdf) {
-      const url = await attachInvoicePdf(invoiceId);
+      const url = await attachInvoicePdf(invoiceId, true);
       if (!url) toast.error('Could not build the PDF — submitting without it');
     } else {
       await clearInvoicePdf(invoiceId);
