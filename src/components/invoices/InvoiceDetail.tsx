@@ -261,7 +261,23 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   };
 
   const handleSubmit = () => {
-    updateInvoiceStatus('SUBMITTED', {
+    setAttachPdf(getAttachPdfPreference());
+    setSubmitDialogOpen(true);
+  };
+
+  const confirmSubmit = async () => {
+    setSubmitDialogOpen(false);
+    setAttachPdfPreference(attachPdf);
+    setActionLoading(true);
+    // The document has to exist before the status change fires the alert email.
+    if (attachPdf) {
+      const url = await attachInvoicePdf(invoiceId);
+      if (!url) toast.error('Could not build the PDF — submitting without it');
+    } else {
+      await clearInvoicePdf(invoiceId);
+    }
+    setActionLoading(false);
+    await updateInvoiceStatus('SUBMITTED', {
       submitted_at: new Date().toISOString(),
       submitted_by: user?.id,
     });
