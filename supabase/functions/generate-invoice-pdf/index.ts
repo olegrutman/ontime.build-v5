@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
     y += 40;
 
     label('Status', M, y);
-    label('Submitted', col2, y);
+    label(invoice.submitted_at ? 'Submitted' : 'Created', col2, y);
     value(String(invoice.status ?? ''), M, y + 15);
     value(day(invoice.submitted_at ?? invoice.created_at), col2, y + 15);
     y += 44;
