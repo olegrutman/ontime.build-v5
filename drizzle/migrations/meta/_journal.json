@@ -36,6 +36,13 @@
       "when": 1789669551440,
       "tag": "0004_notify_estimate_parse_complete",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790093343290,
+      "tag": "0005_invoice_pdf_attachment_link",
+      "breakpoints": true
     }
   ]
 }

@@ -39,6 +39,9 @@ interface Layout {
   ctaUrl: string;
   footnote?: string;
   status?: 'success' | 'danger' | 'warning' | 'info';
+  /** Optional secondary button, e.g. a document download link. */
+  secondaryLabel?: string;
+  secondaryUrl?: string;
 }
 
 const LOGO_URL = 'https://ontime.build/ontime-logo-email.png';
@@ -50,7 +53,7 @@ const STATUS_BANDS: Record<string, { bg: string; text: string; label: string }> 
   info: { bg: '#f97316', text: '#ffffff', label: 'Update' },
 };
 
-export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, status }: Layout): string {
+export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, status, secondaryLabel, secondaryUrl }: Layout): string {
   const rowsHtml = rows
     .filter(([, v]) => v)
     .map(
@@ -89,6 +92,9 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, 
         ${rowsHtml}
       </table>
       <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px;">${escapeHtml(ctaLabel)}</a>
+      ${secondaryUrl && secondaryLabel
+        ? `<a href="${escapeHtml(secondaryUrl)}" style="display:inline-block;margin-left:10px;background:#ffffff;color:#0f172a;text-decoration:none;font-weight:700;font-size:14px;padding:11px 20px;border:1px solid #cbd5e1;border-radius:10px;">${escapeHtml(secondaryLabel)}</a>`
+        : ''}
       ${footnote ? `<p style="margin:18px 0 0;color:#64748b;font-size:12px;line-height:1.5;">${escapeHtml(footnote)}</p>` : ''}
       <p style="margin:16px 0 0;color:#64748b;font-size:12px;word-break:break-all;">${escapeHtml(ctaUrl)}</p>
     </td></tr>

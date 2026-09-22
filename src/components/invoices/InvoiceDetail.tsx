@@ -29,6 +29,12 @@ import { useNudge } from '@/hooks/useNudge';
 import { InvoiceExternalInviteDialog } from './InvoiceExternalInviteDialog';
 import { InvoiceTimeline, invoicePaceLabel } from './InvoiceTimeline';
 import { RecordPaymentDialog, PaymentDetails } from './RecordPaymentDialog';
+import {
+  attachInvoicePdf,
+  clearInvoicePdf,
+  getAttachPdfPreference,
+  setAttachPdfPreference,
+} from '@/lib/invoicePdf';
 
 function extractScopeOfWork(desc: string | null | undefined): string | null {
   if (!desc) return null;
@@ -69,6 +75,8 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [attachPdf, setAttachPdf] = useState(true);
   const [rejectionReason, setRejectionReason] = useState('');
   const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string; pricing_owner_org_id: string | null; supplier_org_id: string | null } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
@@ -261,7 +269,23 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   };
 
   const handleSubmit = () => {
-    updateInvoiceStatus('SUBMITTED', {
+    setAttachPdf(getAttachPdfPreference());
+    setSubmitDialogOpen(true);
+  };
+
+  const confirmSubmit = async () => {
+    setSubmitDialogOpen(false);
+    setAttachPdfPreference(attachPdf);
+    setActionLoading(true);
+    // The document has to exist before the status change fires the alert email.
+    if (attachPdf) {
+      const url = await attachInvoicePdf(invoiceId);
+      if (!url) toast.error('Could not build the PDF — submitting without it');
+    } else {
+      await clearInvoicePdf(invoiceId);
+    }
+    setActionLoading(false);
+    await updateInvoiceStatus('SUBMITTED', {
       submitted_at: new Date().toISOString(),
       submitted_by: user?.id,
     });
@@ -798,6 +822,33 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           </CardContent>
         </Card>
       )}
+
+      {/* Submit Dialog */}
+      <AlertDialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit for approval</AlertDialogTitle>
+            <AlertDialogDescription>
+              {invoice?.invoice_number} will be sent to the approver for review.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
+            <Switch id="attach-invoice-pdf" checked={attachPdf} onCheckedChange={setAttachPdf} />
+            <div className="space-y-1">
+              <Label htmlFor="attach-invoice-pdf" className="text-sm font-medium">
+                Include a PDF copy of this invoice
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                The notification email gets a secure download link to the invoice, good for 14 days.
+              </p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSubmit}>Submit</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Void Dialog */}
       <AlertDialog open={voidDialogOpen} onOpenChange={setVoidDialogOpen}>
