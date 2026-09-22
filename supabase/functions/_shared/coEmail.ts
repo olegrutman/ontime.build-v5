@@ -39,6 +39,9 @@ interface Layout {
   ctaUrl: string;
   footnote?: string;
   status?: 'success' | 'danger' | 'warning' | 'info';
+  /** Optional secondary button, e.g. a document download link. */
+  secondaryLabel?: string;
+  secondaryUrl?: string;
 }
 
 const LOGO_URL = 'https://ontime.build/ontime-logo-email.png';
