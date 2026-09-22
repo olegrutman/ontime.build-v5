@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { attachInvoicePdf, getAttachPdfPreference } from '@/lib/invoicePdf';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
