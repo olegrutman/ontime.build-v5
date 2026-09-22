@@ -3562,6 +3562,8 @@ export type Database = {
           created_by: string | null
           id: string
           invoice_number: string
+          invoice_pdf_generated_at: string | null
+          invoice_pdf_url: string | null
           notes: string | null
           paid_at: string | null
           paid_by: string | null
@@ -3597,6 +3599,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           invoice_number: string
+          invoice_pdf_generated_at?: string | null
+          invoice_pdf_url?: string | null
           notes?: string | null
           paid_at?: string | null
           paid_by?: string | null
@@ -3632,6 +3636,8 @@ export type Database = {
           created_by?: string | null
           id?: string
           invoice_number?: string
+          invoice_pdf_generated_at?: string | null
+          invoice_pdf_url?: string | null
           notes?: string | null
           paid_at?: string | null
           paid_by?: string | null
