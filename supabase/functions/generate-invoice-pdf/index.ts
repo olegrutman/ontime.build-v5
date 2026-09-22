@@ -194,8 +194,8 @@ Deno.serve(async (req) => {
       scheduled: margin + 260,
       previous: margin + 331,
       current: margin + 397,
-      total: margin + 458,
-      remaining: margin + 516,
+      total: margin + 444,
+      remaining: margin + 497,
       percent: right - 2,
     };
 
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
       doc.text(String(index + 1), columns.number, y);
       doc.setTextColor(...INK).setFontSize(7);
       doc.text(descriptionLines, columns.description, y);
-      doc.setFont('courier', 'normal').setFontSize(6.1);
+      doc.setFont('courier', 'normal').setFontSize(5.7);
       doc.text(money(line.scheduled_value), columns.scheduled, y, { align: 'right' });
       doc.text(money(line.previous_billed), columns.previous, y, { align: 'right' });
       doc.setTextColor(...TEAL).setFont('courier', 'bold');
