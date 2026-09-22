@@ -823,6 +823,33 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         </Card>
       )}
 
+      {/* Submit Dialog */}
+      <AlertDialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit for approval</AlertDialogTitle>
+            <AlertDialogDescription>
+              {invoice?.invoice_number} will be sent to the approver for review.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
+            <Switch id="attach-invoice-pdf" checked={attachPdf} onCheckedChange={setAttachPdf} />
+            <div className="space-y-1">
+              <Label htmlFor="attach-invoice-pdf" className="text-sm font-medium">
+                Include a PDF copy of this invoice
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                The notification email gets a secure download link to the invoice, good for 14 days.
+              </p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSubmit}>Submit</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Void Dialog */}
       <AlertDialog open={voidDialogOpen} onOpenChange={setVoidDialogOpen}>
         <AlertDialogContent>
