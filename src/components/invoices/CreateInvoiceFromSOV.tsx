@@ -116,6 +116,7 @@ interface CreateInvoiceFromSOVProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   onSuccess: () => void;
+  initialMode?: 'single' | 'bulk';
   // Revision mode
   revisionInvoiceId?: string;
   revisionData?: RevisionData;
@@ -182,7 +183,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   const [periodConfirmed, setPeriodConfirmed] = useState(false);
   const [showPeriodWarning, setShowPeriodWarning] = useState(false);
   const [notes, setNotes] = useState('');
-  const [billMode, setBillMode] = useState<'single' | 'bulk'>('single');
+  const [billMode, setBillMode] = useState<'single' | 'bulk'>(initialMode);
+  useEffect(() => { if (open) setBillMode(initialMode); }, [open, initialMode]);
 
   // Get current user's organization info
   const currentOrgId = userOrgRoles[0]?.organization?.id;
