@@ -156,6 +156,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   onSuccess,
   revisionInvoiceId,
   revisionData,
+  initialMode = 'single',
 }, _ref) {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
