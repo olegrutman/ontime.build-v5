@@ -149,7 +149,16 @@ Deno.serve(async (req) => {
         .select('invoice_pdf_url')
         .eq('id', payload.entity_id)
         .maybeSingle();
-      invoicePdfUrl = (inv as { invoice_pdf_url?: string | null } | null)?.invoice_pdf_url ?? null;
+      const stored = (inv as { invoice_pdf_url?: string | null } | null)?.invoice_pdf_url ?? null;
+      invoicePdfUrl = stored;
+      // Re-sign on every send so later emails (approved/paid) get a fresh 14-day link.
+      const m = stored?.match(/\/object\/sign\/invoice-documents\/([^?]+)/);
+      if (m) {
+        const { data: signed } = await supabase.storage
+          .from('invoice-documents')
+          .createSignedUrl(decodeURIComponent(m[1]), 60 * 60 * 24 * 14);
+        if (signed?.signedUrl) invoicePdfUrl = signed.signedUrl;
+      }
     }
 
     const actionUrl = payload.action_url
