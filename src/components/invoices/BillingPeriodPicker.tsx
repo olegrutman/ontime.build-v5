@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths, subDays, differenceInCalendarDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, subDays, differenceInCalendarDays, isSameDay } from 'date-fns';
 import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -31,9 +31,11 @@ export function validateBillingPeriod(
   const e = periodEnd.getTime();
   if (Number.isNaN(s) || Number.isNaN(e)) return 'Enter valid billing period dates.';
   if (e < s) return 'Period end must be on or after period start.';
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-  if (e > todayEnd.getTime()) return 'Period end cannot be in the future.';
+  // Billing may run ahead to the last day of the current month, never past it.
+  const monthEnd = endOfMonth(new Date());
+  monthEnd.setHours(23, 59, 59, 999);
+  if (e > monthEnd.getTime())
+    return `Period end can't be later than the end of this month (${format(monthEnd, 'MMM d, yyyy')}).`;
   const twoYearsAgo = new Date();
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
   if (s < twoYearsAgo.getTime()) return 'Period start is more than 2 years ago — please confirm the dates.';
@@ -49,15 +51,31 @@ export function BillingPeriodPicker({
   className,
 }: BillingPeriodPickerProps) {
   const today = useMemo(() => new Date(), []);
+  const monthStart = useMemo(() => startOfMonth(today), [today]);
+  const monthEnd = useMemo(() => endOfMonth(today), [today]);
 
   const applyChip = (start: Date, end: Date) => {
     onChange(start, end, true);
   };
 
-  const chips: { label: string; onClick: () => void }[] = [
+  const chips: { label: string; onClick: () => void; active: boolean }[] = [
+    {
+      label: 'Through end of month',
+      // Keeps a start the user already picked; otherwise bills the whole month.
+      onClick: () =>
+        applyChip(periodStart && periodStart <= monthEnd ? periodStart : monthStart, monthEnd),
+      active: Boolean(periodEnd && confirmed && isSameDay(periodEnd, monthEnd)),
+    },
     {
       label: 'This month to date',
-      onClick: () => applyChip(startOfMonth(today), today),
+      onClick: () => applyChip(monthStart, today),
+      active: Boolean(
+        periodStart &&
+          periodEnd &&
+          confirmed &&
+          isSameDay(periodStart, monthStart) &&
+          isSameDay(periodEnd, today)
+      ),
     },
     {
       label: 'Last month',
@@ -65,16 +83,33 @@ export function BillingPeriodPicker({
         const lm = subMonths(today, 1);
         applyChip(startOfMonth(lm), endOfMonth(lm));
       },
+      active: Boolean(
+        periodStart &&
+          periodEnd &&
+          confirmed &&
+          isSameDay(periodStart, startOfMonth(subMonths(today, 1))) &&
+          isSameDay(periodEnd, endOfMonth(subMonths(today, 1)))
+      ),
     },
     {
       label: 'Last 2 weeks',
       onClick: () => applyChip(subDays(today, 13), today),
+      active: Boolean(
+        periodStart &&
+          periodEnd &&
+          confirmed &&
+          isSameDay(periodStart, subDays(today, 13)) &&
+          isSameDay(periodEnd, today)
+      ),
     },
   ];
 
   const daysStale =
     periodEnd && confirmed ? differenceInCalendarDays(today, periodEnd) : 0;
   const isStale = daysStale > 15;
+  const daysAhead =
+    periodEnd && confirmed ? differenceInCalendarDays(periodEnd, today) : 0;
+  const isAhead = daysAhead > 0;
 
   const notSet = !periodStart || !periodEnd || !confirmed;
   const highlight = notSet && showRequiredWarning;
@@ -91,7 +126,10 @@ export function BillingPeriodPicker({
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 text-xs"
+            className={cn(
+              'h-7 text-xs',
+              c.active && 'border-primary bg-primary/10 text-foreground hover:bg-primary/15'
+            )}
             onClick={c.onClick}
           >
             {c.label}
@@ -129,7 +167,7 @@ export function BillingPeriodPicker({
                   const nextEnd = periodEnd && date > periodEnd ? date : periodEnd;
                   onChange(date, nextEnd, Boolean(nextEnd));
                 }}
-                disabled={(d) => d > today}
+                disabled={(d) => d > monthEnd}
                 initialFocus
                 className={cn('p-3 pointer-events-auto')}
               />
@@ -162,7 +200,7 @@ export function BillingPeriodPicker({
                   if (!date) return;
                   onChange(periodStart, date, Boolean(periodStart));
                 }}
-                disabled={(d) => d > today || (periodStart ? d < periodStart : false)}
+                disabled={(d) => d > monthEnd || (periodStart ? d < periodStart : false)}
                 initialFocus
                 className={cn('p-3 pointer-events-auto')}
               />
@@ -174,6 +212,13 @@ export function BillingPeriodPicker({
       {highlight && (
         <p className="text-xs text-destructive">
           Please confirm the billing period for this invoice before submitting.
+        </p>
+      )}
+      {!highlight && isAhead && (
+        <p className="text-xs text-amber-600 dark:text-amber-500 flex items-center gap-1.5">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Billing ahead — this period runs {daysAhead} more {daysAhead === 1 ? 'day' : 'days'}, to{' '}
+          {format(monthEnd, 'MMM d')}.
         </p>
       )}
       {!highlight && isStale && (
