@@ -167,7 +167,7 @@ export function BillingPeriodPicker({
                   const nextEnd = periodEnd && date > periodEnd ? date : periodEnd;
                   onChange(date, nextEnd, Boolean(nextEnd));
                 }}
-                disabled={(d) => d > today}
+                disabled={(d) => d > monthEnd}
                 initialFocus
                 className={cn('p-3 pointer-events-auto')}
               />
@@ -200,7 +200,7 @@ export function BillingPeriodPicker({
                   if (!date) return;
                   onChange(periodStart, date, Boolean(periodStart));
                 }}
-                disabled={(d) => d > today || (periodStart ? d < periodStart : false)}
+                disabled={(d) => d > monthEnd || (periodStart ? d < periodStart : false)}
                 initialFocus
                 className={cn('p-3 pointer-events-auto')}
               />
@@ -212,6 +212,13 @@ export function BillingPeriodPicker({
       {highlight && (
         <p className="text-xs text-destructive">
           Please confirm the billing period for this invoice before submitting.
+        </p>
+      )}
+      {!highlight && isAhead && (
+        <p className="text-xs text-amber-600 dark:text-amber-500 flex items-center gap-1.5">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Billing ahead — this period runs {daysAhead} more {daysAhead === 1 ? 'day' : 'days'}, to{' '}
+          {format(monthEnd, 'MMM d')}.
         </p>
       )}
       {!highlight && isStale && (
