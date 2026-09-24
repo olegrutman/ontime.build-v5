@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { FlaskConical, Trash2, RefreshCw, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { IntegrityAuditCard } from '@/components/platform/IntegrityAuditCard';
 
 const GC_USER_ID = 'ef6822a5-c7c0-4a0d-8ac6-3e8647d0452a';
 
@@ -143,6 +144,7 @@ export default function PlatformQA() {
   return (
     <PlatformLayout>
       <div className="space-y-6">
+        <IntegrityAuditCard />
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">

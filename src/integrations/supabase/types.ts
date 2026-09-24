@@ -3413,6 +3413,89 @@ export type Database = {
           },
         ]
       }
+      integrity_audit_findings: {
+        Row: {
+          actual: number | null
+          check_key: string
+          check_name: string
+          created_at: string
+          detail: string | null
+          entity_id: string | null
+          entity_type: string | null
+          expected: number | null
+          id: string
+          project_id: string | null
+          run_id: string
+          severity: string
+        }
+        Insert: {
+          actual?: number | null
+          check_key: string
+          check_name: string
+          created_at?: string
+          detail?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expected?: number | null
+          id?: string
+          project_id?: string | null
+          run_id: string
+          severity?: string
+        }
+        Update: {
+          actual?: number | null
+          check_key?: string
+          check_name?: string
+          created_at?: string
+          detail?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expected?: number | null
+          id?: string
+          project_id?: string | null
+          run_id?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrity_audit_findings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "integrity_audit_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrity_audit_runs: {
+        Row: {
+          checks_failed: number
+          checks_run: number
+          findings_count: number
+          finished_at: string | null
+          id: string
+          started_at: string
+          trigger_source: string
+        }
+        Insert: {
+          checks_failed?: number
+          checks_run?: number
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          trigger_source?: string
+        }
+        Update: {
+          checks_failed?: number
+          checks_run?: number
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          trigger_source?: string
+        }
+        Relationships: []
+      }
       internal_config: {
         Row: {
           key: string
@@ -9298,6 +9381,7 @@ export type Database = {
         Args: { _project_id: string; _supplier_org_id: string }
         Returns: string
       }
+      run_integrity_audit: { Args: { _source?: string }; Returns: string }
       search_catalog: {
         Args: {
           category_filter?: string
