@@ -86,6 +86,38 @@ interface TriggerBody {
   action_url?: string | null;
 }
 
+interface ProjectIdentity {
+  id: string;
+  name: string;
+  address: string;
+}
+
+function projectIdFromActionUrl(actionUrl?: string | null): string | null {
+  const match = actionUrl?.match(/\/project\/([0-9a-f]{8}-[0-9a-f-]{27,})/i);
+  return match?.[1] ?? null;
+}
+
+function formatProjectAddress(
+  address: unknown,
+  city?: string | null,
+  state?: string | null,
+  zip?: string | null,
+): string {
+  const objectAddress =
+    address && typeof address === 'object' ? (address as Record<string, unknown>) : null;
+  const street =
+    typeof address === 'string'
+      ? address
+      : String(objectAddress?.street ?? objectAddress?.line1 ?? '').trim();
+  const addressCity = String(objectAddress?.city ?? city ?? '').trim();
+  const addressState = String(objectAddress?.state ?? state ?? '').trim();
+  const addressZip = String(objectAddress?.zip ?? zip ?? '').trim();
+  const locality = [addressCity, [addressState, addressZip].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ');
+  return [street, locality].filter(Boolean).join(', ');
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -165,6 +197,25 @@ Deno.serve(async (req) => {
       ? `${APP_URL}${payload.action_url.startsWith('/') ? '' : '/'}${payload.action_url}`
       : `${APP_URL}/dashboard`;
 
+    // Project identity belongs in every project-scoped alert. Most notifications
+    // already carry the project UUID in their action URL, regardless of entity type.
+    const projectId = projectIdFromActionUrl(payload.action_url);
+    let projectIdentity: ProjectIdentity | null = null;
+    if (projectId) {
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id, name, address, city, state, zip')
+        .eq('id', projectId)
+        .maybeSingle();
+      if (project) {
+        projectIdentity = {
+          id: project.id,
+          name: project.name,
+          address: formatProjectAddress(project.address, project.city, project.state, project.zip),
+        };
+      }
+    }
+
     const results: Array<{ user_id: string; status: string }> = [];
     const cutoff = new Date(Date.now() - THROTTLE_MINUTES * 60_000).toISOString();
 
@@ -229,6 +280,9 @@ Deno.serve(async (req) => {
       }
 
       const heading = payload.title ?? 'Update on your project';
+      const emailSubject = projectIdentity?.name
+        ? `${projectIdentity.name} — ${heading}`
+        : heading;
       const intro = payload.body ?? 'There is an update waiting for you in Ontime.Build.';
       const t = type.toUpperCase();
       const status: 'success' | 'danger' | 'warning' | 'info' =
@@ -243,7 +297,13 @@ Deno.serve(async (req) => {
         heading,
         intro,
         status,
-        rows: [],
+        rows: projectIdentity
+          ? [
+              ['Project', projectIdentity.name],
+              ['Project ID', projectIdentity.id.slice(0, 8).toUpperCase()],
+              ['Address', projectIdentity.address],
+            ]
+          : [],
         ctaLabel: CTA_BY_TYPE[type] ?? 'Open in Ontime.Build',
         ctaUrl: actionUrl,
         secondaryLabel: invoicePdfUrl ? 'Download invoice PDF' : undefined,
@@ -255,9 +315,18 @@ Deno.serve(async (req) => {
 
       await queueEmail(supabase, {
         to: email,
-        subject: heading,
+        subject: emailSubject,
         html,
-        text: `${heading}\n\n${intro}\n\n${actionUrl}`,
+        text: [
+          heading,
+          '',
+          intro,
+          projectIdentity ? `Project: ${projectIdentity.name}` : '',
+          projectIdentity ? `Project ID: ${projectIdentity.id.slice(0, 8).toUpperCase()}` : '',
+          projectIdentity?.address ? `Address: ${projectIdentity.address}` : '',
+          '',
+          actionUrl,
+        ].filter((line, index, lines) => line || lines[index - 1] !== '').join('\n'),
         label: `notification:${type}`,
       });
 
