@@ -71,6 +71,20 @@
       "when": 1790283760945,
       "tag": "0009_integrity_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790284022490,
+      "tag": "0010_integrity_audit_refine_checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790284084549,
+      "tag": "0011_integrity_audit_seeded_co_totals",
+      "breakpoints": true
     }
   ]
 }

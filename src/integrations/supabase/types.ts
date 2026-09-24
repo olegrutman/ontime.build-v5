@@ -8844,6 +8844,7 @@ export type Database = {
       }
     }
     Functions: {
+      _audit_co_total: { Args: { _co_id: string }; Returns: number }
       _co_target_contract_id: {
         Args: { _org_a: string; _org_b: string; _project_id: string }
         Returns: string
