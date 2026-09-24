@@ -576,7 +576,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" variant={isTM ? 'default' : 'outline'} onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }} disabled={isBlocked}>
+                  <Button size="sm" variant="default" onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }} disabled={isBlocked}>
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">New Invoice</span>
                   </Button>
