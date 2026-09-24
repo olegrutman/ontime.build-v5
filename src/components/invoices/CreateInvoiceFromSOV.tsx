@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getContractDisplayName } from '@/hooks/useContractSOV';
 import { buildInvoiceNumber } from '@/lib/invoiceNumber';
+import { BulkCOInvoicePanel } from './BulkCOInvoicePanel';
 
 
 interface Contract {
@@ -181,6 +182,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   const [periodConfirmed, setPeriodConfirmed] = useState(false);
   const [showPeriodWarning, setShowPeriodWarning] = useState(false);
   const [notes, setNotes] = useState('');
+  const [billMode, setBillMode] = useState<'single' | 'bulk'>('single');
 
   // Get current user's organization info
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -740,6 +742,23 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto min-h-0">
+        {!isRevisionMode && !loading && approvedCOs.filter(c => c.remaining > 0.005).length >= 2 && (
+          <div className="mt-2 inline-flex rounded-lg border border-border bg-muted/40 p-1">
+            {([['single', 'One item'], ['bulk', 'Several change orders']] as const).map(([v, t]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setBillMode(v)}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  billMode === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
         {loading ? (
           <div className="space-y-4 py-4">
             <Skeleton className="h-10 w-full" />
@@ -760,6 +779,15 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               No SOV or approved Change Orders found. Create an SOV or get a CO approved first.
             </AlertDescription>
           </Alert>
+        ) : billMode === 'bulk' && !isRevisionMode ? (
+          <BulkCOInvoicePanel
+            projectId={projectId}
+            userId={user?.id ?? ''}
+            cos={approvedCOs}
+            contracts={allContracts}
+            onCancel={() => onOpenChange(false)}
+            onDone={() => { onSuccess(); onOpenChange(false); setBillMode('single'); }}
+          />
         ) : (
           <div className="space-y-6 py-4">
             {/* Contract Selection - hidden/locked in revision mode */}
@@ -1272,7 +1300,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
               </div>
             </CardContent>
           </Card>
-          <DialogFooter>
+          {(billMode === 'single' || isRevisionMode) && <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -1284,7 +1312,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 ? (isRevisionMode ? 'Resubmitting...' : 'Creating...')
                 : (isRevisionMode ? 'Resubmit Invoice' : 'Create Invoice')}
             </Button>
-          </DialogFooter>
+          </DialogFooter>}
         </div>
       </DialogContent>
     </Dialog>

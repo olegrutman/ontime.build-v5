@@ -3498,6 +3498,7 @@ export type Database = {
           retainage_percent: number
           scheduled_value: number
           sort_order: number
+          source_co_id: string | null
           sov_item_id: string | null
           total_billed: number
         }
@@ -3514,6 +3515,7 @@ export type Database = {
           retainage_percent?: number
           scheduled_value?: number
           sort_order?: number
+          source_co_id?: string | null
           sov_item_id?: string | null
           total_billed?: number
         }
@@ -3530,6 +3532,7 @@ export type Database = {
           retainage_percent?: number
           scheduled_value?: number
           sort_order?: number
+          source_co_id?: string | null
           sov_item_id?: string | null
           total_billed?: number
         }
@@ -3539,6 +3542,20 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_source_co_id_fkey"
+            columns: ["source_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
             referencedColumns: ["id"]
           },
           {
