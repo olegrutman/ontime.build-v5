@@ -180,6 +180,9 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
             </span>
           </div>
           <div className="max-h-64 divide-y divide-border overflow-y-auto bg-card">
+            {billable.length === 0 && (
+              <div className="p-6 text-center text-sm text-muted-foreground">All approved change orders are fully billed.</div>
+            )}
             {billable.map(co => (
               <label key={co.co_id} className="flex cursor-pointer items-center p-3 transition-colors hover:bg-muted/40">
                 <Checkbox checked={selected.has(co.co_id)} onCheckedChange={() => toggle(co.co_id)} />

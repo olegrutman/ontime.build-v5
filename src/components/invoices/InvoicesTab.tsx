@@ -54,6 +54,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL' | 'NEEDS_ACTION'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
   const [createFromCOsOpen, setCreateFromCOsOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
@@ -560,7 +561,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         </Select>
 
         {showCreateButton && canCreateInvoice && !isTM && (
-          <Button size="sm" variant="outline" onClick={() => setCreateFromCOsOpen(true)}>
+          <Button size="sm" variant="outline" onClick={() => { setBulkMode(true); setCreateDialogOpen(true); }}>
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Bill Change Orders</span>
           </Button>
@@ -571,7 +572,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" onClick={() => isTM ? setCreateFromCOsOpen(true) : setCreateDialogOpen(true)} disabled={isBlocked}>
+                  <Button size="sm" onClick={() => { if (isTM) { setCreateFromCOsOpen(true); } else { setBulkMode(false); setCreateDialogOpen(true); } }} disabled={isBlocked}>
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">New Invoice</span>
                   </Button>
@@ -659,6 +660,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             onOpenChange={setCreateDialogOpen}
             projectId={projectId}
             onSuccess={handleCreateSuccess}
+            initialMode={bulkMode ? 'bulk' : 'single'}
           />
         )}
       </div>
@@ -715,6 +717,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             onOpenChange={setCreateDialogOpen}
             projectId={projectId}
             onSuccess={handleCreateSuccess}
+            initialMode={bulkMode ? 'bulk' : 'single'}
           />
         )}
       </div>
@@ -753,6 +756,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           onOpenChange={setCreateDialogOpen}
           projectId={projectId}
           onSuccess={handleCreateSuccess}
+          initialMode={bulkMode ? 'bulk' : 'single'}
         />
       )}
     </div>

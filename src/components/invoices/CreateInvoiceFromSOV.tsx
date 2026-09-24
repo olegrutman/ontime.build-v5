@@ -116,6 +116,7 @@ interface CreateInvoiceFromSOVProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   onSuccess: () => void;
+  initialMode?: 'single' | 'bulk';
   // Revision mode
   revisionInvoiceId?: string;
   revisionData?: RevisionData;
@@ -155,6 +156,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   onSuccess,
   revisionInvoiceId,
   revisionData,
+  initialMode = 'single',
 }, _ref) {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -182,7 +184,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   const [periodConfirmed, setPeriodConfirmed] = useState(false);
   const [showPeriodWarning, setShowPeriodWarning] = useState(false);
   const [notes, setNotes] = useState('');
-  const [billMode, setBillMode] = useState<'single' | 'bulk'>('single');
+  const [billMode, setBillMode] = useState<'single' | 'bulk'>(initialMode);
+  useEffect(() => { if (open) setBillMode(initialMode); }, [open, initialMode]);
 
   // Get current user's organization info
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -733,11 +736,11 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>{isRevisionMode ? 'Revise & Resubmit Invoice' : 'Create Invoice from SOV'}</DialogTitle>
+          <DialogTitle>{isRevisionMode ? 'Revise & Resubmit Invoice' : billMode === 'bulk' ? 'Bill Change Orders' : 'Create Invoice from SOV'}</DialogTitle>
           <DialogDescription>
             {isRevisionMode
               ? `Adjust SOV item percentages for ${revisionData?.invoiceNumber} and resubmit.`
-              : 'Select SOV items and set completion percentage to generate an invoice.'}
+              : billMode === 'bulk' ? 'Pick the approved change orders to bill, then choose one combined invoice or separate invoices.' : 'Select SOV items and set completion percentage to generate an invoice.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -1278,7 +1281,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         )}
         </div>
 
-        <div className="shrink-0 border-t bg-background pt-4 space-y-4">
+        {(billMode === 'single' || isRevisionMode) && <div className="shrink-0 border-t bg-background pt-4 space-y-4">
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -1313,7 +1316,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                 : (isRevisionMode ? 'Resubmit Invoice' : 'Create Invoice')}
             </Button>
           </DialogFooter>}
-        </div>
+        </div>}
       </DialogContent>
     </Dialog>
   );
