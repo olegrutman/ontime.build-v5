@@ -50,6 +50,13 @@
       "when": 1790265145481,
       "tag": "0006_co_sov_bill_own_price",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790265205525,
+      "tag": "0007_co_sov_price_safeguard",
+      "breakpoints": true
     }
   ]
 }
