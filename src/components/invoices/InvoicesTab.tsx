@@ -66,7 +66,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   // ?action=create (from the project quick-actions bar) opens the create-invoice dialog
   useEffect(() => {
     if (searchParams.get('action') !== 'create') return;
-    if (isTM) setCreateFromCOsOpen(true);
+    if (isTM) { setBulkMode(true); setCreateDialogOpen(true); }
     else setCreateDialogOpen(true);
     const next = new URLSearchParams(searchParams);
     next.delete('action');
@@ -430,7 +430,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             {roleContext.emptyMessage}
           </p>
           {canCreateInvoice && (currentOrgType !== 'TC' || invoiceDirection === 'sent') && (
-            <Button onClick={() => isTM ? setCreateFromCOsOpen(true) : setCreateDialogOpen(true)}>
+            <Button onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               Create Invoice
             </Button>
@@ -572,7 +572,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" onClick={() => { if (isTM) { setCreateFromCOsOpen(true); } else { setBulkMode(false); setCreateDialogOpen(true); } }} disabled={isBlocked}>
+                  <Button size="sm" onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }} disabled={isBlocked}>
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">New Invoice</span>
                   </Button>
@@ -654,13 +654,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           onSuccess={handleCreateSuccess}
           isTM={isTM}
         />
-        {!isTM && (
+        {(
           <CreateInvoiceFromSOV
             open={createDialogOpen}
             onOpenChange={setCreateDialogOpen}
             projectId={projectId}
             onSuccess={handleCreateSuccess}
-            initialMode={bulkMode ? 'bulk' : 'single'}
+            initialMode={bulkMode || isTM ? 'bulk' : 'single'}
+            bulkOnly={isTM}
           />
         )}
       </div>
@@ -711,13 +712,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
           onSuccess={handleCreateSuccess}
           isTM={isTM}
         />
-        {!isTM && (
+        {(
           <CreateInvoiceFromSOV
             open={createDialogOpen}
             onOpenChange={setCreateDialogOpen}
             projectId={projectId}
             onSuccess={handleCreateSuccess}
-            initialMode={bulkMode ? 'bulk' : 'single'}
+            initialMode={bulkMode || isTM ? 'bulk' : 'single'}
+            bulkOnly={isTM}
           />
         )}
       </div>
@@ -750,13 +752,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         onSuccess={handleCreateSuccess}
         isTM={isTM}
       />
-      {!isTM && (
+      {(
         <CreateInvoiceFromSOV
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
           projectId={projectId}
           onSuccess={handleCreateSuccess}
-          initialMode={bulkMode ? 'bulk' : 'single'}
+          initialMode={bulkMode || isTM ? 'bulk' : 'single'}
+            bulkOnly={isTM}
         />
       )}
     </div>

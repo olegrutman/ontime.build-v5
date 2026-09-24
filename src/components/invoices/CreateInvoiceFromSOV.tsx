@@ -117,6 +117,8 @@ interface CreateInvoiceFromSOVProps {
   projectId: string;
   onSuccess: () => void;
   initialMode?: 'single' | 'bulk';
+  /** Work-order (T&M) projects: only multi-select billing, no SOV. */
+  bulkOnly?: boolean;
   // Revision mode
   revisionInvoiceId?: string;
   revisionData?: RevisionData;
@@ -157,6 +159,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   revisionInvoiceId,
   revisionData,
   initialMode = 'single',
+  bulkOnly = false,
 }, _ref) {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -736,7 +739,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>{isRevisionMode ? 'Revise & Resubmit Invoice' : billMode === 'bulk' ? 'Bill Change Orders' : 'Create Invoice from SOV'}</DialogTitle>
+          <DialogTitle>{isRevisionMode ? 'Revise & Resubmit Invoice' : billMode === 'bulk' ? (bulkOnly ? 'Bill Work Orders' : 'Bill Change Orders') : 'Create Invoice from SOV'}</DialogTitle>
           <DialogDescription>
             {isRevisionMode
               ? `Adjust SOV item percentages for ${revisionData?.invoiceNumber} and resubmit.`
@@ -745,7 +748,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto min-h-0">
-        {!isRevisionMode && !loading && approvedCOs.filter(c => c.remaining > 0.005).length >= 2 && (
+        {!isRevisionMode && !bulkOnly && !loading && approvedCOs.filter(c => c.remaining > 0.005).length >= 2 && (
           <div className="mt-2 inline-flex rounded-lg border border-border bg-muted/40 p-1">
             {([['single', 'One item'], ['bulk', 'Several change orders']] as const).map(([v, t]) => (
               <button
@@ -768,14 +771,14 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
           </div>
-        ) : contracts.length === 0 ? (
+        ) : contracts.length === 0 && !(bulkOnly && approvedCOs.length > 0) ? (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               No contracts available for invoicing. You can only create invoices for contracts where your organization is the contractor (Subcontractor or Crew). Please accept a contract first.
             </AlertDescription>
           </Alert>
-        ) : sovs.length === 0 && approvedCOs.length === 0 ? (
+        ) : sovs.length === 0 && approvedCOs.length === 0 && !bulkOnly ? (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
