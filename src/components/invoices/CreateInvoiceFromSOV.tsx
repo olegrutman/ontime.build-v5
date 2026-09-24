@@ -1064,7 +1064,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                       Toggle items and set completion percentage for this billing period
                     </p>
                   </div>
-                  <Badge variant="secondary">{billingItems.length} items</Badge>
+                  <Badge variant="secondary">{billingItems.length} {billingItems.length === 1 ? "item" : "items"}</Badge>
                 </div>
 
                 <div className="space-y-2">
@@ -1278,7 +1278,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={saving || !hasSelectedItems || hasErrors || !selectedContractId}
+              disabled={saving || !hasSelectedItems || hasErrors || !selectedContractId || !!dateError}
             >
               {saving
                 ? (isRevisionMode ? 'Resubmitting...' : 'Creating...')
