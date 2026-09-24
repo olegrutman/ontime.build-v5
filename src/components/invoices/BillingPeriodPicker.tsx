@@ -51,15 +51,31 @@ export function BillingPeriodPicker({
   className,
 }: BillingPeriodPickerProps) {
   const today = useMemo(() => new Date(), []);
+  const monthStart = useMemo(() => startOfMonth(today), [today]);
+  const monthEnd = useMemo(() => endOfMonth(today), [today]);
 
   const applyChip = (start: Date, end: Date) => {
     onChange(start, end, true);
   };
 
-  const chips: { label: string; onClick: () => void }[] = [
+  const chips: { label: string; onClick: () => void; active: boolean }[] = [
+    {
+      label: 'Through end of month',
+      // Keeps a start the user already picked; otherwise bills the whole month.
+      onClick: () =>
+        applyChip(periodStart && periodStart <= monthEnd ? periodStart : monthStart, monthEnd),
+      active: Boolean(periodEnd && confirmed && isSameDay(periodEnd, monthEnd)),
+    },
     {
       label: 'This month to date',
-      onClick: () => applyChip(startOfMonth(today), today),
+      onClick: () => applyChip(monthStart, today),
+      active: Boolean(
+        periodStart &&
+          periodEnd &&
+          confirmed &&
+          isSameDay(periodStart, monthStart) &&
+          isSameDay(periodEnd, today)
+      ),
     },
     {
       label: 'Last month',
@@ -67,16 +83,33 @@ export function BillingPeriodPicker({
         const lm = subMonths(today, 1);
         applyChip(startOfMonth(lm), endOfMonth(lm));
       },
+      active: Boolean(
+        periodStart &&
+          periodEnd &&
+          confirmed &&
+          isSameDay(periodStart, startOfMonth(subMonths(today, 1))) &&
+          isSameDay(periodEnd, endOfMonth(subMonths(today, 1)))
+      ),
     },
     {
       label: 'Last 2 weeks',
       onClick: () => applyChip(subDays(today, 13), today),
+      active: Boolean(
+        periodStart &&
+          periodEnd &&
+          confirmed &&
+          isSameDay(periodStart, subDays(today, 13)) &&
+          isSameDay(periodEnd, today)
+      ),
     },
   ];
 
   const daysStale =
     periodEnd && confirmed ? differenceInCalendarDays(today, periodEnd) : 0;
   const isStale = daysStale > 15;
+  const daysAhead =
+    periodEnd && confirmed ? differenceInCalendarDays(periodEnd, today) : 0;
+  const isAhead = daysAhead > 0;
 
   const notSet = !periodStart || !periodEnd || !confirmed;
   const highlight = notSet && showRequiredWarning;
@@ -93,7 +126,10 @@ export function BillingPeriodPicker({
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 text-xs"
+            className={cn(
+              'h-7 text-xs',
+              c.active && 'border-primary bg-primary/10 text-foreground hover:bg-primary/15'
+            )}
             onClick={c.onClick}
           >
             {c.label}
