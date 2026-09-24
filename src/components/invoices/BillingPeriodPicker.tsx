@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths, subDays, differenceInCalendarDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, subDays, differenceInCalendarDays, isSameDay } from 'date-fns';
 import { CalendarIcon, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -31,9 +31,11 @@ export function validateBillingPeriod(
   const e = periodEnd.getTime();
   if (Number.isNaN(s) || Number.isNaN(e)) return 'Enter valid billing period dates.';
   if (e < s) return 'Period end must be on or after period start.';
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-  if (e > todayEnd.getTime()) return 'Period end cannot be in the future.';
+  // Billing may run ahead to the last day of the current month, never past it.
+  const monthEnd = endOfMonth(new Date());
+  monthEnd.setHours(23, 59, 59, 999);
+  if (e > monthEnd.getTime())
+    return `Period end can't be later than the end of this month (${format(monthEnd, 'MMM d, yyyy')}).`;
   const twoYearsAgo = new Date();
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
   if (s < twoYearsAgo.getTime()) return 'Period start is more than 2 years ago — please confirm the dates.';
