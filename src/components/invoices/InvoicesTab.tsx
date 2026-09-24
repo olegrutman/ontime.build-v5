@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, Package } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, Package, Layers } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { attachInvoicePdf, getAttachPdfPreference } from '@/lib/invoicePdf';
 import { Button } from '@/components/ui/button';
@@ -561,8 +561,12 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         </Select>
 
         {showCreateButton && canCreateInvoice && !isTM && (
-          <Button size="sm" variant="outline" onClick={() => { setBulkMode(true); setCreateDialogOpen(true); }}>
-            <Plus className="h-4 w-4 sm:mr-2" />
+          <Button
+            size="sm"
+            onClick={() => { setBulkMode(true); setCreateDialogOpen(true); }}
+            className="bg-primary text-primary-foreground font-semibold shadow-[0_0_0_3px_hsl(var(--primary)/0.25),0_6px_16px_-6px_hsl(var(--primary)/0.7)] hover:bg-primary/90 ring-1 ring-primary/60"
+          >
+            <Layers className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Bill Change Orders</span>
           </Button>
         )}
@@ -572,7 +576,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }} disabled={isBlocked}>
+                  <Button size="sm" variant={isTM ? 'default' : 'outline'} onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }} disabled={isBlocked}>
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">New Invoice</span>
                   </Button>
