@@ -125,7 +125,7 @@ export function useChangeOrders(projectId: string | null) {
           .maybeSingle(),
         coIds.length
           ? supabase.from(t.labor)
-              .select('co_id, entered_by_role, line_total, is_actual_cost')
+              .select('id, co_id, org_id, entered_by_role, line_total, is_actual_cost, source_fc_entry_ids')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
         coIds.length
@@ -149,9 +149,20 @@ export function useChangeOrders(projectId: string | null) {
       const isGCOnProject = myParticipant?.role === 'GC';
 
       // Per-CO aggregates mirroring useChangeOrderDetail formulas
+      // Own actual-cost rows; crew rows already imported into them are not counted again.
       const actualByCo = new Map<string, number>();
+      const importedFC = new Set<string>();
+      const subByCo = new Map<string, number>();
       for (const r of (laborRows ?? []) as any[]) {
-        if (r.is_actual_cost) actualByCo.set(r.co_id, (actualByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+        if (r.is_actual_cost && r.org_id === orgId) {
+          actualByCo.set(r.co_id, (actualByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+          for (const id of (r.source_fc_entry_ids ?? []) as string[]) importedFC.add(id);
+        }
+      }
+      for (const r of (laborRows ?? []) as any[]) {
+        if (r.entered_by_role === 'FC' && !r.is_actual_cost && r.org_id !== orgId && !importedFC.has(r.id)) {
+          subByCo.set(r.co_id, (subByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+        }
       }
       const tcLaborByCo = new Map<string, number>();
       const fcLaborByCo = new Map<string, number>();
@@ -196,7 +207,7 @@ export function useChangeOrders(projectId: string | null) {
         const actual = actualByCo.get(c.id) ?? 0;
         if (myRole === 'GC') return computeDisplayTotal(c);
         if (myRole === 'FC') return actual;
-        return (fcLaborByCo.get(c.id) ?? 0) + actual;
+        return (subByCo.get(c.id) ?? 0) + actual;
       };
 
       // Billing state per CO from invoices the viewer's company sent
