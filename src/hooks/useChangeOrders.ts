@@ -8,6 +8,10 @@ export interface ChangeOrderWithMembers extends ChangeOrder {
   collaboratorStatus?: COCollaboratorStatus;
   collaboratorOrgId?: string;
   display_total?: number;
+  /** What this CO costs the viewer's company */
+  my_cost?: number;
+  billing_state?: 'not_billed' | 'draft' | 'invoiced' | 'partly_paid' | 'paid';
+  billed_amount?: number;
 }
 
 export type BoardColumnKey = 'wip' | 'pending_pricing' | 'gc_review' | 'approved' | 'invoiced';
@@ -105,6 +109,7 @@ export function useChangeOrders(projectId: string | null) {
         { data: laborRows },
         { data: matRows },
         { data: eqRows },
+        { data: projInvoices },
       ] = await Promise.all([
         supabase
           .from('project_contracts')
@@ -133,6 +138,9 @@ export function useChangeOrders(projectId: string | null) {
               .select('co_id, billed_amount, added_by_role')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
+        supabase.from('invoices')
+          .select('id, status, total_amount, co_ids, from_org_id')
+          .eq('project_id', projectId!) as any,
       ]);
 
       const downstreamOrgIds = new Set(
@@ -141,6 +149,10 @@ export function useChangeOrders(projectId: string | null) {
       const isGCOnProject = myParticipant?.role === 'GC';
 
       // Per-CO aggregates mirroring useChangeOrderDetail formulas
+      const actualByCo = new Map<string, number>();
+      for (const r of (laborRows ?? []) as any[]) {
+        if (r.is_actual_cost) actualByCo.set(r.co_id, (actualByCo.get(r.co_id) ?? 0) + Number(r.line_total ?? 0));
+      }
       const tcLaborByCo = new Map<string, number>();
       const fcLaborByCo = new Map<string, number>();
       for (const r of (laborRows ?? []) as any[]) {
@@ -180,12 +192,55 @@ export function useChangeOrders(projectId: string | null) {
 
 
 
+      const computeMyCost = (c: ChangeOrder) => {
+        const actual = actualByCo.get(c.id) ?? 0;
+        if (myRole === 'GC') return computeDisplayTotal(c);
+        if (myRole === 'FC') return actual;
+        return (fcLaborByCo.get(c.id) ?? 0) + actual;
+      };
+
+      // Billing state per CO from invoices the viewer's company sent
+      const invIds = ((projInvoices ?? []) as any[]).map(i => i.id);
+      const { data: invLines } = invIds.length
+        ? await supabase.from('invoice_line_items').select('invoice_id, source_co_id, current_billed').in('invoice_id', invIds)
+        : { data: [] as any[] };
+      const perCo = new Map<string, { status: string; amount: number }[]>();
+      for (const inv of (projInvoices ?? []) as any[]) {
+        const lines = ((invLines ?? []) as any[]).filter(l => l.invoice_id === inv.id && l.source_co_id);
+        const coList: string[] = lines.length ? Array.from(new Set(lines.map(l => l.source_co_id))) : (inv.co_ids ?? []);
+        for (const coId of coList) {
+          const amt = lines.length
+            ? lines.filter(l => l.source_co_id === coId).reduce((s, l) => s + Number(l.current_billed || 0), 0)
+            : Number(inv.total_amount || 0) / Math.max(1, coList.length);
+          const arr = perCo.get(coId) ?? [];
+          arr.push({ status: inv.status, amount: amt });
+          perCo.set(coId, arr);
+        }
+      }
+      const billingFor = (c: ChangeOrder) => {
+        const invs = perCo.get(c.id) ?? [];
+        const live = invs.filter(i => i.status !== 'VOIDED' && i.status !== 'REJECTED');
+        const sent = live.filter(i => i.status !== 'DRAFT');
+        const billed = sent.reduce((s, i) => s + i.amount, 0);
+        const paid = live.filter(i => i.status === 'PAID').reduce((s, i) => s + i.amount, 0);
+        const approved = computeDisplayTotal(c);
+        let state: ChangeOrderWithMembers['billing_state'] = 'not_billed';
+        if (paid > 0 && paid + 0.01 >= Math.max(approved, billed)) state = 'paid';
+        else if (paid > 0) state = 'partly_paid';
+        else if (sent.length) state = 'invoiced';
+        else if (live.length) state = 'draft';
+        return { state, billed };
+      };
+
       return {
         items: allCOs.map(c => ({
           ...c,
           collaboratorStatus: collaboratorMap.get(c.id)?.status,
           collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
           display_total: computeDisplayTotal(c),
+          my_cost: computeMyCost(c),
+          billing_state: billingFor(c).state,
+          billed_amount: billingFor(c).billed,
           fc_cost_total: fcLaborByCo.get(c.id) ?? 0,
           _isDownstreamOrg: downstreamOrgIds.has(c.org_id),
         })) as (ChangeOrderWithMembers & { _isDownstreamOrg?: boolean })[],
