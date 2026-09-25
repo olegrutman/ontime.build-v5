@@ -104,3 +104,20 @@ export function useSpeechRecognition(opts: UseSpeechRecognitionOptions = {}): Sp
 
   return { isListening, transcript, startListening, stopListening, isSupported, error };
 }
+
+const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+/** Join speech segments, dropping repeats where a segment re-contains earlier text. */
+export function mergeSegments(segments: string[]): string {
+  let out = '';
+  for (const seg of segments) {
+    if (!seg) continue;
+    const a = norm(out);
+    const b = norm(seg);
+    if (!a) { out = seg; continue; }
+    if (b.startsWith(a)) { out = seg; continue; }
+    if (a.endsWith(b) || a.includes(b)) continue;
+    out = `${out} ${seg}`;
+  }
+  return out.trim();
+}
