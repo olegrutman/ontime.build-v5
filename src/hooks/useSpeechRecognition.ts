@@ -67,17 +67,14 @@ export function useSpeechRecognition(opts: UseSpeechRecognitionOptions = {}): Sp
 
     recognition.onresult = (event: any) => {
       resetSilenceTimer();
-      let final = '';
-      let interim = '';
+      // Android Chrome (continuous mode) re-sends earlier words inside each
+      // new result ("fix wall" → "fix wall header"). Merge overlap-aware so
+      // phrases aren't doubled.
+      const segments: string[] = [];
       for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          final += result[0].transcript;
-        } else {
-          interim += result[0].transcript;
-        }
+        segments.push(String(event.results[i][0].transcript || '').trim());
       }
-      setTranscript(final + interim);
+      setTranscript(mergeSegments(segments));
     };
 
     recognition.onerror = (event: any) => {
@@ -106,4 +103,21 @@ export function useSpeechRecognition(opts: UseSpeechRecognitionOptions = {}): Sp
   }, [clearSilenceTimer]);
 
   return { isListening, transcript, startListening, stopListening, isSupported, error };
+}
+
+const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+/** Join speech segments, dropping repeats where a segment re-contains earlier text. */
+export function mergeSegments(segments: string[]): string {
+  let out = '';
+  for (const seg of segments) {
+    if (!seg) continue;
+    const a = norm(out);
+    const b = norm(seg);
+    if (!a) { out = seg; continue; }
+    if (b.startsWith(a)) { out = seg; continue; }
+    if (a.endsWith(b) || a.includes(b)) continue;
+    out = `${out} ${seg}`;
+  }
+  return out.trim();
 }
