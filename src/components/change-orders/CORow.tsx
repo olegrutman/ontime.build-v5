@@ -21,6 +21,14 @@ interface CORowProps {
   bundledLabel?: string | null;
 }
 
+const BILL_TAG: Record<string, { label: string; cls: string }> = {
+  not_billed: { label: 'Not invoiced', cls: 'border-border bg-muted text-muted-foreground' },
+  draft: { label: 'Invoice draft', cls: 'border-border bg-muted text-foreground' },
+  invoiced: { label: 'Invoiced', cls: 'border-secondary/30 bg-secondary/10 text-secondary' },
+  partly_paid: { label: 'Partly paid', cls: 'border-secondary/30 bg-secondary/10 text-secondary' },
+  paid: { label: 'Paid', cls: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600' },
+};
+
 const money = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function CORow({ co, onClick, needsAction = false, selectable = false, isSelected = false, onSelect, bundledLabel = null }: CORowProps) {
@@ -97,6 +105,17 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
         <p className="font-mono tabular-nums text-base font-semibold text-foreground md:text-lg">
           {money(amount ?? 0)}
         </p>
+        {typeof co.my_cost === 'number' && co.my_cost > 0 && (
+          <p className="font-mono tabular-nums text-[0.7rem] text-muted-foreground">
+            Your cost {money(co.my_cost)}
+          </p>
+        )}
+        {isApproved && co.billing_state && (
+          <span className={cn('mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider', BILL_TAG[co.billing_state].cls)}>
+            {BILL_TAG[co.billing_state].label}
+            {co.billing_state === 'invoiced' || co.billing_state === 'partly_paid' ? ` · ${money(co.billed_amount ?? 0)}` : ''}
+          </span>
+        )}
 
       </div>
 
