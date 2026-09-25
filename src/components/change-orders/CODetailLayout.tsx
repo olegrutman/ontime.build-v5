@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { CONextActionBanner } from './CONextActionBanner';
 import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
+import { COBillingStatusCard } from './COBillingStatusCard';
 import { COSidebar } from './COSidebar';
 import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
@@ -523,6 +524,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           {/* Full-width Header Card + Pipeline */}
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
+
+          <COBillingStatusCard
+            coId={co.id}
+            projectId={projectId}
+            status={co.status}
+            approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
+          />
 
           {/* Next Action Banner */}
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
