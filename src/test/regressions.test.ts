@@ -44,3 +44,13 @@ describe('regressions', () => {
     expect(toCents(((revenue - cost) / revenue) * 100)).toBeCloseTo(46.15, 1);
   });
 });
+
+import { deriveCOBillingState } from '@/components/change-orders/COBillingStatusCard';
+describe('CO billing status', () => {
+  it('shows partly paid, paid, and ignores voided invoices', () => {
+    expect(deriveCOBillingState([], 520).state).toBe('not_billed');
+    expect(deriveCOBillingState([{ status: 'SUBMITTED', amount: 520 }], 520).state).toBe('invoiced');
+    expect(deriveCOBillingState([{ status: 'PAID', amount: 260 }, { status: 'APPROVED', amount: 260 }], 520).state).toBe('partly_paid');
+    expect(deriveCOBillingState([{ status: 'PAID', amount: 520 }, { status: 'VOIDED', amount: 520 }], 520)).toEqual({ state: 'paid', billed: 520, paid: 520 });
+  });
+});
