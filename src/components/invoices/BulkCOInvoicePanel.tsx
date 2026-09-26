@@ -94,9 +94,69 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
     };
   };
 
+  // Itemize each CO into its priced rows (labor per scope line, materials, equipment).
+  // Falls back to one summary line when the CO is partly billed or its items don't add up to the amount due.
+  const itemRowsFor = async (co: BulkBillableCO, billingOrgId: string | null) => {
+    if (co.already_billed > 0.005) return null;
+    const [li, le, mat, eq] = await Promise.all([
+      supabase.from('co_line_items').select('id, item_name, sort_order').eq('co_id', co.co_id),
+      supabase.from('co_labor_entries').select('co_line_item_id, line_total, org_id, is_actual_cost').eq('co_id', co.co_id).eq('is_actual_cost', false),
+      supabase.from('co_material_items').select('description, quantity, uom, billed_amount, line_number').eq('co_id', co.co_id),
+      supabase.from('co_equipment_items').select('description, billed_amount').eq('co_id', co.co_id),
+    ]);
+    const labor = (le.data || []).filter(e => !billingOrgId || e.org_id === billingOrgId);
+    const lines = (li.data || [])
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map(l => ({
+        label: l.item_name || 'Labor',
+        amount: labor.filter(e => e.co_line_item_id === l.id).reduce((s, e) => s + Number(e.line_total || 0), 0),
+      }))
+      .filter(r => r.amount > 0.005);
+    const mats = (mat.data || [])
+      .sort((a, b) => a.line_number - b.line_number)
+      .map(m => ({ label: `Material: ${m.description}${m.quantity ? ` (${m.quantity} ${m.uom || ''})`.replace(' )', ')') : ''}`, amount: Number(m.billed_amount || 0) }))
+      .filter(r => r.amount > 0.005);
+    const eqs = (eq.data || [])
+      .map(e => ({ label: `Equipment: ${e.description}`, amount: Number(e.billed_amount || 0) }))
+      .filter(r => r.amount > 0.005);
+    const sum = (rows: { amount: number }[]) => rows.reduce((s, r) => s + r.amount, 0);
+    // Try with materials+equipment, then labor+materials, then labor only — must match the approved amount to the cent.
+    for (const rows of [[...lines, ...mats, ...eqs], [...lines, ...mats], [...lines, ...eqs], lines]) {
+      if (rows.length > 1 && Math.abs(sum(rows) - co.remaining) < 0.01) return rows;
+    }
+    return null;
+  };
+
+  const linesForCO = async (co: BulkBillableCO, invoiceId: string, startIdx: number, ret: number, billingOrgId: string | null) => {
+    const rows = await itemRowsFor(co, billingOrgId);
+    if (!rows) return [lineFor(co, invoiceId, startIdx, ret)];
+    const tag = shortNum(co.co_number);
+    const coTitle = (co.title || 'Change Order').trim();
+    return rows.map((r, i) => {
+      const label = `${tag} · ${r.label}`;
+      return {
+        invoice_id: invoiceId,
+        sov_item_id: null,
+        source_co_id: co.co_id,
+        description: label.length > 240 ? label.slice(0, 237) + '…' : label,
+        line_notes: i === 0 ? `${coTitle}${co.description ? ` — ${co.description}` : ''}` : null,
+        scheduled_value: r.amount,
+        previous_billed: 0,
+        current_billed: r.amount,
+        total_billed: r.amount,
+        billed_percent: 100,
+        retainage_percent: ret,
+        retainage_amount: r.amount * (ret / 100),
+        sort_order: startIdx + i,
+      };
+    });
+  };
+
   const createOne = async (contractId: string, list: BulkBillableCO[]) => {
     const contract = contracts.find(c => c.id === contractId);
     const ret = contract?.retainage_percent || 0;
+    const { data: pc } = await supabase.from('project_contracts').select('from_org_id').eq('id', contractId).maybeSingle();
+    const billingOrgId = (pc as { from_org_id?: string } | null)?.from_org_id ?? null;
     const gross = list.reduce((s, c) => s + c.remaining, 0);
     const retAmt = gross * (ret / 100);
     const number = await buildInvoiceNumber({
@@ -125,9 +185,11 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
       .select()
       .single();
     if (error) throw error;
+    const allLines: ReturnType<typeof lineFor>[] = [];
+    for (const c of list) allLines.push(...(await linesForCO(c, inv.id, allLines.length, ret, billingOrgId)));
     const { error: lErr } = await supabase
       .from('invoice_line_items')
-      .insert(list.map((c, i) => lineFor(c, inv.id, i, ret)) as never);
+      .insert(allLines as never);
     if (lErr) throw lErr;
     await supabase.from('project_activity').insert({
       project_id: projectId,
@@ -206,8 +268,8 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
         <Label className="mb-2 block">How should they be invoiced?</Label>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { v: true, t: 'One combined invoice', d: 'One invoice number, one line per change order' },
-            { v: false, t: 'Separate invoice per CO', d: 'Each change order gets its own invoice' },
+            { v: true, t: 'One combined invoice', d: 'One invoice number, every item listed under its change order' },
+            { v: false, t: 'Separate invoice per CO', d: 'Each change order gets its own itemized invoice' },
           ].map(o => (
             <button
               key={String(o.v)}
