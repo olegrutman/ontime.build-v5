@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Receipt, CheckCircle2, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { toCents } from '@/lib/money';
 import { INVOICE_STATUS_LABELS, type InvoiceStatus } from '@/types/invoice';
@@ -54,7 +55,9 @@ const d = (s: string | null) => (s ? new Date(s).toLocaleDateString('en-US', { m
 export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const key = ['co-billing-status', coId];
+  const { userOrgRoles } = useAuth();
+  const orgId = userOrgRoles?.[0]?.organization_id ?? null;
+  const key = ['co-billing-status', coId, orgId];
 
   const { data: invoices = [] } = useQuery({
     queryKey: key,
@@ -70,10 +73,17 @@ export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: 
       if (!ids.length) return [];
       const { data: invs } = await supabase
         .from('invoices')
-        .select('id, invoice_number, status, submitted_at, approved_at, paid_at, total_amount, co_ids, created_at')
+        .select('id, invoice_number, status, submitted_at, approved_at, paid_at, total_amount, co_ids, created_at, contract_id')
         .in('id', ids)
         .order('created_at');
-      return (invs ?? []).map((i: any) => ({
+      // Only invoices the viewer's company SENT count — the sender is the contract's from_org_id.
+      const cIds = Array.from(new Set((invs ?? []).map((i: any) => i.contract_id).filter(Boolean)));
+      const { data: ctrs } = cIds.length
+        ? await supabase.from('project_contracts').select('id, from_org_id').in('id', cIds)
+        : { data: [] as any[] };
+      const fromOrg = new Map(((ctrs ?? []) as any[]).map(c => [c.id, c.from_org_id]));
+      const mine = (invs ?? []).filter((i: any) => !orgId || fromOrg.get(i.contract_id) === orgId);
+      return mine.map((i: any) => ({
         id: i.id,
         invoice_number: i.invoice_number,
         status: i.status,
