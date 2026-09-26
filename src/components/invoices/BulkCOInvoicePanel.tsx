@@ -161,7 +161,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
     const rows = await itemRowsFor(co, billingOrgId);
     if (!rows) return [lineFor(co, invoiceId, startIdx, ret)];
     const tag = shortNum(co.co_number);
-    const coTitle = (co.title || 'Change Order').trim();
+    const coTitle = coLabel(co);
     return rows.map((r, i) => {
       const label = `${tag} · ${r.label}`;
       return {
