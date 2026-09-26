@@ -139,7 +139,7 @@ export function useChangeOrders(projectId: string | null) {
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
         supabase.from('invoices')
-          .select('id, status, total_amount, co_ids, from_org_id')
+          .select('id, status, total_amount, co_ids, contract_id')
           .eq('project_id', projectId!) as any,
       ]);
 
@@ -210,13 +210,20 @@ export function useChangeOrders(projectId: string | null) {
         return (subByCo.get(c.id) ?? 0) + actual;
       };
 
-      // Billing state per CO from invoices the viewer's company sent
-      const invIds = ((projInvoices ?? []) as any[]).map(i => i.id);
+      // Billing state per CO from invoices the viewer's company SENT.
+      // invoices has no from_org_id column — the sender is the contract's from_org_id.
+      const invContractIds = Array.from(new Set(((projInvoices ?? []) as any[]).map(i => i.contract_id).filter(Boolean)));
+      const { data: invContracts } = invContractIds.length
+        ? await supabase.from('project_contracts').select('id, from_org_id').in('id', invContractIds)
+        : { data: [] as any[] };
+      const contractFromOrg = new Map(((invContracts ?? []) as any[]).map(c => [c.id, c.from_org_id]));
+      const myInvoices = ((projInvoices ?? []) as any[]).filter(i => contractFromOrg.get(i.contract_id) === orgId);
+      const invIds = myInvoices.map(i => i.id);
       const { data: invLines } = invIds.length
         ? await supabase.from('invoice_line_items').select('invoice_id, source_co_id, current_billed').in('invoice_id', invIds)
         : { data: [] as any[] };
       const perCo = new Map<string, { status: string; amount: number }[]>();
-      for (const inv of (projInvoices ?? []) as any[]) {
+      for (const inv of myInvoices) {
         const lines = ((invLines ?? []) as any[]).filter(l => l.invoice_id === inv.id && l.source_co_id);
         const coList: string[] = lines.length ? Array.from(new Set(lines.map(l => l.source_co_id))) : (inv.co_ids ?? []);
         for (const coId of coList) {
