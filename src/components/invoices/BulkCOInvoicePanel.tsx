@@ -46,6 +46,36 @@ function shortNum(n: string | null) {
   return m ? `CO-${m[1]}` : n || 'CO';
 }
 
+function extractScopeOfWork(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
+  const m = desc.match(re);
+  if (!m || m.index === undefined) {
+    const trimmed = desc.trim();
+    return trimmed || null;
+  }
+  const start = m.index + m[0].length;
+  const rest = desc.slice(start);
+  const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
+  const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
+  const cleaned = body.trim();
+  return cleaned || null;
+}
+
+// Auto-titles are often just "CO-0007 · Sep 24" — prefer the first scope-of-work line.
+function coLabel(co: BulkBillableCO) {
+  const scopeText = extractScopeOfWork(co.description);
+  const scopeFirstLine = scopeText
+    ? scopeText.split('\n').map(l => l.replace(/^[*\-\s]+/, '').trim()).find(Boolean)
+    : null;
+  const rawTitle = (co.title || '').trim();
+  const looksLikeAutoTitle = /^CO-[A-Z0-9-]+(\s+·\s+.*)?$/i.test(rawTitle) || !rawTitle;
+  const base = (!looksLikeAutoTitle && rawTitle)
+    ? rawTitle
+    : (scopeFirstLine && scopeFirstLine.length > 4 ? scopeFirstLine : (rawTitle || 'Change Order'));
+  return `${base} (${shortNum(co.co_number)})`;
+}
+
 export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel, onDone }: Props) {
   const billable = useMemo(() => cos.filter(c => c.remaining > 0.005), [cos]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(billable.map(c => c.co_id)));
@@ -76,7 +106,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
     });
 
   const lineFor = (co: BulkBillableCO, invoiceId: string, idx: number, ret: number) => {
-    const label = `${(co.title || 'Change Order').trim()} (${shortNum(co.co_number)})`;
+    const label = coLabel(co);
     return {
       invoice_id: invoiceId,
       sov_item_id: null,
