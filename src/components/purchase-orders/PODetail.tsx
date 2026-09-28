@@ -1303,46 +1303,51 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
           }}>
             Cancel
           </Button>
-          <Button variant="outline" onClick={() => savePriceEdits(false)} disabled={actionLoading}>
+          <Button variant="outline" onClick={() => savePriceEdits(false)} disabled={actionLoading} title="Keep your prices private and finish later">
             {actionLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Saving {Object.keys(priceEdits).length} items…
               </>
             ) : (
-              'Save Pricing'
+              'Save draft'
             )}
           </Button>
-          <Button onClick={() => setLockConfirmOpen(true)} disabled={actionLoading}>
+          <Button onClick={() => setLockConfirmOpen(true)} disabled={actionLoading} title="Send your final prices to the buyer for approval">
             <Lock className="h-4 w-4 mr-2" />
-            Lock Pricing
+            Send quote to buyer
           </Button>
         </div>
       )}
+      {editingPrices && (
+        <p className="text-xs text-muted-foreground text-right">
+          <strong>Save draft</strong> keeps your prices private so you can finish later. <strong>Send quote to buyer</strong> finalizes the prices and asks the buyer to approve.
+        </p>
+      )}
 
-      {/* Lock Pricing Confirmation Dialog */}
+      {/* Send Quote Confirmation Dialog */}
       <AlertDialog open={lockConfirmOpen} onOpenChange={setLockConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Lock Pricing?</AlertDialogTitle>
+            <AlertDialogTitle>Send quote to the buyer?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will lock pricing at{' '}
+              Your quote of{' '}
               <span className="font-semibold text-foreground">
                 {formatCurrency(computeEditTotal())}
               </span>{' '}
-              and mark the PO as <strong>Priced</strong>. The buyer will be notified. This action cannot be undone.
+              will be sent to the buyer for approval, and they'll be notified. You won't be able to change these prices unless the buyer sends the order back to you.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={actionLoading}>Keep editing</AlertDialogCancel>
             <AlertDialogAction onClick={() => savePriceEdits(true)} disabled={actionLoading}>
               {actionLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Locking {Object.keys(priceEdits).length} items…
+                  Sending {Object.keys(priceEdits).length} items…
                 </>
               ) : (
-                'Confirm & Lock'
+                'Send quote'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
