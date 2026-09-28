@@ -85,6 +85,13 @@
       "when": 1790284084549,
       "tag": "0011_integrity_audit_seeded_co_totals",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790613978133,
+      "tag": "0012_allow_multiple_org_admins",
+      "breakpoints": true
     }
   ]
 }
