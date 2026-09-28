@@ -92,6 +92,13 @@
       "when": 1790613978133,
       "tag": "0012_allow_multiple_org_admins",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790614144421,
+      "tag": "0013_block_restricted_self_assign",
+      "breakpoints": true
     }
   ]
 }
