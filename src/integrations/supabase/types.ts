@@ -9230,6 +9230,7 @@ export type Database = {
       }
       is_gc_or_tc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
+      is_invited_org_admin: { Args: { _project_id: string }; Returns: boolean }
       is_org_admin: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean

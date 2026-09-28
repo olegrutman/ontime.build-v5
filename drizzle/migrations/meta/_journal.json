@@ -106,6 +106,13 @@
       "when": 1790614468522,
       "tag": "0014_admin_only_team_mgmt_and_accepted_access",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790614551427,
+      "tag": "0015_fix_invited_project_policy_recursion",
+      "breakpoints": true
     }
   ]
 }
