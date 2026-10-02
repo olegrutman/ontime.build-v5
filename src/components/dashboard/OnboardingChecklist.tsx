@@ -60,10 +60,10 @@ export function OnboardingChecklist({
       </SurfaceCardHeader>
       <SurfaceCardBody className="space-y-2">
         {steps.map((step) => (
-          <div key={step.label} className="flex items-center gap-2">
+          <div key={step.label} className="flex min-w-0 flex-col items-stretch gap-1 sm:flex-row sm:items-center sm:gap-2">
             <button
               onClick={() => !step.done && navigate(step.path)}
-              className={`flex items-center gap-3 flex-1 text-left rounded-xl px-3 py-2 text-sm transition-colors ${
+              className={`flex min-w-0 items-center gap-3 flex-1 text-left rounded-xl px-3 py-2 text-sm transition-colors ${
                 step.done
                   ? 'text-muted-foreground'
                   : 'hover:bg-muted cursor-pointer'
@@ -75,10 +75,10 @@ export function OnboardingChecklist({
               ) : (
                 <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
               )}
-              <span className={step.done ? 'line-through' : ''}>{step.label}</span>
+              <span className={`min-w-0 break-words ${step.done ? 'line-through' : ''}`}>{step.label}</span>
             </button>
             {step.isSoleMemberStep && !step.done && (
-              <div className="flex items-center gap-2 pr-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-10 pr-3 sm:pl-0">
                 {onMarkPartOfTeam && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onMarkPartOfTeam(); }}

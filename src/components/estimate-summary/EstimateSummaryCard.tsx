@@ -133,26 +133,30 @@ export function EstimateSummaryCard({ items, totalWithTax, estimateId }: Estimat
                 return (
                   <Collapsible key={pack.name} open={isOpen} onOpenChange={() => togglePack(pack.name)}>
                     <CollapsibleTrigger asChild>
-                      <div className="flex items-center justify-between text-sm rounded-md bg-muted/50 px-3 py-2 cursor-pointer hover:bg-muted/80 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-                          <span className="font-medium">{pack.name}</span>
-                          <Badge variant="outline" className="text-[10px]">{pack.itemCount} items</Badge>
-                          {orderedPackNames.has(pack.name) && (
-                            <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
-                              <ShoppingCart className="h-3 w-3 mr-0.5" />
-                              Ordered
-                            </Badge>
-                          )}
+                      <div className="flex min-w-0 flex-col gap-1.5 text-sm rounded-md bg-muted/50 px-3 py-2 cursor-pointer hover:bg-muted/80 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <ChevronRight className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                          <span className="min-w-0 font-medium break-words">{pack.name}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-right">
-                          <span className="text-muted-foreground text-xs">{pack.percentOfTotal.toFixed(1)}%</span>
-                          <span className="font-medium">${fmt(pack.subtotal)}</span>
+                        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 pl-5 sm:justify-end sm:pl-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant="outline" className="shrink-0 whitespace-nowrap text-[10px]">{pack.itemCount} {pack.itemCount === 1 ? 'item' : 'items'}</Badge>
+                            {orderedPackNames.has(pack.name) && (
+                              <Badge className="shrink-0 whitespace-nowrap text-[10px] bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                                <ShoppingCart className="h-3 w-3 mr-0.5" />
+                                Ordered
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-3 text-right">
+                            <span className="text-muted-foreground text-xs">{pack.percentOfTotal.toFixed(1)}%</span>
+                            <span className="font-medium font-mono tabular-nums whitespace-nowrap">${fmt(pack.subtotal)}</span>
+                          </div>
                         </div>
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="mt-1 ml-2 border rounded-md overflow-hidden">
+                      <div className="mt-1 ml-2 border rounded-md overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
