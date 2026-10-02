@@ -507,12 +507,12 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
         <AlertTitle className="text-amber-800 dark:text-amber-200">SOV Setup Required</AlertTitle>
-        <AlertDescription className="text-amber-700 dark:text-amber-300 flex items-center justify-between">
-          <span>{sovReadiness.message}</span>
+        <AlertDescription className="min-w-0 text-amber-700 dark:text-amber-300 flex flex-col items-start gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
+          <span className="min-w-0 break-words">{sovReadiness.message}</span>
           <Button
             variant="outline"
             size="sm"
-            className="ml-4 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50"
+            className="w-full min-[380px]:ml-2 min-[380px]:w-auto shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50"
             onClick={() => {
               const sovTabButton = document.querySelector('[data-value="sov"]') as HTMLButtonElement;
               if (sovTabButton) sovTabButton.click();
@@ -527,7 +527,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   };
 
   const renderHeader = (showCreateButton: boolean, title?: string) => (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-start justify-between gap-2">
       <div className="min-w-0">
         <h3 className="text-base sm:text-xl font-semibold truncate">{title || 'Invoices'}</h3>
         <p className="text-xs sm:text-sm text-muted-foreground">
@@ -535,7 +535,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         </p>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex max-w-full flex-wrap items-center justify-end gap-2 min-[360px]:shrink-0">
         <div className="hidden sm:block">
           <ViewSwitcher
             value={viewMode}
@@ -545,7 +545,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         </div>
 
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL' | 'NEEDS_ACTION')}>
-          <SelectTrigger className="w-[130px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm">
+          <SelectTrigger className="w-[116px] min-[360px]:w-[130px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm">
             <Filter className="h-3.5 w-3.5 mr-1 sm:mr-2" />
             <SelectValue placeholder="Filter" />
           </SelectTrigger>

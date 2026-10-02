@@ -15,7 +15,7 @@ const SurfaceCard = React.forwardRef<HTMLDivElement, SurfaceCardProps>(
     <div
       ref={ref}
       className={cn(
-        'rounded-2xl bg-card border border-border/60 shadow-sm overflow-hidden',
+        'min-w-0 max-w-full rounded-2xl bg-card border border-border/60 shadow-sm overflow-hidden',
         className,
       )}
       {...props}
@@ -38,15 +38,15 @@ const SurfaceCardHeader = React.forwardRef<HTMLDivElement, SurfaceCardHeaderProp
   ({ title, subtitle, action, className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('px-5 py-4 border-b border-border/40 flex items-start justify-between gap-4', className)}
+      className={cn('min-w-0 px-4 py-4 sm:px-5 border-b border-border/40 flex flex-col items-start gap-2 min-[360px]:flex-row min-[360px]:justify-between sm:gap-4', className)}
       {...props}
     >
       <div className="min-w-0">
-        <h3 className="text-[0.95rem] font-semibold tracking-tight text-foreground leading-tight">{title}</h3>
-        {subtitle && <p className="text-[0.8rem] text-muted-foreground mt-0.5 leading-snug">{subtitle}</p>}
+        <h3 className="break-words text-[0.95rem] font-semibold tracking-tight text-foreground leading-tight">{title}</h3>
+        {subtitle && <p className="break-words text-[0.8rem] text-muted-foreground mt-0.5 leading-snug">{subtitle}</p>}
         {children}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="max-w-full shrink-0">{action}</div>}
     </div>
   ),
 );
@@ -57,7 +57,7 @@ SurfaceCardHeader.displayName = 'SurfaceCardHeader';
  */
 const SurfaceCardBody = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('px-5 py-4', className)} {...props} />
+    <div ref={ref} className={cn('min-w-0 px-4 py-4 sm:px-5', className)} {...props} />
   ),
 );
 SurfaceCardBody.displayName = 'SurfaceCardBody';

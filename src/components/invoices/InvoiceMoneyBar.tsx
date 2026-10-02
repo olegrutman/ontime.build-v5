@@ -71,7 +71,7 @@ function Tile({
   return (
     <div
       className={cn(
-        'rounded-2xl p-3.5 sm:p-4 border shadow-sm min-w-0',
+        'rounded-2xl p-3 sm:p-4 border shadow-sm min-w-0 overflow-hidden',
         isDark
           ? 'bg-[hsl(var(--navy))] border-transparent'
           : 'bg-card border-border',
@@ -90,7 +90,7 @@ function Tile({
       </p>
       <p
         className={cn(
-          'font-mono tabular-nums font-semibold leading-tight mt-1 text-lg sm:text-2xl',
+          'font-mono tabular-nums font-semibold leading-tight mt-1 text-base min-[360px]:text-lg sm:text-2xl break-words [overflow-wrap:anywhere]',
           isDark ? 'text-white' : tone === 'alert' ? 'text-secondary' : tone === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground',
         )}
       >
@@ -118,7 +118,7 @@ export function InvoiceMoneyBar({ invoices, isApprover, netDays = 30 }: InvoiceM
               {isApprover ? 'Payment progress' : 'Collection progress'}
             </p>
             <div className="mt-1 flex flex-wrap items-baseline gap-2">
-              <span className="font-mono tabular-nums text-3xl sm:text-4xl font-semibold text-white">
+              <span className="max-w-full font-mono tabular-nums text-[1.7rem] min-[360px]:text-3xl sm:text-4xl font-semibold text-white break-words [overflow-wrap:anywhere]">
                 {formatCurrency(m.totalPaid)}
               </span>
               <span className="text-xs sm:text-sm text-white/60">
@@ -139,11 +139,11 @@ export function InvoiceMoneyBar({ invoices, isApprover, netDays = 30 }: InvoiceM
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 md:text-right">
             <div className="min-w-0 col-span-2 sm:col-span-1">
               <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/50">Outstanding</p>
-              <p className="font-mono tabular-nums text-base sm:text-xl text-white">{formatCurrency(m.outstanding)}</p>
+              <p className="font-mono tabular-nums text-sm min-[360px]:text-base sm:text-xl text-white break-words [overflow-wrap:anywhere]">{formatCurrency(m.outstanding)}</p>
             </div>
             <div className="min-w-0">
               <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-secondary">Overdue</p>
-              <p className="font-mono tabular-nums text-base sm:text-xl text-secondary">{formatCurrency(m.overdue)}</p>
+              <p className="font-mono tabular-nums text-sm min-[360px]:text-base sm:text-xl text-secondary break-words [overflow-wrap:anywhere]">{formatCurrency(m.overdue)}</p>
             </div>
             <div className="min-w-0">
               <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/50">Avg. payment</p>
@@ -184,8 +184,8 @@ export function InvoiceMoneyBar({ invoices, isApprover, netDays = 30 }: InvoiceM
       </div>
 
       {m.needsActionCount > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-secondary/30 bg-secondary/10 px-4 py-2.5">
-          <p className="text-xs sm:text-sm font-medium text-foreground">
+        <div className="flex flex-col items-start gap-1 rounded-2xl border border-secondary/30 bg-secondary/10 px-4 py-2.5 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:gap-3">
+          <p className="min-w-0 break-words text-xs sm:text-sm font-medium text-foreground">
             <span className="font-mono tabular-nums font-semibold">{m.needsActionCount}</span>{' '}
             invoice{m.needsActionCount === 1 ? '' : 's'} {isApprover ? 'awaiting your approval' : 'still in draft'}
           </p>

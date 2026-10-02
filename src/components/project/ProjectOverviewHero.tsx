@@ -21,7 +21,7 @@ const HEALTH_LABELS: Record<string, string> = {
 };
 
 const PILL =
-  'shrink-0 whitespace-nowrap px-2.5 py-1 rounded-md text-[0.68rem] font-bold uppercase tracking-wider border';
+  'max-w-full px-2.5 py-1 rounded-md text-[0.68rem] font-bold uppercase tracking-wider border whitespace-normal break-words text-center';
 
 
 export function ProjectOverviewHero({
@@ -62,13 +62,13 @@ export function ProjectOverviewHero({
       </div>
 
       {/* Identity */}
-      <h1 className="font-heading text-3xl sm:text-4xl font-bold uppercase tracking-tight leading-none break-words">
+      <h1 className="max-w-full font-heading text-[1.65rem] min-[360px]:text-3xl sm:text-4xl font-bold uppercase tracking-normal leading-[1.02] break-words [overflow-wrap:anywhere]">
         {projectName}
       </h1>
       {address && <p className="text-[0.8rem] text-slate-400 mt-1 break-words">{address}</p>}
 
-      {/* Single meta row — scrolls horizontally instead of wrapping */}
-      <div className="flex items-center gap-2 mt-3.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      {/* Metadata wraps on phones so no label is pushed outside the project card. */}
+      <div className="flex flex-wrap items-center gap-2 mt-3.5">
         <span
           className={cn(
             PILL,

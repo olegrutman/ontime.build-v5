@@ -49,15 +49,15 @@ export function DashboardMaterialsHealth({ estimate, ordered, forecast }: Dashbo
         </div>
 
         {/* Mini stats */}
-        <div className="grid grid-cols-3 gap-2 text-sm">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-2 text-sm">
           {[
             { label: 'Estimate', value: estimate, highlight: false },
             { label: 'Ordered', value: ordered, highlight: false },
             { label: 'Forecast', value: forecast, highlight: isOver },
           ].map(({ label, value, highlight }) => (
-            <div key={label} className="rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-3">
+            <div key={label} className="min-w-0 rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-3">
               <p className="text-muted-foreground text-[0.7rem]">{label}</p>
-              <p className={cn('font-semibold mt-1 text-[0.85rem]', highlight && 'text-amber-700 dark:text-amber-400')}>
+              <p className={cn('break-words [overflow-wrap:anywhere] font-semibold mt-1 text-[0.85rem]', highlight && 'text-amber-700 dark:text-amber-400')}>
                 {formatCurrency(value)}
               </p>
             </div>

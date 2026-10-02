@@ -98,9 +98,9 @@ export function InvoiceCard({
 
       <div className="pl-4 pr-3.5 py-3.5">
         <div className="mb-3">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col items-start gap-2 min-[380px]:flex-row min-[380px]:justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <h4 className="font-mono font-medium text-sm truncate">{invoice.invoice_number}</h4>
+              <h4 className="min-w-0 font-mono font-medium text-sm break-all">{invoice.invoice_number}</h4>
               {(invoice.co_ids?.length ?? 0) > 0 && (
                 <Badge variant="outline" className="text-[0.6rem] uppercase tracking-wider shrink-0">
                   {invoice.co_ids!.length > 1 ? `${invoice.co_ids!.length} COs` : 'Change order'}
@@ -108,7 +108,7 @@ export function InvoiceCard({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex max-w-full flex-wrap items-center gap-2">
               <div className="hidden sm:block">
                 <HoverActions actions={hoverActions} />
               </div>
@@ -127,7 +127,7 @@ export function InvoiceCard({
           <InvoiceMilestoneTrail invoice={invoice} className="mt-2" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3 text-sm">
           <div className="flex items-center gap-2 min-w-0">
             <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0">
@@ -138,11 +138,11 @@ export function InvoiceCard({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <div>
+          <div className="flex min-w-0 items-center gap-2">
+            <DollarSign className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Amount Due</p>
-              <p className="font-mono font-bold text-sm">{formatCurrency(invoice.total_amount)}</p>
+              <p className="font-mono font-bold text-sm break-words [overflow-wrap:anywhere]">{formatCurrency(invoice.total_amount)}</p>
             </div>
           </div>
         </div>

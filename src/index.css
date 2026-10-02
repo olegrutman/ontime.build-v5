@@ -696,6 +696,13 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Last-resort safety for user-entered names, IDs, and financial labels.
+     Structural wrapping remains component-owned; this prevents unbroken data
+     from escaping a correctly-sized container. */
+  p, h1, h2, h3, h4, h5, h6, dd, dt, li, label {
+    overflow-wrap: anywhere;
+  }
+
   .bg-card {
     border-radius: 12px;
   }
