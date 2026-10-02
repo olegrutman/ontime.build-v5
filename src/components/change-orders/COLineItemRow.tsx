@@ -528,15 +528,15 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <div className="flex w-full sm:w-auto items-stretch rounded-lg border border-border bg-card overflow-hidden">
                   {/* Mode */}
                   <div className="flex shrink-0 flex-col justify-center px-2 border-r border-border bg-muted/20">
-                    <span className="text-[9px] font-bold uppercase tracking-tight leading-tight whitespace-nowrap" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
+                    <span className="break-words text-center text-[9px] font-bold uppercase tracking-tight leading-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
                     {entryCount > 0 && (
-                      <span className="text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70 whitespace-nowrap">
+                      <span className="break-words text-center text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">
                         {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
                         {isHourly && totalHours > 0 ? ` · ${fmtHours(totalHours)}h` : ''}
                       </span>
                     )}
                     {crewSummary && (
-                      <span className="font-mono text-[9px] leading-tight text-muted-foreground/80 whitespace-nowrap" title="crew × days × hrs/day">
+                      <span className="break-words text-center font-mono text-[9px] leading-tight text-muted-foreground/80" title="crew × days × hrs/day">
                         {crewSummary}
                       </span>
                     )}

@@ -16,7 +16,7 @@ interface OrganizationsTabProps {
 
 export function OrganizationsTab({ groupedPartners }: OrganizationsTabProps) {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       {ORG_TYPE_ORDER.map((type) => {
         const typePartners = groupedPartners[type];
         if (!typePartners || typePartners.length === 0) return null;
@@ -26,7 +26,7 @@ export function OrganizationsTab({ groupedPartners }: OrganizationsTabProps) {
 
         return (
           <Card key={type} data-sasha-card="Partner Organization">
-            <CardHeader className="pb-3">
+            <CardHeader className="px-4 pb-3 sm:px-6">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Icon className={`h-4 w-4 ${config.color}`} />
                 {config.label}
@@ -35,32 +35,32 @@ export function OrganizationsTab({ groupedPartners }: OrganizationsTabProps) {
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-4 pt-0 sm:px-6">
               <div className="space-y-2">
                 {typePartners.map((partner) => (
                   <div
                     key={partner.org_id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="flex min-w-0 flex-col items-start gap-2 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted shrink-0">
                         <Icon className={`h-4 w-4 ${config.color}`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm truncate">{partner.name}</p>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <p className="min-w-0 break-words text-sm font-medium">{partner.name}</p>
                           <Badge variant="outline" className="text-xs font-mono shrink-0">
                             {partner.org_code}
                           </Badge>
                         </div>
                         {partner.most_recent_project && (
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="line-clamp-2 text-xs text-muted-foreground break-words">
                             Last: {partner.most_recent_project}
                           </p>
                         )}
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground whitespace-nowrap ml-3">
+                    <p className="ml-12 text-xs text-muted-foreground min-[380px]:ml-3 min-[380px]:shrink-0">
                       {partner.project_count} project{partner.project_count !== 1 ? 's' : ''}
                     </p>
                   </div>

@@ -99,10 +99,10 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
             const isResending = resending === member.id;
 
             return (
-              <div key={member.id} className="group flex items-center gap-2 py-1">
+              <div key={member.id} className="group flex min-w-0 flex-wrap items-center gap-2 py-1 min-[380px]:flex-nowrap">
                 <span className={cn('h-2 w-2 rounded-full shrink-0', roleDotColors[member.role] || 'bg-muted-foreground')} />
-                <span className="text-[0.6rem] font-medium text-muted-foreground uppercase truncate max-w-[110px]">{label}</span>
-                <span className={cn('text-[0.85rem] font-medium truncate flex-1', isInvited && 'text-muted-foreground')}>
+                <span className="max-w-full break-words text-[0.6rem] font-medium uppercase text-muted-foreground min-[380px]:max-w-[110px] min-[380px]:truncate">{label}</span>
+                <span className={cn('min-w-0 flex-1 break-words text-[0.85rem] font-medium min-[380px]:truncate', isInvited && 'text-muted-foreground')}>
                   {member.invited_org_name || 'Unknown'}
                 </span>
                 {isInvited && (
