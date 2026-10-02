@@ -39,7 +39,10 @@ export function CompactHealthHero({
         display: 'flex',
         alignItems: 'center',
         gap: 18,
+        rowGap: 8,
         flexWrap: 'wrap',
+        minWidth: 0,
+        maxWidth: '100%',
         ...fontLabel,
       }}
     >
@@ -57,7 +60,7 @@ export function CompactHealthHero({
         {s.label}
       </span>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
         <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, fontWeight: 700 }}>
           {label}
         </span>

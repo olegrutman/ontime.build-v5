@@ -62,7 +62,7 @@ export function AppShell({
       {/* Sidebar — desktop only */}
       <DashboardSidebar />
 
-      <div className="flex flex-col flex-1 lg:ml-[200px] xl:ml-[220px]">
+      <div className="flex min-w-0 flex-col flex-1 lg:ml-[200px] xl:ml-[220px]">
         <ContextBar
           showNewButton={showNewButton}
           onNewClick={onNewClick}
