@@ -43,9 +43,9 @@ export default function PartnerDirectory() {
 
   return (
     <AppLayout title="Partner Directory" subtitle="Everyone you've worked with on projects">
-      <div className="space-y-4 sm:space-y-6">
+      <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
         {/* Search */}
-        <div className="relative max-w-md">
+        <div className="relative w-full max-w-md min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Filter by name, email, org code, or project..."
@@ -56,13 +56,13 @@ export default function PartnerDirectory() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'organizations' | 'people')}>
-          <TabsList className="bg-muted/50 p-1 rounded-full">
-            <TabsTrigger value="organizations" className="gap-1.5 rounded-full text-xs px-4">
+        <Tabs className="min-w-0 max-w-full" value={activeTab} onValueChange={(v) => setActiveTab(v as 'organizations' | 'people')}>
+          <TabsList className="grid w-full grid-cols-2 rounded-full bg-muted/50 p-1 min-[360px]:inline-flex min-[360px]:w-auto">
+            <TabsTrigger value="organizations" className="min-w-0 gap-1.5 rounded-full px-2 text-xs min-[360px]:px-4">
               <Building2 className="h-3.5 w-3.5" />
               Organizations
             </TabsTrigger>
-            <TabsTrigger value="people" className="gap-1.5 rounded-full text-xs px-4">
+            <TabsTrigger value="people" className="min-w-0 gap-1.5 rounded-full px-2 text-xs min-[360px]:px-4">
               <Users className="h-3.5 w-3.5" />
               People
             </TabsTrigger>

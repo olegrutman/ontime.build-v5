@@ -242,7 +242,7 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
       <div className="space-y-3 pt-3 pb-1">
         <Skeleton className="h-10 w-full rounded-lg" />
         <Skeleton className="h-10 w-3/4 rounded-lg" />
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-2">
           <Skeleton className="h-20 rounded-xl" />
           <Skeleton className="h-20 rounded-xl" />
           <Skeleton className="h-20 rounded-xl" />
@@ -266,8 +266,8 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
     kpiTiles.length === 1
       ? 'grid-cols-1'
       : kpiTiles.length === 2
-      ? 'grid-cols-2'
-      : 'grid-cols-3';
+      ? 'grid-cols-1 min-[360px]:grid-cols-2'
+      : 'grid-cols-1 min-[360px]:grid-cols-3';
 
   return (
     <div className="space-y-3 pt-3 pb-1">

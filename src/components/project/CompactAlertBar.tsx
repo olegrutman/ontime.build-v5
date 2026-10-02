@@ -83,7 +83,7 @@ export function CompactAlertBar({ projectId, onNavigate, financials, projectStat
     : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40';
 
   return (
-    <div className={cn('rounded-xl border px-3 py-2 flex items-center gap-2 flex-wrap', barBg)}>
+    <div className={cn('min-w-0 rounded-xl border px-3 py-2 flex items-start gap-2 flex-wrap', barBg)}>
       <AlertTriangle className={cn('h-3.5 w-3.5 shrink-0', hasRed ? 'text-red-500' : 'text-amber-500')} />
       {chips.map((chip, i) => {
         const chipColor = chip.variant === 'red'
@@ -95,7 +95,7 @@ export function CompactAlertBar({ projectId, onNavigate, financials, projectStat
             key={i}
             onClick={chip.tab ? () => onNavigate(chip.tab!) : undefined}
             className={cn(
-              'rounded-full px-2.5 py-0.5 text-[0.72rem] font-medium whitespace-nowrap',
+              'max-w-full rounded-full px-2.5 py-0.5 text-left text-[0.72rem] font-medium whitespace-normal break-words',
               chipColor,
               chip.tab && 'cursor-pointer hover:opacity-80 transition-opacity'
             )}

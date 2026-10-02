@@ -90,7 +90,7 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, childr
         boxShadow: open ? `0 0 0 3px rgba(245,166,35,.1)` : '0 1px 3px rgba(0,0,0,.04)',
         animationDelay: `${idx * 0.04}s`, ...fontLabel,
       }}
-      className="animate-fade-in"
+      className="min-w-0 max-w-full animate-fade-in"
     >
       <div style={{ height: 3, background: accent }} />
       <div className="px-3 sm:px-4 pt-3 sm:pt-3.5">
@@ -124,7 +124,7 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, childr
         <ChevronRight size={13} style={{ transition: 'transform 0.3s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }} />
       </div>
       <div onClick={(e) => e.stopPropagation()} style={{ maxHeight: open ? 1600 : 0, overflow: open ? 'auto' : 'hidden', transition: 'max-height 0.44s cubic-bezier(.22,1,.36,1), opacity 0.3s', opacity: open ? 1 : 0 }}>
-        <div className="overflow-x-auto">
+        <div className="max-w-full overflow-x-auto">
           {children}
         </div>
       </div>

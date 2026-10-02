@@ -91,9 +91,9 @@ export function InvoiceRow({
 
       <div className="flex-1 min-w-0 px-3 py-2.5">
         {/* Line 1: number + amount */}
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-sm font-medium truncate">{invoice.invoice_number}</span>
+        <div className="flex flex-col items-start gap-1.5 min-w-0 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
+          <div className="flex max-w-full flex-wrap items-center gap-2 min-w-0">
+            <span className="min-w-0 font-mono text-sm font-medium break-all">{invoice.invoice_number}</span>
             {(invoice.co_ids?.length ?? 0) > 0 && (
               <span className="shrink-0 px-1.5 py-0.5 rounded border border-border text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {invoice.co_ids!.length > 1 ? `${invoice.co_ids!.length} COs` : 'CO'}
@@ -101,7 +101,7 @@ export function InvoiceRow({
             )}
 
             <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide"
+              className="inline-flex max-w-full items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide whitespace-normal break-words"
               style={{ color: accent, backgroundColor: `${accent}1a` }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
@@ -111,13 +111,13 @@ export function InvoiceRow({
               <Badge className={cn('font-mono text-[10px] px-1.5 py-0', ageColors)}>{days}d</Badge>
             )}
           </div>
-          <span className="font-mono text-sm font-bold shrink-0 tabular-nums">
+          <span className="max-w-full font-mono text-sm font-bold tabular-nums break-words [overflow-wrap:anywhere]">
             {formatCurrency(invoice.total_amount)}
           </span>
         </div>
 
         {/* Line 2: period + latest milestone */}
-        <div className="mt-1 flex items-center justify-between gap-2 min-w-0">
+        <div className="mt-1 flex flex-col items-start gap-2 min-w-0 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground truncate">
               {format(new Date(invoice.billing_period_start), 'MMM d')} – {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}

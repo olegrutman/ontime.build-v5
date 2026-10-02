@@ -95,8 +95,8 @@ export function CombinedSOVCard({ projectId, currentCoId }: CombinedSOVCardProps
 
   return (
     <Card className="p-4 rounded-2xl space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Layers className="h-4 w-4 text-muted-foreground" />
           <h3 className="font-heading text-sm font-extrabold uppercase tracking-wide">
             Combined CO SOV
@@ -109,24 +109,24 @@ export function CombinedSOVCard({ projectId, currentCoId }: CombinedSOVCardProps
       </div>
 
       {/* Top totals */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="p-2.5 rounded-lg border bg-background">
+      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
+        <div className="min-w-0 p-2.5 rounded-lg border bg-background">
           <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold">
             Scheduled
           </div>
-          <div className="font-mono text-base font-bold">{fmt(totalScheduled)}</div>
+          <div className="font-mono text-base font-bold break-words [overflow-wrap:anywhere]">{fmt(totalScheduled)}</div>
         </div>
-        <div className="p-2.5 rounded-lg border bg-background">
+        <div className="min-w-0 p-2.5 rounded-lg border bg-background">
           <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold">
             Billed
           </div>
-          <div className="font-mono text-base font-bold">{fmt(totalBilled)}</div>
+          <div className="font-mono text-base font-bold break-words [overflow-wrap:anywhere]">{fmt(totalBilled)}</div>
         </div>
-        <div className="p-2.5 rounded-lg border bg-amber-50/40">
+        <div className="min-w-0 p-2.5 rounded-lg border bg-amber-50/40">
           <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold">
             Remaining
           </div>
-          <div className="font-mono text-base font-bold">{fmt(totalRemaining)}</div>
+          <div className="font-mono text-base font-bold break-words [overflow-wrap:anywhere]">{fmt(totalRemaining)}</div>
         </div>
       </div>
 

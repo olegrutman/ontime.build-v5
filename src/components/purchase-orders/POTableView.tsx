@@ -106,8 +106,8 @@ export function POTableView({
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <Table>
+    <div className="max-w-full overflow-x-auto rounded-lg border">
+      <Table className="min-w-[760px]">
         <TableHeader>
           <TableRow className="bg-muted/30">
             <TableHead><SortHeader label="PO #" sortKeyVal="po_number" /></TableHead>

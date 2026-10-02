@@ -27,7 +27,7 @@ interface PeopleTabProps {
 
 export function PeopleTab({ groupedPeople }: PeopleTabProps) {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       {ORG_TYPE_ORDER.map((type) => {
         const typePeople = groupedPeople[type];
         if (!typePeople || typePeople.length === 0) return null;
@@ -36,7 +36,7 @@ export function PeopleTab({ groupedPeople }: PeopleTabProps) {
 
         return (
           <Card key={type} data-sasha-card="Partner Contact">
-            <CardHeader className="pb-3">
+            <CardHeader className="px-4 pb-3 sm:px-6">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <config.icon className="h-4 w-4 text-muted-foreground" />
                 {config.label}
@@ -45,12 +45,12 @@ export function PeopleTab({ groupedPeople }: PeopleTabProps) {
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="px-4 pt-0 sm:px-6">
               <div className="space-y-2">
                 {typePeople.map((person) => (
                   <div
                     key={person.key}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="flex min-w-0 flex-col items-start gap-2 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <Avatar className="h-9 w-9 shrink-0">
@@ -60,10 +60,10 @@ export function PeopleTab({ groupedPeople }: PeopleTabProps) {
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium text-sm truncate">{person.name}</p>
+                          <p className="min-w-0 break-words text-sm font-medium">{person.name}</p>
                           <RoleBadge orgType={type as OrgType} size="sm" />
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">{person.email}</p>
+                        <p className="break-all text-xs text-muted-foreground">{person.email}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <p className="text-xs text-muted-foreground truncate">{person.org_name}</p>
                           {person.most_recent_project && (
@@ -77,7 +77,7 @@ export function PeopleTab({ groupedPeople }: PeopleTabProps) {
                         </div>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground whitespace-nowrap ml-3">
+                      <p className="ml-12 text-xs text-muted-foreground min-[380px]:ml-3 min-[380px]:shrink-0">
                       {person.project_count} project{person.project_count !== 1 ? 's' : ''}
                     </p>
                   </div>

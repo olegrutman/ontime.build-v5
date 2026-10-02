@@ -18,11 +18,11 @@ export function SupplierDeliverySchedule({ days, rows }: Props) {
       </div>
 
       {/* 5-day strip */}
-      <div className="grid grid-cols-5 gap-1 px-3 py-3">
+      <div className="grid grid-cols-5 gap-1 px-2 min-[360px]:px-3 py-3">
         {days.map(day => (
           <div
             key={day.date.toISOString()}
-            className={`text-center rounded-md py-2 px-1 ${
+            className={`min-w-0 text-center rounded-md py-2 px-0.5 min-[360px]:px-1 ${
               day.hasDeliveries
                 ? 'bg-primary/10 border border-primary/30'
                 : 'bg-accent border border-transparent'
@@ -33,7 +33,7 @@ export function SupplierDeliverySchedule({ days, rows }: Props) {
             </div>
             <div className="text-[0.9rem] font-bold text-foreground">{format(day.date, 'd')}</div>
             {day.hasDeliveries && (
-              <div className="text-[0.6rem] font-semibold text-primary mt-0.5">
+              <div className="break-words text-[0.55rem] min-[360px]:text-[0.6rem] font-semibold text-primary mt-0.5">
                 {day.count} drop{day.count > 1 ? 's' : ''}
               </div>
             )}
@@ -51,21 +51,21 @@ export function SupplierDeliverySchedule({ days, rows }: Props) {
           rows.slice(0, 5).map(row => (
             <div
               key={row.id}
-              className={`flex items-center justify-between rounded-md border px-3 py-2 ${
+              className={`flex flex-col items-start gap-1 rounded-md border px-3 py-2 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between ${
                 row.confirmed
                   ? 'border-border bg-accent/50'
                   : 'border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-900/10'
               }`}
             >
               <div className="min-w-0 flex-1">
-                <div className="text-[0.78rem] font-semibold text-foreground truncate">
+                <div className="text-[0.78rem] font-semibold text-foreground break-words">
                   {row.poNumber} · {row.projectName}
                 </div>
                 <div className="text-[0.68rem] text-muted-foreground">
                   {format(new Date(row.deliveryDate), 'EEE, MMM d')}
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex max-w-full items-center gap-2 flex-shrink-0">
                 {row.poTotal != null && (
                   <span className="text-[0.72rem] font-semibold text-foreground">
                     {formatCurrency(row.poTotal)}

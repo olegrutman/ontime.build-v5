@@ -101,15 +101,15 @@ export function MaterialsBudgetStatusCard({ projectId, supplierOrgId, financials
 
 function Row({ label, value, sub, over }: { label: string; value: string; sub?: string; over?: boolean }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1.5">
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-1">
+      <span className="min-w-0 break-words text-sm text-muted-foreground">{label}</span>
+      <div className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
         {sub && (
           <span className={cn("text-xs font-medium w-14 text-right", over ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
             {sub}
           </span>
         )}
-        <span className="text-sm font-semibold tabular-nums text-right min-w-[90px]">{value}</span>
+        <span className="break-words text-sm font-semibold tabular-nums text-right [overflow-wrap:anywhere]">{value}</span>
       </div>
     </div>
   );
