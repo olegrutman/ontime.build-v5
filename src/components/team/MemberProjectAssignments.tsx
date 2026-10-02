@@ -64,7 +64,7 @@ export function MemberProjectAssignments({
           {assignedIds.size} of {projects.length} projects
         </p>
         {teammates.length > 0 && (
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:grid sm:w-auto sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <Select value={copyFrom} onValueChange={setCopyFrom}>
               <SelectTrigger className="h-10 w-full min-w-0 text-xs sm:h-7 sm:w-[150px]">
                 <SelectValue placeholder="Copy from…" />
@@ -80,7 +80,7 @@ export function MemberProjectAssignments({
             <Button
               size="sm"
               variant="outline"
-              className="h-10 px-4 text-xs sm:h-7"
+              className="h-10 w-full px-4 text-xs sm:h-7 sm:w-auto"
               disabled={!copyFrom || saving === `copy:${userId}`}
               onClick={() => {
                 onCopyFrom(copyFrom);
