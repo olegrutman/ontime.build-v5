@@ -100,16 +100,17 @@ export function MemberProjectAssignments({
           return (
             <label
               key={project.id}
-              className="flex min-h-12 items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-muted/50"
+              className="flex min-h-12 min-w-0 items-start gap-2.5 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-muted/50"
             >
               <Checkbox
+                className="mt-0.5 !h-5 !w-5 aspect-square self-start"
                 checked={checked}
                 disabled={saving === key}
                 onCheckedChange={(v) => onToggle(project.id, v === true)}
               />
-              <span className="text-sm text-foreground truncate flex-1">{project.name}</span>
+              <span className="min-w-0 flex-1 break-words text-sm leading-snug text-foreground">{project.name}</span>
               {project.status === 'completed' && (
-                <Badge variant="secondary" className="text-[0.65rem] shrink-0">
+                <Badge variant="secondary" className="text-[0.65rem]">
                   Completed
                 </Badge>
               )}

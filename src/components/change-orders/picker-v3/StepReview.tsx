@@ -32,7 +32,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
       </div>
 
       {/* Items table */}
-      <div className="flex items-center justify-between mb-3.5">
+      <div className="flex flex-col items-start gap-2 mb-3.5 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
         <p className="font-heading text-[1.1rem] font-extrabold uppercase tracking-[0.5px] text-foreground">
           Items in this {state.items[0]?.docType ?? 'CO'}
         </p>
@@ -47,7 +47,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
 
       <div className="bg-background border rounded-xl overflow-hidden mb-3.5 shadow-xs">
         {/* Header */}
-        <div className="grid grid-cols-[36px_1fr_120px_36px] gap-3 px-3.5 py-2.5 bg-muted/50 text-[0.6rem] font-bold text-muted-foreground uppercase tracking-[1px]">
+        <div className="hidden grid-cols-[36px_1fr_120px_36px] gap-3 bg-muted/50 px-3.5 py-2.5 text-[0.6rem] font-bold uppercase tracking-[1px] text-muted-foreground sm:grid">
           <span>#</span>
           <span>Location · Scope</span>
           <span className="text-right">Type</span>
@@ -67,19 +67,19 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
               key={i}
               type="button"
               onClick={() => onSwitchItem(i)}
-              className="grid grid-cols-[36px_1fr_120px_36px] gap-3 px-3.5 py-3 items-center border-b hover:bg-muted/30 transition-colors text-left"
+              className="grid w-full min-w-0 grid-cols-[32px_minmax(0,1fr)_28px] items-start gap-2 border-b px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:grid-cols-[36px_1fr_120px_36px] sm:items-center sm:gap-3 sm:px-3.5"
             >
               <span className="font-mono text-[0.75rem] font-bold text-foreground bg-amber-50 py-1 rounded-md text-center">
                 {String(i + 1).padStart(2, '0')}
               </span>
-              <div>
-                <p className="text-[0.82rem] font-semibold text-foreground">{loc}</p>
-                <p className="text-[0.7rem] text-muted-foreground mt-0.5">{item.causeName ?? 'No cause'} · {wts || 'No work types'}{more}</p>
+              <div className="min-w-0">
+                <p className="break-words text-[0.82rem] font-semibold text-foreground">{loc}</p>
+                <p className="mt-0.5 break-words text-[0.7rem] text-muted-foreground">{item.causeName ?? 'No cause'} · {wts || 'No work types'}{more}</p>
                 {item.narrative && (
                   <p className="text-[0.62rem] text-muted-foreground/70 mt-0.5 line-clamp-1 italic">"{item.narrative.substring(0, 80)}"</p>
                 )}
               </div>
-              <div className="flex items-center justify-end gap-1.5">
+              <div className="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center gap-1.5 sm:col-start-auto sm:row-start-auto sm:justify-end">
                 <span className={cn(
                   'text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full uppercase',
                   item.docType === 'CO' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700',
@@ -90,7 +90,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
                   {item.pricingName}
                 </span>
               </div>
-              <div className="flex justify-end">
+              <div className="col-start-3 row-span-2 row-start-1 flex justify-end sm:col-start-auto sm:row-span-1 sm:row-start-auto">
                 {state.items.length > 1 && (
                   <span
                     role="button"
@@ -106,15 +106,15 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
         })}
 
         {/* Summary footer */}
-        <div className="grid grid-cols-[36px_1fr_120px_36px] gap-3 px-3.5 py-3.5 bg-[hsl(var(--navy))] items-center">
-          <span />
-          <span className="font-heading text-sm font-extrabold uppercase tracking-[0.5px] text-white/55">
+        <div className="flex min-w-0 flex-col gap-1 bg-[hsl(var(--navy))] px-3.5 py-3.5 sm:grid sm:grid-cols-[36px_1fr_120px_36px] sm:items-center sm:gap-3">
+          <span className="hidden sm:block" />
+          <span className="break-words font-heading text-sm font-extrabold uppercase tracking-[0.5px] text-white/55">
             {state.items.length} item{state.items.length !== 1 ? 's' : ''} · Pricing deferred
           </span>
-          <span className="text-[0.7rem] font-semibold text-amber-400 text-right">
+          <span className="break-words text-[0.7rem] font-semibold text-amber-400 sm:text-right">
             {state.items[0]?.pricingName}
           </span>
-          <span />
+          <span className="hidden sm:block" />
         </div>
       </div>
 

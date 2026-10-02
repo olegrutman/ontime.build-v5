@@ -136,8 +136,8 @@ export function InvoiceMoneyBar({ invoices, isApprover, netDays = 30 }: InvoiceM
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 md:text-right">
-            <div className="min-w-0">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 md:text-right">
+            <div className="min-w-0 col-span-2 sm:col-span-1">
               <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/50">Outstanding</p>
               <p className="font-mono tabular-nums text-base sm:text-xl text-white">{formatCurrency(m.outstanding)}</p>
             </div>
@@ -147,7 +147,7 @@ export function InvoiceMoneyBar({ invoices, isApprover, netDays = 30 }: InvoiceM
             </div>
             <div className="min-w-0">
               <p className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/50">Avg. payment</p>
-              <p className="font-mono tabular-nums text-base sm:text-xl text-white">
+              <p className="break-words font-mono tabular-nums text-base sm:text-xl text-white">
                 {m.avgPaymentDays !== null ? `${m.avgPaymentDays}d` : '—'}
               </p>
             </div>

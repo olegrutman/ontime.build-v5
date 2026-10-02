@@ -700,8 +700,8 @@
     border-radius: 12px;
   }
 
-  /* Ensure all tappable elements have 44px min */
-  button, a[role="button"], [role="menuitem"], .touch-target {
+  /* Keep touch targets large without stretching compact controls out of shape. */
+  button:not([role="checkbox"]):not([role="switch"]), a[role="button"], [role="menuitem"], .touch-target {
     min-height: 44px;
   }
 

@@ -60,9 +60,9 @@ export function ProjectAssignmentMatrix({
             const assigned = assignmentsByUser.get(m.userId) ?? new Set<string>();
             return (
               <div key={m.userId} className="rounded-lg border border-border px-3 py-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-sm font-medium text-foreground">{m.name}</span>
-                  {!m.restricted && <Badge variant="secondary" className="shrink-0 text-[0.65rem]">All projects</Badge>}
+                <div className="mb-2 flex min-w-0 flex-col items-start gap-1.5 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
+                  <span className="min-w-0 break-words text-sm font-medium text-foreground">{m.name}</span>
+                  {!m.restricted && <Badge variant="secondary" className="text-[0.65rem]">All projects</Badge>}
                 </div>
                 {m.restricted ? (
                   <div className="space-y-1.5">
@@ -73,9 +73,9 @@ export function ProjectAssignmentMatrix({
                           {saving === key ? (
                             <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
                           ) : (
-                            <Checkbox checked={assigned.has(p.id)} onCheckedChange={(v) => onToggle(p.id, m.userId, v === true)} />
+                            <Checkbox className="!h-5 !w-5 aspect-square self-start" checked={assigned.has(p.id)} onCheckedChange={(v) => onToggle(p.id, m.userId, v === true)} />
                           )}
-                          <span className="min-w-0 flex-1 text-sm text-foreground">{p.name}</span>
+                           <span className="min-w-0 flex-1 break-words text-sm leading-snug text-foreground">{p.name}</span>
                         </label>
                       );
                     })}
