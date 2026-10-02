@@ -109,8 +109,8 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
       </div>
 
       {/* Status Pipeline */}
-      <div className="border-t border-border bg-accent/50 px-3 sm:px-5 py-3.5 overflow-x-auto">
-        <div className="flex items-center justify-between min-w-[300px]">
+      <div className="border-t border-border bg-accent/50 px-3 sm:px-5 py-3.5">
+        <div className="flex min-w-0 items-start justify-between gap-1">
 
           {PIPELINE_STEPS.map((step, i) => {
             const isCompleted = i < activeStep;
@@ -118,8 +118,8 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
             const isFuture = i > activeStep;
 
             return (
-              <div key={step.key} className="flex items-center flex-1 last:flex-initial">
-                <div className="flex flex-col items-center gap-1">
+              <div key={step.key} className="flex min-w-0 items-center flex-1 last:flex-initial">
+                <div className="flex min-w-0 flex-col items-center gap-1">
                   <div className={cn(
                     'w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all',
                     isCompleted && 'bg-[hsl(var(--navy))] text-white',
@@ -129,7 +129,7 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
                     {isCompleted ? <Check className="h-3.5 w-3.5" /> : i + 1}
                   </div>
                   <span className={cn(
-                    'text-[10px] font-medium whitespace-nowrap',
+                    'max-w-full text-center text-[9px] min-[360px]:text-[10px] font-medium leading-tight whitespace-normal break-words',
                     isCompleted && 'text-foreground',
                     isActive && 'text-[hsl(var(--amber-d))] font-semibold',
                     isFuture && 'text-muted-foreground/60',

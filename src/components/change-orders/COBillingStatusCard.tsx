@@ -142,10 +142,10 @@ export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: 
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 font-mono text-sm">
-        <div><p className="text-[0.6rem] uppercase font-sans text-muted-foreground">Approved</p>{fmt(approvedTotal)}</div>
-        <div><p className="text-[0.6rem] uppercase font-sans text-muted-foreground">Billed</p>{fmt(billed)}</div>
-        <div><p className="text-[0.6rem] uppercase font-sans text-muted-foreground">Paid</p>{fmt(paid)}</div>
+      <div className="grid grid-cols-1 gap-2 font-mono text-sm min-[360px]:grid-cols-3">
+        <div className="min-w-0"><p className="text-[0.6rem] uppercase font-sans text-muted-foreground">Approved</p><span className="break-words [overflow-wrap:anywhere]">{fmt(approvedTotal)}</span></div>
+        <div className="min-w-0"><p className="text-[0.6rem] uppercase font-sans text-muted-foreground">Billed</p><span className="break-words [overflow-wrap:anywhere]">{fmt(billed)}</span></div>
+        <div className="min-w-0"><p className="text-[0.6rem] uppercase font-sans text-muted-foreground">Paid</p><span className="break-words [overflow-wrap:anywhere]">{fmt(paid)}</span></div>
       </div>
 
       {invoices.length > 0 ? (
@@ -164,7 +164,7 @@ export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: 
                     {inv.paid_at ? ` · paid ${d(inv.paid_at)}` : inv.approved_at ? ` · approved ${d(inv.approved_at)}` : inv.submitted_at ? ` · sent ${d(inv.submitted_at)}` : ''}
                   </span>
                 </span>
-                <span className="flex items-center gap-1.5 font-mono text-sm">
+                <span className="flex shrink-0 items-center gap-1.5 font-mono text-sm">
                   {inv.status === 'PAID' ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
                   {fmt(inv.amount)}
                 </span>

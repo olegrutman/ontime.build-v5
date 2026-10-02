@@ -51,8 +51,8 @@ export function MaterialsBudgetDrawer({ open, onOpenChange, data }: Props) {
           {topPacks.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Top Packs Over Budget</p>
-              <div className="border rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="border rounded-xl overflow-x-auto">
+                <table className="min-w-[520px] w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30">
                       <th className="text-left px-3 py-2 font-medium text-muted-foreground">Pack</th>
@@ -82,8 +82,8 @@ export function MaterialsBudgetDrawer({ open, onOpenChange, data }: Props) {
           {topUnmatched.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Materials Not in Estimate</p>
-              <div className="border rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="border rounded-xl overflow-x-auto">
+                <table className="min-w-[480px] w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30">
                       <th className="text-left px-3 py-2 font-medium text-muted-foreground">Item</th>
