@@ -73,7 +73,7 @@ export function ProjectAssignmentMatrix({
                           {saving === key ? (
                             <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
                           ) : (
-                            <Checkbox className="size-5" checked={assigned.has(p.id)} onCheckedChange={(v) => onToggle(p.id, m.userId, v === true)} />
+                            <Checkbox className="!h-5 !w-5 aspect-square self-start" checked={assigned.has(p.id)} onCheckedChange={(v) => onToggle(p.id, m.userId, v === true)} />
                           )}
                            <span className="min-w-0 flex-1 break-words text-sm leading-snug text-foreground">{p.name}</span>
                         </label>

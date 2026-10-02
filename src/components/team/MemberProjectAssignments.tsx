@@ -103,7 +103,7 @@ export function MemberProjectAssignments({
               className="flex min-h-12 min-w-0 items-start gap-2.5 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-muted/50"
             >
               <Checkbox
-                className="mt-0.5 size-5"
+                className="mt-0.5 !h-5 !w-5 aspect-square self-start"
                 checked={checked}
                 disabled={saving === key}
                 onCheckedChange={(v) => onToggle(project.id, v === true)}

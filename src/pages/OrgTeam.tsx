@@ -320,7 +320,7 @@ export default function OrgTeam() {
               return (
                 <div
                   key={m.id}
-                  className={`flex min-h-14 items-start justify-between gap-2 py-2 border-b border-border last:border-0 sm:items-center ${
+                  className={`flex min-h-14 min-w-0 flex-col items-start gap-2 border-b border-border py-2 last:border-0 sm:flex-row sm:items-center sm:justify-between ${
                     isCurrentUserAdmin && !isSelf ? 'cursor-pointer hover:bg-muted/50 rounded-md px-2 -mx-2' : ''
                   }`}
                   onClick={() => {
@@ -361,7 +361,7 @@ export default function OrgTeam() {
                       </p>
                     )}
                   </div>
-                  <div className="flex min-w-0 max-w-[46%] shrink-0 items-center gap-2 sm:ml-2 sm:max-w-none">
+                  <div className="flex min-w-0 max-w-full items-center gap-2 sm:ml-2 sm:max-w-none sm:shrink-0">
                     {showDropdown ? (
                       <Select
                         value={m.role}
@@ -381,7 +381,7 @@ export default function OrgTeam() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge variant="secondary" className="max-w-full break-words text-right leading-snug">
+                      <Badge variant="secondary" className="max-w-full break-words leading-snug">
                         {m.profile?.job_title || ROLE_LABELS[m.role]}
                       </Badge>
                     )}
