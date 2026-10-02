@@ -29,7 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase, FolderKanban } from 'lucide-react';
+import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase, FolderKanban, ChevronLeft } from 'lucide-react';
 import { ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_TO_DB_COLUMN, getJobTitlesForOrgType } from '@/types/organization';
 import { useAuth } from '@/hooks/useAuth';
 import type { OrgMember } from '@/hooks/useOrgTeam';
@@ -176,23 +176,36 @@ export function MemberDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="inset-0 left-0 top-0 h-[100dvh] w-full max-w-none translate-x-0 translate-y-0 content-start gap-0 overflow-y-auto border-0 p-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:gap-4 sm:overflow-y-auto sm:border sm:p-6 sm:rounded-lg [&>button]:hidden sm:[&>button]:block">
+        <DialogHeader className="sticky top-0 z-20 flex-row items-center gap-2 space-y-0 border-b border-border bg-background px-3 py-3 text-left sm:static sm:block sm:border-0 sm:bg-transparent sm:p-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11 shrink-0 sm:hidden"
+            onClick={() => handleOpenChange(false)}
+            aria-label="Back to team"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+          <div className="min-w-0 flex-1">
           <DialogTitle className="flex items-center gap-2">
-            {member.profile?.full_name || 'Team Member'}
+            <span className="truncate">{member.profile?.full_name || 'Team Member'}</span>
             {member.is_owner ? (
               <Badge variant="default" className="text-xs">Owner</Badge>
             ) : member.is_admin ? (
               <Badge variant="secondary" className="text-xs">Admin</Badge>
             ) : null}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="truncate text-left">
             {member.profile?.email}
             {member.profile?.job_title && ` · ${member.profile.job_title}`}
             {' · '}{ROLE_LABELS[member.role]}
           </DialogDescription>
+          </div>
         </DialogHeader>
 
+        <div className="space-y-4 px-4 py-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:contents">
         {isCurrentUserAdmin && !isSelf && (
           <>
             {/* Job Title Section */}
@@ -268,19 +281,20 @@ export function MemberDetailDialog({
             <Separator />
 
             {/* Permissions Section */}
-            <div className="space-y-4">
+              <div className="space-y-4">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Permissions
               </h3>
               <div className="space-y-3">
                 {Object.entries(PERMISSION_LABELS).map(([key, { label, description }]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <div>
+                    <div key={key} className="flex min-h-12 items-center justify-between gap-4">
+                      <div className="min-w-0">
                       <Label className="text-sm font-medium">{label}</Label>
                       <p className="text-xs text-muted-foreground">{description}</p>
                     </div>
-                    <Switch
+                      <Switch
+                        className="shrink-0"
                       checked={localPerms[key] ?? false}
                       onCheckedChange={(v) => handleToggle(key, v)}
                     />
@@ -291,7 +305,7 @@ export function MemberDetailDialog({
               <Button
                 onClick={handleSave}
                 disabled={!dirty || saving}
-                className="w-full"
+                className="sticky bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 min-h-11 w-full shadow-lg sm:static sm:shadow-none"
               >
                 {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Save Permissions
@@ -393,6 +407,7 @@ export function MemberDetailDialog({
             </div>
           </>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

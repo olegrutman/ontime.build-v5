@@ -54,7 +54,40 @@ export function ProjectAssignmentMatrix({
           {projects.length === 0 ? 'No active projects yet.' : 'No team members yet.'}
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        <div className="space-y-2 sm:hidden">
+          {members.map((m) => {
+            const assigned = assignmentsByUser.get(m.userId) ?? new Set<string>();
+            return (
+              <div key={m.userId} className="rounded-lg border border-border px-3 py-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">{m.name}</span>
+                  {!m.restricted && <Badge variant="secondary" className="shrink-0 text-[0.65rem]">All projects</Badge>}
+                </div>
+                {m.restricted ? (
+                  <div className="space-y-1.5">
+                    {projects.map((p) => {
+                      const key = `${p.id}:${m.userId}`;
+                      return (
+                        <label key={p.id} className="flex min-h-11 items-center gap-3 rounded-md bg-muted/30 px-3 py-2">
+                          {saving === key ? (
+                            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                          ) : (
+                            <Checkbox checked={assigned.has(p.id)} onCheckedChange={(v) => onToggle(p.id, m.userId, v === true)} />
+                          )}
+                          <span className="min-w-0 flex-1 text-sm text-foreground">{p.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">This person can access every company project.</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-sm border-separate border-spacing-0">
             <thead>
               <tr>
@@ -111,6 +144,7 @@ export function ProjectAssignmentMatrix({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
