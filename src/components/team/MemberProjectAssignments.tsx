@@ -59,14 +59,14 @@ export function MemberProjectAssignments({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           {assignedIds.size} of {projects.length} projects
         </p>
         {teammates.length > 0 && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex w-full flex-col gap-2 sm:grid sm:w-auto sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <Select value={copyFrom} onValueChange={setCopyFrom}>
-              <SelectTrigger className="h-7 w-[150px] text-xs">
+              <SelectTrigger className="h-10 w-full min-w-0 text-xs sm:h-7 sm:w-[150px]">
                 <SelectValue placeholder="Copy from…" />
               </SelectTrigger>
               <SelectContent>
@@ -80,7 +80,7 @@ export function MemberProjectAssignments({
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-xs"
+              className="h-10 w-full px-4 text-xs sm:h-7 sm:w-auto"
               disabled={!copyFrom || saving === `copy:${userId}`}
               onClick={() => {
                 onCopyFrom(copyFrom);
@@ -93,14 +93,14 @@ export function MemberProjectAssignments({
         )}
       </div>
 
-      <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+      <div className="space-y-1.5 sm:max-h-64 sm:overflow-y-auto sm:pr-1">
         {projects.map((project) => {
           const key = `${project.id}:${userId}`;
           const checked = assignedIds.has(project.id);
           return (
             <label
               key={project.id}
-              className="flex items-center gap-2.5 rounded-lg border border-border px-2.5 py-2 cursor-pointer hover:bg-muted/50"
+              className="flex min-h-12 items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 cursor-pointer hover:bg-muted/50"
             >
               <Checkbox
                 checked={checked}

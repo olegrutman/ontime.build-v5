@@ -220,11 +220,11 @@ export default function OrgTeam() {
 
   return (
     <AppLayout title="My Team">
-      <div className="space-y-6 max-w-3xl">
+      <div className="max-w-3xl space-y-4 sm:space-y-6">
         {/* Org Header */}
         <div>
           <h1 className="text-xl font-bold text-foreground">{currentOrg?.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your organization's team members and invitations
           </p>
         </div>
@@ -238,8 +238,8 @@ export default function OrgTeam() {
             </div>
           </div>
           <div>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
                 <Label htmlFor="allow-join">Allow team members to join via search</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   When enabled, users can find and request to join your organization
@@ -320,7 +320,7 @@ export default function OrgTeam() {
               return (
                 <div
                   key={m.id}
-                  className={`flex items-center justify-between py-2 border-b border-border last:border-0 ${
+                  className={`flex min-h-14 items-start justify-between gap-2 py-2 border-b border-border last:border-0 sm:items-center ${
                     isCurrentUserAdmin && !isSelf ? 'cursor-pointer hover:bg-muted/50 rounded-md px-2 -mx-2' : ''
                   }`}
                   onClick={() => {
@@ -361,7 +361,7 @@ export default function OrgTeam() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <div className="flex max-w-[42%] shrink-0 items-center gap-2 sm:ml-2 sm:max-w-none">
                     {showDropdown ? (
                       <Select
                         value={m.role}
@@ -381,7 +381,7 @@ export default function OrgTeam() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge variant="secondary">
+                      <Badge variant="secondary" className="max-w-full truncate">
                         {m.profile?.job_title || ROLE_LABELS[m.role]}
                       </Badge>
                     )}
