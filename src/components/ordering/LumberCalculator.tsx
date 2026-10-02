@@ -83,7 +83,7 @@ export function LumberCalculator({ category, onChange }: LumberCalculatorProps) 
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
         <div>
           <Label>Pieces</Label>
           <Input

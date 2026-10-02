@@ -25,7 +25,7 @@ const StatusPill = React.forwardRef<HTMLSpanElement, StatusPillProps>(
     <span
       ref={ref}
       className={cn(
-        'rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold leading-snug whitespace-nowrap',
+        'inline-flex max-w-full items-center rounded-full px-2.5 py-0.5 text-left text-[0.7rem] font-semibold leading-snug whitespace-normal break-words sm:whitespace-nowrap',
         VARIANT_CLASSES[variant],
         className,
       )}

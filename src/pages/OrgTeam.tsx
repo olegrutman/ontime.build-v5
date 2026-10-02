@@ -328,8 +328,8 @@ export default function OrgTeam() {
                   }}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
-                      {m.profile?.full_name || 'Unknown'}
+                    <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-1.5">
+                      <p className="min-w-0 break-words text-sm font-medium leading-snug text-foreground">{m.profile?.full_name || 'Unknown'}</p>
                       {m.is_owner ? (
                         <Badge variant="default" className="text-[10px] px-1.5 py-0">
                           <Crown className="h-3 w-3 mr-0.5" />
@@ -341,8 +341,8 @@ export default function OrgTeam() {
                           Admin
                         </Badge>
                       ) : null}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    </div>
+                    <p className="break-all text-xs text-muted-foreground sm:truncate">
                       {m.profile?.email}
                       {m.profile?.job_title && ` · ${m.profile.job_title}`}
                     </p>
@@ -361,7 +361,7 @@ export default function OrgTeam() {
                       </p>
                     )}
                   </div>
-                  <div className="flex max-w-[42%] shrink-0 items-center gap-2 sm:ml-2 sm:max-w-none">
+                  <div className="flex min-w-0 max-w-[46%] shrink-0 items-center gap-2 sm:ml-2 sm:max-w-none">
                     {showDropdown ? (
                       <Select
                         value={m.role}
@@ -369,7 +369,7 @@ export default function OrgTeam() {
                           changeRole(m.id, v as AppRole);
                         }}
                       >
-                        <SelectTrigger className="w-[200px] h-8 text-xs" onClick={(e) => e.stopPropagation()}>
+                        <SelectTrigger className="h-8 w-full min-w-0 text-xs sm:w-[200px]" onClick={(e) => e.stopPropagation()}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -381,7 +381,7 @@ export default function OrgTeam() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge variant="secondary" className="max-w-full truncate">
+                      <Badge variant="secondary" className="max-w-full break-words text-right leading-snug">
                         {m.profile?.job_title || ROLE_LABELS[m.role]}
                       </Badge>
                     )}
