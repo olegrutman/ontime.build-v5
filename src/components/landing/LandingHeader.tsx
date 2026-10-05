@@ -67,7 +67,7 @@ export function LandingHeader() {
               <>
                 <Link
                   to="/auth"
-                  className="px-5 py-2 border-[1.5px] border-white/[0.16] text-white/60 rounded-full text-[0.85rem] font-medium hover:border-primary/50 hover:text-white transition-all no-underline"
+                  className="px-5 py-2 border-[1.5px] border-white/25 text-white/80 rounded-full text-[0.85rem] font-medium hover:border-white/50 hover:text-white transition-all no-underline"
                 >
                   Sign In
                 </Link>
