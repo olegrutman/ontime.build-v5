@@ -286,6 +286,22 @@
     @apply text-[0.7rem] font-bold uppercase tracking-[0.14em];
   }
 
+  .landing-on-photo {
+    color: hsl(var(--navy-fg));
+  }
+
+  .landing-on-photo-muted {
+    color: hsl(var(--navy-fg) / 0.82);
+  }
+
+  .landing-on-photo-soft {
+    color: hsl(var(--navy-fg) / 0.66);
+  }
+
+  .landing-proof-rule {
+    background: hsl(var(--navy-fg) / 0.2);
+  }
+
   .landing-hero {
     @apply relative min-h-[820px] overflow-hidden bg-foreground;
   }
@@ -411,7 +427,7 @@
 
   @media (max-width: 639px) {
     .landing-hero {
-      min-height: 760px;
+      min-height: 680px;
     }
 
     .landing-hero-photo {

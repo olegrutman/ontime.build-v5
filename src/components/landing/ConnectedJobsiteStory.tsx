@@ -115,13 +115,13 @@ export function ConnectedJobsiteStory() {
           fetchPriority="high"
         />
         <div className="landing-hero-shade" />
-        <div className="relative z-10 mx-auto flex min-h-[760px] max-w-7xl flex-col justify-center px-5 pb-20 pt-28 sm:min-h-[820px] sm:px-[5%] sm:pb-28 sm:pt-36">
+        <div className="relative z-10 mx-auto flex min-h-[680px] max-w-7xl flex-col justify-center px-5 pb-20 pt-28 sm:min-h-[820px] sm:px-[5%] sm:pb-28 sm:pt-36">
           <div className="max-w-3xl animate-fade-up">
             <p className="landing-kicker text-primary">One job. Every company connected.</p>
-            <h1 id="landing-title" className="landing-display mt-5 max-w-[820px] text-[3rem] font-bold leading-[0.98] text-primary-foreground sm:text-[4.8rem] lg:text-[6rem]">
+            <h1 id="landing-title" className="landing-display landing-on-photo mt-5 max-w-[820px] text-[3rem] font-bold leading-[0.98] sm:text-[4.8rem] lg:text-[6rem]">
               The whole job.<br />Working together.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-primary-foreground/80 sm:text-lg">
+            <p className="landing-on-photo-muted mt-6 max-w-xl text-base leading-relaxed sm:text-lg">
               Orders, changes, labor, materials, approvals, invoices, and payments move through one connected construction workflow.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -130,7 +130,7 @@ export function ConnectedJobsiteStory() {
               </Link>
               <a href="#how" className="landing-secondary-cta">See the workflow</a>
             </div>
-            <p className="mt-4 text-xs font-medium text-primary-foreground/65">No credit card · Unlimited users · Cancel anytime</p>
+            <p className="landing-on-photo-soft mt-4 text-xs font-medium">No credit card · Unlimited users · Cancel anytime</p>
           </div>
 
           <div className="landing-hero-cast" aria-hidden="true">
@@ -142,9 +142,9 @@ export function ConnectedJobsiteStory() {
           </div>
         </div>
         <div className="landing-hero-proof">
-          <span className="landing-kicker text-primary-foreground/65">From field issue to paid invoice</span>
-          <span className="hidden h-px flex-1 bg-primary-foreground/20 sm:block" />
-          <span className="text-sm font-semibold text-primary-foreground">One record. No re-entry.</span>
+          <span className="landing-kicker landing-on-photo-soft">From field issue to paid invoice</span>
+          <span className="landing-proof-rule hidden h-px flex-1 sm:block" />
+          <span className="landing-on-photo text-sm font-semibold">One record. No re-entry.</span>
         </div>
       </section>
 
