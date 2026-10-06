@@ -359,7 +359,8 @@
   }
 
   .landing-role-number {
-    @apply landing-display absolute left-1 top-1 z-10 text-5xl font-bold text-foreground/10;
+    @apply absolute left-1 top-1 z-10 text-5xl font-bold text-foreground/10;
+    font-family: 'Space Grotesk', 'DM Sans', sans-serif;
   }
 
   .landing-character-stage {
