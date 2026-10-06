@@ -15,6 +15,7 @@ export default {
   	extend: {
 		fontFamily: {
 			heading: ['Barlow Condensed', 'sans-serif'],
+			landing: ['Space Grotesk', 'DM Sans', 'sans-serif'],
 			body: ['DM Sans', 'sans-serif'],
 			sans: [
 				'DM Sans',

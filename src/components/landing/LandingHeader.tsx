@@ -23,8 +23,9 @@ export function LandingHeader() {
       <div
         className="pointer-events-auto mx-auto w-full max-w-6xl h-[60px] sm:h-[64px] flex items-center rounded-full pl-4 pr-2 sm:pl-6 sm:pr-2.5"
         style={{
-          background: 'hsl(var(--navy))',
-          boxShadow: '0 8px 30px hsl(var(--navy) / 0.22), 0 0 0 1px hsl(var(--amber) / 0.12)',
+          background: 'hsl(var(--navy) / 0.82)',
+          backdropFilter: 'blur(18px)',
+          boxShadow: '0 12px 34px hsl(var(--navy) / 0.24), inset 0 0 0 1px hsl(var(--navy-fg) / 0.12)',
         }}
       >
         <div className="w-full flex items-center justify-between gap-4">

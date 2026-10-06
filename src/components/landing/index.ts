@@ -16,3 +16,4 @@ export { SecurityPrivacySection } from './SecurityPrivacySection';
 export { ComparisonTable } from './ComparisonTable';
 export { FAQSection } from './FAQSection';
 export { StickyMobileCTA } from './StickyMobileCTA';
+export { ConnectedJobsiteStory } from './ConnectedJobsiteStory';
