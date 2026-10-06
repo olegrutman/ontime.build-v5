@@ -1,40 +1,30 @@
+import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
 export function CTASection() {
   return (
-    <section className="py-[100px] px-[5%] text-center relative overflow-hidden"
-      style={{ background: 'linear-gradient(150deg, hsl(var(--navy)) 0%, #0B1830 100%)' }}
-    >
-      {/* Dot grid */}
-      <div className="absolute inset-0 pointer-events-none dot-grid-amber" />
-      {/* Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse, hsl(var(--amber) / 0.08), transparent 70%)' }}
-      />
-
-      <h2 className="font-heading text-[clamp(2.4rem,8vw,5.5rem)] font-black leading-[0.93] tracking-[-2px] uppercase text-white max-w-[800px] mx-auto mb-[22px] relative">
-        Stop Losing Money<br />to <em className="not-italic" style={{ color: 'hsl(var(--amber))' }}>Disconnected Systems.</em>
+    <section className="relative overflow-hidden bg-foreground px-5 py-24 text-center sm:px-[5%] sm:py-32">
+      <div className="absolute inset-x-0 top-0 mx-auto h-px max-w-7xl bg-primary-foreground/15" />
+      <p className="landing-kicker relative text-primary">Bring the whole job together</p>
+      <h2 className="landing-display relative mx-auto mt-5 max-w-4xl text-4xl font-bold leading-tight text-primary-foreground sm:text-7xl">
+        Start with the next job.<br />Keep every handoff connected.
       </h2>
-      <p className="text-white/[0.44] text-[1.05rem] max-w-[460px] mx-auto mb-9 relative">
-        Join construction teams that replaced scattered spreadsheets, phone calls, and paper invoices with one platform built for real job sites.
+      <p className="relative mx-auto mb-9 mt-6 max-w-xl text-base leading-relaxed text-primary-foreground/65">
+        Replace scattered texts, spreadsheets, and paper trails with one shared record from field issue to final payment.
       </p>
-      <div className="flex justify-center gap-3.5 flex-wrap relative">
-        <a
-          href="/signup"
-          className="px-9 py-4 text-base font-bold rounded-[5px] no-underline shadow-amber-lg hover:brightness-110 hover:-translate-y-0.5 transition-all"
-          style={{ background: 'hsl(var(--amber))', color: 'hsl(var(--navy-d))' }}
-        >
-          Create an Account
-        </a>
+      <div className="relative flex flex-col justify-center gap-3 sm:flex-row">
+        <Link to="/signup" className="landing-primary-cta">Create an Account <ArrowRight className="h-4 w-4" /></Link>
         <a
           href="mailto:hello@ontime.build?subject=Ontime.Build%20demo%20request"
-          className="px-9 py-4 text-base font-semibold bg-transparent text-white/70 border-[1.5px] border-white/[0.14] rounded-[5px] no-underline hover:border-white/35 hover:text-white transition-all"
+          className="landing-secondary-cta"
         >
           Talk to Sales
         </a>
       </div>
-      <div className="mt-[22px] grid grid-cols-2 sm:flex sm:justify-center gap-x-4 gap-y-2 sm:gap-6 max-w-[440px] sm:max-w-none mx-auto relative">
+      <div className="relative mx-auto mt-6 grid max-w-[440px] grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:max-w-none sm:justify-center sm:gap-6">
         {['No credit card required', 'Full platform access', 'Setup in under 30 min', '$89 / company / month'].map((t) => (
-          <span key={t} className="text-[0.82rem] sm:text-[0.8rem] text-white/45 sm:text-white/30 flex items-center gap-[5px]">
-            <span className="font-bold" style={{ color: 'hsl(var(--amber))' }}>✓</span>
+          <span key={t} className="flex items-center gap-1.5 text-[0.75rem] text-primary-foreground/45">
+            <span className="font-bold text-primary">✓</span>
             {t}
           </span>
         ))}
