@@ -330,11 +330,15 @@
   }
 
   .landing-secondary-cta {
-    @apply border border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground backdrop-blur-md;
+    @apply border bg-transparent backdrop-blur-md;
+    border-color: hsl(var(--navy-fg) / 0.3);
+    background: hsl(var(--navy-fg) / 0.1);
+    color: hsl(var(--navy-fg));
   }
 
   .landing-secondary-cta:hover {
-    @apply border-primary-foreground/50 bg-primary-foreground/15;
+    border-color: hsl(var(--navy-fg) / 0.5);
+    background: hsl(var(--navy-fg) / 0.15);
   }
 
   .landing-hero-cast {
