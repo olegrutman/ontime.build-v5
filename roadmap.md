@@ -7,3 +7,5 @@
 - [x] Audit all reachable role views and major screens at 320px and 394px
 - [x] Phone-width layout checker across every screen for every company type (scripts/mobile-audit)
 - [x] Rebuild the public landing page as an illustrated connected-jobsite story
+
+- [x] Apply and verify the selected Connected Vertical Flow landing design
