@@ -285,6 +285,8 @@
   .landing-dark .text-primary-foreground\/45 { color: hsl(var(--navy-fg) / 0.7); }
   .landing-dark .landing-display { color: hsl(var(--navy-fg)); }
   .landing-dark .text-primary { color: hsl(var(--primary)); }
+  .landing-dark .landing-product-window .landing-display { color: hsl(var(--card-foreground)); }
+  .landing-hero .landing-status-card { color: hsl(var(--navy-fg)); }
   .landing-connected-track { position: relative; display: grid; gap: 80px; max-width: 1000px; margin-left: auto; margin-right: auto; }
   .landing-connected-track::before { content: ''; position: absolute; top: 30px; bottom: 30px; left: 50%; border-left: 1px dashed hsl(var(--primary) / 0.45); }
   .landing-connected-scene { position: relative; display: grid; gap: 28px; justify-items: center; }

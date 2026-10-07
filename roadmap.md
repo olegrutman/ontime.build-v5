@@ -8,4 +8,4 @@
 - [x] Phone-width layout checker across every screen for every company type (scripts/mobile-audit)
 - [x] Rebuild the public landing page as an illustrated connected-jobsite story
 
-- [ ] Apply and verify the selected Connected Vertical Flow landing design
+- [x] Apply and verify the selected Connected Vertical Flow landing design
