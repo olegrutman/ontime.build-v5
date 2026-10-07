@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export function CTASection() {
   return (
-    <section className="relative overflow-hidden bg-foreground px-5 py-24 text-center sm:px-[5%] sm:py-32">
+    <section className="landing-dark relative overflow-hidden bg-foreground px-5 py-24 text-center sm:px-[5%] sm:py-32">
       <div className="absolute inset-x-0 top-0 mx-auto h-px max-w-7xl bg-primary-foreground/15" />
       <p className="landing-kicker relative text-primary">Bring the whole job together</p>
       <h2 className="landing-display relative mx-auto mt-5 max-w-4xl text-4xl font-bold leading-tight text-primary-foreground sm:text-7xl">

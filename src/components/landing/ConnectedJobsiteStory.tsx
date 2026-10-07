@@ -1,7 +1,8 @@
 import '@fontsource/space-grotesk/600.css';
 import '@fontsource/space-grotesk/700.css';
-import { ArrowRight, Check, FileText, PackageCheck, Smartphone, WalletCards } from 'lucide-react';
+import { ArrowRight, Check, FileText, PackageCheck, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/landing-jobsite-hero.jpg';
 import generalContractor from '@/assets/landing-character-general-contractor.png';
 import subcontractor from '@/assets/landing-character-subcontractor.png';
@@ -64,7 +65,7 @@ function ProductProof() {
       <div className="p-4 sm:p-6">
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="landing-kicker">Change order ready</p>
+            <p className="landing-kicker">Illustrative approval example</p>
             <h3 className="landing-display mt-1 text-xl font-bold leading-tight text-foreground sm:text-2xl">
               Re-frame bearing wall — Unit 3B
             </h3>
@@ -76,25 +77,15 @@ function ProductProof() {
             Awaiting approval
           </span>
         </div>
-        <div className="mt-5 divide-y divide-border/70 border-y border-border/70">
-          {[
-            ['Labor · 3 carpenters × 14 hrs', '$3,780.00'],
-            ['Materials · LVL beam, hangers, strap', '$1,412.65'],
-            ['Equipment · telehandler, 1 day', '$385.00'],
-            ['Markup · 12%', '$669.32'],
-          ].map(([label, value]) => (
-            <div key={label} className="flex min-w-0 items-start justify-between gap-4 py-2.5 text-xs sm:text-sm">
-              <span className="min-w-0 break-words text-muted-foreground">{label}</span>
-              <span className="shrink-0 font-mono font-semibold tabular-nums text-foreground">{value}</span>
-            </div>
-          ))}
+        <div className="mt-5 border-y border-border py-4 text-sm leading-relaxed text-muted-foreground">
+          Re-frame the bearing wall at Unit 3B. Review the submitted scope and quoted total, with each company's private costs kept separate.
         </div>
         <div className="flex items-end justify-between gap-4 pt-4">
           <span className="landing-kicker text-foreground">Change order total</span>
           <span className="font-mono text-xl font-bold tabular-nums text-foreground sm:text-2xl">$6,246.97</span>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
-          <span className="rounded-full bg-state-approved px-4 py-2 text-xs font-bold text-primary-foreground">Approve</span>
+          <span className="rounded-full bg-state-approved px-4 py-2 text-xs font-bold text-secondary-foreground">Approve</span>
           <span className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground">Request revision</span>
         </div>
       </div>
@@ -115,10 +106,10 @@ export function ConnectedJobsiteStory() {
           fetchPriority="high"
         />
         <div className="landing-hero-shade" />
-        <div className="relative z-10 mx-auto flex min-h-[680px] max-w-7xl flex-col justify-center px-5 pb-20 pt-28 sm:min-h-[820px] sm:px-[5%] sm:pb-28 sm:pt-36">
+        <div className="relative z-10 mx-auto flex min-h-[620px] max-w-7xl flex-col justify-center px-5 pb-20 pt-28 sm:min-h-[720px] sm:px-[5%] sm:pb-28 sm:pt-36">
           <div className="max-w-3xl animate-fade-up">
-            <p className="landing-kicker text-primary">One job. Every company connected.</p>
-            <h1 id="landing-title" className="landing-display landing-on-photo mt-5 max-w-[820px] text-[3rem] font-bold leading-[0.98] sm:text-[4.8rem] lg:text-[6rem]">
+            <p className="landing-kicker text-primary">OnTime.Build · Construction collaboration</p>
+            <h1 id="landing-title" className="landing-display landing-on-photo mt-5 max-w-[820px] text-[2.5rem] font-bold leading-[0.98] sm:text-[4rem] lg:text-[4.5rem]">
               The whole job.<br />Working together.
             </h1>
             <p className="landing-on-photo-muted mt-6 max-w-xl text-base leading-relaxed sm:text-lg">
@@ -130,12 +121,12 @@ export function ConnectedJobsiteStory() {
               </Link>
               <a href="#how" className="landing-secondary-cta">See the workflow</a>
             </div>
-            <p className="landing-on-photo-soft mt-4 text-xs font-medium">No credit card · Unlimited users · Cancel anytime</p>
+            <p className="landing-on-photo-soft mt-4 text-xs font-medium">$89 per company / month · Unlimited users and projects</p>
           </div>
 
           <div className="landing-hero-cast" aria-hidden="true">
             <img src={generalContractor} alt="" className="landing-hero-character" width={1024} height={1536} />
-            <div className="landing-status-card">
+            <div className="landing-status-card landing-on-photo">
               <span className="h-2 w-2 shrink-0 rounded-full bg-state-approved" />
               <span>Approved · budget updated</span>
             </div>
@@ -153,37 +144,34 @@ export function ConnectedJobsiteStory() {
           <div className="mx-auto max-w-3xl text-center">
             <p className="landing-kicker text-muted-foreground">One connected handoff</p>
             <h2 className="landing-display mt-4 text-4xl font-bold leading-tight text-foreground sm:text-6xl">
-              Work moves forward.<br />Nothing gets lost between companies.
+              Work moves forward.<br />Nothing gets lost.
             </h2>
           </div>
 
-          <div className="landing-role-track mt-14 sm:mt-20">
-            <div className="landing-track-line" aria-hidden="true"><span /></div>
+          <div id="roles" className="landing-connected-track mt-14 sm:mt-20">
             {roles.map((role, index) => {
               const Icon = role.icon;
               return (
-                <Link key={role.name} to={role.href} className="landing-role-scene group">
-                  <div className="landing-role-number">0{index + 1}</div>
-                  <div className="landing-character-stage">
+                <article key={role.name} className="landing-connected-scene">
+                  <div className="landing-connected-image">
+                    <span className="landing-connected-number">0{index + 1}</span>
                     <img src={role.image} alt={`${role.name} professional`} loading="lazy" width={1024} height={1536} />
-                    <span className="landing-role-icon"><Icon className="h-4 w-4" /></span>
+                    <span className="landing-role-icon"><Icon className="h-5 w-5" /></span>
                   </div>
-                  <div className="min-w-0 border-t border-border pt-5">
+                  <div className="landing-connected-copy">
                     <p className="landing-kicker text-muted-foreground">{role.name}</p>
-                    <h3 className="landing-display mt-2 text-xl font-bold text-foreground">{role.action}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{role.detail}</p>
-                    <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-foreground">
-                      Explore this company <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                    </span>
+                    <h3 className="landing-display mt-3 text-2xl font-bold text-foreground sm:text-4xl">{role.action}</h3>
+                    <p className="mt-4 text-base leading-relaxed text-muted-foreground">{role.detail}</p>
+                    <Button asChild variant="link" className="mt-5 h-auto p-0 text-foreground"><Link to={role.href}>Explore {role.name === 'Crew' ? 'the crew' : role.name.toLowerCase()} workflow <ArrowRight className="h-4 w-4 shrink-0" /></Link></Button>
                   </div>
-                </Link>
+                </article>
               );
             })}
           </div>
         </div>
       </section>
 
-      <section id="features" className="overflow-hidden bg-foreground px-5 py-20 text-primary-foreground sm:px-[5%] sm:py-28">
+      <section id="features" className="landing-dark overflow-hidden bg-foreground px-5 py-20 text-primary-foreground sm:px-[5%] sm:py-28">
         <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.82fr_1.18fr] lg:gap-20">
           <div>
             <p className="landing-kicker text-primary">The record follows the work</p>
@@ -204,44 +192,6 @@ export function ConnectedJobsiteStory() {
         </div>
       </section>
 
-      <section id="roles" className="bg-accent px-5 py-20 sm:px-[5%] sm:py-28">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-            <div>
-              <p className="landing-kicker text-muted-foreground">Built around responsibility</p>
-              <h2 className="landing-display mt-4 text-4xl font-bold leading-tight text-foreground sm:text-6xl">One project.<br />The right view for each company.</h2>
-            </div>
-            <p className="max-w-xl text-base leading-relaxed text-muted-foreground lg:justify-self-end">
-              General Contractors control approvals and project financials. Subcontractors price and coordinate work. Crews report from the field. Suppliers fulfill project demand. Everyone shares progress—not private business data.
-            </p>
-          </div>
-          <div className="mt-12 grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-            {roles.map((role) => (
-              <Link key={role.name} to={role.href} className="group flex min-h-44 flex-col justify-between bg-card p-6 no-underline transition-colors hover:bg-background">
-                <span className="landing-kicker text-muted-foreground">{role.name}</span>
-                <div>
-                  <p className="landing-display text-xl font-bold text-foreground">{role.action}</p>
-                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-foreground">See their workflow <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-background px-5 py-20 sm:px-[5%] sm:py-28">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-10 border-y border-border py-12 lg:flex-row lg:items-center">
-          <div className="flex items-center gap-5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-foreground"><WalletCards className="h-6 w-6" /></span>
-            <div>
-              <p className="landing-kicker text-muted-foreground">Straightforward pricing</p>
-              <p className="landing-display mt-1 text-3xl font-bold text-foreground">$89 per company / month</p>
-            </div>
-          </div>
-          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">Unlimited users. Unlimited projects. All four company workflows. No per-seat tax.</p>
-          <Link to="/signup" className="landing-primary-cta shrink-0">Start free <ArrowRight className="h-4 w-4" /></Link>
-        </div>
-      </section>
     </>
   );
 }

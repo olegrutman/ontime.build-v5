@@ -14,7 +14,7 @@ export function PricingSection() {
   return (
     <section id="pricing" className="bg-accent px-5 py-20 sm:px-[5%] sm:py-28">
       <div className="mx-auto grid max-w-7xl overflow-hidden rounded-lg border border-border bg-card lg:grid-cols-[0.88fr_1.12fr]">
-        <div className="flex flex-col justify-between bg-foreground p-7 text-primary-foreground sm:p-12">
+        <div className="landing-dark flex flex-col justify-between bg-foreground p-7 text-primary-foreground sm:p-12">
           <div>
             <p className="landing-kicker text-primary">One flat price</p>
             <div className="landing-display mt-6 flex flex-wrap items-end gap-2">
