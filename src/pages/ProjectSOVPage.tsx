@@ -72,7 +72,7 @@ function SOVContractSection({
   const handleAddLine = async () => {
     if (!newItemName.trim()) return;
     const pct = parseFloat(newItemPct);
-    await addLine(newItemName.trim(), newItemGroup.trim() || 'Extra scope', 'extra_scope', isNaN(pct) || pct <= 0 ? 1 : pct);
+    await addLine(newItemName.trim(), newItemGroup.trim() || 'Extra scope', null, isNaN(pct) || pct <= 0 ? 1 : pct);
     setNewItemName('');
     setNewItemGroup('');
     setNewItemAmount('');
