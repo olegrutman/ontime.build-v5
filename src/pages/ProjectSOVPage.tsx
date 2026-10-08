@@ -58,7 +58,9 @@ function SOVContractSection({
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemGroup, setNewItemGroup] = useState('');
-  const [newItemSection, setNewItemSection] = useState('');
+  const [newItemAmount, setNewItemAmount] = useState('');
+  const [newItemPct, setNewItemPct] = useState('');
+  const contractValue = prereqs.contractValue || 0;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingPct, setEditingPct] = useState('');
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
@@ -69,10 +71,12 @@ function SOVContractSection({
 
   const handleAddLine = async () => {
     if (!newItemName.trim()) return;
-    await addLine(newItemName, newItemGroup, newItemSection || null);
+    const pct = parseFloat(newItemPct);
+    await addLine(newItemName.trim(), newItemGroup.trim() || 'Extra scope', 'extra_scope', isNaN(pct) || pct <= 0 ? 1 : pct);
     setNewItemName('');
     setNewItemGroup('');
-    setNewItemSection('');
+    setNewItemAmount('');
+    setNewItemPct('');
     setAddDialogOpen(false);
   };
 
@@ -244,16 +248,29 @@ function SOVContractSection({
                         {canEdit && items.length > 0 && (
                           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
                             <DialogTrigger asChild>
-                              <Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" />Add</Button>
+                              <Button size="sm"><Plus className="h-3.5 w-3.5 mr-1" />Add custom item</Button>
                             </DialogTrigger>
                             <DialogContent>
-                              <DialogHeader><DialogTitle>Add SOV Line</DialogTitle></DialogHeader>
+                              <DialogHeader>
+                                <DialogTitle>Add custom / extra scope item</DialogTitle>
+                                <p className="text-sm text-muted-foreground">For unusual work not in the standard list — e.g. metal lintels around the building or insulated panels.</p>
+                              </DialogHeader>
                               <div className="space-y-3">
-                                <div><Label>Line Item Name</Label><Input value={newItemName} onChange={e => setNewItemName(e.target.value)} placeholder="e.g. Balcony framing" /></div>
-                                <div><Label>Group</Label><Input value={newItemGroup} onChange={e => setNewItemGroup(e.target.value)} placeholder="e.g. Decks" /></div>
-                                <div><Label>Scope Section (slug)</Label><Input value={newItemSection} onChange={e => setNewItemSection(e.target.value)} placeholder="e.g. decks_balconies" /></div>
+                                <div><Label>Item name</Label><Input value={newItemName} onChange={e => setNewItemName(e.target.value)} placeholder="e.g. Install metal lintels around building" /></div>
+                                <div>
+                                  <Label>Group</Label>
+                                  <Input list="sov-groups" value={newItemGroup} onChange={e => setNewItemGroup(e.target.value)} placeholder="Extra scope" />
+                                  <datalist id="sov-groups">
+                                    {['Extra scope', ...Array.from(new Set(items.map(i => i.item_group).filter(Boolean)))].map(g => <option key={g as string} value={g as string} />)}
+                                  </datalist>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div><Label>Amount ($)</Label><Input inputMode="decimal" value={newItemAmount} onChange={e => { setNewItemAmount(e.target.value); const v = parseFloat(e.target.value); setNewItemPct(contractValue > 0 && !isNaN(v) ? ((v / contractValue) * 100).toFixed(2) : ''); }} placeholder="0.00" /></div>
+                                  <div><Label>% of contract</Label><Input inputMode="decimal" value={newItemPct} onChange={e => { setNewItemPct(e.target.value); const v = parseFloat(e.target.value); setNewItemAmount(!isNaN(v) ? (contractValue * v / 100).toFixed(2) : ''); }} placeholder="1.00" /></div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Other unlocked lines adjust automatically so the SOV stays at 100%. New scope after the SOV is locked should be a change order instead.</p>
                               </div>
-                              <DialogFooter><Button onClick={handleAddLine} disabled={!newItemName.trim()}>Add Line</Button></DialogFooter>
+                              <DialogFooter><Button onClick={handleAddLine} disabled={!newItemName.trim()}>Add item</Button></DialogFooter>
                             </DialogContent>
                           </Dialog>
                         )}
@@ -321,6 +338,9 @@ function SOVContractSection({
                                         }}
                                       >
                                         {item.item_name}
+                                        {item.source === 'user' && (
+                                          <span className="ml-2 inline-flex rounded-full border border-primary/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary align-middle">Extra scope</span>
+                                        )}
                                       </span>
                                     )}
                                   </td>

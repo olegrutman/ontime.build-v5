@@ -284,10 +284,10 @@ export function useSOVPage(projectId: string, contractId?: string | null, userOr
   }, [items, currentSOV, prereqs, qc]);
 
   // Add a new line
-  const addLine = useCallback(async (itemName: string, group: string, sectionSlug: string | null) => {
+  const addLine = useCallback(async (itemName: string, group: string, sectionSlug: string | null, pct: number = 1) => {
     if (!currentSOV || currentSOV.is_locked) return;
     const contractValue = prereqs?.contractValue || 0;
-    const defaultPct = 1;
+    const defaultPct = Math.min(100, Math.max(0.01, Math.round(pct * 100) / 100));
     const unlocked = items.filter(i => !i.is_locked);
     const unlockTotal = unlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
 
