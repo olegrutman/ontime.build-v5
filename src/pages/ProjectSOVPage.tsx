@@ -60,7 +60,6 @@ function SOVContractSection({
   const [newItemGroup, setNewItemGroup] = useState('');
   const [newItemAmount, setNewItemAmount] = useState('');
   const [newItemPct, setNewItemPct] = useState('');
-  const contractValue = prereqs.contractValue || 0;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingPct, setEditingPct] = useState('');
   const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
@@ -265,8 +264,8 @@ function SOVContractSection({
                                   </datalist>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  <div><Label>Amount ($)</Label><Input inputMode="decimal" value={newItemAmount} onChange={e => { setNewItemAmount(e.target.value); const v = parseFloat(e.target.value); setNewItemPct(contractValue > 0 && !isNaN(v) ? ((v / contractValue) * 100).toFixed(2) : ''); }} placeholder="0.00" /></div>
-                                  <div><Label>% of contract</Label><Input inputMode="decimal" value={newItemPct} onChange={e => { setNewItemPct(e.target.value); const v = parseFloat(e.target.value); setNewItemAmount(!isNaN(v) ? (contractValue * v / 100).toFixed(2) : ''); }} placeholder="1.00" /></div>
+                                  <div><Label>Amount ($)</Label><Input inputMode="decimal" value={newItemAmount} onChange={e => { setNewItemAmount(e.target.value); const v = parseFloat(e.target.value); setNewItemPct((prereqs.contractValue||0) > 0 && !isNaN(v) ? ((v / (prereqs.contractValue||0)) * 100).toFixed(2) : ''); }} placeholder="0.00" /></div>
+                                  <div><Label>% of contract</Label><Input inputMode="decimal" value={newItemPct} onChange={e => { setNewItemPct(e.target.value); const v = parseFloat(e.target.value); setNewItemAmount(!isNaN(v) ? ((prereqs.contractValue||0) * v / 100).toFixed(2) : ''); }} placeholder="1.00" /></div>
                                 </div>
                                 <p className="text-xs text-muted-foreground">Other unlocked lines adjust automatically so the SOV stays at 100%. New scope after the SOV is locked should be a change order instead.</p>
                               </div>
