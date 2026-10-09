@@ -65,6 +65,8 @@ export function FCPricingToggleCard({
 
   useEffect(() => {
     if (!isOn || !fcHasSubmitted || calculatedPrice <= 0) return;
+    // Once sent to the GC the billed price is frozen; later crew pricing is private.
+    if (['submitted', 'approved', 'rejected', 'contracted'].includes(co.status)) return;
     if (lastWrittenPrice.current === calculatedPrice) return;
     lastWrittenPrice.current = calculatedPrice;
     supabase
