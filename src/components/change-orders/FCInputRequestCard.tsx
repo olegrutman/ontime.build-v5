@@ -20,9 +20,18 @@ interface FCInputRequestCardProps {
   acting: boolean;
   /** Set when the crew company itself created this work order (no invite row exists). */
   creatorCrewName?: string;
+  /** Change order status — after submission crew pricing is a private sub↔crew agreement. */
+  coStatus?: string;
+  /** Crew's priced total on this change order. */
+  crewTotal?: number;
+  /** What the subcontractor bills the general contractor for labor. */
+  billedUpstream?: number;
   onRequest: (orgId: string) => Promise<void>;
   onComplete: () => Promise<void>;
 }
+
+const fmt = (v: number) =>
+  `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function FCInputRequestCard({
   canRequest,
@@ -31,9 +40,14 @@ export function FCInputRequestCard({
   collaborators,
   acting,
   creatorCrewName,
+  coStatus,
+  crewTotal = 0,
+  billedUpstream = 0,
   onRequest,
   onComplete,
 }: FCInputRequestCardProps) {
+  const afterSubmission = ['submitted', 'approved', 'contracted'].includes(coStatus ?? '');
+  const overBilled = crewTotal > 0 && billedUpstream > 0 && crewTotal > billedUpstream + 0.005;
   const rl = useRoleLabelsContext();
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
 
@@ -76,6 +90,18 @@ export function FCInputRequestCard({
             </p>
           ) : null}
         </div>
+
+        {afterSubmission && (
+          <p className="text-xs text-muted-foreground break-words">
+            {rl.FC} pricing after submission is between you and your {rl.FC.toLowerCase()}. It does not change the price sent to the {rl.GC}.
+          </p>
+        )}
+
+        {overBilled && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive break-words">
+            {rl.FC} price ({fmt(crewTotal)}) exceeds your billed amount ({fmt(billedUpstream)}).
+          </div>
+        )}
 
         {canRequest && (
           <div className="space-y-2">

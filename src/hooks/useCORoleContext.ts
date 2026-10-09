@@ -78,18 +78,22 @@ export function useCORoleContext(
       fcCreatorOrg?.name ??
       'Crew';
 
+    // Crew pricing may be requested after submission/approval — it creates a private
+    // subcontractor↔crew agreement and never changes the price sent upstream.
     const canRequestFCInput = !!co && isTC && (
       ((co.assigned_to_org_id === myOrgId || co.org_id === myOrgId) &&
-        ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)) ||
+        ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing', 'submitted', 'approved', 'contracted'].includes(co.status)) ||
       (co.org_id === myOrgId && co.status === 'draft')
     );
     const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
 
     const isActiveStatus = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co?.status ?? '');
     const isRunningPricing = co?.pricing_type === 'tm' || co?.pricing_type === 'nte';
-    const baseCanEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isGC || isTC || isFC);
     // Bug 15: FC must be an active collaborator OR the CO creator before they can edit
     const isFCCreator = isFC && co?.org_id === myOrgId;
+    const fcPostSubmitPricing = isFC && isCollaboratorOrg &&
+      ['submitted', 'approved', 'contracted'].includes(co?.status ?? '');
+    const baseCanEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted') || fcPostSubmitPricing) && (isGC || isTC || isFC);
     const canEdit = baseCanEdit && (!isFC || isCollaboratorOrg || isFCCreator);
     const nteBlocked = co?.pricing_type === 'nte' && !!co?.nte_cap && (financials.nteUsedPercent ?? 0) >= 100;
 
@@ -101,9 +105,11 @@ export function useCORoleContext(
     // FCPricingToggleCard recomputes); it is NOT a "TC submitted" event marker, so we
     // can't use it as a freeze. fc_pricing_submitted_at IS set by an explicit FC action,
     // so it still freezes FC's external edits before status changes.
+    // An active crew collaborator can still price after submission: their price bills
+    // the subcontractor only, never the general contractor.
     const fcFrozen = co?.fc_pricing_submitted_at != null;
     const externalFrozenForRole =
-      isFC ? (fcFrozen || submittedOrFinal)
+      isFC ? (fcFrozen || (submittedOrFinal && !fcPostSubmitPricing))
       : submittedOrFinal;
     const canEditExternal =
       !!co && (isGC || isTC || isFC) && !externalFrozenForRole && (!isFC || isCollaboratorOrg || isFCCreator);
