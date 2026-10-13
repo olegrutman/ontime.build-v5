@@ -310,6 +310,7 @@ export default function ProposalBuilder() {
                     {r.location && <p className="text-xs text-muted-foreground break-words">{r.location}</p>}
                     {r.description && <p className="mt-1 text-sm whitespace-pre-wrap break-words">{r.description}</p>}
                     {r.scope.map((s, j) => <div key={j} className="mt-2 text-sm break-words"><p className="font-medium">{s.item_name}</p>{s.description && <p className="whitespace-pre-wrap text-muted-foreground">{s.description}</p>}{s.location_tag && <p className="text-xs text-muted-foreground">{s.location_tag}</p>}</div>)}
+                    {!(Number(r.amount) > 0) && <p className="mt-2 text-xs font-medium text-destructive">No price on this work order yet — add pricing on its page or remove it before sending.</p>}
                   </div>
                   <span className="shrink-0 font-mono tabular-nums text-sm font-semibold text-foreground">{money(r.amount)}</span>
                   <Button variant="ghost" size="icon"
