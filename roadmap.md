@@ -9,6 +9,6 @@
 - [x] Rebuild the public landing page as an illustrated connected-jobsite story
 
 - [x] Apply and verify the selected Connected Vertical Flow landing design
-- [ ] Resolve proposal parties from actual project relationships for all three billing directions
-- [ ] Apply Classic Contract PDF with issuer branding and complete work-order descriptions
-- [ ] Verify proposal creation and PDF download with real project data
+- [x] Resolve proposal parties from actual project relationships for all three billing directions
+- [x] Apply Classic Contract PDF with issuer branding and complete work-order descriptions
+- [x] Verify proposal creation and PDF download with real project data
