@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
         if (li.description) writeText(String(li.description));
         y += 5;
       }
-      for (const entry of labor.filter((l: any) => l.co_id === co.id && l.org_id === billingOrgId && l.description)) {
+      for (const entry of [...materials, ...equipment].filter((l: any) => l.co_id === co.id && l.org_id === billingOrgId && l.description)) {
         if (!scopeSeen.has(entry.description)) { writeText(String(entry.description)); scopeSeen.add(entry.description); }
       }
       y += 8;
@@ -377,7 +377,7 @@ Deno.serve(async (req) => {
     y += 20;
 
     // Acceptance
-    if (y > 580) { doc.addPage(); y = margin; }
+    if (y > 620) { doc.addPage(); y = margin; }
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);
