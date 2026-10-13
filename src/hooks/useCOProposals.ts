@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgType } from '@/hooks/useOrgType';
 
 export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
 export type MilestoneBasis = 'percent' | 'amount';
@@ -28,6 +27,7 @@ export interface COProposal {
   created_at: string;
   updated_at: string;
   /* Quote fields */
+  recipient_org_id: string | null;
   client_name: string | null;
   client_company: string | null;
   client_email: string | null;
@@ -68,6 +68,7 @@ export interface MilestoneInput {
 }
 
 export interface QuoteFields {
+  recipient_org_id?: string | null;
   client_name?: string | null;
   client_company?: string | null;
   client_email?: string | null;
@@ -125,18 +126,21 @@ const sortDetails = (rows: ProposalWithDetails[]) =>
     milestones: [...(p.milestones ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   }));
 
-/** Proposals are upstream commercial documents; crew organizations cannot read them. */
+/** Each company sees its own proposals, including crew-to-subcontractor proposals. */
 export function useCOProposals(projectId: string | null) {
-  const { isFC } = useOrgType();
+  const { userOrgRoles } = useAuth();
+  const orgId = userOrgRoles[0]?.organization_id;
 
   return useQuery({
-    queryKey: ['co-proposals', projectId],
-    enabled: !!projectId && !isFC,
+    queryKey: ['co-proposals', projectId, orgId],
+    enabled: !!projectId && !!orgId,
     queryFn: async (): Promise<ProposalWithDetails[]> => {
+      if (!projectId || !orgId) return [];
       const { data, error } = await supabase
         .from('co_proposals')
         .select(SELECT)
-        .eq('project_id', projectId!)
+        .eq('project_id', projectId)
+        .eq('org_id', orgId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return sortDetails((data ?? []) as unknown as ProposalWithDetails[]);
@@ -175,6 +179,7 @@ export function useCOsInProposals(projectId: string | null) {
 function quotePayload(input: QuoteFields) {
   const t = (v?: string | null) => (v && v.trim() ? v.trim() : null);
   return {
+    recipient_org_id: input.recipient_org_id ?? null,
     client_name: t(input.client_name),
     client_company: t(input.client_company),
     client_email: t(input.client_email),
@@ -243,10 +248,10 @@ export function useCreateProposal(projectId: string | null) {
         .select('proposal_number')
         .eq('project_id', projectId);
       const maxSeq = (existingNumbers ?? []).reduce((max: number, r: any) => {
-        const n = parseInt(String(r.proposal_number ?? '').replace(/\D/g, ''), 10);
+        const n = parseInt(String(r.proposal_number ?? '').split('-').at(-1) ?? '0', 10);
         return Number.isFinite(n) && n > max ? n : max;
       }, 0);
-      const proposalNumber = `PROP-${String(maxSeq + 1).padStart(3, '0')}`;
+      const proposalNumber = `PROP-${orgId.slice(0, 8).toUpperCase()}-${String(maxSeq + 1).padStart(3, '0')}`;
       const { subtotal, total } = computeProposalTotals(
         input.items.map(i => i.amount),
         input.markup_percent,

@@ -2036,6 +2036,7 @@ export type Database = {
           perspective: string
           project_id: string
           proposal_number: string
+          recipient_org_id: string | null
           scope_notes: string | null
           sent_at: string | null
           site_address: string | null
@@ -2068,6 +2069,7 @@ export type Database = {
           perspective?: string
           project_id: string
           proposal_number: string
+          recipient_org_id?: string | null
           scope_notes?: string | null
           sent_at?: string | null
           site_address?: string | null
@@ -2100,6 +2102,7 @@ export type Database = {
           perspective?: string
           project_id?: string
           proposal_number?: string
+          recipient_org_id?: string | null
           scope_notes?: string | null
           sent_at?: string | null
           site_address?: string | null
@@ -2125,6 +2128,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_proposals_recipient_org_id_fkey"
+            columns: ["recipient_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -9309,6 +9319,10 @@ export type Database = {
         Returns: boolean
       }
       projects_visible_via_org: { Args: { p_user: string }; Returns: string[] }
+      proposal_parties: {
+        Args: { _org_id: string; _project_id: string }
+        Returns: Json
+      }
       recalc_po_totals: { Args: { _po_id: string }; Returns: undefined }
       recalc_sov_item_billing: {
         Args: { _sov_item_id: string }
