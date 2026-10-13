@@ -16,6 +16,10 @@ import {
   type MilestoneInput,
 } from '@/hooks/useCOProposals';
 import { PaymentScheduleEditor } from '@/components/change-orders/PaymentScheduleEditor';
+import { useProposalParties, formatProposalAddress } from '@/hooks/useProposalParties';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const money = (v: number) =>
   `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -33,6 +37,10 @@ export default function ProposalBuilder() {
   const createProposal = useCreateProposal(projectId ?? null);
   const updateProposal = useUpdateProposal(projectId ?? null);
   const { data: existing, isLoading: loadingExisting } = useCOProposal(proposalId ?? null);
+
+  const { data: parties, isLoading: loadingParties, error: partiesError } = useProposalParties(projectId);
+  const [recipientId, setRecipientId] = useState('');
+  const [partiesHydrated, setPartiesHydrated] = useState(false);
 
   const initialIds = useMemo(
     () => (searchParams.get('ids') ?? '').split(',').filter(Boolean),
@@ -61,6 +69,39 @@ export default function ProposalBuilder() {
   const [depositNote, setDepositNote] = useState('');
   const [milestones, setMilestones] = useState<MilestoneInput[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const { data: scopeItems = [] } = useQuery({
+    queryKey: ['proposal-scope', projectId, orderedIds.join(',')],
+    enabled: Boolean(projectId && orderedIds.length),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('co_line_items').select('co_id, item_name, description, location_tag').in('co_id', orderedIds).order('sort_order');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  function fillRecipient(id: string) {
+    const recipient = parties?.recipients.find(p => p.id === id);
+    if (!recipient) return;
+    setRecipientId(id);
+    setClientCompany(recipient.name);
+    setClientAddress(formatProposalAddress(recipient.address));
+    setClientPhone(recipient.phone ?? '');
+    setClientName('');
+    setClientEmail('');
+  }
+  useEffect(() => {
+    if (!parties || partiesHydrated || isEdit) return;
+    setSiteAddress(formatProposalAddress(parties.site_address));
+    if (parties.recipients.length === 1) fillRecipient(parties.recipients[0].id);
+    else if (parties.issuer.type === 'GC') {
+      const owner = parties.owner;
+      setClientName(String(owner?.name ?? owner?.full_name ?? ''));
+      setClientCompany(String(owner?.company ?? owner?.company_name ?? ''));
+      setClientEmail(String(owner?.email ?? parties.owner_email ?? ''));
+      setClientPhone(String(owner?.phone ?? ''));
+      setClientAddress(formatProposalAddress(owner?.address));
+    }
+    setPartiesHydrated(true);
+  }, [parties, partiesHydrated, isEdit]);
 
   useEffect(() => {
     if (!isEdit || !existing || hydrated) return;
@@ -71,6 +112,7 @@ export default function ProposalBuilder() {
     setPaymentTerms(existing.payment_terms ?? '');
     setMarkup(String(existing.markup_percent ?? 0));
     setTax(String(existing.tax_percent ?? 0));
+    setRecipientId(existing.recipient_org_id ?? '');
     setClientName(existing.client_name ?? '');
     setClientCompany(existing.client_company ?? '');
     setClientEmail(existing.client_email ?? '');
@@ -101,6 +143,9 @@ export default function ProposalBuilder() {
       id: co.id,
       number: co.co_number ?? '—',
       title: co.title ?? 'Untitled',
+      description: (co as unknown as { problem_summary?: string }).problem_summary || co.reason_note || '',
+      location: co.location_tag,
+      scope: scopeItems.filter(item => item.co_id === co.id),
       amount: (co as { display_total?: number }).display_total ?? 0,
     }));
 
@@ -128,6 +173,7 @@ export default function ProposalBuilder() {
       payment_terms: paymentTerms.trim() || null,
       markup_percent: markupPct,
       tax_percent: taxPct,
+      recipient_org_id: parties?.issuer.type === 'GC' ? null : recipientId || parties?.recipients.find(p => p.name === clientCompany)?.id || null,
       client_name: clientName,
       client_company: clientCompany,
       client_email: clientEmail,
@@ -150,6 +196,20 @@ export default function ProposalBuilder() {
     }
     if (!clientName.trim() && !clientCompany.trim()) {
       toast.error('Add the client name or company this quote is addressed to.');
+      return;
+    }
+    if (!parties || partiesError || (parties.issuer.type !== 'GC' && !parties.recipients.length)) {
+      toast.error('A project contract must identify the company that pays for this work.');
+      return;
+    }
+    const selectedRecipient = recipientId || parties.recipients.find(p => p.name === clientCompany)?.id;
+    if (parties.issuer.type !== 'GC' && !selectedRecipient) {
+      toast.error('Choose the paying company before creating the proposal.');
+      return;
+    }
+    const mixed = changeOrders.some(co => orderedIds.includes(co.id) && co.org_id === parties.issuer.id && parties.issuer.type !== 'GC' && co.assigned_to_org_id && co.assigned_to_org_id !== selectedRecipient);
+    if (mixed) {
+      toast.error('These work orders have different paying companies. Create a separate proposal for each recipient.');
       return;
     }
     setSaving(true);
@@ -176,7 +236,7 @@ export default function ProposalBuilder() {
     }
   }
 
-  const busy = isLoading || (isEdit && loadingExisting);
+  const busy = isLoading || loadingParties || (isEdit && loadingExisting);
 
   return (
     <div className="min-h-screen bg-background pb-36 md:pb-10">
@@ -197,6 +257,14 @@ export default function ProposalBuilder() {
           </p>
         </header>
 
+        {parties && <section className="border-b border-border pb-4 space-y-2">
+          <h2 className="text-xs uppercase font-semibold text-muted-foreground">Prepared by</h2>
+          <div className="flex items-start gap-3 min-w-0">
+            {parties.issuer.logo_url && <img src={parties.issuer.logo_url} alt={`${parties.issuer.name} logo`} className="h-14 w-20 shrink-0 object-contain" />}
+            <div className="min-w-0 break-words"><p className="font-semibold">{parties.issuer.name}</p><p className="text-sm text-muted-foreground">{formatProposalAddress(parties.issuer.address)}</p><p className="text-sm text-muted-foreground">{parties.issuer.phone}</p></div>
+          </div>
+        </section>}
+        {partiesError && <p role="alert" className="text-sm text-destructive">Could not load the proposal parties. Please reload before saving.</p>}
         {/* Bundled work orders */}
         <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <h2 className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -213,9 +281,9 @@ export default function ProposalBuilder() {
           ) : (
             <ul className="divide-y divide-border">
               {rows.map((r, i) => (
-                <li key={r.id} className="flex items-center gap-3 py-2.5">
-                  <div className="flex flex-col gap-0.5">
-                    <button
+                <li key={r.id} className="flex flex-wrap items-start gap-3 py-2.5">
+                  <div className="flex shrink-0 flex-col gap-0.5">
+                    <Button variant="ghost" size="icon"
                       type="button"
                       onClick={() => move(i, -1)}
                       disabled={i === 0}
@@ -223,8 +291,8 @@ export default function ProposalBuilder() {
                       aria-label="Move up"
                     >
                       <ArrowUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="ghost" size="icon"
                       type="button"
                       onClick={() => move(i, 1)}
                       disabled={i === rows.length - 1}
@@ -232,23 +300,26 @@ export default function ProposalBuilder() {
                       aria-label="Move down"
                     >
                       <ArrowDown className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6rem] font-semibold text-muted-foreground">
                       {r.number}
                     </span>
-                    <p className="mt-0.5 truncate text-sm font-medium text-foreground">{r.title}</p>
+                    <p className="mt-0.5 break-words text-sm font-medium text-foreground">{r.title}</p>
+                    {r.location && <p className="text-xs text-muted-foreground break-words">{r.location}</p>}
+                    {r.description && <p className="mt-1 text-sm whitespace-pre-wrap break-words">{r.description}</p>}
+                    {r.scope.map((s, j) => <div key={j} className="mt-2 text-sm break-words"><p className="font-medium">{s.item_name}</p>{s.description && <p className="whitespace-pre-wrap text-muted-foreground">{s.description}</p>}{s.location_tag && <p className="text-xs text-muted-foreground">{s.location_tag}</p>}</div>)}
                   </div>
-                  <span className="font-mono tabular-nums text-sm font-semibold text-foreground">{money(r.amount)}</span>
-                  <button
+                  <span className="shrink-0 font-mono tabular-nums text-sm font-semibold text-foreground">{money(r.amount)}</span>
+                  <Button variant="ghost" size="icon"
                     type="button"
                     onClick={() => setOrderedIds(ids => ids.filter(x => x !== r.id))}
                     className="rounded p-1 text-muted-foreground hover:bg-accent"
                     aria-label="Remove from proposal"
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -258,8 +329,10 @@ export default function ProposalBuilder() {
         {/* Client */}
         <section className="rounded-2xl border border-border bg-card p-4 space-y-4">
           <h2 className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Quote for (client)
+            Prepared for
           </h2>
+          {parties && parties.recipients.length > 1 && <div className="space-y-1.5"><Label>Paying company</Label><Select value={recipientId} onValueChange={fillRecipient}><SelectTrigger><SelectValue placeholder="Choose recipient" /></SelectTrigger><SelectContent>{parties.recipients.map(p => <SelectItem value={p.id} key={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>}
+          {parties?.issuer.type === 'GC' && !parties.owner && <p className="text-sm text-muted-foreground">Owner details are not recorded. Enter the recipient’s details below.</p>}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="q-client-name">Client name</Label>
@@ -307,7 +380,7 @@ export default function ProposalBuilder() {
               placeholder="Summarize the package for the client in one or two sentences."
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="prop-validity">Valid (days)</Label>
               <Input id="prop-validity" type="number" inputMode="numeric" value={validityDays} onChange={e => setValidityDays(e.target.value)} />
@@ -361,7 +434,7 @@ export default function ProposalBuilder() {
         </section>
 
         {/* Totals */}
-        <section className="rounded-2xl border border-border bg-[hsl(var(--primary))] p-4 text-primary-foreground">
+        <section className="rounded-2xl border border-border bg-primary p-4 text-primary-foreground">
           <div className="flex items-center justify-between text-sm">
             <span className="opacity-80">Subtotal</span>
             <span className="font-mono tabular-nums">{money(subtotal)}</span>
@@ -378,7 +451,7 @@ export default function ProposalBuilder() {
               <span className="font-mono tabular-nums">{money(taxAmount)}</span>
             </div>
           )}
-          <div className="mt-3 flex items-baseline justify-between border-t border-white/20 pt-3">
+          <div className="mt-3 flex flex-wrap gap-2 items-baseline justify-between border-t border-primary-foreground/20 pt-3">
             <span className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] opacity-80">Total quote</span>
             <span className="font-mono tabular-nums text-2xl font-semibold">{money(total)}</span>
           </div>
@@ -386,7 +459,7 @@ export default function ProposalBuilder() {
 
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => navigate(`/project/${projectId}`)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || rows.length === 0} className="gap-1.5">
+          <Button onClick={handleSave} disabled={saving || busy || !!partiesError || rows.length === 0} className="gap-1.5">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
             {isEdit ? 'Save quote' : 'Create quote & download PDF'}
           </Button>
