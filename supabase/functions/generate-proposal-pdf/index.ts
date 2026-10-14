@@ -108,6 +108,25 @@ Deno.serve(async (req) => {
       y += 16;
     };
     const addressLine = addressText(project?.address);
+    const scopeType: string = proposal.scope_type ?? "labor_materials_equipment";
+    const showNumbers: boolean = proposal.show_wo_numbers !== false;
+    const SCOPE_LABEL: Record<string, string> = {
+      labor_only: "LABOR ONLY",
+      labor_materials: "LABOR + MATERIALS",
+      labor_materials_equipment: "LABOR + MATERIALS + EQUIPMENT",
+    };
+    const SCOPE_SENTENCE: Record<string, string> = {
+      labor_only: "This proposal is for labor only. Materials and equipment are not included and will be supplied by others.",
+      labor_materials: "Amounts include labor and materials described for each work order. Equipment is not included.",
+      labor_materials_equipment: "Amounts include all labor, materials, and equipment described for each work order.",
+    };
+    const costLines = [
+      ...(scopeType === "labor_only" ? [] : materials),
+      ...(scopeType === "labor_materials_equipment" ? equipment : []),
+    ];
+    const pageBottom = doc.internal.pageSize.getHeight() - 60;
+    const keep = (h: number) => { if (y + h > pageBottom && h < pageBottom - margin) { doc.addPage(); y = margin; } };
+    const lh = (text: string, width: number, size: number) => { doc.setFontSize(size); return doc.splitTextToSize(text, width).length * (size + 4); };
 
     // Classic Contract: company identity, document identity and paired parties.
     let companyX = margin;
@@ -148,6 +167,14 @@ Deno.serve(async (req) => {
     y = Math.max(senderBottom, recipientBottom) + 18;
     doc.setTextColor(26, 59, 110);
     writeText(String(proposal.title ?? "Proposal"), margin, contentW, 14, true);
+    {
+      const label = "SCOPE: " + SCOPE_LABEL[scopeType];
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+      const w = doc.getTextWidth(label) + 16;
+      doc.setFillColor(245, 166, 35); doc.roundedRect(margin, y - 10, w, 16, 3, 3, "F");
+      doc.setTextColor(26, 26, 26); doc.text(label, margin + 8, y + 1);
+      y += 20; doc.setTextColor(26, 59, 110);
+    }
     writeText("PROJECT  " + String(project?.name ?? "") + " / " + String(proposal.project_id).slice(0, 8).toUpperCase(), margin, contentW, 10, true);
     doc.setTextColor(80);
     writeText("SITE  " + String(proposal.site_address || addressLine), margin, contentW, 9);
@@ -175,14 +202,28 @@ Deno.serve(async (req) => {
       const co = cos.find((c: any) => c.id === item.change_order_id);
       if (!co) continue;
       sectionIndex++;
-      const coNumber = String(co.co_number ?? `WO-${sectionIndex}`);
+      const coNumber = showNumbers ? String(co.co_number ?? `WO-${sectionIndex}`) : `Item ${sectionIndex}`;
       const coTitle = String(co.title ?? "Scope of work");
       const amount = num(item.amount_snapshot);
       summary.push({ number: coNumber, title: coTitle, amount });
 
-      heading(`${sectionIndex}. ${coNumber} — ${coTitle}`.toUpperCase());
-      doc.setTextColor(60);
       const descriptions = Array.from(new Set([co.problem_summary, co.reason_note].filter(Boolean))) as string[];
+      // Keep each work order together on one page whenever it fits on a page.
+      {
+        let h = 40 + 30 + 8;
+        if (co.location_tag) h += 13;
+        for (const d of descriptions) h += lh(d, contentW, 9) + 6;
+        const seen = new Set<string>();
+        for (const li of lineItems.filter((l: any) => l.co_id === co.id)) {
+          const k = [li.item_name, li.description, li.location_tag].join("|");
+          if (seen.has(k)) continue; seen.add(k);
+          h += 13 + (li.description ? lh(String(li.description), contentW, 9) : 0) + (li.qty != null ? 12 : 0) + (li.location_tag && li.location_tag !== co.location_tag ? 13 : 0) + 5;
+        }
+        for (const e of costLines.filter((l: any) => l.co_id === co.id && l.org_id === billingOrgId && l.description)) h += lh(String(e.description), contentW, 9);
+        keep(h > pageBottom - margin ? 140 : h);
+      }
+      heading((showNumbers ? `${sectionIndex}. ${coNumber} — ${coTitle}` : `${coNumber}. ${coTitle}`).toUpperCase());
+      doc.setTextColor(60);
       if (co.location_tag) writeText("Location: " + co.location_tag);
       for (const narrative of descriptions) { writeText(narrative); y += 6; }
       // Scope text is public to the proposal; private rates, cost inputs and margins are not.
@@ -192,14 +233,13 @@ Deno.serve(async (req) => {
         const key = [li.item_name, li.description, li.location_tag].join("|");
         if (scopeSeen.has(key)) continue;
         scopeSeen.add(key);
-        brk(670);
         writeText(String(li.item_name ?? "Scope item"), margin, contentW, 9, true);
         if (li.location_tag && li.location_tag !== co.location_tag) writeText("Location: " + li.location_tag);
         if (li.qty != null) writeText("Qty " + li.qty + " " + (li.unit ?? ""), margin, contentW, 8);
         if (li.description) writeText(String(li.description));
         y += 5;
       }
-      for (const entry of [...materials, ...equipment].filter((l: any) => l.co_id === co.id && l.org_id === billingOrgId && l.description)) {
+      for (const entry of costLines.filter((l: any) => l.co_id === co.id && l.org_id === billingOrgId && l.description)) {
         if (!scopeSeen.has(entry.description)) { writeText(String(entry.description)); scopeSeen.add(entry.description); }
       }
       y += 8;
@@ -223,7 +263,7 @@ Deno.serve(async (req) => {
     doc.setFont("helvetica", "bold");
     doc.setTextColor(80);
     doc.text("#", margin + 5, y);
-    doc.text("WORK ORDER", margin + 25, y);
+    doc.text(showNumbers ? "WORK ORDER" : "ITEM", margin + 25, y);
     doc.text("DESCRIPTION", margin + 150, y);
     doc.text("AMOUNT", pw - margin - 5, y, { align: "right" });
     y += 18;
@@ -261,6 +301,7 @@ Deno.serve(async (req) => {
     if (markupPct > 0) finRows.push([`Contractor fee (${markupPct}%):`, fmt(markupAmt)]);
     if (proposalTaxPct > 0) finRows.push([`Sales tax (${proposalTaxPct}%):`, fmt(taxAmt)]);
     finRows.push(["Total Quote Amount:", fmt(grandTotal), true]);
+    finRows.push(["Includes:", SCOPE_LABEL[scopeType], true]);
 
     doc.setFontSize(9.5);
     for (const [label, val, bold] of finRows) {
@@ -353,7 +394,7 @@ Deno.serve(async (req) => {
     heading("TERMS & CONDITIONS");
     const taxRate = num(project?.sales_tax_rate);
     const terms = [
-      "Amounts above include all labor, materials, and equipment described for each work order.",
+      SCOPE_SENTENCE[scopeType],
       proposalTaxPct > 0
         ? `Sales tax of ${proposalTaxPct}% is shown as a separate line above.`
         : taxRate > 0
@@ -376,8 +417,12 @@ Deno.serve(async (req) => {
     }
     y += 20;
 
-    // Acceptance
-    if (y > 620) { doc.addPage(); y = margin; }
+    // Acceptance stays in one piece with the total line above it.
+    keep(150);
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 95);
+    doc.text(`Total Quote Amount (${SCOPE_LABEL[scopeType].toLowerCase()}):`, margin, y);
+    doc.text(fmt(grandTotal), pw - margin, y, { align: "right" });
+    y += 24;
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 58, 95);

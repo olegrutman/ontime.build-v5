@@ -134,6 +134,13 @@
       "when": 1791921612900,
       "tag": "0018_proposal_recipient_contract_validation",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791938161154,
+      "tag": "0019_proposal_scope_type_and_wo_numbers",
+      "breakpoints": true
     }
   ]
 }

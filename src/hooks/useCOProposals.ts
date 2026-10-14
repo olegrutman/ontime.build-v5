@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'declined';
+export type ProposalScopeType = 'labor_only' | 'labor_materials' | 'labor_materials_equipment';
 export type MilestoneBasis = 'percent' | 'amount';
 
 export interface COProposal {
@@ -38,6 +39,8 @@ export interface COProposal {
   exclusions: string | null;
   terms_text: string | null;
   deposit_note: string | null;
+  scope_type: ProposalScopeType;
+  show_wo_numbers: boolean;
 }
 
 export interface COProposalItem {
@@ -80,6 +83,8 @@ export interface QuoteFields {
   terms_text?: string | null;
   deposit_note?: string | null;
   tax_percent?: number;
+  scope_type?: ProposalScopeType;
+  show_wo_numbers?: boolean;
 }
 
 export interface NewProposalInput extends QuoteFields {
@@ -191,6 +196,8 @@ function quotePayload(input: QuoteFields) {
     terms_text: t(input.terms_text),
     deposit_note: t(input.deposit_note),
     tax_percent: Number(input.tax_percent || 0),
+    scope_type: input.scope_type ?? 'labor_materials_equipment',
+    show_wo_numbers: input.show_wo_numbers ?? true,
   };
 }
 

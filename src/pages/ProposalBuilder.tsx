@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowDown, ArrowUp, FileText, Loader2, X } from 'lucide-react';
+import { ArrowLeft, ArrowDown, ArrowUp, FileText, Loader2, Sparkles, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import {
   downloadProposalPdf,
   computeProposalTotals,
   type MilestoneInput,
+  type ProposalScopeType,
 } from '@/hooks/useCOProposals';
 import { PaymentScheduleEditor } from '@/components/change-orders/PaymentScheduleEditor';
 import { useProposalParties, formatProposalAddress } from '@/hooks/useProposalParties';
@@ -23,6 +25,12 @@ import { supabase } from '@/integrations/supabase/client';
 
 const money = (v: number) =>
   `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const SCOPE_OPTIONS: { value: ProposalScopeType; label: string }[] = [
+  { value: 'labor_only', label: 'Labor only' },
+  { value: 'labor_materials', label: 'Labor + materials' },
+  { value: 'labor_materials_equipment', label: 'Labor + materials + equipment' },
+];
 
 const DEFAULT_TERMS = `Work is performed per the scope described above. Concealed conditions, code-required upgrades, or owner-directed changes are handled by written change order before work proceeds.
 Schedule commences upon written acceptance and access to the work area.
@@ -69,6 +77,49 @@ export default function ProposalBuilder() {
   const [depositNote, setDepositNote] = useState('');
   const [milestones, setMilestones] = useState<MilestoneInput[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [scopeType, setScopeType] = useState<ProposalScopeType | null>(null);
+  const [showNumbers, setShowNumbers] = useState(true);
+  const [aiBusy, setAiBusy] = useState(false);
+  const { data: costKinds } = useQuery({
+    queryKey: ['proposal-cost-kinds', orderedIds.join(',')],
+    enabled: orderedIds.length > 0,
+    queryFn: async () => {
+      const [m, e] = await Promise.all([
+        supabase.from('co_material_items').select('co_id').in('co_id', orderedIds).limit(1),
+        supabase.from('co_equipment_items').select('co_id').in('co_id', orderedIds).limit(1),
+      ]);
+      return { materials: (m.data ?? []).length > 0, equipment: (e.data ?? []).length > 0 };
+    },
+  });
+  useEffect(() => {
+    if (scopeType || !costKinds || isEdit) return;
+    setScopeType(costKinds.equipment ? 'labor_materials_equipment' : costKinds.materials ? 'labor_materials' : 'labor_only');
+  }, [costKinds, scopeType, isEdit]);
+  const scopeWarning = !scopeType || !costKinds ? null
+    : scopeType === 'labor_only' && (costKinds.materials || costKinds.equipment)
+      ? 'Some work orders include material or equipment lines, but this proposal says labor only. Those lines will be left off the PDF.'
+      : scopeType === 'labor_materials' && costKinds.equipment
+        ? 'Some work orders include equipment, but this proposal does not include equipment.'
+        : null;
+
+  async function writeSummary() {
+    if (!orderedIds.length) return;
+    setAiBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('proposal-ai-summary', {
+        body: { co_ids: orderedIds, scope_type: scopeType ?? 'labor_materials_equipment' },
+      });
+      if (error) {
+        const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+        throw new Error(body?.error ?? 'Could not write the summary');
+      }
+      if (data?.summary) { setIntro(data.summary); toast.success('Summary written — review and edit it before saving.'); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not write the summary');
+    } finally {
+      setAiBusy(false);
+    }
+  }
   const { data: scopeItems = [] } = useQuery({
     queryKey: ['proposal-scope', projectId, orderedIds.join(',')],
     enabled: Boolean(projectId && orderedIds.length),
@@ -123,6 +174,8 @@ export default function ProposalBuilder() {
     setExclusions(existing.exclusions ?? '');
     setTermsText(existing.terms_text ?? '');
     setDepositNote(existing.deposit_note ?? '');
+    setScopeType(existing.scope_type ?? 'labor_materials_equipment');
+    setShowNumbers(existing.show_wo_numbers ?? true);
     setMilestones(
       existing.milestones.map(m => ({
         label: m.label,
@@ -184,6 +237,8 @@ export default function ProposalBuilder() {
       exclusions,
       terms_text: termsText,
       deposit_note: depositNote,
+      scope_type: scopeType ?? 'labor_materials_equipment',
+      show_wo_numbers: showNumbers,
       items: rows.map(r => ({ change_order_id: r.id, amount: r.amount })),
       milestones: milestones.filter(m => m.label.trim() || m.percent || m.amount),
     };
@@ -192,6 +247,10 @@ export default function ProposalBuilder() {
   async function handleSave() {
     if (rows.length === 0) {
       toast.error('Add at least one work order to the proposal.');
+      return;
+    }
+    if (!scopeType) {
+      toast.error('Choose what this proposal includes: labor only, or materials and equipment too.');
       return;
     }
     if (!clientName.trim() && !clientCompany.trim()) {
@@ -371,8 +430,33 @@ export default function ProposalBuilder() {
             <Label htmlFor="prop-title">Quote title</Label>
             <Input id="prop-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Kitchen & bath additional work" />
           </div>
+          <div className="space-y-2">
+            <Label>What this proposal includes</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup">
+              {SCOPE_OPTIONS.map(o => (
+                <Button key={o.value} type="button" role="radio" aria-checked={scopeType === o.value}
+                  variant={scopeType === o.value ? 'default' : 'outline'} onClick={() => setScopeType(o.value)}>
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+            {scopeWarning && <p className="text-xs font-medium text-destructive">{scopeWarning}</p>}
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Label htmlFor="prop-numbers">Show work order numbers on the proposal</Label>
+              <p className="text-xs text-muted-foreground">When off, items are listed as Item 1, Item 2…</p>
+            </div>
+            <Switch id="prop-numbers" checked={showNumbers} onCheckedChange={setShowNumbers} />
+          </div>
           <div className="space-y-1.5">
-            <Label htmlFor="prop-intro">Intro paragraph</Label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor="prop-intro">Intro paragraph</Label>
+              <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={writeSummary} disabled={aiBusy || !orderedIds.length}>
+                {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Write summary with AI
+              </Button>
+            </div>
             <Textarea
               id="prop-intro"
               value={intro}
