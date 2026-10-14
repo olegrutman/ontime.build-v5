@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
           h += 13 + (li.description ? lh(String(li.description), contentW, 9) : 0) + (li.qty != null ? 12 : 0) + (li.location_tag && li.location_tag !== co.location_tag ? 13 : 0) + 5;
         }
         for (const e of costLines.filter((l: any) => l.co_id === co.id && l.org_id === billingOrgId && l.description)) h += lh(String(e.description), contentW, 9);
-        keep(Math.min(h, 140) === 140 && h > pageBottom - margin ? 140 : h);
+        keep(h > pageBottom - margin ? 140 : h);
       }
       heading((showNumbers ? `${sectionIndex}. ${coNumber} — ${coTitle}` : `${coNumber}. ${coTitle}`).toUpperCase());
       doc.setTextColor(60);
