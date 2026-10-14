@@ -2038,7 +2038,9 @@ export type Database = {
           proposal_number: string
           recipient_org_id: string | null
           scope_notes: string | null
+          scope_type: string
           sent_at: string | null
+          show_wo_numbers: boolean
           site_address: string | null
           status: string
           subtotal: number
@@ -2071,7 +2073,9 @@ export type Database = {
           proposal_number: string
           recipient_org_id?: string | null
           scope_notes?: string | null
+          scope_type?: string
           sent_at?: string | null
+          show_wo_numbers?: boolean
           site_address?: string | null
           status?: string
           subtotal?: number
@@ -2104,7 +2108,9 @@ export type Database = {
           proposal_number?: string
           recipient_org_id?: string | null
           scope_notes?: string | null
+          scope_type?: string
           sent_at?: string | null
+          show_wo_numbers?: boolean
           site_address?: string | null
           status?: string
           subtotal?: number
