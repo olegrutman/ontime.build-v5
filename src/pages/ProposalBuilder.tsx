@@ -226,7 +226,7 @@ export default function ProposalBuilder() {
       payment_terms: paymentTerms.trim() || null,
       markup_percent: markupPct,
       tax_percent: taxPct,
-      recipient_org_id: parties?.issuer.type === 'GC' ? null : recipientId || parties?.recipients.find(p => p.name === clientCompany)?.id || null,
+      recipient_org_id: parties?.issuer.type === 'GC' ? null : recipientId || parties?.recipients.find(p => p.name === clientCompany)?.id || (parties?.recipients.length === 1 ? parties.recipients[0].id : null),
       client_name: clientName,
       client_company: clientCompany,
       client_email: clientEmail,
@@ -261,7 +261,7 @@ export default function ProposalBuilder() {
       toast.error('A project contract must identify the company that pays for this work.');
       return;
     }
-    const selectedRecipient = recipientId || parties.recipients.find(p => p.name === clientCompany)?.id;
+    const selectedRecipient = recipientId || parties.recipients.find(p => p.name === clientCompany)?.id || (parties.recipients.length === 1 ? parties.recipients[0].id : undefined);
     if (parties.issuer.type !== 'GC' && !selectedRecipient) {
       toast.error('Choose the paying company before creating the proposal.');
       return;
