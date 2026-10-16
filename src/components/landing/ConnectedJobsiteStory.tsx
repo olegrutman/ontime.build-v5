@@ -3,11 +3,20 @@ import '@fontsource/space-grotesk/700.css';
 import { ArrowRight, Check, FileText, PackageCheck, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import heroImage from '@/assets/landing-jobsite-hero.jpg';
-import generalContractor from '@/assets/landing-character-general-contractor.png';
-import subcontractor from '@/assets/landing-character-subcontractor.png';
-import crew from '@/assets/landing-character-crew.png';
-import supplier from '@/assets/landing-character-supplier.png';
+import heroImage from '@/assets/landing-photo-jobsite.webp';
+import officePhoto from '@/assets/landing-photo-office.webp';
+import yardPhoto from '@/assets/landing-photo-yard.webp';
+import salesPhoto from '@/assets/landing-photo-sales.webp';
+import generalContractor from '@/assets/landing-person-gc.webp';
+import subcontractor from '@/assets/landing-person-sub.webp';
+import crew from '@/assets/landing-person-crew.webp';
+import supplier from '@/assets/landing-person-supplier.webp';
+
+const scenes = [
+  { image: officePhoto, alt: 'A contractor team reviewing a project schedule and plans together', label: 'In the office', text: 'Budgets, schedules, and approvals reviewed together.' },
+  { image: yardPhoto, alt: 'A supplier and a contractor checking a material order in a lumber yard', label: 'At the yard', text: 'Material orders confirmed against the approved work.' },
+  { image: salesPhoto, alt: 'A supplier sales representative on the phone at his desk', label: 'At the desk', text: 'Quotes, deliveries, and invoices handled without re-typing.' },
+];
 
 const roles = [
   {
@@ -99,10 +108,10 @@ export function ConnectedJobsiteStory() {
       <section className="landing-hero" aria-labelledby="landing-title">
         <img
           src={heroImage}
-          alt="An active timber-frame construction project at sunrise"
+          alt="A superintendent directing his team on an active timber-frame jobsite"
           className="landing-hero-photo"
-          width={1920}
-          height={1200}
+          width={1672}
+          height={941}
           fetchPriority="high"
         />
         <div className="landing-hero-shade" />
@@ -125,7 +134,6 @@ export function ConnectedJobsiteStory() {
           </div>
 
           <div className="landing-hero-cast" aria-hidden="true">
-            <img src={generalContractor} alt="" className="landing-hero-character" width={1024} height={1536} />
             <div className="landing-status-card landing-on-photo">
               <span className="h-2 w-2 shrink-0 rounded-full bg-state-approved" />
               <span>Approved · budget updated</span>
@@ -155,7 +163,7 @@ export function ConnectedJobsiteStory() {
                 <article key={role.name} className="landing-connected-scene">
                   <div className="landing-connected-image">
                     <span className="landing-connected-number">0{index + 1}</span>
-                    <img src={role.image} alt={`${role.name} professional`} loading="lazy" width={1024} height={1536} />
+                    <img src={role.image} alt={`${role.name} professional`} loading="lazy" width={640} height={800} />
                     <span className="landing-role-icon"><Icon className="h-5 w-5" /></span>
                   </div>
                   <div className="landing-connected-copy">
@@ -167,6 +175,26 @@ export function ConnectedJobsiteStory() {
                 </article>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-muted px-5 py-20 sm:px-[5%] sm:py-24" aria-labelledby="landing-scenes-title">
+        <div className="mx-auto max-w-7xl">
+          <p className="landing-kicker text-muted-foreground">Field, office, and yard</p>
+          <h2 id="landing-scenes-title" className="landing-display mt-4 max-w-3xl text-3xl font-bold leading-tight text-foreground sm:text-5xl">
+            Everyone on the job sees the same record.
+          </h2>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {scenes.map((scene) => (
+              <figure key={scene.label} className="landing-scene-card">
+                <img src={scene.image} alt={scene.alt} loading="lazy" />
+                <figcaption className="p-5">
+                  <p className="landing-kicker text-muted-foreground">{scene.label}</p>
+                  <p className="mt-2 text-base font-medium leading-relaxed text-foreground">{scene.text}</p>
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </div>
       </section>

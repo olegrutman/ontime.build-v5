@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 import { LandingHeader, Footer } from '@/components/landing';
 import { rolePages, getRolePage } from '@/content/rolePages';
 import NotFound from '@/pages/NotFound';
+import jobsitePhoto from '@/assets/landing-photo-jobsite.webp';
+import officePhoto from '@/assets/landing-photo-office.webp';
+import yardPhoto from '@/assets/landing-photo-yard.webp';
+
+const rolePhotos: Record<string, { src: string; alt: string; position?: string }> = {
+  'general-contractors': { src: jobsitePhoto, alt: 'A superintendent directing his team on an active jobsite', position: 'center right' },
+  'trade-contractors': { src: officePhoto, alt: 'A contractor team reviewing a schedule and plans together' },
+  'field-crews': { src: jobsitePhoto, alt: 'Crews working on a timber-frame building', position: 'center left' },
+  suppliers: { src: yardPhoto, alt: 'A supplier and a contractor checking a material order in a lumber yard' },
+};
 
 export default function RolePage() {
   const { slug } = useParams();
@@ -76,6 +86,16 @@ export default function RolePage() {
                 </div>
               ))}
             </div>
+            {rolePhotos[role.slug] && (
+              <img
+                src={rolePhotos[role.slug].src}
+                alt={rolePhotos[role.slug].alt}
+                className="mt-10 w-full rounded-lg object-cover aspect-[4/3] sm:aspect-[16/7]"
+                style={{ objectPosition: rolePhotos[role.slug].position ?? 'center' }}
+                width={1672}
+                height={941}
+              />
+            )}
           </div>
         </section>
 
