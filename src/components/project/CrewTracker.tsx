@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HiredCrewJobs } from './HiredCrewJobs';
+import { useSetupTaskSuggestions } from './HiredCrewTaskDialog';
 
 const blankEntry = (projectId: string, date: string) => ({
   project_id:projectId, entry_date:date, cost_type:'lump_sum', description:'', men_count:null, hours_per_man:null,
@@ -27,6 +28,8 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
   const [laborView,setLaborView]=useState('workers');
   const [date,setDate]=useState(format(new Date(),'yyyy-MM-dd'));
   const [quantities,setQuantities]=useState<Record<string,string>>({});
+  const [workTasks,setWorkTasks]=useState<Record<string,string>>({});
+  const taskSuggestions=useSetupTaskSuggestions(projectId,!!tracker.orgId);
   const [workerOpen,setWorkerOpen]=useState(false);
   const [workerId,setWorkerId]=useState<string>();
   const [name,setName]=useState('');
