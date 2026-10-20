@@ -64,6 +64,8 @@ export default {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
+  			'budget-healthy': 'hsl(var(--budget-healthy))',
+  			'budget-tight': 'hsl(var(--budget-tight))',
   			muted: {
   				DEFAULT: 'hsl(var(--muted))',
   				foreground: 'hsl(var(--muted-foreground))'
