@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Plus, Users, Receipt, ShieldCheck, Download, Trash2, Pencil, Archive, Camera } from 'lucide-react';
+import { ArrowLeft, Plus, Users, Receipt, ShieldCheck, Download, Trash2, Pencil, Archive, Camera, Wallet, HardHat, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useCrewTracker, type CrewSpending } from '@/hooks/useCrewTracker';
@@ -79,47 +79,75 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
   if(tracker.loading) return <p role="status" className="py-12 text-muted-foreground">Loading crew spending…</p>;
   if(tracker.error) return <div role="alert"><p>{tracker.error.message}</p><Button variant="outline" onClick={onBack}>Back to overview</Button></div>;
   if(!tracker.orgId) return <p>Only your crew’s accepted projects have a Crew Tracker.</p>;
+  const card='min-w-0 rounded-2xl border bg-card p-4 shadow-sm sm:p-5';
+  const todayCount=tracker.entries.filter(e=>e.entry_date===date).length;
+  const kpis:[string,number,string,typeof Wallet][]=[
+    ['Total spent',totals.total,`${tracker.entries.length} ${tracker.entries.length===1?'entry':'entries'}`,Wallet],
+    ['Labor',totals.labor,`${activeWorkers.length} active ${activeWorkers.length===1?'worker':'workers'}`,HardHat],
+    ['Job expenses',totals.expenses,`${tracker.entries.filter(e=>e.tracker_receipt_path).length} receipts`,Receipt],
+  ];
   return <section className="min-w-0 space-y-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0"><Button variant="ghost" size="sm" onClick={onBack} className="mb-2"><ArrowLeft className="h-4 w-4"/>Overview</Button><h1 className="font-heading text-3xl font-bold">Crew Tracker</h1><p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 shrink-0"/>Private to your crew company</p></div>
-      <Button variant="outline" onClick={exportCosts} disabled={!tracker.entries.length}><Download className="h-4 w-4"/>Export</Button>
+      <div className="min-w-0"><Button variant="ghost" size="sm" onClick={onBack} className="mb-2"><ArrowLeft className="h-4 w-4"/>Overview</Button><h1 className="font-heading text-3xl font-bold uppercase tracking-wide">Crew Tracker</h1>
+        <p className="mt-1 inline-flex max-w-full items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0 text-primary"/><span className="min-w-0 break-words">Private to your crew · never shared with the General Contractor or Subcontractor</span></p></div>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="space-y-1"><Label htmlFor="tracker-date" className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground"><CalendarDays className="h-3.5 w-3.5"/>Work date</Label><Input id="tracker-date" type="date" value={date} onChange={e=>setDate(e.target.value)} required className="w-44"/></div>
+        <Button variant="outline" onClick={exportCosts} disabled={!tracker.entries.length}><Download className="h-4 w-4"/>Export</Button>
+      </div>
     </div>
-    <dl className="grid grid-cols-2 gap-3 border-y py-4 sm:grid-cols-3">{[['Labor',totals.labor],['Expenses',totals.expenses],['Total spent',totals.total]].map(([label,value])=><div key={label} className={label==='Total spent'?'col-span-2 min-w-0 sm:col-span-1':'min-w-0'}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="break-words font-mono text-xl font-semibold">{formatCurrency(Number(value))}</dd></div>)}</dl>
-    <div className="max-w-xs space-y-1"><Label htmlFor="tracker-date">Date</Label><Input id="tracker-date" type="date" value={date} onChange={e=>setDate(e.target.value)} required/></div>
-    <Tabs defaultValue="labor"><TabsList className="grid w-full max-w-md grid-cols-3"><TabsTrigger value="labor"><Users className="mr-1 h-4 w-4"/>Labor</TabsTrigger><TabsTrigger value="expense"><Receipt className="mr-1 h-4 w-4"/>Expense</TabsTrigger><TabsTrigger value="history">History</TabsTrigger></TabsList>
-      <TabsContent value="labor" className="space-y-4 pt-3">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-heading text-xl font-semibold">Daily pay</h2><Button variant="outline" onClick={()=>{setWorkerOpen(true);setWorkerId(undefined);setName('');setRate('');setBasis('hourly');}}><Plus className="h-4 w-4"/>Add worker</Button></div>
-        {workerOpen && <form className="grid gap-3 border-y py-4 sm:grid-cols-3" onSubmit={async e=>{e.preventDefault();try{await tracker.saveWorker.mutateAsync({id:workerId,name:name.trim(),pay_basis:basis,rate:Number(rate)});setWorkerOpen(false);}catch{}}}>
+    <dl className="grid gap-3 sm:grid-cols-3">{kpis.map(([label,value,sub,Icon])=><div key={label} className={card}>
+      <div className="flex items-center justify-between gap-2"><dt className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">{label}</dt><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="h-4 w-4"/></span></div>
+      <dd className="mt-2 break-words font-mono text-2xl font-semibold">{formatCurrency(value)}</dd><p className="text-xs text-muted-foreground">{sub}</p></div>)}</dl>
+
+    <div className="grid gap-5 lg:grid-cols-2">
+      <div id="roll-call" className={`${card} space-y-4`}>
+        <div className="flex flex-wrap items-center justify-between gap-2"><div className="min-w-0"><h2 className="font-heading text-xl font-semibold uppercase tracking-wide">Daily pay roll-call</h2><p className="text-xs text-muted-foreground">Tap hours or days for each worker</p></div><Button variant="outline" size="sm" onClick={()=>{setWorkerOpen(true);setWorkerId(undefined);setName('');setRate('');setBasis('hourly');}}><Plus className="h-4 w-4"/>Add worker</Button></div>
+        {workerOpen && <form className="grid gap-3 rounded-xl border bg-muted/40 p-3 sm:grid-cols-3" onSubmit={async e=>{e.preventDefault();try{await tracker.saveWorker.mutateAsync({id:workerId,name:name.trim(),pay_basis:basis,rate:Number(rate)});setWorkerOpen(false);}catch{}}}>
           <div><Label htmlFor="worker-name">Worker name</Label><Input id="worker-name" value={name} onChange={e=>setName(e.target.value)} maxLength={100} required/></div>
           <div><Label>Pay type</Label><Select value={basis} onValueChange={setBasis}><SelectTrigger aria-label="Pay type"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="hourly">Hourly</SelectItem><SelectItem value="daily">Per day</SelectItem></SelectContent></Select></div>
           <div><Label htmlFor="worker-rate">{basis==='hourly'?'Hourly rate':'Daily rate'}</Label><Input id="worker-rate" type="number" min="0.01" step="0.01" value={rate} onChange={e=>setRate(e.target.value)} required/></div>
           <div className="flex flex-wrap gap-2 sm:col-span-3"><Button type="submit" disabled={tracker.saveWorker.isPending||!name.trim()}>Save worker</Button><Button type="button" variant="ghost" onClick={()=>setWorkerOpen(false)}>Cancel</Button></div>
         </form>}
-        {!activeWorkers.length&&!workerOpen&&<p className="py-6 text-muted-foreground">No workers added yet.</p>}
-        <div className="divide-y">{activeWorkers.map(w=>{
+        {!activeWorkers.length&&!workerOpen&&<div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground"><Users className="mx-auto mb-2 h-6 w-6"/>No workers yet. Add your crew once and reuse their rates every day.</div>}
+        <div className="space-y-2">{activeWorkers.map(w=>{
           const logged=tracker.entries.find(e=>e.tracker_worker_id===w.id&&e.entry_date===date);
-          return <div key={w.id} className="grid min-w-0 gap-3 py-4 sm:grid-cols-[1fr_1.5fr_auto]">
-            <div className="min-w-0"><p className="break-words font-semibold">{w.name}</p><p className="text-sm text-muted-foreground">{formatCurrency(Number(w.rate))} / {w.pay_basis==='hourly'?'hour':'day'}</p><div className="flex gap-1"><Button variant="ghost" size="icon" aria-label={`Edit ${w.name}`} onClick={()=>{setWorkerId(w.id);setName(w.name);setBasis(w.pay_basis);setRate(String(w.rate));setWorkerOpen(true);}}><Pencil className="h-3.5 w-3.5"/></Button><Button variant="ghost" size="icon" aria-label={`Archive ${w.name}`} onClick={()=>tracker.saveWorker.mutate({id:w.id,name:w.name,pay_basis:w.pay_basis,rate:Number(w.rate),active:false})}><Archive className="h-3.5 w-3.5"/></Button></div></div>
-            {logged?<p className="self-center text-sm text-muted-foreground">Pay already logged · {formatCurrency(Number(logged.total_amount))}</p>:<div className="space-y-2"><Label htmlFor={`pay-${w.id}`}>{w.pay_basis==='hourly'?'Hours':'Days'}</Label><Input id={`pay-${w.id}`} type="number" min="0" step="0.25" value={quantities[w.id]??''} onChange={e=>setQuantities(q=>({...q,[w.id]:e.target.value}))}/><div className="flex flex-wrap gap-2">{(w.pay_basis==='hourly'?[4,8,10]:[0.5,1]).map(q=><Button key={q} variant={Number(quantities[w.id])===q?'secondary':'outline'} size="sm" onClick={()=>setQuantities(v=>({...v,[w.id]:String(q)}))}>{w.pay_basis==='hourly'?`${q} hrs`:q===1?'Full day':'Half day'}</Button>)}</div></div>}
-            <p className="self-center font-mono font-semibold">{formatCurrency(logged?Number(logged.total_amount):crewPay(Number(w.rate),Number(quantities[w.id])))}</p>
+          const pay=logged?Number(logged.total_amount):crewPay(Number(w.rate),Number(quantities[w.id]));
+          return <div key={w.id} className={`min-w-0 space-y-3 rounded-xl border p-3 ${logged?'bg-muted/40':''}`}>
+            <div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">{w.name.trim().charAt(0).toUpperCase()}</span>
+              <div className="min-w-0 flex-1"><p className="break-words font-semibold">{w.name}</p><p className="text-xs text-muted-foreground">{formatCurrency(Number(w.rate))} / {w.pay_basis==='hourly'?'hour':'day'}</p></div>
+              <p className="shrink-0 font-mono font-semibold">{formatCurrency(pay)}</p>
+              <div className="flex shrink-0"><Button variant="ghost" size="icon" aria-label={`Edit ${w.name}`} onClick={()=>{setWorkerId(w.id);setName(w.name);setBasis(w.pay_basis);setRate(String(w.rate));setWorkerOpen(true);}}><Pencil className="h-3.5 w-3.5"/></Button><Button variant="ghost" size="icon" aria-label={`Archive ${w.name}`} onClick={()=>tracker.saveWorker.mutate({id:w.id,name:w.name,pay_basis:w.pay_basis,rate:Number(w.rate),active:false})}><Archive className="h-3.5 w-3.5"/></Button></div></div>
+            {logged?<p className="text-xs font-medium text-primary">✓ Pay logged for this date</p>:<div className="flex flex-wrap items-center gap-2">{(w.pay_basis==='hourly'?[4,8,10]:[0.5,1]).map(q=><Button key={q} variant={Number(quantities[w.id])===q?'default':'outline'} size="sm" onClick={()=>setQuantities(v=>({...v,[w.id]:String(q)}))}>{w.pay_basis==='hourly'?`${q} hrs`:q===1?'Full day':'Half day'}</Button>)}
+              <Input aria-label={`${w.pay_basis==='hourly'?'Hours':'Days'} for ${w.name}`} placeholder={w.pay_basis==='hourly'?'Hours':'Days'} className="h-9 w-24" type="number" min="0" step="0.25" value={quantities[w.id]??''} onChange={e=>setQuantities(q=>({...q,[w.id]:e.target.value}))}/></div>}
           </div>;
         })}</div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4"><p className="font-mono font-semibold">Daily pay: {formatCurrency(payTotal)}</p><Button onClick={saveLabor} disabled={!selected.length||tracker.saveCosts.isPending||!date}>Save daily pay</Button></div>
-      </TabsContent>
-      <TabsContent value="expense" className="max-w-2xl space-y-4 pt-4"><form className="space-y-4" onSubmit={e=>{e.preventDefault();saveExpense();}}>
-        <div><Label htmlFor="expense-amount">Amount</Label><Input id="expense-amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} required/></div>
-        <div><Label>Category</Label><div className="mt-2 flex flex-wrap gap-2">{EXPENSE_CATEGORIES.map(c=><Button type="button" key={c} variant={category===c?'secondary':'outline'} size="sm" onClick={()=>setCategory(c)}>{c}</Button>)}</div></div>
+        {activeWorkers.length>0&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted p-3"><div><p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">Pay to save</p><p className="font-mono text-lg font-semibold">{formatCurrency(payTotal)}</p></div><Button onClick={saveLabor} disabled={!selected.length||tracker.saveCosts.isPending||!date}>Save daily pay</Button></div>}
+      </div>
+
+      <form id="log-expense" className={`${card} space-y-4`} onSubmit={e=>{e.preventDefault();saveExpense();}}>
+        <div><h2 className="font-heading text-xl font-semibold uppercase tracking-wide">Log a job expense</h2><p className="text-xs text-muted-foreground">Nails, blades, fuel, rentals, dump runs…</p></div>
+        <div><Label htmlFor="expense-amount">Amount</Label><div className="relative mt-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-muted-foreground">$</span><Input id="expense-amount" className="h-12 pl-7 font-mono text-xl" type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} required/></div></div>
+        <div><Label>Category</Label><div className="mt-2 flex flex-wrap gap-2">{EXPENSE_CATEGORIES.map(c=><Button type="button" key={c} variant={category===c?'default':'outline'} size="sm" onClick={()=>setCategory(c)}>{c}</Button>)}</div></div>
         <div><div className="flex items-center gap-2"><Label htmlFor="expense-note">Note</Label><VoiceInputButton onTranscript={setNote}/></div><Input id="expense-note" placeholder="What did you buy?" value={note} onChange={e=>setNote(e.target.value)} maxLength={500}/></div>
-        <div><Label>Related work order (optional)</Label><Select value={order} onValueChange={setOrder}><SelectTrigger aria-label="Related work order"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Project expense</SelectItem>{tracker.orders.filter(o=>o.id).map(o=><SelectItem key={o.id} value={o.id??''}>{o.co_number} · {o.title}</SelectItem>)}</SelectContent></Select></div>
-        <div><Label htmlFor="receipt" className="flex items-center gap-2"><Camera className="h-4 w-4"/>Receipt (optional)</Label><Input key={receipt?.name??'empty'} id="receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e=>setReceipt(e.target.files?.[0]??null)} className="mt-2"/>{receipt&&<p className="break-words text-sm text-muted-foreground">{receipt.name}</p>}</div>
-        <Button type="submit" disabled={saving||tracker.saveCosts.isPending||!date||!(Number(amount)>0)}>Save expense</Button>
-      </form></TabsContent>
-      <TabsContent value="history" className="space-y-3 pt-4"><h2 className="font-heading text-xl font-semibold">Spending history</h2>{!tracker.entries.length&&<p className="py-6 text-muted-foreground">No spending logged yet.</p>}<div className="divide-y">{tracker.entries.map(e=><div key={e.id} className="flex flex-wrap items-start gap-3 py-4">
-        <div className="min-w-0 flex-1 basis-40"><p className="break-words font-semibold">{e.description}</p><p className="break-words text-sm text-muted-foreground">{e.entry_date} · {e.tracker_category??'Cost entry'}{e.tracker_category==='labor'?` · ${e.tracker_quantity} ${e.tracker_pay_basis==='daily'?'days':'hrs'} × ${formatCurrency(Number(e.hourly_rate))}`:''}</p>{e.tracker_work_order_id&&<p className="break-words text-xs text-muted-foreground">{tracker.orders.find(o=>o.id===e.tracker_work_order_id)?.co_number??'Work order'}</p>}</div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="min-w-0"><Label>Work order (optional)</Label><Select value={order} onValueChange={setOrder}><SelectTrigger aria-label="Related work order"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Project expense</SelectItem>{tracker.orders.filter(o=>o.id).map(o=><SelectItem key={o.id} value={o.id??''}>{o.co_number} · {o.title}</SelectItem>)}</SelectContent></Select></div>
+          <div className="min-w-0"><Label htmlFor="receipt" className="flex items-center gap-2"><Camera className="h-4 w-4"/>Receipt (optional)</Label><Input key={receipt?.name??'empty'} id="receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e=>setReceipt(e.target.files?.[0]??null)}/>{receipt&&<p className="break-words text-xs text-muted-foreground">{receipt.name}</p>}</div>
+        </div>
+        <Button type="submit" className="w-full" disabled={saving||tracker.saveCosts.isPending||!date||!(Number(amount)>0)}><Plus className="h-4 w-4"/>Save expense</Button>
+      </form>
+    </div>
+
+    <div id="activity" className={`${card} space-y-3`}>
+      <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-heading text-xl font-semibold uppercase tracking-wide">Recent activity</h2><span className="text-xs text-muted-foreground">{todayCount} on selected date</span></div>
+      {!tracker.entries.length&&<p className="py-6 text-center text-sm text-muted-foreground">No spending logged yet.</p>}
+      <div className="divide-y">{tracker.entries.map(e=><div key={e.id} className="flex flex-wrap items-start gap-3 py-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">{e.tracker_category==='labor'?<HardHat className="h-4 w-4"/>:<Receipt className="h-4 w-4"/>}</span>
+        <div className="min-w-0 flex-1 basis-40"><p className="break-words font-semibold">{e.description}</p><p className="break-words text-xs text-muted-foreground">{e.entry_date}{e.tracker_category==='labor'?` · ${e.tracker_quantity} ${e.tracker_pay_basis==='daily'?'days':'hrs'} × ${formatCurrency(Number(e.hourly_rate))}`:''}</p>
+          <div className="mt-1 flex flex-wrap gap-1"><span className="rounded-full border px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground">{e.tracker_category==='labor'?'Labor':e.tracker_category??'Cost entry'}</span>{e.tracker_work_order_id&&<span className="rounded-full bg-primary/10 px-2 py-0.5 text-[0.65rem] text-primary">{tracker.orders.find(o=>o.id===e.tracker_work_order_id)?.co_number??'Work order'}</span>}</div></div>
         <div className="flex shrink-0 items-center gap-1"><span className="font-mono font-semibold">{formatCurrency(Number(e.total_amount))}</span>{e.tracker_receipt_path&&<Button variant="ghost" size="icon" aria-label="View receipt" onClick={()=>{if(e.tracker_receipt_path) openReceipt(e.tracker_receipt_path);}}><Receipt className="h-4 w-4"/></Button>}{e.tracker_category&&<Button variant="ghost" size="icon" aria-label={`Edit entry ${e.description}`} onClick={()=>{setEditing(e);setEditValue(String(e.tracker_category==='labor'?e.tracker_quantity:e.total_amount));}}><Pencil className="h-4 w-4"/></Button>}<Button variant="ghost" size="icon" aria-label={`Delete entry ${e.description}`} onClick={()=>setRemove(e)}><Trash2 className="h-4 w-4"/></Button></div>
-      </div>)}</div></TabsContent>
-    </Tabs>
-    {editing&&<form className="space-y-3 border-y py-4" onSubmit={async e=>{e.preventDefault();try{await tracker.editCost.mutateAsync({id:editing.id,...(editing.tracker_category==='labor'?{quantity:Number(editValue)}:{amount:Number(editValue)})});setEditing(null);}catch{}}}><h2 className="font-semibold break-words">Edit {editing.description}</h2><Label htmlFor="edit-cost">{editing.tracker_category==='labor'?(editing.tracker_pay_basis==='daily'?'Days':'Hours'):'Amount'}</Label><Input id="edit-cost" type="number" min="0.01" step="0.01" value={editValue} onChange={e=>setEditValue(e.target.value)} required/><div className="flex gap-2"><Button disabled={tracker.editCost.isPending}>Save changes</Button><Button type="button" variant="ghost" onClick={()=>setEditing(null)}>Cancel</Button></div></form>}
+      </div>)}</div>
+    </div>
+    <Dialog open={!!editing} onOpenChange={o=>{if(!o)setEditing(null);}}><DialogContent>{editing&&<form className="space-y-3" onSubmit={async e=>{e.preventDefault();try{await tracker.editCost.mutateAsync({id:editing.id,...(editing.tracker_category==='labor'?{quantity:Number(editValue)}:{amount:Number(editValue)})});setEditing(null);}catch{}}}><DialogHeader><DialogTitle className="break-words">Edit {editing.description}</DialogTitle></DialogHeader><Label htmlFor="edit-cost">{editing.tracker_category==='labor'?(editing.tracker_pay_basis==='daily'?'Days':'Hours'):'Amount'}</Label><Input id="edit-cost" type="number" min="0.01" step="0.01" value={editValue} onChange={e=>setEditValue(e.target.value)} required/><div className="flex gap-2"><Button disabled={tracker.editCost.isPending}>Save changes</Button><Button type="button" variant="ghost" onClick={()=>setEditing(null)}>Cancel</Button></div></form>}</DialogContent></Dialog>
     <AlertDialog open={!!remove} onOpenChange={open=>{if(!open)setRemove(null);}}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete this spending entry?</AlertDialogTitle><AlertDialogDescription>This removes the cost and its receipt from your crew tracker.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={()=>{if(remove)tracker.deleteCost.mutate(remove);setRemove(null);}}>Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </section>;
 }
