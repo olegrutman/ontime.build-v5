@@ -15,18 +15,23 @@ export function crewDrawBalance(total: number, percent: number, paid: number) {
   return { earned, available: toCents(Math.max(0, earned - paid)), remaining: toCents(Math.max(0, total - paid)) };
 }
 
-export function crewLaborBreakdown(entries: { total_amount: number; tracker_category?: string | null; tracker_job_task_id?: string | null; tracker_pay_basis?: string | null }[]) {
-  const labor = entries.filter(e => e.tracker_category === 'labor');
+/** One rule for every card: tracker labor, or legacy hour entries with no category. */
+export function isCrewLabor(e: { tracker_category?: string | null; cost_type?: string | null }) {
+  return e.tracker_category === 'labor' || (!e.tracker_category && e.cost_type === 'hours');
+}
+
+export function crewLaborBreakdown(entries: { total_amount: number; tracker_category?: string | null; cost_type?: string | null; tracker_job_task_id?: string | null; tracker_pay_basis?: string | null }[]) {
+  const labor = entries.filter(isCrewLabor);
   const hired = toCents(labor.filter(e => e.tracker_job_task_id || ['sq_ft','unit'].includes(e.tracker_pay_basis ?? '')).reduce((s,e) => s + Number(e.total_amount),0));
   const total = toCents(labor.reduce((s,e) => s + Number(e.total_amount),0));
   return { workers: toCents(total - hired), hired };
 }
 
-export function crewBudgetComparison(entries: { total_amount: number; tracker_category?: string | null; cost_type?: string }[], budget: CrewBudget) {
+export function crewBudgetComparison(entries: { total_amount: number; tracker_category?: string | null; cost_type?: string | null }[], budget: CrewBudget) {
   const actual = { ...EMPTY_CREW_BUDGET };
   for (const entry of entries) {
     const category = entry.tracker_category;
-    const group = category === 'labor' || (!category && entry.cost_type === 'hours') ? 'labor'
+    const group = isCrewLabor(entry) ? 'labor'
       : category === 'Materials' || category === 'Nails & fasteners' ? 'materials'
       : category === 'Tools & blades' || category === 'Equipment rental' ? 'tools_equipment' : 'other';
     actual[group] = toCents(actual[group] + Number(entry.total_amount));
@@ -71,8 +76,8 @@ export function crewPay(rate: number, quantity: number): number {
   if (!Number.isFinite(rate) || !Number.isFinite(quantity) || rate <= 0 || quantity <= 0) return 0;
   return toCents(rate * quantity);
 }
-export function spendingTotals(entries: { total_amount: number; tracker_category?: string | null }[]) {
-  const labor = toCents(entries.filter(e => e.tracker_category === 'labor').reduce((s,e) => s + Number(e.total_amount),0));
+export function spendingTotals(entries: { total_amount: number; tracker_category?: string | null; cost_type?: string | null }[]) {
+  const labor = toCents(entries.filter(isCrewLabor).reduce((s,e) => s + Number(e.total_amount),0));
   const total = toCents(entries.reduce((s,e) => s + Number(e.total_amount),0));
   return { labor, expenses: toCents(total-labor), total };
 }
