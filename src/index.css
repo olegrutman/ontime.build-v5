@@ -35,6 +35,8 @@
 
     --destructive: 354 70% 54%;
     --destructive-foreground: 0 85% 97%;
+    --budget-healthy: 152 60% 36%;
+    --budget-tight: 36 92% 46%;
 
     --border: 219 26% 89%;
     --input: 219 26% 89%;
@@ -166,6 +168,8 @@
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 85% 97%;
+    --budget-healthy: 152 60% 36%;
+    --budget-tight: 36 92% 46%;
 
     --border: 216 28% 28%;
     --input: 216 28% 28%;
