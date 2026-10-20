@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { C, fontMono, KpiCard, type PillType } from '@/components/shared/KpiCard';
+import { fontMono, KpiCard, type PillType } from '@/components/shared/KpiCard';
 import type { Basis, LedgerTerm } from '@/lib/kpiLedger';
 import { money } from '@/lib/kpiLedger';
 
