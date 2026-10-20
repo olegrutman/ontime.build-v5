@@ -78,6 +78,21 @@ export function useCrewTracker(projectId: string) {
     const result=id ? await supabase.from('crew_workers').update(fields).eq('id',id).eq('organization_id',orgId) : await supabase.from('crew_workers').insert({...fields,organization_id:orgId});
     if(result.error) throw result.error;
   },onSuccess:()=>client.invalidateQueries({queryKey:['crew-workers']}),onError:e=>toast.error(e.message)});
+  const crews = useQuery({ queryKey: ['crew-hired-crews',orgId], enabled: !!orgId, queryFn: async () => {
+    if(!orgId) return [];
+    const {data,error} = await supabase.from('crew_hired_crews').select('*').eq('organization_id',orgId).eq('active',true).order('name');
+    if(error) throw error; return data;
+  }});
+  const saveCrew = useMutation({mutationFn: async (crew: {name:string;phone?:string|null}) => {
+    if(!orgId) throw new Error('Crew project access required');
+    const {error}=await supabase.from('crew_hired_crews').insert({name:crew.name.trim(),phone:crew.phone?.trim()||null,organization_id:orgId});
+    if(error) throw new Error(error.code==='23505'?'That crew is already in your list':error.message);
+  },onSuccess:()=>{client.invalidateQueries({queryKey:['crew-hired-crews']});toast.success('Crew saved');},onError:e=>toast.error(e.message)});
+  const archiveCrew = useMutation({mutationFn: async (id:string) => {
+    if(!orgId) throw new Error('Crew project access required');
+    const {error}=await supabase.from('crew_hired_crews').update({active:false}).eq('id',id).eq('organization_id',orgId);
+    if(error) throw error;
+  },onSuccess:()=>client.invalidateQueries({queryKey:['crew-hired-crews']}),onError:e=>toast.error(e.message)});
   const saveCosts = useMutation({mutationFn:async(entries: Omit<TablesInsert<'actual_cost_entries'>,'organization_id'|'entered_by'|'tracker_job_task_id'|'tracker_draw_request_id'>[])=>{
     if(!orgId || !user) throw new Error('Crew project access required');
     const {error}=await supabase.from('actual_cost_entries').insert(entries.map(e=>({...e,organization_id:orgId,entered_by:user.id})));
@@ -94,5 +109,5 @@ export function useCrewTracker(projectId: string) {
     const {error}=await supabase.from('actual_cost_entries').update(quantity !== undefined ? {tracker_quantity:quantity} : {lump_amount:amount}).eq('id',id).eq('organization_id',orgId);
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Entry updated');},onError:e=>toast.error(e.message)});
-  return {orgId,projectId,tasks:tasks.data??[],saveTask,deleteTask,saveDraw,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],budget:budget.data??EMPTY_CREW_BUDGET,hasBudget:!!budget.data,saveBudget,loading:access.isLoading||workers.isLoading||costs.isLoading||budget.isLoading||tasks.isLoading,error:access.error||workers.error||costs.error||budget.error||tasks.error,saveWorker,saveCosts,deleteCost,editCost};
+  return {orgId,projectId,crews:crews.data??[],saveCrew,archiveCrew,tasks:tasks.data??[],saveTask,deleteTask,saveDraw,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],budget:budget.data??EMPTY_CREW_BUDGET,hasBudget:!!budget.data,saveBudget,loading:access.isLoading||workers.isLoading||costs.isLoading||budget.isLoading||tasks.isLoading,error:access.error||workers.error||costs.error||budget.error||tasks.error,saveWorker,saveCosts,deleteCost,editCost};
 }
