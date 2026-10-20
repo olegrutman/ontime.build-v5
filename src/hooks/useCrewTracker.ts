@@ -21,13 +21,18 @@ export function useCrewTracker(projectId: string) {
     },
   });
   const orgId = access.data;
+  const tasks = useQuery({queryKey:['crew-job-tasks',orgId,projectId],enabled:!!orgId,queryFn:async()=>{
+    if(!orgId) return [];
+    const {data,error}=await supabase.from('crew_job_tasks').select('*').eq('organization_id',orgId).eq('project_id',projectId).order('created_at');
+    if(error) throw error; return data;
+  }});
   const budget = useQuery({ queryKey: ['crew-budget',orgId,projectId], enabled: !!orgId, queryFn: async () => {
     if(!orgId) return null;
     const {data,error} = await supabase.from('crew_project_budgets').select('*').eq('organization_id',orgId).eq('project_id',projectId).maybeSingle();
     if(error) throw error;
     return data;
   }});
-  const saveBudget = useMutation({mutationFn:async(values:CrewBudget)=>{
+  const saveBudget = useMutation({mutationFn:async(values:CrewBudget & {worker_labor?:number;hired_labor?:number})=>{
     if(!orgId) throw new Error('Crew project access required');
     if(Object.values(values).some(v=>!Number.isFinite(v)||v<0)) throw new Error('Budget amounts must be zero or greater');
     const {error}=await supabase.from('crew_project_budgets').upsert({...values,organization_id:orgId,project_id:projectId},{onConflict:'project_id,organization_id'});
@@ -48,10 +53,20 @@ export function useCrewTracker(projectId: string) {
     if(error) throw error; return data ?? [];
   }});
   const refresh = () => {
+    client.invalidateQueries({queryKey:['crew-job-tasks']});
     client.invalidateQueries({queryKey:['crew-spending']});
     client.invalidateQueries({queryKey:['actual-costs']});
     client.invalidateQueries({queryKey:['actual-costs-project-total']});
   };
+  const saveTask=useMutation({mutationFn:async(task:{crew_name:string;task_name:string;pay_basis:string;quantity:number;rate:number})=>{
+    if(!orgId) throw new Error('Crew project access required');
+    const {error}=await supabase.from('crew_job_tasks').insert({...task,project_id:projectId,organization_id:orgId});
+    if(error) throw error;
+  },onSuccess:()=>{refresh();toast.success('Crew task added');},onError:e=>toast.error(e.message)});
+  const saveDraw=useMutation({mutationFn:async(draw:{taskId:string;percent:number;amount:number;date:string})=>{
+    const {error}=await supabase.rpc('record_crew_job_draw',{p_task_id:draw.taskId,p_percent:draw.percent,p_amount:draw.amount,p_date:draw.date});
+    if(error) throw error;
+  },onSuccess:()=>{refresh();toast.success('Progress and payment saved');},onError:e=>toast.error(e.message)});
   const saveWorker = useMutation({mutationFn: async (worker: {name:string;pay_basis:string;rate:number;id?:string;active?:boolean}) => {
     if(!orgId) throw new Error('Crew project access required');
     const {id,...fields}=worker;
@@ -74,5 +89,5 @@ export function useCrewTracker(projectId: string) {
     const {error}=await supabase.from('actual_cost_entries').update(quantity !== undefined ? {tracker_quantity:quantity} : {lump_amount:amount}).eq('id',id).eq('organization_id',orgId);
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Entry updated');},onError:e=>toast.error(e.message)});
-  return {orgId,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],budget:budget.data??EMPTY_CREW_BUDGET,hasBudget:!!budget.data,saveBudget,loading:access.isLoading||workers.isLoading||costs.isLoading||budget.isLoading,error:access.error||workers.error||costs.error||budget.error,saveWorker,saveCosts,deleteCost,editCost};
+  return {orgId,tasks:tasks.data??[],saveTask,saveDraw,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],budget:budget.data??EMPTY_CREW_BUDGET,hasBudget:!!budget.data,saveBudget,loading:access.isLoading||workers.isLoading||costs.isLoading||budget.isLoading||tasks.isLoading,error:access.error||workers.error||costs.error||budget.error||tasks.error,saveWorker,saveCosts,deleteCost,editCost};
 }
