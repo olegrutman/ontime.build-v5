@@ -1,3 +1,4 @@
+import { isOrderedPO, isDeliveredPO, isScheduledSupplierPO, isBilledInvoice, realizedReturnCredit, poOrderedAmount } from '@/lib/supplierMetrics';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -80,20 +81,22 @@ export function useSupplierProjectAnalytics({
     enabled: !!projectId && !!supplierId,
     queryFn: async () => {
       const now = new Date();
+      if (!supplierId) throw new Error("Supplier not available");
 
       const [posRes, invRes, returnsRes, coRes, lineRes] = await Promise.all([
         supabase
           .from('purchase_orders')
-          .select('id, po_number, po_name, status, po_total, created_at, ordered_at, delivered_at, ready_for_delivery_at')
+          .select('id, po_number, po_name, status, po_total, po_subtotal_total, sales_tax_percent, created_at, ordered_at, delivered_at, ready_for_delivery_at')
           .eq('project_id', projectId)
-          .eq('supplier_id', supplierId!),
+          .eq('supplier_id', supplierId),
         // invoices joined via po_id
         supabase
           .from('purchase_orders')
           .select('id')
           .eq('project_id', projectId)
-          .eq('supplier_id', supplierId!)
+          .eq('supplier_id', supplierId)
           .then(async (r) => {
+            if (r.error) throw r.error;
             const ids = (r.data || []).map((x: any) => x.id);
             if (!ids.length) return { data: [] as any[] };
             return supabase
@@ -104,7 +107,7 @@ export function useSupplierProjectAnalytics({
         supplierOrgId
           ? supabase
               .from('returns')
-              .select('id, status, credit_subtotal, reason, created_at')
+              .select('id, status, credit_subtotal, net_credit_total, reason, created_at')
               .eq('project_id', projectId)
               .eq('supplier_org_id', supplierOrgId)
           : Promise.resolve({ data: [] as any[] }),
@@ -118,8 +121,9 @@ export function useSupplierProjectAnalytics({
           .from('purchase_orders')
           .select('id')
           .eq('project_id', projectId)
-          .eq('supplier_id', supplierId!)
+          .eq('supplier_id', supplierId)
           .then(async (r) => {
+            if (r.error) throw r.error;
             const ids = (r.data || []).map((x: any) => x.id);
             if (!ids.length) return { data: [] as any[] };
             return supabase
@@ -129,6 +133,7 @@ export function useSupplierProjectAnalytics({
           }),
       ]);
 
+      for (const result of [posRes, invRes, returnsRes, coRes, lineRes]) { if ("error" in result && result.error) throw result.error; }
       const pos = (posRes.data || []) as any[];
       const invoices = (invRes.data || []) as any[];
       const returns = (returnsRes.data || []) as any[];
@@ -140,17 +145,18 @@ export function useSupplierProjectAnalytics({
       const walletCapturePct = estimateTotal > 0 ? Math.round((orderedTotal / estimateTotal) * 100) : 0;
 
       const weekBuckets = [0, 0, 0, 0];
-      pos.forEach(po => {
-        const created = new Date(po.created_at);
+      pos.filter(po => isOrderedPO(po.status)).forEach(po => {
+        const created = new Date(po.ordered_at || po.created_at);
         const days = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+        if (days < 0) return;
         if (days < 7) weekBuckets[3]++;
         else if (days < 14) weekBuckets[2]++;
         else if (days < 21) weekBuckets[1]++;
         else if (days < 28) weekBuckets[0]++;
       });
 
-      const lastPo = pos.reduce<Date | null>((latest, po) => {
-        const d = new Date(po.created_at);
+      const lastPo = pos.filter(po => isOrderedPO(po.status)).reduce<Date | null>((latest, po) => {
+        const d = new Date(po.ordered_at || po.created_at);
         return !latest || d > latest ? d : latest;
       }, null);
       const daysSinceLastPO = lastPo
@@ -174,7 +180,7 @@ export function useSupplierProjectAnalytics({
           }
           return;
         }
-        if (inv.status === 'DRAFT' || inv.status === 'VOIDED') return;
+        if (!isBilledInvoice(inv.status)) return;
         // open invoice
         const refDate = inv.submitted_at || inv.created_at;
         if (!refDate) return;
@@ -190,7 +196,7 @@ export function useSupplierProjectAnalytics({
         : null;
 
       const firstDelivery = pos
-        .filter(p => p.delivered_at)
+        .filter(p => isDeliveredPO(p.status) && p.delivered_at)
         .reduce<Date | null>((earliest, po) => {
           const d = new Date(po.delivered_at);
           return !earliest || d < earliest ? d : earliest;
@@ -203,9 +209,9 @@ export function useSupplierProjectAnalytics({
       // ── Delivery perf ──
       const leadTimes: number[] = [];
       pos.forEach(po => {
-        if (po.created_at && po.delivered_at) {
+        if (isDeliveredPO(po.status) && po.ordered_at && po.delivered_at) {
           const days = Math.floor(
-            (new Date(po.delivered_at).getTime() - new Date(po.created_at).getTime()) / (1000 * 60 * 60 * 24)
+            (new Date(po.delivered_at).getTime() - new Date(po.ordered_at).getTime()) / (1000 * 60 * 60 * 24)
           );
           if (days >= 0) leadTimes.push(days);
         }
@@ -215,29 +221,29 @@ export function useSupplierProjectAnalytics({
         : null;
 
       const upcomingDeliveries = pos
-        .filter(p => p.status === 'ORDERED' || p.status === 'READY_FOR_DELIVERY')
+        .filter(p => isScheduledSupplierPO(p))
         .map(p => ({
           id: p.id,
           po_number: p.po_number,
           po_name: p.po_name,
-          date: p.ready_for_delivery_at || p.ordered_at || p.created_at,
-          amount: p.po_total || 0,
+          date: p.ready_for_delivery_at,
+          amount: poOrderedAmount(p),
         }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(0, 5);
+;
 
       // ── Returns ──
-      const returnsTotal = returns.reduce((s, r) => s + (r.credit_subtotal || 0), 0);
+      const returnsTotal = returns.reduce((s, r) => s + realizedReturnCredit(r), 0);
       const deliveredTotal = pos
-        .filter(p => p.status === 'DELIVERED' || p.status === 'FINALIZED')
-        .reduce((s, p) => s + (p.po_total || 0), 0);
+        .filter(p => isDeliveredPO(p.status))
+        .reduce((s, p) => s + poOrderedAmount(p), 0);
       const returnRatePct = deliveredTotal > 0 ? +((returnsTotal / deliveredTotal) * 100).toFixed(1) : 0;
-      const openCreditMemos = returns.filter(r => r.status === 'APPROVED' || r.status === 'CREDITED').length;
+      const openCreditMemos = returns.filter(r => ['APPROVED', 'SCHEDULED', 'PICKED_UP', 'PRICED'].includes(r.status)).length;
 
       const reasonMap: Record<string, number> = {};
-      returns.forEach(r => {
+      returns.filter(r => r.status === 'CLOSED').forEach(r => {
         const reason = r.reason || 'Unspecified';
-        reasonMap[reason] = (reasonMap[reason] || 0) + (r.credit_subtotal || 0);
+        reasonMap[reason] = (reasonMap[reason] || 0) + realizedReturnCredit(r);
       });
       const topReturnReasons = Object.entries(reasonMap)
         .sort((a, b) => b[1] - a[1])
@@ -248,9 +254,9 @@ export function useSupplierProjectAnalytics({
       let priceOverrideCount = 0;
       let priceOverrideTotal = 0;
       lines.forEach(li => {
-        if (li.price_adjusted_by_supplier && li.original_unit_price && li.unit_price) {
+        if (li.price_adjusted_by_supplier && li.original_unit_price != null && li.unit_price != null) {
           priceOverrideCount++;
-          const delta = (li.original_unit_price - li.unit_price) * (li.quantity || 0);
+          const delta = Math.max(0, li.original_unit_price - li.unit_price) * (li.quantity || 0);
           priceOverrideTotal += delta;
         }
       });

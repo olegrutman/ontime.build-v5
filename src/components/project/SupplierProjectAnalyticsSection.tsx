@@ -6,6 +6,7 @@ import type { SupplierProjectAnalytics } from '@/hooks/useSupplierProjectAnalyti
 interface Props {
   analytics: SupplierProjectAnalytics | undefined;
   loading: boolean;
+  error?: boolean;
   estimateTotal: number;
   orderedTotal: number;
   onNavigate: (tab: string) => void;
@@ -45,12 +46,13 @@ function Sparkline({ values, color = C.amber }: { values: number[]; color?: stri
   );
 }
 
-export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTotal, orderedTotal, onNavigate }: Props) {
+export function SupplierProjectAnalyticsSection({ analytics, loading, error, estimateTotal, orderedTotal, onNavigate }: Props) {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>('ALL');
 
 
+  if (error) return <div role="alert" className="p-4 text-destructive">Could not load supplier analytics. Refresh to retry.</div>;
   if (loading || !analytics) {
     return (
       <div style={{ padding: 16, textAlign: 'center', color: C.muted, fontSize: '0.78rem', ...fontLabel }}>
@@ -158,9 +160,9 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
           iconBg={C.redBg}
           label="PROJECT A/R AGING"
           value={fmt(totalOpenAR)}
-          sub={a.oldestPastDueDays !== null ? `Oldest past-due: ${a.oldestPastDueDays}d · Avg DSO: ${a.avgDsoDays ?? '—'}d` : `Avg DSO: ${a.avgDsoDays ?? '—'}d`}
+          sub={a.oldestPastDueDays !== null ? `Oldest invoice: ${a.oldestPastDueDays}d · Avg DSO: ${a.avgDsoDays ?? '—'}d` : `Avg DSO: ${a.avgDsoDays ?? '—'}d`}
           pills={[
-            { type: lienPill, text: lienDays === null ? 'No deliveries' : lienDays <= 0 ? 'Lien clock expired' : `Lien clock: ${lienDays}d` },
+            { type: totalOpenAR > 0 ? 'pa' : 'pg', text: totalOpenAR > 0 ? 'Awaiting payment' : 'No open receivables' },
           ]}
           idx={7}
         >
@@ -178,7 +180,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
             </table>
             {a.firstDeliveryAt && (
               <div style={{ marginTop: 10, padding: 8, background: C.surface2, borderRadius: 6, fontSize: '0.7rem', color: C.muted }}>
-                First delivery: <strong style={{ color: C.ink }}>{fmtDate(a.firstDeliveryAt)}</strong> · 90-day lien window default
+                First delivery: <strong style={{ color: C.ink }}>{fmtDate(a.firstDeliveryAt)}</strong> · Invoice ages measured from submission, not contractual due dates
               </div>
             )}
           </div>
@@ -225,7 +227,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
           iconBg={C.redBg}
           label="RETURNS & CREDITS"
           value={fmt(a.returnsTotal)}
-          sub={a.returnRatePct > 0 ? `${a.returnRatePct}% return rate · ${a.openCreditMemos} open credit${a.openCreditMemos === 1 ? '' : 's'}` : 'No returns issued'}
+          sub={a.returnsTotal > 0 ? `${a.returnRatePct}% return rate · ${a.openCreditMemos} open credit${a.openCreditMemos === 1 ? '' : 's'}` : `${a.openCreditMemos} pending credits · no closed credits`}
           pills={[{ type: returnRatePill, text: a.returnRatePct === 0 ? 'Clean' : `${a.returnRatePct}% rate` }]}
           idx={9}
         >
@@ -253,7 +255,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
           iconBg={C.purpleBg}
           label="PRICING HEALTH"
           value={a.priceOverrideCount > 0 ? `${a.priceOverrideCount}` : '0'}
-          sub={a.priceOverrideTotal > 0 ? `${fmt(a.priceOverrideTotal)} discounted from list` : 'No price overrides'}
+          sub={a.priceOverrideTotal > 0 ? `${fmt(a.priceOverrideTotal)} discounted from list` : a.priceOverrideCount > 0 ? 'Overrides without net discounts' : 'No price overrides'}
           pills={[{ type: overridePill, text: a.priceOverrideCount === 0 ? 'List pricing' : `${fmt(a.priceOverrideTotal)} given` }]}
           idx={10}
         >
@@ -277,16 +279,16 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, estimateTo
           icon="🔭"
           iconBg={C.greenBg}
           label="FUTURE DEMAND SIGNAL"
-          value={a.activeCOs.count > 0 ? fmt(a.activeCOs.total) : '$0'}
+          value={String(a.activeCOs.count)}
           sub={`${a.activeCOs.count} active change order${a.activeCOs.count === 1 ? '' : 's'} · ${a.packsNotOrderedCount} pack${a.packsNotOrderedCount === 1 ? '' : 's'} unstarted`}
-          pills={[{ type: demandPill, text: a.activeCOs.count > 0 ? `${a.activeCOs.count} CO${a.activeCOs.count === 1 ? '' : 's'} pending` : 'No upcoming demand' }]}
+          pills={[{ type: demandPill, text: a.activeCOs.count > 0 ? `${a.activeCOs.count} active` : 'No upcoming demand' }]}
           idx={11}
         >
           <div style={{ padding: 14 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 <TRow cells={[<TdN>Active change orders</TdN>, <TdM>{a.activeCOs.count}</TdM>]} />
-                <TRow cells={[<TdN>CO scope value</TdN>, <TdM>{fmt(a.activeCOs.total)}</TdM>]} />
+                <TRow cells={[<TdN>Material demand value</TdN>, 'Not quoted yet']} />
                 <TRow cells={[<TdN>Packs not yet ordered</TdN>, <TdM>{a.packsNotOrderedCount}</TdM>]} />
               </tbody>
             </table>

@@ -1,3 +1,4 @@
+import { isOrderedPO, poOrderedAmount } from '@/lib/supplierMetrics';
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,14 +49,14 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
       const estimateIds = estimates.map(e => e.id);
       const { data: pos } = await supabase
         .from('purchase_orders')
-        .select('id, status, source_estimate_id, source_pack_name')
+        .select('id, status, source_estimate_id, source_pack_name, po_total, po_subtotal_total, sales_tax_percent')
         .eq('project_id', projectId)
         .in('source_estimate_id', estimateIds);
 
       const orderedPacksByEst: Record<string, Set<string>> = {};
       const orderedAmountByEst: Record<string, number> = {};
       (pos || []).forEach(po => {
-        if (po.source_estimate_id && po.status !== 'ACTIVE') {
+        if (po.source_estimate_id && isOrderedPO(po.status)) {
           if (po.source_pack_name) {
             if (!orderedPacksByEst[po.source_estimate_id]) orderedPacksByEst[po.source_estimate_id] = new Set();
             orderedPacksByEst[po.source_estimate_id].add(po.source_pack_name);
@@ -63,21 +64,9 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
         }
       });
 
-      // Get ordered amounts
-      const activePOIds = (pos || []).filter(p => ['PRICED','ORDERED','DELIVERED'].includes(p.status)).map(p => p.id);
-      if (activePOIds.length > 0) {
-        const { data: lineItems } = await supabase
-          .from('po_line_items')
-          .select('po_id, line_total, source_estimate_item_id')
-          .in('po_id', activePOIds)
-          .not('source_estimate_item_id', 'is', null);
-        (lineItems || []).forEach(li => {
-          const po = (pos || []).find(p => p.id === li.po_id);
-          if (po?.source_estimate_id) {
-            orderedAmountByEst[po.source_estimate_id] = (orderedAmountByEst[po.source_estimate_id] || 0) + (li.line_total || 0);
-          }
-        });
-      }
+      (pos || []).filter(po => isOrderedPO(po.status)).forEach(po => {
+        if (po.source_estimate_id) orderedAmountByEst[po.source_estimate_id] = (orderedAmountByEst[po.source_estimate_id] || 0) + poOrderedAmount(po);
+      });
 
       const { data: project } = await supabase.from('projects').select('name').eq('id', projectId).maybeSingle();
 

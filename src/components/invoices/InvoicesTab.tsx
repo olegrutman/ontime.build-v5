@@ -164,7 +164,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       const actionStatuses = isApproverView ? ['SUBMITTED'] : ['DRAFT'];
       return base.filter(i => actionStatuses.includes(i.status));
     }
-    return base;
+    return statusFilter === 'ALL' ? base : base.filter(i => i.status === statusFilter);
   }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices, statusFilter, isApproverView]);
 
   const fetchAll = async () => {
@@ -198,9 +198,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
 
-      if (statusFilter !== 'ALL' && statusFilter !== 'NEEDS_ACTION') {
-        query = query.eq('status', statusFilter);
-      }
 
       const { data: invoiceData, error: invoiceError } = await query;
 
@@ -242,7 +239,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   useEffect(() => {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, statusFilter]);
+  }, [projectId]);
 
   const fetchInvoices = fetchAll;
 

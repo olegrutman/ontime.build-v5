@@ -1,3 +1,4 @@
+import { isOrderedPO, poOrderedAmount } from '@/lib/supplierMetrics';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,6 +37,7 @@ export default function SupplierEstimates() {
   const [suppliers, setSuppliers] = useState<{ id: string; name: string; supplier_code: string }[]>([]);
   const [selectedEstimate, setSelectedEstimate] = useState<ProjectEstimate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [estimateRows, setEstimateRows] = useState<EstimateRow[]>([]);
   
   // New estimate form
@@ -64,19 +66,21 @@ export default function SupplierEstimates() {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchEstimates(), fetchProjects(), fetchSuppliers(), fetchEstimateOrderRows()]);
-    setLoading(false);
+    setFetchError(false);
+    try { await Promise.all([fetchEstimates(), fetchProjects(), fetchSuppliers(), fetchEstimateOrderRows()]); }
+    catch { setFetchError(true); } finally { setLoading(false); }
   };
 
   const fetchEstimateOrderRows = async () => {
     if (!organizationId) return;
 
     // Fetch supplier_estimates for this org
-    const { data: supplierEsts } = await supabase
+    const { data: supplierEsts, error: estimateError } = await supabase
       .from('supplier_estimates')
       .select('id, name, project_id, total_amount, status, projects:project_id(name)')
       .eq('supplier_org_id', organizationId);
 
+    if (estimateError) throw estimateError;
     if (!supplierEsts || supplierEsts.length === 0) {
       setEstimateRows([]);
       return;
@@ -92,10 +96,12 @@ export default function SupplierEstimates() {
         .in('estimate_id', estIds),
       supabase
         .from('purchase_orders')
-        .select('id, source_estimate_id, source_pack_name, po_total, status')
+        .select('id, source_estimate_id, source_pack_name, po_total, po_subtotal_total, sales_tax_percent, status')
         .in('source_estimate_id', estIds),
     ]);
 
+    if (itemsRes.error) throw itemsRes.error;
+    if (posRes.error) throw posRes.error;
     const items = itemsRes.data || [];
     const pos = posRes.data || [];
 
@@ -103,8 +109,8 @@ export default function SupplierEstimates() {
     const orderedByEst: Record<string, number> = {};
     const orderedPacksByEst: Record<string, Set<string>> = {};
     pos.forEach(po => {
-      if (po.source_estimate_id && po.status !== 'ACTIVE') {
-        orderedByEst[po.source_estimate_id] = (orderedByEst[po.source_estimate_id] || 0) + (po.po_total || 0);
+      if (po.source_estimate_id && isOrderedPO(po.status)) {
+        orderedByEst[po.source_estimate_id] = (orderedByEst[po.source_estimate_id] || 0) + poOrderedAmount(po);
         if (po.source_pack_name) {
           if (!orderedPacksByEst[po.source_estimate_id]) orderedPacksByEst[po.source_estimate_id] = new Set();
           orderedPacksByEst[po.source_estimate_id].add(po.source_pack_name);
@@ -424,8 +430,9 @@ export default function SupplierEstimates() {
           </Dialog>
         </div>
 
+        {fetchError && <div role="alert" className="text-destructive">Could not load estimate totals. <Button variant="outline" onClick={fetchData}>Retry</Button></div>}
         {/* Estimate → Orders card */}
-        {estimateRows.length > 0 && (
+        {!fetchError && estimateRows.length > 0 && (
           <div className="mb-6">
             <SupplierEstimateCatalog estimates={estimateRows} />
           </div>

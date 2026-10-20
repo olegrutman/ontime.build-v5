@@ -1,3 +1,4 @@
+import { estimateItemAmount } from '@/lib/supplierMetrics';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -161,27 +162,24 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       const estimateIds = Array.from(new Set(pos.map((po) => po.source_estimate_id).filter(Boolean))) as string[];
       const totals = new Map<string, { total: number; itemCount: number }>();
       if (estimateIds.length > 0) {
-        const { data: estItems } = await supabase
+        const { data: estimateTaxes, error: taxError } = await supabase.from("supplier_estimates").select("id, sales_tax_percent").in("id", estimateIds);
+        if (taxError) throw taxError;
+        const taxByEstimate = Object.fromEntries((estimateTaxes || []).map(e => [e.id, e.sales_tax_percent]));
+        const { data: estItems, error: itemError } = await supabase
           .from('supplier_estimate_items')
-          .select('estimate_id, pack_name, unit_price, quantity')
+          .select('estimate_id, pack_name, line_total')
           .in('estimate_id', estimateIds);
 
+        if (itemError) throw itemError;
         for (const item of estItems || []) {
           const key = `${item.estimate_id}|${item.pack_name || ''}`;
           const current = totals.get(key) || { total: 0, itemCount: 0 };
-          current.total += (item.unit_price || 0) * (item.quantity || 0);
+          current.total += estimateItemAmount(item.line_total, taxByEstimate[item.estimate_id]);
           current.itemCount += 1;
           totals.set(key, current);
         }
 
-        for (const po of pos) {
-          if (!po.source_estimate_id || !po.source_pack_name) continue;
-          const key = `${po.source_estimate_id}|${po.source_pack_name}`;
-          const packData = totals.get(key);
-          if (packData) {
-            packData.total = packData.total * (1 + (po.sales_tax_percent || 0) / 100);
-          }
-        }
+
       }
 
       const poIds = pos.map((po) => po.id);
@@ -190,6 +188,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         const { data: invoicedData } = await supabase
           .from('invoices')
           .select('po_id')
+          .in('status', ['SUBMITTED', 'APPROVED', 'PAID'])
           .eq('project_id', projectId)
           .in('po_id', poIds)
           .not('po_id', 'is', null);
