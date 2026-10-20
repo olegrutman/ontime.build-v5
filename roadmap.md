@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Audit every supplier KPI definition and reconcile live project totals
-- [ ] Correct supplier KPI mismatches and verify permanent regressions and live screens
+- [x] Audit reachable supplier KPI definitions and reconcile live dashboard/project totals; reviewed dormant legacy surfaces separately
+- [x] Correct supplier KPI mismatches and verify 44 regressions, all 22 live dashboard/overview popups, order/invoice summaries and invoice filtering
 
 - [x] Unify operational KPI cards with the overview card anatomy without changing calculations
 - [x] Verify live breakdowns, financial regressions and phone layouts (53 tests; signed-in dashboard/overview dialogs; 68 supplier phone views)

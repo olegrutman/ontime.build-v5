@@ -426,7 +426,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
           <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h4 className="text-lg font-medium mb-2">No Invoices Yet</h4>
+          <h4 className="text-lg font-medium mb-2">{statusFilter === 'ALL' ? 'No Invoices Yet' : 'No matching invoices'}</h4>
           <p className="text-sm text-muted-foreground mb-4 max-w-md">
             {roleContext.emptyMessage}
           </p>
