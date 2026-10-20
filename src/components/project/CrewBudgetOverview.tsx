@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { HardHat, Package, Wrench, ClipboardList, Pencil, Plus, ShieldCheck, Wallet, TrendingUp, PiggyBank } from 'lucide-react';
+import { HardHat, Package, Wrench, ClipboardList, Pencil, Plus, ShieldCheck, Wallet, TrendingUp, PiggyBank, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CREW_BUDGET_GROUPS, crewBudgetComparison, crewLaborBreakdown, crewPay, type CrewBudget } from '@/lib/crewTracker';
 import type { useCrewTracker } from '@/hooks/useCrewTracker';
-import { HiredCrewTaskDialog } from '@/components/project/HiredCrewTaskDialog';
+import { HiredCrewTaskForm } from '@/components/project/HiredCrewTaskDialog';
 import { formatCurrency, cn } from '@/lib/utils';
 
 const ICONS = { labor: HardHat, materials: Package, tools_equipment: Wrench, other: ClipboardList } as const;
@@ -35,6 +35,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
   const labor = crewLaborBreakdown(tracker.entries);
   const workerBudget = 'worker_labor' in tracker.budget ? Number(tracker.budget.worker_labor ?? tracker.budget.labor) : tracker.budget.labor;
   const hiredBudget = 'hired_labor' in tracker.budget ? Number(tracker.budget.hired_labor ?? 0) : 0;
+  const taskSum = tracker.tasks.reduce((s, t) => s + crewPay(Number(t.rate), Number(t.quantity)), 0);
   const editGroups = [{key:'worker_labor',label:'Worker payroll (hourly / daily)'},{key:'hired_labor',label:'Hired crews (piece-rate / task)'},...CREW_BUDGET_GROUPS.filter(g=>g.key!=='labor')];
   if (tracker.loading) return <div role="status" className="h-48 animate-pulse rounded-2xl border bg-muted/40" aria-label="Loading spending and budget" />;
   if (tracker.error) return <p role="alert" className="rounded-2xl border border-destructive/30 p-4 text-destructive">Could not load spending and budget: {tracker.error.message}</p>;
@@ -42,7 +43,8 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
 
   const startEditing = () => {
     setDraft(Object.fromEntries(CREW_BUDGET_GROUPS.map(g => [g.key, tracker.budget[g.key] ? String(tracker.budget[g.key]) : ''])));
-    setDraft(v=>({...v,worker_labor:String(workerBudget),hired_labor:String(hiredBudget)}));
+    setDraft(v => ({ ...v, worker_labor: String(workerBudget), hired_labor: String(hiredBudget > 0 ? hiredBudget : taskSum || '') }));
+    setAssigning(false);
     setEditing(true);
   };
   const draftTotal = editGroups.reduce((s, g) => s + (Number(draft[g.key]) || 0), 0);
@@ -122,15 +124,15 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
       <div className="border-t pt-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-heading text-lg font-semibold">Labor breakdown</h3>
-          <Button variant="outline" size="sm" className="min-h-11" onClick={() => setAssigning(true)}><Plus className="h-4 w-4 shrink-0" />Assign crew task</Button>
+          <Button variant="outline" size="sm" className="min-h-11" onClick={startEditing}><Plus className="h-4 w-4 shrink-0" />Assign crew task</Button>
         </div>
         <dl className="grid gap-3 sm:grid-cols-2">{([['Worker payroll',labor.workers,workerBudget],['Hired crew payments',labor.hired,hiredBudget]] as const).map(([label,spent,budget])=><div key={label} className="min-w-0"><dt className="text-xs uppercase text-muted-foreground">{label}</dt><dd className="mt-1 break-words font-mono text-sm">{formatCurrency(spent)} spent / {formatCurrency(budget)} budget</dd></div>)}</dl>
         <div className="mt-4 space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Assigned hired-crew tasks</h4>
-            <span className="font-mono text-xs text-muted-foreground">{formatCurrency(tracker.tasks.reduce((s,t)=>s+crewPay(Number(t.rate),Number(t.quantity)),0))} total</span>
+            <span className="font-mono text-xs text-muted-foreground">{formatCurrency(taskSum)} total</span>
           </div>
-          {!tracker.tasks.length && <button type="button" onClick={() => setAssigning(true)} className="w-full rounded-xl border border-dashed p-4 text-left transition-colors hover:bg-muted/40">
+          {!tracker.tasks.length && <button type="button" onClick={startEditing} className="w-full rounded-xl border border-dashed p-4 text-left transition-colors hover:bg-muted/40">
             <p className="font-medium">No hired crew tasks yet</p>
             <p className="text-sm text-muted-foreground">Assign piece-rate work like wall framing or roof trusses — pick a task from your project setup. It will show up in the Crew Tracker job roll-call for progress payments.</p>
           </button>}
@@ -155,25 +157,67 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{tracker.hasBudget ? 'Edit budget' : 'Set your budget'}</DialogTitle>
-          <DialogDescription>What do you plan to spend on this job? Only your crew can see this.</DialogDescription>
+          <DialogDescription>Start with the work: assign hired-crew tasks, then fill in payroll and job expenses. Only your crew can see this.</DialogDescription>
         </DialogHeader>
-        <form id="crew-budget-form" className="space-y-3" onSubmit={async e => {
+        <form id="crew-budget-form" className="space-y-4" onSubmit={async e => {
           e.preventDefault();
           const values = Object.fromEntries(CREW_BUDGET_GROUPS.map(g => [g.key, Number(draft[g.key] || 0)])) as CrewBudget;
           const worker_labor=Number(draft.worker_labor||0), hired_labor=Number(draft.hired_labor||0);
           try { await tracker.saveBudget.mutateAsync({...values,labor:worker_labor+hired_labor,worker_labor,hired_labor}); setEditing(false); } catch { /* keep edits */ }
         }}>
-          {editGroups.map(g => {
-            const Icon = ICONS[g.key as keyof typeof ICONS] ?? HardHat;
-            return <div key={g.key} className="space-y-1">
-              <Label htmlFor={`crew-budget-${g.key}`} className="flex items-center gap-2"><Icon className="h-4 w-4 shrink-0" />{g.label}</Label>
+          <fieldset className="space-y-3 rounded-xl border p-3">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">1 · Hired crew tasks</legend>
+            <p className="text-xs text-muted-foreground">Assign the piece-rate work first — the task totals build your hired-crew budget for you.</p>
+            <ul className="space-y-2">
+              {tracker.tasks.map(t => {
+                const taskTotal = crewPay(Number(t.rate), Number(t.quantity));
+                return <li key={t.id} className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-medium">{t.crew_name}</p>
+                    <p className="break-words text-xs text-muted-foreground">{t.task_name}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <span className="font-mono text-sm font-semibold">{formatCurrency(taskTotal)}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label={`Remove task ${t.task_name}`} onClick={() => tracker.saveTask.mutate({ id: t.id, crew_name: t.crew_name, task_name: t.task_name, pay_basis: t.pay_basis, quantity: Number(t.quantity), rate: Number(t.rate), active: false })}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                </li>;
+              })}
+            </ul>
+            {assigning
+              ? <div className="rounded-lg border p-3">
+                  <HiredCrewTaskForm tracker={tracker} projectId={tracker.projectId} open={assigning} onOpenChange={setAssigning} inline />
+                  <div className="mt-3 flex gap-2">
+                    <Button type="button" size="sm" disabled={tracker.saveTask.isPending} onClick={() => (document.getElementById('hired-crew-name')?.closest('div')?.parentElement?.querySelector('form') as HTMLFormElement | null)?.requestSubmit()}>Add task</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setAssigning(false)}>Done</Button>
+                  </div>
+                </div>
+              : <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => setAssigning(true)}><Plus className="h-4 w-4 shrink-0" />Assign crew task</Button>}
+            <div className="space-y-1">
+              <Label htmlFor="crew-budget-hired_labor" className="flex items-center gap-2"><HardHat className="h-4 w-4 shrink-0" />Hired crews (piece-rate / task)</Label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                <Input id={`crew-budget-${g.key}`} className="h-11 pl-7 font-mono" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0"
-                  value={draft[g.key] ?? ''} onChange={e => setDraft({ ...draft, [g.key]: e.target.value })} />
+                <Input id="crew-budget-hired_labor" className="h-11 pl-7 font-mono" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0"
+                  value={draft.hired_labor ?? ''} onChange={e => setDraft({ ...draft, hired_labor: e.target.value })} />
               </div>
-            </div>;
-          })}
+              {taskSum > 0 && <p className="text-xs text-muted-foreground">Tasks add up to <span className="font-mono font-medium">{formatCurrency(taskSum)}</span>{Number(draft.hired_labor) > taskSum ? ` — includes ${formatCurrency(Number(draft.hired_labor) - taskSum)} buffer` : ''}.</p>}
+              {taskSum > Number(draft.hired_labor || 0) && <p role="alert" className="text-xs font-medium text-destructive">Assigned tasks exceed this budget by {formatCurrency(taskSum - Number(draft.hired_labor || 0))}.</p>}
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-3 rounded-xl border p-3">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">2 · Your workers & job expenses</legend>
+            {editGroups.filter(g => g.key !== 'hired_labor').map(g => {
+              const Icon = ICONS[g.key as keyof typeof ICONS] ?? HardHat;
+              return <div key={g.key} className="space-y-1">
+                <Label htmlFor={`crew-budget-${g.key}`} className="flex items-center gap-2"><Icon className="h-4 w-4 shrink-0" />{g.label}</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input id={`crew-budget-${g.key}`} className="h-11 pl-7 font-mono" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0"
+                    value={draft[g.key] ?? ''} onChange={e => setDraft({ ...draft, [g.key]: e.target.value })} />
+                </div>
+              </div>;
+            })}
+          </fieldset>
           <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2.5">
             <span className="text-sm font-medium">Total budget</span>
             <span className="font-mono font-semibold">{formatCurrency(draftTotal)}</span>
@@ -185,7 +229,6 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
         </DialogFooter>
       </DialogContent>
     </Dialog>
-    <HiredCrewTaskDialog tracker={tracker} projectId={tracker.projectId} open={assigning} onOpenChange={setAssigning} />
   </section>;
 }
 
