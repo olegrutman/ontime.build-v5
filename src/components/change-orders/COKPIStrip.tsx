@@ -1,3 +1,6 @@
+import { Calculator, Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { C, KpiCard } from '@/components/shared/KpiCard';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -41,11 +44,9 @@ interface KPITile {
   passedToOwner?: boolean | null;
 }
 
-const BADGE_CLASSES = {
-  healthy: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-  watch: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
-  neutral: 'bg-accent text-muted-foreground',
-};
+function tilePills(tile: KPITile) {
+  return tile.badge ? [{ type: tile.badge.variant === 'healthy' ? 'pg' as const : tile.badge.variant === 'watch' ? 'pa' as const : 'pm' as const, text: tile.badge.text }] : [];
+}
 
 function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   const { isGC, isTC, isFC, financials, markupVisibility = 'hidden' } = props;
@@ -88,14 +89,14 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: 'Material Cost',
         value: fmtCurrency(tcMaterialCost),
-        color: '#059669',
+        color: C.green,
       });
     }
     if (eqResp === 'TC' && tcEquipmentCost > 0) {
       tiles.push({
         label: 'Equipment Cost',
         value: fmtCurrency(tcEquipmentCost),
-        color: '#F59E0B',
+        color: C.yellow,
       });
     }
 
@@ -114,7 +115,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     tiles.push({
       label: 'Your price to owner',
       value: passedToOwner === false ? 'Absorbed' : gcBudget ? fmtCurrency(gcBudget) : '—',
-      color: '#6366F1',
+      color: C.blue,
       editable: true,
       editValue: gcBudget,
       gcCost,
@@ -144,7 +145,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: `${rl.TC} margin`,
         value: fmtCurrency(tcMargin),
-        color: tcMargin >= 0 ? '#059669' : '#DC2626',
+        color: tcMargin >= 0 ? C.green : C.red,
         badge: tcInternalCost > 0 ? { text: `${tcMarginPct.toFixed(0)}%`, variant: tcMargin >= 0 ? 'healthy' as const : 'watch' as const } : undefined,
       });
     }
@@ -154,7 +155,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: financials.taxJurisdictionLabel ?? 'Tax',
         value: fmtCurrency(financials.billableTotalTax),
-        color: '#8B5CF6',
+        color: C.purple,
         sub: `${financials.taxRate}%`,
       });
     }
@@ -165,14 +166,14 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: 'Retainage Held',
         value: fmtCurrency(financials.retainageAmount),
-        color: '#DC2626',
+        color: C.red,
         sub: `${financials.retainagePercent}%`,
         badge: financials.retainageReleased ? { text: 'Released', variant: 'healthy' } : { text: 'Held', variant: 'watch' },
       });
       tiles.push({
         label: 'Net Payable',
         value: fmtCurrency(financials.netPayableAmount),
-        color: '#059669',
+        color: C.green,
       });
     }
 
@@ -194,7 +195,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: `${rl.FC} cost`,
         value: fmtCurrency(financials.fcLaborTotal),
-        color: '#F5A623',
+        color: C.amber,
         sub: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs logged` : undefined,
         badge: financials.fcLaborTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
       });
@@ -202,7 +203,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: 'Hours Logged',
         value: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs` : '—',
-        color: '#F5A623',
+        color: C.amber,
         sub: financials.fcTotalHours > 0 ? `${Math.ceil(financials.fcTotalHours / 8)} days` : undefined,
       });
     }
@@ -218,7 +219,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: 'Materials + Equipment',
         value: fmtCurrency(matEquip),
-        color: '#059669',
+        color: C.green,
       });
     }
 
@@ -228,7 +229,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: `Total to ${upstream}`,
         value: fmtCurrency(totalToUpstream),
-        color: '#F5A623',
+        color: C.amber,
       });
     }
 
@@ -236,14 +237,14 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       tiles.push({
         label: 'Retainage Held',
         value: fmtCurrency(financials.viewer.retainageAmount),
-        color: '#DC2626',
+        color: C.red,
         sub: `${financials.retainagePercent}%`,
         badge: financials.retainageReleased ? { text: 'Released', variant: 'healthy' } : { text: 'Held', variant: 'watch' },
       });
       tiles.push({
         label: 'Net Payable',
         value: fmtCurrency(financials.viewer.netPayableAmount),
-        color: '#059669',
+        color: C.green,
       });
     }
 
@@ -299,21 +300,10 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
   }
 
   return (
-    <div
-      className="bg-card rounded-xl px-3.5 py-3 border border-border shadow-sm cursor-pointer"
-      style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
-      onClick={() => { if (!editing) open(); }}
-    >
-      <div className="flex flex-col gap-1 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
-        <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium leading-tight">
-          {tile.label}
-        </p>
-        {tile.badge && !editing && (
-          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap self-start ${BADGE_CLASSES[tile.badge.variant]}`}>
-            {tile.badge.text}
-          </span>
-        )}
-      </div>
+    <KpiCard label={tile.label} value={tile.value} sub={tile.sub ?? tile.label} accent={tile.color}
+      icon={<Calculator size={18} />} iconBg={C.surface2} pills={tilePills(tile)}
+      headerAction={<Button variant="ghost" size="icon" aria-label={`Edit ${tile.label}`} onClick={open}><Pencil size={14} /></Button>}>
+      <div className="p-4">
       {editing ? (
         <div className="mt-1.5 space-y-1.5" onClick={e => e.stopPropagation()}>
           <div className="grid grid-cols-2 gap-1.5">
@@ -347,24 +337,20 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
             Cost {fmtCurrency(cost)}
             {derivedPrice != null && !priceDraft ? ` → ${fmtCurrency(derivedPrice)} to owner` : ''}
           </p>
-          <button
+          <Button
             type="button"
             onClick={save}
             disabled={saving}
             className="h-7 w-full rounded-md bg-primary text-primary-foreground text-[11px] font-semibold uppercase tracking-wider"
           >
             {saving ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       ) : (
-        <p className="font-heading text-foreground leading-none mt-1.5" style={{ fontSize: '1.35rem', fontWeight: 900 }}>
-          {tile.value}
-        </p>
+        <div className="space-y-3"><p className="text-sm text-muted-foreground">{tile.sub}</p><Button variant="outline" onClick={open}><Pencil size={14} />Edit owner price</Button></div>
       )}
-      {!editing && tile.sub && (
-        <p className="text-[10px] text-muted-foreground mt-1">{tile.sub}</p>
-      )}
-    </div>
+      </div>
+    </KpiCard>
   );
 }
 
@@ -375,35 +361,11 @@ export function COKPIStrip(props: COKPIStripProps) {
   const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3';
 
   return (
-    <div className={`grid grid-cols-2 ${gridCols} gap-2.5`}>
-      {tiles.map((tile) =>
-        tile.editable ? (
-          <EditableBudgetTile key={tile.label} tile={tile} coId={props.co.id} onRefresh={props.onRefresh} />
-        ) : (
-          <div
-            key={tile.label}
-            className="bg-card rounded-xl px-3.5 py-3 border border-border shadow-sm"
-            style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
-          >
-            <div className="flex flex-col gap-1 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
-              <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium leading-tight">
-                {tile.label}
-              </p>
-              {tile.badge && (
-                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap self-start ${BADGE_CLASSES[tile.badge.variant]}`}>
-                  {tile.badge.text}
-                </span>
-              )}
-            </div>
-            <p className="font-heading text-foreground leading-none mt-1.5" style={{ fontSize: '1.35rem', fontWeight: 900 }}>
-              {tile.value}
-            </p>
-            {tile.sub && (
-              <p className="text-[10px] text-muted-foreground mt-1">{tile.sub}</p>
-            )}
-          </div>
-        )
-      )}
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-2.5`}>
+      {tiles.map((tile, idx) => tile.editable
+        ? <EditableBudgetTile key={tile.label} tile={tile} coId={props.co.id} onRefresh={props.onRefresh} />
+        : <KpiCard key={tile.label} label={tile.label} value={tile.value} sub={tile.sub ?? tile.label}
+            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)} />)}
     </div>
   );
 }
