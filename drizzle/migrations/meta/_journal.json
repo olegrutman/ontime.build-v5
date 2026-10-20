@@ -169,6 +169,13 @@
       "when": 1792463641687,
       "tag": "0023_crew_project_budgets",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792465809694,
+      "tag": "0024_crew_production_pay",
+      "breakpoints": true
     }
   ]
 }
