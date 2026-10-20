@@ -1,4 +1,49 @@
 import { toCents } from '@/lib/money';
+import type { ProjectLedger } from '@/lib/kpiLedger';
+
+export const CREW_BUDGET_GROUPS = [
+  { key: 'labor', label: 'Labor' },
+  { key: 'materials', label: 'Materials & fasteners' },
+  { key: 'tools_equipment', label: 'Tools & equipment' },
+  { key: 'other', label: 'Other expenses' },
+] as const;
+export type CrewBudget = Record<typeof CREW_BUDGET_GROUPS[number]['key'], number>;
+export const EMPTY_CREW_BUDGET: CrewBudget = { labor: 0, materials: 0, tools_equipment: 0, other: 0 };
+
+export function crewBudgetComparison(entries: { total_amount: number; tracker_category?: string | null; cost_type?: string }[], budget: CrewBudget) {
+  const actual = { ...EMPTY_CREW_BUDGET };
+  for (const entry of entries) {
+    const category = entry.tracker_category;
+    const group = category === 'labor' || (!category && entry.cost_type === 'hours') ? 'labor'
+      : category === 'Materials' || category === 'Nails & fasteners' ? 'materials'
+      : category === 'Tools & blades' || category === 'Equipment rental' ? 'tools_equipment' : 'other';
+    actual[group] = toCents(actual[group] + Number(entry.total_amount));
+  }
+  const totalBudget = toCents(CREW_BUDGET_GROUPS.reduce((sum, group) => sum + budget[group.key], 0));
+  const totalActual = toCents(CREW_BUDGET_GROUPS.reduce((sum, group) => sum + actual[group.key], 0));
+  const forecast = toCents(CREW_BUDGET_GROUPS.reduce((sum, group) => sum + Math.max(budget[group.key], actual[group.key]), 0));
+  return { actual, totalBudget, totalActual, remaining: toCents(totalBudget - totalActual), forecast };
+}
+
+/** Budget is a forecast, never a second expense. Actual ledger entries count once. */
+export function withCrewSpending(ledger: ProjectLedger, actual: number, forecast: number): ProjectLedger {
+  const revisedCost = toCents(ledger.revisedCost.value + forecast);
+  const earnedCost = toCents(ledger.earnedCost.value + actual);
+  const forecastMargin = toCents(ledger.revisedContract.value - revisedCost);
+  const marginToDate = toCents(ledger.billed.value - earnedCost);
+  const forecastKnown = ledger.revisedContract.known && revisedCost > 0;
+  const earnedKnown = ledger.billed.value > 0 && earnedCost > 0;
+  return {
+    ...ledger,
+    revisedCost: { ...ledger.revisedCost, value: revisedCost, known: ledger.revisedCost.known || forecast > 0, formula: `${ledger.revisedCost.formula} + private crew spending forecast` },
+    forecastMargin: { ...ledger.forecastMargin, value: forecastMargin, known: forecastKnown, formula: 'Revised revenue − forecast costs, including your crew budget' },
+    forecastMarginPct: forecastKnown && ledger.revisedContract.value > 0 ? forecastMargin / ledger.revisedContract.value * 100 : 0,
+    earnedCost: { ...ledger.earnedCost, value: earnedCost, known: earnedCost > 0, formula: 'Invoices billed to you + logged internal labor + Crew Tracker labor and expenses' },
+    marginToDate: { ...ledger.marginToDate, value: marginToDate, known: earnedKnown, formula: 'Billed revenue − actual costs, including Crew Tracker spending' },
+    marginToDatePct: ledger.billed.value > 0 ? marginToDate / ledger.billed.value * 100 : 0,
+    marginToDateMeaningful: earnedKnown,
+  };
+}
 
 export type PayBasis = 'hourly' | 'daily';
 export const EXPENSE_CATEGORIES = ['Nails & fasteners', 'Tools & blades', 'Equipment rental', 'Fuel', 'Materials', 'Disposal', 'Travel', 'Other'];

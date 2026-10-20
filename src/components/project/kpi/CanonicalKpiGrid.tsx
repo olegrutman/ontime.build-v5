@@ -11,6 +11,8 @@ export interface CanonicalKpiExtras {
   pendingCOCount?: number;
   /** Label swap for T&M projects. */
   coWord?: 'CO' | 'WO';
+  crewForecastCost?: number;
+  crewActualSpending?: number;
 }
 
 const pct = (n: number) => `${n.toFixed(n % 1 === 0 ? 0 : 1)}%`;
@@ -48,6 +50,7 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
       label: 'Materials', value: ledger.materialCommitment.known ? money(ledger.materialCommitment.value) : '—',
       note: ledger.materialCommitment.formula, excluded: !ledger.materialCommitment.known,
     },
+    ...(extras.crewForecastCost !== undefined ? [{ label: 'Your crew spending forecast', value: money(extras.crewForecastCost), note: 'Labor, materials, tools & other expenses: budget or actual, whichever is higher in each category' }] : []),
     { label: 'Revised cost', value: money(ledger.revisedCost.value), emphasis: true },
     ...(ledger.pendingAwardCost.value > 0
       ? [{
@@ -77,6 +80,7 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
   ];
 
   const m2dRows: DrilldownRow[] = [
+    ...(extras.crewActualSpending !== undefined ? [{ label: 'Crew Tracker spending', value: money(extras.crewActualSpending), note: 'Included once in cost incurred below; budget is not an expense' }] : []),
     { label: '% complete (billed ÷ revised)', value: pct(ledger.percentComplete) },
     { label: 'Billed to date', value: money(ledger.earnedRevenue.value), note: ledger.earnedRevenue.formula },
     {
