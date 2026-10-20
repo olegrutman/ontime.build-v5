@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Build private project-based Crew Tracker with saved hourly/day rates, labor and expenses
+- [ ] Verify cost calculations, private access and phone-width logging
+
 - [x] Audit shared mobile controls and high-traffic screens for distorted boxes and text overflow
 - [x] Apply reusable mobile-safe sizing and wrapping fixes
 - [x] Verify main screens at phone width and confirm the build
