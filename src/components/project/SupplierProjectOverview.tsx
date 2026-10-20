@@ -31,7 +31,7 @@ const PO_STATUS_PILL: Record<string, PillType> = {
 
 export default function SupplierProjectOverview({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
   const { userOrgRoles } = useAuth();
-  const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const currentOrgId = (userOrgRoles.find(r => r.organization?.type === 'SUPPLIER') ?? userOrgRoles[0])?.organization?.id;
 
   // Get supplier_id for this org
   const { data: supplierRec, isLoading: supplierLoading, isError: supplierError } = useQuery({

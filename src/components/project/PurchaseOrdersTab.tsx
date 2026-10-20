@@ -51,6 +51,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [searchParams, setSearchParams] = useSearchParams();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
+  const [billedByPO, setBilledByPO] = useState<Record<string, number>>({});
   const [estimatePackTotals, setEstimatePackTotals] = useState<Map<string, { total: number; itemCount: number }>>(new Map());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -120,7 +121,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
   const posQueryKey = useMemo(() => ['project-purchase-orders', projectId, isSupplier, currentOrgId] as const, [projectId, isSupplier, currentOrgId]);
 
-  const { data: poData, isLoading: loading, refetch: refetchPOs } = useQuery({
+  const { data: poData, isLoading: loading, isError: totalsError, refetch: refetchPOs } = useQuery({
     queryKey: posQueryKey,
     enabled: !!projectId && !!currentOrgId,
     staleTime: 60_000,
@@ -184,26 +185,32 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
       const poIds = pos.map((po) => po.id);
       const invoicedIds = new Set<string>();
+      const billedAmounts: Record<string, number> = {};
       if (poIds.length > 0) {
-        const { data: invoicedData } = await supabase
+        const { data: invoicedData, error: invoiceError } = await supabase
           .from('invoices')
-          .select('po_id')
+          .select('po_id, total_amount')
           .in('status', ['SUBMITTED', 'APPROVED', 'PAID'])
           .eq('project_id', projectId)
           .in('po_id', poIds)
           .not('po_id', 'is', null);
+        if (invoiceError) throw invoiceError;
         for (const inv of invoicedData || []) {
-          if (inv.po_id) invoicedIds.add(inv.po_id);
+          if (inv.po_id) {
+            invoicedIds.add(inv.po_id);
+            billedAmounts[inv.po_id] = (billedAmounts[inv.po_id] || 0) + (inv.total_amount || 0);
+          }
         }
       }
 
-      return { pos, invoicedIds, packTotals: totals };
+      return { pos, invoicedIds, billedAmounts, packTotals: totals };
     },
   });
 
   useEffect(() => {
     setPurchaseOrders(poData?.pos || []);
     setInvoicedPOIds(poData?.invoicedIds || new Set());
+    setBilledByPO(poData?.billedAmounts || {});
     setEstimatePackTotals(poData?.packTotals || new Map());
   }, [poData]);
 
@@ -976,6 +983,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         : 'From Subcontractors')
     : 'From General Contractor';
 
+  if (totalsError) return <div role="alert" className="p-4 text-destructive">Could not load purchase order totals. <Button variant="outline" onClick={() => refetchPOs()}>Retry</Button></div>;
   return (
     <>
       <div className="space-y-6">
@@ -994,6 +1002,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           isSupplier={isSupplier}
           hidePricing={hidePricing}
           invoicedPOIds={invoicedPOIds}
+          billedByPO={billedByPO}
         />
 
 

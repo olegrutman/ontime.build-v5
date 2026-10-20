@@ -63,6 +63,11 @@ export function realizedReturnCredit(row: { status?: string | null; net_credit_t
   return row.status === 'CLOSED' ? row.net_credit_total || 0 : 0;
 }
 
+/** Remaining delivered value, including partially invoiced POs without cross-PO offsets. */
+export function supplierUnbilledAmount(po: Parameters<typeof poOrderedAmount>[0], billedAmount: number): number {
+  return Math.max(0, poOrderedAmount(po) - billedAmount);
+}
+
 /** Never let advance invoices for one PO offset unapproved deliveries on another. */
 export function supplierCreditExposure(
   pos: Array<{ id: string; status?: string | null; po_total?: number | null; po_subtotal_total?: number | null; sales_tax_percent?: number | null }>,

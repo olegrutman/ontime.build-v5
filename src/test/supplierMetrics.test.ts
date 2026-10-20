@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { poOrderedAmount, sumOrdered, sumBilled, sumReceived, sumEstimated, isOrderedPO, isDeliveredPO, isScheduledSupplierPO, isOpenSupplierPO, estimateItemAmount, realizedReturnCredit, supplierCreditExposure } from '@/lib/supplierMetrics';
+import { poOrderedAmount, sumOrdered, sumBilled, sumReceived, sumEstimated, isOrderedPO, isDeliveredPO, isScheduledSupplierPO, isOpenSupplierPO, estimateItemAmount, realizedReturnCredit, supplierCreditExposure, supplierUnbilledAmount } from '@/lib/supplierMetrics';
 
 describe('poOrderedAmount', () => {
   it('does not double-count sales tax when po_total is present (already tax-inclusive)', () => {
@@ -56,6 +56,10 @@ describe('supplier pipeline sums (live project 66ccdaeb)', () => {
 });
 
 describe('supplier audit guardrails', () => {
+  it('preserves unbilled balance for partially invoiced deliveries', () => {
+    expect(supplierUnbilledAmount({po_total:1000},100)).toBe(900);
+    expect(supplierUnbilledAmount({po_total:1000},1200)).toBe(0);
+  });
   it('counts only buyer-committed orders, never sent or awaiting approval quotes', () => {
     for (const status of ['DRAFT', 'ACTIVE', 'SENT', 'PENDING_APPROVAL', 'SUBMITTED', 'PRICED', 'CANCELLED', 'UNKNOWN']) expect(isOrderedPO(status)).toBe(false);
     for (const status of ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED']) expect(isOrderedPO(status)).toBe(true);

@@ -170,7 +170,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, error, est
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Bucket', 'Open A/R']} />
               <tbody>
-                <TRow cells={[<TdN>Current</TdN>, <TdM>{fmt(a.aging.current)}</TdM>]} />
+                <TRow cells={[<TdN>0 days since submission</TdN>, <TdM>{fmt(a.aging.current)}</TdM>]} />
                 <TRow cells={[<TdN>1–30 days</TdN>, <TdM>{fmt(a.aging.d1_30)}</TdM>]} />
                 <TRow cells={[<TdN>31–60 days</TdN>, <TdM>{fmt(a.aging.d31_60)}</TdM>]} />
                 <TRow cells={[<TdN>61–90 days</TdN>, <TdM>{fmt(a.aging.d61_90)}</TdM>]} />

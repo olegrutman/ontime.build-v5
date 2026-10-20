@@ -107,7 +107,7 @@ export function useSupplierProjectAnalytics({
         supplierOrgId
           ? supabase
               .from('returns')
-              .select('id, status, credit_subtotal, net_credit_total, reason, created_at')
+              .select('id, status, credit_subtotal, net_credit_total, reason, created_at, closed_at')
               .eq('project_id', projectId)
               .eq('supplier_org_id', supplierOrgId)
           : Promise.resolve({ data: [] as any[] }),
@@ -279,7 +279,7 @@ export function useSupplierProjectAnalytics({
         if (inv.paid_at) events.push({ ts: inv.paid_at, type: 'INV_PAID', title: `Invoice ${inv.invoice_number} paid`, amount: inv.total_amount, ref: inv.id });
       });
       returns.forEach(r => {
-        events.push({ ts: r.created_at, type: 'RETURN', title: `Return / credit issued`, amount: r.credit_subtotal });
+        events.push({ ts: r.status === 'CLOSED' ? r.closed_at || r.created_at : r.created_at, type: 'RETURN', title: r.status === 'CLOSED' ? 'Return credit finalized' : `Return (${r.status})`, amount: r.status === 'CLOSED' ? realizedReturnCredit(r) : undefined });
       });
       cos.forEach(c => {
         events.push({ ts: c.created_at, type: 'CO', title: `Change order ${c.co_number || ''} (${c.status})`, amount: c.tc_submitted_price });
