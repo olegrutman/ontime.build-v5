@@ -54,11 +54,6 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
     setAssigning(false);
     setEditing(true);
   };
-  // While the budget modal is open, keep the hired-crew budget in step with the
-  // assigned task totals — unless the user typed their own number (a buffer).
-  useEffect(() => {
-    if (editing && !hiredTouched) setDraft(v => ({ ...v, hired_labor: taskSum ? String(taskSum) : '' }));
-  }, [editing, hiredTouched, taskSum]);
   const draftTotal = editGroups.reduce((s, g) => s + (Number(draft[g.key]) || 0), 0);
   const total = health(comparison.totalBudget, comparison.totalActual);
   const burn = comparison.totalBudget > 0 ? Math.round((comparison.totalActual / comparison.totalBudget) * 100) : null;
