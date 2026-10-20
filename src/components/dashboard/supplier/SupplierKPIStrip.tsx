@@ -1,26 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { ChartNoAxesCombined } from 'lucide-react';
+import { C, KpiCard } from '@/components/shared/KpiCard';
 import { formatCurrency } from '@/lib/utils';
 import type { SupplierKPIs } from '@/hooks/useSupplierDashboardData';
-
-function useCountUp(target: number, duration = 900, delay = 0) {
-  const [current, setCurrent] = useState(0);
-  const rafRef = useRef<number>();
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      const start = performance.now();
-      const animate = (now: number) => {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        setCurrent(Math.round(target * eased));
-        if (progress < 1) rafRef.current = requestAnimationFrame(animate);
-      };
-      rafRef.current = requestAnimationFrame(animate);
-    }, delay);
-    return () => { clearTimeout(timeout); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [target, duration, delay]);
-  return current;
-}
 
 interface KPICardProps {
   label: string;
@@ -31,40 +12,11 @@ interface KPICardProps {
   delay: number;
 }
 
-const tagStyles: Record<string, string> = {
-  green: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  red: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  amber: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  neutral: 'bg-accent text-muted-foreground',
-};
-
 function KPICard({ label, value, tag, tagColor, subText, delay }: KPICardProps) {
-  const animatedValue = useCountUp(value, 900, delay);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setVisible(true), delay); return () => clearTimeout(t); }, [delay]);
-
-  return (
-    <div
-      className={`bg-card border border-border rounded-lg px-3.5 md:px-4 py-3.5 md:py-[18px] transition-all duration-300 hover:-translate-y-px hover:shadow-md ${
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2.5'
-      }`}
-    >
-      <div className="text-[0.7rem] md:text-[0.72rem] uppercase tracking-[0.5px] text-muted-foreground mb-2">
-        {label}
-      </div>
-      <div className="flex items-center justify-between mb-1">
-        <span className="font-heading text-[2rem] font-black tracking-tight text-foreground leading-none">
-          {formatCurrency(animatedValue)}
-        </span>
-        {tag && (
-          <span className={`text-[0.68rem] font-semibold px-2 py-0.5 rounded-full ${tagStyles[tagColor]}`}>
-            {tag}
-          </span>
-        )}
-      </div>
-      <div className="text-[0.72rem] text-muted-foreground">{subText}</div>
-    </div>
-  );
+  const accent = tagColor === 'red' ? C.red : tagColor === 'amber' ? C.amber : tagColor === 'green' ? C.green : C.blue;
+  return <KpiCard label={label} value={formatCurrency(value)} sub={subText} idx={delay / 40}
+    accent={accent} iconBg={`color-mix(in srgb, ${accent} 10%, transparent)`} icon={<ChartNoAxesCombined size={18} />}
+    pills={tag ? [{ type: tagColor === 'red' ? 'pr' : tagColor === 'amber' ? 'pa' : tagColor === 'green' ? 'pg' : 'pm', text: tag }] : []} />;
 }
 
 interface Props { kpis: SupplierKPIs; }

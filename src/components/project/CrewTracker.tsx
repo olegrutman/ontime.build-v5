@@ -1,3 +1,4 @@
+import { C, KpiCard } from '@/components/shared/KpiCard';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Plus, Users, Receipt, ShieldCheck, Download, Trash2, Pencil, Archive, Camera, Wallet, HardHat, CalendarDays } from 'lucide-react';
@@ -102,9 +103,9 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
         <Button variant="outline" onClick={exportCosts} disabled={!tracker.entries.length}><Download className="h-4 w-4"/>Export</Button>
       </div>
     </div>
-    <dl className="grid gap-3 sm:grid-cols-3">{kpis.map(([label,value,sub,Icon])=><div key={label} className={card}>
-      <div className="flex items-center justify-between gap-2"><dt className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">{label}</dt><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="h-4 w-4"/></span></div>
-      <dd className="mt-2 break-words font-mono text-2xl font-semibold">{formatCurrency(value)}</dd><p className="text-xs text-muted-foreground">{sub}</p></div>)}</dl>
+    <div className="grid gap-2.5 sm:grid-cols-3">{kpis.map(([label,value,sub,Icon],idx)=><KpiCard key={label} label={label} value={formatCurrency(value)} sub={sub} icon={<Icon className="h-4 w-4"/>} accent={idx===0?C.blue:idx===1?C.amber:C.green} iconBg={idx===0?C.blueBg:idx===1?C.amberPale:C.greenBg} idx={idx}>
+      <div className="space-y-2 p-4"><p className="text-sm text-muted-foreground">{sub}</p><p className="font-mono text-xl font-semibold">{formatCurrency(value)}</p><Button variant="outline" onClick={()=>document.getElementById('activity')?.scrollIntoView({behavior:'smooth'})}>View spending log</Button></div>
+    </KpiCard>)}</div>
 
     <div className="grid gap-5 lg:grid-cols-2">
       <div id="roll-call" className={`${card} space-y-4`}>

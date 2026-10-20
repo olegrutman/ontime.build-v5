@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { ChartNoAxesCombined } from 'lucide-react';
+import { C, KpiCard } from '@/components/shared/KpiCard';
 import { formatCurrency } from '@/lib/utils';
 import { useCountUp } from '@/hooks/useCountUp';
 
@@ -21,23 +22,16 @@ interface KPICardProps {
 
 export function KPICard({ label, value, subtitle, delay = 0, suffix, isText, textValue, className }: KPICardProps) {
   const animated = useCountUp(value, 900, delay);
-
+  const tone = /cost|paid out|outstanding|pending/i.test(label) ? C.amber : /margin|collected|received|profit/i.test(label) ? C.green : C.blue;
   return (
-    <div className={cn('rounded-2xl border border-border/60 bg-card p-3 sm:p-4', className)}>
-      <p className="text-[0.7rem] sm:text-[0.75rem] text-muted-foreground leading-tight">{label}</p>
-      <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1.5">
-        <span
-          className="text-lg sm:text-xl font-semibold tracking-tight text-foreground leading-none tabular-nums font-mono"
-        >
-          {isText ? textValue : formatCurrency(animated)}
-        </span>
-        {suffix && (
-          <span className="text-[0.65rem] font-semibold text-muted-foreground">{suffix}</span>
-        )}
+    <KpiCard label={label} value={isText ? (textValue ?? '') : formatCurrency(animated)} sub={subtitle ?? label}
+      accent={tone} iconBg={`color-mix(in srgb, ${tone} 10%, transparent)`} icon={<ChartNoAxesCombined size={18} />}
+      idx={delay / 40} pills={suffix ? [{ type: 'pm', text: suffix }] : []} className={className}>
+      <div className="space-y-2 p-4 text-sm text-muted-foreground">
+        <p>{subtitle ?? label}</p>
+        <p className="font-mono text-xl font-semibold text-foreground">{isText ? textValue : formatCurrency(value)}</p>
+        {suffix && <p>{suffix}</p>}
       </div>
-      {subtitle && (
-        <p className="mt-1.5 text-[0.7rem] text-muted-foreground leading-tight">{subtitle}</p>
-      )}
-    </div>
+    </KpiCard>
   );
 }

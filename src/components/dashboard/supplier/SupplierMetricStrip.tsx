@@ -1,4 +1,5 @@
-import { C, fontVal, fontLabel } from '@/components/shared/KpiCard';
+import { Activity } from 'lucide-react';
+import { C, KpiCard } from '@/components/shared/KpiCard';
 
 interface Metric {
   label: string;
@@ -55,49 +56,11 @@ export function SupplierMetricStrip({
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: 10 }}>
-      {metrics.map((m) => (
-        <div
-          key={m.label}
-          style={{
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            borderRadius: 12,
-            padding: '12px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-          }}
-        >
-          <span
-            style={{
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
-              color: C.muted,
-              ...fontLabel,
-            }}
-          >
-            {m.label}
-          </span>
-          <span
-            style={{
-              fontSize: '1.4rem',
-              color: TONE[m.tone ?? 'default'],
-              ...fontVal,
-              lineHeight: 1,
-            }}
-          >
-            {m.value}
-          </span>
-          {m.hint && (
-            <span style={{ fontSize: '0.64rem', color: C.faint, ...fontLabel }}>
-              {m.hint}
-            </span>
-          )}
-        </div>
-      ))}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+      {metrics.map((m, idx) => <KpiCard key={m.label} label={m.label} value={m.value}
+        sub={m.hint ?? m.label} icon={<Activity size={18} />} idx={idx}
+        accent={TONE[m.tone ?? 'default']} iconBg={C.surface2}
+        pills={m.hint ? [{ type: m.tone === 'danger' ? 'pr' : m.tone === 'good' ? 'pg' : 'pm', text: m.hint }] : []} />)}
     </div>
   );
 }

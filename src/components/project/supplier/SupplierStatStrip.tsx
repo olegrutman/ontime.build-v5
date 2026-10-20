@@ -1,4 +1,6 @@
-import { C, fontMono, fontLabel, fmt } from '@/components/shared/KpiCard';
+import { Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { C, KpiCard, fmt } from '@/components/shared/KpiCard';
 
 export interface StatTile {
   label: string;
@@ -23,44 +25,14 @@ export function SupplierStatStrip({ tiles, onNavigate }: Props) {
   if (tiles.length === 0) return null;
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-      style={{ background: C.surface, border: `1px solid ${C.border}` }}
-    >
-      {tiles.map((t, i) => {
-        const clickable = !!t.tab;
-        return (
-          <button
-            key={t.label}
-            type="button"
-            disabled={!clickable}
-            onClick={() => t.tab && onNavigate(t.tab)}
-            className={`text-left px-3.5 py-3 transition-colors ${clickable ? 'hover:bg-muted/40 cursor-pointer' : 'cursor-default'}`}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              borderRight: `1px solid ${C.border}`,
-              borderTop: i >= 2 ? `1px solid ${C.border}` : undefined,
-              ...fontLabel,
-            }}
-          >
-            <div
-              className="uppercase truncate"
-              style={{ ...fontLabel, fontSize: '0.56rem', letterSpacing: '0.07em', color: C.faint, fontWeight: 700 }}
-            >
-              {t.label}
-            </div>
-            <div style={{ ...fontMono, fontSize: '0.92rem', color: C.ink2, marginTop: 2 }}>
-              {t.raw ? String(t.value) : fmt(typeof t.value === 'number' ? t.value : 0)}
-            </div>
-            {t.hint && (
-              <div className="truncate" style={{ ...fontLabel, fontSize: '0.62rem', color: C.muted, marginTop: 1 }}>
-                {t.hint}
-              </div>
-            )}
-          </button>
-        );
-      })}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+      {tiles.map((t, idx) => <KpiCard key={t.label} label={t.label}
+        value={t.raw ? String(t.value) : fmt(typeof t.value === 'number' ? t.value : 0)} sub={t.hint ?? t.label}
+        icon={<Package size={18} />} accent={C.blue} iconBg={C.blueBg} idx={idx}>
+        <div className="space-y-3 p-4 text-sm text-muted-foreground"><p>{t.hint ?? t.label}</p>
+          {t.tab && <Button variant="outline" onClick={() => t.tab && onNavigate(t.tab)}>Open {t.label}</Button>}
+        </div>
+      </KpiCard>)}
     </div>
   );
 }
