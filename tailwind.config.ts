@@ -43,6 +43,12 @@ export default {
   			]
   		},
   		colors: {
+			command: {
+				DEFAULT: 'hsl(var(--navy))',
+				foreground: 'hsl(var(--navy-fg))',
+				muted: 'hsl(var(--navy-fg-muted))',
+				border: 'hsl(var(--navy-line))',
+			},
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
