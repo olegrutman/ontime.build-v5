@@ -9,7 +9,7 @@ import {
   isBilledInvoice,
   isReceivedInvoice,
   poOrderedAmount,
-  isDeliveredPO, isOpenSupplierPO, isScheduledSupplierPO, estimateItemAmount, supplierCreditExposure,
+  isDeliveredPO, isOpenSupplierPO, isScheduledSupplierPO, estimateItemAmount, supplierCreditExposure, supplierInvoiceDaysPastDue,
 } from '@/lib/supplierMetrics';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -298,8 +298,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const outstandingInvoices = allInvoices.filter((inv: any) => ['SUBMITTED', 'APPROVED'].includes(inv.status));
       const totalReceivable = outstandingInvoices.reduce((s: number, inv: any) => s + (inv.total_amount || 0), 0);
       const overdueInvoices = outstandingInvoices.filter((inv: any) => {
-        if (!inv.submitted_at) return false;
-        return differenceInDays(now, new Date(inv.submitted_at)) > 30;
+        return supplierInvoiceDaysPastDue(inv, now) > 0;
       });
 
       const paidThisMonth = allInvoices
@@ -434,9 +433,9 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const overdueAmt = overdue.reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
 
       setAgingBuckets([
-        { label: 'Current', range: '0–30 days', amount: currentAmt, count: current.length, percent: totalOutstanding > 0 ? (currentAmt / totalOutstanding) * 100 : 0 },
-        { label: 'Due Soon', range: '31–60 days', amount: dueSoonAmt, count: dueSoon.length, percent: totalOutstanding > 0 ? (dueSoonAmt / totalOutstanding) * 100 : 0 },
-        { label: 'Overdue', range: '60+ days', amount: overdueAmt, count: overdue.length, percent: totalOutstanding > 0 ? (overdueAmt / totalOutstanding) * 100 : 0 },
+        { label: '0–30 days old', range: 'Since submission', amount: currentAmt, count: current.length, percent: totalOutstanding > 0 ? (currentAmt / totalOutstanding) * 100 : 0 },
+        { label: '31–60 days old', range: 'Since submission', amount: dueSoonAmt, count: dueSoon.length, percent: totalOutstanding > 0 ? (dueSoonAmt / totalOutstanding) * 100 : 0 },
+        { label: 'Over 60 days old', range: 'Since submission', amount: overdueAmt, count: overdue.length, percent: totalOutstanding > 0 ? (overdueAmt / totalOutstanding) * 100 : 0 },
       ]);
 
       // Oldest invoice
