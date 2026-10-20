@@ -52,6 +52,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [poOwnerMap, setPoOwnerMap] = useState<Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }>>({});
   const [loading, setLoading] = useState(true);
+  const [totalsError, setTotalsError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL' | 'NEEDS_ACTION'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
@@ -169,9 +170,10 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
   const fetchAll = async () => {
     setLoading(true);
+    setTotalsError(false);
     try {
       // 1. Load contracts FIRST so downstream sent/received splits have data
-      const { data: contractData } = await supabase
+      const { data: contractData, error: contractError } = await supabase
         .from('project_contracts')
         .select(`
           id, from_org_id, to_org_id, from_role, to_role,
@@ -180,6 +182,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         `)
         .eq('project_id', projectId);
 
+      if (contractError) throw contractError;
       const mappedContracts: Contract[] = (contractData || []).map((c: any) => ({
         id: c.id,
         from_org_id: c.from_org_id,
@@ -201,22 +204,19 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
       const { data: invoiceData, error: invoiceError } = await query;
 
-      if (invoiceError) {
-        console.error('Error fetching invoices:', invoiceError);
-        setInvoices([]);
-        return;
-      }
+      if (invoiceError) throw invoiceError;
 
       const allInvoices = (invoiceData || []) as Invoice[];
 
       // 3. Load PO ownership info for PO-linked invoices (used for supplier vs received split)
       const poIds = [...new Set(allInvoices.filter(i => i.po_id).map(i => i.po_id!))];
       if (poIds.length > 0) {
-        const { data: poData } = await supabase
+        const { data: poData, error: poError } = await supabase
           .from('purchase_orders')
           .select('id, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
           .in('id', poIds);
 
+        if (poError) throw poError;
         const map: Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }> = {};
         (poData || []).forEach((po: any) => {
           map[po.id] = {
@@ -231,6 +231,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
       // RLS handles visibility — show every invoice the database returned
       setInvoices(allInvoices);
+    } catch (error) {
+      setTotalsError(true);
     } finally {
       setLoading(false);
     }
@@ -320,6 +322,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     if (currentOrgType === 'TC') return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
     return sentInvoices;
   }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
+
+  if (totalsError) return <div role="alert" className="p-4 text-destructive">Could not load invoice totals. <Button variant="outline" onClick={fetchAll}>Retry</Button></div>;
 
   if (selectedInvoiceId) {
     return (

@@ -143,13 +143,14 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         .order('created_at', { ascending: false });
 
       if (isSupplier) {
-        const { data: supplierLinks } = await supabase
+        const { data: supplierLinks, error: supplierError } = await supabase
           .from('suppliers')
           .select('id')
           .eq('organization_id', currentOrgId);
 
+        if (supplierError) throw supplierError;
         if (!supplierLinks || supplierLinks.length === 0) {
-          return { pos: [] as PurchaseOrder[], invoicedIds: new Set<string>(), packTotals: new Map() };
+          return { pos: [] as PurchaseOrder[], invoicedIds: new Set<string>(), billedAmounts: {} as Record<string, number>, packTotals: new Map() };
         }
         query = query.in('supplier_id', supplierLinks.map((s) => s.id));
         // Hide buyers' drafts, but keep the supplier's own drafts visible
