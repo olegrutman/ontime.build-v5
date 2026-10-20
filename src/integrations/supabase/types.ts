@@ -218,6 +218,12 @@ export type Database = {
           organization_id: string
           project_id: string | null
           total_amount: number
+          tracker_category: string | null
+          tracker_pay_basis: string | null
+          tracker_quantity: number | null
+          tracker_receipt_path: string | null
+          tracker_work_order_id: string | null
+          tracker_worker_id: string | null
         }
         Insert: {
           cost_type?: string
@@ -233,6 +239,12 @@ export type Database = {
           organization_id: string
           project_id?: string | null
           total_amount?: number
+          tracker_category?: string | null
+          tracker_pay_basis?: string | null
+          tracker_quantity?: number | null
+          tracker_receipt_path?: string | null
+          tracker_work_order_id?: string | null
+          tracker_worker_id?: string | null
         }
         Update: {
           cost_type?: string
@@ -248,6 +260,12 @@ export type Database = {
           organization_id?: string
           project_id?: string | null
           total_amount?: number
+          tracker_category?: string | null
+          tracker_pay_basis?: string | null
+          tracker_quantity?: number | null
+          tracker_receipt_path?: string | null
+          tracker_work_order_id?: string | null
+          tracker_worker_id?: string | null
         }
         Relationships: [
           {
@@ -262,6 +280,27 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_tracker_work_order_id_fkey"
+            columns: ["tracker_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_tracker_work_order_id_fkey"
+            columns: ["tracker_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_tracker_worker_id_fkey"
+            columns: ["tracker_worker_id"]
+            isOneToOne: false
+            referencedRelation: "crew_workers"
             referencedColumns: ["id"]
           },
         ]
@@ -2792,6 +2831,44 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crew_workers: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          pay_basis: string
+          rate: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          pay_basis?: string
+          rate?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          pay_basis?: string
+          rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

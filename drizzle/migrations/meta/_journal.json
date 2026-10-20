@@ -141,6 +141,13 @@
       "when": 1791938161154,
       "tag": "0019_proposal_scope_type_and_wo_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792462966008,
+      "tag": "0020_crew_tracker_workers_and_spending",
+      "breakpoints": true
     }
   ]
 }
