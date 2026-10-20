@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CREW_BUDGET_GROUPS, crewBudgetComparison, crewLaborBreakdown, type CrewBudget } from '@/lib/crewTracker';
+import { CREW_BUDGET_GROUPS, crewBudgetComparison, crewLaborBreakdown, crewPay, type CrewBudget } from '@/lib/crewTracker';
 import type { useCrewTracker } from '@/hooks/useCrewTracker';
+import { HiredCrewTaskDialog } from '@/components/project/HiredCrewTaskDialog';
 import { formatCurrency, cn } from '@/lib/utils';
 
 const ICONS = { labor: HardHat, materials: Package, tools_equipment: Wrench, other: ClipboardList } as const;
@@ -28,6 +29,7 @@ const HEALTH_BAR: Record<Health, string> = { none: 'bg-muted-foreground', health
 
 export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnType<typeof useCrewTracker>; onNavigate: (tab: string) => void }) {
   const [editing, setEditing] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const comparison = crewBudgetComparison(tracker.entries, tracker.budget);
   const labor = crewLaborBreakdown(tracker.entries);
