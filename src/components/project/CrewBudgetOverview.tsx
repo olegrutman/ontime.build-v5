@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HardHat, Package, Wrench, ClipboardList, Pencil, Plus, ShieldCheck, Wallet, TrendingUp, PiggyBank, Trash2 } from 'lucide-react';
+import { HardHat, Package, Wrench, ClipboardList, Pencil, Plus, ShieldCheck, Wallet, TrendingUp, PiggyBank, Trash2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { CREW_BUDGET_GROUPS, crewBudgetComparison, crewLaborBreakdown, crewPay, 
 import type { useCrewTracker } from '@/hooks/useCrewTracker';
 import { HiredCrewTaskForm } from '@/components/project/HiredCrewTaskDialog';
 import { formatCurrency, cn } from '@/lib/utils';
+import { useCardCollapse } from '@/hooks/useCardCollapse';
 
 const ICONS = { labor: HardHat, materials: Package, tools_equipment: Wrench, other: ClipboardList } as const;
 const SEGMENT = { labor: 'bg-primary', materials: 'bg-accent-foreground', tools_equipment: 'bg-budget-tight', other: 'bg-muted-foreground' } as const;
@@ -33,6 +34,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
   const [newCrew, setNewCrew] = useState('');
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [hiredTouched, setHiredTouched] = useState(false);
+  const { collapsed, toggle } = useCardCollapse(`crew-budget-${tracker.projectId ?? tracker.orgId ?? 'shared'}`);
   const comparison = crewBudgetComparison(tracker.entries, tracker.budget);
   const labor = crewLaborBreakdown(tracker.entries);
   const workerBudget = 'worker_labor' in tracker.budget ? Number(tracker.budget.worker_labor ?? tracker.budget.labor) : tracker.budget.labor;
@@ -61,20 +63,32 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
   const scale = Math.max(comparison.totalBudget, comparison.totalActual, 1);
 
   return <section aria-label="Crew budget and spending" className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm">
-    <header className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/30 p-4 sm:p-5">
-      <div className="min-w-0">
-        <h2 className="font-heading text-2xl font-semibold leading-tight">Your budget & spending</h2>
-        <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-budget-healthy/10 px-2.5 py-1 text-xs font-medium text-budget-healthy">
-          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />Private to your crew · never shared
-        </p>
+    <header className="border-b bg-muted/30 p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-heading text-2xl font-semibold leading-tight">Your budget & spending</h2>
+          <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-budget-healthy/10 px-2.5 py-1 text-xs font-medium text-budget-healthy">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />Private to your crew · never shared
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label={collapsed ? 'Expand budget and spending details' : 'Collapse budget and spending details'} aria-expanded={!collapsed} aria-controls={collapsed ? undefined : 'crew-budget-body'} onClick={toggle}>
+          <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', collapsed && 'rotate-180')} />
+        </Button>
       </div>
-      <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+      <div className="mt-3 flex w-full flex-wrap gap-2 sm:mt-4 sm:w-auto">
         <Button variant="outline" className="min-h-11 flex-1 sm:flex-none" onClick={startEditing}><Pencil className="h-4 w-4 shrink-0" />{tracker.hasBudget ? 'Edit budget' : 'Set budget'}</Button>
         <Button className="min-h-11 flex-1 sm:flex-none" onClick={() => onNavigate('crew-tracker')}><Plus className="h-4 w-4 shrink-0" />Log spending</Button>
       </div>
     </header>
 
-    <div className="space-y-5 p-4 sm:p-5">
+    {collapsed ? <button type="button" onClick={toggle} className="w-full px-4 py-3 text-left sm:px-5" aria-label="Expand budget and spending details">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-sm">
+        <span className="font-semibold">{formatCurrency(comparison.totalActual)}</span>
+        <span className="text-muted-foreground">spent of {tracker.hasBudget ? formatCurrency(comparison.totalBudget) : 'no budget'}</span>
+        {burn !== null && <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', HEALTH_PILL[total])}>{burn}% used</span>}
+        {tracker.hasBudget && <span className={cn('text-xs font-semibold', comparison.remaining < 0 ? 'text-destructive' : 'text-budget-healthy')}>{comparison.remaining < 0 ? `${formatCurrency(Math.abs(comparison.remaining))} over` : `${formatCurrency(comparison.remaining)} left`}</span>}
+      </span>
+    </button> : <div id="crew-budget-body" className="space-y-5 p-4 sm:p-5">
       {!tracker.hasBudget && <button type="button" onClick={startEditing} className="w-full rounded-xl border border-dashed p-4 text-left transition-colors hover:bg-muted/40">
         <p className="font-medium">Set a budget to see if you're on track</p>
         <p className="text-sm text-muted-foreground">Enter what you plan to spend on labor, materials, tools and other costs. Takes 30 seconds.</p>
@@ -159,7 +173,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
           </ul>
         </div>
       </div>
-    </div>
+    </div>}
 
     <Dialog open={editing} onOpenChange={setEditing}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
