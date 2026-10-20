@@ -46,15 +46,27 @@ export function HiredCrewTaskForm({ tracker, projectId, open, onOpenChange, inli
   const [quantity, setQuantity] = useState('');
   const [rate, setRate] = useState('');
   const suggestions = useSetupTaskSuggestions(projectId, open && !!tracker.orgId);
+  const saved = tracker.crews.find(c => c.name.toLowerCase() === crew.trim().toLowerCase());
+  const [typing, setTyping] = useState(false);
+  const showInput = typing || !tracker.crews.length;
   const save = async () => {
     try {
+      if (crew.trim() && !saved) await tracker.saveCrew.mutateAsync({ name: crew.trim() }).catch(() => {});
       await tracker.saveTask.mutateAsync({ crew_name: crew.trim(), task_name: task.trim(), pay_basis: basis, quantity: basis === 'fixed' ? 1 : Number(quantity), rate: Number(rate) });
-      onOpenChange(false); setCrew(''); setTask(''); setQuantity(''); setRate('');
+      onOpenChange(false); setCrew(''); setTask(''); setQuantity(''); setRate(''); setTyping(false);
     } catch { /* Mutation displays error; keep input. */ }
   };
   const submit = async (e: React.FormEvent) => { e.preventDefault(); await save(); };
   const fields = <>
-    <div><Label htmlFor="hired-crew-name">Crew / company name</Label><Input id="hired-crew-name" value={crew} onChange={e => setCrew(e.target.value)} required maxLength={100} /></div>
+    <div>
+      <Label htmlFor="hired-crew-name">Hired crew</Label>
+      {!showInput && <Select value={saved ? saved.name : ''} onValueChange={v => { if (v === '__new') { setTyping(true); setCrew(''); } else setCrew(v); }}>
+        <SelectTrigger id="hired-crew-name" aria-label="Hired crew"><SelectValue placeholder="Choose a saved crew" /></SelectTrigger>
+        <SelectContent>{tracker.crews.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}<SelectItem value="__new">+ New crew…</SelectItem></SelectContent>
+      </Select>}
+      {showInput && <Input id="hired-crew-name" value={crew} onChange={e => setCrew(e.target.value)} required maxLength={100} placeholder="Crew or company name" />}
+      {showInput && <p className="mt-1 text-xs text-muted-foreground">New names are saved to your crew list for next time.{tracker.crews.length > 0 && <> <button type="button" className="underline" onClick={() => { setTyping(false); setCrew(''); }}>Pick from list</button></>}</p>}
+    </div>
     <div><Label>Project setup task</Label><Select value={suggestions.data?.includes(task) ? task : 'custom'} onValueChange={v => setTask(v === 'custom' ? '' : v)}><SelectTrigger aria-label="Project setup task"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="custom">Custom task</SelectItem>{suggestions.data?.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>{suggestions.error && <p role="alert" className="text-xs text-destructive">Could not load setup tasks. You can enter a task below.</p>}</div>
     <div><Label htmlFor="crew-task-name">Task name</Label><Input id="crew-task-name" value={task} onChange={e => setTask(e.target.value)} required maxLength={300} /></div>
     <div><Label>Payment basis</Label><Select value={basis} onValueChange={setBasis}><SelectTrigger aria-label="Crew payment basis"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="sq_ft">Per sq. ft</SelectItem><SelectItem value="unit">Per unit</SelectItem><SelectItem value="fixed">Fixed task price</SelectItem></SelectContent></Select></div>

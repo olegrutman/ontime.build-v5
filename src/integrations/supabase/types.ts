@@ -2848,6 +2848,41 @@ export type Database = {
           },
         ]
       }
+      crew_hired_crews: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          phone: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          phone?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_hired_crews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_job_tasks: {
         Row: {
           completed_percent: number

@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HiredCrewJobs } from './HiredCrewJobs';
+import { useSetupTaskSuggestions } from './HiredCrewTaskDialog';
 
 const blankEntry = (projectId: string, date: string) => ({
   project_id:projectId, entry_date:date, cost_type:'lump_sum', description:'', men_count:null, hours_per_man:null,
@@ -27,6 +28,8 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
   const [laborView,setLaborView]=useState('workers');
   const [date,setDate]=useState(format(new Date(),'yyyy-MM-dd'));
   const [quantities,setQuantities]=useState<Record<string,string>>({});
+  const [workTasks,setWorkTasks]=useState<Record<string,string>>({});
+  const taskSuggestions=useSetupTaskSuggestions(projectId,!!tracker.orgId);
   const [workerOpen,setWorkerOpen]=useState(false);
   const [workerId,setWorkerId]=useState<string>();
   const [name,setName]=useState('');
@@ -48,11 +51,11 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
   const payTotal=selected.reduce((s,w)=>s+crewPay(Number(w.rate),Number(quantities[w.id])),0);
 
   const saveLabor=async()=>{
-    const entries=selected.map(w=>({...blankEntry(projectId,date),cost_type:w.pay_basis==='hourly'?'hours':'lump_sum',description:w.name,
+    const entries=selected.map(w=>({...blankEntry(projectId,date),cost_type:w.pay_basis==='hourly'?'hours':'lump_sum',description:workTasks[w.id]?.trim()?`${w.name} · ${workTasks[w.id].trim()}`:w.name,
       tracker_category:'labor',tracker_worker_id:w.id,tracker_pay_basis:w.pay_basis,tracker_quantity:Number(quantities[w.id]),
       hourly_rate:Number(w.rate),men_count:1,hours_per_man:w.pay_basis==='hourly'?Number(quantities[w.id]):null,
       lump_amount:w.pay_basis!=='hourly'?crewPay(Number(w.rate),Number(quantities[w.id])):null,total_amount:crewPay(Number(w.rate),Number(quantities[w.id]))}));
-    try {await tracker.saveCosts.mutateAsync(entries);setQuantities({});} catch { /* Mutation displays error; preserve input. */ }
+    try {await tracker.saveCosts.mutateAsync(entries);setQuantities({});} catch { /* Mutation displays error; preserve input. Task picks stay for the next day. */ }
   };
   const saveExpense=async()=>{
     if(!tracker.orgId || Number(amount)<=0) return;
@@ -124,7 +127,8 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
               <p className="shrink-0 font-mono font-semibold">{formatCurrency(pay)}</p>
               <div className="flex shrink-0"><Button variant="ghost" size="icon" aria-label={`Edit ${w.name}`} onClick={()=>{setWorkerId(w.id);setName(w.name);setBasis(w.pay_basis);setRate(String(w.rate));setWorkerOpen(true);}}><Pencil className="h-3.5 w-3.5"/></Button><Button variant="ghost" size="icon" aria-label={`Archive ${w.name}`} onClick={()=>tracker.saveWorker.mutate({id:w.id,name:w.name,pay_basis:w.pay_basis,rate:Number(w.rate),active:false})}><Archive className="h-3.5 w-3.5"/></Button></div></div>
             {logged?<p className="text-xs font-medium text-primary">✓ Pay logged for this date</p>:<div className="flex flex-wrap items-center gap-2">{payBasisInfo(w.pay_basis).presets.map(q=><Button key={q} variant={Number(quantities[w.id])===q?'default':'outline'} size="sm" onClick={()=>setQuantities(v=>({...v,[w.id]:String(q)}))}>{presetLabel(w.pay_basis,q)}</Button>)}
-              <Input aria-label={`${payBasisInfo(w.pay_basis).qty} for ${w.name}`} placeholder={payBasisInfo(w.pay_basis).qty} className="h-9 w-28" type="number" min="0" step={payBasisInfo(w.pay_basis).step} value={quantities[w.id]??''} onChange={e=>setQuantities(q=>({...q,[w.id]:e.target.value}))}/></div>}
+              <Input aria-label={`${payBasisInfo(w.pay_basis).qty} for ${w.name}`} placeholder={payBasisInfo(w.pay_basis).qty} className="h-9 w-28" type="number" min="0" step={payBasisInfo(w.pay_basis).step} value={quantities[w.id]??''} onChange={e=>setQuantities(q=>({...q,[w.id]:e.target.value}))}/>
+              <div className="w-full min-w-0 sm:w-auto sm:flex-1"><Select value={workTasks[w.id]||'none'} onValueChange={v=>setWorkTasks(t=>({...t,[w.id]:v==='none'?'':v}))}><SelectTrigger aria-label={`Task for ${w.name}`} className="h-9"><SelectValue placeholder="Task (optional)"/></SelectTrigger><SelectContent><SelectItem value="none">No task</SelectItem>{taskSuggestions.data?.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}{[...new Set(tracker.tasks.map(t=>t.task_name))].filter(n=>!taskSuggestions.data?.includes(n)).map(n=><SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent></Select></div></div>}
           </div>;
         })}</div>
         {activeWorkers.length>0&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted p-3"><div><p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">Pay to save</p><p className="font-mono text-lg font-semibold">{formatCurrency(payTotal)}</p></div><Button onClick={saveLabor} disabled={!selected.length||tracker.saveCosts.isPending||!date}>Save daily pay</Button></div>}
