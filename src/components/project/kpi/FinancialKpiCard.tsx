@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { C, fontLabel, fontMono, Pill, type PillType } from '@/components/shared/KpiCard';
+import { C, fontMono, KpiCard, type PillType } from '@/components/shared/KpiCard';
 import type { Basis, LedgerTerm } from '@/lib/kpiLedger';
 import { money } from '@/lib/kpiLedger';
 
@@ -48,86 +48,25 @@ export function FinancialKpiCard({
   ];
 
   return (
-    <section
-      className="animate-fade-in rounded-2xl p-3.5 sm:p-4"
-      style={{
-        background: C.surface,
-        border: `1px solid ${C.border}`,
-        boxShadow: '0 1px 3px rgba(15,25,35,.05)',
-        animationDelay: `${idx * 0.04}s`,
-        ...fontLabel,
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-            style={{ background: iconBg, color: accent, fontSize: 17 }}
-          >
-            {icon}
+    <KpiCard label={label} value={suffix && term.known ? `${headline} ${suffix}` : headline}
+      sub={term.formula} accent={accent} icon={icon} iconBg={iconBg} idx={idx} pills={allPills}>
+      <div className="space-y-3 p-4 sm:p-6">
+        <div className="rounded-lg border border-border bg-accent p-3 text-xs text-foreground [overflow-wrap:anywhere]" style={fontMono}>
+          {term.formula}
+          <div className="mt-1 text-[0.7rem] font-sans uppercase text-muted-foreground">{BASIS_LABEL[term.basis]}</div>
+        </div>
+        {rows.map((r, i) => (
+          <div key={i} className={`flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-border py-2 ${r.excluded ? 'opacity-60' : ''}`}>
+            <div className="min-w-0 flex-1 basis-32 [overflow-wrap:anywhere]">
+              <div className={`text-sm ${r.emphasis ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>{r.label}</div>
+              {r.note && <div className="mt-0.5 text-xs text-muted-foreground">{r.note}</div>}
+            </div>
+            <div className="max-w-full text-sm font-bold text-foreground [overflow-wrap:anywhere]" style={fontMono}>{r.value}</div>
           </div>
-          <div className="min-w-0">
-            <div
-              className="line-clamp-2"
-              style={{ fontSize: '0.64rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, fontWeight: 800 }}
-            >
-              {label}
-            </div>
-            <div style={{ marginTop: 3, color: C.ink, fontSize: '1.9rem', lineHeight: 1, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900 }}>
-              {suffix && term.known ? `${headline} ${suffix}` : headline}
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-          {allPills.map((p, i) => <Pill key={`${p.text}-${i}`} type={p.type}>{p.text}</Pill>)}
-        </div>
+        ))}
+        {footnote && <div className="text-xs text-muted-foreground">{footnote}</div>}
+        {children}
       </div>
-
-      <div
-        style={{
-          marginTop: 10,
-          padding: '7px 9px',
-          borderRadius: 10,
-          background: C.surface2,
-          border: `1px solid ${C.border}`,
-          color: C.ink2,
-          fontSize: '0.68rem',
-          ...fontMono,
-        }}
-      >
-        {term.formula}
-        <div style={{ marginTop: 3, color: C.faint, fontSize: '0.58rem', fontFamily: "'DM Sans', sans-serif", fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-          {BASIS_LABEL[term.basis]}
-        </div>
-      </div>
-
-      {rows.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 10 }}>
-          {rows.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10,
-                padding: '6px 0', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`,
-                opacity: r.excluded ? 0.55 : 1,
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: r.emphasis ? 800 : 600, color: r.emphasis ? C.ink : C.ink2 }}>
-                  {r.label}
-                </div>
-                {r.note && <div className="line-clamp-2" style={{ fontSize: '0.6rem', color: C.faint }}>{r.note}</div>}
-              </div>
-              <div style={{ ...fontMono, fontSize: '0.76rem', fontWeight: 800, color: r.emphasis ? C.ink : C.ink2, whiteSpace: 'nowrap' }}>
-                {r.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {footnote && <div style={{ fontSize: '0.62rem', color: C.faint, marginTop: 8 }}>{footnote}</div>}
-      {children}
-    </section>
+    </KpiCard>
   );
 }

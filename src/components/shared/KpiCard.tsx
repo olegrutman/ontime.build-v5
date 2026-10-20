@@ -1,18 +1,20 @@
 import { forwardRef, useState, type ReactNode } from 'react';
-import { ChevronRight, Maximize2 } from 'lucide-react';
+import { Maximize2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /* ─── Design tokens ─── */
 export const C = {
-  amber: '#F5A623', amberD: '#C8850A', amberPale: '#FFF7E6',
-  navy: '#0D1F3C', navyL: '#162E52',
-  bg: '#F0F2F7', surface: '#FFFFFF', surface2: '#F7F9FC',
-  border: '#E4E8F0', ink: '#0F1923', ink2: '#253347', muted: '#5A6A7E', faint: '#9AAABB',
-  green: '#059669', greenBg: '#ECFDF5', greenDark: '#047857',
-  red: '#DC2626', redBg: '#FEF2F2',
-  blue: '#2563EB', blueBg: '#EFF6FF',
-  yellow: '#D97706', yellowBg: '#FFFBEB',
-  purple: '#7C3AED', purpleBg: '#F5F3FF',
+  amber: 'hsl(var(--primary))', amberD: 'hsl(var(--amber-d))', amberPale: 'hsl(var(--state-open-bg))',
+  navy: 'hsl(var(--navy))', navyL: 'hsl(var(--navy-line))',
+  bg: 'hsl(var(--background))', surface: 'hsl(var(--card))', surface2: 'hsl(var(--surface))',
+  border: 'hsl(var(--border))', ink: 'hsl(var(--foreground))', ink2: 'hsl(var(--card-foreground))', muted: 'hsl(var(--muted-foreground))', faint: 'hsl(var(--muted-foreground))',
+  green: 'hsl(var(--state-approved))', greenBg: 'hsl(var(--state-approved-bg))', greenDark: 'hsl(var(--state-approved-foreground))',
+  red: 'hsl(var(--destructive))', redBg: 'hsl(var(--destructive) / .1)',
+  blue: 'hsl(var(--type-sov))', blueBg: 'hsl(var(--type-sov) / .1)',
+  yellow: 'hsl(var(--budget-tight))', yellowBg: 'hsl(var(--budget-tight) / .1)',
+  purple: 'hsl(var(--type-project))', purpleBg: 'hsl(var(--type-project) / .1)',
 };
 
 export const fontVal = { fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900 } as const;
@@ -39,13 +41,13 @@ const PILL_S: Record<PillType, { bg: string; color: string; border?: string }> =
   pb: { bg: C.blueBg, color: C.blue },
   pm: { bg: C.surface2, color: C.muted, border: `1px solid ${C.border}` },
   pw: { bg: C.yellowBg, color: C.yellow },
-  pn: { bg: C.navy, color: '#FFF' },
+  pn: { bg: C.navy, color: 'hsl(var(--navy-fg))' },
 };
 
 export const Pill = forwardRef<HTMLSpanElement, { type: PillType; children: ReactNode }>(function Pill({ type, children }, ref) {
   const s = PILL_S[type];
   return (
-    <span ref={ref} style={{ fontSize: '0.59rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color, border: s.border || 'none', whiteSpace: 'nowrap', ...fontLabel }}>
+    <span ref={ref} style={{ fontSize: '0.59rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color, border: s.border || 'none', maxWidth: '100%', overflowWrap: 'anywhere', ...fontLabel }}>
       {children}
     </span>
   );
@@ -76,76 +78,58 @@ export function BarRow({ label, value, pct, barColor }: { label: string; value: 
 }
 
 /* ─── KPI Card ─── */
-export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, children, idx, spark, headerAction }: {
+export function KpiCard({ accent, icon, iconBg, label, value, sub, pills = [], children, idx = 0, spark, headerAction, className }: {
   accent: string; icon: ReactNode; iconBg: string; label: string; value: string; sub: string;
-  pills: { type: PillType; text: string }[]; children: ReactNode; idx: number;
-  spark?: ReactNode; headerAction?: ReactNode;
+  pills?: { type: PillType; text: string }[]; children?: ReactNode; idx?: number;
+  spark?: ReactNode; headerAction?: ReactNode; className?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => setOpen(true)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); } }}
-      style={{
-        background: C.surface, borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-        border: `1px solid ${C.border}`,
-        boxShadow: '0 1px 3px rgba(0,0,0,.04)',
-        animationDelay: `${idx * 0.04}s`, ...fontLabel,
-      }}
-      className="min-w-0 max-w-full animate-fade-in hover:shadow-md transition-shadow"
-    >
-      <div style={{ height: 3, background: accent }} />
-      <div className="px-3 sm:px-4 pt-3 sm:pt-3.5">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, minHeight: 36 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }} className="sm:w-9 sm:h-9 sm:text-[18px]">{icon}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', minHeight: 22 }}>
-            {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
-            <span onClick={(e) => e.stopPropagation()}>{headerAction}</span>
-          </div>
-        </div>
-        <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, marginBottom: 2, fontWeight: 600, minHeight: 24, display: 'flex', alignItems: 'flex-start' }}>
-          <span className="line-clamp-2">{label}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
-          <div style={{ color: C.ink, lineHeight: 1.1, display: 'flex', alignItems: 'center', ...fontVal }} className="text-2xl sm:text-[2rem] min-h-[30px] sm:min-h-[36px]">{value}</div>
-          {spark && <div style={{ flexShrink: 0, marginBottom: 4 }}>{spark}</div>}
-        </div>
-        <div style={{ fontSize: '0.67rem', color: C.muted, marginBottom: 10, minHeight: 24 }}>
-          <span className="line-clamp-2">{sub}</span>
-        </div>
-      </div>
-      <div
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: C.surface2, fontSize: '0.67rem', color: C.muted, fontWeight: 600, borderTop: `1px solid ${C.border}` }}
-        className="hover:bg-[#FFF7E6] transition-colors"
-      >
-        <span>View breakdown</span>
-        <Maximize2 size={12} />
-      </div>
-    </div>
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="p-0 gap-0 overflow-hidden rounded-2xl w-[calc(100vw-1rem)] max-w-3xl max-h-[90vh] flex flex-col" style={fontLabel}>
-        <div style={{ height: 4, background: accent }} />
-        <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 text-left space-y-1" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-center gap-3 pr-8">
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.muted, fontWeight: 600 }}>{label}</DialogTitle>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span style={{ color: C.ink, ...fontVal }} className="text-3xl leading-tight">{value}</span>
-                {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
-              </div>
+      <section data-kpi-card={label} className={cn('min-w-0 max-w-full self-stretch overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm motion-safe:animate-fade-in flex flex-col', className)} style={{ animationDelay: `${idx * 0.04}s`, ...fontLabel }}>
+        <div className="h-[3px] shrink-0" style={{ background: accent }} />
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          <div className="mb-2 flex min-h-9 items-start justify-between gap-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: iconBg, color: accent }}>{icon}</div>
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+              {pills.map((p, i) => <Pill key={`${p.text}-${i}`} type={p.type}>{p.text}</Pill>)}
+              {headerAction}
             </div>
           </div>
-          <DialogDescription style={{ fontSize: '0.75rem', color: C.muted }}>{sub}</DialogDescription>
-        </DialogHeader>
-        <div className="overflow-auto flex-1 min-h-0">
-          {children}
+          <Button variant="ghost" onClick={() => setOpen(true)} aria-label={`View ${label} breakdown`} className="h-auto w-full flex-1 flex-col items-start justify-start gap-0 rounded-none p-0 text-left hover:bg-transparent hover:text-foreground">
+            <span className="min-h-8 text-[0.7rem] font-semibold uppercase leading-snug text-muted-foreground [overflow-wrap:anywhere]">{label}</span>
+            <span className="flex w-full min-w-0 items-end justify-between gap-2">
+              <span className="min-w-0 text-2xl sm:text-[2rem] leading-tight tabular-nums text-foreground [overflow-wrap:anywhere]" style={fontVal}>{value}</span>
+              {spark && <span className="shrink-0">{spark}</span>}
+            </span>
+            <span className="mt-1 min-h-9 text-[0.75rem] font-normal leading-snug text-muted-foreground [overflow-wrap:anywhere]">{sub}</span>
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+        <Button variant="ghost" onClick={() => setOpen(true)} className="h-auto min-h-10 w-full shrink-0 justify-between rounded-none border-t border-border bg-accent px-3 py-2 text-xs text-muted-foreground hover:bg-primary/10 hover:text-foreground">
+          <span>View breakdown</span><Maximize2 size={12} />
+        </Button>
+      </section>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="p-0 gap-0 overflow-hidden rounded-2xl w-[calc(100vw-1rem)] max-w-3xl max-h-[90dvh] flex flex-col" style={fontLabel}>
+          <div className="h-1 shrink-0" style={{ background: accent }} />
+          <DialogHeader className="border-b border-border px-4 sm:px-6 pt-4 pb-3 text-left space-y-1">
+            <div className="flex items-center gap-3 pr-8">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ background: iconBg, color: accent }}>{icon}</div>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-[0.7rem] uppercase text-muted-foreground [overflow-wrap:anywhere]">{label}</DialogTitle>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-3xl leading-tight text-foreground [overflow-wrap:anywhere]" style={fontVal}>{value}</span>
+                  {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
+                </div>
+              </div>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{sub}</DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto flex-1 min-h-0">
+            {children ?? <div className="p-4 text-sm text-muted-foreground">{sub}<div className="mt-3 text-xl text-foreground" style={fontMono}>{value}</div></div>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
