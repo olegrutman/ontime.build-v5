@@ -8,10 +8,11 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Check, ChevronLeft, ChevronRight, Loader2, X, Info } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, X, Info, Building2, MapPin, Wallet, Layers, FileText, Users, ShieldCheck, Home, CalendarDays, Ruler, CircleCheck, type LucideIcon } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { ProjectSidebar } from '@/components/project/ProjectSidebar';
+import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { cn } from '@/lib/utils';
 import { isInfoCreator, ownInfoContracts, infoContractValue, canEditInfoContract } from '@/lib/projectInfoAccess';
 import { OrgType } from '@/types/organization';
@@ -639,51 +640,57 @@ export default function FinishProjectSetup() {
       { label: 'Team', value: `${team.length} ${team.length === 1 ? 'company' : 'companies'}` },
       { label: 'Info complete', value: `${completeness}%`, mono: true },
     ];
+    const statIcons = [Wallet, Home, Ruler, CalendarDays, Users, CircleCheck];
 
     return (
       <ProjectShell projectName={p.name || 'Project'} projectId={projectId ?? ''} projectStatus={p.status || 'active'}>
         <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
-          <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} />
-          <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
+          <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} isFC={creatorOrgType === 'FC'} />
+          <main className="flex-1 min-w-0 overflow-auto lg:ml-[200px] xl:ml-[220px]">
             <div className="max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-36 lg:pb-12 space-y-4">
 
               {/* Header + snapshot */}
-              <div className="bg-card rounded-2xl border border-border shadow-sm p-4 sm:p-5">
+              <div className="bg-command text-command-foreground rounded-2xl border border-command-border shadow-sm p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} aria-label="Back to dashboard" className="lg:hidden shrink-0 h-10 w-10 -ml-2 text-command-foreground hover:bg-command-foreground/10 hover:text-command-foreground">
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-normal text-command-muted">Project Information</p>
+                </div>
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-heading">Project Information</p>
-                    <h1 className="text-2xl sm:text-3xl font-bold font-heading tracking-tight break-words">{p.name || 'Project'}</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5 break-words">{location || 'No address yet'}</p>
+                  <div className="min-w-0 max-w-full">
+                    <h1 className="text-3xl sm:text-4xl font-bold font-heading tracking-normal break-words [overflow-wrap:anywhere]">{p.name || 'Project'}</h1>
+                    <p className="text-sm text-command-muted mt-1 flex items-start gap-1.5"><MapPin className="h-4 w-4 shrink-0 mt-0.5" /><span className="min-w-0 break-words">{location || 'No address yet'}</span></p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {[prettify(p.status), p.contract_mode === 'tm' ? 'T&M / Remodel' : 'Fixed Price', prettify(p.project_type), prettify(p.build_type)].filter(Boolean).map(t => (
-                      <span key={t as string} className="text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider bg-muted text-muted-foreground border border-border">{t}</span>
+                      <span key={t as string} className={cn('max-w-full break-words text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-normal border', t === prettify(p.status) ? 'bg-state-approved-bg text-state-approved border-state-approved/30' : 'bg-command-foreground/10 text-command-foreground border-command-border')}>{t}</span>
                     ))}
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                  {stats.map(st => (
-                    <div key={st.label} className="rounded-xl bg-muted/40 border border-border/60 px-3 py-2 min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{st.label}</p>
-                      <p className={cn('text-sm font-semibold text-foreground break-words', st.mono && 'font-mono')}>{st.value}</p>
+                  {stats.map((st, index) => {
+                    const Icon = statIcons[index] ?? Info;
+                    return (
+                    <div key={st.label} className="border-t border-command-border px-1 py-2 min-w-0">
+                      <Icon className={cn('h-4 w-4 mb-2', index === 0 ? 'text-state-approved' : index === 5 ? 'text-type-change' : 'text-command-muted')} />
+                      <p className="text-[10px] font-semibold uppercase tracking-normal text-command-muted">{st.label}</p>
+                      <p className={cn('text-sm font-semibold text-command-foreground break-words [overflow-wrap:anywhere]', st.mono && 'font-mono')}>{st.value}</p>
                     </div>
-                  ))}
+                  );})}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-3">{canEditProjectInfo ? 'Project creator' : 'Read-only · Project details are managed by the creator'}</p>
+                <p className="text-[11px] text-command-muted mt-3">{canEditProjectInfo ? 'Project creator' : 'Read-only · Project details are managed by the creator'}</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <InfoCard canEdit={canEditProjectInfo} id="project-details" title="Project Details" fields={detailFields} />
+                <InfoCard canEdit={canEditProjectInfo} id="project-details" title="Project Details" fields={detailFields} icon={Building2} accent="text-type-project bg-type-project/10" />
 
-                <InfoCard canEdit={canEditProjectInfo} id="financials" title="Financial Settings" fields={financialFields} />
+                <InfoCard canEdit={canEditProjectInfo} id="financials" title="Financial Settings" fields={financialFields} icon={Wallet} accent="text-state-approved bg-state-approved/10" />
 
-                <InfoCard canEdit={canEditProjectInfo} id="building-info" title="Building Info" fields={buildingFields} className="lg:col-span-2" twoCol />
+                <InfoCard canEdit={canEditProjectInfo} id="building-info" title="Building Info" fields={buildingFields} className="lg:col-span-2" twoCol icon={Home} accent="text-type-change bg-type-change/10" />
 
                 <section id="building-features" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden lg:col-span-2">
-                  <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
-                    <h2 className="text-base font-bold tracking-tight uppercase font-heading">Building Features</h2>
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{featuresOn} of {features.length} included</span>
-                  </div>
+                  <InfoSectionHeading title="Building Features" icon={Layers} accent="text-type-change bg-type-change/10" count={`${featuresOn} of ${features.length} included`} />
                   <div className="p-4 flex flex-wrap gap-2">
                     {features.map(f => {
                       const on = !!s?.[f.key];
@@ -697,7 +704,7 @@ export default function FinishProjectSetup() {
                           onClick={() => saveScope(f.key)(!on).catch((err: Error) => toast({ title: 'Could not save', description: err.message, variant: 'destructive' }))}
                           className={cn(
                             'inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-full border text-sm font-medium transition-colors',
-                            on ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground',
+                            on ? 'bg-state-approved-bg text-state-approved border-state-approved/30 disabled:opacity-100' : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground disabled:opacity-100',
                           )}
                         >
                           {on ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 rounded-full border border-current shrink-0" />}
@@ -712,10 +719,7 @@ export default function FinishProjectSetup() {
                 </section>
 
                 <section id="contracts" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
-                    <h2 className="text-base font-bold tracking-tight uppercase font-heading">Contracts</h2>
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{visibleContracts.length} agreements</span>
-                  </div>
+                  <InfoSectionHeading title="Contracts" icon={FileText} accent="text-state-approved bg-state-approved/10" count={`${visibleContracts.length} agreements`} />
                   <div className="divide-y divide-border/40 px-1">
                     {visibleContracts.map(c => (
                       <div key={c.id}>
@@ -733,14 +737,11 @@ export default function FinishProjectSetup() {
                   </div>
                 </section>
 
-                {isGC && <InfoCard canEdit={canEditProjectInfo} id="approvals" title="Approvals & Compliance" fields={approvalFields} />}
+                {isGC && <InfoCard canEdit={canEditProjectInfo} id="approvals" title="Approvals & Compliance" fields={approvalFields} icon={ShieldCheck} accent="text-type-change bg-type-change/10" />}
 
                 {team.length > 0 && (
                   <section id="team" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden lg:col-span-2">
-                    <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
-                      <h2 className="text-base font-bold tracking-tight uppercase font-heading">Team</h2>
-                      <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{team.length} members</span>
-                    </div>
+                    <InfoSectionHeading title="Team" icon={Users} accent="text-type-sov bg-type-sov/10" count={`${team.length} members`} />
                     <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {team.map((m: any) => (
                         <div key={m.id} className="rounded-xl border border-border/60 px-3 py-2 min-w-0">
@@ -749,7 +750,7 @@ export default function FinishProjectSetup() {
                             <span className="text-xs text-muted-foreground">{m.role || 'Member'}</span>
                             {m.status && (
                               <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider',
-                                m.status === 'Accepted' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>{m.status}</span>
+                                m.status === 'Accepted' ? 'bg-state-approved-bg text-state-approved' : 'bg-muted text-muted-foreground')}>{m.status}</span>
                             )}
                           </div>
                         </div>
@@ -762,6 +763,7 @@ export default function FinishProjectSetup() {
             </div>
           </main>
         </div>
+        <ProjectBottomNav isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} isFC={creatorOrgType === 'FC'} />
       </ProjectShell>
     );
   }
@@ -844,13 +846,27 @@ export default function FinishProjectSetup() {
   );
 }
 
-function InfoCard({ id, title, fields, className, twoCol, canEdit = false }: {
+function InfoSectionHeading({ title, icon: Icon, accent, count }: { title: string; icon: LucideIcon; accent: string; count: string }) {
+  return (
+    <div className="px-4 py-3 border-b border-border/60 flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', accent)}><Icon className="h-4 w-4" /></span>
+        <h2 className="text-base font-bold tracking-normal uppercase font-heading break-words">{title}</h2>
+      </div>
+      <span className="text-[10px] font-semibold px-2 py-1 rounded-md tracking-normal bg-muted/50 text-muted-foreground max-w-full">{count}</span>
+    </div>
+  );
+}
+
+function InfoCard({ id, title, fields, className, twoCol, canEdit = false, icon = Info, accent = 'text-primary bg-primary/10' }: {
   id: string;
   title: string;
   fields: { filled: boolean; node: React.ReactNode }[];
   className?: string;
   twoCol?: boolean;
   canEdit?: boolean;
+  icon?: LucideIcon;
+  accent?: string;
 }) {
   const [showEmpty, setShowEmpty] = useState(false);
   const filled = fields.filter(f => f.filled);
@@ -858,12 +874,7 @@ function InfoCard({ id, title, fields, className, twoCol, canEdit = false }: {
   const visible = showEmpty ? fields : filled;
   return (
     <section id={id} className={cn('scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden', className)}>
-      <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
-        <h2 className="text-base font-bold tracking-tight uppercase font-heading">{title}</h2>
-        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">
-          {filled.length}/{fields.length} filled
-        </span>
-      </div>
+      <InfoSectionHeading title={title} icon={icon} accent={accent} count={`${filled.length}/${fields.length} filled`} />
       <div className={cn('px-1', twoCol ? 'grid grid-cols-1 md:grid-cols-2 md:gap-x-6' : '')}>
         {visible.map((f, i) => (
           <div key={i} className="border-b border-border/40 min-w-0">{f.node}</div>

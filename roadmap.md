@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Align Project Info colors and headings with operational pages and add phone exit navigation
+- [ ] Verify Project Info navigation and layout at desktop and phone widths
+
 - [x] Tailor Project Info contract values to each company and enforce creator-only editing
 - [x] Verify contract privacy, creator locks, and Project Info on phone widths
 
