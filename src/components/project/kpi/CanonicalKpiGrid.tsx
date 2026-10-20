@@ -43,7 +43,18 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
   ];
 
 
-  const costRows: DrilldownRow[] = [
+  const isCrewCost = extras.crewForecastCost !== undefined;
+  const additionalCostRows: DrilldownRow[] = [
+    ...(ledger.baseCost.value !== 0 ? [{ label: 'Additional contracts', value: money(ledger.baseCost.value), note: ledger.baseCost.formula }] : []),
+    ...(ledger.coCost.value !== 0 ? [{ label: `${co} commitments`, value: money(ledger.coCost.value), note: ledger.coCost.formula }] : []),
+    ...(ledger.materialCommitment.known && ledger.materialCommitment.value !== 0 ? [{ label: 'Additional materials', value: money(ledger.materialCommitment.value), note: ledger.materialCommitment.formula }] : []),
+  ];
+  const costRows: DrilldownRow[] = isCrewCost ? [
+    { label: 'Crew budget/spending forecast', value: money(extras.crewForecastCost ?? 0), note: 'Budget or actual spending, whichever is higher in each category' },
+    ...additionalCostRows,
+    { label: 'Total forecast cost', value: money(ledger.revisedCost.value), emphasis: true },
+    ...(ledger.pendingAwardCost.value !== 0 ? [{ label: 'Pending award', value: money(ledger.pendingAwardCost.value), excluded: true, note: ledger.pendingAwardCost.formula }] : []),
+  ] : [
     { label: 'Subs & crew contracts', value: money(ledger.baseCost.value), note: ledger.baseCost.formula },
     { label: `${co} cost`, value: money(ledger.coCost.value), note: ledger.coCost.formula },
     {
@@ -59,6 +70,12 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
         }]
       : []),
   ];
+  // Presentation only: retain the canonical total, but omit inapplicable zero
+  // categories from the crew's formula strip as well as the drilldown.
+  const costTerm = isCrewCost ? {
+    ...ledger.revisedCost,
+    formula: `${money(extras.crewForecastCost ?? 0)} crew forecast${additionalCostRows.map(row => ` + ${row.value} ${row.label.toLowerCase()}`).join('')}`,
+  } : ledger.revisedCost;
 
 
   const marginRows: DrilldownRow[] = [
@@ -112,9 +129,11 @@ export function CanonicalKpiGrid({ ledger, extras = {} }: { ledger: ProjectLedge
       />
       <FinancialKpiCard
         idx={1} label="COST (REVISED)"
-        term={ledger.revisedCost} accent={C.red} icon="🧱" iconBg={C.redBg}
+        term={costTerm} accent={C.red} icon="🧱" iconBg={C.redBg}
         pills={[{ type: 'pm', text: extras.paidParties || 'Subs, crew & materials' }]} rows={costRows}
-        footnote="Materials only count as your cost when you are the responsible party."
+        footnote={isCrewCost
+          ? additionalCostRows.length === 0 ? 'No other committed costs.' : 'Only your additional commitments are included; pending awards are excluded.'
+          : 'Materials only count as your cost when you are the responsible party.'}
       />
       <FinancialKpiCard
         idx={2} label="FORECAST MARGIN"
