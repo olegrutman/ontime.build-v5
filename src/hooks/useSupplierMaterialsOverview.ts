@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { isOrderedPO, isDeliveredPO, estimateItemAmount, poOrderedAmount } from '@/lib/supplierMetrics';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -62,7 +63,8 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
   const { data, isLoading } = useQuery({
     queryKey: ['supplier-materials-overview', projectId, supplierOrgId, supplier?.id],
     queryFn: async () => {
-      const supplierId = supplier!.id;
+      const supplierId = supplier?.id;
+      if (!supplierId) throw new Error("Supplier not available");
 
       // 1. Estimates
       const { data: estimates } = await supabase
@@ -81,24 +83,24 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
       if (estimateIds.length > 0) {
         const { data: items } = await supabase
           .from('supplier_estimate_items')
-          .select('pack_name, line_total')
+          .select('estimate_id, pack_name, line_total')
           .in('estimate_id', estimateIds);
-      const estimateTaxMult = 1 + salesTaxPercent / 100;
+      const estimateTaxById = Object.fromEntries((estimates || []).map(e => [e.id, e.sales_tax_percent || 0]));
       (items || []).forEach(item => {
           const pack = item.pack_name || 'Uncategorized';
-          estimateItemsByPack[pack] = (estimateItemsByPack[pack] || 0) + (item.line_total || 0) * estimateTaxMult;
+          estimateItemsByPack[pack] = (estimateItemsByPack[pack] || 0) + estimateItemAmount(item.line_total, estimateTaxById[item.estimate_id]);
         });
       }
 
       // 3. POs with line items
       const { data: allPOs } = await supabase
         .from('purchase_orders')
-        .select('id, status, created_at, delivered_at, sales_tax_percent, po_line_items(description, line_total, source_estimate_item_id, source_pack_name, created_at)')
+        .select('id, status, created_at, delivered_at, po_total, po_subtotal_total, sales_tax_percent, po_line_items(description, line_total, source_estimate_item_id, source_pack_name, created_at)')
         .eq('project_id', projectId)
         .eq('supplier_id', supplierId)
         .order('created_at', { ascending: true });
 
-      const activePOs = (allPOs || []).filter(po => ['PRICED', 'ORDERED', 'DELIVERED'].includes(po.status));
+      const activePOs = (allPOs || []).filter(po => isOrderedPO(po.status));
       const submittedPOs = (allPOs || []).filter(po => po.status === 'SUBMITTED');
 
       // 4. Returns
@@ -142,21 +144,21 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
             }
             unmatchedMap[key].orderedCost += costWithTax;
             unmatchedMap[key].poIds.add(po.id);
-            if (po.status === 'DELIVERED') {
+            if (isDeliveredPO(po.status)) {
               unmatchedMap[key].deliveredCost += costWithTax;
             }
           }
         });
 
-        const poTotal = poSubtotal * taxMult;
+        const poTotal = poOrderedAmount(po);
         materialsOrdered += poTotal;
-        if (po.status === 'DELIVERED') deliveredTotal += poTotal;
+        if (isDeliveredPO(po.status)) deliveredTotal += poTotal;
 
         // Chart data
         const monthKey = po.created_at.slice(0, 7);
         const bucket = chartBuckets.get(monthKey) || { ordered: 0, delivered: 0 };
         bucket.ordered += poTotal;
-        if (po.status === 'DELIVERED') bucket.delivered += poTotal;
+        if (isDeliveredPO(po.status)) bucket.delivered += poTotal;
         chartBuckets.set(monthKey, bucket);
       });
 
