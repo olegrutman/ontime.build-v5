@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Unify operational KPI cards with the overview card anatomy without changing calculations
+- [ ] Verify live breakdowns, financial regressions and phone layouts
+
 - [x] Simplify Crew Cost KPI presentation without changing financial calculations
 - [x] Verify the cost breakdown and phone layouts against live project data
 
