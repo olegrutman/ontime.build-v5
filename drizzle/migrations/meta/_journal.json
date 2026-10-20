@@ -204,6 +204,20 @@
       "when": 1792510597104,
       "tag": "0028_crew_hired_crews",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792514723945,
+      "tag": "0029_project_info_creator_edit_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792515048013,
+      "tag": "0030_project_profile_creator_edit_guard",
+      "breakpoints": true
     }
   ]
 }

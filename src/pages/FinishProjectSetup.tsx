@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { AppLayout } from '@/components/layout';
 import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { cn } from '@/lib/utils';
+import { isInfoCreator, ownInfoContracts, infoContractValue, canEditInfoContract } from '@/lib/projectInfoAccess';
 import { OrgType } from '@/types/organization';
 import { useSetupWizardV2 } from '@/hooks/useSetupWizardV2';
 import { EditableInfoRow, type RowFieldType } from '@/components/project-setup/EditableInfoRow';
@@ -72,17 +73,22 @@ export default function FinishProjectSetup() {
 
   // Load project + scope details + all contracts + supplier org name
   const { data: ctx, isLoading, refetch: refetchCtx } = useQuery({
-    queryKey: ['finish_setup_ctx', projectId],
-    enabled: !!projectId,
+    queryKey: ['finish_setup_ctx', projectId, currentOrgId],
+    enabled: !!projectId && !!currentOrgId,
     queryFn: async () => {
+      if (!projectId) throw new Error('Project required');
       const [proj, scope, contracts] = await Promise.all([
-        supabase.from('projects').select('*').eq('id', projectId!).maybeSingle(),
-        supabase.from('project_scope_details').select('*').eq('project_id', projectId!).maybeSingle(),
+        supabase.from('projects').select('*').eq('id', projectId ?? '').maybeSingle(),
+        supabase.from('project_scope_details').select('*').eq('project_id', projectId ?? '').maybeSingle(),
         supabase
           .from('project_contracts')
           .select('*, from_org:from_org_id(id,name), to_org:to_org_id(id,name)')
-          .eq('project_id', projectId!),
+          .eq('project_id', projectId)
+          .or(`from_org_id.eq.${currentOrgId},to_org_id.eq.${currentOrgId}`),
       ]);
+      if (proj.error) throw proj.error;
+      if (scope.error) throw scope.error;
+      if (contracts.error) throw contracts.error;
       return { project: proj.data, scope: scope.data, contracts: (contracts.data || []) as any[] };
     },
   });
@@ -95,7 +101,7 @@ export default function FinishProjectSetup() {
       const { data } = await supabase
         .from('project_team')
         .select('id, org_id, role, invited_org_name, status')
-        .eq('project_id', projectId!);
+        .eq('project_id', projectId ?? '');
       return data || [];
     },
   });
@@ -103,17 +109,18 @@ export default function FinishProjectSetup() {
   // Prefill TM building info from project_scope_details
   useEffect(() => {
     if (!ctx?.scope) return;
+    const scope = ctx.scope;
     setTmScope(prev => ({
       ...prev,
-      buildingType: ctx.scope!.home_type || prev.buildingType,
-      stories: ctx.scope!.stories || ctx.scope!.floors || prev.stories,
-      foundationType: (ctx.scope!.foundation_type as any) || prev.foundationType,
-      basementType: (ctx.scope!.basement_type as any) || prev.basementType,
-      basementFinish: (ctx.scope!.basement_finish as any) || prev.basementFinish,
-      garageType: (ctx.scope!.garage_type as any) || prev.garageType,
-      sidingIncluded: ctx.scope!.siding_included ?? prev.sidingIncluded,
-      sidingMaterials: Array.isArray(ctx.scope!.siding_materials) ? (ctx.scope!.siding_materials as string[]) : prev.sidingMaterials,
-      totalSqft: ctx.scope!.total_sqft || prev.totalSqft,
+      buildingType: scope.home_type || prev.buildingType,
+      stories: scope.stories || scope.floors || prev.stories,
+      foundationType: (scope.foundation_type as any) || prev.foundationType,
+      basementType: (scope.basement_type as any) || prev.basementType,
+      basementFinish: (scope.basement_finish as any) || prev.basementFinish,
+      garageType: (scope.garage_type as any) || prev.garageType,
+      sidingIncluded: scope.siding_included ?? prev.sidingIncluded,
+      sidingMaterials: Array.isArray(scope.siding_materials) ? (scope.siding_materials as string[]) : prev.sidingMaterials,
+      totalSqft: scope.total_sqft || prev.totalSqft,
     }));
   }, [ctx?.scope]);
 
@@ -211,6 +218,8 @@ export default function FinishProjectSetup() {
     ctx.project.status !== 'setup' &&
     ctx.project.status !== 'draft';
 
+  const canEditProjectInfo = isInfoCreator(ctx?.project?.created_by, user?.id);
+
   const hasInvitedDownstream = downstreamContracts.length > 0;
 
   const canProceed = (): boolean => {
@@ -245,7 +254,7 @@ export default function FinishProjectSetup() {
 
 
   const finish = async () => {
-    if (!projectId || !currentOrgId || !user?.id) return;
+    if (!projectId || !currentOrgId || !user?.id || !canEditProjectInfo) return;
     setSaving(true);
     try {
       // 1. Upsert project_scope_details (building info)
@@ -487,47 +496,49 @@ export default function FinishProjectSetup() {
   const isLastStep = currentStep === activeSteps.length - 1;
 
   // ----- Read-only Project Summary (shown for already-active projects) -----
-  if (isActiveProject && ctx?.project) {
+  if ((isActiveProject || !canEditProjectInfo) && ctx?.project) {
     const p = ctx.project as any;
     const s = ctx.scope as any | null;
     const addr = (p.address && typeof p.address === 'object') ? p.address : null;
 
-    const ownerRow = (ctx.contracts || []).find((c: any) => (c.from_role || '').toLowerCase() === 'owner');
-    const supplierRow = (ctx.contracts || []).find((c: any) => (c.from_role || '').toLowerCase().includes('supplier'));
-    const downstreamRows = (ctx.contracts || []).filter(
-      (c: any) => c.to_org_id === currentOrgId && (c.from_role || '').toLowerCase() !== 'owner' && !(c.from_role || '').toLowerCase().includes('supplier'),
-    );
+    const visibleContracts = ownInfoContracts(ctx.contracts, currentOrgId);
     const fmt$ = (n: number | null | undefined) => `$${Number(n || 0).toLocaleString()}`;
 
-    const invalidate = () => qc.invalidateQueries({ queryKey: ['finish_setup_ctx', projectId] });
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['finish_setup_ctx', projectId, currentOrgId] });
 
     const saveProject = (field: string) => async (val: any) => {
-      const { error } = await supabase.from('projects').update({ [field]: val }).eq('id', projectId!);
+      if (!canEditProjectInfo) throw new Error('Only the project creator can edit project information');
+      const { error } = await supabase.from('projects').update({ [field]: val }).eq('id', projectId ?? '');
       if (error) throw error;
       invalidate();
     };
     const saveAddress = (field: 'street' | 'city' | 'state' | 'zip') => async (val: any) => {
+      if (!canEditProjectInfo) throw new Error('Only the project creator can edit project information');
       if (field === 'city' || field === 'state' || field === 'zip') {
-        const { error } = await supabase.from('projects').update({ [field]: val }).eq('id', projectId!);
+        if (!canEditProjectInfo) throw new Error('Only the project creator can edit project information');
+      const { error } = await supabase.from('projects').update({ [field]: val }).eq('id', projectId ?? '');
         if (error) throw error;
       } else {
         const next = { ...(addr || {}), street: val };
-        const { error } = await supabase.from('projects').update({ address: next }).eq('id', projectId!);
+        const { error } = await supabase.from('projects').update({ address: next }).eq('id', projectId ?? '');
         if (error) throw error;
       }
       invalidate();
     };
     const saveScope = (field: string) => async (val: any) => {
+      if (!canEditProjectInfo) throw new Error('Only the project creator can edit building information');
       if (!s) {
-        const { error } = await supabase.from('project_scope_details').insert({ project_id: projectId!, [field]: val } as any);
+        const { error } = await supabase.from('project_scope_details').insert({ project_id: projectId ?? '', [field]: val } as any);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('project_scope_details').update({ [field]: val }).eq('project_id', projectId!);
+        const { error } = await supabase.from('project_scope_details').update({ [field]: val }).eq('project_id', projectId ?? '');
         if (error) throw error;
       }
       invalidate();
     };
     const saveContract = (id: string, field: string) => async (val: any) => {
+      const contract = visibleContracts.find(c => c.id === id);
+      if (!contract || !canEditInfoContract(contract, user?.id)) throw new Error('Only the contract creator can edit an unlocked contract');
       const { error } = await supabase.from('project_contracts').update({ [field]: val }).eq('id', id);
       if (error) throw error;
       invalidate();
@@ -544,10 +555,10 @@ export default function FinishProjectSetup() {
     const markupVisOpts = opts(['hidden', 'summary', 'detailed']);
 
     const has = (v: any) => v !== null && v !== undefined && v !== '' && v !== 0;
-    const F = (filled: boolean, node: React.ReactNode) => ({ filled, node });
+    const F = (filled: boolean, node: React.ReactElement) => ({ filled, node: React.cloneElement(node, { locked: !canEditProjectInfo, lockReason: 'Only the project creator can edit project information' }) });
     const prettify = (v?: string | null) => (v ? String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : null);
     const team = (teamData || []) as any[];
-    const contractTotal = (ownerRow?.contract_sum || 0) + downstreamRows.reduce((a: number, c: any) => a + Number(c.contract_sum || 0), 0);
+    const contractTotal = infoContractValue(visibleContracts, currentOrgId, creatorOrgType);
     const location = [addr?.street, p.city, p.state, p.zip].filter(Boolean).join(', ');
 
     const detailFields = [
@@ -603,10 +614,10 @@ export default function FinishProjectSetup() {
       F(true, <EditableInfoRow label="Sales Tax" value={p.sales_tax_rate} type="percent" mono onSave={saveProject('sales_tax_rate')} />),
       F(has(p.tax_jurisdiction_label), <EditableInfoRow label="Tax Jurisdiction" value={p.tax_jurisdiction_label} type="text" onSave={saveProject('tax_jurisdiction_label')} />),
       F(true, <EditableInfoRow label="Labor Taxable" value={!!p.labor_taxable} type="boolean" onSave={saveProject('labor_taxable')} />),
-      F(true, <EditableInfoRow label="Retainage" value={p.retainage_percent} type="percent" mono onSave={saveProject('retainage_percent')} />),
+      ...(isGC ? [F(true, <EditableInfoRow label="Retainage" value={p.retainage_percent} type="percent" mono onSave={saveProject('retainage_percent')} />),
       F(has(p.retainage_release_trigger), <EditableInfoRow label="Retainage Release" value={p.retainage_release_trigger} type="text" onSave={saveProject('retainage_release_trigger')} />),
       F(true, <EditableInfoRow label="Mobilization" value={!!p.mobilization_enabled} type="boolean" onSave={saveProject('mobilization_enabled')} />),
-      F(true, <EditableInfoRow label="Markup Visibility" value={p.tc_markup_visibility} type="select" options={markupVisOpts} onSave={saveProject('tc_markup_visibility')} />),
+      F(true, <EditableInfoRow label="Markup Visibility" value={p.tc_markup_visibility} type="select" options={markupVisOpts} onSave={saveProject('tc_markup_visibility')} />)] : []),
     ];
 
     const approvalFields = [
@@ -617,11 +628,11 @@ export default function FinishProjectSetup() {
       F(true, <EditableInfoRow label="Photos on Submit" value={!!p.require_photos_on_submit} type="boolean" onSave={saveProject('require_photos_on_submit')} />),
     ];
 
-    const allFields = [...detailFields, ...buildingFields, ...financialFields, ...approvalFields];
+    const allFields = [...detailFields, ...buildingFields, ...financialFields, ...(isGC ? approvalFields : [])];
     const completeness = Math.round((allFields.filter(f => f.filled).length / allFields.length) * 100);
 
     const stats: { label: string; value: string; mono?: boolean }[] = [
-      { label: 'Contract value', value: contractTotal ? fmt$(contractTotal) : '—', mono: true },
+      { label: isGC ? 'Owner contract' : creatorOrgType === 'SUPPLIER' ? 'Supply contract' : 'Your contract', value: contractTotal !== null ? fmt$(contractTotal) : '—', mono: true },
       { label: 'Building', value: [prettify(s?.home_type), (s?.stories ?? s?.floors) ? `${s?.stories ?? s?.floors} story` : null].filter(Boolean).join(' · ') || '—' },
       { label: 'Size', value: s?.total_sqft ? `${Number(s.total_sqft).toLocaleString()} sq ft` : '—', mono: true },
       { label: 'Start', value: p.start_date ? new Date(p.start_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
@@ -630,7 +641,7 @@ export default function FinishProjectSetup() {
     ];
 
     return (
-      <ProjectShell projectName={p.name || 'Project'} projectId={projectId!} projectStatus={p.status || 'active'}>
+      <ProjectShell projectName={p.name || 'Project'} projectId={projectId ?? ''} projectStatus={p.status || 'active'}>
         <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
           <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} />
           <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
@@ -658,15 +669,15 @@ export default function FinishProjectSetup() {
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-3">Click any field below to edit · Enter saves · Esc cancels</p>
+                <p className="text-[11px] text-muted-foreground mt-3">{canEditProjectInfo ? 'Project creator' : 'Read-only · Project details are managed by the creator'}</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <InfoCard id="project-details" title="Project Details" fields={detailFields} />
+                <InfoCard canEdit={canEditProjectInfo} id="project-details" title="Project Details" fields={detailFields} />
 
-                <InfoCard id="financials" title="Financial Settings" fields={financialFields} />
+                <InfoCard canEdit={canEditProjectInfo} id="financials" title="Financial Settings" fields={financialFields} />
 
-                <InfoCard id="building-info" title="Building Info" fields={buildingFields} className="lg:col-span-2" twoCol />
+                <InfoCard canEdit={canEditProjectInfo} id="building-info" title="Building Info" fields={buildingFields} className="lg:col-span-2" twoCol />
 
                 <section id="building-features" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden lg:col-span-2">
                   <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
@@ -677,11 +688,13 @@ export default function FinishProjectSetup() {
                     {features.map(f => {
                       const on = !!s?.[f.key];
                       return (
-                        <button
+                        <Button
+                          variant="outline"
+                          disabled={!canEditProjectInfo}
                           key={f.key}
                           type="button"
                           aria-pressed={on}
-                          onClick={() => saveScope(f.key)(!on).catch(() => {})}
+                          onClick={() => saveScope(f.key)(!on).catch((err: Error) => toast({ title: 'Could not save', description: err.message, variant: 'destructive' }))}
                           className={cn(
                             'inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-full border text-sm font-medium transition-colors',
                             on ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground',
@@ -689,46 +702,38 @@ export default function FinishProjectSetup() {
                         >
                           {on ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 rounded-full border border-current shrink-0" />}
                           {f.label}
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
                   <div className="px-4 pb-3">
-                    <EditableInfoRow label="Fascia/Soffit Material" value={s?.fascia_soffit_material} type="text" onSave={saveScope('fascia_soffit_material')} />
+                    <EditableInfoRow locked={!canEditProjectInfo} lockReason="Only the project creator can edit building information" label="Fascia/Soffit Material" value={s?.fascia_soffit_material} type="text" onSave={saveScope('fascia_soffit_material')} />
                   </div>
                 </section>
 
                 <section id="contracts" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                   <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
                     <h2 className="text-base font-bold tracking-tight uppercase font-heading">Contracts</h2>
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{(ownerRow ? 1 : 0) + (supplierRow ? 1 : 0) + downstreamRows.length} active</span>
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{visibleContracts.length} agreements</span>
                   </div>
                   <div className="divide-y divide-border/40 px-1">
-                    {ownerRow && (
-                      <EditableInfoRow label={`Owner → ${ownerRow.to_org?.name || 'You'}`} value={ownerRow.contract_sum} type="currency" mono
-                        display={<span className="font-mono">{fmt$(ownerRow.contract_sum)}</span>}
-                        onSave={saveContract(ownerRow.id, 'contract_sum')}
-                        locked={ownerRow.status === 'approved' || ownerRow.status === 'executed'} lockReason="Contract is locked" />
-                    )}
-                    {supplierRow && (
-                      <EditableInfoRow label={`Supplier (${supplierRow.from_org?.name || 'Supplier'})`} value={supplierRow.contract_sum} type="currency" mono
-                        display={<span className="font-mono">{fmt$(supplierRow.contract_sum)}</span>}
-                        onSave={saveContract(supplierRow.id, 'contract_sum')} />
-                    )}
-                    {downstreamRows.map((c: any) => (
-                      <EditableInfoRow key={c.id} label={`${c.from_org?.name || c.from_role || 'Downstream'} → ${c.to_org?.name || 'You'}`}
-                        value={c.contract_sum} type="currency" mono
-                        display={<span className="font-mono">{fmt$(c.contract_sum)}</span>}
-                        onSave={saveContract(c.id, 'contract_sum')}
-                        locked={c.status === 'approved' || c.status === 'executed'} lockReason="Contract is locked" />
+                    {visibleContracts.map(c => (
+                      <div key={c.id}>
+                        <EditableInfoRow label={`${c.from_org?.name || c.from_role} → ${c.to_org?.name || c.to_role}`}
+                          value={c.contract_sum} type="currency" mono
+                          display={<span className="font-mono">{fmt$(c.contract_sum)}</span>}
+                          onSave={saveContract(c.id, 'contract_sum')}
+                          locked={!canEditInfoContract(c, user?.id)} lockReason="Only the contract creator can edit an unlocked agreement" />
+                        <EditableInfoRow label="Retainage" value={c.retainage_percent} type="percent" mono
+                          onSave={saveContract(c.id, 'retainage_percent')}
+                          locked={!canEditInfoContract(c, user?.id)} lockReason="Only the contract creator can edit an unlocked agreement" />
+                      </div>
                     ))}
-                    {downstreamRows.length === 0 && !ownerRow && !supplierRow && (
-                      <p className="text-sm text-muted-foreground py-4 px-3">No contracts recorded.</p>
-                    )}
+                    {visibleContracts.length === 0 && <p className="text-sm text-muted-foreground py-4 px-3">No agreements recorded for your company.</p>}
                   </div>
                 </section>
 
-                <InfoCard id="approvals" title="Approvals & Compliance" fields={approvalFields} />
+                {isGC && <InfoCard canEdit={canEditProjectInfo} id="approvals" title="Approvals & Compliance" fields={approvalFields} />}
 
                 {team.length > 0 && (
                   <section id="team" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden lg:col-span-2">
@@ -839,12 +844,13 @@ export default function FinishProjectSetup() {
   );
 }
 
-function InfoCard({ id, title, fields, className, twoCol }: {
+function InfoCard({ id, title, fields, className, twoCol, canEdit = false }: {
   id: string;
   title: string;
   fields: { filled: boolean; node: React.ReactNode }[];
   className?: string;
   twoCol?: boolean;
+  canEdit?: boolean;
 }) {
   const [showEmpty, setShowEmpty] = useState(false);
   const filled = fields.filter(f => f.filled);
@@ -865,13 +871,14 @@ function InfoCard({ id, title, fields, className, twoCol }: {
         {visible.length === 0 && <p className="text-sm text-muted-foreground px-3 py-3">Nothing entered yet.</p>}
       </div>
       {empty.length > 0 && (
-        <button
+        <Button
+          variant="ghost"
           type="button"
           onClick={() => setShowEmpty(v => !v)}
           className="w-full min-h-[40px] px-4 text-left text-xs font-semibold text-primary hover:bg-muted/40"
         >
-          {showEmpty ? 'Hide empty fields' : `+ Add missing info (${empty.length})`}
-        </button>
+          {showEmpty ? 'Hide empty fields' : `${canEdit ? '+ Add missing info' : 'Show missing info'} (${empty.length})`}
+        </Button>
       )}
     </section>
   );

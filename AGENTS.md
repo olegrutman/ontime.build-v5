@@ -1,5 +1,7 @@
 # Project architecture rules
 
+- Project Info derives headline revenue from the viewer's own earning contracts, never the sum of revenue and downstream costs; shared details and contract edits use their respective user-level creator identities.
+
 - Crew Tracker posts spending once into actual_cost_entries and stores reusable workers separately; this keeps project financials on one ledger without counting labor twice.
 - Hired crew tasks hold pricing and cumulative progress separately from daily workers; progress draws lock the task and post only actual payments to the shared private cost ledger, because completed work is not automatically paid payroll.
 - Crew project budgets are organization-private and separate from upstream contracts; overview actual costs count ledger spending once, while forecasts use the greater of budget and actual in each expense category.
