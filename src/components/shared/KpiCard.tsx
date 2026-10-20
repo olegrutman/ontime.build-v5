@@ -1,5 +1,6 @@
 import { forwardRef, useState, type ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Maximize2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /* ─── Design tokens ─── */
 export const C = {
@@ -82,36 +83,36 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, childr
 }) {
   const [open, setOpen] = useState(false);
   return (
+    <>
     <div
-      onClick={() => setOpen(!open)}
+      role="button"
+      tabIndex={0}
+      onClick={() => setOpen(true)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); } }}
       style={{
         background: C.surface, borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-        border: open ? `1.5px solid ${C.amber}` : `1px solid ${C.border}`,
-        boxShadow: open ? `0 0 0 3px rgba(245,166,35,.1)` : '0 1px 3px rgba(0,0,0,.04)',
+        border: `1px solid ${C.border}`,
+        boxShadow: '0 1px 3px rgba(0,0,0,.04)',
         animationDelay: `${idx * 0.04}s`, ...fontLabel,
       }}
-      className="min-w-0 max-w-full animate-fade-in"
+      className="min-w-0 max-w-full animate-fade-in hover:shadow-md transition-shadow"
     >
       <div style={{ height: 3, background: accent }} />
       <div className="px-3 sm:px-4 pt-3 sm:pt-3.5">
-        {/* Icon + Pills row — fixed height */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, minHeight: 36 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }} className="sm:w-9 sm:h-9 sm:text-[18px]">{icon}</div>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }} className="sm:w-9 sm:h-9 sm:text-[18px]">{icon}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', minHeight: 22 }}>
             {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
-            {headerAction}
+            <span onClick={(e) => e.stopPropagation()}>{headerAction}</span>
           </div>
         </div>
-        {/* Label */}
         <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, marginBottom: 2, fontWeight: 600, minHeight: 24, display: 'flex', alignItems: 'flex-start' }}>
           <span className="line-clamp-2">{label}</span>
         </div>
-        {/* Value + optional sparkline */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
           <div style={{ color: C.ink, lineHeight: 1.1, display: 'flex', alignItems: 'center', ...fontVal }} className="text-2xl sm:text-[2rem] min-h-[30px] sm:min-h-[36px]">{value}</div>
           {spark && <div style={{ flexShrink: 0, marginBottom: 4 }}>{spark}</div>}
         </div>
-        {/* Sub */}
         <div style={{ fontSize: '0.67rem', color: C.muted, marginBottom: 10, minHeight: 24 }}>
           <span className="line-clamp-2">{sub}</span>
         </div>
@@ -120,15 +121,32 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills, childr
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: C.surface2, fontSize: '0.67rem', color: C.muted, fontWeight: 600, borderTop: `1px solid ${C.border}` }}
         className="hover:bg-[#FFF7E6] transition-colors"
       >
-        <span>{open ? 'Collapse' : 'Expand for detail'}</span>
-        <ChevronRight size={13} style={{ transition: 'transform 0.3s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }} />
-      </div>
-      <div onClick={(e) => e.stopPropagation()} style={{ maxHeight: open ? 1600 : 0, overflow: open ? 'auto' : 'hidden', transition: 'max-height 0.44s cubic-bezier(.22,1,.36,1), opacity 0.3s', opacity: open ? 1 : 0 }}>
-        <div className="max-w-full overflow-x-auto">
-          {children}
-        </div>
+        <span>View breakdown</span>
+        <Maximize2 size={12} />
       </div>
     </div>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="p-0 gap-0 overflow-hidden rounded-2xl w-[calc(100vw-1rem)] max-w-3xl max-h-[90vh] flex flex-col" style={fontLabel}>
+        <div style={{ height: 4, background: accent }} />
+        <DialogHeader className="px-4 sm:px-6 pt-4 pb-3 text-left space-y-1" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="flex items-center gap-3 pr-8">
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</div>
+            <div className="min-w-0 flex-1">
+              <DialogTitle style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.muted, fontWeight: 600 }}>{label}</DialogTitle>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span style={{ color: C.ink, ...fontVal }} className="text-3xl leading-tight">{value}</span>
+                {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
+              </div>
+            </div>
+          </div>
+          <DialogDescription style={{ fontSize: '0.75rem', color: C.muted }}>{sub}</DialogDescription>
+        </DialogHeader>
+        <div className="overflow-auto flex-1 min-h-0">
+          {children}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
