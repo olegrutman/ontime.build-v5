@@ -51,11 +51,11 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
   const payTotal=selected.reduce((s,w)=>s+crewPay(Number(w.rate),Number(quantities[w.id])),0);
 
   const saveLabor=async()=>{
-    const entries=selected.map(w=>({...blankEntry(projectId,date),cost_type:w.pay_basis==='hourly'?'hours':'lump_sum',description:w.name,
+    const entries=selected.map(w=>({...blankEntry(projectId,date),cost_type:w.pay_basis==='hourly'?'hours':'lump_sum',description:workTasks[w.id]?.trim()?`${w.name} · ${workTasks[w.id].trim()}`:w.name,
       tracker_category:'labor',tracker_worker_id:w.id,tracker_pay_basis:w.pay_basis,tracker_quantity:Number(quantities[w.id]),
       hourly_rate:Number(w.rate),men_count:1,hours_per_man:w.pay_basis==='hourly'?Number(quantities[w.id]):null,
       lump_amount:w.pay_basis!=='hourly'?crewPay(Number(w.rate),Number(quantities[w.id])):null,total_amount:crewPay(Number(w.rate),Number(quantities[w.id]))}));
-    try {await tracker.saveCosts.mutateAsync(entries);setQuantities({});} catch { /* Mutation displays error; preserve input. */ }
+    try {await tracker.saveCosts.mutateAsync(entries);setQuantities({});} catch { /* Mutation displays error; preserve input. Task picks stay for the next day. */ }
   };
   const saveExpense=async()=>{
     if(!tracker.orgId || Number(amount)<=0) return;
