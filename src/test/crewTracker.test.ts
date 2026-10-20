@@ -31,4 +31,7 @@ describe('Crew Tracker pay and spending',()=>{
     expect(result.marginToDate.value).toBe(414);
     expect(result.forecastMargin.value).toBe(400);
   });
+});describe('Crew production pay',()=>{
+  it('pays a labor crew per square foot',()=>expect(crewPay(0.85,1200)).toBe(1020));
+  it('pays a labor crew per unit',()=>expect(crewPay(45,12)).toBe(540));
 });
