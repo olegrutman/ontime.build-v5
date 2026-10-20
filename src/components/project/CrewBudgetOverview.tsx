@@ -34,7 +34,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
     <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">{[
       ['Total budget',tracker.hasBudget?formatCurrency(comparison.totalBudget):'Not set'],
       ['Actual spending',formatCurrency(comparison.totalActual)],
-      [comparison.remaining<0?'Over budget':'Budget remaining',tracker.hasBudget?formatCurrency(Math.abs(comparison.remaining)):'Not set'],
+      [tracker.hasBudget && comparison.remaining<0?'Over budget':'Budget remaining',tracker.hasBudget?formatCurrency(Math.abs(comparison.remaining)):'Not set'],
     ].map(([label,value])=><div key={label} className="min-w-0"><dt className="text-sm text-muted-foreground">{label}</dt><dd className={`break-words font-mono text-2xl font-semibold ${label==='Over budget'?'text-destructive':''}`}>{value}</dd></div>)}</dl>
     <div className="divide-y">{CREW_BUDGET_GROUPS.map(g=><div key={g.key} className="grid min-w-0 grid-cols-1 gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"><h3 className="break-words font-medium">{g.label}</h3><dl className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:grid-cols-3">{[
       ['Budget',tracker.hasBudget?formatCurrency(tracker.budget[g.key]):'Not set'],
