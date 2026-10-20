@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
@@ -74,7 +75,7 @@ export function SupplierDashboardView({
   onSetSoleMember, onSetPartOfTeam, onRefresh,
 }: SupplierDashboardViewProps) {
   const navigate = useNavigate();
-  const { projectFinancials, upcomingDeliveries, refetch: refetchSupplier } = useSupplierDashboardData();
+  const { projectFinancials, upcomingDeliveries, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
 
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
@@ -160,6 +161,9 @@ export function SupplierDashboardView({
   );
 
   const goToProject = (pid: string) => navigate(`/project/${pid}`);
+
+  if (supplierError) return <div role="alert" className="p-4 text-destructive">Could not load supplier totals. <Button variant="outline" onClick={refetchSupplier}>Retry</Button></div>;
+  if (supplierLoading) return <div className="p-4 text-muted-foreground">Loading supplier totals…</div>;
 
   return (
     <div className="space-y-4">

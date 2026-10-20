@@ -29,6 +29,7 @@ export interface RiskFactors {
 
 export interface SupplierMaterialsOverviewData {
   loading: boolean;
+  error: boolean;
   estimateTotal: number;
   salesTaxPercent: number;
   materialsOrdered: number;
@@ -50,7 +51,7 @@ export interface SupplierMaterialsOverviewData {
 }
 
 export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: string): SupplierMaterialsOverviewData {
-  const { data: supplier } = useQuery({
+  const { data: supplier, isLoading: supplierLoading, isError: supplierError } = useQuery({
     queryKey: ['supplier-by-org', supplierOrgId],
     queryFn: async () => {
       const { data, error } = await supabase.from('suppliers').select('id').eq('organization_id', supplierOrgId).maybeSingle();
@@ -60,20 +61,21 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
     enabled: !!supplierOrgId,
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['supplier-materials-overview', projectId, supplierOrgId, supplier?.id],
     queryFn: async () => {
       const supplierId = supplier?.id;
       if (!supplierId) throw new Error("Supplier not available");
 
       // 1. Estimates
-      const { data: estimates } = await supabase
+      const { data: estimates, error: estimatesError } = await supabase
         .from('supplier_estimates')
         .select('id, total_amount, sales_tax_percent')
         .eq('project_id', projectId)
         .eq('supplier_org_id', supplierOrgId)
         .eq('status', 'APPROVED');
 
+      if (estimatesError) throw estimatesError;
       const estimateTotal = estimates?.reduce((s, e) => s + (e.total_amount || 0), 0) || 0;
       const salesTaxPercent = estimates?.[0]?.sales_tax_percent || 0;
       const estimateIds = estimates?.map(e => e.id) || [];
@@ -81,10 +83,11 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
       // 2. Estimate items by pack
       let estimateItemsByPack: Record<string, number> = {};
       if (estimateIds.length > 0) {
-        const { data: items } = await supabase
+        const { data: items, error: itemsError } = await supabase
           .from('supplier_estimate_items')
           .select('estimate_id, pack_name, line_total')
           .in('estimate_id', estimateIds);
+      if (itemsError) throw itemsError;
       const estimateTaxById = Object.fromEntries((estimates || []).map(e => [e.id, e.sales_tax_percent || 0]));
       (items || []).forEach(item => {
           const pack = item.pack_name || 'Uncategorized';
@@ -93,23 +96,25 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
       }
 
       // 3. POs with line items
-      const { data: allPOs } = await supabase
+      const { data: allPOs, error: posError } = await supabase
         .from('purchase_orders')
         .select('id, status, created_at, delivered_at, po_total, po_subtotal_total, sales_tax_percent, po_line_items(description, line_total, source_estimate_item_id, source_pack_name, created_at)')
         .eq('project_id', projectId)
         .eq('supplier_id', supplierId)
         .order('created_at', { ascending: true });
 
+      if (posError) throw posError;
       const activePOs = (allPOs || []).filter(po => isOrderedPO(po.status));
       const submittedPOs = (allPOs || []).filter(po => po.status === 'SUBMITTED');
 
       // 4. Returns
-      const { data: returns } = await supabase
+      const { data: returns, error: returnsError } = await supabase
         .from('returns')
-        .select('net_credit_total')
+        .select('net_credit_total, closed_at')
         .eq('project_id', projectId)
         .eq('supplier_org_id', supplierOrgId)
         .eq('status', 'CLOSED');
+      if (returnsError) throw returnsError;
       const creditsTotal = returns?.reduce((s, r) => s + (r.net_credit_total || 0), 0) || 0;
 
       // Compute totals
@@ -246,7 +251,7 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
           month: `${monthNames[parseInt(m) - 1]} ${y}`,
           budget: estimateTotal,
           ordered: cumOrdered,
-          delivered: Math.max(0, cumDelivered - creditsTotal),
+          delivered: Math.max(0, cumDelivered - (returns || []).filter(r => r.closed_at && r.closed_at.slice(0, 7) <= month).reduce((sum, r) => sum + (r.net_credit_total || 0), 0)),
         };
       });
 
@@ -279,7 +284,8 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
   });
 
   return useMemo(() => ({
-    loading: isLoading || !data,
+    loading: supplierLoading || isLoading,
+    error: supplierError || isError,
     estimateTotal: data?.estimateTotal || 0,
     salesTaxPercent: data?.salesTaxPercent || 0,
     materialsOrdered: data?.materialsOrdered || 0,
@@ -298,5 +304,5 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
     riskFactors: data?.riskFactors || { unpricedItems: 0, unpricedPOs: 0, packsNotStarted: 0, totalPacks: 0, biggestUpcomingPack: null },
     chartData: data?.chartData || [],
     lastUpdated: data?.lastUpdated || null,
-  }), [data, isLoading]);
+  }), [data, isLoading, supplierLoading, supplierError, isError]);
 }

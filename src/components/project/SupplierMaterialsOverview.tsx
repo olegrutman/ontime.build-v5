@@ -35,24 +35,26 @@ const chartConfig = {
 
 export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate }: Props) {
   const data = useSupplierMaterialsOverview(projectId, supplierOrgId);
-  const { data: estimateRows = [] } = useQuery<EstimateRow[]>({
+  const { data: estimateRows = [], isError: rowsError } = useQuery<EstimateRow[]>({
     queryKey: ['supplier-estimate-rows', projectId, supplierOrgId],
     queryFn: async () => {
-      const { data: estimates } = await supabase
+      const { data: estimates, error: estimatesError } = await supabase
         .from('supplier_estimates')
         .select('id, name, status, total_amount, supplier_estimate_items(pack_name)')
         .eq('project_id', projectId)
         .eq('supplier_org_id', supplierOrgId);
 
+      if (estimatesError) throw estimatesError;
       if (!estimates?.length) return [];
 
       const estimateIds = estimates.map(e => e.id);
-      const { data: pos } = await supabase
+      const { data: pos, error: posError } = await supabase
         .from('purchase_orders')
         .select('id, status, source_estimate_id, source_pack_name, po_total, po_subtotal_total, sales_tax_percent')
         .eq('project_id', projectId)
         .in('source_estimate_id', estimateIds);
 
+      if (posError) throw posError;
       const orderedPacksByEst: Record<string, Set<string>> = {};
       const orderedAmountByEst: Record<string, number> = {};
       (pos || []).forEach(po => {
@@ -95,6 +97,7 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
 
   const [unmatchedView, setUnmatchedView] = useState<'ordered' | 'delivered'>('ordered');
 
+  if (data.error || rowsError) return <div role="alert" className="p-4 text-destructive">Could not load supplier materials totals. Refresh to retry.</div>;
   if (data.loading) {
     return (
       <div className="space-y-4">

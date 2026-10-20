@@ -172,6 +172,7 @@ export interface SupplierDashboardData {
   projectFinancials: SupplierProjectFinancial[];
   upcomingDeliveries: UpcomingDelivery[];
   loading: boolean;
+  error: boolean;
   refetch: () => Promise<void>;
 }
 
@@ -181,6 +182,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   const { user, userOrgRoles } = useAuth();
   const orgId = userOrgRoles[0]?.organization?.id;
 
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState<SupplierKPIs>({ totalReceivable: 0, overdueCount: 0, paidThisMonth: 0, paidLastMonth: 0, openOrdersCount: 0, needsConfirmationCount: 0, creditExposure: 0 });
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
@@ -200,14 +202,16 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   const fetchData = useCallback(async () => {
     if (!orgId || !user) { setLoading(false); return; }
     setLoading(true);
+    setError(false);
 
     try {
       // Step 1: Find supplier records for this org
-      const { data: supplierRecords } = await supabase
+      const { data: supplierRecords, error: supplierError } = await supabase
         .from('suppliers')
         .select('id')
         .eq('organization_id', orgId);
 
+      if (supplierError) throw supplierError;
       const supplierIds = (supplierRecords || []).map(s => s.id);
 
       // Step 2: Parallel fetches
@@ -254,6 +258,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
               .select('id')
               .in('supplier_id', supplierIds)
               .then(async (poRes) => {
+                if (poRes.error) throw poRes.error;
                 const poIds = (poRes.data || []).map((r: any) => r.id);
                 if (poIds.length === 0) return { data: [] };
                 return supabase
@@ -270,6 +275,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           .eq('invite_status', 'ACCEPTED'),
       ]);
 
+      for (const result of [posResult, estimatesResult, returnsResult, invoicesResult, acceptedProjectsResult]) { if ("error" in result && result.error) throw result.error; }
       const allPOs = (posResult.data || []) as any[];
       const allEstimates = (estimatesResult.data || []) as any[];
       const allReturns = (returnsResult.data || []) as any[];
@@ -464,10 +470,11 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const estimateIds = allEstimates.map((e: any) => e.id);
       let estimateItemsData: any[] = [];
       if (estimateIds.length > 0) {
-        const { data } = await supabase
+        const { data, error: itemsError } = await supabase
           .from('supplier_estimate_items')
           .select('estimate_id, pack_name, line_total')
           .in('estimate_id', estimateIds);
+        if (itemsError) throw itemsError;
         estimateItemsData = data || [];
       }
 
@@ -721,6 +728,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       setUpcomingDeliveries(upcoming);
 
     } catch (err) {
+      setError(true);
       console.error('Supplier dashboard fetch error:', err);
     } finally {
       setLoading(false);
@@ -734,6 +742,6 @@ export function useSupplierDashboardData(): SupplierDashboardData {
     velocityTrend, oldestInvoiceDays, estimates, projectHealth,
     acceptedProjects, openPOs, returns,
     projectFinancials, upcomingDeliveries,
-    loading, refetch: fetchData,
+    loading, error, refetch: fetchData,
   };
 }

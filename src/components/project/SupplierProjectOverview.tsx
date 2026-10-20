@@ -34,10 +34,11 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
   // Get supplier_id for this org
-  const { data: supplierRec } = useQuery({
+  const { data: supplierRec, isLoading: supplierLoading, isError: supplierError } = useQuery({
     queryKey: ['supplier-by-org', currentOrgId],
     queryFn: async () => {
-      const { data } = await supabase.from('suppliers').select('id, name').eq('organization_id', currentOrgId!).maybeSingle();
+      const { data, error } = await supabase.from('suppliers').select('id, name').eq('organization_id', currentOrgId || "").maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!currentOrgId,
@@ -50,7 +51,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const { data: relationships = [] } = useQuery({
     queryKey: ['sup-proj-relationships', projectId],
     queryFn: async () => {
-      const { data } = await supabase.rpc('get_project_relationships', { _project_id: projectId });
+      const { data, error } = await supabase.rpc('get_project_relationships', { _project_id: projectId });
       return (data || []) as {
         upstream_org_name: string; upstream_role: string;
         downstream_org_name: string; downstream_role: string;
@@ -79,15 +80,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     : materialsResponsible?.role === 'SUPPLIER' ? 'Supplier' : materialsResponsible?.role;
 
   // Fetch POs for this project + supplier
-  const { data: pos = [] } = useQuery({
+  const { data: pos = [], isLoading: posLoading, isError: posError } = useQuery({
     queryKey: ['sup-proj-pos', projectId, supplierId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('purchase_orders')
         .select('id, po_number, po_name, status, po_total, po_subtotal_total, sales_tax_percent, source_estimate_id, source_pack_name, ready_for_delivery_at, created_at')
         .eq('project_id', projectId)
-        .eq('supplier_id', supplierId!)
+        .eq('supplier_id', supplierId || "")
         .order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!projectId && !!supplierId,
@@ -96,15 +98,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   // Fetch estimates for this project + supplier org.
   // Canonical "Estimated" counts APPROVED only (see @/lib/supplierMetrics) — we still
   // fetch SUBMITTED so the estimate card can hint at pending submissions.
-  const { data: allEstimates = [] } = useQuery({
+  const { data: allEstimates = [], isLoading: estimatesLoading, isError: estimatesError } = useQuery({
     queryKey: ['sup-proj-estimates', projectId, currentOrgId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('supplier_estimates')
         .select('id, name, total_amount, sales_tax_percent, status')
         .eq('project_id', projectId)
-        .eq('supplier_org_id', currentOrgId!)
+        .eq('supplier_org_id', currentOrgId || "")
         .in('status', ['APPROVED', 'SUBMITTED']);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!projectId && !!currentOrgId,
@@ -116,13 +119,14 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
   // Fetch estimate items for pack breakdown
   const estimateIds = estimates.map(e => e.id);
-  const { data: estimateItems = [] } = useQuery({
+  const { data: estimateItems = [], isLoading: itemsLoading, isError: itemsError } = useQuery({
     queryKey: ['sup-proj-est-items', estimateIds],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('supplier_estimate_items')
         .select('estimate_id, pack_name, line_total')
         .in('estimate_id', estimateIds);
+      if (error) throw error;
       return data || [];
     },
     enabled: estimateIds.length > 0,
@@ -130,15 +134,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
   // Fetch invoices linked to this supplier's POs
   const poIds = pos.map(p => p.id);
-  const { data: invoices = [] } = useQuery({
+  const { data: invoices = [], isLoading: invoicesLoading, isError: invoicesError } = useQuery({
     queryKey: ['sup-proj-invoices', poIds],
     queryFn: async () => {
       if (poIds.length === 0) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('invoices')
         .select('id, invoice_number, total_amount, status, submitted_at, paid_at, po_id, notes')
         .in('po_id', poIds)
         .order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: poIds.length > 0,
@@ -236,7 +241,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
   // Analytics (Phase A — additive per-project insights)
   const packsOrderedCount = packNames.filter(p => (orderedByPack[p] || 0) > 0).length;
-  const { data: analytics, isLoading: analyticsLoading } = useSupplierProjectAnalytics({
+  const { data: analytics, isLoading: analyticsLoading, isError: analyticsError } = useSupplierProjectAnalytics({
     projectId,
     supplierId,
     supplierOrgId: currentOrgId,
@@ -288,6 +293,10 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   ].filter(Boolean) as StatTile[];
 
   const anyCardVisible = Object.values(cardHasData).some(Boolean);
+
+  if (supplierError || posError || estimatesError || itemsError || invoicesError) return <div role="alert" className="p-4 text-destructive">Could not load supplier totals. Refresh to retry.</div>;
+  if (supplierLoading || posLoading || estimatesLoading || itemsLoading || invoicesLoading) return <div className="p-4 text-muted-foreground">Loading supplier totals…</div>;
+  if (!supplierId) return <div className="p-4 text-muted-foreground">No supplier account linked to this company.</div>;
 
   return (
     <div className="space-y-4">
@@ -551,6 +560,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
       <SupplierProjectAnalyticsSection
         analytics={analytics}
         loading={analyticsLoading}
+        error={analyticsError}
         estimateTotal={totalEstimate}
         orderedTotal={totalOrdered}
         onNavigate={onNavigate}
