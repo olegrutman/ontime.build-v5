@@ -141,6 +141,27 @@
       "when": 1791938161154,
       "tag": "0019_proposal_scope_type_and_wo_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792462966008,
+      "tag": "0020_crew_tracker_workers_and_spending",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792463002164,
+      "tag": "0021_private_crew_receipt_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792463174910,
+      "tag": "0022_qualify_private_receipt_object_paths",
+      "breakpoints": true
     }
   ]
 }

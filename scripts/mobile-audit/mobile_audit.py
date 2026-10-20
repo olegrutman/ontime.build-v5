@@ -16,7 +16,7 @@ KEY = "sb-gzqgbfazwvmwmirbqfwf-auth-token"
 OUT = Path("/tmp/browser/audit"); OUT.mkdir(parents=True, exist_ok=True)
 SECTIONS = ["overview", "change-orders", "invoices", "purchase-orders", "team", "setup", "scope", "sov",
             "rfis", "estimates", "money", "returns", "backcharges", "payment-apps", "field", "schedule",
-            "daily-log", "docs", "pulse", "settings"]
+            "daily-log", "crew-tracker", "docs", "pulse", "settings"]
 GLOBAL = ["/dashboard", "/org/team", "/partners", "/projects/archive", "/catalog", "/estimates",
           "/purchase-orders", "/reminders", "/supplier/inventory", "/supplier/estimates", "/profile",
           "/settings", "/rfis"]

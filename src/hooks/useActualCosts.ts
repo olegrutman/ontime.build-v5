@@ -6,7 +6,7 @@ import { toast } from '@/hooks/use-toast';
 
 export interface ActualCostEntry {
   id: string;
-  change_order_id: string | null;
+  change_order_id?: string | null;
   project_id: string | null;
   entry_date: string;
   cost_type: 'hours' | 'lump_sum';
@@ -43,7 +43,7 @@ export function useActualCosts({ changeOrderId, projectId }: UseActualCostsOptio
   const { user, userOrgRoles } = useAuth();
   const orgId = userOrgRoles[0]?.organization?.id;
   const queryClient = useQueryClient();
-  const queryKey = ['actual-costs', changeOrderId ?? null, projectId ?? null];
+  const queryKey = ['actual-costs', orgId, changeOrderId ?? null, projectId ?? null];
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey,
@@ -52,6 +52,7 @@ export function useActualCosts({ changeOrderId, projectId }: UseActualCostsOptio
       let query = supabase
         .from('actual_cost_entries')
         .select('*')
+        .eq('organization_id', orgId ?? '')
         .order('entry_date', { ascending: false });
 
       if (projectId) {
@@ -108,13 +109,15 @@ export function useProjectActualCosts(projectId: string | undefined) {
   const orgId = userOrgRoles[0]?.organization?.id;
 
   const { data: totalActualCost = 0, isLoading } = useQuery({
-    queryKey: ['actual-costs-project-total', projectId],
+    queryKey: ['actual-costs-project-total', orgId, projectId],
     enabled: !!projectId && !!orgId,
     queryFn: async () => {
+      if (!projectId || !orgId) return 0;
       const { data: projectEntries, error: e1 } = await supabase
         .from('actual_cost_entries')
         .select('total_amount')
-        .eq('project_id', projectId!);
+        .eq('project_id', projectId)
+        .eq('organization_id', orgId);
       if (e1) throw e1;
 
       const sum = (projectEntries ?? [])

@@ -45,6 +45,7 @@ import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTea
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';
 import { FCProjectOverview } from '@/components/project/FCProjectOverview';
+import { CrewTracker } from '@/components/project/CrewTracker';
 import { TCProjectOverview } from '@/components/project/TCProjectOverview';
 import SupplierProjectOverview from '@/components/project/SupplierProjectOverview';
 
@@ -372,6 +373,9 @@ export default function ProjectHome() {
 
 
             {/* Overview Tab */}
+            {activeTab === 'crew-tracker' && isFC && !isInDemoMode && (
+              <CrewTracker projectId={project.id} onBack={() => handleTabChange('overview')} />
+            )}
             {activeTab === 'overview' && (
               <>
                 {isInDemoMode ? (

@@ -14,6 +14,12 @@ function flatten(isTM: boolean, isSupplier: boolean) {
 }
 
 describe('project sidebar nav — all user types', () => {
+  it('makes Crew Tracker available only on crew navigation', () => {
+    const crew = getNavGroups(false, false, true);
+    expect(crew.groups.flatMap(g=>g.items).map(i=>i.route)).toContain('crew-tracker');
+    expect(flatten(false,false).map(i=>i.route)).not.toContain('crew-tracker');
+    expect(flatten(false,true).map(i=>i.route)).not.toContain('crew-tracker');
+  });
   VARIANTS.forEach(({ name, isTM, isSupplier }) => {
     describe(name, () => {
       it('renders every destination exactly once (no pinned duplicates)', () => {
