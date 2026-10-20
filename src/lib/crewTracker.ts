@@ -10,6 +10,18 @@ export const CREW_BUDGET_GROUPS = [
 export type CrewBudget = Record<typeof CREW_BUDGET_GROUPS[number]['key'], number>;
 export const EMPTY_CREW_BUDGET: CrewBudget = { labor: 0, materials: 0, tools_equipment: 0, other: 0 };
 
+export function crewDrawBalance(total: number, percent: number, paid: number) {
+  const earned = toCents(total * Math.max(0, Math.min(100, percent)) / 100);
+  return { earned, available: toCents(Math.max(0, earned - paid)), remaining: toCents(Math.max(0, total - paid)) };
+}
+
+export function crewLaborBreakdown(entries: { total_amount: number; tracker_category?: string | null; tracker_job_task_id?: string | null; tracker_pay_basis?: string | null }[]) {
+  const labor = entries.filter(e => e.tracker_category === 'labor');
+  const hired = toCents(labor.filter(e => e.tracker_job_task_id || ['sq_ft','unit'].includes(e.tracker_pay_basis ?? '')).reduce((s,e) => s + Number(e.total_amount),0));
+  const total = toCents(labor.reduce((s,e) => s + Number(e.total_amount),0));
+  return { workers: toCents(total - hired), hired };
+}
+
 export function crewBudgetComparison(entries: { total_amount: number; tracker_category?: string | null; cost_type?: string }[], budget: CrewBudget) {
   const actual = { ...EMPTY_CREW_BUDGET };
   for (const entry of entries) {

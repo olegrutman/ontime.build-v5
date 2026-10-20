@@ -219,6 +219,8 @@ export type Database = {
           project_id: string | null
           total_amount: number
           tracker_category: string | null
+          tracker_draw_request_id: string | null
+          tracker_job_task_id: string | null
           tracker_pay_basis: string | null
           tracker_quantity: number | null
           tracker_receipt_path: string | null
@@ -240,6 +242,8 @@ export type Database = {
           project_id?: string | null
           total_amount?: number
           tracker_category?: string | null
+          tracker_draw_request_id?: string | null
+          tracker_job_task_id?: string | null
           tracker_pay_basis?: string | null
           tracker_quantity?: number | null
           tracker_receipt_path?: string | null
@@ -261,6 +265,8 @@ export type Database = {
           project_id?: string | null
           total_amount?: number
           tracker_category?: string | null
+          tracker_draw_request_id?: string | null
+          tracker_job_task_id?: string | null
           tracker_pay_basis?: string | null
           tracker_quantity?: number | null
           tracker_receipt_path?: string | null
@@ -280,6 +286,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_tracker_job_task_id_fkey"
+            columns: ["tracker_job_task_id"]
+            isOneToOne: false
+            referencedRelation: "crew_job_tasks"
             referencedColumns: ["id"]
           },
           {
@@ -2835,8 +2848,63 @@ export type Database = {
           },
         ]
       }
+      crew_job_tasks: {
+        Row: {
+          completed_percent: number
+          created_at: string
+          crew_name: string
+          id: string
+          organization_id: string
+          pay_basis: string
+          project_id: string
+          quantity: number
+          rate: number
+          task_name: string
+        }
+        Insert: {
+          completed_percent?: number
+          created_at?: string
+          crew_name: string
+          id?: string
+          organization_id: string
+          pay_basis: string
+          project_id: string
+          quantity: number
+          rate: number
+          task_name: string
+        }
+        Update: {
+          completed_percent?: number
+          created_at?: string
+          crew_name?: string
+          id?: string
+          organization_id?: string
+          pay_basis?: string
+          project_id?: string
+          quantity?: number
+          rate?: number
+          task_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_job_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_job_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_project_budgets: {
         Row: {
+          hired_labor: number | null
           id: string
           labor: number
           materials: number
@@ -2844,8 +2912,10 @@ export type Database = {
           other: number
           project_id: string
           tools_equipment: number
+          worker_labor: number | null
         }
         Insert: {
+          hired_labor?: number | null
           id?: string
           labor?: number
           materials?: number
@@ -2853,8 +2923,10 @@ export type Database = {
           other?: number
           project_id: string
           tools_equipment?: number
+          worker_labor?: number | null
         }
         Update: {
+          hired_labor?: number | null
           id?: string
           labor?: number
           materials?: number
@@ -2862,6 +2934,7 @@ export type Database = {
           other?: number
           project_id?: string
           tools_equipment?: number
+          worker_labor?: number | null
         }
         Relationships: [
           {
@@ -9480,6 +9553,25 @@ export type Database = {
           times_ordered: number
           uom_default: string
         }[]
+      }
+      record_crew_job_draw: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_percent: number
+          p_task_id: string
+        }
+        Returns: string
+      }
+      record_crew_job_draw_once: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_percent: number
+          p_request_id: string
+          p_task_id: string
+        }
+        Returns: string
       }
       reject_join_request: { Args: { _request_id: string }; Returns: undefined }
       reject_tm_period: {

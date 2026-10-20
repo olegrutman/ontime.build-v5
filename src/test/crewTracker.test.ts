@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { crewPay, spendingTotals,csvCell, crewBudgetComparison, EMPTY_CREW_BUDGET, withCrewSpending } from '@/lib/crewTracker';
+import { crewPay, spendingTotals,csvCell, crewBudgetComparison, EMPTY_CREW_BUDGET, withCrewSpending, crewDrawBalance, crewLaborBreakdown } from '@/lib/crewTracker';
 import { buildProjectLedger } from '@/lib/kpiLedger';
 describe('Crew Tracker pay and spending',()=>{
   it('pays hourly employees hours times hourly wage',()=>expect(crewPay(25,8)).toBe(200));
@@ -34,4 +34,8 @@ describe('Crew Tracker pay and spending',()=>{
 });describe('Crew production pay',()=>{
   it('pays a labor crew per square foot',()=>expect(crewPay(0.85,1200)).toBe(1020));
   it('pays a labor crew per unit',()=>expect(crewPay(45,12)).toBe(540));
+  it('pays only the unpaid portion of completed work',()=>expect(crewDrawBalance(10000,50,2000)).toEqual({earned:5000,available:3000,remaining:8000}));
+  it('releases the remaining balance at completion',()=>expect(crewDrawBalance(10000,100,5000).available).toBe(5000));
+  it('does not pay again for an already paid milestone',()=>expect(crewDrawBalance(10000,50,5000).available).toBe(0));
+  it('separates worker payroll from crew draws without counting either twice',()=>expect(crewLaborBreakdown([{total_amount:200,tracker_category:'labor',tracker_pay_basis:'hourly'},{total_amount:3000,tracker_category:'labor',tracker_job_task_id:'wall-framing'},{total_amount:50,tracker_category:'Fuel'}])).toEqual({workers:200,hired:3000}));
 });

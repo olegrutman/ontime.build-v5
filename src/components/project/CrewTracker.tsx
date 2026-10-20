@@ -13,15 +13,18 @@ import { crewPay, spendingTotals, csvCell, EXPENSE_CATEGORIES, PAY_BASIS, payBas
 import { formatCurrency } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { HiredCrewJobs } from './HiredCrewJobs';
 
 const blankEntry = (projectId: string, date: string) => ({
   project_id:projectId, entry_date:date, cost_type:'lump_sum', description:'', men_count:null, hours_per_man:null,
   hourly_rate:null, lump_amount:null,total_amount:0,tracker_category:null,tracker_worker_id:null,
-  tracker_pay_basis:null,tracker_quantity:null,tracker_receipt_path:null,tracker_work_order_id:null,
+   tracker_pay_basis:null,tracker_quantity:null,tracker_receipt_path:null,tracker_work_order_id:null,tracker_job_task_id:null,
 });
 
 export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void}) {
   const tracker=useCrewTracker(projectId);
+  const [laborView,setLaborView]=useState('workers');
   const [date,setDate]=useState(format(new Date(),'yyyy-MM-dd'));
   const [quantities,setQuantities]=useState<Record<string,string>>({});
   const [workerOpen,setWorkerOpen]=useState(false);
@@ -39,8 +42,9 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
   const [editing,setEditing]=useState<CrewSpending|null>(null);
   const [editValue,setEditValue]=useState('');
   const totals=spendingTotals(tracker.entries);
-  const activeWorkers=tracker.workers.filter(w=>w.active);
-  const selected=activeWorkers.filter(w=>crewPay(Number(w.rate),Number(quantities[w.id]))>0);
+  const activeWorkers=tracker.workers.filter(w=>w.active&&['hourly','daily'].includes(w.pay_basis));
+  const legacyCrews=tracker.workers.filter(w=>w.active&&!['hourly','daily'].includes(w.pay_basis));
+  const selected=activeWorkers.filter(w=>!tracker.entries.some(e=>e.tracker_worker_id===w.id&&e.entry_date===date)&&crewPay(Number(w.rate),Number(quantities[w.id]))>0);
   const payTotal=selected.reduce((s,w)=>s+crewPay(Number(w.rate),Number(quantities[w.id])),0);
 
   const saveLabor=async()=>{
@@ -72,7 +76,7 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
     if(data) window.open(data.signedUrl,'_blank','noopener,noreferrer');
   };
   const exportCosts=()=>{
-    const rows=[['Date','Description','Category','Pay basis','Quantity','Rate','Amount','Work order'],...tracker.entries.map(e=>[e.entry_date,e.description,e.tracker_category,e.tracker_pay_basis,e.tracker_quantity,e.hourly_rate,e.total_amount,tracker.orders.find(o=>o.id===e.tracker_work_order_id)?.co_number])];
+    const rows=[['Date','Description','Category','Pay basis','Quantity','Rate','Amount','Work order','Crew task'],...tracker.entries.map(e=>[e.entry_date,e.description,e.tracker_category,e.tracker_job_task_id?'Progress payment':e.tracker_pay_basis,e.tracker_job_task_id?'':e.tracker_quantity,e.tracker_job_task_id?'':e.hourly_rate,e.total_amount,tracker.orders.find(o=>o.id===e.tracker_work_order_id)?.co_number,tracker.tasks.find(t=>t.id===e.tracker_job_task_id)?.task_name])];
     const url=URL.createObjectURL(new Blob([rows.map(r=>r.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
     const a=document.createElement('a');a.href=url;a.download='crew-spending.csv';a.click();URL.revokeObjectURL(url);
   };
@@ -101,10 +105,12 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
 
     <div className="grid gap-5 lg:grid-cols-2">
       <div id="roll-call" className={`${card} space-y-4`}>
-        <div className="flex flex-wrap items-center justify-between gap-2"><div className="min-w-0"><h2 className="font-heading text-xl font-semibold uppercase tracking-wide">Daily pay roll-call</h2><p className="text-xs text-muted-foreground">Enter hours, days, sq. ft or units for each worker or crew</p></div><Button variant="outline" size="sm" onClick={()=>{setWorkerOpen(true);setWorkerId(undefined);setName('');setRate('');setBasis('hourly');}}><Plus className="h-4 w-4"/>Add worker or crew</Button></div>
+        <Tabs value={laborView} onValueChange={setLaborView}><TabsList className="grid h-auto w-full grid-cols-2"><TabsTrigger value="workers">Daily workers</TabsTrigger><TabsTrigger value="crews">Hired crews</TabsTrigger></TabsList></Tabs>
+        {laborView==='crews'?<><HiredCrewJobs tracker={tracker} projectId={projectId} date={date}/>{legacyCrews.length>0&&<div className="space-y-2 border-t pt-3"><h3 className="font-semibold">Previous piece-rate roster</h3>{legacyCrews.map(w=><p key={w.id} className="break-words text-sm text-muted-foreground">{w.name} · {formatCurrency(Number(w.rate))} / {payBasisInfo(w.pay_basis).per}</p>)}</div>}</>:<>
+        <div className="flex flex-wrap items-center justify-between gap-2"><div className="min-w-0"><h2 className="font-heading text-xl font-semibold uppercase tracking-wide">Daily worker roll-call</h2><p className="text-xs text-muted-foreground">Hourly & daily employee payroll</p></div><Button variant="outline" size="sm" onClick={()=>{setWorkerOpen(true);setWorkerId(undefined);setName('');setRate('');setBasis('hourly');}}><Plus className="h-4 w-4"/>Add worker</Button></div>
         {workerOpen && <form className="grid gap-3 rounded-xl border bg-muted/40 p-3 sm:grid-cols-3" onSubmit={async e=>{e.preventDefault();try{await tracker.saveWorker.mutateAsync({id:workerId,name:name.trim(),pay_basis:basis,rate:Number(rate)});setWorkerOpen(false);}catch{}}}>
           <div><Label htmlFor="worker-name">Worker name</Label><Input id="worker-name" value={name} onChange={e=>setName(e.target.value)} maxLength={100} required/></div>
-          <div><Label>Pay type</Label><Select value={basis} onValueChange={setBasis}><SelectTrigger aria-label="Pay type"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(PAY_BASIS).map(([k,v])=><SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label>Pay type</Label><Select value={basis} onValueChange={setBasis}><SelectTrigger aria-label="Pay type"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(PAY_BASIS).filter(([k])=>['hourly','daily'].includes(k)).map(([k,v])=><SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select></div>
           <div><Label htmlFor="worker-rate">{payBasisInfo(basis).rateLabel}</Label><Input id="worker-rate" type="number" min="0.01" step="0.01" value={rate} onChange={e=>setRate(e.target.value)} required/></div>
           <div className="flex flex-wrap gap-2 sm:col-span-3"><Button type="submit" disabled={tracker.saveWorker.isPending||!name.trim()}>Save worker</Button><Button type="button" variant="ghost" onClick={()=>setWorkerOpen(false)}>Cancel</Button></div>
         </form>}
@@ -122,6 +128,7 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
           </div>;
         })}</div>
         {activeWorkers.length>0&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted p-3"><div><p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">Pay to save</p><p className="font-mono text-lg font-semibold">{formatCurrency(payTotal)}</p></div><Button onClick={saveLabor} disabled={!selected.length||tracker.saveCosts.isPending||!date}>Save daily pay</Button></div>}
+        </>}
       </div>
 
       <form id="log-expense" className={`${card} space-y-4`} onSubmit={e=>{e.preventDefault();saveExpense();}}>
@@ -142,9 +149,9 @@ export function CrewTracker({projectId,onBack}:{projectId:string;onBack:()=>void
       {!tracker.entries.length&&<p className="py-6 text-center text-sm text-muted-foreground">No spending logged yet.</p>}
       <div className="divide-y">{tracker.entries.map(e=><div key={e.id} className="flex flex-wrap items-start gap-3 py-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">{e.tracker_category==='labor'?<HardHat className="h-4 w-4"/>:<Receipt className="h-4 w-4"/>}</span>
-        <div className="min-w-0 flex-1 basis-40"><p className="break-words font-semibold">{e.description}</p><p className="break-words text-xs text-muted-foreground">{e.entry_date}{e.tracker_category==='labor'?` · ${e.tracker_quantity} ${payBasisInfo(e.tracker_pay_basis).qty.toLowerCase()} × ${formatCurrency(Number(e.hourly_rate))}`:''}</p>
+        <div className="min-w-0 flex-1 basis-40"><p className="break-words font-semibold">{e.description}</p><p className="break-words text-xs text-muted-foreground">{e.entry_date}{e.tracker_job_task_id?' · Hired crew payment':e.tracker_category==='labor'?` · ${e.tracker_quantity} ${payBasisInfo(e.tracker_pay_basis).qty.toLowerCase()} × ${formatCurrency(Number(e.hourly_rate))}`:''}</p>
           <div className="mt-1 flex flex-wrap gap-1"><span className="rounded-full border px-2 py-0.5 text-[0.65rem] uppercase tracking-wide text-muted-foreground">{e.tracker_category==='labor'?'Labor':e.tracker_category??'Cost entry'}</span>{e.tracker_work_order_id&&<span className="rounded-full bg-primary/10 px-2 py-0.5 text-[0.65rem] text-primary">{tracker.orders.find(o=>o.id===e.tracker_work_order_id)?.co_number??'Work order'}</span>}</div></div>
-        <div className="flex shrink-0 items-center gap-1"><span className="font-mono font-semibold">{formatCurrency(Number(e.total_amount))}</span>{e.tracker_receipt_path&&<Button variant="ghost" size="icon" aria-label="View receipt" onClick={()=>{if(e.tracker_receipt_path) openReceipt(e.tracker_receipt_path);}}><Receipt className="h-4 w-4"/></Button>}{e.tracker_category&&<Button variant="ghost" size="icon" aria-label={`Edit entry ${e.description}`} onClick={()=>{setEditing(e);setEditValue(String(e.tracker_category==='labor'?e.tracker_quantity:e.total_amount));}}><Pencil className="h-4 w-4"/></Button>}<Button variant="ghost" size="icon" aria-label={`Delete entry ${e.description}`} onClick={()=>setRemove(e)}><Trash2 className="h-4 w-4"/></Button></div>
+        <div className="flex shrink-0 items-center gap-1"><span className="font-mono font-semibold">{formatCurrency(Number(e.total_amount))}</span>{e.tracker_receipt_path&&<Button variant="ghost" size="icon" aria-label="View receipt" onClick={()=>{if(e.tracker_receipt_path) openReceipt(e.tracker_receipt_path);}}><Receipt className="h-4 w-4"/></Button>}{e.tracker_category&&!e.tracker_job_task_id&&<Button variant="ghost" size="icon" aria-label={`Edit entry ${e.description}`} onClick={()=>{setEditing(e);setEditValue(String(e.tracker_category==='labor'?e.tracker_quantity:e.total_amount));}}><Pencil className="h-4 w-4"/></Button>}<Button variant="ghost" size="icon" aria-label={`Delete entry ${e.description}`} onClick={()=>setRemove(e)}><Trash2 className="h-4 w-4"/></Button></div>
       </div>)}</div>
     </div>
     <Dialog open={!!editing} onOpenChange={o=>{if(!o)setEditing(null);}}><DialogContent>{editing&&<form className="space-y-3" onSubmit={async e=>{e.preventDefault();try{await tracker.editCost.mutateAsync({id:editing.id,...(editing.tracker_category==='labor'?{quantity:Number(editValue)}:{amount:Number(editValue)})});setEditing(null);}catch{}}}><DialogHeader><DialogTitle className="break-words">Edit {editing.description}</DialogTitle></DialogHeader><Label htmlFor="edit-cost">{editing.tracker_category==='labor'?payBasisInfo(editing.tracker_pay_basis).qty:'Amount'}</Label><Input id="edit-cost" type="number" min="0.01" step="0.01" value={editValue} onChange={e=>setEditValue(e.target.value)} required/><div className="flex gap-2"><Button disabled={tracker.editCost.isPending}>Save changes</Button><Button type="button" variant="ghost" onClick={()=>setEditing(null)}>Cancel</Button></div></form>}</DialogContent></Dialog>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CREW_BUDGET_GROUPS, crewBudgetComparison, type CrewBudget } from '@/lib/crewTracker';
+import { CREW_BUDGET_GROUPS, crewBudgetComparison, crewLaborBreakdown, type CrewBudget } from '@/lib/crewTracker';
 import type { useCrewTracker } from '@/hooks/useCrewTracker';
 import { formatCurrency, cn } from '@/lib/utils';
 
@@ -30,15 +30,20 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const comparison = crewBudgetComparison(tracker.entries, tracker.budget);
+  const labor = crewLaborBreakdown(tracker.entries);
+  const workerBudget = 'worker_labor' in tracker.budget ? Number(tracker.budget.worker_labor ?? tracker.budget.labor) : tracker.budget.labor;
+  const hiredBudget = 'hired_labor' in tracker.budget ? Number(tracker.budget.hired_labor ?? 0) : 0;
+  const editGroups = [{key:'worker_labor',label:'Worker payroll (hourly / daily)'},{key:'hired_labor',label:'Hired crews (piece-rate / task)'},...CREW_BUDGET_GROUPS.filter(g=>g.key!=='labor')];
   if (tracker.loading) return <div role="status" className="h-48 animate-pulse rounded-2xl border bg-muted/40" aria-label="Loading spending and budget" />;
   if (tracker.error) return <p role="alert" className="rounded-2xl border border-destructive/30 p-4 text-destructive">Could not load spending and budget: {tracker.error.message}</p>;
   if (!tracker.orgId) return null;
 
   const startEditing = () => {
     setDraft(Object.fromEntries(CREW_BUDGET_GROUPS.map(g => [g.key, tracker.budget[g.key] ? String(tracker.budget[g.key]) : ''])));
+    setDraft(v=>({...v,worker_labor:String(workerBudget),hired_labor:String(hiredBudget)}));
     setEditing(true);
   };
-  const draftTotal = CREW_BUDGET_GROUPS.reduce((s, g) => s + (Number(draft[g.key]) || 0), 0);
+  const draftTotal = editGroups.reduce((s, g) => s + (Number(draft[g.key]) || 0), 0);
   const total = health(comparison.totalBudget, comparison.totalActual);
   const burn = comparison.totalBudget > 0 ? Math.round((comparison.totalActual / comparison.totalBudget) * 100) : null;
   const scale = Math.max(comparison.totalBudget, comparison.totalActual, 1);
@@ -112,6 +117,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
           </li>;
         })}
       </ul>
+      <div className="border-t pt-4"><h3 className="mb-3 font-heading text-lg font-semibold">Labor breakdown</h3><dl className="grid gap-3 sm:grid-cols-2">{([['Worker payroll',labor.workers,workerBudget],['Hired crew payments',labor.hired,hiredBudget]] as const).map(([label,spent,budget])=><div key={label} className="min-w-0"><dt className="text-xs uppercase text-muted-foreground">{label}</dt><dd className="mt-1 break-words font-mono text-sm">{formatCurrency(spent)} spent / {formatCurrency(budget)} budget</dd></div>)}</dl><p className="mt-3 text-xs text-muted-foreground">Assigned hired-crew tasks: {formatCurrency(tracker.tasks.reduce((s,t)=>s+Number(t.quantity)*Number(t.rate),0))}</p></div>
     </div>
 
     <Dialog open={editing} onOpenChange={setEditing}>
@@ -123,10 +129,11 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
         <form id="crew-budget-form" className="space-y-3" onSubmit={async e => {
           e.preventDefault();
           const values = Object.fromEntries(CREW_BUDGET_GROUPS.map(g => [g.key, Number(draft[g.key] || 0)])) as CrewBudget;
-          try { await tracker.saveBudget.mutateAsync(values); setEditing(false); } catch { /* keep edits */ }
+          const worker_labor=Number(draft.worker_labor||0), hired_labor=Number(draft.hired_labor||0);
+          try { await tracker.saveBudget.mutateAsync({...values,labor:worker_labor+hired_labor,worker_labor,hired_labor}); setEditing(false); } catch { /* keep edits */ }
         }}>
-          {CREW_BUDGET_GROUPS.map(g => {
-            const Icon = ICONS[g.key];
+          {editGroups.map(g => {
+            const Icon = ICONS[g.key as keyof typeof ICONS] ?? HardHat;
             return <div key={g.key} className="space-y-1">
               <Label htmlFor={`crew-budget-${g.key}`} className="flex items-center gap-2"><Icon className="h-4 w-4 shrink-0" />{g.label}</Label>
               <div className="relative">
