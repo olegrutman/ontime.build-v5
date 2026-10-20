@@ -543,234 +543,216 @@ export default function FinishProjectSetup() {
     const garageOpts = opts(['attached', 'detached', 'none']);
     const markupVisOpts = opts(['hidden', 'summary', 'detailed']);
 
-    const sections: { id: string; label: string }[] = [
-      { id: 'project-details', label: 'Project Details' },
-      { id: 'building-info', label: 'Building Info' },
-      { id: 'building-features', label: 'Building Features' },
-      { id: 'financials', label: 'Financial Settings' },
-      { id: 'approvals', label: 'Approvals' },
-      { id: 'contracts', label: 'Contracts' },
-      ...((teamData || []).length > 0 ? [{ id: 'team', label: 'Team' }] : []),
+    const has = (v: any) => v !== null && v !== undefined && v !== '' && v !== 0;
+    const F = (filled: boolean, node: React.ReactNode) => ({ filled, node });
+    const prettify = (v?: string | null) => (v ? String(v).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : null);
+    const team = (teamData || []) as any[];
+    const contractTotal = (ownerRow?.contract_sum || 0) + downstreamRows.reduce((a: number, c: any) => a + Number(c.contract_sum || 0), 0);
+    const location = [addr?.street, p.city, p.state, p.zip].filter(Boolean).join(', ');
+
+    const detailFields = [
+      F(has(p.name), <EditableInfoRow label="Name" value={p.name} type="text" onSave={saveProject('name')} />),
+      F(has(p.status), <EditableInfoRow label="Status" value={p.status} type="select" options={statusOpts} onSave={saveProject('status')} />),
+      F(true, <EditableInfoRow label="Contract Mode" value={p.contract_mode || 'fixed'} type="select" options={contractModeOpts} onSave={saveProject('contract_mode')} />),
+      F(has(p.project_type), <EditableInfoRow label="Project Type" value={p.project_type} type="select" options={projectTypeOpts} onSave={saveProject('project_type')} />),
+      F(has(p.build_type), <EditableInfoRow label="Build Type" value={p.build_type} type="select" options={buildTypeOpts} onSave={saveProject('build_type')} />),
+      F(has(p.start_date), <EditableInfoRow label="Start Date" value={p.start_date} type="date" onSave={saveProject('start_date')} />),
+      F(has(addr?.street), <EditableInfoRow label="Street" value={addr?.street ?? ''} type="text" onSave={saveAddress('street')} placeholder="123 Main St" />),
+      F(has(p.city), <EditableInfoRow label="City" value={p.city} type="text" onSave={saveAddress('city')} />),
+      F(has(p.state), <EditableInfoRow label="State" value={p.state} type="text" onSave={saveAddress('state')} />),
+      F(has(p.zip), <EditableInfoRow label="Zip" value={p.zip} type="text" onSave={saveAddress('zip')} />),
+      F(has(p.description), <EditableInfoRow label="Description" value={p.description} type="text" onSave={saveProject('description')} />),
     ];
 
-    const SectionCard: React.FC<{
-      id: string;
-      title: string;
-      meta?: React.ReactNode;
-      highlight?: boolean;
-      children: React.ReactNode;
-    }> = ({ id, title, meta, highlight, children }) => (
-      <section
-        id={id}
-        className={cn(
-          'scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden',
-          highlight && 'ring-4 ring-primary/10',
-        )}
-      >
-        <div className={cn(
-          'px-6 py-4 border-b flex items-center justify-between',
-          highlight ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/60',
-        )}>
-          <h2 className={cn(
-            'text-lg font-bold tracking-tight uppercase font-heading',
-            highlight ? 'text-primary-foreground' : 'text-foreground',
-          )}>
-            {title}
-          </h2>
-          {meta && (
-            <span className={cn(
-              'text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider',
-              highlight ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-background text-muted-foreground border border-border',
-            )}>
-              {meta}
-            </span>
-          )}
-        </div>
-        <div className="divide-y divide-border/40">{children}</div>
-      </section>
-    );
+    const buildingFields = [
+      F(has(s?.home_type), <EditableInfoRow label="Building Type" value={s?.home_type} type="select" options={homeTypeOpts} onSave={saveScope('home_type')} />),
+      F(has(s?.stories ?? s?.floors), <EditableInfoRow label="Stories" value={s?.stories ?? s?.floors} type="number" onSave={saveScope('stories')} />),
+      F(has(s?.total_sqft), <EditableInfoRow label="Total Sqft" value={s?.total_sqft} type="number" mono onSave={saveScope('total_sqft')} />),
+      F(has(s?.foundation_type), <EditableInfoRow label="Foundation" value={s?.foundation_type} type="select" options={foundationOpts} onSave={saveScope('foundation_type')} />),
+      ...(s?.foundation_type === 'Basement' ? [
+        F(has(s?.basement_type), <EditableInfoRow label="Basement Type" value={s?.basement_type} type="text" onSave={saveScope('basement_type')} />),
+        F(has(s?.basement_finish), <EditableInfoRow label="Basement Finish" value={s?.basement_finish} type="text" onSave={saveScope('basement_finish')} />),
+      ] : []),
+      F(has(s?.construction_type), <EditableInfoRow label="Construction" value={s?.construction_type} type="text" onSave={saveScope('construction_type')} />),
+      F(has(s?.framing_method), <EditableInfoRow label="Framing" value={s?.framing_method} type="text" onSave={saveScope('framing_method')} />),
+      F(has(s?.roof_type), <EditableInfoRow label="Roof Type" value={s?.roof_type} type="text" onSave={saveScope('roof_type')} />),
+      F(has(s?.stairs_type), <EditableInfoRow label="Stairs" value={s?.stairs_type} type="text" onSave={saveScope('stairs_type')} />),
+      F(has(s?.num_buildings), <EditableInfoRow label="# Buildings" value={s?.num_buildings} type="number" onSave={saveScope('num_buildings')} />),
+      F(has(s?.num_units), <EditableInfoRow label="# Units" value={s?.num_units} type="number" onSave={saveScope('num_units')} />),
+      F(has(s?.stories_per_unit), <EditableInfoRow label="Stories / Unit" value={s?.stories_per_unit} type="number" onSave={saveScope('stories_per_unit')} />),
+      F(!!s?.has_shared_walls, <EditableInfoRow label="Shared Walls" value={!!s?.has_shared_walls} type="boolean" onSave={saveScope('has_shared_walls')} />),
+      F(has(s?.bedrooms), <EditableInfoRow label="Bedrooms" value={s?.bedrooms} type="number" onSave={saveScope('bedrooms')} />),
+      F(has(s?.bathrooms), <EditableInfoRow label="Bathrooms" value={s?.bathrooms} type="number" onSave={saveScope('bathrooms')} />),
+      F(has(s?.garage_type), <EditableInfoRow label="Garage" value={s?.garage_type} type="select" options={garageOpts} onSave={saveScope('garage_type')} />),
+      F(has(s?.garage_cars), <EditableInfoRow label="Garage Cars" value={s?.garage_cars} type="number" onSave={saveScope('garage_cars')} />),
+      F(has(s?.lot_size_acres), <EditableInfoRow label="Lot (acres)" value={s?.lot_size_acres} type="number" onSave={saveScope('lot_size_acres')} />),
+      F(has(s?.scope_description), <EditableInfoRow label="Scope Notes" value={s?.scope_description} type="text" onSave={saveScope('scope_description')} />),
+    ];
+
+    const features: { key: string; label: string }[] = [
+      { key: 'has_elevator', label: 'Elevator' }, { key: 'has_roof_deck', label: 'Roof Deck' },
+      { key: 'has_covered_porches', label: 'Covered Porches' }, { key: 'has_balconies', label: 'Balconies' },
+      { key: 'decking_included', label: 'Decking' }, { key: 'siding_included', label: 'Siding' },
+      { key: 'fascia_included', label: 'Fascia' }, { key: 'soffit_included', label: 'Soffit' },
+      { key: 'windows_included', label: 'Windows' }, { key: 'ext_doors_included', label: 'Exterior Doors' },
+      { key: 'wrb_included', label: 'WRB / Housewrap' }, { key: 'decorative_included', label: 'Decorative' },
+    ];
+    const featuresOn = features.filter(f => !!s?.[f.key]).length;
+
+    const financialFields = [
+      F(true, <EditableInfoRow label="Sales Tax" value={p.sales_tax_rate} type="percent" mono onSave={saveProject('sales_tax_rate')} />),
+      F(has(p.tax_jurisdiction_label), <EditableInfoRow label="Tax Jurisdiction" value={p.tax_jurisdiction_label} type="text" onSave={saveProject('tax_jurisdiction_label')} />),
+      F(true, <EditableInfoRow label="Labor Taxable" value={!!p.labor_taxable} type="boolean" onSave={saveProject('labor_taxable')} />),
+      F(true, <EditableInfoRow label="Retainage" value={p.retainage_percent} type="percent" mono onSave={saveProject('retainage_percent')} />),
+      F(has(p.retainage_release_trigger), <EditableInfoRow label="Retainage Release" value={p.retainage_release_trigger} type="text" onSave={saveProject('retainage_release_trigger')} />),
+      F(true, <EditableInfoRow label="Mobilization" value={!!p.mobilization_enabled} type="boolean" onSave={saveProject('mobilization_enabled')} />),
+      F(true, <EditableInfoRow label="Markup Visibility" value={p.tc_markup_visibility} type="select" options={markupVisOpts} onSave={saveProject('tc_markup_visibility')} />),
+    ];
+
+    const approvalFields = [
+      F(has(p.owner_approval_threshold), <EditableInfoRow label="Owner Threshold" value={p.owner_approval_threshold} type="currency" mono onSave={saveProject('owner_approval_threshold')} />),
+      F(has(p.owner_approval_email), <EditableInfoRow label="Owner Email" value={p.owner_approval_email} type="text" onSave={saveProject('owner_approval_email')} />),
+      F(true, <EditableInfoRow label="Architect Approval" value={!!p.architect_approval_required} type="boolean" onSave={saveProject('architect_approval_required')} />),
+      F(has(p.architect_approval_email), <EditableInfoRow label="Architect Email" value={p.architect_approval_email} type="text" onSave={saveProject('architect_approval_email')} />),
+      F(true, <EditableInfoRow label="Photos on Submit" value={!!p.require_photos_on_submit} type="boolean" onSave={saveProject('require_photos_on_submit')} />),
+    ];
+
+    const allFields = [...detailFields, ...buildingFields, ...financialFields, ...approvalFields];
+    const completeness = Math.round((allFields.filter(f => f.filled).length / allFields.length) * 100);
+
+    const stats: { label: string; value: string; mono?: boolean }[] = [
+      { label: 'Contract value', value: contractTotal ? fmt$(contractTotal) : '—', mono: true },
+      { label: 'Building', value: [prettify(s?.home_type), (s?.stories ?? s?.floors) ? `${s?.stories ?? s?.floors} story` : null].filter(Boolean).join(' · ') || '—' },
+      { label: 'Size', value: s?.total_sqft ? `${Number(s.total_sqft).toLocaleString()} sq ft` : '—', mono: true },
+      { label: 'Start', value: p.start_date ? new Date(p.start_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
+      { label: 'Team', value: `${team.length} ${team.length === 1 ? 'company' : 'companies'}` },
+      { label: 'Info complete', value: `${completeness}%`, mono: true },
+    ];
 
     return (
       <ProjectShell projectName={p.name || 'Project'} projectId={projectId!} projectStatus={p.status || 'active'}>
         <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
           <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} />
           <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px]">
-            <div className="max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-10 py-4 sm:py-8 pb-36 lg:pb-12">
+            <div className="max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-36 lg:pb-12 space-y-4">
 
-              {/* Page header */}
-              <div className="mb-8">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-heading mb-1">
-                  Project Information Sheet
-                </p>
-                <h1 className="text-3xl font-bold font-heading tracking-tight">{p.name || 'Project'}</h1>
-                <p className="text-sm text-muted-foreground mt-1.5">
-                  Click any field to edit · Press <kbd className="px-1 py-0.5 text-[10px] rounded border bg-muted">Enter</kbd> to save · <kbd className="px-1 py-0.5 text-[10px] rounded border bg-muted">Esc</kbd> to cancel
-                </p>
+              {/* Header + snapshot */}
+              <div className="bg-card rounded-2xl border border-border shadow-sm p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground font-heading">Project Information</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold font-heading tracking-tight break-words">{p.name || 'Project'}</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5 break-words">{location || 'No address yet'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[prettify(p.status), p.contract_mode === 'tm' ? 'T&M / Remodel' : 'Fixed Price', prettify(p.project_type), prettify(p.build_type)].filter(Boolean).map(t => (
+                      <span key={t as string} className="text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider bg-muted text-muted-foreground border border-border">{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  {stats.map(st => (
+                    <div key={st.label} className="rounded-xl bg-muted/40 border border-border/60 px-3 py-2 min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{st.label}</p>
+                      <p className={cn('text-sm font-semibold text-foreground break-words', st.mono && 'font-mono')}>{st.value}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-3">Click any field below to edit · Enter saves · Esc cancels</p>
               </div>
 
-              <div className="flex flex-col lg:flex-row gap-8">
-                {/* Section nav — floating sticky panel */}
-                <aside className="lg:w-56 flex-shrink-0 lg:self-start lg:sticky lg:top-4 z-10">
-                  <div className="bg-card/90 backdrop-blur-md border border-border rounded-2xl shadow-lg p-4">
-                    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-3 font-heading">
-                      Jump to Section
-                    </h3>
-                    <nav className="space-y-0.5">
-                      {sections.map((sec, idx) => (
-                        <a
-                          key={sec.id}
-                          href={`#${sec.id}`}
-                          className="flex items-center group py-1.5 px-2 -mx-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                        >
-                          <span className={cn(
-                            'w-1 rounded-full mr-3 transition-all bg-border group-hover:bg-primary',
-                            idx === 0 ? 'h-4 bg-primary' : 'h-1 group-hover:h-4',
-                          )} />
-                          {sec.label}
-                        </a>
-                      ))}
-                    </nav>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <InfoCard id="project-details" title="Project Details" fields={detailFields} />
+
+                <InfoCard id="financials" title="Financial Settings" fields={financialFields} />
+
+                <InfoCard id="building-info" title="Building Info" fields={buildingFields} className="lg:col-span-2" twoCol />
+
+                <section id="building-features" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden lg:col-span-2">
+                  <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
+                    <h2 className="text-base font-bold tracking-tight uppercase font-heading">Building Features</h2>
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{featuresOn} of {features.length} included</span>
                   </div>
-                </aside>
-
-                {/* Sections */}
-                <div className="flex-1 space-y-6 min-w-0">
-
-                  <SectionCard id="project-details" title="Project Details" meta={p.status ? `Status: ${p.status}` : undefined}>
-                    <EditableInfoRow label="Name" value={p.name} type="text" onSave={saveProject('name')} />
-                    <EditableInfoRow label="Status" value={p.status} type="select" options={statusOpts} onSave={saveProject('status')} />
-                    <EditableInfoRow label="Contract Mode" value={p.contract_mode || 'fixed'} type="select" options={contractModeOpts} onSave={saveProject('contract_mode')} />
-                    <EditableInfoRow label="Project Type" value={p.project_type} type="select" options={projectTypeOpts} onSave={saveProject('project_type')} />
-                    <EditableInfoRow label="Build Type" value={p.build_type} type="select" options={buildTypeOpts} onSave={saveProject('build_type')} />
-                    <EditableInfoRow label="Street" value={addr?.street ?? ''} type="text" onSave={saveAddress('street')} placeholder="123 Main St" />
-                    <EditableInfoRow label="City" value={p.city} type="text" onSave={saveAddress('city')} />
-                    <EditableInfoRow label="State" value={p.state} type="text" onSave={saveAddress('state')} />
-                    <EditableInfoRow label="Zip" value={p.zip} type="text" onSave={saveAddress('zip')} />
-                    <EditableInfoRow label="Start Date" value={p.start_date} type="date" onSave={saveProject('start_date')} />
-                    <EditableInfoRow label="Description" value={p.description} type="text" onSave={saveProject('description')} />
-                  </SectionCard>
-
-                  <SectionCard id="building-info" title="Building Info">
-                    <EditableInfoRow label="Building Type" value={s?.home_type} type="select" options={homeTypeOpts} onSave={saveScope('home_type')} />
-                    <EditableInfoRow label="Stories" value={s?.stories ?? s?.floors} type="number" onSave={saveScope('stories')} />
-                    <EditableInfoRow label="Foundation" value={s?.foundation_type} type="select" options={foundationOpts} onSave={saveScope('foundation_type')} />
-                    {s?.foundation_type === 'Basement' && (
-                      <>
-                        <EditableInfoRow label="Basement Type" value={s?.basement_type} type="text" onSave={saveScope('basement_type')} />
-                        <EditableInfoRow label="Basement Finish" value={s?.basement_finish} type="text" onSave={saveScope('basement_finish')} />
-                      </>
-                    )}
-                    <EditableInfoRow label="Construction Type" value={s?.construction_type} type="text" onSave={saveScope('construction_type')} />
-                    <EditableInfoRow label="Framing Method" value={s?.framing_method} type="text" onSave={saveScope('framing_method')} />
-                    <EditableInfoRow label="Roof Type" value={s?.roof_type} type="text" onSave={saveScope('roof_type')} />
-                    <EditableInfoRow label="Stairs Type" value={s?.stairs_type} type="text" onSave={saveScope('stairs_type')} />
-                    <EditableInfoRow label="# Buildings" value={s?.num_buildings} type="number" onSave={saveScope('num_buildings')} />
-                    <EditableInfoRow label="# Units" value={s?.num_units} type="number" onSave={saveScope('num_units')} />
-                    <EditableInfoRow label="Stories per Unit" value={s?.stories_per_unit} type="number" onSave={saveScope('stories_per_unit')} />
-                    <EditableInfoRow label="Shared Walls" value={!!s?.has_shared_walls} type="boolean" onSave={saveScope('has_shared_walls')} />
-                    <EditableInfoRow label="Bedrooms" value={s?.bedrooms} type="number" onSave={saveScope('bedrooms')} />
-                    <EditableInfoRow label="Bathrooms" value={s?.bathrooms} type="number" onSave={saveScope('bathrooms')} />
-                    <EditableInfoRow label="Garage" value={s?.garage_type} type="select" options={garageOpts} onSave={saveScope('garage_type')} />
-                    <EditableInfoRow label="Garage Cars" value={s?.garage_cars} type="number" onSave={saveScope('garage_cars')} />
-                    <EditableInfoRow label="Total Sqft" value={s?.total_sqft} type="number" mono onSave={saveScope('total_sqft')} />
-                    <EditableInfoRow label="Lot Size (acres)" value={s?.lot_size_acres} type="number" onSave={saveScope('lot_size_acres')} />
-                    <EditableInfoRow label="Scope Notes" value={s?.scope_description} type="text" onSave={saveScope('scope_description')} />
-                  </SectionCard>
-
-                  <SectionCard id="building-features" title="Building Features">
-                    <EditableInfoRow label="Elevator" value={!!s?.has_elevator} type="boolean" onSave={saveScope('has_elevator')} />
-                    <EditableInfoRow label="Roof Deck" value={!!s?.has_roof_deck} type="boolean" onSave={saveScope('has_roof_deck')} />
-                    <EditableInfoRow label="Covered Porches" value={!!s?.has_covered_porches} type="boolean" onSave={saveScope('has_covered_porches')} />
-                    <EditableInfoRow label="Balconies" value={!!s?.has_balconies} type="boolean" onSave={saveScope('has_balconies')} />
-                    <EditableInfoRow label="Decking Included" value={!!s?.decking_included} type="boolean" onSave={saveScope('decking_included')} />
-                    <EditableInfoRow label="Siding Included" value={!!s?.siding_included} type="boolean" onSave={saveScope('siding_included')} />
-                    <EditableInfoRow label="Fascia" value={!!s?.fascia_included} type="boolean" onSave={saveScope('fascia_included')} />
-                    <EditableInfoRow label="Soffit" value={!!s?.soffit_included} type="boolean" onSave={saveScope('soffit_included')} />
+                  <div className="p-4 flex flex-wrap gap-2">
+                    {features.map(f => {
+                      const on = !!s?.[f.key];
+                      return (
+                        <button
+                          key={f.key}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => saveScope(f.key)(!on).catch(() => {})}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-full border text-sm font-medium transition-colors',
+                            on ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground',
+                          )}
+                        >
+                          {on ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 rounded-full border border-current shrink-0" />}
+                          {f.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="px-4 pb-3">
                     <EditableInfoRow label="Fascia/Soffit Material" value={s?.fascia_soffit_material} type="text" onSave={saveScope('fascia_soffit_material')} />
-                    <EditableInfoRow label="Windows" value={!!s?.windows_included} type="boolean" onSave={saveScope('windows_included')} />
-                    <EditableInfoRow label="Exterior Doors" value={!!s?.ext_doors_included} type="boolean" onSave={saveScope('ext_doors_included')} />
-                    <EditableInfoRow label="WRB / Housewrap" value={!!s?.wrb_included} type="boolean" onSave={saveScope('wrb_included')} />
-                    <EditableInfoRow label="Decorative Items" value={!!s?.decorative_included} type="boolean" onSave={saveScope('decorative_included')} />
-                  </SectionCard>
+                  </div>
+                </section>
 
-                  <SectionCard id="financials" title="Financial Settings" highlight>
-                    <EditableInfoRow label="Sales Tax Rate" value={p.sales_tax_rate} type="percent" mono onSave={saveProject('sales_tax_rate')} />
-                    <EditableInfoRow label="Tax Jurisdiction" value={p.tax_jurisdiction_label} type="text" onSave={saveProject('tax_jurisdiction_label')} />
-                    <EditableInfoRow label="Labor Taxable" value={!!p.labor_taxable} type="boolean" onSave={saveProject('labor_taxable')} />
-                    <EditableInfoRow label="Retainage" value={p.retainage_percent} type="percent" mono onSave={saveProject('retainage_percent')} />
-                    <EditableInfoRow label="Retainage Release" value={p.retainage_release_trigger} type="text" onSave={saveProject('retainage_release_trigger')} />
-                    <EditableInfoRow label="Mobilization" value={!!p.mobilization_enabled} type="boolean" onSave={saveProject('mobilization_enabled')} />
-                    <EditableInfoRow label="Subcontractor Markup Visibility" value={p.tc_markup_visibility} type="select" options={markupVisOpts} onSave={saveProject('tc_markup_visibility')} />
-                  </SectionCard>
-
-                  <SectionCard id="approvals" title="Approvals & Compliance">
-                    <EditableInfoRow label="Owner Approval Threshold" value={p.owner_approval_threshold} type="currency" mono onSave={saveProject('owner_approval_threshold')} />
-                    <EditableInfoRow label="Owner Approval Email" value={p.owner_approval_email} type="text" onSave={saveProject('owner_approval_email')} />
-                    <EditableInfoRow label="Architect Approval Required" value={!!p.architect_approval_required} type="boolean" onSave={saveProject('architect_approval_required')} />
-                    <EditableInfoRow label="Architect Approval Email" value={p.architect_approval_email} type="text" onSave={saveProject('architect_approval_email')} />
-                    <EditableInfoRow label="Require Photos on Submit" value={!!p.require_photos_on_submit} type="boolean" onSave={saveProject('require_photos_on_submit')} />
-                  </SectionCard>
-
-                  <SectionCard id="contracts" title="Contracts" meta={`${(ownerRow ? 1 : 0) + (supplierRow ? 1 : 0) + downstreamRows.length} active`}>
+                <section id="contracts" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
+                    <h2 className="text-base font-bold tracking-tight uppercase font-heading">Contracts</h2>
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{(ownerRow ? 1 : 0) + (supplierRow ? 1 : 0) + downstreamRows.length} active</span>
+                  </div>
+                  <div className="divide-y divide-border/40 px-1">
                     {ownerRow && (
-                      <EditableInfoRow
-                        label={`Owner → ${ownerRow.to_org?.name || 'You'}`}
-                        value={ownerRow.contract_sum} type="currency" mono
+                      <EditableInfoRow label={`Owner → ${ownerRow.to_org?.name || 'You'}`} value={ownerRow.contract_sum} type="currency" mono
                         display={<span className="font-mono">{fmt$(ownerRow.contract_sum)}</span>}
                         onSave={saveContract(ownerRow.id, 'contract_sum')}
-                        locked={ownerRow.status === 'approved' || ownerRow.status === 'executed'}
-                        lockReason="Contract is locked"
-                      />
+                        locked={ownerRow.status === 'approved' || ownerRow.status === 'executed'} lockReason="Contract is locked" />
                     )}
                     {supplierRow && (
-                      <EditableInfoRow
-                        label={`Supplier (${supplierRow.from_org?.name || 'Supplier'})`}
-                        value={supplierRow.contract_sum} type="currency" mono
+                      <EditableInfoRow label={`Supplier (${supplierRow.from_org?.name || 'Supplier'})`} value={supplierRow.contract_sum} type="currency" mono
                         display={<span className="font-mono">{fmt$(supplierRow.contract_sum)}</span>}
-                        onSave={saveContract(supplierRow.id, 'contract_sum')}
-                      />
-                    )}
-                    {downstreamRows.length === 0 && !ownerRow && !supplierRow && (
-                      <p className="text-sm text-muted-foreground py-4 px-3">No contracts recorded.</p>
+                        onSave={saveContract(supplierRow.id, 'contract_sum')} />
                     )}
                     {downstreamRows.map((c: any) => (
-                      <EditableInfoRow
-                        key={c.id}
-                        label={`${c.from_org?.name || c.from_role || 'Downstream'} → ${c.to_org?.name || 'You'}`}
+                      <EditableInfoRow key={c.id} label={`${c.from_org?.name || c.from_role || 'Downstream'} → ${c.to_org?.name || 'You'}`}
                         value={c.contract_sum} type="currency" mono
                         display={<span className="font-mono">{fmt$(c.contract_sum)}</span>}
                         onSave={saveContract(c.id, 'contract_sum')}
-                        locked={c.status === 'approved' || c.status === 'executed'}
-                        lockReason="Contract is locked"
-                      />
+                        locked={c.status === 'approved' || c.status === 'executed'} lockReason="Contract is locked" />
                     ))}
-                  </SectionCard>
+                    {downstreamRows.length === 0 && !ownerRow && !supplierRow && (
+                      <p className="text-sm text-muted-foreground py-4 px-3">No contracts recorded.</p>
+                    )}
+                  </div>
+                </section>
 
-                  {(teamData || []).length > 0 && (
-                    <SectionCard id="team" title="Team" meta={`${(teamData || []).length} members`}>
-                      {(teamData || []).map((m: any) => (
-                        <div key={m.id} className="group flex items-center justify-between px-3 py-2.5 gap-3">
-                          <span className="text-muted-foreground text-sm">{m.role || 'Member'}</span>
-                          <span className="font-medium text-sm flex items-center gap-2">
-                            {m.invited_org_name || '—'}
+                <InfoCard id="approvals" title="Approvals & Compliance" fields={approvalFields} />
+
+                {team.length > 0 && (
+                  <section id="team" className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden lg:col-span-2">
+                    <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
+                      <h2 className="text-base font-bold tracking-tight uppercase font-heading">Team</h2>
+                      <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">{team.length} members</span>
+                    </div>
+                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {team.map((m: any) => (
+                        <div key={m.id} className="rounded-xl border border-border/60 px-3 py-2 min-w-0">
+                          <p className="text-sm font-semibold text-foreground break-words">{m.invited_org_name || '—'}</p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                            <span className="text-xs text-muted-foreground">{m.role || 'Member'}</span>
                             {m.status && (
-                              <span className={cn(
-                                'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider',
-                                m.status === 'Accepted' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground',
-                              )}>
-                                {m.status}
-                              </span>
+                              <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider',
+                                m.status === 'Accepted' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>{m.status}</span>
                             )}
-                          </span>
+                          </div>
                         </div>
                       ))}
-                      <p className="text-[11px] text-muted-foreground px-3 py-2 border-t border-border/40">
-                        Manage team members from the Team tab.
-                      </p>
-                    </SectionCard>
-                  )}
-
-                </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground px-4 pb-3">Manage team members from the Team tab.</p>
+                  </section>
+                )}
               </div>
             </div>
           </main>
@@ -857,3 +839,40 @@ export default function FinishProjectSetup() {
   );
 }
 
+function InfoCard({ id, title, fields, className, twoCol }: {
+  id: string;
+  title: string;
+  fields: { filled: boolean; node: React.ReactNode }[];
+  className?: string;
+  twoCol?: boolean;
+}) {
+  const [showEmpty, setShowEmpty] = useState(false);
+  const filled = fields.filter(f => f.filled);
+  const empty = fields.filter(f => !f.filled);
+  const visible = showEmpty ? fields : filled;
+  return (
+    <section id={id} className={cn('scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm overflow-hidden', className)}>
+      <div className="px-4 py-3 border-b border-border/60 bg-muted/40 flex items-center justify-between gap-2">
+        <h2 className="text-base font-bold tracking-tight uppercase font-heading">{title}</h2>
+        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider bg-background text-muted-foreground border border-border shrink-0">
+          {filled.length}/{fields.length} filled
+        </span>
+      </div>
+      <div className={cn('px-1', twoCol ? 'grid grid-cols-1 md:grid-cols-2 md:gap-x-6' : '')}>
+        {visible.map((f, i) => (
+          <div key={i} className="border-b border-border/40 min-w-0">{f.node}</div>
+        ))}
+        {visible.length === 0 && <p className="text-sm text-muted-foreground px-3 py-3">Nothing entered yet.</p>}
+      </div>
+      {empty.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowEmpty(v => !v)}
+          className="w-full min-h-[40px] px-4 text-left text-xs font-semibold text-primary hover:bg-muted/40"
+        >
+          {showEmpty ? 'Hide empty fields' : `+ Add missing info (${empty.length})`}
+        </button>
+      )}
+    </section>
+  );
+}
