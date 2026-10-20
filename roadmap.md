@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Separate daily workers and hired job crews, with project task picking and progress draws
-- [ ] Split private labor budget into worker payroll and hired crews without double counting
-- [ ] Verify progress limits, privacy, saved draws and phone layouts
+- [x] Separate daily workers and hired job crews, with project task picking and progress draws
+- [x] Split private labor budget into worker payroll and hired crews without double counting
+- [x] Verify progress limits, privacy, saved draws and phone layouts
 
 - [x] Show private crew expenses as overview costs and add labor/materials/tools budgets
 - [x] Verify saved budgets, actual totals, privacy and phone layouts
