@@ -61,7 +61,13 @@ export function HiredCrewTaskForm({ tracker, projectId, open, onOpenChange, inli
     <div className="grid gap-3 sm:grid-cols-2">{basis !== 'fixed' && <div><Label htmlFor="crew-task-quantity">{basis === 'sq_ft' ? 'Total sq. ft' : 'Total units'}</Label><Input id="crew-task-quantity" type="number" min="0.01" step="0.01" value={quantity} onChange={e => setQuantity(e.target.value)} required /></div>}<div><Label htmlFor="crew-task-rate">{basis === 'fixed' ? 'Task price' : basis === 'sq_ft' ? 'Price per sq. ft' : 'Price per unit'}</Label><Input id="crew-task-rate" type="number" min="0.01" step="0.01" value={rate} onChange={e => setRate(e.target.value)} required /></div></div>
     <p className="rounded-lg bg-muted p-3 font-mono font-semibold">Task total {formatCurrency(crewPay(Number(rate), basis === 'fixed' ? 1 : Number(quantity)))}</p>
   </>;
-  if (inline) return <div className="space-y-4">{fields}</div>;
+  if (inline) return <form className="space-y-4" onSubmit={submit}>
+    {fields}
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" className="min-h-11" disabled={tracker.saveTask.isPending || !crew.trim() || !task.trim()}>Add task</Button>
+      <Button type="button" variant="ghost" size="sm" className="min-h-11" onClick={() => onOpenChange(false)}>Done</Button>
+    </div>
+  </form>;
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Add hired crew task</DialogTitle><DialogDescription>Private piece-rate or fixed-price work for this job.</DialogDescription></DialogHeader>
     <form className="space-y-4" onSubmit={submit}>
       {fields}

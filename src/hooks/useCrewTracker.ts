@@ -63,6 +63,11 @@ export function useCrewTracker(projectId: string) {
     const {error}=await supabase.from('crew_job_tasks').insert({...task,project_id:projectId,organization_id:orgId});
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Crew task added');},onError:e=>toast.error(e.message)});
+  const deleteTask=useMutation({mutationFn:async(taskId:string)=>{
+    if(!orgId) throw new Error('Crew project access required');
+    const {error}=await supabase.from('crew_job_tasks').delete().eq('id',taskId).eq('organization_id',orgId);
+    if(error) throw error;
+  },onSuccess:()=>{refresh();toast.success('Crew task removed');},onError:e=>toast.error(e.message)});
   const saveDraw=useMutation({mutationFn:async(draw:{taskId:string;percent:number;amount:number;date:string;requestId:string})=>{
     const {error}=await supabase.rpc('record_crew_job_draw_once',{p_task_id:draw.taskId,p_percent:draw.percent,p_amount:draw.amount,p_date:draw.date,p_request_id:draw.requestId});
     if(error) throw error;
