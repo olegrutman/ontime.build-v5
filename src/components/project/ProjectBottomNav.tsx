@@ -36,7 +36,7 @@ function getPrimaryItems(isTM: boolean, isFC = false): BottomItem[] {
     { label: 'Overview', icon: LayoutDashboard, route: 'overview' },
     { label: isTM ? 'WOs' : 'COs', icon: AlertTriangle, route: 'change-orders' },
     { label: 'Invoices', icon: Receipt, route: 'invoices' },
-    ...(isFC ? [] : [{ label: 'Orders', icon: Package, route: 'purchase-orders' } as BottomItem]),
+    ...(isFC ? [{ label: 'Tracker', icon: Users, route: 'crew-tracker' } as BottomItem] : [{ label: 'Orders', icon: Package, route: 'purchase-orders' } as BottomItem]),
   ];
 }
 

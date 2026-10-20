@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FileText, ClipboardEdit, ShoppingCart, HelpCircle, Hammer, type LucideIcon } from 'lucide-react';
+import { FileText, ClipboardEdit, ShoppingCart, HelpCircle, Hammer, Users, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type Role = 'GC' | 'TC' | 'FC';
@@ -57,6 +57,7 @@ export function QuickActionsBar({ projectId, role, isTM = false, onNavigate }: P
   let actions: Action[] = [];
   if (role === 'GC' || role === 'TC') actions = [invoiceAction, coAction, poAction, rfiAction];
   else actions = isTM ? [invoiceAction, coAction, rfiAction] : [invoiceAction, rfiAction];
+  if (role === 'FC') actions.push({key:'tracker',label:'Crew Tracker',icon:Users,onClick:()=>onNavigate('crew-tracker')});
 
   return (
     <div
