@@ -45,7 +45,15 @@ export function withCrewSpending(ledger: ProjectLedger, actual: number, forecast
   };
 }
 
-export type PayBasis = 'hourly' | 'daily';
+export type PayBasis = 'hourly' | 'daily' | 'sq_ft' | 'unit';
+export const PAY_BASIS: Record<PayBasis, { label: string; rateLabel: string; per: string; qty: string; presets: number[]; step: string }> = {
+  hourly: { label: 'Hourly', rateLabel: 'Hourly rate', per: 'hour', qty: 'Hours', presets: [4, 8, 10], step: '0.25' },
+  daily: { label: 'Per day', rateLabel: 'Daily rate', per: 'day', qty: 'Days', presets: [0.5, 1], step: '0.25' },
+  sq_ft: { label: 'Per sq. ft (labor crew)', rateLabel: 'Price per sq. ft', per: 'sq. ft', qty: 'Sq. ft', presets: [], step: '0.01' },
+  unit: { label: 'Per unit (labor crew)', rateLabel: 'Price per unit', per: 'unit', qty: 'Units', presets: [], step: '1' },
+};
+export function payBasisInfo(basis: string | null | undefined) { return PAY_BASIS[basis as PayBasis] ?? PAY_BASIS.hourly; }
+export function presetLabel(basis: string, q: number) { return basis === 'hourly' ? `${q} hrs` : q === 1 ? 'Full day' : 'Half day'; }
 export const EXPENSE_CATEGORIES = ['Nails & fasteners', 'Tools & blades', 'Equipment rental', 'Fuel', 'Materials', 'Disposal', 'Travel', 'Other'];
 export function crewPay(rate: number, quantity: number): number {
   if (!Number.isFinite(rate) || !Number.isFinite(quantity) || rate <= 0 || quantity <= 0) return 0;
