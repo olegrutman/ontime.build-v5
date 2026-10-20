@@ -63,6 +63,11 @@ export function useCrewTracker(projectId: string) {
     const {error}=await supabase.from('crew_job_tasks').insert({...task,project_id:projectId,organization_id:orgId});
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Crew task added');},onError:e=>toast.error(e.message)});
+  const deleteTask=useMutation({mutationFn:async(taskId:string)=>{
+    if(!orgId) throw new Error('Crew project access required');
+    const {error}=await supabase.from('crew_job_tasks').delete().eq('id',taskId).eq('organization_id',orgId);
+    if(error) throw error;
+  },onSuccess:()=>{refresh();toast.success('Crew task removed');},onError:e=>toast.error(e.message)});
   const saveDraw=useMutation({mutationFn:async(draw:{taskId:string;percent:number;amount:number;date:string;requestId:string})=>{
     const {error}=await supabase.rpc('record_crew_job_draw_once',{p_task_id:draw.taskId,p_percent:draw.percent,p_amount:draw.amount,p_date:draw.date,p_request_id:draw.requestId});
     if(error) throw error;
@@ -89,5 +94,5 @@ export function useCrewTracker(projectId: string) {
     const {error}=await supabase.from('actual_cost_entries').update(quantity !== undefined ? {tracker_quantity:quantity} : {lump_amount:amount}).eq('id',id).eq('organization_id',orgId);
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Entry updated');},onError:e=>toast.error(e.message)});
-  return {orgId,projectId,tasks:tasks.data??[],saveTask,saveDraw,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],budget:budget.data??EMPTY_CREW_BUDGET,hasBudget:!!budget.data,saveBudget,loading:access.isLoading||workers.isLoading||costs.isLoading||budget.isLoading||tasks.isLoading,error:access.error||workers.error||costs.error||budget.error||tasks.error,saveWorker,saveCosts,deleteCost,editCost};
+  return {orgId,projectId,tasks:tasks.data??[],saveTask,deleteTask,saveDraw,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],budget:budget.data??EMPTY_CREW_BUDGET,hasBudget:!!budget.data,saveBudget,loading:access.isLoading||workers.isLoading||costs.isLoading||budget.isLoading||tasks.isLoading,error:access.error||workers.error||costs.error||budget.error||tasks.error,saveWorker,saveCosts,deleteCost,editCost};
 }
