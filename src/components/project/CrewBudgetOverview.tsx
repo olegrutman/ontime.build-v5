@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HardHat, Package, Wrench, ClipboardList, Pencil, Plus, ShieldCheck, Wallet, TrendingUp, PiggyBank, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
   const [editing, setEditing] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [hiredTouched, setHiredTouched] = useState(false);
   const comparison = crewBudgetComparison(tracker.entries, tracker.budget);
   const labor = crewLaborBreakdown(tracker.entries);
   const workerBudget = 'worker_labor' in tracker.budget ? Number(tracker.budget.worker_labor ?? tracker.budget.labor) : tracker.budget.labor;
