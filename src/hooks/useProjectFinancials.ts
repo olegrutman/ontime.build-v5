@@ -9,6 +9,7 @@ import {
   type COCostBreakdown,
 } from '@/hooks/coAggregation';
 import { buildProjectLedger, type ProjectLedger } from '@/lib/kpiLedger';
+import { sumOrdered, sumBilled, sumReceived } from '@/lib/supplierMetrics';
 
 
 
@@ -318,26 +319,29 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       // 2. Supplier path
       if (detectedRole === 'Supplier' && supplierOrgId) {
-        const { data: supplierData } = await supabase
+        const { data: supplierData, error: supplierError } = await supabase
           .from('suppliers')
           .select('id')
           .eq('organization_id', supplierOrgId)
           .maybeSingle();
+        if (supplierError) throw supplierError;
         const supplierId = supplierData?.id;
         if (supplierId) {
           const [posRes, invRes] = await Promise.all([
-            supabase.from('purchase_orders').select('id, po_line_items(line_total)').eq('project_id', projectId).eq('supplier_id', supplierId).in('status', ['ORDERED', 'DELIVERED']),
+            supabase.from('purchase_orders').select('id, status, po_total, po_subtotal_total, sales_tax_percent').eq('project_id', projectId).eq('supplier_id', supplierId),
             supabase.from('invoices').select('id, invoice_number, status, total_amount, created_at, po_id').eq('project_id', projectId),
           ]);
+          if (posRes.error) throw posRes.error;
+          if (invRes.error) throw invRes.error;
           const pos = posRes.data || [];
-          const orderVal = pos.reduce((sum, po: any) => sum + ((po.po_line_items || []).reduce((s: number, li: any) => s + (li.line_total || 0), 0)), 0);
+          const orderVal = sumOrdered(pos);
           setSupplierOrderValue(orderVal);
 
           const poIds = pos.map(p => p.id);
           const relevantInvoices = (invRes.data || []).filter((inv: any) => inv.po_id && poIds.includes(inv.po_id));
-          setSupplierInvoiced(relevantInvoices.reduce((s, inv: any) => s + (inv.total_amount || 0), 0));
-          setSupplierPaid(relevantInvoices.filter((i: any) => i.status === 'PAID').reduce((s, inv: any) => s + (inv.total_amount || 0), 0));
-          setRecentInvoices((invRes.data || []).slice(0, 5).map((inv: any) => ({
+          setSupplierInvoiced(sumBilled(relevantInvoices));
+          setSupplierPaid(sumReceived(relevantInvoices));
+          setRecentInvoices(relevantInvoices.slice(0, 5).map((inv: any) => ({
             id: inv.id, invoice_number: inv.invoice_number, status: inv.status, total_amount: inv.total_amount, created_at: inv.created_at,
           })));
         }

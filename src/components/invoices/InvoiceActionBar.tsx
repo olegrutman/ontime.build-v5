@@ -33,8 +33,9 @@ export function InvoiceActionBar({ invoices, isApprover }: InvoiceActionBarProps
       : 0;
 
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const paidThisMonth = invoices
-      .filter(i => i.status === 'PAID' && i.paid_at && new Date(i.paid_at) >= monthStart)
+      .filter(i => i.status === 'PAID' && i.paid_at && new Date(i.paid_at) >= monthStart && new Date(i.paid_at) < nextMonthStart)
       .reduce((s, i) => s + i.total_amount, 0);
 
     return { needsAction: needsAction.length, needsActionTotal, awaitingCount: awaiting.length, awaitingTotal, avgAge, paidThisMonth };

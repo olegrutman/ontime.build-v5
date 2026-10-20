@@ -1,3 +1,4 @@
+import { isOrderedPO, poOrderedAmount } from '@/lib/supplierMetrics';
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,28 +35,30 @@ const chartConfig = {
 
 export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate }: Props) {
   const data = useSupplierMaterialsOverview(projectId, supplierOrgId);
-  const { data: estimateRows = [] } = useQuery<EstimateRow[]>({
+  const { data: estimateRows = [], isError: rowsError } = useQuery<EstimateRow[]>({
     queryKey: ['supplier-estimate-rows', projectId, supplierOrgId],
     queryFn: async () => {
-      const { data: estimates } = await supabase
+      const { data: estimates, error: estimatesError } = await supabase
         .from('supplier_estimates')
         .select('id, name, status, total_amount, supplier_estimate_items(pack_name)')
         .eq('project_id', projectId)
         .eq('supplier_org_id', supplierOrgId);
 
+      if (estimatesError) throw estimatesError;
       if (!estimates?.length) return [];
 
       const estimateIds = estimates.map(e => e.id);
-      const { data: pos } = await supabase
+      const { data: pos, error: posError } = await supabase
         .from('purchase_orders')
-        .select('id, status, source_estimate_id, source_pack_name')
+        .select('id, status, source_estimate_id, source_pack_name, po_total, po_subtotal_total, sales_tax_percent')
         .eq('project_id', projectId)
         .in('source_estimate_id', estimateIds);
 
+      if (posError) throw posError;
       const orderedPacksByEst: Record<string, Set<string>> = {};
       const orderedAmountByEst: Record<string, number> = {};
       (pos || []).forEach(po => {
-        if (po.source_estimate_id && po.status !== 'ACTIVE') {
+        if (po.source_estimate_id && isOrderedPO(po.status)) {
           if (po.source_pack_name) {
             if (!orderedPacksByEst[po.source_estimate_id]) orderedPacksByEst[po.source_estimate_id] = new Set();
             orderedPacksByEst[po.source_estimate_id].add(po.source_pack_name);
@@ -63,21 +66,9 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
         }
       });
 
-      // Get ordered amounts
-      const activePOIds = (pos || []).filter(p => ['PRICED','ORDERED','DELIVERED'].includes(p.status)).map(p => p.id);
-      if (activePOIds.length > 0) {
-        const { data: lineItems } = await supabase
-          .from('po_line_items')
-          .select('po_id, line_total, source_estimate_item_id')
-          .in('po_id', activePOIds)
-          .not('source_estimate_item_id', 'is', null);
-        (lineItems || []).forEach(li => {
-          const po = (pos || []).find(p => p.id === li.po_id);
-          if (po?.source_estimate_id) {
-            orderedAmountByEst[po.source_estimate_id] = (orderedAmountByEst[po.source_estimate_id] || 0) + (li.line_total || 0);
-          }
-        });
-      }
+      (pos || []).filter(po => isOrderedPO(po.status)).forEach(po => {
+        if (po.source_estimate_id) orderedAmountByEst[po.source_estimate_id] = (orderedAmountByEst[po.source_estimate_id] || 0) + poOrderedAmount(po);
+      });
 
       const { data: project } = await supabase.from('projects').select('name').eq('id', projectId).maybeSingle();
 
@@ -106,6 +97,7 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
 
   const [unmatchedView, setUnmatchedView] = useState<'ordered' | 'delivered'>('ordered');
 
+  if (data.error || rowsError) return <div role="alert" className="p-4 text-destructive">Could not load supplier materials totals. Refresh to retry.</div>;
   if (data.loading) {
     return (
       <div className="space-y-4">

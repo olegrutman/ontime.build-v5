@@ -9,6 +9,7 @@ import {
   isBilledInvoice,
   isReceivedInvoice,
   poOrderedAmount,
+  isDeliveredPO, isOpenSupplierPO, isScheduledSupplierPO, estimateItemAmount, supplierCreditExposure, supplierInvoiceDaysPastDue,
 } from '@/lib/supplierMetrics';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -171,6 +172,7 @@ export interface SupplierDashboardData {
   projectFinancials: SupplierProjectFinancial[];
   upcomingDeliveries: UpcomingDelivery[];
   loading: boolean;
+  error: boolean;
   refetch: () => Promise<void>;
 }
 
@@ -180,6 +182,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   const { user, userOrgRoles } = useAuth();
   const orgId = userOrgRoles[0]?.organization?.id;
 
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState<SupplierKPIs>({ totalReceivable: 0, overdueCount: 0, paidThisMonth: 0, paidLastMonth: 0, openOrdersCount: 0, needsConfirmationCount: 0, creditExposure: 0 });
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
@@ -199,14 +202,16 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   const fetchData = useCallback(async () => {
     if (!orgId || !user) { setLoading(false); return; }
     setLoading(true);
+    setError(false);
 
     try {
       // Step 1: Find supplier records for this org
-      const { data: supplierRecords } = await supabase
+      const { data: supplierRecords, error: supplierError } = await supabase
         .from('suppliers')
         .select('id')
         .eq('organization_id', orgId);
 
+      if (supplierError) throw supplierError;
       const supplierIds = (supplierRecords || []).map(s => s.id);
 
       // Step 2: Parallel fetches
@@ -231,13 +236,13 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         supplierIds.length > 0
           ? supabase
               .from('purchase_orders')
-              .select('id, po_number, po_name, status, po_total, sales_tax_percent, project_id, created_at, delivered_at, ordered_at, ready_for_delivery_at, source_estimate_id, source_pack_name, projects:project_id(name, organization_id, organizations:organization_id(name))')
+              .select('id, po_number, po_name, status, po_total, po_subtotal_total, sales_tax_percent, project_id, created_at, delivered_at, ordered_at, ready_for_delivery_at, source_estimate_id, source_pack_name, projects:project_id(name, organization_id, organizations:organization_id(name))')
               .in('supplier_id', supplierIds)
           : Promise.resolve({ data: [] }),
         // Supplier estimates
         supabase
           .from('supplier_estimates')
-          .select('id, name, project_id, total_amount, status, projects:project_id(name)')
+          .select('id, name, project_id, total_amount, sales_tax_percent, status, projects:project_id(name)')
           .eq('supplier_org_id', orgId),
         // Returns targeting this supplier
         supabase
@@ -253,6 +258,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
               .select('id')
               .in('supplier_id', supplierIds)
               .then(async (poRes) => {
+                if (poRes.error) throw poRes.error;
                 const poIds = (poRes.data || []).map((r: any) => r.id);
                 if (poIds.length === 0) return { data: [] };
                 return supabase
@@ -269,6 +275,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           .eq('invite_status', 'ACCEPTED'),
       ]);
 
+      for (const result of [posResult, estimatesResult, returnsResult, invoicesResult, acceptedProjectsResult]) { if ("error" in result && result.error) throw result.error; }
       const allPOs = (posResult.data || []) as any[];
       const allEstimates = (estimatesResult.data || []) as any[];
       const allReturns = (returnsResult.data || []) as any[];
@@ -291,8 +298,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const outstandingInvoices = allInvoices.filter((inv: any) => ['SUBMITTED', 'APPROVED'].includes(inv.status));
       const totalReceivable = outstandingInvoices.reduce((s: number, inv: any) => s + (inv.total_amount || 0), 0);
       const overdueInvoices = outstandingInvoices.filter((inv: any) => {
-        if (!inv.submitted_at) return false;
-        return differenceInDays(now, new Date(inv.submitted_at)) > 30;
+        return supplierInvoiceDaysPastDue(inv, now) > 0;
       });
 
       const paidThisMonth = allInvoices
@@ -302,18 +308,10 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         .filter((inv: any) => inv.status === 'PAID' && inv.paid_at && inv.paid_at >= lastMonthStart && inv.paid_at <= lastMonthEnd)
         .reduce((s: number, inv: any) => s + (inv.total_amount || 0), 0);
 
-      const openStatuses = ['SUBMITTED', 'PRICED', 'ORDERED'];
-      const openPOsList = allPOs.filter((po: any) => openStatuses.includes(po.status));
+      const openPOsList = allPOs.filter((po: any) => isOpenSupplierPO(po.status));
       const needsConfirmation = allPOs.filter((po: any) => po.status === 'SUBMITTED');
 
-      // Credit exposure: DELIVERED POs total minus APPROVED/PAID invoices total
-      const deliveredPOsTotal = allPOs
-        .filter((po: any) => po.status === 'DELIVERED')
-        .reduce((s: number, po: any) => s + (po.po_total || 0), 0);
-      const approvedPaidTotal = allInvoices
-        .filter((inv: any) => ['APPROVED', 'PAID'].includes(inv.status))
-        .reduce((s: number, inv: any) => s + (inv.total_amount || 0), 0);
-      const creditExposure = Math.max(0, deliveredPOsTotal - approvedPaidTotal);
+      const creditExposure = supplierCreditExposure(allPOs, allInvoices);
 
       setKpis({
         totalReceivable,
@@ -372,7 +370,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       });
 
       // POs ordered but no delivery date
-      const unscheduledDeliveries = allPOs.filter((po: any) => po.status === 'ORDERED' && !po.ready_for_delivery_at);
+      const unscheduledDeliveries = allPOs.filter((po: any) => isOrderedPO(po.status) && !isDeliveredPO(po.status) && !po.ready_for_delivery_at);
       unscheduledDeliveries.slice(0, 3).forEach((po: any) => {
         actions.push({
           id: `delivery-${po.id}`,
@@ -389,7 +387,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       setActionItems(actions);
 
       // ── Delivery Schedule ──
-      const orderedPOs = allPOs.filter((po: any) => po.status === 'ORDERED');
+      const orderedPOs = allPOs.filter((po: any) => isScheduledSupplierPO(po));
       const deliveryDaysList: DeliveryDay[] = weekDays.map(day => {
         const dayStr = day.toISOString().split('T')[0];
         const dayPOs = orderedPOs.filter((po: any) => {
@@ -435,9 +433,9 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const overdueAmt = overdue.reduce((s: number, i: any) => s + (i.total_amount || 0), 0);
 
       setAgingBuckets([
-        { label: 'Current', range: '0–30 days', amount: currentAmt, count: current.length, percent: totalOutstanding > 0 ? (currentAmt / totalOutstanding) * 100 : 0 },
-        { label: 'Due Soon', range: '31–60 days', amount: dueSoonAmt, count: dueSoon.length, percent: totalOutstanding > 0 ? (dueSoonAmt / totalOutstanding) * 100 : 0 },
-        { label: 'Overdue', range: '60+ days', amount: overdueAmt, count: overdue.length, percent: totalOutstanding > 0 ? (overdueAmt / totalOutstanding) * 100 : 0 },
+        { label: '0–30 days old', range: 'Since submission', amount: currentAmt, count: current.length, percent: totalOutstanding > 0 ? (currentAmt / totalOutstanding) * 100 : 0 },
+        { label: '31–60 days old', range: 'Since submission', amount: dueSoonAmt, count: dueSoon.length, percent: totalOutstanding > 0 ? (dueSoonAmt / totalOutstanding) * 100 : 0 },
+        { label: 'Over 60 days old', range: 'Since submission', amount: overdueAmt, count: overdue.length, percent: totalOutstanding > 0 ? (overdueAmt / totalOutstanding) * 100 : 0 },
       ]);
 
       // Oldest invoice
@@ -471,10 +469,11 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const estimateIds = allEstimates.map((e: any) => e.id);
       let estimateItemsData: any[] = [];
       if (estimateIds.length > 0) {
-        const { data } = await supabase
+        const { data, error: itemsError } = await supabase
           .from('supplier_estimate_items')
           .select('estimate_id, pack_name, line_total')
           .in('estimate_id', estimateIds);
+        if (itemsError) throw itemsError;
         estimateItemsData = data || [];
       }
 
@@ -482,8 +481,8 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const orderedByEstimate: Record<string, number> = {};
       const orderedPacksByEstimate: Record<string, Set<string>> = {};
       allPOs.forEach((po: any) => {
-        if (po.source_estimate_id && po.status !== 'ACTIVE') {
-          orderedByEstimate[po.source_estimate_id] = (orderedByEstimate[po.source_estimate_id] || 0) + (po.po_total || 0);
+        if (po.source_estimate_id && isOrderedPO(po.status)) {
+          orderedByEstimate[po.source_estimate_id] = (orderedByEstimate[po.source_estimate_id] || 0) + poOrderedAmount(po);
           if (po.source_pack_name) {
             if (!orderedPacksByEstimate[po.source_estimate_id]) {
               orderedPacksByEstimate[po.source_estimate_id] = new Set();
@@ -508,7 +507,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           packNames: packs,
           orderedPackNames: [...(orderedPacksByEstimate[est.id] || [])],
           orderedAmount: orderedAmt,
-          orderedPercent: total > 0 ? Math.min(Math.round((orderedAmt / total) * 100), 100) : 0,
+          orderedPercent: total > 0 ? Math.round((orderedAmt / total) * 100) : 0,
           status: est.status,
         };
       }));
@@ -525,34 +524,35 @@ export function useSupplierDashboardData(): SupplierDashboardData {
             exposure: 0,
           };
         }
-        if (po.status === 'DELIVERED') {
-          projectMap[po.project_id].delivered += po.po_total || 0;
+        if (isDeliveredPO(po.status)) {
+          projectMap[po.project_id].delivered += poOrderedAmount(po);
         }
       });
 
       // Per-project approved invoices
-      const approvedByProject: Record<string, { total: number; count: number; totalDays: number }> = {};
+      const approvedByProject: Record<string, { total: number; count: number; totalDays: number; samples: number }> = {};
       allInvoices.filter((inv: any) => ['APPROVED', 'PAID'].includes(inv.status)).forEach((inv: any) => {
         if (!inv.project_id) return;
-        if (!approvedByProject[inv.project_id]) approvedByProject[inv.project_id] = { total: 0, count: 0, totalDays: 0 };
+        if (!approvedByProject[inv.project_id]) approvedByProject[inv.project_id] = { total: 0, count: 0, totalDays: 0, samples: 0 };
         approvedByProject[inv.project_id].total += inv.total_amount || 0;
         approvedByProject[inv.project_id].count++;
         if (inv.submitted_at && inv.approved_at) {
+          approvedByProject[inv.project_id].samples++;
           approvedByProject[inv.project_id].totalDays += differenceInDays(new Date(inv.approved_at), new Date(inv.submitted_at));
         }
       });
 
       setProjectHealth(Object.entries(projectMap).map(([pid, p]) => {
-        const approved = approvedByProject[pid] || { total: 0, count: 0, totalDays: 0 };
+        const approved = approvedByProject[pid] || { total: 0, count: 0, totalDays: 0, samples: 0 };
         return {
           projectId: pid,
           projectName: p.name,
           gcName: p.gcName,
           deliveredTotal: p.delivered,
           approvedTotal: approved.total,
-          exposure: Math.max(0, p.delivered - approved.total),
+          exposure: supplierCreditExposure(allPOs.filter(po => po.project_id === pid), allInvoices),
           invoiceCount: approved.count,
-          avgApprovalDays: approved.count > 0 ? Math.round(approved.totalDays / approved.count) : null,
+          avgApprovalDays: approved.samples > 0 ? Math.round(approved.totalDays / approved.samples) : null,
         };
       }).filter(p => p.deliveredTotal > 0 || p.exposure > 0));
 
@@ -647,6 +647,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const approvedEstIds = new Set(
         allEstimates.filter((e: any) => isCountedEstimate(e.status) && e.project_id).map((e: any) => e.id)
       );
+      const estimateTaxById = Object.fromEntries(allEstimates.map(e => [e.id, e.sales_tax_percent || 0]));
       const estProjectMap: Record<string, string> = {};
       allEstimates.forEach((e: any) => { if (e.id && e.project_id) estProjectMap[e.id] = e.project_id; });
 
@@ -659,14 +660,13 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         const pid = estProjectMap[it.estimate_id];
         if (!pid) return;
         if (!packEstimate[pid]) packEstimate[pid] = {};
-        packEstimate[pid][it.pack_name] = (packEstimate[pid][it.pack_name] || 0) + (Number(it.line_total) || 0);
+        packEstimate[pid][it.pack_name] = (packEstimate[pid][it.pack_name] || 0) + estimateItemAmount(Number(it.line_total) || 0, estimateTaxById[it.estimate_id]);
       });
 
       allPOs.forEach((po: any) => {
         if (!po.project_id || !po.source_pack_name) return;
         if (!isOrderedPO(po.status)) return;
         // Only count POs whose source estimate is APPROVED to keep apples-to-apples with packEstimate
-        if (po.source_estimate_id && !approvedEstIds.has(po.source_estimate_id)) return;
         const pid = po.project_id;
         if (!packOrdered[pid]) packOrdered[pid] = {};
         packOrdered[pid][po.source_pack_name] =
@@ -713,9 +713,8 @@ export function useSupplierDashboardData(): SupplierDashboardData {
 
       // ── Upcoming Deliveries (POs with ready_for_delivery_at in future, not yet delivered) ──
       const upcoming: UpcomingDelivery[] = allPOs
-        .filter((po: any) => po.ready_for_delivery_at && po.status !== 'DELIVERED' && po.status !== 'CANCELLED' && new Date(po.ready_for_delivery_at) >= now)
+        .filter((po: any) => isScheduledSupplierPO(po))
         .sort((a: any, b: any) => new Date(a.ready_for_delivery_at).getTime() - new Date(b.ready_for_delivery_at).getTime())
-        .slice(0, 10)
         .map((po: any) => ({
           id: po.id,
           poNumber: po.po_number,
@@ -728,6 +727,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       setUpcomingDeliveries(upcoming);
 
     } catch (err) {
+      setError(true);
       console.error('Supplier dashboard fetch error:', err);
     } finally {
       setLoading(false);
@@ -741,6 +741,6 @@ export function useSupplierDashboardData(): SupplierDashboardData {
     velocityTrend, oldestInvoiceDays, estimates, projectHealth,
     acceptedProjects, openPOs, returns,
     projectFinancials, upcomingDeliveries,
-    loading, refetch: fetchData,
+    loading, error, refetch: fetchData,
   };
 }

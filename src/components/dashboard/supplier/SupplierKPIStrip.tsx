@@ -10,11 +10,12 @@ interface KPICardProps {
   tagColor: 'green' | 'red' | 'amber' | 'neutral';
   subText: string;
   delay: number;
+  raw?: boolean;
 }
 
-function KPICard({ label, value, tag, tagColor, subText, delay }: KPICardProps) {
+function KPICard({ label, value, tag, tagColor, subText, delay, raw }: KPICardProps) {
   const accent = tagColor === 'red' ? C.red : tagColor === 'amber' ? C.amber : tagColor === 'green' ? C.green : C.blue;
-  return <KpiCard label={label} value={formatCurrency(value)} sub={subText} idx={delay / 40}
+  return <KpiCard label={label} value={raw ? String(value) : formatCurrency(value)} sub={subText} idx={delay / 40}
     accent={accent} iconBg={`color-mix(in srgb, ${accent} 10%, transparent)`} icon={<ChartNoAxesCombined size={18} />}
     pills={tag ? [{ type: tagColor === 'red' ? 'pr' : tagColor === 'amber' ? 'pa' : tagColor === 'green' ? 'pg' : 'pm', text: tag }] : []} />;
 }
@@ -55,6 +56,7 @@ export function SupplierKPIStrip({ kpis }: Props) {
       <KPICard
         label="Open Orders"
         value={kpis.openOrdersCount}
+        raw
         tag={kpis.needsConfirmationCount > 0 ? `${kpis.needsConfirmationCount} to confirm` : 'All confirmed'}
         tagColor={kpis.needsConfirmationCount > 0 ? 'amber' : 'green'}
         subText="Active purchase orders"

@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
@@ -74,7 +75,7 @@ export function SupplierDashboardView({
   onSetSoleMember, onSetPartOfTeam, onRefresh,
 }: SupplierDashboardViewProps) {
   const navigate = useNavigate();
-  const { projectFinancials, upcomingDeliveries, refetch: refetchSupplier } = useSupplierDashboardData();
+  const { projectFinancials, upcomingDeliveries, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
 
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
@@ -106,7 +107,7 @@ export function SupplierDashboardView({
     const risk = rank[packRisk] >= rank[projectRisk] ? packRisk : projectRisk;
 
     // Display "over" amount: prefer pack overage when project rollup is $0 but packs are over
-    const displayOverBy = pf.overBy > 0 ? pf.overBy : pf.packOverBy;
+    const displayOverBy = Math.max(pf.overBy, pf.packOverBy);
 
     return {
       projectId: pf.projectId,
@@ -141,14 +142,14 @@ export function SupplierDashboardView({
   const totalReceived = dp.reduce((s, p) => s + p.received, 0);
   const totalOver = dp.reduce((s, p) => s + Math.max(p.overBy, p.packOverBy), 0);
   const totalOutstanding = totalBilled - totalReceived;
-  const totalNotBilled = Math.max(0, totalOrdered - totalBilled);
+  const totalNotBilled = dp.reduce((sum, p) => sum + Math.max(0, p.ordered - p.billed), 0);
   const orderedPct = totalEstimate > 0 ? Math.round((totalOrdered / totalEstimate) * 100) : 0;
   const billedPct = totalOrdered > 0 ? Math.round((totalBilled / totalOrdered) * 100) : 0;
   const receivedPct = totalBilled > 0 ? Math.round((totalReceived / totalBilled) * 100) : 0;
-  const overCount = dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).length;
+  const overCount = forecastRows.filter(p => p.overBy > 0 || p.packsOverCount > 0).length;
   const onTrackCount = dp.filter(p => p.risk === 'On Track' && (p.estimate > 0 || p.ordered > 0 || p.billed > 0)).length;
   const activeProjectCount = dp.filter(p => !['archived', 'completed'].includes(p.status)).length;
-  const daysVals = dp.map(p => p.daysSinceLastPayment).filter((d): d is number => d !== null);
+  const daysVals = forecastRows.map(p => p.daysSinceLastPayment).filter((d): d is number => d !== null);
   const avgDaysSincePayment = daysVals.length > 0
     ? Math.round(daysVals.reduce((s, d) => s + d, 0) / daysVals.length)
     : null;
@@ -160,6 +161,9 @@ export function SupplierDashboardView({
   );
 
   const goToProject = (pid: string) => navigate(`/project/${pid}`);
+
+  if (supplierError) return <div role="alert" className="p-4 text-destructive">Could not load supplier totals. <Button variant="outline" onClick={refetchSupplier}>Retry</Button></div>;
+  if (supplierLoading) return <div className="p-4 text-muted-foreground">Loading supplier totals…</div>;
 
   return (
     <div className="space-y-4">
@@ -350,7 +354,7 @@ export function SupplierDashboardView({
                       const bPct = p.ordered > 0 ? Math.round((p.billed / p.ordered) * 100) : 0;
                       const rPct = p.billed > 0 ? Math.round((p.received / p.billed) * 100) : 0;
                       const outBal = Math.max(0, p.billed - p.received);
-                      const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
+                      const overAmt = Math.max(p.overBy, p.packOverBy);
                       fEst += p.estimate; fOrd += p.ordered; fBilled += p.billed;
                       fRec += p.received; fOver += overAmt; fOut += outBal;
                       const riskPill: PillType =
@@ -411,7 +415,7 @@ export function SupplierDashboardView({
           {/* Card 1 — Total Estimate Value */}
           <KpiCard
             accent={C.navy} icon="📐" iconBg={C.surface2} label="TOTAL ESTIMATE VALUE" value={fmt(totalEstimate)}
-            sub={`Across ${dp.filter(p => p.estimate > 0).length} active projects`}
+            sub={`Across ${dp.filter(p => p.estimate > 0).length} projects · approved estimates`}
             pills={[{ type: 'pm', text: 'Estimates' }]}
             idx={0}
             headerAction={dp.length > 0 ? (
@@ -489,7 +493,7 @@ export function SupplierDashboardView({
                     <THead cols={['Project', 'Estimated', 'Ordered', 'Over By', 'Risk']} />
                     <tbody>
                       {dp.filter(p => p.overBy > 0 || p.packsOverCount > 0).map((p, i) => {
-                        const overAmt = p.overBy > 0 ? p.overBy : p.packOverBy;
+                        const overAmt = Math.max(p.overBy, p.packOverBy);
                         const tip = p.packOverDetails.length > 0
                           ? p.packOverDetails.slice(0, 4).map(d => `${d.packName} +${Math.round(d.overPct)}%`).join(', ')
                           : '';

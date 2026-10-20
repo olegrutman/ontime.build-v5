@@ -52,6 +52,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [poOwnerMap, setPoOwnerMap] = useState<Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }>>({});
   const [loading, setLoading] = useState(true);
+  const [totalsError, setTotalsError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL' | 'NEEDS_ACTION'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
@@ -164,14 +165,15 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       const actionStatuses = isApproverView ? ['SUBMITTED'] : ['DRAFT'];
       return base.filter(i => actionStatuses.includes(i.status));
     }
-    return base;
+    return statusFilter === 'ALL' ? base : base.filter(i => i.status === statusFilter);
   }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices, statusFilter, isApproverView]);
 
   const fetchAll = async () => {
     setLoading(true);
+    setTotalsError(false);
     try {
       // 1. Load contracts FIRST so downstream sent/received splits have data
-      const { data: contractData } = await supabase
+      const { data: contractData, error: contractError } = await supabase
         .from('project_contracts')
         .select(`
           id, from_org_id, to_org_id, from_role, to_role,
@@ -180,6 +182,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         `)
         .eq('project_id', projectId);
 
+      if (contractError) throw contractError;
       const mappedContracts: Contract[] = (contractData || []).map((c: any) => ({
         id: c.id,
         from_org_id: c.from_org_id,
@@ -198,28 +201,22 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
 
-      if (statusFilter !== 'ALL' && statusFilter !== 'NEEDS_ACTION') {
-        query = query.eq('status', statusFilter);
-      }
 
       const { data: invoiceData, error: invoiceError } = await query;
 
-      if (invoiceError) {
-        console.error('Error fetching invoices:', invoiceError);
-        setInvoices([]);
-        return;
-      }
+      if (invoiceError) throw invoiceError;
 
       const allInvoices = (invoiceData || []) as Invoice[];
 
       // 3. Load PO ownership info for PO-linked invoices (used for supplier vs received split)
       const poIds = [...new Set(allInvoices.filter(i => i.po_id).map(i => i.po_id!))];
       if (poIds.length > 0) {
-        const { data: poData } = await supabase
+        const { data: poData, error: poError } = await supabase
           .from('purchase_orders')
           .select('id, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
           .in('id', poIds);
 
+        if (poError) throw poError;
         const map: Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }> = {};
         (poData || []).forEach((po: any) => {
           map[po.id] = {
@@ -234,6 +231,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
 
       // RLS handles visibility — show every invoice the database returned
       setInvoices(allInvoices);
+    } catch (error) {
+      setTotalsError(true);
     } finally {
       setLoading(false);
     }
@@ -242,7 +241,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   useEffect(() => {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, statusFilter]);
+  }, [projectId]);
 
   const fetchInvoices = fetchAll;
 
@@ -323,6 +322,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     if (currentOrgType === 'TC') return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
     return sentInvoices;
   }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
+
+  if (totalsError) return <div role="alert" className="p-4 text-destructive">Could not load invoice totals. <Button variant="outline" onClick={fetchAll}>Retry</Button></div>;
 
   if (selectedInvoiceId) {
     return (
@@ -425,7 +426,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
           <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h4 className="text-lg font-medium mb-2">No Invoices Yet</h4>
+          <h4 className="text-lg font-medium mb-2">{statusFilter === 'ALL' ? 'No Invoices Yet' : 'No matching invoices'}</h4>
           <p className="text-sm text-muted-foreground mb-4 max-w-md">
             {roleContext.emptyMessage}
           </p>

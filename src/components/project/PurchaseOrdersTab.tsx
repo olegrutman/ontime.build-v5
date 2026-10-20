@@ -1,3 +1,4 @@
+import { estimateItemAmount } from '@/lib/supplierMetrics';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -50,6 +51,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [searchParams, setSearchParams] = useSearchParams();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
+  const [billedByPO, setBilledByPO] = useState<Record<string, number>>({});
   const [estimatePackTotals, setEstimatePackTotals] = useState<Map<string, { total: number; itemCount: number }>>(new Map());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -119,7 +121,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
   const posQueryKey = useMemo(() => ['project-purchase-orders', projectId, isSupplier, currentOrgId] as const, [projectId, isSupplier, currentOrgId]);
 
-  const { data: poData, isLoading: loading, refetch: refetchPOs } = useQuery({
+  const { data: poData, isLoading: loading, isError: totalsError, refetch: refetchPOs } = useQuery({
     queryKey: posQueryKey,
     enabled: !!projectId && !!currentOrgId,
     staleTime: 60_000,
@@ -141,13 +143,14 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         .order('created_at', { ascending: false });
 
       if (isSupplier) {
-        const { data: supplierLinks } = await supabase
+        const { data: supplierLinks, error: supplierError } = await supabase
           .from('suppliers')
           .select('id')
           .eq('organization_id', currentOrgId);
 
+        if (supplierError) throw supplierError;
         if (!supplierLinks || supplierLinks.length === 0) {
-          return { pos: [] as PurchaseOrder[], invoicedIds: new Set<string>(), packTotals: new Map() };
+          return { pos: [] as PurchaseOrder[], invoicedIds: new Set<string>(), billedAmounts: {} as Record<string, number>, packTotals: new Map() };
         }
         query = query.in('supplier_id', supplierLinks.map((s) => s.id));
         // Hide buyers' drafts, but keep the supplier's own drafts visible
@@ -161,50 +164,54 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       const estimateIds = Array.from(new Set(pos.map((po) => po.source_estimate_id).filter(Boolean))) as string[];
       const totals = new Map<string, { total: number; itemCount: number }>();
       if (estimateIds.length > 0) {
-        const { data: estItems } = await supabase
+        const { data: estimateTaxes, error: taxError } = await supabase.from("supplier_estimates").select("id, sales_tax_percent").in("id", estimateIds);
+        if (taxError) throw taxError;
+        const taxByEstimate = Object.fromEntries((estimateTaxes || []).map(e => [e.id, e.sales_tax_percent]));
+        const { data: estItems, error: itemError } = await supabase
           .from('supplier_estimate_items')
-          .select('estimate_id, pack_name, unit_price, quantity')
+          .select('estimate_id, pack_name, line_total')
           .in('estimate_id', estimateIds);
 
+        if (itemError) throw itemError;
         for (const item of estItems || []) {
           const key = `${item.estimate_id}|${item.pack_name || ''}`;
           const current = totals.get(key) || { total: 0, itemCount: 0 };
-          current.total += (item.unit_price || 0) * (item.quantity || 0);
+          current.total += estimateItemAmount(item.line_total, taxByEstimate[item.estimate_id]);
           current.itemCount += 1;
           totals.set(key, current);
         }
 
-        for (const po of pos) {
-          if (!po.source_estimate_id || !po.source_pack_name) continue;
-          const key = `${po.source_estimate_id}|${po.source_pack_name}`;
-          const packData = totals.get(key);
-          if (packData) {
-            packData.total = packData.total * (1 + (po.sales_tax_percent || 0) / 100);
-          }
-        }
+
       }
 
       const poIds = pos.map((po) => po.id);
       const invoicedIds = new Set<string>();
+      const billedAmounts: Record<string, number> = {};
       if (poIds.length > 0) {
-        const { data: invoicedData } = await supabase
+        const { data: invoicedData, error: invoiceError } = await supabase
           .from('invoices')
-          .select('po_id')
+          .select('po_id, total_amount')
+          .in('status', ['SUBMITTED', 'APPROVED', 'PAID'])
           .eq('project_id', projectId)
           .in('po_id', poIds)
           .not('po_id', 'is', null);
+        if (invoiceError) throw invoiceError;
         for (const inv of invoicedData || []) {
-          if (inv.po_id) invoicedIds.add(inv.po_id);
+          if (inv.po_id) {
+            invoicedIds.add(inv.po_id);
+            billedAmounts[inv.po_id] = (billedAmounts[inv.po_id] || 0) + (inv.total_amount || 0);
+          }
         }
       }
 
-      return { pos, invoicedIds, packTotals: totals };
+      return { pos, invoicedIds, billedAmounts, packTotals: totals };
     },
   });
 
   useEffect(() => {
     setPurchaseOrders(poData?.pos || []);
     setInvoicedPOIds(poData?.invoicedIds || new Set());
+    setBilledByPO(poData?.billedAmounts || {});
     setEstimatePackTotals(poData?.packTotals || new Map());
   }, [poData]);
 
@@ -977,6 +984,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         : 'From Subcontractors')
     : 'From General Contractor';
 
+  if (totalsError) return <div role="alert" className="p-4 text-destructive">Could not load purchase order totals. <Button variant="outline" onClick={() => refetchPOs()}>Retry</Button></div>;
   return (
     <>
       <div className="space-y-6">
@@ -995,6 +1003,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           isSupplier={isSupplier}
           hidePricing={hidePricing}
           invoicedPOIds={invoicedPOIds}
+          billedByPO={billedByPO}
         />
 
 

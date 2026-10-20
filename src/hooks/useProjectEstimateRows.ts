@@ -1,42 +1,46 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { EstimateRow } from '@/hooks/useSupplierDashboardData';
+import { isOrderedPO, poOrderedAmount } from '@/lib/supplierMetrics';
 
 export function useProjectEstimateRows(projectId: string, supplierOrgId: string | null) {
   return useQuery<EstimateRow[]>({
     queryKey: ['project-estimate-rows', projectId, supplierOrgId],
     queryFn: async () => {
       // 1. Fetch estimates for this project + supplier
-      const { data: estimates } = await supabase
+      const { data: estimates, error: estimatesError } = await supabase
         .from('supplier_estimates')
         .select('id, name, status, total_amount, project_id')
         .eq('project_id', projectId)
-        .eq('supplier_org_id', supplierOrgId!)
+        .eq('supplier_org_id', supplierOrgId || '')
         .in('status', ['APPROVED', 'SUBMITTED']);
 
+      if (estimatesError) throw estimatesError;
       if (!estimates?.length) return [];
 
       const estimateIds = estimates.map(e => e.id);
 
       // 2. Fetch estimate items for pack names
-      const { data: items } = await supabase
+      const { data: items, error: itemsError } = await supabase
         .from('supplier_estimate_items')
         .select('estimate_id, pack_name')
         .in('estimate_id', estimateIds);
 
       // 3. Fetch POs linked to these estimates
-      const { data: pos } = await supabase
+      if (itemsError) throw itemsError;
+      const { data: pos, error: posError } = await supabase
         .from('purchase_orders')
-        .select('id, source_estimate_id, source_pack_name, po_total, status')
+        .select('id, source_estimate_id, source_pack_name, po_total, po_subtotal_total, sales_tax_percent, status')
         .eq('project_id', projectId)
         .not('source_estimate_id', 'is', null);
 
+      if (posError) throw posError;
       // Build ordered maps
       const orderedByEstimate: Record<string, number> = {};
       const orderedPacksByEstimate: Record<string, Set<string>> = {};
       (pos || []).forEach(po => {
-        if (po.source_estimate_id && po.status !== 'ACTIVE') {
-          orderedByEstimate[po.source_estimate_id] = (orderedByEstimate[po.source_estimate_id] || 0) + (po.po_total || 0);
+        if (po.source_estimate_id && isOrderedPO(po.status)) {
+          orderedByEstimate[po.source_estimate_id] = (orderedByEstimate[po.source_estimate_id] || 0) + poOrderedAmount(po);
           if (po.source_pack_name) {
             if (!orderedPacksByEstimate[po.source_estimate_id]) {
               orderedPacksByEstimate[po.source_estimate_id] = new Set();
@@ -47,12 +51,13 @@ export function useProjectEstimateRows(projectId: string, supplierOrgId: string 
       });
 
       // 4. Get project name
-      const { data: proj } = await supabase
+      const { data: proj, error: projectError } = await supabase
         .from('projects')
         .select('name')
         .eq('id', projectId)
         .single();
 
+      if (projectError) throw projectError;
       return estimates.map(est => {
         const estItems = (items || []).filter(i => i.estimate_id === est.id);
         const packs = [...new Set(estItems.map(i => i.pack_name).filter(Boolean))] as string[];

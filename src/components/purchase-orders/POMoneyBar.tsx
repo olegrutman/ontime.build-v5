@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { differenceInDays } from 'date-fns';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { formatCurrency, cn } from '@/lib/utils';
+import { isOrderedPO, poOrderedAmount, supplierUnbilledAmount } from '@/lib/supplierMetrics';
 
 interface POMoneyBarProps {
   purchaseOrders: PurchaseOrder[];
@@ -11,6 +12,7 @@ interface POMoneyBarProps {
   hidePricing?: boolean;
   /** POs already turned into an invoice */
   invoicedPOIds?: Set<string>;
+  billedByPO?: Record<string, number>;
   /** days after ordering before a delivery is considered late */
   lateAfterDays?: number;
 }
@@ -25,12 +27,13 @@ export function usePOMoney(
   isSupplier: boolean,
   invoicedPOIds?: Set<string>,
   lateAfterDays = 14,
+  billedByPO?: Record<string, number>,
 ) {
   return useMemo(() => {
     const now = new Date();
-    const val = (po: PurchaseOrder) => po.po_total || 0;
+    const val = poOrderedAmount;
 
-    const committed = purchaseOrders.filter(po => COMMITTED.includes(po.status as POStatus));
+    const committed = purchaseOrders.filter(po => isSupplier ? isOrderedPO(po.status) : COMMITTED.includes(po.status as POStatus));
     const committedTotal = committed.reduce((s, po) => s + val(po), 0);
 
     const received = purchaseOrders.filter(po => RECEIVED.includes(po.status as POStatus));
@@ -48,8 +51,11 @@ export function usePOMoney(
     });
     const lateTotal = late.reduce((s, po) => s + val(po), 0);
 
-    const uninvoiced = received.filter(po => !invoicedPOIds?.has(po.id));
-    const uninvoicedTotal = uninvoiced.reduce((s, po) => s + val(po), 0);
+    const remaining = (po: PurchaseOrder) => billedByPO
+      ? supplierUnbilledAmount(po, billedByPO[po.id] || 0)
+      : invoicedPOIds?.has(po.id) ? 0 : val(po);
+    const uninvoiced = received.filter(po => remaining(po) > 0.005);
+    const uninvoicedTotal = uninvoiced.reduce((s, po) => s + remaining(po), 0);
 
     const actionStatuses: POStatus[] = isSupplier
       ? ['SUBMITTED', 'SENT']
@@ -68,7 +74,7 @@ export function usePOMoney(
       needsActionTotal, needsActionCount: needsAction.length,
       receivedPct,
     };
-  }, [purchaseOrders, isSupplier, invoicedPOIds, lateAfterDays]);
+  }, [purchaseOrders, isSupplier, invoicedPOIds, lateAfterDays, billedByPO]);
 }
 
 function Tile({
@@ -119,9 +125,9 @@ function Tile({
 }
 
 export function POMoneyBar({
-  purchaseOrders, isSupplier, hidePricing = false, invoicedPOIds, lateAfterDays = 14,
+  purchaseOrders, isSupplier, hidePricing = false, invoicedPOIds, lateAfterDays = 14, billedByPO,
 }: POMoneyBarProps) {
-  const m = usePOMoney(purchaseOrders, isSupplier, invoicedPOIds, lateAfterDays);
+  const m = usePOMoney(purchaseOrders, isSupplier, invoicedPOIds, lateAfterDays, billedByPO);
   const money = (v: number) => (hidePricing ? '—' : formatCurrency(v));
 
   return (
@@ -183,7 +189,7 @@ export function POMoneyBar({
         <Tile
           label="Total committed"
           value={money(m.committedTotal)}
-          sub={`${m.committedCount} priced PO${m.committedCount === 1 ? '' : 's'}`}
+          sub={`${m.committedCount} ${isSupplier ? 'committed' : 'priced'} PO${m.committedCount === 1 ? '' : 's'}`}
         />
         <Tile
           label="Awaiting delivery"

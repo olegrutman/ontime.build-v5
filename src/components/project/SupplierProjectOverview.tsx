@@ -13,7 +13,7 @@ import { SupplierStatStrip, type StatTile } from './supplier/SupplierStatStrip';
 import { SupplierPackLedger, type LedgerRow } from './supplier/SupplierPackLedger';
 import { StackedRow } from './supplier/StackedRow';
 
-import { isCountedEstimate, isPendingEstimate, isOrderedPO, isBilledInvoice, isReceivedInvoice, poOrderedAmount } from '@/lib/supplierMetrics';
+import { isCountedEstimate, isPendingEstimate, isOrderedPO, isBilledInvoice, isReceivedInvoice, poOrderedAmount, isDeliveredPO, isScheduledSupplierPO, estimateItemAmount } from '@/lib/supplierMetrics';
 
 
 /* ═══════════════════════════════════════════════════ */
@@ -31,13 +31,14 @@ const PO_STATUS_PILL: Record<string, PillType> = {
 
 export default function SupplierProjectOverview({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
   const { userOrgRoles } = useAuth();
-  const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const currentOrgId = (userOrgRoles.find(r => r.organization?.type === 'SUPPLIER') ?? userOrgRoles[0])?.organization?.id;
 
   // Get supplier_id for this org
-  const { data: supplierRec } = useQuery({
+  const { data: supplierRec, isLoading: supplierLoading, isError: supplierError } = useQuery({
     queryKey: ['supplier-by-org', currentOrgId],
     queryFn: async () => {
-      const { data } = await supabase.from('suppliers').select('id, name').eq('organization_id', currentOrgId!).maybeSingle();
+      const { data, error } = await supabase.from('suppliers').select('id, name').eq('organization_id', currentOrgId || "").maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!currentOrgId,
@@ -50,7 +51,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const { data: relationships = [] } = useQuery({
     queryKey: ['sup-proj-relationships', projectId],
     queryFn: async () => {
-      const { data } = await supabase.rpc('get_project_relationships', { _project_id: projectId });
+      const { data, error } = await supabase.rpc('get_project_relationships', { _project_id: projectId });
       return (data || []) as {
         upstream_org_name: string; upstream_role: string;
         downstream_org_name: string; downstream_role: string;
@@ -79,15 +80,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
     : materialsResponsible?.role === 'SUPPLIER' ? 'Supplier' : materialsResponsible?.role;
 
   // Fetch POs for this project + supplier
-  const { data: pos = [] } = useQuery({
+  const { data: pos = [], isLoading: posLoading, isError: posError } = useQuery({
     queryKey: ['sup-proj-pos', projectId, supplierId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('purchase_orders')
-        .select('id, po_number, po_name, status, po_total, po_subtotal_total, sales_tax_percent, source_estimate_id, source_pack_name, created_at')
+        .select('id, po_number, po_name, status, po_total, po_subtotal_total, sales_tax_percent, source_estimate_id, source_pack_name, ready_for_delivery_at, created_at')
         .eq('project_id', projectId)
-        .eq('supplier_id', supplierId!)
+        .eq('supplier_id', supplierId || "")
         .order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!projectId && !!supplierId,
@@ -96,15 +98,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   // Fetch estimates for this project + supplier org.
   // Canonical "Estimated" counts APPROVED only (see @/lib/supplierMetrics) — we still
   // fetch SUBMITTED so the estimate card can hint at pending submissions.
-  const { data: allEstimates = [] } = useQuery({
+  const { data: allEstimates = [], isLoading: estimatesLoading, isError: estimatesError } = useQuery({
     queryKey: ['sup-proj-estimates', projectId, currentOrgId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('supplier_estimates')
-        .select('id, name, total_amount, status')
+        .select('id, name, total_amount, sales_tax_percent, status')
         .eq('project_id', projectId)
-        .eq('supplier_org_id', currentOrgId!)
+        .eq('supplier_org_id', currentOrgId || "")
         .in('status', ['APPROVED', 'SUBMITTED']);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!projectId && !!currentOrgId,
@@ -116,13 +119,14 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
   // Fetch estimate items for pack breakdown
   const estimateIds = estimates.map(e => e.id);
-  const { data: estimateItems = [] } = useQuery({
+  const { data: estimateItems = [], isLoading: itemsLoading, isError: itemsError } = useQuery({
     queryKey: ['sup-proj-est-items', estimateIds],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('supplier_estimate_items')
         .select('estimate_id, pack_name, line_total')
         .in('estimate_id', estimateIds);
+      if (error) throw error;
       return data || [];
     },
     enabled: estimateIds.length > 0,
@@ -130,15 +134,16 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
   // Fetch invoices linked to this supplier's POs
   const poIds = pos.map(p => p.id);
-  const { data: invoices = [] } = useQuery({
+  const { data: invoices = [], isLoading: invoicesLoading, isError: invoicesError } = useQuery({
     queryKey: ['sup-proj-invoices', poIds],
     queryFn: async () => {
       if (poIds.length === 0) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('invoices')
         .select('id, invoice_number, total_amount, status, submitted_at, paid_at, po_id, notes')
         .in('po_id', poIds)
         .order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: poIds.length > 0,
@@ -148,10 +153,11 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const totalEstimate = estimates.reduce((s, e) => s + (e.total_amount || 0), 0);
 
   // Pack breakdown from estimate items
+  const estimateTaxById = Object.fromEntries(estimates.map(e => [e.id, e.sales_tax_percent || 0]));
   const packTotals: Record<string, number> = {};
   estimateItems.forEach(item => {
     const pack = item.pack_name || 'Uncategorized';
-    packTotals[pack] = (packTotals[pack] || 0) + (item.line_total || 0);
+    packTotals[pack] = (packTotals[pack] || 0) + estimateItemAmount(item.line_total, estimateTaxById[item.estimate_id]);
   });
   const packNames = Object.keys(packTotals);
 
@@ -171,8 +177,8 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
 
   // Deliveries
-  const deliveredPOs = pos.filter(p => p.status === 'DELIVERED');
-  const scheduledPOs = pos.filter(p => p.status === 'ORDERED');
+  const deliveredPOs = pos.filter(p => isDeliveredPO(p.status));
+  const scheduledPOs = pos.filter(p => isScheduledSupplierPO(p));
   const deliveryCount = deliveredPOs.length + scheduledPOs.length;
 
   // Invoice metrics (canonical: SUBMITTED/APPROVED/PAID count as billed)
@@ -186,7 +192,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
   const pendingInvoices = invoices.filter(i => ['SUBMITTED', 'APPROVED'].includes(i.status));
   const outstanding = totalBilled - totalReceived;
-  const futureUnbilled = totalOrdered - totalBilled;
+  const futureUnbilled = Math.max(0, totalOrdered - totalBilled);
 
   // Per-pack billed / received (invoices roll up through their PO's pack)
   const billedByPack: Record<string, number> = {};
@@ -234,8 +240,8 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   }
 
   // Analytics (Phase A — additive per-project insights)
-  const packsOrderedCount = Object.keys(orderedByPack).length;
-  const { data: analytics, isLoading: analyticsLoading } = useSupplierProjectAnalytics({
+  const packsOrderedCount = packNames.filter(p => (orderedByPack[p] || 0) > 0).length;
+  const { data: analytics, isLoading: analyticsLoading, isError: analyticsError } = useSupplierProjectAnalytics({
     projectId,
     supplierId,
     supplierOrgId: currentOrgId,
@@ -249,7 +255,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   const projectOverBy = Math.max(0, totalOrdered - totalEstimate);
   const packsOverCount = packNames.filter(p => (orderedByPack[p] || 0) > packTotals[p]).length;
   const packOverBy = packNames.reduce((s, p) => s + Math.max(0, (orderedByPack[p] || 0) - packTotals[p]), 0);
-  const snapshotOverBy = projectOverBy > 0 ? projectOverBy : packOverBy;
+  const snapshotOverBy = Math.max(projectOverBy, packOverBy);
 
   const lastPaidAt = paidInvoices
     .map(i => i.paid_at)
@@ -287,6 +293,10 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
   ].filter(Boolean) as StatTile[];
 
   const anyCardVisible = Object.values(cardHasData).some(Boolean);
+
+  if (supplierError || posError || estimatesError || itemsError || invoicesError) return <div role="alert" className="p-4 text-destructive">Could not load supplier totals. Refresh to retry.</div>;
+  if (supplierLoading || posLoading || estimatesLoading || itemsLoading || invoicesLoading) return <div className="p-4 text-muted-foreground">Loading supplier totals…</div>;
+  if (!supplierId) return <div className="p-4 text-muted-foreground">No supplier account linked to this company.</div>;
 
   return (
     <div className="space-y-4">
@@ -395,7 +405,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
 
         {/* Card 2 — Total Ordered (stacked line items with Δ) */}
         {cardHasData.ordered && (
-        <KpiCard accent={C.amber} icon="📦" iconBg={C.amberPale} label="TOTAL ORDERED (POs ISSUED)" value={totalOrdered > 0 ? fmt(totalOrdered) : '$0'} sub={totalEstimate > 0 ? `${orderedPct}% of estimate · ${fmt(totalEstimate - totalOrdered)} remaining to order` : `${orderedPOs.length} POs`} pills={orderedPct > 0 ? [{ type: 'pa', text: `${orderedPct}% of est` }] : [{ type: 'pm', text: 'No orders' }]} idx={1}>
+        <KpiCard accent={C.amber} icon="📦" iconBg={C.amberPale} label="TOTAL ORDERED (POs ISSUED)" value={totalOrdered > 0 ? fmt(totalOrdered) : '$0'} sub={totalEstimate > 0 ? `${orderedPct}% of estimate · ${fmt(Math.max(0, totalEstimate - totalOrdered))} remaining to order` : `${orderedPOs.length} POs`} pills={orderedPct > 0 ? [{ type: 'pa', text: `${orderedPct}% of est` }] : [{ type: 'pm', text: 'No orders' }]} idx={1}>
 
           <div style={{ padding: 12 }}>
             {packNames.length > 0 ? (
@@ -445,7 +455,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
                       <div style={{ fontWeight: 700, fontSize: '0.78rem', color: C.ink }}>{po.po_name || po.po_number || 'Delivery'}</div>
                       <div style={{ fontSize: '0.67rem', color: C.muted }}>{po.po_number}</div>
                     </div>
-                    <TdM>{fmt(po.po_total || 0)}</TdM>
+                    <TdM>{fmt(poOrderedAmount(po))}</TdM>
                     <Pill type="pw">Scheduled</Pill>
                   </div>
                 ))}
@@ -455,7 +465,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
                       <div style={{ fontWeight: 700, fontSize: '0.78rem', color: C.ink }}>{po.po_name || po.po_number || 'Delivery'}</div>
                       <div style={{ fontSize: '0.67rem', color: C.muted }}>{po.po_number}</div>
                     </div>
-                    <TdM>{fmt(po.po_total || 0)}</TdM>
+                    <TdM>{fmt(poOrderedAmount(po))}</TdM>
                     <Pill type="pg">Delivered ✓</Pill>
                   </div>
                 ))}
@@ -512,7 +522,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
                       <Pill type="pg">Paid</Pill>,
                     ]} />
                   ))}
-                  <TRow cells={[<TdN>{paidInvoices.length} paid</TdN>, <TdM>{fmt(totalBilled)}</TdM>, <TdM>{fmt(totalReceived)}</TdM>, '—']} isTotal />
+                  <TRow cells={[<TdN>{paidInvoices.length} paid</TdN>, <TdM>{fmt(totalReceived)}</TdM>, <TdM>{fmt(totalReceived)}</TdM>, '—']} isTotal />
                 </tbody>
               </table>
             ) : (
@@ -531,7 +541,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
               <THead cols={['Item', 'Amount', 'Notes']} />
               <tbody>
                 {pendingInvoices.map(inv => (
-                  <TRow key={inv.id} cells={[<TdN>{inv.invoice_number} (pending)</TdN>, <TdM>{fmt(inv.total_amount)}</TdM>, `Submitted · awaiting ${gcName}`]} />
+                  <TRow key={inv.id} cells={[<TdN>{inv.invoice_number} (pending)</TdN>, <TdM>{fmt(inv.total_amount)}</TdM>, inv.status === 'APPROVED' ? 'Approved · awaiting payment' : `Submitted · awaiting approval`]} />
                 ))}
                 {futureUnbilled > 0 && (
                   <TRow cells={[<TdN>Not yet invoiced</TdN>, <TdM>{fmt(futureUnbilled)}</TdM>, 'POs delivered/ordered, not billed']} />
@@ -550,6 +560,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
       <SupplierProjectAnalyticsSection
         analytics={analytics}
         loading={analyticsLoading}
+        error={analyticsError}
         estimateTotal={totalEstimate}
         orderedTotal={totalOrdered}
         onNavigate={onNavigate}
@@ -574,7 +585,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
                     <TdN>{po.po_number || '—'}</TdN>,
                     po.po_name || po.source_pack_name || '—',
                     <Pill type={PO_STATUS_PILL[po.status] || 'pm'}>{po.status}</Pill>,
-                    <TdM>{fmt(po.po_total || 0)}</TdM>,
+                    <TdM>{fmt(poOrderedAmount(po))}</TdM>,
                   ]}
                 />
               ))}
@@ -598,7 +609,7 @@ export default function SupplierProjectOverview({ projectId, projectName = 'Proj
             segments={[
               { pct: pctOfBase(totalReceived), color: C.green },
               { pct: pctOfBase(totalBilled - totalReceived), color: C.blue },
-              { pct: pctOfBase(totalOrdered - totalBilled), color: C.amber },
+              { pct: pctOfBase(futureUnbilled), color: C.amber },
             ]}
             rows={[
               { label: 'Estimated', value: fmt(totalEstimate), pct: base > 0 ? 100 : 0, barColor: C.navy },
