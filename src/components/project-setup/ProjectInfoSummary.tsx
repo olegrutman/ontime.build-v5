@@ -4,7 +4,9 @@ import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui
 import { formatCurrency } from '@/lib/utils';
 import { Building2, MapPin, Calendar, Users, FileText, Layers, Home } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EditableInfoRow } from './EditableInfoRow';
+import { EditableInfoRow as BaseEditableInfoRow, type EditableInfoRowProps } from './EditableInfoRow';
+import { useAuth } from '@/hooks/useAuth';
+import { isInfoCreator, ownInfoContracts, canEditInfoContract } from '@/lib/projectInfoAccess';
 
 interface ProjectInfoSummaryProps {
   projectId: string;
@@ -95,11 +97,13 @@ function formatAnswerDisplay(val: unknown): string {
 
 export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
   const qc = useQueryClient();
+  const { user, userOrgRoles } = useAuth();
+  const orgId = userOrgRoles[0]?.organization?.id;
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ['project_info_summary', projectId] });
     qc.invalidateQueries({ queryKey: ['project_setup_answers_summary', projectId] });
-    qc.invalidateQueries({ queryKey: ['project_contracts_summary', projectId] });
+    qc.invalidateQueries({ queryKey: ['project_contracts_summary', projectId, orgId] });
     qc.invalidateQueries({ queryKey: ['project_team_summary', projectId] });
     qc.invalidateQueries({ queryKey: ['project_scope_details_summary', projectId] });
     qc.invalidateQueries({ queryKey: ['project', projectId] });
@@ -112,7 +116,7 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('name, project_type, build_type, city, state, zip, start_date, address, status')
+        .select('created_by, name, project_type, build_type, city, state, zip, start_date, address, status')
         .eq('id', projectId).single();
       if (error) throw error;
       return data;
@@ -132,12 +136,12 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
   });
 
   const { data: contracts = [], isLoading: contractsLoading } = useQuery({
-    queryKey: ['project_contracts_summary', projectId],
+    queryKey: ['project_contracts_summary', projectId, orgId],
     enabled: !!projectId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, from_role, to_role, contract_sum, material_responsibility, retainage_percent, status')
+        .select('id, from_org_id, to_org_id, created_by_user_id, from_role, to_role, contract_sum, material_responsibility, retainage_percent, status')
         .eq('project_id', projectId);
       if (error) throw error;
       return data ?? [];
@@ -170,10 +174,15 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
     },
   });
 
+  const canEdit = isInfoCreator(project?.created_by, user?.id);
+  const EditableInfoRow = (props: EditableInfoRowProps) => <BaseEditableInfoRow {...props} locked={props.locked || !canEdit} lockReason={props.lockReason || 'Only the project creator can edit project information'} />;
+  const assertCreator = () => { if (!canEdit) throw new Error('Only the project creator can edit project information'); };
+
   const isLoading = projLoading || answersLoading || contractsLoading || teamLoading || scopeLoading;
 
   // --- Save handlers ---
   const saveProject = (field: string) => async (val: any) => {
+    assertCreator();
     const payload: Record<string, any> = { [field]: val };
     const { error } = await supabase.from('projects').update(payload).eq('id', projectId);
     if (error) throw error;
@@ -181,6 +190,7 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
   };
 
   const saveAddress = (field: 'street' | 'city' | 'state' | 'zip') => async (val: any) => {
+    assertCreator();
     if (field === 'city' || field === 'state' || field === 'zip') {
       const { error } = await supabase.from('projects').update({ [field]: val }).eq('id', projectId);
       if (error) throw error;
@@ -194,6 +204,7 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
   };
 
   const saveScope = (field: string) => async (val: any) => {
+    assertCreator();
     if (!scopeDetails?.id) {
       const { error } = await supabase.from('project_scope_details').insert({ project_id: projectId, [field]: val } as any);
       if (error) throw error;
@@ -205,12 +216,15 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
   };
 
   const saveContract = (contractId: string, field: string) => async (val: any) => {
+    const contract = contracts.find(c => c.id === contractId);
+    if (!contract || !canEditInfoContract(contract, user?.id)) throw new Error('Only the contract creator can edit an unlocked agreement');
     const { error } = await supabase.from('project_contracts').update({ [field]: val }).eq('id', contractId);
     if (error) throw error;
     invalidateAll();
   };
 
   const saveAnswer = (fieldKey: string, originalValue: unknown) => async (val: any) => {
+    assertCreator();
     let nextValue: unknown = val;
     // Preserve object shape for {enabled, percent, ...}
     if (typeof originalValue === 'object' && originalValue !== null && 'enabled' in (originalValue as object)) {
@@ -244,14 +258,14 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
     const phase = a.field_key.split('_').slice(0, 2).join('_');
     const section = SECTION_LABELS[phase] || 'Scope';
     if (!grouped.has(section)) grouped.set(section, []);
-    grouped.get(section)!.push({ key: a.field_key, value: a.value });
+    grouped.get(section)?.push({ key: a.field_key, value: a.value });
   }
 
   const address = project?.address as Record<string, string> | null;
 
   return (
     <SurfaceCard>
-      <SurfaceCardHeader title="Project Information" subtitle="Click any field to edit" />
+      <SurfaceCardHeader title="Project Information" subtitle={canEdit ? 'Project creator' : 'Read-only · Managed by the project creator'} />
       <SurfaceCardBody className="space-y-5">
         {/* Project Details */}
         <div className="space-y-2.5">
@@ -295,29 +309,29 @@ export function ProjectInfoSummary({ projectId }: ProjectInfoSummaryProps) {
               <FileText className="w-3.5 h-3.5" /> Contracts
             </h4>
             <div className="space-y-2">
-              {contracts.map((c) => {
-                const locked = c.status === 'approved' || c.status === 'executed';
+              {ownInfoContracts(contracts, orgId).map((c) => {
+                const locked = !canEditInfoContract(c, user?.id);
                 return (
                   <div key={c.id} className="rounded-lg border border-border divide-y divide-border">
                     <div className="flex items-center justify-between px-3 py-2 text-sm">
                       <span className="text-muted-foreground">Direction</span>
                       <span className="font-medium text-foreground">{c.from_role} → {c.to_role}</span>
                     </div>
-                    <EditableInfoRow
+                    <BaseEditableInfoRow
                       label="Contract Sum" value={c.contract_sum} type="currency" mono
                       display={<span className="font-mono font-semibold">{formatCurrency(c.contract_sum)}</span>}
                       onSave={saveContract(c.id, 'contract_sum')}
-                      locked={locked} lockReason="Contract is approved — unlock by reverting status"
+                      locked={locked} lockReason="Only the contract creator can edit an unlocked agreement"
                     />
-                    <EditableInfoRow
+                    <BaseEditableInfoRow
                       label="Material Responsibility" value={c.material_responsibility} type="select" options={MATERIAL_RESP_OPTIONS}
                       onSave={saveContract(c.id, 'material_responsibility')}
-                      locked={locked} lockReason="Contract is approved"
+                      locked={locked} lockReason="Only the contract creator can edit an unlocked agreement"
                     />
-                    <EditableInfoRow
+                    <BaseEditableInfoRow
                       label="Retainage" value={c.retainage_percent} type="percent"
                       onSave={saveContract(c.id, 'retainage_percent')}
-                      locked={locked} lockReason="Contract is approved"
+                      locked={locked} lockReason="Only the contract creator can edit an unlocked agreement"
                     />
                   </div>
                 );
