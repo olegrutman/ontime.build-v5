@@ -148,6 +148,13 @@
       "when": 1792462966008,
       "tag": "0020_crew_tracker_workers_and_spending",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792463002164,
+      "tag": "0021_private_crew_receipt_access",
+      "breakpoints": true
     }
   ]
 }
