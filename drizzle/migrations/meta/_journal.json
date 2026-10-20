@@ -155,6 +155,13 @@
       "when": 1792463002164,
       "tag": "0021_private_crew_receipt_access",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792463174910,
+      "tag": "0022_qualify_private_receipt_object_paths",
+      "breakpoints": true
     }
   ]
 }
