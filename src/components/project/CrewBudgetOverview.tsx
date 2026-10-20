@@ -38,6 +38,11 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
   const hiredBudget = 'hired_labor' in tracker.budget ? Number(tracker.budget.hired_labor ?? 0) : 0;
   const taskSum = tracker.tasks.reduce((s, t) => s + crewPay(Number(t.rate), Number(t.quantity)), 0);
   const editGroups = [{key:'worker_labor',label:'Worker payroll (hourly / daily)'},{key:'hired_labor',label:'Hired crews (piece-rate / task)'},...CREW_BUDGET_GROUPS.filter(g=>g.key!=='labor')];
+  // While the budget modal is open, keep the hired-crew budget in step with the
+  // assigned task totals — unless the user typed their own number (a buffer).
+  useEffect(() => {
+    if (editing && !hiredTouched) setDraft(v => ({ ...v, hired_labor: taskSum ? String(taskSum) : '' }));
+  }, [editing, hiredTouched, taskSum]);
   if (tracker.loading) return <div role="status" className="h-48 animate-pulse rounded-2xl border bg-muted/40" aria-label="Loading spending and budget" />;
   if (tracker.error) return <p role="alert" className="rounded-2xl border border-destructive/30 p-4 text-destructive">Could not load spending and budget: {tracker.error.message}</p>;
   if (!tracker.orgId) return null;
