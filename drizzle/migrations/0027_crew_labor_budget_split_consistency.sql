@@ -1,0 +1,2 @@
+CREATE OR REPLACE FUNCTION public.sync_crew_labor_budget() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$ BEGIN IF NEW.worker_labor IS NOT NULL AND NEW.hired_labor IS NOT NULL THEN NEW.labor:=NEW.worker_labor+NEW.hired_labor; END IF; RETURN NEW; END $$;
+CREATE TRIGGER sync_crew_labor_budget BEFORE INSERT OR UPDATE ON public.crew_project_budgets FOR EACH ROW EXECUTE FUNCTION public.sync_crew_labor_budget();
