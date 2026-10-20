@@ -185,6 +185,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <HiredCrewTaskDialog tracker={tracker} projectId={tracker.projectId} open={assigning} onOpenChange={setAssigning} />
   </section>;
 }
 
