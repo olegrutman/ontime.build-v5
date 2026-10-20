@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import type { Tables } from '@/integrations/supabase/types';
+import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 import { EMPTY_CREW_BUDGET, type CrewBudget } from '@/lib/crewTracker';
 
 export type CrewWorker = Tables<'crew_workers'>;
@@ -63,8 +63,8 @@ export function useCrewTracker(projectId: string) {
     const {error}=await supabase.from('crew_job_tasks').insert({...task,project_id:projectId,organization_id:orgId});
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Crew task added');},onError:e=>toast.error(e.message)});
-  const saveDraw=useMutation({mutationFn:async(draw:{taskId:string;percent:number;amount:number;date:string})=>{
-    const {error}=await supabase.rpc('record_crew_job_draw',{p_task_id:draw.taskId,p_percent:draw.percent,p_amount:draw.amount,p_date:draw.date});
+  const saveDraw=useMutation({mutationFn:async(draw:{taskId:string;percent:number;amount:number;date:string;requestId:string})=>{
+    const {error}=await supabase.rpc('record_crew_job_draw_once',{p_task_id:draw.taskId,p_percent:draw.percent,p_amount:draw.amount,p_date:draw.date,p_request_id:draw.requestId});
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Progress and payment saved');},onError:e=>toast.error(e.message)});
   const saveWorker = useMutation({mutationFn: async (worker: {name:string;pay_basis:string;rate:number;id?:string;active?:boolean}) => {
@@ -73,7 +73,7 @@ export function useCrewTracker(projectId: string) {
     const result=id ? await supabase.from('crew_workers').update(fields).eq('id',id).eq('organization_id',orgId) : await supabase.from('crew_workers').insert({...fields,organization_id:orgId});
     if(result.error) throw result.error;
   },onSuccess:()=>client.invalidateQueries({queryKey:['crew-workers']}),onError:e=>toast.error(e.message)});
-  const saveCosts = useMutation({mutationFn:async(entries: Omit<CrewSpending,'id'|'created_at'|'organization_id'|'entered_by'>[])=>{
+  const saveCosts = useMutation({mutationFn:async(entries: Omit<TablesInsert<'actual_cost_entries'>,'organization_id'|'entered_by'>[])=>{
     if(!orgId || !user) throw new Error('Crew project access required');
     const {error}=await supabase.from('actual_cost_entries').insert(entries.map(e=>({...e,organization_id:orgId,entered_by:user.id})));
     if(error) throw new Error(error.code==='23505' ? 'A worker already has pay logged on this date. Edit that entry instead.' : error.message);

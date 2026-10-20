@@ -24,6 +24,7 @@ export function HiredCrewJobs({tracker,projectId,date}:{tracker:Tracker;projectI
   const [drawId,setDrawId]=useState<string|null>(null);
   const [percent,setPercent]=useState('');
   const [amount,setAmount]=useState('');
+  const [requestId,setRequestId]=useState(()=>crypto.randomUUID());
   const suggestions=useQuery({queryKey:['crew-setup-tasks',projectId],enabled:!!tracker.orgId,queryFn:async()=>{
     const {data,error}=await supabase.from('project_setup_answers').select('field_key,value').eq('project_id',projectId);
     if(error) throw error;
@@ -56,7 +57,7 @@ export function HiredCrewJobs({tracker,projectId,date}:{tracker:Tracker;projectI
         <p className="break-words text-xs text-muted-foreground">{t.pay_basis==='fixed'?'Fixed task price':`${t.quantity} ${t.pay_basis==='sq_ft'?'sq. ft':'units'} × ${formatCurrency(Number(t.rate))}`}</p>
         <div className="flex flex-wrap justify-between gap-2 text-sm"><span>{progress}% complete</span><span className="font-mono">{formatCurrency(taskTotal)} task total</span></div>
         <Progress value={progress} className="h-2"/>
-        <div className="flex flex-wrap items-center justify-between gap-3"><p className="break-words text-sm"><span className="font-mono font-semibold">{formatCurrency(taskPaid)}</span><span className="text-muted-foreground"> paid · {formatCurrency(taskTotal-taskPaid)} unpaid</span></p><Button variant="outline" size="sm" onClick={()=>{setDrawId(t.id);setPercent(String(progress));setAmount('0');}}><Wallet className="h-4 w-4"/>Update progress / pay</Button></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><p className="break-words text-sm"><span className="font-mono font-semibold">{formatCurrency(taskPaid)}</span><span className="text-muted-foreground"> paid · {formatCurrency(taskTotal-taskPaid)} unpaid</span></p><Button variant="outline" size="sm" onClick={()=>{setRequestId(crypto.randomUUID());setDrawId(t.id);setPercent(String(progress));setAmount('0');}}><Wallet className="h-4 w-4"/>Update progress / pay</Button></div>
       </article>;
     })}
     <Dialog open={adding} onOpenChange={setAdding}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Add hired crew task</DialogTitle><DialogDescription>Private piece-rate or fixed-price work for this job.</DialogDescription></DialogHeader>
@@ -71,7 +72,7 @@ export function HiredCrewJobs({tracker,projectId,date}:{tracker:Tracker;projectI
       </form>
     </DialogContent></Dialog>
     <Dialog open={!!drawTask} onOpenChange={o=>{if(!o)setDrawId(null);}}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle className="break-words">{drawTask?.crew_name}</DialogTitle><DialogDescription className="break-words">{drawTask?.task_name}</DialogDescription></DialogHeader>
-      <form className="space-y-4" onSubmit={async e=>{e.preventDefault();if(!drawTask)return;try{await tracker.saveDraw.mutateAsync({taskId:drawTask.id,percent:Number(percent),amount:Number(amount),date});setDrawId(null);}catch{}}}>
+      <form className="space-y-4" onSubmit={async e=>{e.preventDefault();if(!drawTask)return;try{await tracker.saveDraw.mutateAsync({taskId:drawTask.id,percent:Number(percent),amount:Number(amount),date,requestId});setDrawId(null);}catch{}}}>
         <div><Label htmlFor="crew-progress">Total work completed (%)</Label><Input id="crew-progress" type="number" min="0" max="100" step="0.01" value={percent} onChange={e=>setPercent(e.target.value)} required/></div>
         <div className="flex flex-wrap gap-2">{[25,50,75,100].map(p=><Button type="button" key={p} size="sm" variant={Number(percent)===p?'default':'outline'} onClick={()=>setPercent(String(p))}>{p}%</Button>)}</div>
         <div className="rounded-lg bg-muted p-3 text-sm"><p>Available for payment <span className="font-mono font-semibold">{formatCurrency(balance?.available??0)}</span></p><p className="text-muted-foreground">Payment date · {date}</p></div>
