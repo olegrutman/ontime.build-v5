@@ -16,10 +16,10 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
   if (isTM) {
     const tmTotal = approvedWOTotal;
     return (
-      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 gap-2">
-        <KPICard label="T&M Total" value={tmTotal} delay={0} className="p-3" />
-        <KPICard label="Approved Work Orders" value={tmTotal} delay={40} className="p-3" />
-        <KPICard label="Collected" value={financials.receivablesCollected} delay={80} className="p-3" />
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 gap-2.5">
+        <KPICard label="T&M Total" value={tmTotal} delay={0} />
+        <KPICard label="Approved Work Orders" value={tmTotal} delay={40} />
+        <KPICard label="Collected" value={financials.receivablesCollected} delay={80} />
       </div>
     );
   }
@@ -40,13 +40,13 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
 
 
     return (
-      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
-        <KPICard label="Original Contract" value={originalContract} delay={0} className="p-3" />
-        <KPICard label="Approved CO Adds" value={coAdds} delay={40} className="p-3" />
-        <KPICard label="Revised Contract" value={revised} delay={80} className="p-3" />
-        <KPICard label="Estimated Total Cost" value={totalCostOut} delay={120} className="p-3" />
-        <KPICard label="Projected Gross Margin" value={revised - totalCostOut} delay={160} suffix={`${Math.round(margin)}%`} className="p-3" />
-        <KPICard label="Margin to Date" value={marginToDateAmount} delay={200} suffix={marginToDateSuffix} className="p-3" />
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5">
+        <KPICard label="Original Contract" value={originalContract} delay={0} />
+        <KPICard label="Approved CO Adds" value={coAdds} delay={40} />
+        <KPICard label="Revised Contract" value={revised} delay={80} />
+        <KPICard label="Estimated Total Cost" value={totalCostOut} delay={120} />
+        <KPICard label="Projected Gross Margin" value={revised - totalCostOut} delay={160} suffix={`${Math.round(margin)}%`} />
+        <KPICard label="Margin to Date" value={marginToDateAmount} delay={200} suffix={marginToDateSuffix} />
       </div>
     );
   }
@@ -59,13 +59,13 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
     const margin = revised > 0 ? ((revised - costOut) / revised) * 100 : 0;
 
     return (
-      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
-        <KPICard label="Original Contract" value={contractIn} delay={0} className="p-3" />
-        <KPICard label="Approved CO Adds" value={coAdds} delay={40} className="p-3" />
-        <KPICard label="Revised Contract" value={revised} delay={80} className="p-3" />
-        <KPICard label="Estimated Total Cost" value={costOut} delay={120} className="p-3" />
-        <KPICard label="Projected Gross Margin" value={revised - costOut} delay={160} suffix={`${Math.round(margin)}%`} className="p-3" />
-        <KPICard label="Margin to Date" value={marginToDateAmount} delay={200} suffix={marginToDateSuffix} className="p-3" />
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5">
+        <KPICard label="Original Contract" value={contractIn} delay={0} />
+        <KPICard label="Approved CO Adds" value={coAdds} delay={40} />
+        <KPICard label="Revised Contract" value={revised} delay={80} />
+        <KPICard label="Estimated Total Cost" value={costOut} delay={120} />
+        <KPICard label="Projected Gross Margin" value={revised - costOut} delay={160} suffix={`${Math.round(margin)}%`} />
+        <KPICard label="Margin to Date" value={marginToDateAmount} delay={200} suffix={marginToDateSuffix} />
       </div>
     );
   }
@@ -73,10 +73,10 @@ export function ProjectFinancialCommand({ financials, isTM = false }: ProjectFin
   // FC
   const fcContract = downstreamContract?.contract_sum || upstreamContract?.contract_sum || 0;
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-      <KPICard label="Contract Value" value={fcContract} delay={0} className="p-3" />
-      <KPICard label="Collected" value={financials.receivablesCollected} delay={40} className="p-3" />
-      <KPICard label="Outstanding" value={fcContract - financials.receivablesCollected} delay={80} className="p-3" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+      <KPICard label="Contract Value" value={fcContract} delay={0} />
+      <KPICard label="Collected" value={financials.receivablesCollected} delay={40} />
+      <KPICard label="Outstanding" value={fcContract - financials.receivablesCollected} delay={80} />
     </div>
   );
 }
