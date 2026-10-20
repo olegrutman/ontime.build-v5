@@ -1,0 +1,1 @@
+CREATE TRIGGER project_profile_creator_guard BEFORE INSERT OR UPDATE ON public.project_profiles FOR EACH ROW EXECUTE FUNCTION public.guard_project_info_creator();
