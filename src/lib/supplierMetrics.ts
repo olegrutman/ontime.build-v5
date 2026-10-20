@@ -19,6 +19,8 @@ export const ORDERED_EXCLUDED_PO_STATUSES = new Set([
   'CANCELLED',
   'SUBMITTED',
   'PRICED',
+  'SENT',
+  'PENDING_APPROVAL',
 ]);
 
 /** Invoice statuses counted toward "Billed". */
@@ -36,7 +38,41 @@ export function isPendingEstimate(status?: string | null): boolean {
 }
 
 export function isOrderedPO(status?: string | null): boolean {
-  return !!status && !ORDERED_EXCLUDED_PO_STATUSES.has(status);
+  return !!status && ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(status);
+}
+
+export function isDeliveredPO(status?: string | null): boolean {
+  return status === 'DELIVERED' || status === 'FINALIZED';
+}
+
+export function isOpenSupplierPO(status?: string | null): boolean {
+  return !!status && ['SUBMITTED', 'PRICED', 'ORDERED', 'READY_FOR_DELIVERY'].includes(status);
+}
+
+export function isScheduledSupplierPO(po: { status?: string | null; ready_for_delivery_at?: string | null }): boolean {
+  return ['ORDERED', 'READY_FOR_DELIVERY'].includes(po.status || '') && !!po.ready_for_delivery_at;
+}
+
+/** Estimate line totals are pre-tax; each estimate has its own tax rate. */
+export function estimateItemAmount(lineTotal: number | null, taxPercent?: number | null): number {
+  return (lineTotal || 0) * (1 + (taxPercent || 0) / 100);
+}
+
+/** Credits are realized only when the return is closed, net of restocking. */
+export function realizedReturnCredit(row: { status?: string | null; net_credit_total?: number | null }): number {
+  return row.status === 'CLOSED' ? row.net_credit_total || 0 : 0;
+}
+
+/** Never let advance invoices for one PO offset unapproved deliveries on another. */
+export function supplierCreditExposure(
+  pos: Array<{ id: string; status?: string | null; po_total?: number | null; po_subtotal_total?: number | null; sales_tax_percent?: number | null }>,
+  invoices: Array<{ po_id?: string | null; status?: string | null; total_amount?: number | null }>,
+): number {
+  return pos.reduce((sum, po) => {
+    if (!isDeliveredPO(po.status)) return sum;
+    const covered = invoices.reduce((s, inv) => inv.po_id === po.id && ['APPROVED', 'PAID'].includes(inv.status || '') ? s + (inv.total_amount || 0) : s, 0);
+    return sum + Math.max(0, poOrderedAmount(po) - covered);
+  }, 0);
 }
 
 export function isBilledInvoice(status?: string | null): boolean {
