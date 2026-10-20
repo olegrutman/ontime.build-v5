@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Show private crew expenses as overview costs and add labor/materials/tools budgets
-- [ ] Verify saved budgets, actual totals, privacy and phone layouts
+- [x] Show private crew expenses as overview costs and add labor/materials/tools budgets
+- [x] Verify saved budgets, actual totals, privacy and phone layouts
 
 - [x] Build private project-based Crew Tracker with saved hourly/day rates, labor and expenses
 - [x] Verify cost calculations, private access and phone-width logging
