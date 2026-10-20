@@ -119,7 +119,36 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
           </li>;
         })}
       </ul>
-      <div className="border-t pt-4"><h3 className="mb-3 font-heading text-lg font-semibold">Labor breakdown</h3><dl className="grid gap-3 sm:grid-cols-2">{([['Worker payroll',labor.workers,workerBudget],['Hired crew payments',labor.hired,hiredBudget]] as const).map(([label,spent,budget])=><div key={label} className="min-w-0"><dt className="text-xs uppercase text-muted-foreground">{label}</dt><dd className="mt-1 break-words font-mono text-sm">{formatCurrency(spent)} spent / {formatCurrency(budget)} budget</dd></div>)}</dl><p className="mt-3 text-xs text-muted-foreground">Assigned hired-crew tasks: {formatCurrency(tracker.tasks.reduce((s,t)=>s+Number(t.quantity)*Number(t.rate),0))}</p></div>
+      <div className="border-t pt-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-heading text-lg font-semibold">Labor breakdown</h3>
+          <Button variant="outline" size="sm" className="min-h-11" onClick={() => setAssigning(true)}><Plus className="h-4 w-4 shrink-0" />Assign crew task</Button>
+        </div>
+        <dl className="grid gap-3 sm:grid-cols-2">{([['Worker payroll',labor.workers,workerBudget],['Hired crew payments',labor.hired,hiredBudget]] as const).map(([label,spent,budget])=><div key={label} className="min-w-0"><dt className="text-xs uppercase text-muted-foreground">{label}</dt><dd className="mt-1 break-words font-mono text-sm">{formatCurrency(spent)} spent / {formatCurrency(budget)} budget</dd></div>)}</dl>
+        <div className="mt-4 space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Assigned hired-crew tasks</h4>
+            <span className="font-mono text-xs text-muted-foreground">{formatCurrency(tracker.tasks.reduce((s,t)=>s+crewPay(Number(t.rate),Number(t.quantity)),0))} total</span>
+          </div>
+          {!tracker.tasks.length && <button type="button" onClick={() => setAssigning(true)} className="w-full rounded-xl border border-dashed p-4 text-left transition-colors hover:bg-muted/40">
+            <p className="font-medium">No hired crew tasks yet</p>
+            <p className="text-sm text-muted-foreground">Assign piece-rate work like wall framing or roof trusses — pick a task from your project setup. It will show up in the Crew Tracker job roll-call for progress payments.</p>
+          </button>}
+          <ul className="space-y-2">
+            {tracker.tasks.map(t => {
+              const taskTotal = crewPay(Number(t.rate), Number(t.quantity));
+              const taskPaid = tracker.entries.filter(e => e.tracker_job_task_id === t.id).reduce((s,e) => s + Number(e.total_amount), 0);
+              return <li key={t.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-medium">{t.crew_name}</p>
+                  <p className="break-words text-xs text-muted-foreground">{t.task_name} · {Number(t.completed_percent)}% complete</p>
+                </div>
+                <p className="shrink-0 font-mono text-sm"><span className="font-semibold">{formatCurrency(taskTotal)}</span><span className="text-muted-foreground"> · {formatCurrency(taskPaid)} paid</span></p>
+              </li>;
+            })}
+          </ul>
+        </div>
+      </div>
     </div>
 
     <Dialog open={editing} onOpenChange={setEditing}>
