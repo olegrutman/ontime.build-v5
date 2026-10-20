@@ -28,3 +28,6 @@
 - [x] Resolve proposal parties from actual project relationships for all three billing directions
 - [x] Apply Classic Contract PDF with issuer branding and complete work-order descriptions
 - [x] Verify proposal creation and PDF download with real project data
+
+- [x] Let crews collapse the "Your budget & spending" card and remember the choice per project
+- [x] Verify collapse, remembered state, summary figures and phone layouts
