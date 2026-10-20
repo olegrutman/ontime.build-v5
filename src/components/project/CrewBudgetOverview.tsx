@@ -45,9 +45,15 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
   const startEditing = () => {
     setDraft(Object.fromEntries(CREW_BUDGET_GROUPS.map(g => [g.key, tracker.budget[g.key] ? String(tracker.budget[g.key]) : ''])));
     setDraft(v => ({ ...v, worker_labor: String(workerBudget), hired_labor: String(hiredBudget > 0 ? hiredBudget : taskSum || '') }));
+    setHiredTouched(hiredBudget > 0 && hiredBudget !== taskSum);
     setAssigning(false);
     setEditing(true);
   };
+  // While the budget modal is open, keep the hired-crew budget in step with the
+  // assigned task totals — unless the user typed their own number (a buffer).
+  useEffect(() => {
+    if (editing && !hiredTouched) setDraft(v => ({ ...v, hired_labor: taskSum ? String(taskSum) : '' }));
+  }, [editing, hiredTouched, taskSum]);
   const draftTotal = editGroups.reduce((s, g) => s + (Number(draft[g.key]) || 0), 0);
   const total = health(comparison.totalBudget, comparison.totalActual);
   const burn = comparison.totalBudget > 0 ? Math.round((comparison.totalActual / comparison.totalBudget) * 100) : null;
@@ -194,7 +200,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                 <Input id="crew-budget-hired_labor" className="h-11 pl-7 font-mono" type="number" inputMode="decimal" min="0" step="0.01" placeholder="0"
-                  value={draft.hired_labor ?? ''} onChange={e => setDraft({ ...draft, hired_labor: e.target.value })} />
+                  value={draft.hired_labor ?? ''} onChange={e => { setHiredTouched(true); setDraft({ ...draft, hired_labor: e.target.value }); }} />
               </div>
               {taskSum > 0 && <p className="text-xs text-muted-foreground">Tasks add up to <span className="font-mono font-medium">{formatCurrency(taskSum)}</span>{Number(draft.hired_labor) > taskSum ? ` — includes ${formatCurrency(Number(draft.hired_labor) - taskSum)} buffer` : ''}.</p>}
               {taskSum > Number(draft.hired_labor || 0) && <p role="alert" className="text-xs font-medium text-destructive">Assigned tasks exceed this budget by {formatCurrency(taskSum - Number(draft.hired_labor || 0))}.</p>}
