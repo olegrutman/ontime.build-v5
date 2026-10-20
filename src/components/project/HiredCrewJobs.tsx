@@ -26,8 +26,14 @@ export function HiredCrewJobs({tracker,projectId,date}:{tracker:Tracker;projectI
   const [amount,setAmount]=useState('');
   const [requestId,setRequestId]=useState(()=>crypto.randomUUID());
   const suggestions=useQuery({queryKey:['crew-setup-tasks',projectId],enabled:!!tracker.orgId,queryFn:async()=>{
-    const {data,error}=await supabase.from('project_setup_answers').select('field_key,value').eq('project_id',projectId);
+    const [{data,error},sov]=await Promise.all([
+      supabase.from('project_setup_answers').select('field_key,value').eq('project_id',projectId),
+      supabase.from('project_sov_items').select('item_name').eq('project_id',projectId).order('sort_order'),
+    ]);
     if(error) throw error;
+    if(sov.error) throw sov.error;
+    const persisted=[...new Set((sov.data??[]).map(s=>s.item_name).filter((s):s is string=>!!s))];
+    if(persisted.length) return persisted;
     const answers:Record<string,any>={};
     for(const row of data??[]) {let value=row.value; if(typeof value==='string'){try{value=JSON.parse(value);}catch{}} answers[row.field_key]=value;}
     const saved=answers.scope_selections_v2;
