@@ -46,13 +46,13 @@ export function HiredCrewTaskForm({ tracker, projectId, open, onOpenChange, inli
   const [quantity, setQuantity] = useState('');
   const [rate, setRate] = useState('');
   const suggestions = useSetupTaskSuggestions(projectId, open && !!tracker.orgId);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const save = async () => {
     try {
       await tracker.saveTask.mutateAsync({ crew_name: crew.trim(), task_name: task.trim(), pay_basis: basis, quantity: basis === 'fixed' ? 1 : Number(quantity), rate: Number(rate) });
       onOpenChange(false); setCrew(''); setTask(''); setQuantity(''); setRate('');
     } catch { /* Mutation displays error; keep input. */ }
   };
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); await save(); };
   const fields = <>
     <div><Label htmlFor="hired-crew-name">Crew / company name</Label><Input id="hired-crew-name" value={crew} onChange={e => setCrew(e.target.value)} required maxLength={100} /></div>
     <div><Label>Project setup task</Label><Select value={suggestions.data?.includes(task) ? task : 'custom'} onValueChange={v => setTask(v === 'custom' ? '' : v)}><SelectTrigger aria-label="Project setup task"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="custom">Custom task</SelectItem>{suggestions.data?.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>{suggestions.error && <p role="alert" className="text-xs text-destructive">Could not load setup tasks. You can enter a task below.</p>}</div>
