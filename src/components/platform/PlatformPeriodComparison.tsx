@@ -1,5 +1,5 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { C, KpiCard } from '@/components/shared/KpiCard';
+import { TrendingUp, TrendingDown, Minus, ChartNoAxesCombined } from 'lucide-react';
 import type { PeriodComparison } from '@/hooks/usePlatformMetrics';
 
 interface Props {
@@ -16,7 +16,7 @@ function DeltaIndicator({ current, previous }: { current: number; previous: numb
   if (current > previous) {
     const pct = previous > 0 ? Math.round(((current - previous) / previous) * 100) : 100;
     return (
-      <span className="flex items-center gap-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+      <span className="flex items-center gap-0.5 text-xs font-medium text-state-approved">
         <TrendingUp className="h-3.5 w-3.5" />
         +{pct}%
       </span>
@@ -36,21 +36,12 @@ function DeltaIndicator({ current, previous }: { current: number; previous: numb
 
 export function PlatformPeriodComparison({ comparisons }: Props) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-      {comparisons.map((c) => (
-        <Card key={c.label}>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground mb-1">{c.label}</p>
-            <div className="flex items-end justify-between gap-2">
-              <span className="text-xl font-bold">{formatValue(c.current, c.isCurrency)}</span>
-              <DeltaIndicator current={c.current} previous={c.previous} />
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              vs {formatValue(c.previous, c.isCurrency)} last month
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+      {comparisons.map((c, idx) => <KpiCard key={c.label} label={c.label} value={formatValue(c.current, c.isCurrency)}
+        sub={`vs ${formatValue(c.previous, c.isCurrency)} last month`} accent={C.blue} iconBg={C.blueBg}
+        icon={<ChartNoAxesCombined size={18} />} idx={idx} spark={<DeltaIndicator current={c.current} previous={c.previous} />}>
+        <div className="space-y-2 p-4 text-sm"><p>Current month: <span className="font-mono">{formatValue(c.current, c.isCurrency)}</span></p><p>Previous month: <span className="font-mono">{formatValue(c.previous, c.isCurrency)}</span></p><DeltaIndicator current={c.current} previous={c.previous} /></div>
+      </KpiCard>)}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { C, KpiCard } from '@/components/shared/KpiCard';
+import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlatformLayout } from '@/components/platform/PlatformLayout';
@@ -105,21 +107,10 @@ export default function PlatformDashboard() {
 
       {/* Tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {tiles.map((tile) => (
-          <Card
-            key={tile.label}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => navigate(tile.href)}
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{tile.label}</CardTitle>
-              <tile.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{tile.count.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-        ))}
+        {tiles.map((tile, idx) => <KpiCard key={tile.label} label={tile.label} value={tile.count.toLocaleString()}
+          sub={tile.label} icon={<tile.icon size={18} />} accent={C.blue} iconBg={C.blueBg} idx={idx}>
+          <div className="p-4"><Button variant="outline" onClick={() => navigate(tile.href)}>Open {tile.label}</Button></div>
+        </KpiCard>)}
       </div>
 
       {/* Growth Metrics */}
