@@ -3,6 +3,7 @@ import { differenceInDays } from 'date-fns';
 import { Invoice } from '@/types/invoice';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { supplierInvoiceDaysPastDue } from '@/lib/supplierMetrics';
 
 interface InvoiceMoneyBarProps {
   invoices: Invoice[];
@@ -27,8 +28,7 @@ export function useInvoiceMoney(invoices: Invoice[], isApprover: boolean, netDay
     const outstanding = openInvoices.reduce((s, i) => s + i.total_amount, 0);
 
     const overdueInvoices = openInvoices.filter(i => {
-      const ref = i.approved_at || i.submitted_at || i.created_at;
-      return differenceInDays(now, new Date(ref)) > netDays;
+      return supplierInvoiceDaysPastDue(i, now, netDays) > 0;
     });
     const overdue = overdueInvoices.reduce((s, i) => s + i.total_amount, 0);
 

@@ -189,7 +189,7 @@ export function POMoneyBar({
         <Tile
           label="Total committed"
           value={money(m.committedTotal)}
-          sub={`${m.committedCount} priced PO${m.committedCount === 1 ? '' : 's'}`}
+          sub={`${m.committedCount} ${isSupplier ? 'committed' : 'priced'} PO${m.committedCount === 1 ? '' : 's'}`}
         />
         <Tile
           label="Awaiting delivery"

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { poOrderedAmount, sumOrdered, sumBilled, sumReceived, sumEstimated, isOrderedPO, isDeliveredPO, isScheduledSupplierPO, isOpenSupplierPO, estimateItemAmount, realizedReturnCredit, supplierCreditExposure, supplierUnbilledAmount } from '@/lib/supplierMetrics';
+import { poOrderedAmount, sumOrdered, sumBilled, sumReceived, sumEstimated, isOrderedPO, isDeliveredPO, isScheduledSupplierPO, isOpenSupplierPO, estimateItemAmount, realizedReturnCredit, supplierCreditExposure, supplierUnbilledAmount, supplierInvoiceDaysPastDue } from '@/lib/supplierMetrics';
 
 describe('poOrderedAmount', () => {
   it('does not double-count sales tax when po_total is present (already tax-inclusive)', () => {
@@ -56,6 +56,12 @@ describe('supplier pipeline sums (live project 66ccdaeb)', () => {
 });
 
 describe('supplier audit guardrails', () => {
+  it('uses the same net 30 past-due convention and approval fallback across supplier screens', () => {
+    const now = new Date('2026-10-20T12:00:00Z');
+    expect(supplierInvoiceDaysPastDue({submitted_at:'2026-09-20T12:00:00Z'},now)).toBe(0);
+    expect(supplierInvoiceDaysPastDue({submitted_at:'2026-09-19T12:00:00Z'},now)).toBe(1);
+    expect(supplierInvoiceDaysPastDue({submitted_at:'2026-08-01T12:00:00Z',approved_at:'2026-10-01T12:00:00Z'},now)).toBe(0);
+  });
   it('preserves unbilled balance for partially invoiced deliveries', () => {
     expect(supplierUnbilledAmount({po_total:1000},100)).toBe(900);
     expect(supplierUnbilledAmount({po_total:1000},1200)).toBe(0);

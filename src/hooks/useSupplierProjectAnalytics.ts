@@ -1,4 +1,4 @@
-import { isOrderedPO, isDeliveredPO, isScheduledSupplierPO, isBilledInvoice, realizedReturnCredit, poOrderedAmount } from '@/lib/supplierMetrics';
+import { isOrderedPO, isDeliveredPO, isScheduledSupplierPO, isBilledInvoice, realizedReturnCredit, poOrderedAmount, supplierInvoiceDaysPastDue } from '@/lib/supplierMetrics';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -182,9 +182,7 @@ export function useSupplierProjectAnalytics({
         }
         if (!isBilledInvoice(inv.status)) return;
         // open invoice
-        const refDate = inv.submitted_at || inv.created_at;
-        if (!refDate) return;
-        const daysPast = Math.floor((now.getTime() - new Date(refDate).getTime()) / (1000 * 60 * 60 * 24));
+        const daysPast = supplierInvoiceDaysPastDue(inv, now);
         bucketAge(daysPast, inv.total_amount || 0, aging);
         if (daysPast > 0 && (oldestPastDueDays === null || daysPast > oldestPastDueDays)) {
           oldestPastDueDays = daysPast;

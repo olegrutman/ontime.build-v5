@@ -68,6 +68,16 @@ export function supplierUnbilledAmount(po: Parameters<typeof poOrderedAmount>[0]
   return Math.max(0, poOrderedAmount(po) - billedAmount);
 }
 
+/** Shared operational net-days convention; not a statutory lien deadline. */
+export function supplierInvoiceDaysPastDue(invoice: {
+  approved_at?: string | null; submitted_at?: string | null; created_at?: string | null;
+}, now = new Date(), netDays = 30): number {
+  const date = invoice.approved_at || invoice.submitted_at || invoice.created_at;
+  if (!date) return 0;
+  const elapsed = Math.floor((now.getTime() - new Date(date).getTime()) / 86400000);
+  return Number.isFinite(elapsed) ? Math.max(0, elapsed - netDays) : 0;
+}
+
 /** Never let advance invoices for one PO offset unapproved deliveries on another. */
 export function supplierCreditExposure(
   pos: Array<{ id: string; status?: string | null; po_total?: number | null; po_subtotal_total?: number | null; sales_tax_percent?: number | null }>,

@@ -160,7 +160,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, error, est
           iconBg={C.redBg}
           label="PROJECT A/R AGING"
           value={fmt(totalOpenAR)}
-          sub={a.oldestPastDueDays !== null ? `Oldest invoice: ${a.oldestPastDueDays}d · Avg DSO: ${a.avgDsoDays ?? '—'}d` : `Avg DSO: ${a.avgDsoDays ?? '—'}d`}
+          sub={a.oldestPastDueDays !== null ? `Oldest overdue: ${a.oldestPastDueDays}d past net 30 · Avg DSO: ${a.avgDsoDays ?? '—'}d` : `Avg DSO: ${a.avgDsoDays ?? '—'}d`}
           pills={[
             { type: totalOpenAR > 0 ? 'pa' : 'pg', text: totalOpenAR > 0 ? 'Awaiting payment' : 'No open receivables' },
           ]}
@@ -170,7 +170,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, error, est
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Bucket', 'Open A/R']} />
               <tbody>
-                <TRow cells={[<TdN>0 days since submission</TdN>, <TdM>{fmt(a.aging.current)}</TdM>]} />
+                <TRow cells={[<TdN>Current (within net 30)</TdN>, <TdM>{fmt(a.aging.current)}</TdM>]} />
                 <TRow cells={[<TdN>1–30 days</TdN>, <TdM>{fmt(a.aging.d1_30)}</TdM>]} />
                 <TRow cells={[<TdN>31–60 days</TdN>, <TdM>{fmt(a.aging.d31_60)}</TdM>]} />
                 <TRow cells={[<TdN>61–90 days</TdN>, <TdM>{fmt(a.aging.d61_90)}</TdM>]} />
@@ -180,7 +180,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, error, est
             </table>
             {a.firstDeliveryAt && (
               <div style={{ marginTop: 10, padding: 8, background: C.surface2, borderRadius: 6, fontSize: '0.7rem', color: C.muted }}>
-                First delivery: <strong style={{ color: C.ink }}>{fmtDate(a.firstDeliveryAt)}</strong> · Invoice ages measured from submission, not contractual due dates
+                First delivery: <strong style={{ color: C.ink }}>{fmtDate(a.firstDeliveryAt)}</strong> · Buckets show days past net 30 from approval, or submission if not yet approved
               </div>
             )}
           </div>
@@ -243,7 +243,7 @@ export function SupplierProjectAnalyticsSection({ analytics, loading, error, est
                 </tbody>
               </table>
             ) : (
-              <div style={{ padding: 16, textAlign: 'center', color: C.green, fontSize: '0.78rem', fontWeight: 600 }}>No returns on this project ✓</div>
+              <div className="p-4 text-center text-sm text-muted-foreground">No finalized return credits{a.openCreditMemos > 0 ? ` · ${a.openCreditMemos} awaiting completion` : ''}</div>
             )}
           </div>
         </KpiCard>
