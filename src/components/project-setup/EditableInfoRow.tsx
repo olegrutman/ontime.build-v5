@@ -95,7 +95,7 @@ export function EditableInfoRow({
     if (type === 'select' && options) {
       return (
         <Select value={String(draft ?? '')} onValueChange={(v) => setDraft(v)}>
-          <SelectTrigger className="h-8 text-xs w-[180px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
+          <SelectTrigger className="h-8 text-xs w-full min-w-0 sm:w-[180px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
           <SelectContent>
             {options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
           </SelectContent>
@@ -114,7 +114,7 @@ export function EditableInfoRow({
           if (e.key === 'Escape') cancel();
         }}
         placeholder={placeholder}
-        className="h-8 text-xs w-[180px]"
+        className="h-8 text-xs w-full min-w-0 sm:w-[180px]"
       />
     );
   };
@@ -123,17 +123,17 @@ export function EditableInfoRow({
 
   return (
     <div className={cn(
-      'group flex items-center justify-between px-3 py-2 gap-3 transition-colors',
+      'group flex flex-wrap sm:flex-nowrap items-center justify-between px-3 py-2 gap-2 sm:gap-3 transition-colors',
       isEditable && !editing && 'hover:bg-muted/40 cursor-pointer'
     )}
       onClick={() => !editing && startEdit()}
     >
-      <span className="text-muted-foreground text-sm flex items-center gap-1.5 min-w-0 shrink-0">
-        {label}
+      <span className="text-muted-foreground text-sm flex items-center gap-1.5 min-w-0 max-w-full sm:max-w-[55%]">
+        <span className="break-words">{label}</span>
         {locked && <span title={lockReason}><Lock className="w-3 h-3 opacity-60" /></span>}
       </span>
       {editing ? (
-        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex w-full sm:w-auto min-w-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {renderEditor()}
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={commit} disabled={saving}>
             <Check className="w-3.5 h-3.5" />
@@ -143,9 +143,9 @@ export function EditableInfoRow({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 max-w-full ml-auto">
           <span className={cn(
-            'font-medium text-foreground text-sm text-right truncate',
+            'font-medium text-foreground text-sm text-right break-words',
             mono && 'font-mono',
             valueClassName,
           )}>
