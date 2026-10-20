@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import { EMPTY_CREW_BUDGET, type CrewBudget } from '@/lib/crewTracker';
 
 export type CrewWorker = Tables<'crew_workers'>;
 export type CrewSpending = Tables<'actual_cost_entries'>;
@@ -20,6 +21,18 @@ export function useCrewTracker(projectId: string) {
     },
   });
   const orgId = access.data;
+  const budget = useQuery({ queryKey: ['crew-budget',orgId,projectId], enabled: !!orgId, queryFn: async () => {
+    if(!orgId) return null;
+    const {data,error} = await supabase.from('crew_project_budgets').select('*').eq('organization_id',orgId).eq('project_id',projectId).maybeSingle();
+    if(error) throw error;
+    return data;
+  }});
+  const saveBudget = useMutation({mutationFn:async(values:CrewBudget)=>{
+    if(!orgId) throw new Error('Crew project access required');
+    if(Object.values(values).some(v=>!Number.isFinite(v)||v<0)) throw new Error('Budget amounts must be zero or greater');
+    const {error}=await supabase.from('crew_project_budgets').upsert({...values,organization_id:orgId,project_id:projectId},{onConflict:'project_id,organization_id'});
+    if(error) throw error;
+  },onSuccess:()=>{client.invalidateQueries({queryKey:['crew-budget']});toast.success('Budget saved');},onError:e=>toast.error(e.message)});
   const workers = useQuery({ queryKey: ['crew-workers',orgId], enabled: !!orgId, queryFn: async () => {
     if(!orgId) return [];
     const {data,error} = await supabase.from('crew_workers').select('*').eq('organization_id',orgId).order('name');
@@ -61,5 +74,5 @@ export function useCrewTracker(projectId: string) {
     const {error}=await supabase.from('actual_cost_entries').update(quantity !== undefined ? {tracker_quantity:quantity} : {lump_amount:amount}).eq('id',id).eq('organization_id',orgId);
     if(error) throw error;
   },onSuccess:()=>{refresh();toast.success('Entry updated');},onError:e=>toast.error(e.message)});
-  return {orgId,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],loading:access.isLoading||workers.isLoading||costs.isLoading,error:access.error||workers.error||costs.error,saveWorker,saveCosts,deleteCost,editCost};
+  return {orgId,workers:workers.data??[],entries:costs.data??[],orders:orders.data??[],budget:budget.data??EMPTY_CREW_BUDGET,hasBudget:!!budget.data,saveBudget,loading:access.isLoading||workers.isLoading||costs.isLoading||budget.isLoading,error:access.error||workers.error||costs.error||budget.error,saveWorker,saveCosts,deleteCost,editCost};
 }

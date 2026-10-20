@@ -1,6 +1,3 @@
-import { useState, type ReactNode } from 'react';
-import { Pencil, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +6,9 @@ import { C, fontLabel, fmt, WarnItem, type PillType } from '@/components/shared/
 import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
 
 import { QuickActionsBar } from '@/components/project/QuickActionsBar';
+import { useCrewTracker } from '@/hooks/useCrewTracker';
+import { CrewBudgetOverview } from '@/components/project/CrewBudgetOverview';
+import { crewBudgetComparison, withCrewSpending } from '@/lib/crewTracker';
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -33,6 +33,9 @@ const pctTxt = (p: number | null) => (p === null ? NOT_SET : `${p}%`);
 export function FCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate, isTM = false }: Props) {
   const { userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const tracker = useCrewTracker(projectId);
+  const spending = crewBudgetComparison(tracker.entries, tracker.budget);
+  const crewLedger = withCrewSpending(financials.ledger, spending.totalActual, spending.forecast);
 
   /* ─── The FC's own contract row — the ONLY source of this crew's money ───
      Contracts are stored biller → payer, so a Crew row has the crew as
@@ -81,28 +84,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const baseContractValue = contractValue !== null ? Math.max(0, contractValue - coApprovedPortion) : null;
   const retainagePct: number | null =
     typeof myContract?.retainage_percent === 'number' ? Number(myContract.retainage_percent) : null;
-  const retainageAmount = hasContractValue && retainagePct !== null ? (contractValue! * retainagePct) / 100 : null;
-
-  const laborBudget = (typeof myContract?.labor_budget === 'number' ? Number(myContract.labor_budget) : financials.laborBudget) || 0;
-
-  // Editable internal budget (the crew's own cost budget — theirs to set)
-  const [draftBudget, setDraftBudget] = useState(laborBudget);
-  const [editingBudget, setEditingBudget] = useState(false);
-  const [savingBudget, setSavingBudget] = useState(false);
-
-  const saveBudget = async () => {
-    if (!myContract?.id) { toast.error('No contract found'); return; }
-    setSavingBudget(true);
-    const ok = await financials.updateLaborBudget(myContract.id, draftBudget);
-    setSavingBudget(false);
-    if (ok) {
-      toast.success('Internal budget saved');
-      financials.refetch();
-      setEditingBudget(false);
-    } else {
-      toast.error('Failed to save budget');
-    }
-  };
+  const retainageAmount = hasContractValue && retainagePct !== null && contractValue !== null ? (contractValue * retainagePct) / 100 : null;
 
   const tcName = (() => {
     const c = myContract || financials.downstreamContract || financials.upstreamContract;
@@ -205,8 +187,8 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
   const totalHours = fcLaborData.reduce((s: number, e: any) => s + (e.hours || 0), 0);
 
   /* ─── Derived money — every figure traces to project_contracts ─── */
-  const totalPending = hasContract ? Math.max(0, contractValue! - totalPaid) : null;
-  const remainingToEarn = hasContract ? Math.max(0, contractValue! - totalInvoiced) : null;
+  const totalPending = contractValue !== null ? Math.max(0, contractValue - totalPaid) : null;
+  const remainingToEarn = contractValue !== null ? Math.max(0, contractValue - totalInvoiced) : null;
   const collectedPct = pct(totalPaid, hasContract ? contractValue : null);
 
   // Work progress: dollars when a contract exists, scope-count progress in T&M
@@ -266,13 +248,17 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
 
       {contractNotice}
 
+      <CrewBudgetOverview tracker={tracker} onNavigate={onNavigate} />
+
       {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
         Financials
       </div>
       <CanonicalKpiGrid
-        ledger={financials.ledger}
+        ledger={crewLedger}
         extras={{
+          crewForecastCost: spending.forecast,
+          crewActualSpending: spending.totalActual,
           billsTo: tcName,
           paidParties: 'crew costs',
           approvedCOCount: approvedCOs.length,
