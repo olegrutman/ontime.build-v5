@@ -178,7 +178,7 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <span className="font-mono text-sm font-semibold">{formatCurrency(taskTotal)}</span>
-                    <Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label={`Remove task ${t.task_name}`} onClick={() => tracker.saveTask.mutate({ id: t.id, crew_name: t.crew_name, task_name: t.task_name, pay_basis: t.pay_basis, quantity: Number(t.quantity), rate: Number(t.rate), active: false })}><Trash2 className="h-4 w-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-11 w-11" aria-label={`Remove task ${t.task_name}`} onClick={() => tracker.deleteTask.mutate(t.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </li>;
               })}
@@ -186,10 +186,6 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
             {assigning
               ? <div className="rounded-lg border p-3">
                   <HiredCrewTaskForm tracker={tracker} projectId={tracker.projectId} open={assigning} onOpenChange={setAssigning} inline />
-                  <div className="mt-3 flex gap-2">
-                    <Button type="button" size="sm" disabled={tracker.saveTask.isPending} onClick={() => (document.getElementById('hired-crew-name')?.closest('div')?.parentElement?.querySelector('form') as HTMLFormElement | null)?.requestSubmit()}>Add task</Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setAssigning(false)}>Done</Button>
-                  </div>
                 </div>
               : <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => setAssigning(true)}><Plus className="h-4 w-4 shrink-0" />Assign crew task</Button>}
             <div className="space-y-1">
