@@ -2835,6 +2835,51 @@ export type Database = {
           },
         ]
       }
+      crew_project_budgets: {
+        Row: {
+          id: string
+          labor: number
+          materials: number
+          organization_id: string
+          other: number
+          project_id: string
+          tools_equipment: number
+        }
+        Insert: {
+          id?: string
+          labor?: number
+          materials?: number
+          organization_id: string
+          other?: number
+          project_id: string
+          tools_equipment?: number
+        }
+        Update: {
+          id?: string
+          labor?: number
+          materials?: number
+          organization_id?: string
+          other?: number
+          project_id?: string
+          tools_equipment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_project_budgets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_project_budgets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_workers: {
         Row: {
           active: boolean

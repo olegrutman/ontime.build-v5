@@ -162,6 +162,13 @@
       "when": 1792463174910,
       "tag": "0022_qualify_private_receipt_object_paths",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792463641687,
+      "tag": "0023_crew_project_budgets",
+      "breakpoints": true
     }
   ]
 }
