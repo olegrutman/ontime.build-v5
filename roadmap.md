@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Tailor Project Info contract values to each company and enforce creator-only editing
+- [ ] Verify contract privacy, creator locks, and Project Info on phone widths
+
 - [x] Separate daily workers and hired job crews, with project task picking and progress draws
 - [x] Split private labor budget into worker payroll and hired crews without double counting
 - [x] Verify progress limits, privacy, saved draws and phone layouts
