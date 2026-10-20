@@ -12,6 +12,7 @@ import { Check, ChevronLeft, ChevronRight, Loader2, X, Info, Building2, MapPin, 
 import { AppLayout } from '@/components/layout';
 import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { ProjectSidebar } from '@/components/project/ProjectSidebar';
+import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { cn } from '@/lib/utils';
 import { isInfoCreator, ownInfoContracts, infoContractValue, canEditInfoContract } from '@/lib/projectInfoAccess';
 import { OrgType } from '@/types/organization';
@@ -644,7 +645,7 @@ export default function FinishProjectSetup() {
     return (
       <ProjectShell projectName={p.name || 'Project'} projectId={projectId ?? ''} projectStatus={p.status || 'active'}>
         <div className="flex flex-1 overflow-hidden lg:pr-3 lg:pt-3">
-          <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} />
+          <ProjectSidebar isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} isFC={creatorOrgType === 'FC'} />
           <main className="flex-1 min-w-0 overflow-auto lg:ml-[200px] xl:ml-[220px]">
             <div className="max-w-6xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-36 lg:pb-12 space-y-4">
 
@@ -762,6 +763,7 @@ export default function FinishProjectSetup() {
             </div>
           </main>
         </div>
+        <ProjectBottomNav isSupplier={creatorOrgType === 'SUPPLIER'} isTM={p.contract_mode === 'tm'} isFC={creatorOrgType === 'FC'} />
       </ProjectShell>
     );
   }
