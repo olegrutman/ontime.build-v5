@@ -174,6 +174,17 @@ export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnTyp
         }}>
           <fieldset className="space-y-3 rounded-xl border p-3">
             <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">1 · Hired crew tasks</legend>
+            <div className="space-y-2 rounded-lg bg-muted/40 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your hired crews</p>
+              <div className="flex flex-wrap gap-1.5">
+                {tracker.crews.map(c => <span key={c.id} className="inline-flex max-w-full items-center gap-1 rounded-full border bg-card py-1 pl-3 pr-1 text-sm"><span className="min-w-0 break-words">{c.name}</span><button type="button" aria-label={`Remove ${c.name} from list`} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-muted" onClick={() => tracker.archiveCrew.mutate(c.id)}><Trash2 className="h-3 w-3" /></button></span>)}
+                {!tracker.crews.length && <p className="text-xs text-muted-foreground">Add the crews you hire once — then just pick them when assigning tasks.</p>}
+              </div>
+              <div className="flex gap-2">
+                <Input aria-label="New hired crew name" placeholder="Crew or company name" maxLength={100} value={newCrew} onChange={e => setNewCrew(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (newCrew.trim()) tracker.saveCrew.mutate({ name: newCrew }, { onSuccess: () => setNewCrew('') }); } }} className="h-11 min-w-0" />
+                <Button type="button" variant="outline" className="h-11 shrink-0" disabled={!newCrew.trim() || tracker.saveCrew.isPending} onClick={() => tracker.saveCrew.mutate({ name: newCrew }, { onSuccess: () => setNewCrew('') })}><Plus className="h-4 w-4" />Add</Button>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">Assign the piece-rate work first — the task totals build your hired-crew budget for you.</p>
             <ul className="space-y-2">
               {tracker.tasks.map(t => {
