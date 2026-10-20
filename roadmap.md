@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Simplify Crew Cost KPI presentation without changing financial calculations
+- [ ] Verify the cost breakdown and phone layouts against live project data
+
 - [x] Align Project Info colors and headings with operational pages and add phone exit navigation
 - [x] Verify Project Info navigation and layout at desktop and phone widths
 
