@@ -219,6 +219,7 @@ export type Database = {
           project_id: string | null
           total_amount: number
           tracker_category: string | null
+          tracker_draw_request_id: string | null
           tracker_job_task_id: string | null
           tracker_pay_basis: string | null
           tracker_quantity: number | null
@@ -241,6 +242,7 @@ export type Database = {
           project_id?: string | null
           total_amount?: number
           tracker_category?: string | null
+          tracker_draw_request_id?: string | null
           tracker_job_task_id?: string | null
           tracker_pay_basis?: string | null
           tracker_quantity?: number | null
@@ -263,6 +265,7 @@ export type Database = {
           project_id?: string | null
           total_amount?: number
           tracker_category?: string | null
+          tracker_draw_request_id?: string | null
           tracker_job_task_id?: string | null
           tracker_pay_basis?: string | null
           tracker_quantity?: number | null
@@ -9556,6 +9559,16 @@ export type Database = {
           p_amount: number
           p_date: string
           p_percent: number
+          p_task_id: string
+        }
+        Returns: string
+      }
+      record_crew_job_draw_once: {
+        Args: {
+          p_amount: number
+          p_date: string
+          p_percent: number
+          p_request_id: string
           p_task_id: string
         }
         Returns: string

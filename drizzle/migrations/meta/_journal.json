@@ -183,6 +183,13 @@
       "when": 1792466770684,
       "tag": "0025_crew_job_tasks_and_progress_draws",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792466898633,
+      "tag": "0026_crew_draw_retry_protection",
+      "breakpoints": true
     }
   ]
 }
