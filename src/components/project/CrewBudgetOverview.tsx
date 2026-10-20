@@ -30,6 +30,7 @@ const HEALTH_BAR: Record<Health, string> = { none: 'bg-muted-foreground', health
 export function CrewBudgetOverview({ tracker, onNavigate }: { tracker: ReturnType<typeof useCrewTracker>; onNavigate: (tab: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [newCrew, setNewCrew] = useState('');
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [hiredTouched, setHiredTouched] = useState(false);
   const comparison = crewBudgetComparison(tracker.entries, tracker.budget);
