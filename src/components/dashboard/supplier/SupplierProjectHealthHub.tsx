@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Truck } from 'lucide-react';
 import { C, fontVal, fontLabel, fmt, Pill, type PillType } from '@/components/shared/KpiCard';
@@ -69,104 +69,104 @@ export function SupplierProjectHealthHub({ rows, deliveries }: { rows: HubRow[];
   const shown = active.filter(tests[filter]);
   const tot = shown.reduce((s, r) => ({ e: s.e + r.estimate, o: s.o + r.ordered, b: s.b + r.billed, ar: s.ar + (r.billed - r.received) }), { e: 0, o: 0, b: 0, ar: 0 });
 
-  const th: React.CSSProperties = { fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, fontWeight: 700, padding: '9px 12px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: `1px solid ${C.border}` };
-  const td: React.CSSProperties = { padding: '11px 12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'middle' };
-  const num: React.CSSProperties = { ...td, ...fontVal, fontSize: '0.8rem', fontWeight: 700, color: C.ink, textAlign: 'right', whiteSpace: 'nowrap' };
+  const mono = "font-mono";
+  const accent = (r: HubRow) => (r.risk === 'Over Budget' ? C.red : r.risk === 'Watch' ? C.amber : C.green);
+  const cols = 'minmax(220px,2.2fr) 110px minmax(90px,1fr) minmax(130px,1.2fr) minmax(110px,1fr) minmax(150px,1.2fr)';
+  const head: React.CSSProperties = { fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, fontWeight: 700 };
 
   return (
     <div style={{ background: C.surface, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, padding: '18px 20px 14px' }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: C.ink }}>Project health &amp; actions</div>
-          <div style={{ fontSize: '0.7rem', color: C.faint, marginTop: 2 }}>Every active project, its money position and what to do next</div>
+          <div className="font-heading" style={{ fontSize: '1.35rem', fontWeight: 700, color: C.ink, letterSpacing: '0.2px' }}>Project health &amp; actions</div>
+          <div style={{ fontSize: '0.75rem', color: C.muted, marginTop: 2 }}>Where each job stands and what to do next</div>
         </div>
-        <button onClick={() => navigate('/projects/archive')} style={{ fontSize: '0.68rem', fontWeight: 700, color: C.amber, background: 'none', border: 'none', cursor: 'pointer' }}>View archive →</button>
+        <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>
+          {[['Estimated', tot.e, C.ink], ['Ordered', tot.o, C.ink], ['Billed', tot.b, C.ink], ['Open AR', tot.ar, tot.ar > 0 ? C.amberD : C.green]].map(([l, v, c]) => (
+            <div key={l as string} style={{ textAlign: 'right' }}>
+              <div style={head}>{l as string}</div>
+              <div className={mono} style={{ fontSize: '1.05rem', fontWeight: 600, color: c as string, marginTop: 2 }}>{fmt(v as number)}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, padding: '10px 16px', overflowX: 'auto', borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ display: 'flex', gap: 6, padding: '0 20px 14px', overflowX: 'auto', borderBottom: `1px solid ${C.border}` }}>
         {tabs.map(t => {
           const n = active.filter(tests[t.id]).length;
           const on = filter === t.id;
           return (
             <button key={t.id} onClick={() => { setFilter(t.id); setOpen(null); }}
-              style={{ flexShrink: 0, fontSize: '0.7rem', fontWeight: 700, padding: '6px 11px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${on ? C.ink : C.border}`, background: on ? C.ink : C.surface, color: on ? C.surface : C.muted, whiteSpace: 'nowrap' }}>
-              {t.label} <span style={{ opacity: 0.7, marginLeft: 3 }}>{n}</span>
+              style={{ flexShrink: 0, fontSize: '0.74rem', fontWeight: 600, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${on ? C.ink : C.border}`, background: on ? C.ink : C.surface, color: on ? C.surface : C.ink, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              {t.label}
+              <span style={{ fontSize: '0.66rem', fontWeight: 700, minWidth: 18, padding: '1px 6px', borderRadius: 999, background: on ? 'rgba(255,255,255,0.18)' : C.bg, color: on ? C.surface : C.muted }}>{n}</span>
             </button>
           );
         })}
       </div>
 
       {shown.length === 0 ? (
-        <div style={{ padding: '26px 16px', textAlign: 'center', color: C.muted, fontSize: '0.8rem' }}>
+        <div style={{ padding: '32px 16px', textAlign: 'center', color: C.muted, fontSize: '0.82rem' }}>
           {active.length === 0 ? 'No active projects yet' : 'Nothing in this view — all clear.'}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
-            <thead>
-              <tr>
-                <th style={th}>Project &amp; builder</th>
-                <th style={th}>Health</th>
-                <th style={{ ...th, textAlign: 'right' }}>Estimate</th>
-                <th style={{ ...th, textAlign: 'right' }}>Ordered</th>
-                <th style={{ ...th, textAlign: 'right' }}>Billed / AR</th>
-                <th style={th}>Next action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map(r => {
-                const acts = actionsFor(r);
-                const isOpen = open === r.projectId;
-                const pct = r.estimate > 0 ? Math.round((r.ordered / r.estimate) * 100) : null;
-                const ar = r.billed - r.received;
-                const next = deliveries.filter(d => d.projectId === r.projectId).sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
-                return (
-                  <Fragment key={r.projectId}>
-                    <tr onClick={() => setOpen(isOpen ? null : r.projectId)} className="hover:bg-muted/40 transition-colors" style={{ cursor: 'pointer', background: isOpen ? C.bg : undefined }}>
-                      <td style={td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {isOpen ? <ChevronDown size={14} color={C.muted} style={{ flexShrink: 0 }} /> : <ChevronRight size={14} color={C.muted} style={{ flexShrink: 0 }} />}
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink }}>{r.name}</div>
-                            <div style={{ fontSize: '0.66rem', color: C.muted }}>{r.builder} · {r.phase}</div>
+          <div style={{ minWidth: 860 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 16, padding: '10px 20px 10px 24px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+              <div style={head}>Project</div><div style={head}>Health</div>
+              <div style={{ ...head, textAlign: 'right' }}>Estimate</div><div style={{ ...head, textAlign: 'right' }}>Ordered</div>
+              <div style={{ ...head, textAlign: 'right' }}>Billed</div><div style={head}>Next step</div>
+            </div>
+            {shown.map(r => {
+              const acts = actionsFor(r);
+              const isOpen = open === r.projectId;
+              const pct = r.estimate > 0 ? Math.round((r.ordered / r.estimate) * 100) : null;
+              const ar = r.billed - r.received;
+              const next = deliveries.filter(d => d.projectId === r.projectId).sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate));
+              return (
+                <div key={r.projectId} style={{ borderBottom: `1px solid ${C.border}`, boxShadow: `inset 3px 0 0 ${accent(r)}` }}>
+                  <div onClick={() => setOpen(isOpen ? null : r.projectId)} className="hover:bg-muted/40 transition-colors"
+                    style={{ display: 'grid', gridTemplateColumns: cols, gap: 16, alignItems: 'center', padding: '14px 20px 14px 24px', cursor: 'pointer', background: isOpen ? C.bg : undefined }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      {isOpen ? <ChevronDown size={16} color={C.muted} style={{ flexShrink: 0 }} /> : <ChevronRight size={16} color={C.muted} style={{ flexShrink: 0 }} />}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                        <div style={{ fontSize: '0.7rem', color: C.muted, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.builder} · {r.phase}</div>
+                      </div>
+                    </div>
+                    <div><Pill type={pillFor(r)}>{r.risk}</Pill></div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className={mono} style={{ fontSize: '0.86rem', fontWeight: 600, color: r.estimate > 0 ? C.ink : C.faint }}>{r.estimate > 0 ? fmt(r.estimate) : '—'}</div>
+                      {r.pendingEstimate > 0 && <div style={{ fontSize: '0.66rem', color: C.blue, fontWeight: 600, marginTop: 2 }}>+{fmt(r.pendingEstimate)} pending</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className={mono} style={{ fontSize: '0.86rem', fontWeight: 600, color: r.ordered > 0 ? C.ink : C.faint }}>{r.ordered > 0 ? fmt(r.ordered) : '—'}</div>
+                      {pct !== null && r.ordered > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', marginTop: 5 }}>
+                          <div style={{ width: 64, height: 5, borderRadius: 3, background: C.border, overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: pct > 100 ? C.red : C.green }} />
                           </div>
+                          <span className={mono} style={{ fontSize: '0.66rem', color: pct > 100 ? C.red : C.muted, minWidth: 30, textAlign: 'right' }}>{pct}%</span>
                         </div>
-                      </td>
-                      <td style={td}><Pill type={pillFor(r)}>{r.risk}</Pill></td>
-                      <td style={num}>
-                        {r.estimate > 0 ? fmt(r.estimate) : '—'}
-                        {r.pendingEstimate > 0 && <div style={{ fontSize: '0.6rem', color: C.blue, fontWeight: 600 }}>+{fmt(r.pendingEstimate)} pending</div>}
-                      </td>
-                      <td style={num}>
-                        {r.ordered > 0 ? fmt(r.ordered) : '—'}
-                        {pct !== null && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', marginTop: 3 }}>
-                            <div style={{ width: 54, height: 4, borderRadius: 3, background: C.border, overflow: 'hidden' }}>
-                              <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: pct > 100 ? C.red : C.green }} />
-                            </div>
-                            <span style={{ fontSize: '0.6rem', color: pct > 100 ? C.red : C.muted }}>{pct}%</span>
-                          </div>
-                        )}
-                      </td>
-                      <td style={num}>
-                        {r.billed > 0 ? fmt(r.billed) : '—'}
-                        {ar > 0 && <div style={{ fontSize: '0.6rem', fontWeight: 600, color: (r.daysSinceLastPayment ?? 0) > 30 ? C.red : C.amberD }}>{fmt(ar)} open{r.daysSinceLastPayment !== null ? ` · ${r.daysSinceLastPayment}d` : ''}</div>}
-                      </td>
-                      <td style={td}>
-                        {acts.length === 0 ? (
-                          <span style={{ fontSize: '0.7rem', color: C.muted }}>Nothing pending</span>
-                        ) : (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '3px 8px', borderRadius: 7, background: TONE[acts[0].tone].bg, color: TONE[acts[0].tone].fg, whiteSpace: 'nowrap' }}>{acts[0].cta}</span>
-                            {acts.length > 1 && <span style={{ fontSize: '0.62rem', color: C.muted }}>+{acts.length - 1}</span>}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                    {isOpen && (
-                      <tr>
-                        <td colSpan={6} style={{ padding: 0, borderBottom: `1px solid ${C.border}`, background: C.bg }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, padding: 14 }}>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className={mono} style={{ fontSize: '0.86rem', fontWeight: 600, color: r.billed > 0 ? C.ink : C.faint }}>{r.billed > 0 ? fmt(r.billed) : '—'}</div>
+                      {ar > 0 && <div style={{ fontSize: '0.66rem', fontWeight: 600, marginTop: 2, color: (r.daysSinceLastPayment ?? 0) > 30 ? C.red : C.amberD }}>{fmt(ar)} open{r.daysSinceLastPayment !== null ? ` · ${r.daysSinceLastPayment}d` : ''}</div>}
+                    </div>
+                    <div>
+                      {acts.length === 0 ? (
+                        <span style={{ fontSize: '0.74rem', color: C.green, fontWeight: 600 }}>✓ All clear</span>
+                      ) : (
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 700, padding: '5px 10px', borderRadius: 8, background: TONE[acts[0].tone].bg, color: TONE[acts[0].tone].fg, whiteSpace: 'nowrap' }}>{acts[0].cta} →</span>
+                          {acts.length > 1 && <div style={{ fontSize: '0.64rem', color: C.muted, marginTop: 3 }}>+{acts.length - 1} more</div>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, padding: '4px 20px 18px 50px', background: C.bg }}>
                             <Panel title="Material packs">
                               {r.packOverDetails.length === 0 ? (
                                 <Empty>{r.estimate > 0 ? 'All packs within estimate' : 'No approved estimate yet'}</Empty>
@@ -207,23 +207,12 @@ export function SupplierProjectHealthHub({ rows, deliveries }: { rows: HubRow[];
                               })}
                               <button onClick={() => navigate(`/project/${r.projectId}`)} style={{ marginTop: 4, fontSize: '0.68rem', fontWeight: 700, color: C.amber, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Open project →</button>
                             </Panel>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-              <tr style={{ background: C.bg }}>
-                <td style={{ ...td, fontSize: '0.7rem', fontWeight: 800, color: C.ink, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total · {shown.length}</td>
-                <td style={td} />
-                <td style={num}>{fmt(tot.e)}</td>
-                <td style={num}>{fmt(tot.o)}</td>
-                <td style={num}>{fmt(tot.b)}{tot.ar > 0 && <div style={{ fontSize: '0.6rem', color: C.amberD }}>{fmt(tot.ar)} open</div>}</td>
-                <td style={td} />
-              </tr>
-            </tbody>
-          </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
