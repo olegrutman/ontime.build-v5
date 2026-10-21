@@ -77,7 +77,10 @@ export function SupplierDashboardView({
   onSetSoleMember, onSetPartOfTeam, onRefresh,
 }: SupplierDashboardViewProps) {
   const navigate = useNavigate();
-  const { projectFinancials, upcomingDeliveries, acceptedProjects, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
+  const { user } = useAuth();
+  const { members: team, loaded: teamLoaded } = useSupplierTeam(orgId);
+  const [teamSel, setTeamSel] = useState<string | null>(null);
+  const { projectFinancials, upcomingDeliveries: allDeliveries, acceptedProjects, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
 
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
