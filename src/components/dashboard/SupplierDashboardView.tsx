@@ -13,7 +13,7 @@ import { KpiGrid } from '@/components/shared/KpiGrid';
 import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCashPipeline';
 import { SupplierProjectSnapshot } from '@/components/dashboard/supplier/SupplierProjectSnapshot';
 import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
-import { SupplierNeedsAction } from '@/components/dashboard/supplier/SupplierNeedsAction';
+import { SupplierProjectHealthHub } from '@/components/dashboard/supplier/SupplierProjectHealthHub';
 import { SupplierProjectSwitcher } from '@/components/dashboard/supplier/SupplierProjectSwitcher';
 
 
@@ -75,7 +75,7 @@ export function SupplierDashboardView({
   onSetSoleMember, onSetPartOfTeam, onRefresh,
 }: SupplierDashboardViewProps) {
   const navigate = useNavigate();
-  const { projectFinancials, upcomingDeliveries, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
+  const { projectFinancials, upcomingDeliveries, acceptedProjects, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
 
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
@@ -212,70 +212,11 @@ export function SupplierDashboardView({
           })}
         />
 
-        {/* ─── My Projects — promoted hero entry point ─── */}
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontWeight: 700, fontSize: '0.88rem', color: C.ink }}>🏗️ My Projects</span>
-            <button
-              onClick={() => navigate('/projects/archive')}
-              style={{ fontSize: '0.68rem', fontWeight: 700, color: C.amber, background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              View archive →
-            </button>
-          </div>
-          {activeProjects.length === 0 ? (
-            <div style={{ padding: '24px 16px', textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>
-              No active projects yet
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10, padding: 12 }}>
-              {activeProjects.map(proj => {
-                const f = dp.find(d => d.projectId === proj.id);
-                const riskPill: PillType = f?.risk === 'Over Budget' ? 'pr' : f?.risk === 'Watch' ? 'pa' : 'pg';
-                const needCount = attentionItems.filter(a => a.projectId === proj.id).length;
-                return (
-                  <button
-                    key={proj.id}
-                    onClick={() => goToProject(proj.id)}
-                    style={{ textAlign: 'left', background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '12px 14px', cursor: 'pointer', ...fontLabel }}
-                    className="hover:border-[#F5A623] hover:shadow-sm transition-all"
-                  >
-                    <div style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {proj.name}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                      <Pill type={riskPill}>{f?.risk || 'No activity'}</Pill>
-                      <span style={{ fontSize: '0.66rem', color: C.muted }}>{formatPhase(proj.project_type)}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-                      {[
-                        { label: 'Estimate', value: f?.estimate || 0 },
-                        { label: 'Ordered', value: f?.ordered || 0 },
-                        { label: 'Billed', value: f?.billed || 0 },
-                      ].map(m => (
-                        <div key={m.label} style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.56rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: C.faint, fontWeight: 700 }}>{m.label}</div>
-                          <div style={{ ...fontVal, fontSize: '0.76rem', fontWeight: 700, color: C.ink }}>{m.value > 0 ? fmt(m.value) : '—'}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.border}` }}>
-                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: needCount > 0 ? C.amber : C.muted }}>
-                        {needCount > 0 ? `${needCount} need action` : 'Nothing pending'}
-                      </span>
-                      <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#fff', background: C.ink, padding: '5px 10px', borderRadius: 7, whiteSpace: 'nowrap' }}>
-                        Open →
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* ─── Project snapshot funnel ─── */}
-        <SupplierProjectSnapshot rows={dp} deliveries={upcomingDeliveries} />
+        {/* ─── Project health & actions hub ─── */}
+        <SupplierProjectHealthHub
+          rows={dp.map(d => ({ ...d, builder: acceptedProjects.find(a => a.projectId === d.projectId)?.gcName || 'Builder' }))}
+          deliveries={upcomingDeliveries}
+        />
 
         {/* ─── Cash Pipeline ─── */}
         <SupplierCashPipeline
@@ -291,8 +232,8 @@ export function SupplierDashboardView({
           activeProjects={activeProjectCount}
         />
 
-        {/* ─── Needs your action ─── */}
-        <SupplierNeedsAction rows={dp} deliveries={upcomingDeliveries} />
+        {/* ─── Project snapshot funnel ─── */}
+        <SupplierProjectSnapshot rows={dp} deliveries={upcomingDeliveries} />
 
         {/* ─── Secondary metric strip ─── */}
         <SupplierMetricStrip
@@ -598,20 +539,6 @@ export function SupplierDashboardView({
 
 
 
-        {/* ─── Active Projects Grid ─── */}
-        <div>
-          <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, fontWeight: 600, marginBottom: 10, ...fontLabel }}>Active Projects</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
-            {projectsWithActivity.map((p, i) => (
-              <ProjectCard key={i} name={p.name} status={p.status} budget={p.estimate} costs={p.ordered} onClick={() => goToProject(p.projectId)} />
-            ))}
-            {projectsWithActivity.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px', color: C.muted, fontSize: '0.78rem' }}>
-                No active projects with supplier activity yet
-              </div>
-            )}
-          </div>
-        </div>
 
         <div style={{ height: 24 }} />
     </div>
