@@ -311,9 +311,14 @@ export async function fetchCatalogForExport(
   supplierId: string,
   filters: Pick<CatalogFilters, 'search' | 'category' | 'manufacturer' | 'status'>,
 ): Promise<CatalogManagerItem[]> {
-  let query = supabase.from('catalog_items').select(ITEM_COLUMNS).eq('supplier_id', supplierId);
-  query = applyFilters(query, filters);
-  const { data, error } = await query.order('supplier_sku', { ascending: true }).limit(5000);
-  if (error) throw error;
-  return attachPrices(data || []);
+  const rows = await fetchAll<any>((f, t) =>
+    applyFilters(
+      supabase.from('catalog_items').select(ITEM_COLUMNS).eq('supplier_id', supplierId),
+      filters.status === 'unpriced' ? { ...filters, status: 'active' } : filters,
+    ).order('supplier_sku', { ascending: true }).order('id').range(f, t));
+  const priced: CatalogManagerItem[] = [];
+  for (let i = 0; i < rows.length; i += 200) {
+    priced.push(...(await attachPrices(rows.slice(i, i + 200))));
+  }
+  return filters.status === 'unpriced' ? priced.filter((r) => r.list_price == null) : priced;
 }
