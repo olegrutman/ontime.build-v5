@@ -22,9 +22,7 @@ export function CatalogHealthStrip({
   activeStatus,
 }: Props) {
   const tiles = [
-    { key: 'all' as const, label: 'Products', value: total, tone: 'text-foreground' },
-    { key: 'active' as const, label: 'Active', value: activeCount, tone: 'text-foreground' },
-    { key: 'inactive' as const, label: 'Retired', value: inactiveCount, tone: 'text-muted-foreground' },
+    { key: 'active' as const, label: 'Active products', value: activeCount, tone: 'text-foreground' },
     { key: 'unpriced' as const, label: 'No price', value: unpricedCount, tone: unpricedCount > 0 ? 'text-destructive' : 'text-foreground' },
     { key: 'uncategorized' as const, label: 'Uncategorized', value: uncategorizedCount, tone: uncategorizedCount > 0 ? 'text-primary' : 'text-foreground' },
   ];
