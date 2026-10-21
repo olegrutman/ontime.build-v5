@@ -25,37 +25,53 @@ function PriceCell({
 }) {
   const [value, setValue] = useState(item.list_price != null ? String(item.list_price) : '');
   const [dirty, setDirty] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const commit = () => {
     if (!dirty) return;
-    setDirty(false);
-    const trimmed = value.trim();
-    if (trimmed === '') return onCommit(null);
+    const trimmed = value.trim().replace(/^\$/, '').replace(/,/g, '');
+    if (trimmed === '') {
+      setDirty(false);
+      setError(null);
+      return onCommit(null);
+    }
     const num = Number(trimmed);
     if (Number.isNaN(num) || num < 0) {
-      setValue(item.list_price != null ? String(item.list_price) : '');
+      setError('Enter a number like 4.85');
       return;
     }
+    setDirty(false);
+    setError(null);
     onCommit(num);
   };
 
   return (
-    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-      <Input
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          setDirty(true);
-        }}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-        }}
-        placeholder="—"
-        inputMode="decimal"
-        className="h-8 w-24 font-mono text-right"
-      />
-      <span className="text-[0.65rem] text-muted-foreground">/{item.price_uom || item.uom_default}</span>
+    <div className="flex flex-col items-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1.5">
+        <Input
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setDirty(true);
+            setError(null);
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            if (e.key === 'Escape') {
+              setValue(item.list_price != null ? String(item.list_price) : '');
+              setDirty(false);
+              setError(null);
+            }
+          }}
+          placeholder="—"
+          inputMode="decimal"
+          aria-invalid={!!error}
+          className={`h-8 w-24 font-mono text-right ${error ? 'border-destructive' : ''}`}
+        />
+        <span className="text-[0.65rem] text-muted-foreground">/{item.price_uom || item.uom_default}</span>
+      </div>
+      {error && <span className="text-[0.65rem] text-destructive" role="alert">{error}</span>}
     </div>
   );
 }
