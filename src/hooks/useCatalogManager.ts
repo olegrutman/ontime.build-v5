@@ -59,7 +59,7 @@ function applyFilters(
   if (filters.manufacturer !== 'all') query = query.eq('manufacturer', filters.manufacturer);
   if (filters.status === 'active') query = query.eq('is_active', true);
   if (filters.status === 'inactive') query = query.eq('is_active', false);
-  if (filters.status === 'uncategorized') query = query.eq('category', 'Other');
+  if (filters.status === 'uncategorized') query = query.eq('category', 'Other').eq('is_active', true);
   if (filters.search.trim()) {
     const q = filters.search.trim().replace(/[%,()]/g, ' ');
     query = query.or(
