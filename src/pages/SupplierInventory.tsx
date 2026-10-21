@@ -289,6 +289,8 @@ export default function SupplierInventory() {
     setShowPreview(true);
   };
 
+  const [importMode, setImportMode] = useState<'replace' | 'update'>('replace');
+
   const handleUploadConfirm = async () => {
     if (csvPreview.length === 0 || !supplierId) return;
     setUploading(true);
@@ -350,10 +352,37 @@ export default function SupplierInventory() {
         }
       }
 
+      let retired = 0;
+      if (importMode === 'replace') {
+        const keep = new Set(list.map((r) => r.supplier_sku));
+        const stale: string[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await supabase
+            .from('catalog_items')
+            .select('id, supplier_sku')
+            .eq('supplier_id', supplierId)
+            .eq('is_active', true)
+            .order('id')
+            .range(from, from + 999);
+          if (error) throw error;
+          (data || []).forEach((r) => { if (!keep.has(r.supplier_sku)) stale.push(r.id); });
+          if (!data || data.length < 1000) break;
+        }
+        const now = new Date().toISOString();
+        for (let i = 0; i < stale.length; i += 200) {
+          const { error } = await supabase
+            .from('catalog_items')
+            .update({ is_active: false, discontinued_at: now })
+            .in('id', stale.slice(i, i + 200));
+          if (error) throw error;
+        }
+        retired = stale.length;
+      }
+
       const unpriced = list.length - pricedSaved;
       toast({
-        title: 'Import complete',
-        description: `${list.length} products saved · ${pricedSaved} priced${unpriced ? ` · ${unpriced} need a price` : ''}`,
+        title: importMode === 'replace' ? 'Catalog replaced' : 'Import complete',
+        description: `${list.length} products saved · ${pricedSaved} priced${unpriced ? ` · ${unpriced} need a price` : ''}${retired ? ` · ${retired} old products retired` : ''}`,
       });
       setShowPreview(false);
       setCsvPreview([]);
@@ -665,10 +694,28 @@ export default function SupplierInventory() {
                 … and {csvPreview.length - 20} more items
               </p>
             )}
+            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Import mode">
+              {([
+                ['replace', 'Replace catalog', 'Products not in this file are retired and hidden. Past orders keep their history.'],
+                ['update', 'Update existing catalog', 'Keep current products; update matching SKUs and add new ones.'],
+              ] as const).map(([value, label, help]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={importMode === value}
+                  onClick={() => setImportMode(value)}
+                  className={`rounded-xl border p-3 text-left transition-colors ${importMode === value ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}
+                >
+                  <div className="text-sm font-semibold">{label}</div>
+                  <div className="text-xs text-muted-foreground">{help}</div>
+                </button>
+              ))}
+            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowPreview(false)}>Cancel</Button>
               <Button onClick={handleUploadConfirm} disabled={uploading}>
-                {uploading ? 'Importing…' : 'Confirm Import'}
+                {uploading ? 'Importing…' : importMode === 'replace' ? 'Replace Catalog' : 'Confirm Import'}
               </Button>
             </DialogFooter>
           </DialogContent>
