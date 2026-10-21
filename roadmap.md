@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Show the supplier project estimate open by default with a clear toggle and item count; remove duplicate actions
-- [ ] Verify the estimate toggle with live records and phone layouts
+- [x] Show the supplier project estimate open by default with a clear toggle and item count; remove duplicate actions
+- [x] Verify the estimate toggle with live records and phone layouts (195 items / 10 packs; 18 tests; 68 phone views without clipping)
 
 - [x] Audit reachable supplier KPI definitions and reconcile live dashboard/project totals; reviewed dormant legacy surfaces separately
 - [x] Correct supplier KPI mismatches and verify 44 regressions, all 22 live dashboard/overview popups, order/invoice summaries and invoice filtering
