@@ -14,7 +14,9 @@ import { SupplierCashPipeline } from '@/components/dashboard/supplier/SupplierCa
 import { SupplierProjectSnapshot } from '@/components/dashboard/supplier/SupplierProjectSnapshot';
 import { SupplierMetricStrip } from '@/components/dashboard/supplier/SupplierMetricStrip';
 import { SupplierProjectHealthHub } from '@/components/dashboard/supplier/SupplierProjectHealthHub';
-import { SupplierProjectSwitcher } from '@/components/dashboard/supplier/SupplierProjectSwitcher';
+import { SupplierTeamPortfolioStrip, useSupplierTeam } from '@/components/dashboard/supplier/SupplierTeamPortfolioStrip';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useState } from 'react';
 
 
 
@@ -75,7 +77,10 @@ export function SupplierDashboardView({
   onSetSoleMember, onSetPartOfTeam, onRefresh,
 }: SupplierDashboardViewProps) {
   const navigate = useNavigate();
-  const { projectFinancials, upcomingDeliveries, acceptedProjects, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
+  const { user } = useAuth();
+  const { members: team, loaded: teamLoaded } = useSupplierTeam(orgId);
+  const [teamSel, setTeamSel] = useState<string | null>(null);
+  const { projectFinancials, upcomingDeliveries: allDeliveries, acceptedProjects, loading: supplierLoading, error: supplierError, refetch: refetchSupplier } = useSupplierDashboardData();
 
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
@@ -87,7 +92,7 @@ export function SupplierDashboardView({
   const handleRefresh = async () => { await Promise.all([onRefresh(), refetchSupplier()]); };
 
   // Build display rows from supplier-side financials, joining with projects table for type/status
-  const dp = useMemo(() => projectFinancials.map(pf => {
+  const dpAll = useMemo(() => projectFinancials.map(pf => {
     const proj = projects.find(p => p.id === pf.projectId);
     const phaseRaw = pf.projectType || proj?.project_type || null;
 
@@ -129,6 +134,24 @@ export function SupplierDashboardView({
       risk,
     };
   }), [projectFinancials, projects]);
+
+  // Role-aware default: people limited to assigned projects open on their own book; managers/accountants open on the whole company.
+  useEffect(() => {
+    if (teamSel !== null || !teamLoaded) return;
+    const me = team.find(m => m.userId === user?.id);
+    setTeamSel(me && me.scope === 'assigned' && !me.isAdmin && me.projectIds.size > 0 && !/account(ant|ing)/i.test(me.title) ? me.userId : 'all');
+  }, [teamLoaded, team, user?.id, teamSel]);
+  const sel = teamSel ?? 'all';
+  const dp = useMemo(() => {
+    if (sel === 'all') return dpAll;
+    const assigned = new Set(team.flatMap(m => [...m.projectIds]));
+    const mine = team.find(m => m.userId === sel)?.projectIds;
+    return dpAll.filter(d => sel === 'unassigned' ? !assigned.has(d.projectId) : !!mine?.has(d.projectId));
+  }, [dpAll, sel, team]);
+  const upcomingDeliveries = useMemo(() => {
+    const ids = new Set(dp.map(d => d.projectId));
+    return allDeliveries.filter(d => ids.has(d.projectId));
+  }, [allDeliveries, dp]);
 
   // Forecast table excludes archived/completed projects (consistent with other sections)
   const forecastRows = useMemo(
@@ -199,18 +222,18 @@ export function SupplierDashboardView({
         <OrgInviteBanner />
         {pendingInvites.length > 0 && <PendingInvitesPanel invites={pendingInvites} onRefresh={handleRefresh} />}
 
-        {/* ─── Sticky project switcher — one-tap entry into any project ─── */}
-        <SupplierProjectSwitcher
-          projects={activeProjects.map(proj => {
-            const f = dp.find(d => d.projectId === proj.id);
-            return {
-              projectId: proj.id,
-              name: proj.name,
-              risk: (f?.risk || 'On Track') as 'On Track' | 'Watch' | 'Over Budget',
-              ar: Math.max(0, (f?.billed || 0) - (f?.received || 0)),
-            };
-          })}
-        />
+        {/* ─── Sales team portfolio (filters the whole dashboard) ─── */}
+        {team.length > 1 && (
+          <SupplierTeamPortfolioStrip
+            members={team}
+            selected={sel}
+            onSelect={setTeamSel}
+            rows={dpAll.filter(d => !['archived', 'completed'].includes(d.status)).map(d => ({
+              projectId: d.projectId, ordered: d.ordered, billed: d.billed, received: d.received,
+              alert: d.displayOverBy > 0 || (d.billed - d.received > 0 && (d.daysSinceLastPayment ?? 0) > 30),
+            }))}
+          />
+        )}
 
         {/* ─── Project health & actions hub ─── */}
         <SupplierProjectHealthHub
