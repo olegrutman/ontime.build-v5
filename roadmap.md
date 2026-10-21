@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Catalog Management cleanup: active-only health counts, unified CSV/Excel preview, replace-impact preview, import guide, retire confirm, price feedback, full export
+
 - [x] Show the supplier project estimate open by default with a clear toggle and item count; remove duplicate actions
 - [x] Verify the estimate toggle with live records and phone layouts (195 items / 10 packs; 18 tests; 68 phone views without clipping)
 
