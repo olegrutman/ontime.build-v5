@@ -90,6 +90,25 @@ async function attachPrices(items: any[]): Promise<CatalogManagerItem[]> {
   });
 }
 
+// The data API caps each request at 1000 rows, so page through everything.
+async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>) {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build(from, from + 999);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+
+async function fetchPricedIds(supplierId: string) {
+  const rows = await fetchAll<{ catalog_item_id: string }>((f, t) =>
+    supabase.from('catalog_prices').select('catalog_item_id')
+      .eq('supplier_id', supplierId).order('catalog_item_id').range(f, t) as any);
+  return new Set(rows.map((r) => r.catalog_item_id));
+}
+
 /** Paginated, server-filtered catalog for the supplier management console. */
 export function useCatalogManagerItems(supplierId: string | null, filters: CatalogFilters) {
   return useQuery({
@@ -102,14 +121,25 @@ export function useCatalogManagerItems(supplierId: string | null, filters: Catal
       const from = filters.page * filters.pageSize;
       const to = from + filters.pageSize - 1;
 
-      // "unpriced" needs the price table to filter, so resolve those ids first
-      let unpricedIds: string[] | null = null;
+      // "No price" = active products without a price. Resolve ids client-side so
+      // large catalogs never build an oversized NOT IN filter.
       if (filters.status === 'unpriced') {
-        const { data: priced } = await supabase
-          .from('catalog_prices')
-          .select('catalog_item_id')
-          .eq('supplier_id', supplierId);
-        unpricedIds = (priced || []).map((p) => p.catalog_item_id);
+        const [priced, candidates] = await Promise.all([
+          fetchPricedIds(supplierId),
+          fetchAll<{ id: string }>((f, t) =>
+            applyFilters(
+              supabase.from('catalog_items').select('id').eq('supplier_id', supplierId).eq('is_active', true),
+              { ...filters, status: 'all' },
+            ).order('category').order('supplier_sku').range(f, t)),
+        ]);
+        const ids = candidates.map((c) => c.id).filter((id) => !priced.has(id));
+        const pageIds = ids.slice(from, to + 1);
+        if (pageIds.length === 0) return { rows: [], total: ids.length };
+        const { data, error } = await supabase.from('catalog_items').select(ITEM_COLUMNS).in('id', pageIds);
+        if (error) throw error;
+        const order = new Map(pageIds.map((id, i) => [id, i]));
+        const sorted = (data || []).sort((a: any, b: any) => order.get(a.id)! - order.get(b.id)!);
+        return { rows: await attachPrices(sorted), total: ids.length };
       }
 
       let query = supabase
@@ -118,9 +148,6 @@ export function useCatalogManagerItems(supplierId: string | null, filters: Catal
         .eq('supplier_id', supplierId);
 
       query = applyFilters(query, filters);
-      if (unpricedIds && unpricedIds.length > 0) {
-        query = query.not('id', 'in', `(${unpricedIds.join(',')})`);
-      }
 
       const { data, error, count } = await query
         .order('is_active', { ascending: false })
@@ -134,7 +161,7 @@ export function useCatalogManagerItems(supplierId: string | null, filters: Catal
   });
 }
 
-/** Facets + data-quality counters for the console header. */
+/** Facets + data-quality counters for the console header — active products only. */
 export function useCatalogFacets(supplierId: string | null) {
   return useQuery({
     queryKey: ['catalog-facets', supplierId],
@@ -143,49 +170,37 @@ export function useCatalogFacets(supplierId: string | null) {
     queryFn: async () => {
       if (!supplierId) return null;
 
-      // The data API caps each request at 1000 rows, so page through everything.
-      const fetchAll = async <T,>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>) => {
-        const out: T[] = [];
-        for (let from = 0; ; from += 1000) {
-          const { data, error } = await build(from, from + 999);
-          if (error) throw error;
-          out.push(...(data || []));
-          if (!data || data.length < 1000) break;
-        }
-        return out;
-      };
-
-      const [rows, priceRows] = await Promise.all([
-        fetchAll<{ id: string; category: string; manufacturer: string | null; is_active: boolean }>((f, t) =>
-          supabase.from('catalog_items').select('id, category, manufacturer, is_active')
-            .eq('supplier_id', supplierId).order('id').range(f, t) as any),
-        fetchAll<{ catalog_item_id: string }>((f, t) =>
-          supabase.from('catalog_prices').select('catalog_item_id')
-            .eq('supplier_id', supplierId).order('catalog_item_id').range(f, t) as any),
+      const [rows, priced] = await Promise.all([
+        fetchAll<{ id: string; category: string; manufacturer: string | null }>((f, t) =>
+          supabase.from('catalog_items').select('id, category, manufacturer')
+            .eq('supplier_id', supplierId).eq('is_active', true).order('id').range(f, t) as any),
+        fetchPricedIds(supplierId),
       ]);
-      const prices = { data: priceRows };
-      const categoryCounts = new Map<string, number>();
-      const manufacturers = new Set<string>();
-      let activeCount = 0;
-
-      rows.forEach((r) => {
-        categoryCounts.set(r.category, (categoryCounts.get(r.category) || 0) + 1);
-        if (r.manufacturer) manufacturers.add(r.manufacturer);
-        if (r.is_active) activeCount += 1;
-      });
-
-      return {
-        total: rows.length,
-        activeCount,
-        inactiveCount: rows.length - activeCount,
-        uncategorizedCount: categoryCounts.get('Other') || 0,
-        pricedCount: (prices.data || []).length,
-        unpricedCount: Math.max(0, rows.length - (prices.data || []).length),
-        categoryCounts: Array.from(categoryCounts.entries()).sort((a, b) => b[1] - a[1]),
-        manufacturers: Array.from(manufacturers).sort(),
-      };
+      return summarizeActiveCatalog(rows, priced);
     },
   });
+}
+
+/** Pure summary of active catalog rows (exported for tests). */
+export function summarizeActiveCatalog(
+  rows: { id: string; category: string; manufacturer: string | null }[],
+  pricedIds: Set<string>,
+) {
+  const categoryCounts = new Map<string, number>();
+  const manufacturers = new Set<string>();
+  let unpricedCount = 0;
+  rows.forEach((r) => {
+    categoryCounts.set(r.category, (categoryCounts.get(r.category) || 0) + 1);
+    if (r.manufacturer) manufacturers.add(r.manufacturer);
+    if (!pricedIds.has(r.id)) unpricedCount += 1;
+  });
+  return {
+    activeCount: rows.length,
+    unpricedCount,
+    uncategorizedCount: categoryCounts.get('Other') || 0,
+    categoryCounts: Array.from(categoryCounts.entries()).sort((a, b) => b[1] - a[1]),
+    manufacturers: Array.from(manufacturers).sort(),
+  };
 }
 
 function invalidate(qc: ReturnType<typeof useQueryClient>) {
