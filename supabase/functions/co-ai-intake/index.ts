@@ -26,7 +26,7 @@ const MODEL = "google/gemini-3-flash-preview";
 
 const SYSTEM_PROMPT = `You split a contractor change-order request into reviewable line items.
 
-Return strict JSON: { "lines": [ {
+Return strict JSON: { "package_title": string, "lines": [ {
   "order": number,
   "title": string,          // <= 80 chars, action-led
   "problem": string,        // 1-2 sentences, professional trade language
@@ -43,6 +43,7 @@ Rules:
 - problem field: be direct and professional. Lead with the action, state the location, end with the handoff condition. Avoid passive voice, "must be", "is required", "to provide", or vague explanations.
 - If qty is unclear, set qty=null and unit=null.
 - Max 12 lines. Prefer fewer, clearer items.
+- package_title: <= 70 chars naming the WHOLE package, not just the first item. Format "[Location] — [Scope summary]" when a location is known, e.g. "2nd Floor Bath — Pipe Chase Rework", "Kitchen Island Framing & Plumbing Relocation". Only use facts from the request.
 
 Example problem descriptions:
 - "Remove and dispose of existing soffit and fascia boards along the exterior roof perimeter. Leave framing clean and ready for new material."
