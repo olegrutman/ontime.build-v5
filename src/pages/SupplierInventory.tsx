@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Package, AlertCircle, AlertTriangle, Loader2, Plus } from 'lucide-react';
+import { Upload, Package, AlertCircle, AlertTriangle, Loader2, Plus, Download, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import * as XLSX from 'xlsx';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { parseCatalogImport, type CatalogImportRow } from '@/lib/catalogImport';
 import { AddProductDialog } from '@/components/supplier-inventory/AddProductDialog';
 import { EditProductDialog } from '@/components/supplier-inventory/EditProductDialog';
@@ -243,31 +248,17 @@ export default function SupplierInventory() {
   };
 
   const handleExcelUpload = async (file: File) => {
-    if (!supplierId) return;
     setXlsxUploading(true);
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-      const base64 = btoa(binary);
-
-      const { data, error } = await supabase.functions.invoke('import-inventory', {
-        body: { fileData: base64, supplierId, fileName: file.name },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      toast({
-        title: 'Import Complete',
-        description: `${data.insertedCount} items imported${data.duplicatesRemoved > 0 ? ` (${data.duplicatesRemoved} duplicates merged)` : ''}`,
-      });
-      refetch();
+      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      if (!sheet) throw new Error('The workbook has no sheets.');
+      parseCSV(XLSX.utils.sheet_to_csv(sheet, { blankrows: false }));
     } catch (err: any) {
-      toast({ title: 'Import Failed', description: err.message || 'Failed to import file', variant: 'destructive' });
+      toast({ title: 'File could not be read', description: err.message || 'Failed to read Excel file', variant: 'destructive' });
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } finally {
       setXlsxUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -286,10 +277,44 @@ export default function SupplierInventory() {
     }
     setCsvPreview(result.rows);
     setSkippedRows(result.skippedRows);
+    setPreviewFilter('all');
+    setShowGuide(false);
     setShowPreview(true);
+    loadExistingActiveSkus();
   };
 
   const [importMode, setImportMode] = useState<'replace' | 'update'>('replace');
+  const [showGuide, setShowGuide] = useState(false);
+  const [confirmRetire, setConfirmRetire] = useState(false);
+  const [previewFilter, setPreviewFilter] = useState<'all' | 'unpriced' | 'retired' | 'duplicates' | 'other'>('all');
+  const [existingActiveSkus, setExistingActiveSkus] = useState<Set<string> | null>(null);
+
+  const loadExistingActiveSkus = async () => {
+    if (!supplierId) return;
+    setExistingActiveSkus(null);
+    const skus = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('catalog_items').select('supplier_sku')
+        .eq('supplier_id', supplierId).eq('is_active', true).order('id').range(from, from + 999);
+      if (error) return;
+      (data || []).forEach((r) => skus.add(r.supplier_sku));
+      if (!data || data.length < 1000) break;
+    }
+    setExistingActiveSkus(skus);
+  };
+
+  const downloadTemplate = () => {
+    const csv = [
+      'sku,name,description,category,uom,list_price,price_uom,manufacturer,dimension,length,lead_time_days,min_order_qty,status',
+      '2X4-SPF-08,SPF Stud 2x4x8,2x4x8 SPF framing stud,Lumber,EA,4.85,EA,Canfor,2x4,8 ft,3,1,ACTIVE',
+      'OSB-716-4X8,OSB 7/16 4x8,7/16 in OSB sheathing panel,Sheet Goods,EA,18.75,EA,LP,4x8,8 ft,5,1,ACTIVE',
+    ].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'catalog-template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleUploadConfirm = async () => {
     if (csvPreview.length === 0 || !supplierId) return;
@@ -404,7 +429,29 @@ export default function SupplierInventory() {
     return Object.values(counts).filter((c) => c > 1).length;
   }, [csvPreview]);
 
+  const duplicateSkus = useMemo(() => {
+    const seen = new Map<string, number>();
+    csvPreview.forEach((r) => seen.set(r.supplier_sku, (seen.get(r.supplier_sku) || 0) + 1));
+    return new Set(Array.from(seen.entries()).filter(([, c]) => c > 1).map(([k]) => k));
+  }, [csvPreview]);
+
+  const incomingSkus = useMemo(() => new Set(csvPreview.map((r) => r.supplier_sku)), [csvPreview]);
+  const willRetireCount = existingActiveSkus
+    ? Array.from(existingActiveSkus).filter((s) => !incomingSkus.has(s)).length
+    : null;
+
+  const filteredPreview = useMemo(() => csvPreview.filter((r) => {
+    if (previewFilter === 'unpriced') return r.list_price == null;
+    if (previewFilter === 'retired') return !r.is_active;
+    if (previewFilter === 'duplicates') return duplicateSkus.has(r.supplier_sku);
+    if (previewFilter === 'other') return r.category === 'Other';
+    return true;
+  }), [csvPreview, previewFilter, duplicateSkus]);
+
   const previewStats = useMemo(() => ({
+    incomingActive: csvPreview.filter((r) => r.is_active).length,
+    incomingRetired: csvPreview.filter((r) => !r.is_active).length,
+    other: csvPreview.filter((r) => r.category === 'Other').length,
     priced: csvPreview.filter((r) => r.list_price != null).length,
     unpriced: csvPreview.filter((r) => r.list_price == null).length,
     invalid: csvPreview.filter((r) => r.invalid_price).length,
@@ -457,7 +504,7 @@ export default function SupplierInventory() {
               onChange={handleFileSelect}
               className="hidden"
             />
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={xlsxUploading}>
+            <Button variant="outline" onClick={() => setShowGuide(true)} disabled={xlsxUploading}>
               {xlsxUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
               Import
             </Button>
@@ -470,12 +517,9 @@ export default function SupplierInventory() {
 
         {facets && (
           <CatalogHealthStrip
-            total={facets.total}
             activeCount={facets.activeCount}
-            inactiveCount={facets.inactiveCount}
             unpricedCount={facets.unpricedCount}
             uncategorizedCount={facets.uncategorizedCount}
-            manufacturerCount={facets.manufacturers.length}
             activeStatus={filters.status}
             onSelectStatus={(status) => patchFilters({ status, page: 0 })}
           />
@@ -497,15 +541,15 @@ export default function SupplierInventory() {
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                 <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-medium mb-2">
-                  {total === 0 && facets?.total === 0 ? 'No Products Yet' : 'No products match these filters'}
+                  {total === 0 && facets?.activeCount === 0 ? 'No Products Yet' : 'No products match these filters'}
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                  {total === 0 && facets?.total === 0
+                  {total === 0 && facets?.activeCount === 0
                     ? 'Import a CSV/Excel price file or add products manually.'
                     : 'Try clearing search, category, or status filters.'}
                 </p>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Button variant="outline" onClick={() => setShowGuide(true)}>
                     <Upload className="h-4 w-4 mr-2" />
                     Import file
                   </Button>
@@ -591,33 +635,73 @@ export default function SupplierInventory() {
               )
             }
             onSetActive={(active) =>
-              runBulk(
+              active ? runBulk(
                 () =>
                   bulkUpdate.mutateAsync({
                     ids: selectedIdList,
                     patch: { is_active: active, discontinued_at: active ? null : new Date().toISOString() },
                   }),
-                active ? 'Products activated' : 'Products retired',
-              )
+                'Products activated',
+              ) : setConfirmRetire(true)
             }
           />
         )}
 
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-xs space-y-1">
-            <p>
-              <strong>Import file:</strong> CSV or Excel, one product per row. Required: <code>sku</code>,{' '}
-              <code>description</code>. Recommended: <code>category</code>, <code>uom</code> (EA, LF, SF, BF, CS, PK),{' '}
-              <code>list_price</code>, <code>price_uom</code>, <code>manufacturer</code>, <code>dimension</code>,{' '}
-              <code>length</code>, <code>lead_time_days</code>, <code>min_order_qty</code>, <code>status</code>.
-            </p>
-            <p>
-              Prices are numbers per <code>price_uom</code> (e.g. 4.85). Also accepted: original_description,
-              original_category, supplier_confirmed_price. Rows without a price are imported and flagged as unpriced.
-            </p>
-          </AlertDescription>
-        </Alert>
+        <Dialog open={showGuide} onOpenChange={setShowGuide}>
+          <DialogContent className="max-w-[95vw] sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Import your catalog</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">CSV or Excel (.xlsx), one product per row. You'll review everything before anything is saved.</p>
+              <div className="rounded-xl border border-border p-3 space-y-1.5">
+                <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Required columns</p>
+                <p><code>sku</code> · <code>description</code></p>
+                <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground pt-1">Strongly recommended</p>
+                <p><code>category</code> · <code>uom</code> (EA, LF, SF, BF, CS, PK) · <code>list_price</code> · <code>price_uom</code></p>
+                <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground pt-1">Optional</p>
+                <p className="text-xs"><code>name</code>, <code>manufacturer</code>, <code>dimension</code>, <code>length</code>, <code>lead_time_days</code>, <code>min_order_qty</code>, <code>status</code> (ACTIVE or RETIRED)</p>
+              </div>
+              <p className="text-xs text-muted-foreground">Prices are numbers per <code>price_uom</code>, e.g. 4.85. Products without a price are imported and flagged "Needs price".</p>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={downloadTemplate}>
+                <Download className="h-4 w-4 mr-2" />Download template
+              </Button>
+              <Button onClick={() => fileInputRef.current?.click()} disabled={xlsxUploading}>
+                {xlsxUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-2" />}
+                Choose file
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={confirmRetire} onOpenChange={setConfirmRetire}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Retire {selectedIdList.length} product(s)?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Retired products are hidden from buyers and new orders. Past orders keep their history, and you can activate them again from the Retired filter.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() =>
+                  runBulk(
+                    () => bulkUpdate.mutateAsync({
+                      ids: selectedIdList,
+                      patch: { is_active: false, discontinued_at: new Date().toISOString() },
+                    }),
+                    'Products retired',
+                  )
+                }
+              >
+                Retire {selectedIdList.length}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* CSV Preview Dialog */}
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
@@ -630,6 +714,19 @@ export default function SupplierInventory() {
               <Badge variant={previewStats.unpriced ? 'destructive' : 'secondary'}>{previewStats.unpriced} need a price</Badge>
               {previewStats.review > 0 && <Badge variant="outline">{previewStats.review} with review notes kept</Badge>}
               {skippedRows.length > 0 && <Badge variant="outline">{skippedRows.length} rows skipped</Badge>}
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs space-y-0.5">
+              <p><strong className="font-mono">{previewStats.incomingActive}</strong> product(s) will be active after import.</p>
+              {previewStats.incomingRetired > 0 && (
+                <p className="text-destructive"><strong className="font-mono">{previewStats.incomingRetired}</strong> are marked RETIRED in the file's status column and will stay hidden.</p>
+              )}
+              {importMode === 'replace' && (
+                <p>
+                  {willRetireCount == null
+                    ? 'Checking which current products would be retired…'
+                    : <><strong className="font-mono">{willRetireCount}</strong> current product(s) are not in this file and will be retired.</>}
+                </p>
+              )}
             </div>
             {(previewStats.unpriced > 0 || previewStats.invalid > 0) && (
               <Alert>
@@ -655,7 +752,20 @@ export default function SupplierInventory() {
                 </AlertDescription>
               </Alert>
             )}
-            <div className="overflow-x-auto">
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter preview rows">
+              {([
+                ['all', `All (${csvPreview.length})`],
+                ['unpriced', `Needs price (${previewStats.unpriced})`],
+                ['other', `Uncategorized (${previewStats.other})`],
+                ['retired', `Marked retired (${previewStats.incomingRetired})`],
+                ['duplicates', `Duplicate SKUs (${duplicateSkus.size})`],
+              ] as const).map(([key, label]) => (
+                <Button key={key} size="sm" variant={previewFilter === key ? 'default' : 'outline'} className="h-7 text-xs" onClick={() => setPreviewFilter(key)}>
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <div className="overflow-auto max-h-[40vh] rounded-xl border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -668,7 +778,7 @@ export default function SupplierInventory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {csvPreview.slice(0, 20).map((row, idx) => (
+                  {filteredPreview.slice(0, 500).map((row, idx) => (
                     <TableRow key={idx}>
                       <TableCell className="font-mono text-xs">{row.supplier_sku}</TableCell>
                       <TableCell className="text-sm">{row.name || row.description}</TableCell>
@@ -689,9 +799,9 @@ export default function SupplierInventory() {
                 </TableBody>
               </Table>
             </div>
-            {csvPreview.length > 20 && (
-              <p className="text-sm text-muted-foreground text-center">
-                … and {csvPreview.length - 20} more items
+            {filteredPreview.length > 500 && (
+              <p className="text-xs text-muted-foreground text-center">
+                Showing 500 of {filteredPreview.length}. Use the filters above to inspect specific rows.
               </p>
             )}
             <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Import mode">
@@ -714,7 +824,7 @@ export default function SupplierInventory() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowPreview(false)}>Cancel</Button>
-              <Button onClick={handleUploadConfirm} disabled={uploading}>
+              <Button onClick={handleUploadConfirm} disabled={uploading || (importMode === 'replace' && willRetireCount == null)}>
                 {uploading ? 'Importing…' : importMode === 'replace' ? 'Replace Catalog' : 'Confirm Import'}
               </Button>
             </DialogFooter>
