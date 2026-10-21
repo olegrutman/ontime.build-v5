@@ -42,7 +42,7 @@ export const DEFAULT_CATALOG_FILTERS: CatalogFilters = {
   search: '',
   category: 'all',
   manufacturer: 'all',
-  status: 'all',
+  status: 'active',
   page: 0,
   pageSize: 50,
 };
