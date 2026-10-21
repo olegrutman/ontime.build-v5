@@ -576,10 +576,17 @@ export default function SupplierInventory() {
 
         <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-xs">
-            Import supports Excel (.xlsx) or CSV: code, name, description, Main Category, Secondary Category,
-            Manufacture, Dimension, Thickness, Length, Color, Wood Species, Bundle Name, Bundle Count, qtyType.
-            List prices are managed here and auto-fill purchase orders for buyers on your projects.
+          <AlertDescription className="text-xs space-y-1">
+            <p>
+              <strong>Import file:</strong> CSV or Excel, one product per row. Required: <code>sku</code>,{' '}
+              <code>description</code>. Recommended: <code>category</code>, <code>uom</code> (EA, LF, SF, BF, CS, PK),{' '}
+              <code>list_price</code>, <code>price_uom</code>, <code>manufacturer</code>, <code>dimension</code>,{' '}
+              <code>length</code>, <code>lead_time_days</code>, <code>min_order_qty</code>, <code>status</code>.
+            </p>
+            <p>
+              Prices are numbers per <code>price_uom</code> (e.g. 4.85). Also accepted: original_description,
+              original_category, supplier_confirmed_price. Rows without a price are imported and flagged as unpriced.
+            </p>
           </AlertDescription>
         </Alert>
 
@@ -589,6 +596,28 @@ export default function SupplierInventory() {
             <DialogHeader>
               <DialogTitle>Preview Import ({csvPreview.length} items)</DialogTitle>
             </DialogHeader>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="secondary">{previewStats.priced} priced</Badge>
+              <Badge variant={previewStats.unpriced ? 'destructive' : 'secondary'}>{previewStats.unpriced} need a price</Badge>
+              {previewStats.review > 0 && <Badge variant="outline">{previewStats.review} with review notes kept</Badge>}
+              {skippedRows.length > 0 && <Badge variant="outline">{skippedRows.length} rows skipped</Badge>}
+            </div>
+            {(previewStats.unpriced > 0 || previewStats.invalid > 0) && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  {previewStats.unpriced} product(s) have no confirmed price and will show as unpriced — buyers won’t get
+                  an auto-filled price until you add one.
+                  {previewStats.invalid > 0 && ` ${previewStats.invalid} price value(s) were not numbers and were ignored.`}
+                </AlertDescription>
+              </Alert>
+            )}
+            {skippedRows.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Skipped: {skippedRows.slice(0, 5).map((s) => `line ${s.line} (${s.reason})`).join(', ')}
+                {skippedRows.length > 5 ? '…' : ''}
+              </p>
+            )}
             {duplicateSkuCount > 0 && (
               <Alert className="border-amber-500/50 bg-amber-500/10">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -606,6 +635,7 @@ export default function SupplierInventory() {
                     <TableHead>Category</TableHead>
                     <TableHead>Specs</TableHead>
                     <TableHead>UOM</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -620,6 +650,11 @@ export default function SupplierInventory() {
                           .join(' • ') || '—'}
                       </TableCell>
                       <TableCell className="font-mono text-xs">{row.uom_default}</TableCell>
+                      <TableCell className="text-right font-mono text-xs">
+                        {row.list_price != null
+                          ? `$${row.list_price.toFixed(2)} / ${row.price_uom}`
+                          : <span className="text-destructive">Needs price</span>}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
