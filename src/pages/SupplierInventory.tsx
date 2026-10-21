@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { parseEnhancedInventoryCSV, EnhancedCatalogCSVRow, CatalogCategory } from '@/types/supplier';
+import { parseCatalogImport, type CatalogImportRow } from '@/lib/catalogImport';
 import { AddProductDialog } from '@/components/supplier-inventory/AddProductDialog';
 import { EditProductDialog } from '@/components/supplier-inventory/EditProductDialog';
 import { CatalogHealthStrip } from '@/components/supplier-inventory/CatalogHealthStrip';
@@ -99,7 +99,8 @@ export default function SupplierInventory() {
   const [initializing, setInitializing] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [xlsxUploading, setXlsxUploading] = useState(false);
-  const [csvPreview, setCsvPreview] = useState<EnhancedCatalogCSVRow[]>([]);
+  const [csvPreview, setCsvPreview] = useState<CatalogImportRow[]>([]);
+  const [skippedRows, setSkippedRows] = useState<{ line: number; reason: string }[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<CatalogManagerItem | null>(null);
@@ -271,16 +272,20 @@ export default function SupplierInventory() {
   };
 
   const parseCSV = (text: string) => {
-    const parsed = parseEnhancedInventoryCSV(text);
-    if (parsed.length === 0) {
+    const result = parseCatalogImport(text);
+    if (result.missingColumns.length > 0 || result.rows.length === 0) {
       toast({
-        title: 'Invalid CSV',
-        description: 'Could not parse CSV. Ensure it has SKU and Description columns.',
+        title: 'File could not be read',
+        description: result.missingColumns.length
+          ? `Missing column(s): ${result.missingColumns.join(', ')}. Use the template headers below.`
+          : 'No product rows found. Each row needs a SKU and description.',
         variant: 'destructive',
       });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
-    setCsvPreview(parsed);
+    setCsvPreview(result.rows);
+    setSkippedRows(result.skippedRows);
     setShowPreview(true);
   };
 
@@ -288,43 +293,67 @@ export default function SupplierInventory() {
     if (csvPreview.length === 0 || !supplierId) return;
     setUploading(true);
     try {
-      const uniqueItems = new Map<string, any>();
-      csvPreview.forEach((row) => {
-        uniqueItems.set(row.supplier_sku, {
-          supplier_id: supplierId,
-          supplier_sku: row.supplier_sku,
-          name: row.name || null,
-          description: row.description,
-          category: row.category as CatalogCategory,
-          secondary_category: row.secondary_category || null,
-          manufacturer: row.manufacturer || null,
-          use_type: row.use_type || null,
-          product_type: row.product_type || null,
-          dimension: row.dimension || null,
-          thickness: row.thickness || null,
-          length: row.length || null,
-          color: row.color || null,
-          finish: row.finish || null,
-          wood_species: row.wood_species || null,
-          bundle_type: row.bundle_type || null,
-          bundle_qty: row.bundle_qty || null,
-          uom_default: row.uom_default,
-          size_or_spec: row.size_or_spec || null,
-        });
-      });
+      const unique = new Map<string, CatalogImportRow>();
+      csvPreview.forEach((row) => unique.set(row.supplier_sku, row));
+      const list = Array.from(unique.values());
+      const { data: auth } = await supabase.auth.getUser();
+      let pricedSaved = 0;
 
-      const itemsToInsert = Array.from(uniqueItems.values());
-      const { error } = await supabase
-        .from('catalog_items')
-        .upsert(itemsToInsert, { onConflict: 'supplier_id,supplier_sku' });
-      if (error) throw error;
+      for (let i = 0; i < list.length; i += 400) {
+        const chunk = list.slice(i, i + 400);
+        const { data: saved, error } = await supabase
+          .from('catalog_items')
+          .upsert(
+            chunk.map((row) => ({
+              supplier_id: supplierId,
+              supplier_sku: row.supplier_sku,
+              name: row.name,
+              description: row.description,
+              category: row.category,
+              secondary_category: row.secondary_category,
+              manufacturer: row.manufacturer,
+              dimension: row.dimension,
+              thickness: row.thickness,
+              length: row.length,
+              color: row.color,
+              wood_species: row.wood_species,
+              bundle_type: row.bundle_type,
+              bundle_qty: row.bundle_qty,
+              uom_default: row.uom_default,
+              lead_time_days: row.lead_time_days,
+              min_order_qty: row.min_order_qty,
+              is_active: row.is_active,
+              discontinued_at: row.is_active ? null : new Date().toISOString(),
+              ...(Object.keys(row.review).length ? { attributes: { import_review: row.review } } : {}),
+            })),
+            { onConflict: 'supplier_id,supplier_sku' },
+          )
+          .select('id, supplier_sku');
+        if (error) throw error;
 
-      const duplicatesRemoved = csvPreview.length - itemsToInsert.length;
+        const idBySku = new Map((saved || []).map((s) => [s.supplier_sku, s.id]));
+        const prices = chunk
+          .filter((row) => row.list_price != null && idBySku.has(row.supplier_sku))
+          .map((row) => ({
+            catalog_item_id: idBySku.get(row.supplier_sku)!,
+            supplier_id: supplierId,
+            list_price: row.list_price!,
+            price_uom: row.price_uom,
+            updated_by: auth.user?.id ?? null,
+          }));
+        if (prices.length) {
+          const { error: priceError } = await supabase
+            .from('catalog_prices')
+            .upsert(prices, { onConflict: 'catalog_item_id' });
+          if (priceError) throw priceError;
+          pricedSaved += prices.length;
+        }
+      }
+
+      const unpriced = list.length - pricedSaved;
       toast({
-        title: 'Success',
-        description: duplicatesRemoved > 0
-          ? `${itemsToInsert.length} items imported (${duplicatesRemoved} duplicates merged)`
-          : `${itemsToInsert.length} items imported`,
+        title: 'Import complete',
+        description: `${list.length} products saved · ${pricedSaved} priced${unpriced ? ` · ${unpriced} need a price` : ''}`,
       });
       setShowPreview(false);
       setCsvPreview([]);
@@ -345,6 +374,13 @@ export default function SupplierInventory() {
     }, {} as Record<string, number>);
     return Object.values(counts).filter((c) => c > 1).length;
   }, [csvPreview]);
+
+  const previewStats = useMemo(() => ({
+    priced: csvPreview.filter((r) => r.list_price != null).length,
+    unpriced: csvPreview.filter((r) => r.list_price == null).length,
+    invalid: csvPreview.filter((r) => r.invalid_price).length,
+    review: csvPreview.filter((r) => Object.keys(r.review).length > 0).length,
+  }), [csvPreview]);
 
   if (authLoading || (initializing && !isDesignatedOnly)) {
     return (
