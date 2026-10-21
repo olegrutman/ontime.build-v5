@@ -143,15 +143,27 @@ export function useCatalogFacets(supplierId: string | null) {
     queryFn: async () => {
       if (!supplierId) return null;
 
-      const [items, prices] = await Promise.all([
-        supabase
-          .from('catalog_items')
-          .select('category, manufacturer, is_active')
-          .eq('supplier_id', supplierId),
-        supabase.from('catalog_prices').select('catalog_item_id').eq('supplier_id', supplierId),
-      ]);
+      // The data API caps each request at 1000 rows, so page through everything.
+      const fetchAll = async <T,>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>) => {
+        const out: T[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await build(from, from + 999);
+          if (error) throw error;
+          out.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+        return out;
+      };
 
-      const rows = items.data || [];
+      const [rows, priceRows] = await Promise.all([
+        fetchAll<{ id: string; category: string; manufacturer: string | null; is_active: boolean }>((f, t) =>
+          supabase.from('catalog_items').select('id, category, manufacturer, is_active')
+            .eq('supplier_id', supplierId).order('id').range(f, t) as any),
+        fetchAll<{ catalog_item_id: string }>((f, t) =>
+          supabase.from('catalog_prices').select('catalog_item_id')
+            .eq('supplier_id', supplierId).order('catalog_item_id').range(f, t) as any),
+      ]);
+      const prices = { data: priceRows };
       const categoryCounts = new Map<string, number>();
       const manufacturers = new Set<string>();
       let activeCount = 0;
