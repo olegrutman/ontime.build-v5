@@ -177,7 +177,7 @@ function parseCSVLine(line: string): string[] {
   return result.map(v => v.replace(/^["']|["']$/g, ''));
 }
 
-function normalizeCategory(category: string): CatalogCategory {
+export function normalizeCategory(category: string): CatalogCategory {
   const normalized = category.toLowerCase().trim();
   const mapping: Record<string, CatalogCategory> = {
     // New inventory categories
