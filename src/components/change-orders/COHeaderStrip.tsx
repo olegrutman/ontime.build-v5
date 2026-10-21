@@ -1,7 +1,12 @@
 import { cn } from '@/lib/utils';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { ChangeOrder, COStatus, COCreatedByRole } from '@/types/changeOrder';
-import { Check } from 'lucide-react';
+import { Check, Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { cleanTitle } from '@/lib/coTitle';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 
 interface COHeaderStripProps {
@@ -45,6 +50,26 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
   const isWithdrawn = status === 'withdrawn';
   const activeStep = getActiveStep(status);
   const userName = co.title && co.title !== co.co_number ? co.title : null;
+  const canRename = !['approved', 'contracted', 'withdrawn'].includes(status);
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(co.title ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const saveTitle = async () => {
+    const next = cleanTitle(draft);
+    if (!next || next === co.title) { setEditing(false); return; }
+    setSaving(true);
+    const { data, error } = await supabase.from('change_orders').update({ title: next }).eq('id', co.id).select('id');
+    setSaving(false);
+    if (error || !data?.length) {
+      toast({ title: 'Could not rename', description: error?.message ?? 'You do not have permission to rename this order.', variant: 'destructive' });
+      return;
+    }
+    setEditing(false);
+    qc.invalidateQueries({ queryKey: ['co-detail', co.id] });
+    qc.invalidateQueries({ queryKey: ['change-orders', co.project_id] });
+  };
 
   // Avatar shows the company's initials — never the internal role code.
   const roleName = rl.label(role);
@@ -82,7 +107,32 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
                 {CO_STATUS_LABELS[status]}
               </span>
             </div>
-            {userName && (
+            {editing ? (
+              <input
+                autoFocus
+                aria-label="Order title"
+                value={draft}
+                maxLength={100}
+                disabled={saving}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveTitle();
+                  if (e.key === 'Escape') { setDraft(co.title ?? ''); setEditing(false); }
+                }}
+                className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
+              />
+            ) : canRename ? (
+              <button
+                type="button"
+                onClick={() => { setDraft(co.title ?? ''); setEditing(true); }}
+                className="group mt-1 flex max-w-full items-start gap-1.5 text-left text-sm text-muted-foreground hover:text-foreground"
+                aria-label="Rename order"
+              >
+                <span className="break-words">{userName ?? 'Add a title'}</span>
+                <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
+              </button>
+            ) : userName && (
               <p className="text-sm text-muted-foreground mt-1 break-words">{userName}</p>
             )}
           </div>

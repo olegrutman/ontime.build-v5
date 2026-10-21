@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgType } from '@/hooks/useOrgType';
 import { useStartAiIntake, useAiIntake, linesFromIntake, type AiIntakeLine } from '@/hooks/useAiIntake';
 import { generateCONumber } from '@/lib/generateCONumber';
+import { fallbackPackageTitle, cleanTitle } from '@/lib/coTitle';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
@@ -52,6 +53,7 @@ export default function CONewIntakePage() {
   const [text, setText] = useState('');
   const [intakeId, setIntakeId] = useState<string | null>(null);
   const [lines, setLines] = useState<AiIntakeLine[]>([]);
+  const [orderTitle, setOrderTitle] = useState('');
   const [docType, setDocType] = useState<'CO' | 'WO' | null>(null);
   const [pricingType, setPricingType] = useState<'fixed' | 'tm' | 'nte'>('fixed');
   const [materialBy, setMaterialBy] = useState<'GC' | 'TC' | null>(null);
@@ -74,6 +76,7 @@ export default function CONewIntakePage() {
     if (row.status === 'succeeded' && lines.length === 0) {
       const parsed = linesFromIntake(row);
       setLines(parsed);
+      setOrderTitle(row.output_json?.package_title || fallbackPackageTitle(parsed));
       if (parsed.length === 0) {
         toast({ title: 'No scope detected', description: 'Try adding more detail about what changed.' });
       }
@@ -236,7 +239,7 @@ export default function CONewIntakePage() {
           created_by_user_id: user.id,
           created_by_role: role,
           co_number: coNumber,
-          title: lines[0]?.title?.slice(0, 80) ?? 'New change',
+          title: cleanTitle(orderTitle) || fallbackPackageTitle(lines),
           status: 'draft',
           pricing_type: isWO ? 'tm' : pricingType,
           assigned_to_org_id: assignedOrgId,
@@ -541,6 +544,25 @@ export default function CONewIntakePage() {
               {lines.length} scope {lines.length === 1 ? 'item' : 'items'} extracted
             </h1>
           </div>
+
+          {!(addToCoId && existingCO) && (
+            <Card className="mb-4 rounded-2xl p-4">
+              <label htmlFor="order-title" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Order title
+              </label>
+              <Input
+                id="order-title"
+                value={orderTitle}
+                maxLength={100}
+                onChange={(e) => setOrderTitle(e.target.value)}
+                placeholder={fallbackPackageTitle(lines)}
+                className="font-medium"
+              />
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Suggested from the whole request. Edit it so it describes the full package.
+              </p>
+            </Card>
+          )}
 
           {/* CO / WO toggle */}
           <Card className={cn('mb-4 rounded-2xl p-4', existingCO && 'opacity-70')}>
