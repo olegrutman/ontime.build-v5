@@ -45,4 +45,4 @@
 
 - [x] Let crews collapse the "Your budget & spending" card and remember the choice per project
 - [x] Verify collapse, remembered state, summary figures and phone layouts
-- [ ] Supplier dashboard: build Design B (project cards w/ stage bar, filters, deliveries + AR sidebar)
+- [x] Supplier dashboard: build Design B (project cards w/ stage bar, filters, deliveries + AR sidebar)
