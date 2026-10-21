@@ -62,7 +62,7 @@ interface ModelLine {
   confidence: number;
 }
 
-async function callModel(rawText: string): Promise<ModelLine[]> {
+async function callModel(rawText: string): Promise<{ lines: ModelLine[]; package_title: string | null }> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -90,7 +90,8 @@ async function callModel(rawText: string): Promise<ModelLine[]> {
   const parsed = JSON.parse(content);
   const lines = Array.isArray(parsed?.lines) ? parsed.lines : [];
 
-  return lines.slice(0, 12).map((l: any, i: number) => ({
+  const pt = typeof parsed?.package_title === "string" ? parsed.package_title.trim().slice(0, 100) : "";
+  return { package_title: pt || null, lines: lines.slice(0, 12).map((l: any, i: number) => ({
     order: typeof l.order === "number" ? l.order : i + 1,
     title: String(l.title ?? "").slice(0, 200),
     problem: String(l.problem ?? "").slice(0, 800),
@@ -102,19 +103,19 @@ async function callModel(rawText: string): Promise<ModelLine[]> {
       typeof l.confidence === "number"
         ? Math.max(0, Math.min(1, l.confidence))
         : 0.7,
-  }));
+  })) };
 }
 
 async function processIntake(intakeId: string, rawText: string) {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
   try {
-    const lines = await callModel(rawText);
+    const { lines, package_title } = await callModel(rawText);
     await admin
       .from("co_ai_intakes")
       .update({
         status: "succeeded",
         model: MODEL,
-        output_json: { lines },
+        output_json: { lines, package_title },
         updated_at: new Date().toISOString(),
       })
       .eq("id", intakeId);
