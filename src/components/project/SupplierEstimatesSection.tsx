@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { FileText, Upload, Send, Trash2, Package, Plus, RefreshCw, Loader2, Sparkles, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useEstimateParseStatus } from '@/hooks/useEstimateParseStatus';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,7 +46,7 @@ interface UploadWizardState {
 export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId }: SupplierEstimatesSectionProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [confirmMode, setConfirmMode] = useState<'delete' | 'replace'>('delete');
-  const [showDetail, setShowDetail] = useState(false);
+  const [showDetail, setShowDetail] = useState(true);
   /* showDetail now controls inline expansion, not a Sheet */
   const [estimateItems, setEstimateItems] = useState<SupplierEstimateItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -94,6 +94,12 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
     }
     setLoadingItems(false);
   }, []);
+
+  useEffect(() => {
+    setShowDetail(true);
+    setEstimateItems([]);
+    if (estimate?.id) fetchEstimateItems(estimate.id);
+  }, [estimate?.id, projectId, supplierOrgId, fetchEstimateItems]);
 
   const getSupplierId = useCallback(async () => {
     const { data: suppliers } = await supabase
@@ -200,13 +206,6 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
     },
   });
 
-  const handleOpenDetail = () => {
-    if (estimate) {
-      setShowDetail(true);
-      fetchEstimateItems(estimate.id);
-    }
-  };
-
   const handleSubmitEstimate = async () => {
     if (!estimate) return;
     const { error } = await supabase
@@ -296,13 +295,10 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
           </div>
         ) : (
           /* Estimate exists — show inline summary */
-          <div
-            className="cursor-pointer hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors"
-            onClick={handleOpenDetail}
-          >
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <p className="text-base font-medium">{estimate.name}</p>
+          <div>
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="min-w-0 break-words text-base font-medium">{estimate.name}</p>
                 <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
                   {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
                 </Badge>
@@ -325,10 +321,26 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                   </Badge>
                 )}
               </div>
-              <span className="text-sm font-medium">
+              <span className="shrink-0 font-mono text-sm font-medium">
                 ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
+
+            <Button
+              variant="ghost"
+              className="mt-2 h-auto w-full justify-between gap-3 px-2 py-2 text-primary"
+              aria-expanded={showDetail}
+              aria-controls={`estimate-detail-${estimate.id}`}
+              onClick={() => setShowDetail(open => !open)}
+            >
+              <span className="min-w-0 text-left">
+                {showDetail ? 'Hide estimate details' : 'Show estimate details'}
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {loadingItems ? 'Loading items…' : `${estimateItems.length} items · ${new Set(estimateItems.map(item => item.pack_name || 'Ungrouped')).size} packs`}
+                </span>
+              </span>
+              <ChevronDown className={`shrink-0 transition-transform ${showDetail ? 'rotate-180' : ''}`} />
+            </Button>
 
             {/* What happened with the uploaded PDF, and what to do next */}
             {parseStatus.stage !== 'none' && (
@@ -383,7 +395,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 )}
               </div>
             )}
-            <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <Button variant="outline" size="sm" onClick={handleUploadClick}>
                 <Upload className="h-4 w-4 mr-2" />
                 Update
@@ -418,42 +430,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
 
       {/* Estimate Detail Inline */}
       {showDetail && estimate && (
-        <CardContent className="border-t p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
-              {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
-            </Badge>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleUploadClick}>
-              <Upload className="h-4 w-4 mr-2" />
-              Update
-            </Button>
-            {estimate.status !== 'SUBMITTED' && (
-              <Button size="sm" onClick={handleSubmitEstimate} disabled={estimateItems.length === 0}>
-                <Send className="h-4 w-4 mr-2" />
-                {estimate.status === 'DRAFT' ? 'Submit for Review' : 'Resubmit for Review'}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setConfirmMode('replace'); setDeleteConfirmId(estimate.id); }}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Delete & Replace
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => { setConfirmMode('delete'); setDeleteConfirmId(estimate.id); }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          </div>
-
+        <CardContent id={`estimate-detail-${estimate.id}`} className="border-t p-4 space-y-4">
           {loadingItems ? (
             <Skeleton className="h-32 w-full" />
           ) : estimateItems.length === 0 ? (
