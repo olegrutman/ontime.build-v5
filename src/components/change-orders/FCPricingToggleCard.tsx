@@ -74,9 +74,15 @@ export function FCPricingToggleCard({
             <HandCoins className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight text-foreground">Who sets the price?</p>
-            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{helper}</p>
+            <p className="flex items-center gap-1.5 text-sm font-semibold leading-tight text-foreground">
+              Who sets the price?
+              {toggling && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+              {toggling ? 'Updating prices…' : helper}
+            </p>
           </div>
+
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
