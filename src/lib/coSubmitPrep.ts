@@ -213,6 +213,7 @@ export async function materializeCrewPricing({
       lump_sum: base.isHourly ? null : base.calculatedPrice,
       description: 'Priced from crew submitted time',
       is_actual_cost: false,
+      crew_pricing_derived: true,
     });
     // Never swallow this: a rejected insert used to leave the frozen price with no
     // saved rows behind it, which reads as "Not priced" and blocks sending upstream.
@@ -234,6 +235,7 @@ export async function materializeCrewPricing({
         lump_sum: crewCost,
         description: 'Internal cost (crew time)',
         is_actual_cost: true,
+        crew_pricing_derived: true,
         source_fc_entry_ids: crew.map((r) => r.id),
       });
     }

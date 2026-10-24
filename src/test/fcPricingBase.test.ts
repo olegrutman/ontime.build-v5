@@ -1,9 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { computeFcPricingBase, resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
+import { computeFcPricingBase, resolveUpstreamBillerOrgId, canChangeCrewPricingBase } from '@/lib/fcPricingBase';
 
 const IMIS = 'imis-org';
 const PACIFICO = 'pacifico-org';
 const GC = 'gc-org';
+
+describe('crew pricing switch edit window', () => {
+  it('allows recalled crew drafts to change pricing', () => {
+    expect(canChangeCrewPricingBase({ status: 'draft', org_id: IMIS, created_by_role: 'FC', originating_org_id: PACIFICO }, IMIS)).toBe(true);
+  });
+  it('allows crew submissions still on the subcontractor review desk', () => {
+    expect(canChangeCrewPricingBase({ status: 'submitted', org_id: PACIFICO, created_by_role: 'FC', assigned_to_org_id: IMIS }, IMIS)).toBe(true);
+  });
+  it('preserves frozen prices already sent upstream', () => {
+    expect(canChangeCrewPricingBase({ status: 'submitted', org_id: IMIS, created_by_role: 'FC', originating_org_id: PACIFICO, assigned_to_org_id: GC }, IMIS)).toBe(false);
+  });
+  it('preserves approved billing', () => {
+    expect(canChangeCrewPricingBase({ status: 'approved', org_id: IMIS, created_by_role: 'FC' }, IMIS)).toBe(false);
+  });
+});
 
 describe('computeFcPricingBase', () => {
   it('prices a fixed-price WO from crew hours × the sub rate', () => {

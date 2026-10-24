@@ -24,6 +24,23 @@ export interface FcPricingBaseResult {
   calculatedPrice: number;
 }
 
+/** Submitted to the crew's hirer is review, not a frozen submission to the GC. */
+export function canChangeCrewPricingBase(co: {
+  status: string;
+  org_id: string;
+  assigned_to_org_id?: string | null;
+  created_by_role?: string | null;
+  originating_org_id?: string | null;
+}, orgId: string): boolean {
+  if (!orgId || ['approved', 'contracted', 'rejected', 'withdrawn'].includes(co.status)) return false;
+  if (co.status === 'submitted') {
+    return co.created_by_role === 'FC' && co.assigned_to_org_id === orgId &&
+      (!co.originating_org_id || co.originating_org_id === co.org_id);
+  }
+  return ['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(co.status) &&
+    resolveUpstreamBillerOrgId(co) === orgId;
+}
+
 export function computeFcPricingBase({
   fcTotalHours,
   fcLumpSumTotal,

@@ -1,5 +1,7 @@
 # Project architecture rules
 
+- Crew-base billable rows and mirrored costs carry explicit provenance; switching the order-wide base off clears only these rows atomically, preserving manual entries and upstream submission freezes.
+
 - Project Info derives headline revenue from the viewer's own earning contracts, never the sum of revenue and downstream costs; shared details and contract edits use their respective user-level creator identities.
 - Project Info uses semantic command-surface tokens and shared section headings, so operational styling stays consistent without changing contract or creator safeguards.
 

@@ -254,6 +254,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         lump_sum: crewBase.isHourly ? null : provisionalAmount,
         description: `Priced from ${rl.FC} submitted time`,
         is_actual_cost: false,
+        crew_pricing_derived: true,
       });
       if (error) throw error;
       if (crewCostOnItem > 0) {
@@ -266,6 +267,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           lump_sum: crewCostOnItem,
           description: `Internal cost (${rl.FC} time)`,
           is_actual_cost: true,
+          crew_pricing_derived: true,
           source_fc_entry_ids: fcBillable.map(e => e.id),
         });
       }

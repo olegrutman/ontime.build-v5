@@ -26,6 +26,7 @@ import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
 import { COBillingStatusCard } from './COBillingStatusCard';
 import { COSidebar } from './COSidebar';
+import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStickyFooter } from './COStickyFooter';
@@ -450,6 +451,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     .filter(e => !e.is_actual_cost && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole))
     .reduce((s, e) => s + (e.line_total ?? 0), 0);
   const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
+  const scopeCost = isTC
+    ? (financials.useFcPricingBase ? Math.max(financials.tcActualCostTotal, financials.fcLaborTotal) : financials.tcActualCostTotal + financials.fcLaborTotal)
+    : roleActualCost;
   const displayBillable = (isTC || isFC) ? financials.viewer.totalToUpstream : totalLogged;
   const grossMargin = displayBillable - roleActualCost;
   const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
@@ -649,10 +653,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           <>My billable <span className="font-semibold text-foreground">${(financials.viewer.ownLaborToUpstream ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
                         ) : (
                           <>
-                            Cost <span className="font-semibold text-foreground">${(financials.actualCostTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                            Cost <span className="font-semibold text-foreground">${scopeCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                             → Billable <span className="font-semibold text-foreground">${(tcBillableTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                             {tcBillableTotal > 0 && (
-                              <> · Margin <span className={(tcBillableTotal - (financials.actualCostTotal ?? 0)) >= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-destructive'}>{(((tcBillableTotal - (financials.actualCostTotal ?? 0)) / tcBillableTotal) * 100).toFixed(1)}%</span></>
+                              <> · Margin <span className={(tcBillableTotal - scopeCost) >= 0 ? 'font-semibold text-success' : 'font-semibold text-destructive'}>{(((tcBillableTotal - scopeCost) / tcBillableTotal) * 100).toFixed(1)}%</span></>
                             )}
                           </>
                         )}
@@ -668,6 +672,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     )}
                   </div>
 
+
+                  {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <FCPricingToggleCard co={co} financials={financials} myOrgId={myOrgId}
+                        onRefresh={refreshDetail} fcCollabName={fcCollabName} gcSideName={rl.short('GC')} />
+                    </div>
+                  )}
 
                   {/* Progress bar */}
                   {lineItems.length > 0 && (
