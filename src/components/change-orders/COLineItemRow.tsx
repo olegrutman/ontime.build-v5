@@ -371,7 +371,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
         className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Numbered index */}
             {index !== undefined && (
