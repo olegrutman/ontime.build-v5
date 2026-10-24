@@ -384,7 +384,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
         className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-[2rem_minmax(0,1fr)_8rem_7rem_8rem_4.5rem_2.5rem] md:items-center md:gap-3">
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] md:items-center md:gap-3">
           {/* # column — desktop */}
           <div className="hidden md:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
             {index !== undefined && <span className="text-sm font-bold">{index}</span>}

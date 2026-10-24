@@ -689,7 +689,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 {/* Line items */}
                 <div>
                   {lineItems.length > 0 && (
-                    <div className="hidden md:grid md:grid-cols-[2rem_minmax(0,1fr)_8rem_7rem_8rem_4.5rem_2.5rem] md:gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
+                    <div className="hidden md:grid md:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] md:gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
                       <span>#</span>
                       <span>Item</span>
                       <span className="text-right">Crew cost</span>
