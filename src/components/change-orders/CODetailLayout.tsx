@@ -649,10 +649,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           <>My billable <span className="font-semibold text-foreground">${(financials.viewer.ownLaborToUpstream ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
                         ) : (
                           <>
-                            Cost <span className="font-semibold text-foreground">${(financials.fcActualCostTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                            Cost <span className="font-semibold text-foreground">${(financials.actualCostTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                             → Billable <span className="font-semibold text-foreground">${(tcBillableTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                             {tcBillableTotal > 0 && (
-                              <> · Margin <span className={(tcBillableTotal - (financials.fcActualCostTotal ?? 0)) >= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-destructive'}>{(((tcBillableTotal - (financials.fcActualCostTotal ?? 0)) / tcBillableTotal) * 100).toFixed(1)}%</span></>
+                              <> · Margin <span className={(tcBillableTotal - (financials.actualCostTotal ?? 0)) >= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-destructive'}>{(((tcBillableTotal - (financials.actualCostTotal ?? 0)) / tcBillableTotal) * 100).toFixed(1)}%</span></>
                             )}
                           </>
                         )}
