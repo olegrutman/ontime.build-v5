@@ -729,6 +729,210 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <p className="text-sm font-semibold text-foreground">No pricing added yet</p>
               <p className="text-xs text-muted-foreground mt-1">Add an entry to start tracking billable work for this scope item</p>
             </div>
+          ) : isTC && fcBillable.length > 0 ? (
+            /* Design A — two labeled ledgers: the crew's work (read-only) and the
+               subcontractor's own billing (editable), so cost and billable numbers
+               never blur together and crew math is spelled out in plain language. */
+            <>
+              {/* Crew ledger — read only */}
+              <div className="px-3 sm:px-5 pt-3 pb-1.5 flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <Lock className="h-2.5 w-2.5" /> {rl.FC}'s work · your private cost
+                </span>
+                <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-semibold uppercase tracking-wide">View only</span>
+              </div>
+              <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-emerald-200/70 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/10 divide-y divide-emerald-200/60 dark:divide-emerald-900/30">
+                {fcBillable.map(entry => {
+                  const rate = entry.hourly_rate ?? entry.base_hourly_rate;
+                  return (
+                    <div key={entry.id} className="px-3.5 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-foreground">{entry.description || 'Submitted time'}</p>
+                          <p className="text-[10px] text-muted-foreground">{entry.entry_date}</p>
+                        </div>
+                        <p className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">${fmt(entry.line_total ?? 0)}</p>
+                      </div>
+                      {hasCrewMath(entry) ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-card border border-border px-2 py-1"><Users className="h-3 w-3 text-muted-foreground" />{entry.crew_size} workers</span>
+                          <span className="text-muted-foreground">×</span>
+                          <span className="inline-flex items-center gap-1 rounded-md bg-card border border-border px-2 py-1"><CalendarDays className="h-3 w-3 text-muted-foreground" />{entry.days} days</span>
+                          <span className="text-muted-foreground">×</span>
+                          <span className="inline-flex items-center gap-1 rounded-md bg-card border border-border px-2 py-1"><Clock className="h-3 w-3 text-muted-foreground" />{entry.hours_per_day} hrs/day</span>
+                          <span className="text-muted-foreground">=</span>
+                          <span className="inline-flex items-center rounded-md bg-emerald-100 dark:bg-emerald-950/50 px-2 py-1 font-mono font-bold text-emerald-800 dark:text-emerald-300">{fmtHours(entry.hours ?? 0)} hrs</span>
+                          {rate != null && rate > 0 && <span className="text-muted-foreground">@ ${fmt(rate)}/hr</span>}
+                        </div>
+                      ) : entry.pricing_mode === 'lump_sum' ? (
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">Lump sum</p>
+                      ) : (entry.hours ?? 0) > 0 ? (
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">
+                          {fmtHours(entry.hours ?? 0)} hrs{rate != null && rate > 0 ? ` @ $${fmt(rate)}/hr` : ''}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* TC billing ledger — editable */}
+              <div className="px-3 sm:px-5 pt-2 pb-1.5 border-t border-border/60">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Your billing to {rl.GC}</span>
+              </div>
+              {tcBillable.length === 0 ? (
+                <p className="mx-3 sm:mx-5 mb-3 text-xs text-muted-foreground">
+                  No billing entries yet{provisionalAmount > 0 ? ' — confirm the crew-based price on the item above or add your own entry.' : '.'}
+                </p>
+              ) : (
+                <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-border bg-card divide-y divide-border/60">
+                  {tcBillable.map(entry => {
+                    const editable = canEditEntry(entry);
+                    const isEditingThisRow = editEntryId === entry.id;
+                    const entryRate = entry.hourly_rate ?? entry.base_hourly_rate;
+                    return (
+                      <div key={entry.id}>
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-foreground">{entry.description || 'Billing entry'}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {entry.entry_date}
+                              {entry.pricing_mode === 'lump_sum'
+                                ? ' · lump sum'
+                                : (entry.hours ?? 0) > 0
+                                  ? ` · ${fmtHours(entry.hours ?? 0)} hrs${entryRate != null && entryRate > 0 ? ` @ $${fmt(entryRate)}/hr` : ''}`
+                                  : ''}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-mono text-sm font-bold text-foreground">${fmt(entry.line_total ?? 0)}</p>
+                            {editable && (
+                              <button
+                                type="button"
+                                aria-label="Edit billable entry"
+                                onClick={(e) => { e.stopPropagation(); setEditEntryId(isEditingThisRow ? null : entry.id); }}
+                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                                title="Edit billable entry"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            )}
+                            {editable && (
+                              <button
+                                type="button"
+                                aria-label="Remove billable entry"
+                                onClick={(e) => { e.stopPropagation(); deleteEntry(entry); }}
+                                disabled={deletingEntryId === entry.id}
+                                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                title="Remove entry"
+                              >
+                                {deletingEntryId === entry.id
+                                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                                  : <Trash2 className="h-3 w-3" />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {isEditingThisRow && (
+                          <div className="px-3.5 pb-3 pt-1 bg-accent/20">
+                            <LaborEntryForm
+                              coId={coId} lineItemId={item.id} orgId={orgId}
+                              enteredByRole={enteredByRole} pricingType={pricingType}
+                              isTC={isTC} isFC={isFC}
+                              isActualCost={false}
+                              editingEntry={entry}
+                              onSaved={() => { setEditEntryId(null); onRefresh(); }}
+                              onCancel={() => setEditEntryId(null)}
+                              onDelete={() => deleteEntry(entry)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Own internal costs — private, never billed upstream */}
+              {actualCosts.length > 0 && (
+                <>
+                  <div className="px-3 sm:px-5 pt-2 pb-1.5 border-t border-border/60">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                      <Lock className="h-2.5 w-2.5" /> Your own internal costs · private
+                    </span>
+                  </div>
+                  <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-border bg-muted/20 divide-y divide-border/60">
+                    {actualCosts.map(a => {
+                      const editable = canEditEntry(a);
+                      const isEditingThisRow = editEntryId === a.id;
+                      return (
+                        <div key={a.id}>
+                          <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-foreground">{a.description || 'Internal cost'}</p>
+                              <p className="text-[10px] text-muted-foreground">{a.entry_date}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
+                                <Lock className="h-2.5 w-2.5" /> ${fmt(a.line_total ?? 0)}
+                              </p>
+                              {editable && (
+                                <button
+                                  type="button"
+                                  aria-label="Edit internal cost"
+                                  onClick={(e) => { e.stopPropagation(); setEditEntryId(isEditingThisRow ? null : a.id); }}
+                                  className="p-1 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                                  title="Edit internal cost"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                              {editable && (
+                                <button
+                                  type="button"
+                                  aria-label="Remove internal cost"
+                                  onClick={(e) => { e.stopPropagation(); deleteEntry(a); }}
+                                  disabled={deletingEntryId === a.id}
+                                  className="p-1 rounded hover:bg-destructive/10 text-emerald-700 hover:text-destructive"
+                                  title="Remove internal cost"
+                                >
+                                  {deletingEntryId === a.id
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <Trash2 className="h-3 w-3" />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {isEditingThisRow && (
+                            <div className="px-3.5 pb-3 pt-1 bg-accent/20">
+                              <LaborEntryForm
+                                coId={coId} lineItemId={item.id} orgId={orgId}
+                                enteredByRole={enteredByRole} pricingType={pricingType}
+                                isTC={isTC} isFC={isFC}
+                                isActualCost
+                                editingEntry={a}
+                                onSaved={() => { setEditEntryId(null); onRefresh(); }}
+                                onCancel={() => setEditEntryId(null)}
+                                onDelete={() => deleteEntry(a)}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* Summary strip — one place for cost, billable and margin */}
+              <div className="border-t border-border bg-muted/20 px-3 sm:px-5 py-2.5 flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                <span className="text-muted-foreground">Cost <span className="font-mono font-semibold text-foreground">${fmt(roleCostTotal)}</span></span>
+                <span className="text-muted-foreground">Billable <span className="font-mono font-semibold text-foreground">${fmt(billableTotal)}</span></span>
+                {hasMargin && (
+                  <span className="text-muted-foreground">Margin <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>${fmt(marginAmount)} · {marginPct.toFixed(1)}%</span></span>
+                )}
+              </div>
+            </>
           ) : (
             <>
               {/* Column headers */}
