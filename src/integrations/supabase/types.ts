@@ -779,6 +779,8 @@ export type Database = {
           created_at: string | null
           created_by_role: string
           created_by_user_id: string | null
+          crew_approved_at: string | null
+          crew_approved_by_user_id: string | null
           document_type: string
           draft_shared_with_next: boolean
           entry_source: Database["public"]["Enums"]["co_entry_source"]
@@ -790,6 +792,7 @@ export type Database = {
           gc_budget: number | null
           gc_owner_markup_percent: number | null
           id: string
+          kept_internal: boolean
           labor_tax: number | null
           labor_taxable_snapshot: boolean | null
           location_tag: string | null
@@ -859,6 +862,8 @@ export type Database = {
           created_at?: string | null
           created_by_role: string
           created_by_user_id?: string | null
+          crew_approved_at?: string | null
+          crew_approved_by_user_id?: string | null
           document_type?: string
           draft_shared_with_next?: boolean
           entry_source?: Database["public"]["Enums"]["co_entry_source"]
@@ -870,6 +875,7 @@ export type Database = {
           gc_budget?: number | null
           gc_owner_markup_percent?: number | null
           id?: string
+          kept_internal?: boolean
           labor_tax?: number | null
           labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
@@ -939,6 +945,8 @@ export type Database = {
           created_at?: string | null
           created_by_role?: string
           created_by_user_id?: string | null
+          crew_approved_at?: string | null
+          crew_approved_by_user_id?: string | null
           document_type?: string
           draft_shared_with_next?: boolean
           entry_source?: Database["public"]["Enums"]["co_entry_source"]
@@ -950,6 +958,7 @@ export type Database = {
           gc_budget?: number | null
           gc_owner_markup_percent?: number | null
           id?: string
+          kept_internal?: boolean
           labor_tax?: number | null
           labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
@@ -9117,6 +9126,98 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      approve_crew_change_order: {
+        Args: { _co_id: string; _keep_internal?: boolean }
+        Returns: {
+          ai_intake_id: string | null
+          approved_at: string | null
+          architect_approval_status: string
+          architect_approval_token: string | null
+          architect_approved_at: string | null
+          architect_approver_name: string | null
+          architect_rejection_note: string | null
+          assembly_state: string | null
+          assigned_to_org_id: string | null
+          blocked_by_rfi_id: string | null
+          closed_for_pricing_at: string | null
+          co_equipment_responsible_override: string | null
+          co_material_responsible_override: string | null
+          co_number: string | null
+          combined_at: string | null
+          combined_co_id: string | null
+          completed_at: string | null
+          completion_acknowledged_at: string | null
+          contracted_at: string | null
+          created_at: string | null
+          created_by_role: string
+          created_by_user_id: string | null
+          crew_approved_at: string | null
+          crew_approved_by_user_id: string | null
+          document_type: string
+          draft_shared_with_next: boolean
+          entry_source: Database["public"]["Enums"]["co_entry_source"]
+          equipment_needed: boolean
+          equipment_responsible: string | null
+          equipment_tax: number | null
+          fc_input_needed: boolean
+          fc_pricing_submitted_at: string | null
+          gc_budget: number | null
+          gc_owner_markup_percent: number | null
+          id: string
+          kept_internal: boolean
+          labor_tax: number | null
+          labor_taxable_snapshot: boolean | null
+          location_tag: string | null
+          materials_needed: boolean
+          materials_on_site: boolean
+          materials_responsible: string | null
+          materials_tax: number | null
+          not_passed_reason: string | null
+          nte_cap: number | null
+          nte_increase_approved: boolean | null
+          nte_increase_requested: number | null
+          org_id: string
+          originating_org_id: string | null
+          owner_approval_status: string
+          owner_approval_token: string | null
+          owner_approved_at: string | null
+          owner_approver_name: string | null
+          owner_rejection_note: string | null
+          parent_co_id: string | null
+          passed_to_owner: boolean | null
+          pricing_type: string
+          problem_summary: string | null
+          problem_voice_url: string | null
+          project_id: string
+          reason: string | null
+          reason_note: string | null
+          rejected_at: string | null
+          rejection_note: string | null
+          retainage_amount: number | null
+          retainage_released: boolean
+          retainage_released_at: string | null
+          shared_at: string | null
+          status: string
+          submitted_at: string | null
+          tax_rate_snapshot: number | null
+          tc_snapshot_hourly_rate: number | null
+          tc_snapshot_markup_percent: number | null
+          tc_submitted_price: number | null
+          title: string | null
+          total_tax: number | null
+          trigger_code: string | null
+          updated_at: string | null
+          use_fc_pricing_base: boolean | null
+          withdrawn_at: string | null
+          withdrawn_reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "change_orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       approve_join_request: {
         Args: { _request_id: string }
         Returns: undefined
@@ -9314,6 +9415,8 @@ export type Database = {
           created_at: string | null
           created_by_role: string
           created_by_user_id: string | null
+          crew_approved_at: string | null
+          crew_approved_by_user_id: string | null
           document_type: string
           draft_shared_with_next: boolean
           entry_source: Database["public"]["Enums"]["co_entry_source"]
@@ -9325,6 +9428,7 @@ export type Database = {
           gc_budget: number | null
           gc_owner_markup_percent: number | null
           id: string
+          kept_internal: boolean
           labor_tax: number | null
           labor_taxable_snapshot: boolean | null
           location_tag: string | null
@@ -9794,6 +9898,98 @@ export type Database = {
           _work_order_title: string
         }
         Returns: undefined
+      }
+      set_crew_change_order_internal: {
+        Args: { _co_id: string; _internal: boolean }
+        Returns: {
+          ai_intake_id: string | null
+          approved_at: string | null
+          architect_approval_status: string
+          architect_approval_token: string | null
+          architect_approved_at: string | null
+          architect_approver_name: string | null
+          architect_rejection_note: string | null
+          assembly_state: string | null
+          assigned_to_org_id: string | null
+          blocked_by_rfi_id: string | null
+          closed_for_pricing_at: string | null
+          co_equipment_responsible_override: string | null
+          co_material_responsible_override: string | null
+          co_number: string | null
+          combined_at: string | null
+          combined_co_id: string | null
+          completed_at: string | null
+          completion_acknowledged_at: string | null
+          contracted_at: string | null
+          created_at: string | null
+          created_by_role: string
+          created_by_user_id: string | null
+          crew_approved_at: string | null
+          crew_approved_by_user_id: string | null
+          document_type: string
+          draft_shared_with_next: boolean
+          entry_source: Database["public"]["Enums"]["co_entry_source"]
+          equipment_needed: boolean
+          equipment_responsible: string | null
+          equipment_tax: number | null
+          fc_input_needed: boolean
+          fc_pricing_submitted_at: string | null
+          gc_budget: number | null
+          gc_owner_markup_percent: number | null
+          id: string
+          kept_internal: boolean
+          labor_tax: number | null
+          labor_taxable_snapshot: boolean | null
+          location_tag: string | null
+          materials_needed: boolean
+          materials_on_site: boolean
+          materials_responsible: string | null
+          materials_tax: number | null
+          not_passed_reason: string | null
+          nte_cap: number | null
+          nte_increase_approved: boolean | null
+          nte_increase_requested: number | null
+          org_id: string
+          originating_org_id: string | null
+          owner_approval_status: string
+          owner_approval_token: string | null
+          owner_approved_at: string | null
+          owner_approver_name: string | null
+          owner_rejection_note: string | null
+          parent_co_id: string | null
+          passed_to_owner: boolean | null
+          pricing_type: string
+          problem_summary: string | null
+          problem_voice_url: string | null
+          project_id: string
+          reason: string | null
+          reason_note: string | null
+          rejected_at: string | null
+          rejection_note: string | null
+          retainage_amount: number | null
+          retainage_released: boolean
+          retainage_released_at: string | null
+          shared_at: string | null
+          status: string
+          submitted_at: string | null
+          tax_rate_snapshot: number | null
+          tc_snapshot_hourly_rate: number | null
+          tc_snapshot_markup_percent: number | null
+          tc_submitted_price: number | null
+          title: string | null
+          total_tax: number | null
+          trigger_code: string | null
+          updated_at: string | null
+          use_fc_pricing_base: boolean | null
+          withdrawn_at: string | null
+          withdrawn_reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "change_orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_member_project_scope: {
         Args: { _scope: string; _target_role_id: string }

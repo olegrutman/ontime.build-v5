@@ -110,6 +110,8 @@ export function COStatusActions({
 
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
+  const crewApproved = forwardsToGC && !!co.crew_approved_at;
+  const crewPending = forwardsToGC && !co.crew_approved_at;
   const submitAmount = financials?.viewer?.totalToUpstream ?? financials?.grandTotal ?? 0;
 
   /* GC cost on this CO = everything it will pay out (downstream billable +
@@ -369,6 +371,10 @@ export function COStatusActions({
           }
         }
 
+        if (!co.crew_approved_at || co.kept_internal) {
+          const { error: apprErr } = await supabase.rpc('approve_crew_change_order', { _co_id: co.id, _keep_internal: false });
+          if (apprErr) throw apprErr;
+        }
         const { data, error } = await supabase.rpc('forward_change_order_to_upstream_gc', {
           _co_id: co.id,
         });
@@ -379,8 +385,7 @@ export function COStatusActions({
         const forwarded = Array.isArray(data) ? data[0] : data;
         const nextOrgId = forwarded?.assigned_to_org_id ?? null;
 
-        toast.success(`${rl.FC} scope approved and sent to ${rl.GC}`);
-        await logActivity('approved_fc', undefined, financials?.fcLaborTotal || undefined);
+        toast.success(`Sent to ${rl.GC} for approval`);
         await logActivity('forwarded_to_gc', undefined, financials?.grandTotal || undefined);
         await notifyOrg(nextOrgId, 'CHANGE_SUBMITTED', financials?.grandTotal || undefined);
       } else {
@@ -482,6 +487,36 @@ export function COStatusActions({
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to approve');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function doApproveCrew(keepInternal: boolean) {
+    setActing(true);
+    try {
+      const { error } = await supabase.rpc('approve_crew_change_order', { _co_id: co.id, _keep_internal: keepInternal });
+      if (error) throw error;
+      toast.success(keepInternal ? `${rl.FC} work approved and kept as internal cost` : `${rl.FC} work approved — ready to send to ${rl.GC}`);
+      await logActivity('approved_fc', keepInternal ? 'Kept as internal cost' : undefined, financials?.fcLaborTotal || undefined);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to approve');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function doToggleInternal(internal: boolean) {
+    setActing(true);
+    try {
+      const { error } = await supabase.rpc('set_crew_change_order_internal', { _co_id: co.id, _internal: internal });
+      if (error) throw error;
+      toast.success(internal ? 'Kept as internal cost — not billed upstream' : `Moved back to ready to send to ${rl.GC}`);
+      await logActivity(internal ? 'kept_internal' : 'unmarked_internal');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update');
     } finally {
       setActing(false);
     }
@@ -639,9 +674,11 @@ export function COStatusActions({
   /* The GC may be either the creating org (GC-initiated CO) or the assigned org
      (TC submitted upstream to them) — both must be able to decide. */
   const canApprove = ((isGC && status === 'submitted'
-    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || forwardsToGC)
+    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || (crewApproved && !co.kept_internal))
     && !isActiveCollaborator;
-  const canReject = canApprove;
+  const canReject = ((isGC && status === 'submitted'
+    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || crewPending)
+    && !isActiveCollaborator;
   /* Flow 2 completion */
   const isApproved = status === 'approved';
   const canMarkCompleted = isTC && isApproved && !co.completed_at;
@@ -737,7 +774,7 @@ export function COStatusActions({
     );
   }
 
-  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || crewPending || crewApproved || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
 
   if (!hasAnyAction) {
     if (isApproved) {
@@ -788,16 +825,44 @@ export function COStatusActions({
               Recall submission
             </Button>
           )}
+          {crewPending && !isActiveCollaborator && (
+            <>
+              <p className="text-[0.7rem] text-muted-foreground leading-snug">
+                Step 1 of 2 — approve the {rl.FC} work. Sending it to {rl.GC} is a separate choice.
+              </p>
+              <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => doApproveCrew(false)} disabled={acting}>
+                {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                Approve {rl.FC} work
+              </Button>
+              <Button variant="outline" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => doApproveCrew(true)} disabled={acting}>
+                <Check className="h-3 w-3" />
+                Approve &amp; keep as internal cost
+              </Button>
+            </>
+          )}
+          {crewApproved && (
+            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-[0.7rem] leading-snug text-muted-foreground">
+              <span className="font-semibold text-foreground">{rl.FC} work approved.</span>{' '}
+              {co.kept_internal
+                ? `Kept as your internal cost — ${rl.GC} won't see it.`
+                : `Step 2 — send to ${rl.GC} if it should be billed, or keep it internal.`}
+            </div>
+          )}
           {canApprove && (
             <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting}>
-              <Check className="h-3 w-3" />
-              {forwardsToGC ? `Approve & send to ${rl.GC}` : 'Approve'}
+              {forwardsToGC ? <Send className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+              {forwardsToGC ? `Send to ${rl.GC}` : 'Approve'}
+            </Button>
+          )}
+          {crewApproved && (
+            <Button variant="outline" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => doToggleInternal(!co.kept_internal)} disabled={acting}>
+              {co.kept_internal ? `Bill ${rl.GC} instead` : 'Keep as internal cost'}
             </Button>
           )}
           {canReject && (
             <Button variant="destructive" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setRejectOpen(true)} disabled={acting}>
               <X className="h-3 w-3" />
-              Reject
+              {crewPending ? `Send back to ${rl.FC} to fix` : 'Reject'}
             </Button>
           )}
           {canMarkCompleted && (
@@ -845,10 +910,10 @@ export function COStatusActions({
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{forwardsToGC ? `Approve ${rl.FC} scope and send to ${rl.GC}` : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
+            <AlertDialogTitle>{forwardsToGC ? `Send to ${rl.GC}` : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
             <AlertDialogDescription>
               {forwardsToGC
-                ? `This approves the ${rl.FC} portion as ${rl.TC} cost and immediately forwards the ${co.document_type === 'WO' ? 'work order' : 'change order'} for review.`
+                ? `This sends the approved ${co.document_type === 'WO' ? 'work order' : 'change order'} to ${rl.GC} for their approval.`
                 : `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`}
               {!forwardsToGC && co.pricing_type === 'fixed' && (
                 <span className="block mt-1">
@@ -978,7 +1043,7 @@ export function COStatusActions({
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={doApprove} disabled={acting}>
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {forwardsToGC ? 'Approve & send to GC' : isDamagedByOthers && isGC ? 'Approve & Create Backcharge' : 'Approve'}
+              {forwardsToGC ? `Send to ${rl.GC}` : isDamagedByOthers && isGC ? 'Approve & Create Backcharge' : 'Approve'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

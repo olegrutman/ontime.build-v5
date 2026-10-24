@@ -140,6 +140,22 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         ],
       };
     }
+    if (status === 'submitted' && isTC && co.created_by_role === 'FC' && co.assigned_to_org_id && co.org_id !== co.assigned_to_org_id) {
+      if (!co.crew_approved_at) {
+        return {
+          icon: <ClipboardList className="h-5 w-5" />,
+          title: `Review ${rl.FC} work order`,
+          subtitle: `Approve it, keep it as internal cost, or send it back to ${rl.FC} to fix`,
+          actions: [],
+        };
+      }
+      return {
+        icon: <Send className="h-5 w-5" />,
+        title: co.kept_internal ? 'Approved — kept as internal cost' : `Approved — ready to send to ${rl.GC}`,
+        subtitle: co.kept_internal ? `${rl.GC} won't see this. You can still bill it later.` : `Send it to ${rl.GC} only if it should be billed`,
+        actions: [],
+      };
+    }
     if (status === 'submitted') {
       return {
         icon: <Clock className="h-5 w-5" />,

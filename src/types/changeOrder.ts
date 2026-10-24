@@ -102,6 +102,11 @@ export interface ChangeOrder {
   document_type: CODocumentType;
   withdrawn_at: string | null;
   withdrawn_reason: string | null;
+  /** Subcontractor accepted the crew's work; sending upstream is a separate step. */
+  crew_approved_at?: string | null;
+  crew_approved_by_user_id?: string | null;
+  /** Crew-approved work the subcontractor keeps as its own cost (not billed upstream). Reversible. */
+  kept_internal?: boolean;
   created_at: string;
   updated_at: string;
 }
