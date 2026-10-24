@@ -556,7 +556,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
 
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
               {canEditHeader && (
                 <Popover open={editHeaderOpen} onOpenChange={(o) => {
                   setEditHeaderOpen(o);
@@ -693,7 +693,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               >
                 <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')} />
               </button>
-
             </div>
           </div>
         </div>
