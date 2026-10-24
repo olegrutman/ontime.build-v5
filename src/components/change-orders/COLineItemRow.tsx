@@ -285,9 +285,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // GC hidden mode: show the GC's per-line cost (the approved billable amount) without
   // revealing the TC's internal rates or margin.
   const visibleBillable = hideGCBreakdown ? tcBillable : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
-  const tcDownstreamCosts = isTC ? fcBillable : [];
   const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
   const entryCount = visibleBillable.length;
+
+  // Unified entry table: a subcontractor sees their own billable entries and the
+  // crew's downstream charges in one chronological list, each tagged by role.
+  const tableEntries: { entry: COLaborEntry; kind: 'billable' | 'downstream' }[] = isTC
+    ? [
+        ...tcBillable.map(e => ({ entry: e, kind: 'billable' as const })),
+        ...fcBillable.map(e => ({ entry: e, kind: 'downstream' as const })),
+      ].sort((a, b) => (a.entry.entry_date ?? '').localeCompare(b.entry.entry_date ?? ''))
+    : visibleBillable.map(e => ({ entry: e, kind: 'billable' as const }));
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
@@ -426,6 +434,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
           {/* Right side — consolidated pricing module */}
           <div className="shrink-0 flex w-full sm:w-auto flex-wrap items-center justify-end gap-2.5">
+            {/* Downstream crew pricing — what the crew bills this subcontractor (private) */}
+            {isTC && fcTotal > 0 && (
+              <div className="flex items-stretch rounded-lg border border-dashed border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20 overflow-hidden">
+                <span className="flex flex-col justify-center px-2 border-r border-emerald-500/30">
+                  <Lock className="h-3 w-3 text-emerald-700 dark:text-emerald-400" />
+                </span>
+                <span className="px-3 py-1.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-emerald-700/80 dark:text-emerald-400/80">{rl.FC} cost</span>
+                  <span className="flex items-baseline gap-0.5">
+                    <span className="font-mono text-sm text-emerald-700 dark:text-emerald-400">$</span>
+                    <span className="font-mono text-base font-bold text-foreground">{fmt(fcTotal)}</span>
+                  </span>
+                  <span className="block text-[9px] font-semibold text-muted-foreground/80">
+                    {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h logged` : 'lump sum'} · private
+                  </span>
+                </span>
+              </div>
+            )}
             {(() => {
               const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
               // Prefer how the entries were actually priced; fall back to the CO pricing type.
