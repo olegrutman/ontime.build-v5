@@ -48,6 +48,8 @@ interface COLineItemRowProps {
    * so the item card agrees with the side panel before anything is saved.
    */
   crewPricingBase?: { enabled: boolean; hourlyRate: number; markupPercent: number };
+  /** CO lifecycle status — the subcontractor's price is frozen once submitted upstream. */
+  coStatus?: string;
 }
 
 
@@ -76,7 +78,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
-  onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase,
+  onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -369,7 +371,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
         className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Numbered index */}
             {index !== undefined && (
@@ -433,7 +435,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Right side — consolidated pricing module */}
-          <div className="shrink-0 flex w-full sm:w-auto flex-wrap items-center justify-end gap-2.5">
+          <div className="flex w-full sm:w-auto sm:max-w-[55%] flex-wrap items-center justify-end gap-2.5">
             {/* Downstream crew pricing — what the crew bills this subcontractor (private) */}
             {isTC && fcTotal > 0 && (
               <div className="flex items-stretch rounded-lg border border-dashed border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20 overflow-hidden">
@@ -473,7 +475,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               const isPriced = entryCount > 0 || totalForRole > 0;
               const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
 
-              const showProvisional = !isPriced && canAddLabor && isTC && provisionalAmount > 0;
+              // Once the order is submitted upstream the subcontractor's price is
+              // frozen — no provisional confirm or new billable entries until recall.
+              const tcPricingLocked = isTC && ['submitted', 'approved', 'rejected', 'contracted'].includes(coStatus ?? '');
+              const showProvisional = !isPriced && canAddLabor && isTC && !tcPricingLocked && provisionalAmount > 0;
 
               if (showProvisional) {
                 return (
@@ -514,7 +519,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 );
               }
 
-              if (!isPriced && canAddLabor) {
+              if (!isPriced && canAddLabor && !tcPricingLocked) {
                 return (
                   <button
                     type="button"

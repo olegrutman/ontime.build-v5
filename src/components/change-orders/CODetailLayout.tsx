@@ -16,7 +16,8 @@ import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
-import { resolveCOAssignee, snapshotCOSubmission } from '@/lib/coSubmitPrep';
+import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
+import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -289,6 +290,23 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             // FC-as-creator submits the CO itself; FC-as-collaborator marks input complete.
             const isFCCreator = co.created_by_role === 'FC' && co.org_id === myOrgId;
             if (isFCCreator) {
+              // The subcontractor never presses Submit on a crew-created order, so
+              // freeze their crew-derived price into real billable rows here —
+              // otherwise the order travels upstream with a $0 total.
+              if (co.use_fc_pricing_base && co.assigned_to_org_id) {
+                await materializeCrewPricingForOrg({ coId: co.id, orgId: co.assigned_to_org_id, pricingType: co.pricing_type });
+                const { data: pricedRows } = await supabase
+                  .from('co_labor_entries')
+                  .select('line_total')
+                  .eq('co_id', co.id)
+                  .eq('org_id', co.assigned_to_org_id)
+                  .eq('entered_by_role', 'TC')
+                  .eq('is_actual_cost', false);
+                const pricedTotal = (pricedRows ?? []).reduce((s, r) => s + Number(r.line_total ?? 0), 0);
+                if (pricedTotal > 0) {
+                  await supabase.from('change_orders').update({ tc_submitted_price: pricedTotal }).eq('id', co.id);
+                }
+              }
               await submitCO.mutateAsync(co.id);
             } else {
               await completeFCInput.mutateAsync();
@@ -417,10 +435,20 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
   // Scope & Labor totals
+  // "Priced" means the viewer's own billing role has priced the item — a crew
+  // entry alone must not mark the item priced for the subcontractor.
   const pricedCount = lineItems.filter(li =>
-    laborEntries.some(e => e.co_line_item_id === li.id && !e.is_actual_cost)
+    laborEntries.some(e =>
+      e.co_line_item_id === li.id && !e.is_actual_cost &&
+      (isGC || e.entered_by_role === (isFC ? 'FC' : 'TC'))
+    )
   ).length;
-  const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
+  // Sum only the viewer's own billing-role entries — adding the crew's cost and
+  // the subcontractor's price for the same work would double count it.
+  const viewerEntryRole = isFC ? 'FC' : 'TC';
+  const totalLogged = laborEntries
+    .filter(e => !e.is_actual_cost && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole))
+    .reduce((s, e) => s + (e.line_total ?? 0), 0);
   const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
   const displayBillable = (isTC || isFC) ? financials.viewer.totalToUpstream : totalLogged;
   const grossMargin = displayBillable - roleActualCost;
@@ -429,7 +457,21 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   // Responsibility-aware billable-to-GC total. Centralized in useChangeOrderDetail
   // so every consumer (KPI strip, scope strip, sidebar, sticky footer, hero block,
   // banner) reads the same headline number. See COFinancials.billableGrandTotal.
-  const tcBillableTotal = financials.billableGrandTotal;
+  // Fallback for orders submitted by the crew before the subcontractor priced
+  // anything: derive the headline from crew time so the page never shows $0
+  // while the pricing panel shows a real amount.
+  const crewDerivedPrice = co.use_fc_pricing_base
+    ? computeFcPricingBase({
+        fcTotalHours: financials.fcTotalHours,
+        fcLumpSumTotal: financials.fcLumpSumTotal,
+        hourlyRate: crewPricingBase.hourlyRate,
+        markupPercent: crewPricingBase.markupPercent,
+        pricingType: co.pricing_type,
+      })
+    : null;
+  const tcBillableTotal = financials.billableGrandTotal > 0
+    ? financials.billableGrandTotal
+    : (crewDerivedPrice?.fcHasSubmitted ? crewDerivedPrice.calculatedPrice : financials.billableGrandTotal);
 
 
 
@@ -652,6 +694,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         index={idx + 1}
                         markupVisibility={markupVisibility}
                         crewPricingBase={crewPricingBase}
+                        coStatus={co.status}
                       />
                     ))
                   )}
