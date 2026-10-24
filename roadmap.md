@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Move crew pricing switch into Scope & Labor and safely clear derived billing when disabled
-- [ ] Verify saved switch changes, independent pricing preservation and phone layouts
+- [x] Move crew pricing switch into Scope & Labor and safely clear derived billing when disabled
+- [x] Verify saved switch changes, provenance-scoped clearing and phone layouts (46 tests; live WO off/reload; 320/394px; separate supplier-access toast overflow found)
 
 - [x] Catalog Management cleanup: active-only health counts, unified CSV/Excel preview, replace-impact preview, import guide, retire confirm, price feedback, full export
 
