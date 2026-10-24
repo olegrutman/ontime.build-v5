@@ -99,6 +99,7 @@ export default function SupplierInventory() {
   const navigate = useNavigate();
   const { user, userOrgRoles, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [supplierId, setSupplierId] = useState<string | null>(null);
@@ -413,6 +414,9 @@ export default function SupplierInventory() {
       setShowPreview(false);
       setCsvPreview([]);
       refetch();
+      // Header counts (active / need a price / uncategorized) come from the
+      // facets query — refresh them too so a catalog replace shows immediately.
+      qc.invalidateQueries({ queryKey: ['catalog-facets'] });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed to import items', variant: 'destructive' });
     } finally {
