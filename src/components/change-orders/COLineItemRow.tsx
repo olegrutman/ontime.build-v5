@@ -285,9 +285,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // GC hidden mode: show the GC's per-line cost (the approved billable amount) without
   // revealing the TC's internal rates or margin.
   const visibleBillable = hideGCBreakdown ? tcBillable : gcSummaryOnly ? [] : isGC ? tcBillable : isFC ? fcBillable : tcBillable;
-  const tcDownstreamCosts = isTC ? fcBillable : [];
   const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
   const entryCount = visibleBillable.length;
+
+  // Unified entry table: a subcontractor sees their own billable entries and the
+  // crew's downstream charges in one chronological list, each tagged by role.
+  const tableEntries: { entry: COLaborEntry; kind: 'billable' | 'downstream' }[] = isTC
+    ? [
+        ...tcBillable.map(e => ({ entry: e, kind: 'billable' as const })),
+        ...fcBillable.map(e => ({ entry: e, kind: 'downstream' as const })),
+      ].sort((a, b) => (a.entry.entry_date ?? '').localeCompare(b.entry.entry_date ?? ''))
+    : visibleBillable.map(e => ({ entry: e, kind: 'billable' as const }));
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
@@ -426,6 +434,24 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
           {/* Right side — consolidated pricing module */}
           <div className="shrink-0 flex w-full sm:w-auto flex-wrap items-center justify-end gap-2.5">
+            {/* Downstream crew pricing — what the crew bills this subcontractor (private) */}
+            {isTC && fcTotal > 0 && (
+              <div className="flex items-stretch rounded-lg border border-dashed border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20 overflow-hidden">
+                <span className="flex flex-col justify-center px-2 border-r border-emerald-500/30">
+                  <Lock className="h-3 w-3 text-emerald-700 dark:text-emerald-400" />
+                </span>
+                <span className="px-3 py-1.5">
+                  <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-emerald-700/80 dark:text-emerald-400/80">{rl.FC} cost</span>
+                  <span className="flex items-baseline gap-0.5">
+                    <span className="font-mono text-sm text-emerald-700 dark:text-emerald-400">$</span>
+                    <span className="font-mono text-base font-bold text-foreground">{fmt(fcTotal)}</span>
+                  </span>
+                  <span className="block text-[9px] font-semibold text-muted-foreground/80">
+                    {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h logged` : 'lump sum'} · private
+                  </span>
+                </span>
+              </div>
+            )}
             {(() => {
               const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
               // Prefer how the entries were actually priced; fall back to the CO pricing type.
@@ -761,7 +787,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <p className="text-[10px] text-muted-foreground">{billable.length} entr{billable.length === 1 ? 'y' : 'ies'} · Rates hidden in summary mode</p>
               )}
             </div>
-          ) : entryCount === 0 && !autoExpand ? (
+          ) : tableEntries.length === 0 && !autoExpand ? (
             /* Empty state */
             <div className="px-6 py-8 text-center">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
@@ -784,9 +810,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               {/* Entry rows */}
-              {visibleBillable.map(entry => {
+              {tableEntries.map(({ entry, kind }) => {
+                const isDownstream = kind === 'downstream';
                 const gcApproved = (entry as any).gc_approved;
-                const matchingActual = actualCosts.find(a => a.entry_date === entry.entry_date);
+                const matchingActual = isDownstream ? undefined : actualCosts.find(a => a.entry_date === entry.entry_date);
                 const billableEditable = canEditEntry(entry);
                 const internalEditable = matchingActual ? canEditEntry(matchingActual) : false;
                 const isEditingThisRow = editEntryId === entry.id || editEntryId === matchingActual?.id;
@@ -802,7 +829,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                         />
                       )}
                       <span className="w-14 sm:w-20 shrink-0 text-muted-foreground">{entry.entry_date}</span>
-                      <span className="min-w-0 basis-[calc(100%-3.5rem)] sm:basis-0 sm:flex-1 text-foreground truncate">{entry.description || '—'}</span>
+                      <span className="min-w-0 basis-[calc(100%-3.5rem)] sm:basis-0 sm:flex-1 text-foreground truncate">
+                        {isDownstream && (
+                          <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 align-middle">{rl.FC}</span>
+                        )}
+                        {entry.description || '—'}
+                      </span>
                       <span
                         className="mr-auto sm:mr-0 sm:w-28 text-left sm:text-right font-mono text-muted-foreground"
                         title={formatWorkloadTooltip(entry) ?? undefined}
@@ -811,8 +843,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       </span>
                       {/* Billable amount + inline edit pencil */}
                       <span className="sm:w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1 whitespace-nowrap">
-                        ${fmt(entry.line_total ?? 0)}
-                        {billableEditable && (
+                        {isDownstream
+                          ? <span className="text-muted-foreground/40 font-normal">—</span>
+                          : `$${fmt(entry.line_total ?? 0)}`}
+                        {!isDownstream && billableEditable && (
                           <button
                             type="button"
                             aria-label="Edit billable entry"
@@ -823,7 +857,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                              <Pencil className="h-3 w-3" />
                            </button>
                          )}
-                         {billableEditable && (
+                          {!isDownstream && billableEditable && (
                            <button
                              type="button"
                              aria-label="Remove billable entry"
@@ -841,7 +875,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       {/* Internal cost + inline edit pencil */}
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                         <span className="ml-3 sm:ml-0 sm:w-24 text-right inline-flex items-center justify-end gap-1 whitespace-nowrap">
-                          {matchingActual ? (
+                          {isDownstream ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium font-mono">
+                              <Lock className="h-2.5 w-2.5" /> ${fmt(entry.line_total ?? 0)}
+                            </span>
+                          ) : matchingActual ? (
                             <>
                               <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
                                 <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
@@ -986,24 +1024,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               })()}
 
               {/* TC's cost for this scope item — crew charges + own internal costs */}
-              {isTC && (tcDownstreamCosts.length > 0 || actualTotal > 0) && (
+              {isTC && (fcCostForTC > 0 || actualTotal > 0) && (
                 <div className="border-t border-border px-3 sm:px-5 py-2.5 bg-muted/20">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold mb-1.5 flex items-center gap-1">
                     <Lock className="h-2.5 w-2.5" /> Your cost for this item
                   </p>
-                  {tcDownstreamCosts.map(entry => (
-                    <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
-                      <span className="w-20">{entry.entry_date}</span>
-                      <span className="flex-1 truncate">{rl.FC} · {entry.description || '—'}</span>
-                      <span
-                        className="w-14 sm:w-20 text-right font-mono truncate"
-                        title={formatWorkloadTooltip(entry) ?? undefined}
-                      >
-                        {formatWorkload(entry)}
-                      </span>
-                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
+                  {fcCostForTC > 0 && (
+                    <div className="flex items-center text-xs py-1.5 text-muted-foreground">
+                      <span className="flex-1 truncate">{rl.FC} charges</span>
+                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(fcCostForTC)}</span>
                     </div>
-                  ))}
+                  )}
                   {actualTotal > 0 && (
                     <div className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="flex-1 truncate">Own internal costs</span>
