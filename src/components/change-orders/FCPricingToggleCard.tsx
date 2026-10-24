@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { HandCoins, Lock } from 'lucide-react';
+import { HandCoins, Loader2, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { canChangeCrewPricingBase } from '@/lib/fcPricingBase';
@@ -108,7 +108,7 @@ export function FCPricingToggleCard({
                   disabled={!editable || toggling}
                   onClick={() => !active && void handleToggle(option.value)}
                   className={cn(
-                    'whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors',
+                    'min-w-[92px] whitespace-nowrap rounded-md px-3 py-1.5 text-center text-xs font-bold uppercase tracking-wide transition-colors',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
                     active
                       ? 'bg-primary text-primary-foreground shadow-sm'
@@ -116,7 +116,8 @@ export function FCPricingToggleCard({
                     !editable && 'cursor-not-allowed opacity-60',
                   )}
                 >
-                  {option.label}
+                  {toggling && !active ? <Loader2 className="mx-auto h-3.5 w-3.5 animate-spin" /> : option.label}
+
                 </button>
               );
             })}
