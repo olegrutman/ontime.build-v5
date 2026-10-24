@@ -435,7 +435,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Right side — consolidated pricing module */}
-          <div className="shrink-0 flex w-full sm:w-auto flex-wrap items-center justify-end gap-2.5">
+          <div className="flex w-full sm:w-auto sm:max-w-[55%] flex-wrap items-center justify-end gap-2.5">
             {/* Downstream crew pricing — what the crew bills this subcontractor (private) */}
             {isTC && fcTotal > 0 && (
               <div className="flex items-stretch rounded-lg border border-dashed border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20 overflow-hidden">
