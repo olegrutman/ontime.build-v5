@@ -16,7 +16,7 @@ function ItemHeader({ children }: { children?: React.ReactNode }) {
   return (
     <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
       <div className="flex items-start gap-3 px-4 sm:px-5 py-3.5">
-        <div className="h-7 w-7 rounded-lg bg-navy flex items-center justify-center shrink-0 mt-0.5">
+        <div className="h-7 w-7 rounded-lg bg-[hsl(var(--navy))] flex items-center justify-center shrink-0 mt-0.5">
           <Hammer className="h-3.5 w-3.5 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
@@ -189,7 +189,7 @@ function DesignC() {
         </div>
 
         {/* Margin strip */}
-        <div className="rounded-xl bg-navy px-3.5 py-2.5 flex items-center justify-between">
+        <div className="rounded-xl bg-[hsl(var(--navy))] px-3.5 py-2.5 flex items-center justify-between">
           <p className="text-[11px] font-medium text-primary-foreground/80">Margin on this item</p>
           <p className="font-mono text-sm font-bold text-primary">$1,440.00 · 46.2%</p>
         </div>
