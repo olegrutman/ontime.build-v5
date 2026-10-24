@@ -41,10 +41,9 @@ export function AddItemsChooser({
         ) : (
           <Button
             size="sm"
-            variant="ghost"
-            className="h-7 text-xs gap-1 text-muted-foreground"
+            className="h-9 shrink-0 gap-1.5 px-4 text-sm font-semibold shadow-sm"
           >
-            <Plus className="h-3.5 w-3.5" /> {label}
+            <Plus className="h-4 w-4" /> {label}
           </Button>
         )}
       </PopoverTrigger>
