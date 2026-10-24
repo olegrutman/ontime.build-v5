@@ -219,7 +219,10 @@ export default function FinishProjectSetup() {
     ctx.project.status !== 'setup' &&
     ctx.project.status !== 'draft';
 
-  const canEditProjectInfo = isInfoCreator(ctx?.project?.created_by, user?.id);
+  // Creator-only locking applies once the project is active. While it is still
+  // in setup/draft (e.g. created by a supplier and being adopted by the GC/TC),
+  // the wizard must stay editable so the adopting contractor can finish setup.
+  const canEditProjectInfo = isInfoCreator(ctx?.project?.created_by, user?.id) || !isActiveProject;
 
   const hasInvitedDownstream = downstreamContracts.length > 0;
 
