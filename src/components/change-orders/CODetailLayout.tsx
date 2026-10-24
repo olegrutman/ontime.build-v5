@@ -642,6 +642,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
 
                     </div>
+                    {/* Compact money summary — replaces the big KPI cards for TC/FC */}
+                    {!isGC && (
+                      <span className="hidden md:inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                        {isFC ? (
+                          <>My billable <span className="font-semibold text-foreground">${(financials.viewer.ownLaborToUpstream ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
+                        ) : (
+                          <>
+                            Cost <span className="font-semibold text-foreground">${(financials.fcActualCostTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                            → Billable <span className="font-semibold text-foreground">${(tcBillableTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                            {tcBillableTotal > 0 && (
+                              <> · Margin <span className={(tcBillableTotal - (financials.fcActualCostTotal ?? 0)) >= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-destructive'}>{(((tcBillableTotal - (financials.fcActualCostTotal ?? 0)) / tcBillableTotal) * 100).toFixed(1)}%</span></>
+                            )}
+                          </>
+                        )}
+                      </span>
+                    )}
                     {canEdit && !nteBlocked && co && (
                       <AddItemsChooser
                         projectId={projectId}
