@@ -774,7 +774,7 @@ export function COStatusActions({
     );
   }
 
-  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || crewPending || crewApproved || canMarkCompleted || canAcknowledge || canWithdraw || canDelete;
 
   if (!hasAnyAction) {
     if (isApproved) {

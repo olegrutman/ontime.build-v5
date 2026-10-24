@@ -99,6 +99,11 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     return { totalValue, pendingApproval, awaitingPricing, approvedBillableValue, approvedCount, myActionCount, inProgressCount, withdrawnCount };
   }, [changeOrders, orgId]);
 
+  // Crew work the subcontractor approved but hasn't sent upstream yet.
+  const isCrewApproved = (co: any) =>
+    co.status === 'submitted' && co.created_by_role === 'FC' && !!co.crew_approved_at && co.assigned_to_org_id === orgId;
+  const crewApprovedCount = changeOrders.filter(isCrewApproved).length;
+
   // Filter
   const filteredCOs = useMemo(() => {
     if (filter === 'all') return changeOrders;
@@ -113,6 +118,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
     if (filter === 'approved_filter') return changeOrders.filter(co =>
       ['approved', 'contracted'].includes(co.status)
     );
+    if (filter === 'crew_approved') return changeOrders.filter(isCrewApproved);
     if (filter === 'withdrawn_filter') return changeOrders.filter(co => co.status === 'withdrawn');
     return changeOrders;
   }, [changeOrders, filter, orgId]);
@@ -192,6 +198,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
           { key: 'my_action', label: 'Action', count: stats.myActionCount },
           { key: 'in_progress', label: 'Active', count: stats.inProgressCount },
           { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
+          ...(crewApprovedCount > 0 ? [{ key: 'crew_approved' as FilterKey, label: 'Crew approved · ready to bill', count: crewApprovedCount }] : []),
           ...(stats.withdrawnCount > 0 ? [{ key: 'withdrawn_filter' as FilterKey, label: 'Withdrawn', count: stats.withdrawnCount }] : []),
         ] as { key: FilterKey; label: string; count: number }[]).map(f => (
           <button
