@@ -348,6 +348,19 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     return item.unit;
   })();
 
+  // ---- Collapsed-row table cell values (hoisted so the header grid stays declarative) ----
+  const isHourlyMode = visibleBillable.length > 0
+    ? !visibleBillable.every(e => e.pricing_mode === 'lump_sum')
+    : pricingType === 'tm';
+  const modeLabel = isHourlyMode ? 'Hourly' : visibleBillable.length > 0 ? 'Lump sum' : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
+  const totalHours = isHourlyMode ? visibleBillable.reduce((s, e) => s + (e.hours ?? 0), 0) : 0;
+  const isPriced = entryCount > 0 || totalForRole > 0;
+  // Once the order is submitted upstream the subcontractor's price is frozen —
+  // no provisional confirm or new billable entries until recall.
+  const tcPricingLocked = isTC && ['submitted', 'approved', 'rejected', 'contracted'].includes(coStatus ?? '');
+  const showProvisional = !isPriced && canAddLabor && isTC && !tcPricingLocked && provisionalAmount > 0;
+  const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
+
   async function handleGCApproval(entryId: string, approved: boolean) {
     try {
       const { error } = await supabase
@@ -371,11 +384,15 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
         className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-[2rem_minmax(0,1fr)_8rem_7rem_8rem_4.5rem_2.5rem] md:items-center md:gap-3">
+          {/* # column — desktop */}
+          <div className="hidden md:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+            {index !== undefined && <span className="text-sm font-bold">{index}</span>}
+          </div>
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            {/* Numbered index */}
+            {/* Numbered index — mobile */}
             {index !== undefined && (
-              <div className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+              <div className="md:hidden flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
                 <span className="text-sm font-bold">{index}</span>
               </div>
             )}
@@ -426,199 +443,117 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   </span>
                 )}
               </div>
-            </div>
-          </div>
 
-          {/* Right side — consolidated pricing module */}
-          <div className="flex w-full sm:w-auto sm:max-w-[55%] flex-wrap items-center justify-end gap-2.5">
-            {/* Downstream crew pricing — what the crew bills this subcontractor (private) */}
-            {isTC && fcTotal > 0 && (
-              <div className="flex items-stretch rounded-lg border border-dashed border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20 overflow-hidden">
-                <span className="flex flex-col justify-center px-2 border-r border-emerald-500/30">
-                  <Lock className="h-3 w-3 text-emerald-700 dark:text-emerald-400" />
-                </span>
-                <span className="px-3 py-1.5">
-                  <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-emerald-700/80 dark:text-emerald-400/80">{rl.FC} cost</span>
-                  <span className="flex items-baseline gap-0.5">
-                    <span className="font-mono text-sm text-emerald-700 dark:text-emerald-400">$</span>
-                    <span className="font-mono text-base font-bold text-foreground">{fmt(fcTotal)}</span>
-                  </span>
-                  <span className="block text-[9px] font-semibold text-muted-foreground/80">
-                    {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h logged` : 'lump sum'} · private
-                  </span>
-                </span>
-              </div>
-            )}
-            {(() => {
-              const showInternalCell = (isTC || isFC || (isGC && markupVisibility === 'detailed')) && (roleCostTotal > 0 || hasMargin);
-              // Prefer how the entries were actually priced; fall back to the CO pricing type.
-              const isHourly = visibleBillable.length > 0
-                ? !visibleBillable.every(e => e.pricing_mode === 'lump_sum')
-                : pricingType === 'tm';
-              const modeLabel = isHourly ? 'Hourly' : visibleBillable.length > 0 ? 'Lump sum' : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
-              const totalHours = isHourly
-                ? visibleBillable.reduce((s, e) => s + (e.hours ?? 0), 0)
-                : 0;
-              // Crew math summary on the collapsed row: only when every hourly entry
-              // carries crew data, so the approver sees the workload without expanding.
-              const crewEntries = isHourly ? visibleBillable.filter(e => hasCrewMath(e as any)) : [];
-              const crewSummary = crewEntries.length > 0 && crewEntries.length === visibleBillable.length
-                ? crewEntries.map(e => formatWorkload(e as any).split('=')[0]).join(' + ')
-                : null;
-
-
-              const isPriced = entryCount > 0 || totalForRole > 0;
-              const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
-
-              // Once the order is submitted upstream the subcontractor's price is
-              // frozen — no provisional confirm or new billable entries until recall.
-              const tcPricingLocked = isTC && ['submitted', 'approved', 'rejected', 'contracted'].includes(coStatus ?? '');
-              const showProvisional = !isPriced && canAddLabor && isTC && !tcPricingLocked && provisionalAmount > 0;
-
-              if (showProvisional) {
-                return (
-                  <div className="flex items-stretch rounded-lg border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.06)] overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
-                      className="flex items-stretch text-left hover:bg-[hsl(var(--amber)/0.12)] transition-colors"
-                    >
-                      <span className="flex flex-col justify-center px-2.5 border-r border-amber-400/40">
-                        <span className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'hsl(var(--amber-d))' }}>
-                          {crewBase?.isHourly ? 'Hourly' : 'Lump sum'}
-                        </span>
-                      </span>
-                      <span className="px-3.5 py-1.5">
-                        <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Billable amount</span>
-                        <span className="flex items-baseline gap-0.5">
-                          <span className="font-mono text-sm" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
-                          <span className="font-mono text-base font-bold text-foreground">{fmt(provisionalAmount)}</span>
-                        </span>
-                        <span className="block text-[9px] font-semibold text-muted-foreground/80">
-                          from {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h ` : ''}{rl.FC} time — not saved yet
-                        </span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={confirmingCrewPrice}
-                      onClick={(e) => { e.stopPropagation(); confirmCrewPrice(); }}
-                      className="flex shrink-0 items-center gap-1 border-l border-amber-400/40 px-3 text-[10px] font-bold uppercase tracking-tight text-[hsl(var(--amber-d))] hover:bg-[hsl(var(--amber)/0.18)] disabled:opacity-50 transition-colors"
-                    >
-                      {confirmingCrewPrice
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <CheckCircle className="h-3.5 w-3.5" />}
-                      Confirm
-                    </button>
-                  </div>
-                );
-              }
-
-              if (!isPriced && canAddLabor && !tcPricingLocked) {
-                return (
+              {/* Mobile money line — desktop shows table columns instead */}
+              <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+                {isPriced ? (
+                  <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
+                ) : showProvisional ? (
+                  <button
+                    type="button"
+                    disabled={confirmingCrewPrice}
+                    onClick={(e) => { e.stopPropagation(); confirmCrewPrice(); }}
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 font-mono text-xs font-semibold text-foreground"
+                  >
+                    {confirmingCrewPrice ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" style={{ color: 'hsl(var(--amber-d))' }} />}
+                    Confirm ${fmt(provisionalAmount)}
+                  </button>
+                ) : canAddLabor && !tcPricingLocked ? (
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
-                    className="group/price flex items-stretch rounded-lg border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.06)] hover:border-amber-500 hover:bg-[hsl(var(--amber)/0.12)] transition-colors text-left"
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
+                    style={{ color: 'hsl(var(--amber-d))' }}
                   >
-                    <span className="flex flex-col justify-center px-2.5 border-r border-amber-400/40">
-                      <span className="text-[9px] font-bold uppercase tracking-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
-                    </span>
-                    <span className="px-3.5 py-1.5">
-                      <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Billable amount</span>
-                      <span className="flex items-center gap-1.5">
-                        <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />
-                        <span className="font-heading text-base font-bold text-foreground">Set price</span>
-                      </span>
-                      {isTC && crewHoursOnItem > 0 && (
-                        <span className="block text-[9px] font-semibold text-muted-foreground/80">
-                          {fmtHours(crewHoursOnItem)}h {rl.FC} time ready to price
-                        </span>
-                      )}
-                    </span>
-
+                    <DollarSign className="h-3 w-3" /> Set price
                   </button>
-                );
-              }
+                ) : (
+                  <span className="text-muted-foreground">Not priced</span>
+                )}
+                {isTC && fcTotal > 0 && (
+                  <span className="inline-flex items-center gap-1 font-mono text-emerald-700 dark:text-emerald-400">
+                    <Lock className="h-3 w-3" /> ${fmt(fcTotal)} crew
+                  </span>
+                )}
+                {showInternalCell && hasMargin && (
+                  <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                    {marginPct.toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
 
-              if (!isPriced) {
-                return (
-                  <div className="rounded-lg border border-border bg-muted/20 px-3.5 py-1.5">
-                    <span className="block text-[9px] font-bold uppercase tracking-[1.2px] text-muted-foreground">Billable amount</span>
-                    <span className="font-mono text-sm text-muted-foreground">Not priced</span>
-                  </div>
-                );
-              }
-
-              return (
-                <div className="flex w-full sm:w-auto items-stretch rounded-lg border border-border bg-card overflow-hidden">
-                  {/* Mode */}
-                  <div className="flex shrink-0 flex-col justify-center px-2 border-r border-border bg-muted/20">
-                    <span className="break-words text-center text-[9px] font-bold uppercase tracking-tight leading-tight" style={{ color: 'hsl(var(--amber-d))' }}>{modeLabel}</span>
-                    {entryCount > 0 && (
-                      <span className="break-words text-center text-[9px] font-medium uppercase tracking-tight leading-tight text-muted-foreground/70">
-                        {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
-                        {isHourly && totalHours > 0 ? ` · ${fmtHours(totalHours)}h` : ''}
-                      </span>
-                    )}
-                    {crewSummary && (
-                      <span className="break-words text-center font-mono text-[9px] leading-tight text-muted-foreground/80" title="crew × days × hrs/day">
-                        {crewSummary}
-                      </span>
-                    )}
-                  </div>
-
-
-                  {/* Primary value */}
-                  <div className="px-2.5 py-1.5">
-                    <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">{primaryLabel}</span>
-                    <span className="flex items-baseline gap-0.5">
-                      <span className="font-mono text-sm" style={{ color: 'hsl(var(--amber-d))' }}>$</span>
-                      <span className="font-mono text-base font-bold text-foreground">{fmt(totalForRole)}</span>
-                    </span>
-                  </div>
-
-                  {/* Internal cost + margin */}
-                  {showInternalCell && (
-                    <div className="flex items-center gap-2.5 border-l border-border bg-muted/20 px-2.5 py-1.5">
-                      <div>
-                        <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">
-                          <Lock className="h-2.5 w-2.5" /> Cost
-                        </span>
-                        <span className="font-mono text-xs text-foreground/70">
-                          {roleCostTotal > 0 ? `$${fmt(roleCostTotal)}` : '—'}
-                        </span>
-                        {fcCostForTC > 0 && (
-                          <span className="block text-[9px] font-medium text-muted-foreground/70 leading-tight">
-                            incl. ${fmt(fcCostForTC)} {rl.FC}
-                          </span>
-                        )}
-                      </div>
-
-                      {hasMargin && (
-                        <div className="text-right">
-                          <span className="block text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground leading-tight">Margin</span>
-                          <span className={cn(
-                            'font-mono text-xs font-semibold',
-                            marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
-                          )}>
-                            {marginPct.toFixed(1)}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-
-            })()}
-
-            {/* Internal-cost nudge for TCs who priced but logged no cost */}
-            {isTC && entryCount > 0 && actualTotal === 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted/40 text-muted-foreground">
+          {/* Crew cost column (desktop) */}
+          <div className="hidden md:block text-right">
+            {isTC && fcTotal > 0 ? (
+              <>
+                <span className="inline-flex items-center justify-end gap-1 font-mono text-sm font-semibold text-foreground">
+                  ${fmt(fcTotal)}
+                  <Lock className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                </span>
+                <span className="block text-[10px] text-muted-foreground">
+                  {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h` : 'lump sum'} · private
+                </span>
+              </>
+            ) : isTC && entryCount > 0 && actualTotal === 0 ? (
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Lock className="h-2.5 w-2.5" /> No cost logged
               </span>
+            ) : (
+              <span className="text-sm text-muted-foreground/40">—</span>
             )}
+          </div>
+
+          {/* Rate column (desktop) */}
+          <div className="hidden md:block text-right">
+            <span className="text-sm text-foreground">{modeLabel}</span>
+            {isHourlyMode && totalHours > 0 && (
+              <span className="block font-mono text-[10px] text-muted-foreground">{fmtHours(totalHours)}h</span>
+            )}
+          </div>
+
+          {/* Billable column (desktop) */}
+          <div className="hidden md:block text-right">
+            {isPriced ? (
+              <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
+            ) : showProvisional ? (
+              <button
+                type="button"
+                disabled={confirmingCrewPrice}
+                onClick={(e) => { e.stopPropagation(); confirmCrewPrice(); }}
+                className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 font-mono text-xs font-semibold text-foreground transition-colors"
+              >
+                {confirmingCrewPrice ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" style={{ color: 'hsl(var(--amber-d))' }} />}
+                Confirm ${fmt(provisionalAmount)}
+              </button>
+            ) : canAddLabor && !tcPricingLocked ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
+                className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
+                style={{ color: 'hsl(var(--amber-d))' }}
+              >
+                <DollarSign className="h-3 w-3" /> Set price
+              </button>
+            ) : (
+              <span className="text-xs text-muted-foreground">Not priced</span>
+            )}
+          </div>
+
+          {/* Margin column (desktop) */}
+          <div className="hidden md:block text-right">
+            {showInternalCell && hasMargin ? (
+              <span className={cn(
+                'font-mono text-sm font-semibold',
+                marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+              )}>
+                {marginPct.toFixed(1)}%
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground/40">—</span>
+            )}
+          </div>
 
 
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
