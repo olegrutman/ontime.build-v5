@@ -743,7 +743,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
               <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-emerald-200/70 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/10 divide-y divide-emerald-200/60 dark:divide-emerald-900/30">
                 {fcBillable.map(entry => {
-                  const rate = entry.hourly_rate ?? entry.base_hourly_rate;
+                  const rate = entry.hourly_rate;
                   return (
                     <div key={entry.id} className="px-3.5 py-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -789,7 +789,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   {tcBillable.map(entry => {
                     const editable = canEditEntry(entry);
                     const isEditingThisRow = editEntryId === entry.id;
-                    const entryRate = entry.hourly_rate ?? entry.base_hourly_rate;
+                    const entryRate = entry.hourly_rate;
                     return (
                       <div key={entry.id}>
                         <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-3">
