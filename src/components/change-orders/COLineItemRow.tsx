@@ -787,7 +787,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <p className="text-[10px] text-muted-foreground">{billable.length} entr{billable.length === 1 ? 'y' : 'ies'} · Rates hidden in summary mode</p>
               )}
             </div>
-          ) : entryCount === 0 && !autoExpand ? (
+          ) : tableEntries.length === 0 && !autoExpand ? (
             /* Empty state */
             <div className="px-6 py-8 text-center">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
@@ -810,9 +810,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               {/* Entry rows */}
-              {visibleBillable.map(entry => {
+              {tableEntries.map(({ entry, kind }) => {
+                const isDownstream = kind === 'downstream';
                 const gcApproved = (entry as any).gc_approved;
-                const matchingActual = actualCosts.find(a => a.entry_date === entry.entry_date);
+                const matchingActual = isDownstream ? undefined : actualCosts.find(a => a.entry_date === entry.entry_date);
                 const billableEditable = canEditEntry(entry);
                 const internalEditable = matchingActual ? canEditEntry(matchingActual) : false;
                 const isEditingThisRow = editEntryId === entry.id || editEntryId === matchingActual?.id;
