@@ -190,7 +190,7 @@ function DesignC() {
 
         {/* Margin strip */}
         <div className="rounded-xl bg-[hsl(var(--navy))] px-3.5 py-2.5 flex items-center justify-between">
-          <p className="text-[11px] font-medium text-primary-foreground/80">Margin on this item</p>
+          <p className="text-[11px] font-medium text-[hsl(var(--navy-fg))]/80">Margin on this item</p>
           <p className="font-mono text-sm font-bold text-primary">$1,440.00 · 46.2%</p>
         </div>
 
