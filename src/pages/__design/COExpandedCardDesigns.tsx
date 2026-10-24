@@ -117,7 +117,7 @@ function DesignB() {
               <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 align-middle">{CREW}</span>
               Steel angles
             </span>
-            <span className="w-40 text-right font-mono text-muted-foreground">48 hrs</span>
+            <span className="w-44 text-right font-mono text-muted-foreground">48 hrs</span>
             <span className="w-24 text-right font-mono font-semibold text-emerald-700 dark:text-emerald-400 inline-flex items-center justify-end gap-1">
               <Lock className="h-2.5 w-2.5" /> $1,680.00
             </span>
@@ -138,7 +138,7 @@ function DesignB() {
         <div className="flex items-center text-xs px-4 sm:px-5 py-2.5 border-b border-border/30">
           <span className="w-20 shrink-0 text-muted-foreground">Oct 24</span>
           <span className="flex-1 min-w-0 text-foreground truncate">Your price to {UPSTREAM}</span>
-          <span className="w-40 text-right font-mono text-muted-foreground">48 hrs @ $65</span>
+          <span className="w-40 text-right font-mono text-muted-foreground">48 @ $65/hr</span>
           <span className="w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1">
             $3,120.00
             <button className="p-0.5 rounded hover:bg-muted text-muted-foreground"><Pencil className="h-3 w-3" /></button>
