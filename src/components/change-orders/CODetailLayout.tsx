@@ -674,7 +674,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
                   {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
-                    <div className="mt-3 pt-3 border-t border-border">
+                    <div className="mt-3">
                       <FCPricingToggleCard co={co} financials={financials} myOrgId={myOrgId}
                         onRefresh={refreshDetail} fcCollabName={fcCollabName} gcSideName={rl.short('GC')} />
                     </div>
