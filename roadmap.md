@@ -52,3 +52,6 @@
 - [x] Let crews collapse the "Your budget & spending" card and remember the choice per project
 - [x] Verify collapse, remembered state, summary figures and phone layouts
 - [x] Supplier dashboard: build Design B (project cards w/ stage bar, filters, deliveries + AR sidebar)
+
+- [x] Redesign the expanded scope-item card as two labeled ledgers (locked crew work with plain-language math, editable billing) per approved Design A
+- [x] Verify the expanded card live on WO-5 at desktop and 320/390px (no overflow; temporary design preview removed)
