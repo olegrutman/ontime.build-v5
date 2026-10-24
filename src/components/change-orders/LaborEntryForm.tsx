@@ -269,6 +269,7 @@ export function LaborEntryForm({
         const { error } = await supabase
           .from('co_labor_entries')
           .update({
+            crew_pricing_derived: false,
             entry_date: entryDate,
             pricing_mode: getDbMode(),
             hours: getDbHours(),
@@ -300,6 +301,7 @@ export function LaborEntryForm({
         hourly_rate: billableHourly(),
         lump_sum: billableLump(),
         description: description.trim() || null, is_actual_cost: isActualCost,
+        crew_pricing_derived: isTC && prefilledFromCrew && hoursValue === fcHours && !isActualCost,
         crew_size: crewFields.crew_size,
         days: crewFields.days,
         hours_per_day: crewFields.hours_per_day,
@@ -316,6 +318,7 @@ export function LaborEntryForm({
           lump_sum: internalCostValue,
           description: description.trim() ? `Internal: ${description.trim()}` : `Internal cost (${costType.replace(/_/g, ' ')})`,
           is_actual_cost: true,
+          crew_pricing_derived: isTC && prefilledFromCrew && importedFC && internalCostValue === fcCost,
           // Provenance: ties this internal cost row back to the crew time it came from.
           source_fc_entry_ids: importedFC && fcEntryIds.length > 0 ? fcEntryIds : null,
         });

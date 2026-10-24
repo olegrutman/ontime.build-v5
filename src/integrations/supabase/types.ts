@@ -1531,6 +1531,7 @@ export type Database = {
           co_id: string
           co_line_item_id: string
           created_at: string | null
+          crew_pricing_derived: boolean
           crew_size: number | null
           days: number | null
           description: string | null
@@ -1557,6 +1558,7 @@ export type Database = {
           co_id: string
           co_line_item_id: string
           created_at?: string | null
+          crew_pricing_derived?: boolean
           crew_size?: number | null
           days?: number | null
           description?: string | null
@@ -1583,6 +1585,7 @@ export type Database = {
           co_id?: string
           co_line_item_id?: string
           created_at?: string | null
+          crew_pricing_derived?: boolean
           crew_size?: number | null
           days?: number | null
           description?: string | null
@@ -9999,6 +10002,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_crew_pricing_base: {
+        Args: { _co_id: string; _enabled: boolean; _org_id: string }
+        Returns: undefined
       }
       set_member_project_scope: {
         Args: { _scope: string; _target_role_id: string }

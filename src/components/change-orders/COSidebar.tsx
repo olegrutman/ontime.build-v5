@@ -2,7 +2,6 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { CONTEPanel } from './CONTEPanel';
-import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { COStatusActions } from './COStatusActions';
 import { COSOVPanel } from './COSOVPanel';
@@ -123,14 +122,6 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
 
       {/* Team & routing — lets any party see (and a creator fix) who this is assigned to */}
       <COTeamCard co={co} collaborators={collaborators} />
-
-      {/* FC Pricing Toggle — move higher so TC sees it immediately */}
-      {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
-        <FCPricingToggleCard
-          co={co} financials={financials} myOrgId={myOrgId}
-          onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName={rl.short('GC')}
-        />
-      )}
 
       {/* Financials Card */}
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">

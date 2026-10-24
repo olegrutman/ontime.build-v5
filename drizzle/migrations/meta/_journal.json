@@ -246,6 +246,20 @@
       "when": 1792860888951,
       "tag": "0034_role_view_crew_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792862520317,
+      "tag": "0035_crew_pricing_base_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792862549262,
+      "tag": "0036_crew_pricing_base_access_check",
+      "breakpoints": true
     }
   ]
 }

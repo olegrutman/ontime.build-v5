@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Move crew pricing switch into Scope & Labor and safely clear derived billing when disabled
+- [ ] Verify saved switch changes, independent pricing preservation and phone layouts
+
 - [x] Catalog Management cleanup: active-only health counts, unified CSV/Excel preview, replace-impact preview, import guide, retire confirm, price feedback, full export
 
 - [x] Show the supplier project estimate open by default with a clear toggle and item count; remove duplicate actions
