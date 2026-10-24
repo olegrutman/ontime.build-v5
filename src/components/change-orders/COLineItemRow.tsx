@@ -857,7 +857,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                              <Pencil className="h-3 w-3" />
                            </button>
                          )}
-                         {billableEditable && (
+                          {!isDownstream && billableEditable && (
                            <button
                              type="button"
                              aria-label="Remove billable entry"
@@ -875,7 +875,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       {/* Internal cost + inline edit pencil */}
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                         <span className="ml-3 sm:ml-0 sm:w-24 text-right inline-flex items-center justify-end gap-1 whitespace-nowrap">
-                          {matchingActual ? (
+                          {isDownstream ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium font-mono">
+                              <Lock className="h-2.5 w-2.5" /> ${fmt(entry.line_total ?? 0)}
+                            </span>
+                          ) : matchingActual ? (
                             <>
                               <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
                                 <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
