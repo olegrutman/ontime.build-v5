@@ -8308,6 +8308,8 @@ export type Database = {
           created_at: string | null
           created_by_role: string | null
           created_by_user_id: string | null
+          crew_approved_at: string | null
+          crew_approved_by_user_id: string | null
           document_type: string | null
           draft_shared_with_next: boolean | null
           entry_source: Database["public"]["Enums"]["co_entry_source"] | null
@@ -8319,6 +8321,7 @@ export type Database = {
           gc_budget: number | null
           gc_owner_markup_percent: number | null
           id: string | null
+          kept_internal: boolean | null
           labor_tax: number | null
           labor_taxable_snapshot: boolean | null
           location_tag: string | null
@@ -8386,6 +8389,8 @@ export type Database = {
           created_at?: string | null
           created_by_role?: string | null
           created_by_user_id?: string | null
+          crew_approved_at?: never
+          crew_approved_by_user_id?: never
           document_type?: string | null
           draft_shared_with_next?: boolean | null
           entry_source?: Database["public"]["Enums"]["co_entry_source"] | null
@@ -8397,6 +8402,7 @@ export type Database = {
           gc_budget?: never
           gc_owner_markup_percent?: never
           id?: string | null
+          kept_internal?: never
           labor_tax?: never
           labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
@@ -8464,6 +8470,8 @@ export type Database = {
           created_at?: string | null
           created_by_role?: string | null
           created_by_user_id?: string | null
+          crew_approved_at?: never
+          crew_approved_by_user_id?: never
           document_type?: string | null
           draft_shared_with_next?: boolean | null
           entry_source?: Database["public"]["Enums"]["co_entry_source"] | null
@@ -8475,6 +8483,7 @@ export type Database = {
           gc_budget?: never
           gc_owner_markup_percent?: never
           id?: string | null
+          kept_internal?: never
           labor_tax?: never
           labor_taxable_snapshot?: boolean | null
           location_tag?: string | null
