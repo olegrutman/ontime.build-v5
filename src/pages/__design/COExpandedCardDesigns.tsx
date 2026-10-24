@@ -137,8 +137,8 @@ function DesignB() {
         {/* TC billing row — editable */}
         <div className="flex items-center text-xs px-4 sm:px-5 py-2.5 border-b border-border/30">
           <span className="w-20 shrink-0 text-muted-foreground">Oct 24</span>
-          <span className="flex-1 min-w-0 text-foreground truncate">Your price to {UPSTREAM}</span>
-          <span className="w-40 text-right font-mono text-muted-foreground">48 hrs<br /><span className="text-[10px] text-muted-foreground/70">@ $65/hr</span></span>
+          <span className="flex-1 min-w-0 text-foreground truncate">Your price to {UPSTREAM}<span className="block text-[10px] text-muted-foreground font-normal">48 hrs @ $65/hr</span></span>
+          <span className="w-40 text-right font-mono text-muted-foreground">48 hrs</span>
           <span className="w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1">
             $3,120.00
             <button className="p-0.5 rounded hover:bg-muted text-muted-foreground"><Pencil className="h-3 w-3" /></button>
