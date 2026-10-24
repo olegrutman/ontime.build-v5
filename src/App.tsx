@@ -35,7 +35,6 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
-const COExpandedCardDesigns = lazy(() => import("./pages/__design/COExpandedCardDesigns"));
 
 const CreateProjectNew = lazy(() => import("./pages/CreateProjectNew"));
 const ProjectHome = lazy(() => import("./pages/ProjectHome"));
@@ -230,7 +229,6 @@ function AppRoutes() {
             <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
             <Route path="/external/co/:token" element={<COExternalView />} />
 <Route path="/external/invoice/:token" element={<InvoiceApprovalPage />} />
-            <Route path="/design/co-expanded" element={<COExpandedCardDesigns />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
