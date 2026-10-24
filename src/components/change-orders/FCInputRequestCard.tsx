@@ -147,10 +147,9 @@ export function FCInputRequestCard({
             onClick={() => void onComplete()}
           >
             {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            Mark FC input complete
+            Mark {rl.FC.toLowerCase()} input complete
           </Button>
         )}
-      </div>
     </div>
   );
 }
