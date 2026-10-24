@@ -111,7 +111,7 @@ function DesignB() {
 
         {/* Crew row — locked, math explained */}
         <div className="border-b border-border/30 bg-emerald-50/40 dark:bg-emerald-950/10">
-          <div className="flex items-center text-xs px-4 sm:px-5 py-2.5">
+          <div className="flex items-center gap-3 text-xs px-4 sm:px-5 py-2.5">
             <span className="w-20 shrink-0 text-muted-foreground">Oct 5</span>
             <span className="flex-1 min-w-0 text-foreground truncate">
               <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 align-middle">{CREW}</span>
@@ -135,7 +135,7 @@ function DesignB() {
         </div>
 
         {/* TC billing row — editable */}
-        <div className="flex items-center text-xs px-4 sm:px-5 py-2.5 border-b border-border/30">
+        <div className="flex items-center gap-3 text-xs px-4 sm:px-5 py-2.5 border-b border-border/30">
           <span className="w-20 shrink-0 text-muted-foreground">Oct 24</span>
           <span className="flex-1 min-w-0 text-foreground truncate">Your price to {UPSTREAM}<span className="block text-[10px] text-muted-foreground font-normal">48 hrs @ $65/hr</span></span>
           <span className="w-40 text-right font-mono text-muted-foreground">48 hrs</span>
