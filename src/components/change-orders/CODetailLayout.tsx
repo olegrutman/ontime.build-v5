@@ -598,8 +598,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
 
-          {/* KPI Row */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
+          {/* KPI Row — GC keeps the full strip (incl. the editable budget tile);
+              TC/FC get a compact money summary inside the Scope & Labor header instead. */}
+          {isGC && (
+            <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
+          )}
 
           {/* Two-column layout */}
           <div className="flex gap-4">
@@ -639,6 +642,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
 
                     </div>
+                    {/* Compact money summary — replaces the big KPI cards for TC/FC */}
+                    {!isGC && (
+                      <span className="hidden md:inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                        {isFC ? (
+                          <>My billable <span className="font-semibold text-foreground">${(financials.viewer.ownLaborToUpstream ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
+                        ) : (
+                          <>
+                            Cost <span className="font-semibold text-foreground">${(financials.actualCostTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                            → Billable <span className="font-semibold text-foreground">${(tcBillableTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                            {tcBillableTotal > 0 && (
+                              <> · Margin <span className={(tcBillableTotal - (financials.actualCostTotal ?? 0)) >= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-destructive'}>{(((tcBillableTotal - (financials.actualCostTotal ?? 0)) / tcBillableTotal) * 100).toFixed(1)}%</span></>
+                            )}
+                          </>
+                        )}
+                      </span>
+                    )}
                     {canEdit && !nteBlocked && co && (
                       <AddItemsChooser
                         projectId={projectId}
