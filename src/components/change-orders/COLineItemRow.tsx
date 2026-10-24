@@ -1024,24 +1024,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               })()}
 
               {/* TC's cost for this scope item — crew charges + own internal costs */}
-              {isTC && (tcDownstreamCosts.length > 0 || actualTotal > 0) && (
+              {isTC && (fcCostForTC > 0 || actualTotal > 0) && (
                 <div className="border-t border-border px-3 sm:px-5 py-2.5 bg-muted/20">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold mb-1.5 flex items-center gap-1">
                     <Lock className="h-2.5 w-2.5" /> Your cost for this item
                   </p>
-                  {tcDownstreamCosts.map(entry => (
-                    <div key={entry.id} className="flex items-center text-xs py-1.5 text-muted-foreground">
-                      <span className="w-20">{entry.entry_date}</span>
-                      <span className="flex-1 truncate">{rl.FC} · {entry.description || '—'}</span>
-                      <span
-                        className="w-14 sm:w-20 text-right font-mono truncate"
-                        title={formatWorkloadTooltip(entry) ?? undefined}
-                      >
-                        {formatWorkload(entry)}
-                      </span>
-                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(entry.line_total ?? 0)}</span>
+                  {fcCostForTC > 0 && (
+                    <div className="flex items-center text-xs py-1.5 text-muted-foreground">
+                      <span className="flex-1 truncate">{rl.FC} charges</span>
+                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(fcCostForTC)}</span>
                     </div>
-                  ))}
+                  )}
                   {actualTotal > 0 && (
                     <div className="flex items-center text-xs py-1.5 text-muted-foreground">
                       <span className="flex-1 truncate">Own internal costs</span>
