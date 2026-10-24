@@ -26,7 +26,7 @@ interface COListPageProps {
   isTM?: boolean;
 }
 
-type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter' | 'withdrawn_filter';
+type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter' | 'withdrawn_filter' | 'crew_approved';
 
 export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const dt = docTypeFromMode(isTM);
