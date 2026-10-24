@@ -110,8 +110,11 @@ export function COStatusActions({
 
   const status = co.status as COStatus;
   const forwardsToGC = isTC && status === 'submitted' && co.created_by_role === 'FC' && co.assigned_to_org_id === currentOrgId;
-  const crewApproved = forwardsToGC && !!co.crew_approved_at;
-  const crewPending = forwardsToGC && !co.crew_approved_at;
+  /* A crew order the subcontractor recalled from the general contractor comes
+     back as the subcontractor's own draft — it still needs crew approval first. */
+  const crewDraft = isTC && status === 'draft' && co.created_by_role === 'FC' && co.org_id === currentOrgId;
+  const crewApproved = (forwardsToGC || crewDraft) && !!co.crew_approved_at;
+  const crewPending = (forwardsToGC || crewDraft) && !co.crew_approved_at;
   const submitAmount = financials?.viewer?.totalToUpstream ?? financials?.grandTotal ?? 0;
 
   /* GC cost on this CO = everything it will pay out (downstream billable +
@@ -666,7 +669,8 @@ export function COStatusActions({
   const submitStatuses = isOwnerOrg
     ? ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'rejected']
     : ['shared', 'work_in_progress', 'closed_for_pricing', 'rejected'];
-  const canSubmit = (isTC || isFC) && !isAnyCollaborator && submitStatuses.includes(status) && !!effectiveAssignee;
+  const canSubmit = (isTC || isFC) && !isAnyCollaborator && submitStatuses.includes(status) && !!effectiveAssignee
+    && !(crewDraft && (!co.crew_approved_at || co.kept_internal));
   /* FC collaborator can submit pricing independently (M4) */
   const canSubmitFCPricing = isFC && isActiveCollaborator && status === 'closed_for_pricing';
   const canRecall = (isTC || isFC) && !isAnyCollaborator && status === 'submitted';
@@ -674,10 +678,10 @@ export function COStatusActions({
   /* The GC may be either the creating org (GC-initiated CO) or the assigned org
      (TC submitted upstream to them) — both must be able to decide. */
   const canApprove = ((isGC && status === 'submitted'
-    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || (crewApproved && !co.kept_internal))
+    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || (forwardsToGC && crewApproved && !co.kept_internal))
     && !isActiveCollaborator;
   const canReject = ((isGC && status === 'submitted'
-    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || crewPending)
+    && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || (forwardsToGC && crewPending))
     && !isActiveCollaborator;
   /* Flow 2 completion */
   const isApproved = status === 'approved';
