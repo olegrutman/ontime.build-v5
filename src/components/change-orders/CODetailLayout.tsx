@@ -443,7 +443,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       (isGC || e.entered_by_role === (isFC ? 'FC' : 'TC'))
     )
   ).length;
-  const totalLogged = laborEntries.filter(e => !e.is_actual_cost).reduce((s, e) => s + (e.line_total ?? 0), 0);
+  // Sum only the viewer's own billing-role entries — adding the crew's cost and
+  // the subcontractor's price for the same work would double count it.
+  const viewerEntryRole = isFC ? 'FC' : 'TC';
+  const totalLogged = laborEntries
+    .filter(e => !e.is_actual_cost && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole))
+    .reduce((s, e) => s + (e.line_total ?? 0), 0);
   const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
   const displayBillable = (isTC || isFC) ? financials.viewer.totalToUpstream : totalLogged;
   const grossMargin = displayBillable - roleActualCost;
