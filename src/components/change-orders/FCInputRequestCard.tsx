@@ -70,40 +70,48 @@ export function FCInputRequestCard({
         : `No ${rl.FC.toLowerCase()} requested yet`;
 
   const selectedValue = selectedOrgId || activeCollaborator?.organization_id || '';
+  const crewName = (activeCollaborator ?? completedCollaborator)?.organization?.name ?? creatorCrewName;
+  // Crew already known (it created the order or was requested) — no company picker needed.
+  const showPicker = canRequest && !crewName;
+  const [showChange, setShowChange] = useState(false);
 
   return (
-    <div className="co-light-shell overflow-hidden">
-      <div className="px-4 py-3 border-b border-border co-light-header">
-        <h3 className="text-sm font-semibold text-foreground">{rl.FC} involvement</h3>
-      </div>
-      <div className="px-4 py-3 space-y-3">
-        <div className="space-y-1">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
-          <p className="text-sm font-medium text-foreground">{statusLabel}</p>
-          {(activeCollaborator ?? completedCollaborator)?.organization?.name ? (
-            <p className="text-xs text-muted-foreground">
-              {(activeCollaborator ?? completedCollaborator)?.organization?.name}
-            </p>
-          ) : creatorCrewName ? (
-            <p className="text-xs text-muted-foreground">
-              {creatorCrewName} created this work order and logged their own pricing.
-            </p>
-          ) : null}
-        </div>
-
-        {afterSubmission && (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground break-words">{crewName ?? `No ${rl.FC.toLowerCase()} yet`}</p>
           <p className="text-xs text-muted-foreground break-words">
-            {rl.FC} pricing after submission is between you and your {rl.FC.toLowerCase()}. It does not change the price sent to the {rl.GC}.
+            {creatorCrewName && !activeCollaborator && !completedCollaborator
+              ? 'Created this work order and logged their pricing'
+              : statusLabel}
           </p>
+        </div>
+        {crewName && (
+          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            {activeCollaborator ? 'Waiting' : 'Received'}
+          </span>
         )}
+      </div>
 
-        {overBilled && (
-          <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive break-words">
-            {rl.FC} price ({fmt(crewTotal)}) exceeds your billed amount ({fmt(billedUpstream)}).
-          </div>
-        )}
+      {afterSubmission && (
+        <p className="text-xs text-muted-foreground break-words">
+          {rl.FC} pricing after submission is between you and your {rl.FC.toLowerCase()}. It does not change the price sent to the {rl.GC}.
+        </p>
+      )}
 
-        {canRequest && (
+      {overBilled && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive break-words">
+          {rl.FC} price ({fmt(crewTotal)}) exceeds your billed amount ({fmt(billedUpstream)}).
+        </div>
+      )}
+
+      {canRequest && crewName && !showChange && activeCollaborator && (
+        <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => setShowChange(true)}>
+          Request a different {rl.FC.toLowerCase()}
+        </button>
+      )}
+
+      {(showPicker || showChange) && (
           <div className="space-y-2">
             <Label htmlFor="fc-org-select">Assign {rl.FC.toLowerCase()}</Label>
             <Select value={selectedValue} onValueChange={setSelectedOrgId}>
@@ -139,10 +147,9 @@ export function FCInputRequestCard({
             onClick={() => void onComplete()}
           >
             {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            Mark FC input complete
+            Mark {rl.FC.toLowerCase()} input complete
           </Button>
         )}
-      </div>
     </div>
   );
 }

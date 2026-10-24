@@ -35,7 +35,10 @@ export function useCORoleContext(
 
   // For FC-created COs with no collaborators, resolve the FC org name
   const isFCCreatedCO = co?.created_by_role === 'FC';
-  const fcCreatorOrgId = isFCCreatedCO ? co?.org_id : null;
+  // A crew order forwarded to the subcontractor is re-owned by them; the crew is the originator.
+  const fcCreatorOrgId = isFCCreatedCO
+    ? ((co as { originating_org_id?: string | null } | null)?.originating_org_id ?? co?.org_id)
+    : null;
   const needsFCOrgLookup = !!fcCreatorOrgId && collaborators.length === 0;
 
   const { data: fcCreatorOrg } = useQuery({
