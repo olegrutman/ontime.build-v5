@@ -218,6 +218,13 @@
       "when": 1792515048013,
       "tag": "0030_project_profile_creator_edit_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792859092337,
+      "tag": "0031_allow_setup_completion_by_adopting_contractor",
+      "breakpoints": true
     }
   ]
 }
