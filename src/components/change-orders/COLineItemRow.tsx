@@ -829,7 +829,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                         />
                       )}
                       <span className="w-14 sm:w-20 shrink-0 text-muted-foreground">{entry.entry_date}</span>
-                      <span className="min-w-0 basis-[calc(100%-3.5rem)] sm:basis-0 sm:flex-1 text-foreground truncate">{entry.description || '—'}</span>
+                      <span className="min-w-0 basis-[calc(100%-3.5rem)] sm:basis-0 sm:flex-1 text-foreground truncate">
+                        {isDownstream && (
+                          <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 align-middle">{rl.FC}</span>
+                        )}
+                        {entry.description || '—'}
+                      </span>
                       <span
                         className="mr-auto sm:mr-0 sm:w-28 text-left sm:text-right font-mono text-muted-foreground"
                         title={formatWorkloadTooltip(entry) ?? undefined}
@@ -838,8 +843,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       </span>
                       {/* Billable amount + inline edit pencil */}
                       <span className="sm:w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1 whitespace-nowrap">
-                        ${fmt(entry.line_total ?? 0)}
-                        {billableEditable && (
+                        {isDownstream
+                          ? <span className="text-muted-foreground/40 font-normal">—</span>
+                          : `$${fmt(entry.line_total ?? 0)}`}
+                        {!isDownstream && billableEditable && (
                           <button
                             type="button"
                             aria-label="Edit billable entry"
