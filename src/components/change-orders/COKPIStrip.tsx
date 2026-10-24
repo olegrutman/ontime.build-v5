@@ -208,11 +208,17 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       });
     }
 
+    // When the TC prices from crew time but no billable rows exist yet (e.g. the
+    // crew submitted the WO directly), fall back to the crew-derived total so the
+    // card never reads $0 while the pricing panel shows a real number.
+    const myBillable = ownLaborToUpstream > 0
+      ? ownLaborToUpstream
+      : (isTC && props.co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
     tiles.push({
       label: isTC ? 'My Billable' : 'My Labor',
-      value: fmtCurrency(ownLaborToUpstream),
+      value: fmtCurrency(myBillable),
       color: 'hsl(var(--primary))',
-      badge: ownLaborToUpstream > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
+      badge: myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
     });
 
     if (matEquip > 0) {
@@ -358,7 +364,7 @@ export function COKPIStrip(props: COKPIStripProps) {
   const rl = useRoleLabelsContext();
   const tiles = getTiles(props, rl);
   const colCount = tiles.length;
-  const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3';
+  const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : colCount === 3 ? 'lg:grid-cols-3' : colCount === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-1';
 
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-2.5`}>

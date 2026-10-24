@@ -48,6 +48,8 @@ interface COLineItemRowProps {
    * so the item card agrees with the side panel before anything is saved.
    */
   crewPricingBase?: { enabled: boolean; hourlyRate: number; markupPercent: number };
+  /** CO lifecycle status — the subcontractor's price is frozen once submitted upstream. */
+  coStatus?: string;
 }
 
 
@@ -76,7 +78,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
-  onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase,
+  onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -473,7 +475,10 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               const isPriced = entryCount > 0 || totalForRole > 0;
               const primaryLabel = hideGCBreakdown ? 'Approved amount' : 'Billable';
 
-              const showProvisional = !isPriced && canAddLabor && isTC && provisionalAmount > 0;
+              // Once the order is submitted upstream the subcontractor's price is
+              // frozen — no provisional confirm or new billable entries until recall.
+              const tcPricingLocked = isTC && ['submitted', 'approved', 'rejected', 'contracted'].includes(coStatus ?? '');
+              const showProvisional = !isPriced && canAddLabor && isTC && !tcPricingLocked && provisionalAmount > 0;
 
               if (showProvisional) {
                 return (
@@ -514,7 +519,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 );
               }
 
-              if (!isPriced && canAddLabor) {
+              if (!isPriced && canAddLabor && !tcPricingLocked) {
                 return (
                   <button
                     type="button"
