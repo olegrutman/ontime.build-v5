@@ -696,7 +696,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </div>
           </div>
         </div>
-      </div>
 
       {/* Expanded entries panel */}
       {expanded && (
