@@ -66,6 +66,7 @@ export interface POLineItem {
   // Supplier pricing
   lead_time_days?: number | null;
   supplier_notes?: string | null;
+  is_unavailable?: boolean;
   // Pricing traceability
   source_estimate_item_id?: string | null;
   source_pack_name?: string | null;

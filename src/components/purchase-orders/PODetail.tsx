@@ -1116,6 +1116,11 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
                     <TableCell>
                       <div>
                         <p className="font-medium">{item.description}</p>
+                        {(item as any).is_unavailable && (
+                          <span className="inline-block mt-1 rounded-full bg-destructive/10 text-destructive text-[0.7rem] font-semibold uppercase px-2 py-0.5">
+                            Out of stock / unavailable
+                          </span>
+                        )}
                         {item.length_ft && item.computed_lf && (
                           <p className="text-xs text-muted-foreground">
                             {item.quantity} pcs @ {item.length_ft}' = {item.computed_lf} LF

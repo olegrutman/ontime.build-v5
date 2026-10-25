@@ -58,6 +58,7 @@ const CreateRFIPage = lazy(() => import("./pages/CreateRFIPage"));
 const COApprovalPage = lazy(() => import("./pages/external/COApprovalPage"));
 const COExternalView = lazy(() => import("./pages/external/COExternalView"));
 const InvoiceApprovalPage = lazy(() => import("./pages/external/InvoiceApprovalPage"));
+const POSupplierPricingPage = lazy(() => import("./pages/external/POSupplierPricingPage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -228,7 +229,8 @@ function AppRoutes() {
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/external/co-approve/:token" element={<COApprovalPage />} />
             <Route path="/external/co/:token" element={<COExternalView />} />
-<Route path="/external/invoice/:token" element={<InvoiceApprovalPage />} />
+            <Route path="/external/invoice/:token" element={<InvoiceApprovalPage />} />
+            <Route path="/external/po/:token" element={<POSupplierPricingPage />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />

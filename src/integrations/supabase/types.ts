@@ -4896,6 +4896,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          is_unavailable: boolean
           lead_time_days: number | null
           length_ft: number | null
           line_number: number
@@ -4922,6 +4923,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          is_unavailable?: boolean
           lead_time_days?: number | null
           length_ft?: number | null
           line_number: number
@@ -4948,6 +4950,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          is_unavailable?: boolean
           lead_time_days?: number | null
           length_ft?: number | null
           line_number?: number
@@ -4994,6 +4997,53 @@ export type Database = {
             columns: ["source_estimate_item_id"]
             isOneToOne: false
             referencedRelation: "supplier_estimate_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      po_supplier_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          po_id: string
+          submitted_at: string | null
+          submitted_count: number
+          submitter_name: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email: string
+          expires_at?: string
+          id?: string
+          po_id: string
+          submitted_at?: string | null
+          submitted_count?: number
+          submitter_name?: string | null
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          po_id?: string
+          submitted_at?: string | null
+          submitted_count?: number
+          submitter_name?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_supplier_links_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
         ]
