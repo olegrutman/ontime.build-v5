@@ -114,14 +114,24 @@ export function HeaderScreen({
                 <SelectValue placeholder="Select a supplier" />
               </SelectTrigger>
               <SelectContent>
-                {suppliers.map(supplier => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    <div className="flex flex-col items-start">
-                      <span>{supplier.name}</span>
-                      <span className="text-xs text-muted-foreground">{supplier.supplier_code}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {suppliers.map((supplier, idx) => {
+                  const isMasterCatalog = supplier.supplier_code === 'ONTIME-SYS';
+                  const isProjectSupplier = !isMasterCatalog && idx === 0;
+                  return (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      <div className="flex flex-col items-start">
+                        <span>{supplier.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {isMasterCatalog
+                            ? 'Generic Ontime catalog — send to any supplier'
+                            : isProjectSupplier
+                              ? 'Project supplier — their catalog'
+                              : supplier.supplier_code}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
