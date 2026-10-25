@@ -260,6 +260,13 @@
       "when": 1792862549262,
       "tag": "0036_crew_pricing_base_access_check",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792942114772,
+      "tag": "0037_master_catalog_price_read_policy",
+      "breakpoints": true
     }
   ]
 }
