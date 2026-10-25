@@ -311,6 +311,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
 
   const handleProductSelect = useCallback((p: CatalogProduct) => {
     setSelectedProduct(p);
+    setSearchQuery(''); // leave search mode so the quantity step can render
     setStep('quantity');
   }, []);
 
