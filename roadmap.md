@@ -1,6 +1,6 @@
 # Roadmap
-- [ ] Show pricing readiness consistently on CO/WO list and detail without changing approval states
-- [ ] Test readiness rules and verify live priced/unpriced orders
+- [x] Show pricing readiness consistently on CO/WO list and detail without changing approval states
+- [x] Test readiness rules and verify live priced/internal/approved orders (17 tests; list/detail matched; 72 phone views without issues)
 
 - [x] Move crew pricing switch into Scope & Labor and safely clear derived billing when disabled
 - [x] Verify saved switch changes, provenance-scoped clearing and phone layouts (46 tests; live WO off/reload; 320/394px; separate supplier-access toast overflow found)
