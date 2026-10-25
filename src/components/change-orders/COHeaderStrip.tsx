@@ -8,11 +8,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cleanTitle } from '@/lib/coTitle';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { coPricingStatusLabel, type COPricingReadiness } from '@/lib/coPricingReadiness';
 
 interface COHeaderStripProps {
   co: ChangeOrder;
   role: COCreatedByRole;
   myOrgName: string;
+  pricingReadiness?: COPricingReadiness;
 }
 
 const ROLE_PILL_COLORS: Record<string, string> = {
@@ -44,7 +46,7 @@ function getActiveStep(status: string): number {
   }
 }
 
-export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
+export function COHeaderStrip({ co, role, myOrgName, pricingReadiness }: COHeaderStripProps) {
   const rl = useRoleLabelsContext();
   const status = co.status as COStatus;
   const isWithdrawn = status === 'withdrawn';
@@ -104,7 +106,7 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
                 status === 'work_in_progress' || status === 'closed_for_pricing' ? 'bg-amber-100 text-amber-700' :
                 'bg-muted text-muted-foreground'
               )}>
-                {CO_STATUS_LABELS[status]}
+                {coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}
               </span>
             </div>
             {editing ? (

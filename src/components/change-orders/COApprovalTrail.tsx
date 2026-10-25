@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { COStatus } from '@/types/changeOrder';
+import { coPricingStatusLabel, type COPricingReadiness } from '@/lib/coPricingReadiness';
 
 /**
  * Collapses the CO status lifecycle into a 4-stage approval trail:
@@ -37,12 +38,14 @@ export function coTrailLabel(status: COStatus): string {
 
 interface COApprovalTrailProps {
   status: COStatus;
+  pricingReadiness?: COPricingReadiness;
+  keptInternal?: boolean;
   className?: string;
   /** hide the caption line */
   compact?: boolean;
 }
 
-export function COApprovalTrail({ status, className, compact = false }: COApprovalTrailProps) {
+export function COApprovalTrail({ status, pricingReadiness, keptInternal, className, compact = false }: COApprovalTrailProps) {
   const reached = STAGE_INDEX[status] ?? -1;
   const pending = PENDING.includes(status);
   const closed = status === 'rejected' || status === 'withdrawn';
@@ -70,7 +73,7 @@ export function COApprovalTrail({ status, className, compact = false }: COApprov
       {!compact && (
         <p
           className={cn(
-            'mt-1 text-[0.6rem] font-semibold uppercase tracking-wider truncate',
+            'mt-1 text-[0.6rem] font-semibold uppercase tracking-wider break-words',
             status === 'approved' || status === 'contracted'
               ? 'text-emerald-600 dark:text-emerald-400'
               : status === 'rejected'
@@ -80,7 +83,7 @@ export function COApprovalTrail({ status, className, compact = false }: COApprov
                   : 'text-muted-foreground',
           )}
         >
-          {coTrailLabel(status)}
+          {coPricingStatusLabel(status, pricingReadiness, keptInternal) ?? coTrailLabel(status)}
         </p>
       )}
     </div>

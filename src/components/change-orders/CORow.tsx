@@ -96,7 +96,7 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
 
       {/* Approval trail */}
       <div className="md:col-span-3">
-        <COApprovalTrail status={status} />
+        <COApprovalTrail status={status} pricingReadiness={co.pricing_readiness} keptInternal={co.kept_internal} />
       </div>
 
       {/* Amount */}

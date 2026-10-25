@@ -5,6 +5,7 @@ import type { ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import type { COStatus } from '@/types/changeOrder';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import { EntrySourcePill } from './EntrySourcePill';
+import { coPricingStatusLabel } from '@/lib/coPricingReadiness';
 
 interface COBoardCardProps {
   co: ChangeOrderWithMembers;
@@ -141,8 +142,8 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
             <span className={cn('animate-ping absolute inline-flex h-full w-full rounded-full opacity-75', dotColor)} />
             <span className={cn('relative inline-flex rounded-full h-2 w-2', dotColor)} />
           </span>
-          <span className="text-[11px] text-muted-foreground truncate">
-            {CO_STATUS_LABELS[co.status as COStatus]}
+          <span className="text-[11px] text-muted-foreground break-words">
+            {coPricingStatusLabel(co.status, co.pricing_readiness, co.kept_internal) ?? CO_STATUS_LABELS[co.status as COStatus]}
           </span>
         </div>
 

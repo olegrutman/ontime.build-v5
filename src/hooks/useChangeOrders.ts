@@ -2,9 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
+import { getCOPricingReadiness, type COPricingReadiness } from '@/lib/coPricingReadiness';
 import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/changeOrder';
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
+  pricing_readiness?: COPricingReadiness;
   collaboratorStatus?: COCollaboratorStatus;
   collaboratorOrgId?: string;
   display_total?: number;
@@ -110,6 +112,7 @@ export function useChangeOrders(projectId: string | null) {
         { data: matRows },
         { data: eqRows },
         { data: projInvoices },
+        scopeResult,
       ] = await Promise.all([
         supabase
           .from('project_contracts')
@@ -125,7 +128,7 @@ export function useChangeOrders(projectId: string | null) {
           .maybeSingle(),
         coIds.length
           ? supabase.from(t.labor)
-              .select('id, co_id, org_id, entered_by_role, line_total, is_actual_cost, source_fc_entry_ids')
+              .select('id, co_id, co_line_item_id, org_id, entered_by_role, line_total, is_actual_cost, source_fc_entry_ids')
               .in('co_id', coIds)
           : Promise.resolve({ data: [] as any[] }) as any,
         coIds.length
@@ -141,7 +144,11 @@ export function useChangeOrders(projectId: string | null) {
         supabase.from('invoices')
           .select('id, status, total_amount, co_ids, contract_id')
           .eq('project_id', projectId!) as any,
+        coIds.length
+          ? supabase.from('co_line_items').select('id, co_id').in('co_id', coIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
+      if (scopeResult.error) throw scopeResult.error;
 
       const downstreamOrgIds = new Set(
         (downstreamContracts ?? []).map(c => c.from_org_id).filter(Boolean) as string[]
@@ -253,6 +260,13 @@ export function useChangeOrders(projectId: string | null) {
       return {
         items: allCOs.map(c => ({
           ...c,
+          pricing_readiness: getCOPricingReadiness(
+            (scopeResult.data ?? []).filter(item => item.co_id === c.id),
+            (laborRows ?? []).filter((entry: any) => entry.co_id === c.id),
+            myRole,
+            [...(matRows ?? []), ...(eqRows ?? [])].filter((row: any) => row.co_id === c.id &&
+              row.added_by_role !== 'GC' && (myRole !== 'FC' || row.added_by_role === 'FC')),
+          ),
           collaboratorStatus: collaboratorMap.get(c.id)?.status,
           collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
           display_total: computeDisplayTotal(c),
