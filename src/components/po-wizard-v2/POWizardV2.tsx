@@ -141,7 +141,9 @@ export function POWizardV2({
           }));
         }
 
-        if (projectSuppliers.length === 0) {
+        // Always offer the Ontime Master Catalog as a fallback source, listed
+        // after any project-assigned suppliers so their catalog stays priority.
+        if (!restrictToSupplierId) {
           const { data: systemSupplier } = await supabase
             .from('suppliers')
             .select('id, name, supplier_code, organization_id')
@@ -149,13 +151,13 @@ export function POWizardV2({
             .limit(1)
             .maybeSingle();
 
-          if (systemSupplier) {
-            projectSuppliers = [{
+          if (systemSupplier && !projectSuppliers.some(s => s.id === systemSupplier.id)) {
+            projectSuppliers.push({
               id: systemSupplier.id,
               name: systemSupplier.name,
               supplier_code: systemSupplier.supplier_code,
               organization_id: systemSupplier.organization_id,
-            }];
+            });
           }
         }
 
@@ -180,7 +182,9 @@ export function POWizardV2({
 
         setSuppliers(projectSuppliers);
 
-        if (projectSuppliers.length === 1) {
+        // Pre-select the first option: the project-assigned supplier when one
+        // exists (their catalog is priority), otherwise the master catalog.
+        if (projectSuppliers.length >= 1) {
           setFormData(prev => ({
             ...prev,
             supplier_id: projectSuppliers[0].id,
