@@ -33,7 +33,7 @@ export default function POSupplierPricingPage() {
       if (e || !data || data.error) { setError(data?.error ?? 'This link is invalid or has expired.'); setLoading(false); return; }
       setPo(data.po); setItems(data.items); setLocked(data.locked); setSubmittedAt(data.submitted_at);
       setName(data.submitter_name ?? '');
-      setTax(data.po.tax != null && data.submitted_at ? String(data.po.tax) : '');
+      setTax(data.po.tax_percent ? String(Number(data.po.tax_percent)) : '');
       const r: Record<string, Row> = {};
       data.items.forEach((i: any) => { r[i.id] = { price: i.unit_price != null ? String(i.unit_price) : '', unavailable: !!i.is_unavailable, note: i.supplier_notes ?? '' }; });
       setRows(r); setLoading(false);
@@ -44,7 +44,8 @@ export default function POSupplierPricingPage() {
     const r = rows[i.id]; if (!r || r.unavailable) return s;
     const p = parseFloat(r.price); return s + (isFinite(p) ? p * Number(i.quantity) : 0);
   }, 0), [items, rows]);
-  const taxNum = parseFloat(tax) || 0;
+  const taxPct = parseFloat(tax) || 0;
+  const taxNum = Math.round(subtotal * taxPct) / 100;
 
   const update = (id: string, patch: Partial<Row>) => setRows((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
 
@@ -52,10 +53,11 @@ export default function POSupplierPricingPage() {
     setFormError(null);
     if (!name.trim()) return setFormError('Please enter your name.');
     const missing = items.find((i) => !rows[i.id].unavailable && !(parseFloat(rows[i.id].price) >= 0));
+    if (taxPct > 25) return setFormError('Tax rate must be between 0% and 25%.');
     if (missing) return setFormError(`Enter a price for line ${missing.line_number} or mark it out of stock.`);
     setSaving(true);
     const { data, error: e } = await supabase.functions.invoke('po-supplier-access', {
-      body: { action: 'submit', token, name, tax_amount: taxNum,
+      body: { action: 'submit', token, name, tax_percent: taxPct,
         items: items.map((i) => ({ id: i.id, unit_price: parseFloat(rows[i.id].price), unavailable: rows[i.id].unavailable, note: rows[i.id].note })) },
     });
     setSaving(false);
@@ -89,7 +91,7 @@ export default function POSupplierPricingPage() {
             <span>{justSent ? 'Thanks — your pricing was sent to the buyer.' : `Pricing submitted ${new Date(submittedAt).toLocaleDateString()}.`} You can still make changes and resubmit until the buyer places the order.</span>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Enter your unit price for each item, add the tax amount, and mark anything out of stock. No account needed.</p>
+          <p className="text-sm text-muted-foreground">Enter your unit price for each item, add your sales tax rate, and mark anything out of stock. No account needed.</p>
         )}
 
         <div className="space-y-2">
@@ -131,9 +133,14 @@ export default function POSupplierPricingPage() {
         <div className="rounded-2xl border bg-card p-4 space-y-3">
           <div className="flex justify-between text-sm"><span>Subtotal</span><span className="font-mono">{money(subtotal)}</span></div>
           <div className="flex justify-between items-center text-sm gap-3">
-            <Label htmlFor="tax">Tax amount</Label>
-            <Input id="tax" inputMode="decimal" value={tax} disabled={locked} placeholder="0.00"
-              onChange={(e) => setTax(e.target.value.replace(/[^0-9.]/g, ''))} className="w-32 font-mono text-right" />
+            <Label htmlFor="tax">Sales tax rate</Label>
+            <div className="flex items-center gap-2">
+              <Input id="tax" inputMode="decimal" value={tax} disabled={locked} placeholder="0.00"
+                onChange={(e) => setTax(e.target.value.replace(/[^0-9.]/g, ''))} className="w-24 font-mono text-right" />
+              <span className="text-muted-foreground">%</span>
+            </div>
+          </div>
+          <div className="flex justify-between text-sm"><span>Tax</span><span className="font-mono">{money(taxNum)}</span>
           </div>
           <div className="flex justify-between font-semibold border-t pt-3"><span>Total</span><span className="font-mono">{money(subtotal + taxNum)}</span></div>
         </div>
