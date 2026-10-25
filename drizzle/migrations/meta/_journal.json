@@ -281,6 +281,13 @@
       "when": 1792942276918,
       "tag": "0039_catalog_facets_active_only",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792942301829,
+      "tag": "0040_search_catalog_v3_active_only",
+      "breakpoints": true
     }
   ]
 }
