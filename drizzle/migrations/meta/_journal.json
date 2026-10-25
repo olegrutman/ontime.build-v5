@@ -267,6 +267,13 @@
       "when": 1792942114772,
       "tag": "0037_master_catalog_price_read_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792942237143,
+      "tag": "0038_system_supplier_read_policy",
+      "breakpoints": true
     }
   ]
 }
