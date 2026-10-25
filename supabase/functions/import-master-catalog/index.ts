@@ -137,13 +137,18 @@ Deno.serve(async (req) => {
     else upserted += Math.min(400, items.length - i);
   }
 
-  // Prices: resolve item ids, then upsert by catalog_item_id
-  const { data: dbItems, error: fetchErr } = await supabase
-    .from('catalog_items')
-    .select('id, supplier_sku')
-    .eq('supplier_id', SYSTEM_SUPPLIER_ID);
-  if (fetchErr) errors.push(`fetch ids: ${fetchErr.message}`);
-  const idBySku = new Map((dbItems ?? []).map((d) => [d.supplier_sku, d.id]));
+  // Prices: resolve item ids (paginated — PostgREST caps at 1000 rows), then upsert by catalog_item_id
+  const idBySku = new Map<string, string>();
+  for (let from = 0; ; from += 1000) {
+    const { data: page, error: fetchErr } = await supabase
+      .from('catalog_items')
+      .select('id, supplier_sku')
+      .eq('supplier_id', SYSTEM_SUPPLIER_ID)
+      .range(from, from + 999);
+    if (fetchErr) { errors.push(`fetch ids: ${fetchErr.message}`); break; }
+    for (const d of page ?? []) idBySku.set(d.supplier_sku, d.id);
+    if (!page || page.length < 1000) break;
+  }
 
   const prices = records.slice(1)
     .map((r) => ({
