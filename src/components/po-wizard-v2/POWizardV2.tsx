@@ -182,7 +182,9 @@ export function POWizardV2({
 
         setSuppliers(projectSuppliers);
 
-        if (projectSuppliers.length === 1) {
+        // Pre-select the first option: the project-assigned supplier when one
+        // exists (their catalog is priority), otherwise the master catalog.
+        if (projectSuppliers.length >= 1) {
           setFormData(prev => ({
             ...prev,
             supplier_id: projectSuppliers[0].id,
