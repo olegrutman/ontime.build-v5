@@ -272,6 +272,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         .select('*')
         .eq('supplier_id', supplierId)
         .eq('category', config.dbCategory as never)
+        .eq('is_active', true)
         .order('name', { nullsFirst: false })
         .limit(200);
       setProducts((data ?? []) as unknown as CatalogProduct[]);
@@ -298,7 +299,8 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       .from('catalog_items')
       .select('*')
       .eq('supplier_id', supplierId)
-      .eq('category', config.dbCategory as never);
+      .eq('category', config.dbCategory as never)
+      .eq('is_active', true);
     if (selectedSecondary) q = q.eq('secondary_category', selectedSecondary);
     Object.entries(filters).forEach(([k, v]) => { if (v) q = q.eq(k as never, v as never); });
     const { data } = await q.limit(100);
