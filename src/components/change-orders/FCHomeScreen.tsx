@@ -9,6 +9,7 @@ import type { COReasonCode, COStatus } from '@/types/changeOrder';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { VoicePNRecorder } from './VoicePNRecorder';
+import { coPricingStatusLabel } from '@/lib/coPricingReadiness';
 
 interface FCHomeScreenProps {
   projectId: string;
@@ -176,7 +177,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-left min-h-[56px]"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                       {co.status === 'closed_for_pricing' ? 'Log hours' : `${rl.TC} is waiting`}
@@ -217,7 +218,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                      {CO_STATUS_LABELS[co.status as COStatus] ?? co.status}
+                      {coPricingStatusLabel(co.status, co.pricing_readiness, co.kept_internal) ?? CO_STATUS_LABELS[co.status as COStatus] ?? co.status}
                     </span>
                   </div>
                   <p className="text-sm font-medium text-foreground mt-0.5 truncate">
@@ -257,10 +258,10 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-left min-h-[56px]"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-mono text-muted-foreground">{co.co_number ?? '—'}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                      {CO_STATUS_LABELS[co.status as COStatus] ?? co.status}
+                      {coPricingStatusLabel(co.status, co.pricing_readiness, co.kept_internal) ?? CO_STATUS_LABELS[co.status as COStatus] ?? co.status}
                     </span>
                   </div>
                   <p className="text-sm font-medium text-foreground mt-0.5 truncate">

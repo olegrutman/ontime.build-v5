@@ -18,6 +18,7 @@ import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
+import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -569,7 +570,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
           {/* Full-width Header Card + Pipeline */}
-          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
+          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} pricingReadiness={getCOPricingReadiness(
+            lineItems, laborEntries, role,
+            [...materials, ...equipment].filter(row => row.added_by_role !== 'GC' && (role !== 'FC' || row.added_by_role === 'FC')),
+          )} />
 
           <COBillingStatusCard
             coId={co.id}

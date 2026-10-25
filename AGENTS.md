@@ -1,5 +1,7 @@
 # Project architecture rules
 
+- CO/WO pricing readiness is a shared viewer-role-scoped presentation calculation, not a stored lifecycle state; this keeps list/detail consistent without bypassing crew or upstream approval.
+
 - Crew-base billable rows and mirrored costs carry explicit provenance; switching the order-wide base off clears only these rows atomically, preserving manual entries and upstream submission freezes.
 
 - Project Info derives headline revenue from the viewer's own earning contracts, never the sum of revenue and downstream costs; shared details and contract edits use their respective user-level creator identities.
