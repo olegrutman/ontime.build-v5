@@ -372,14 +372,35 @@ Deno.serve(async (req) => {
       .filter(Boolean)
       .join('\n\n');
 
+    const origin = (() => {
+      const o = req.headers.get('origin') || '';
+      return /^https:\/\/([a-z0-9-]+\.)*(ontime\.build|lovable\.app)$/.test(o) ? o : 'https://ontime.build';
+    })();
+
     const failed: string[] = [];
     for (const to of recipients) {
       try {
+        const { data: link, error: linkErr } = await svc
+          .from('po_supplier_links')
+          .insert({ po_id: poId, email: to, created_by: user.id })
+          .select('token')
+          .single();
+        if (linkErr) throw linkErr;
+        const priceUrl = `${origin}/external/po/${link.token}`;
+        const recipientHtml = renderEmail({
+          heading: `Purchase order ${po.po_number}`,
+          intro: `${intro} Please enter your prices and tax, and mark anything out of stock.`,
+          rows,
+          ctaLabel: 'Enter prices',
+          ctaUrl: priceUrl,
+          footnote: 'You can update your pricing until the buyer places the order. No account needed.',
+          status: 'info',
+        }).replace('</body>', `${extraHtml}</body>`);
         await queueEmail(svc, {
           to,
           subject: `Purchase order ${po.po_number} — ${po.po_name}`,
-          html,
-          text,
+          html: recipientHtml,
+          text: `${text}\n\nEnter prices: ${priceUrl}`,
           label: 'po_documents',
         });
       } catch (e) {
