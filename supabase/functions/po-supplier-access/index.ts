@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       po: {
         po_number: po.po_number, po_name: po.po_name, status: po.status, notes: po.notes, created_at: po.created_at,
         buyer: (po.organization as any)?.name ?? '', project: (po.project as any)?.name ?? '', supplier: (po.supplier as any)?.name ?? '',
-        subtotal: po.po_subtotal_total, tax: po.po_tax_total, total: po.po_total,
+        subtotal: po.po_subtotal_total, tax: po.po_tax_total, tax_percent: po.sales_tax_percent, total: po.po_total,
       },
       items: (items || []).map((i: any) => ({
         id: i.id, line_number: i.line_number, sku: i.supplier_sku, description: i.description, quantity: i.quantity, uom: i.uom,
@@ -56,8 +56,8 @@ Deno.serve(async (req) => {
 
   const name = String(body.name ?? '').trim().slice(0, 120);
   if (!name) return json({ error: 'Please enter your name.' }, 400);
-  const taxAmount = Number(body.tax_amount ?? 0);
-  if (!Number.isFinite(taxAmount) || taxAmount < 0 || taxAmount > 10_000_000) return json({ error: 'Tax amount is not valid.' }, 400);
+  const taxPct = Number(body.tax_percent ?? 0);
+  if (!Number.isFinite(taxPct) || taxPct < 0 || taxPct > 25) return json({ error: 'Tax rate must be between 0% and 25%.' }, 400);
   const input = Array.isArray(body.items) ? body.items : [];
   const byId = new Map<string, any>(input.map((x: any) => [String(x?.id), x]));
 
@@ -85,9 +85,9 @@ Deno.serve(async (req) => {
     if (error) return json({ error: error.message }, 500);
   }
   subtotal = round2(subtotal);
-  const tax = round2(taxAmount);
+  const pct = Math.round(taxPct * 1000) / 1000;
+  const tax = round2(subtotal * pct / 100);
   const total = round2(subtotal + tax);
-  const pct = subtotal > 0 ? round2((tax / subtotal) * 100) : 0;
   const now = new Date().toISOString();
 
   const { error: poErr } = await svc.from('purchase_orders').update({
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         heading: `${again ? 'Updated pricing' : 'Pricing received'} for ${po.po_number}`,
         intro: `${escapeHtml(name)} (${escapeHtml(link.email)}) ${again ? 'updated' : 'submitted'} pricing for ${escapeHtml(po.po_name)}.`,
         rows: [
-          ['Subtotal', fmtMoney(subtotal)], ['Tax', fmtMoney(tax)], ['Total', fmtMoney(total)],
+          ['Subtotal', fmtMoney(subtotal)], [`Tax (${pct}%)`, fmtMoney(tax)], ['Total', fmtMoney(total)],
           ['Unavailable items', unavailableCount ? String(unavailableCount) : ''],
         ],
         ctaLabel: 'Review purchase order', ctaUrl: url, status: unavailableCount ? 'warning' : 'success',
