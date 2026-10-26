@@ -847,6 +847,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             {!isMobile && (
               <div className="w-[300px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} />
+                {billedCard}
                 {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
               </div>
             )}
@@ -855,6 +856,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           {isMobile && (
             <>
               <COSidebar {...sidebarProps} />
+              {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
             </>
           )}
