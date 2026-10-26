@@ -274,10 +274,30 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
       const scopeMap = new Map(scopeItems.map(s => [s.id, s]));
       const generated: GeneratedLineItem[] = [];
+      const coById = new Map(availableCOs.map(c => [c.id, c]));
+      const fixedIds = new Set(ids.filter(id => { const c = coById.get(id); return c && isFixedProgress(c); }));
+      const alreadyBilled = (coId: string, entryId: string) => !!billedMap.get(coId)?.entryIds.has(entryId);
 
+      // Fixed price → one progress line per WO for this period's percent complete.
+      // Once the GC acknowledges completion, the default is the remaining balance (final true-up).
+      for (const id of fixedIds) {
+        const co = coById.get(id)!;
+        const value = Number(co.tc_submitted_price ?? 0);
+        const s = summaryFor(co);
+        const pct = percentById[id] ?? (co.completion_acknowledged_at ? Math.round((s.remaining / value) * 10000) / 100 : 0);
+        const amount = fixedProgressAmount(value, pct, s.billed);
+        if (amount <= 0) continue;
+        const isFinal = amount >= s.remaining - 0.005;
+        const label = co.co_number ?? co.title ?? 'WO';
+        generated.push({
+          description: `${label} — ${isFinal ? 'Final billing' : 'Progress billing'} (${pct}% of $${value.toLocaleString('en-US', { minimumFractionDigits: 2 })})`,
+          amount, coId: id, type: 'progress', entryIds: [], percent: pct,
+        });
+      }
 
-      // Labor entries → line items
+      // Labor entries → line items (T&M / NTE: only entries not on an earlier invoice)
       for (const entry of labor) {
+        if (fixedIds.has(entry.co_id) || alreadyBilled(entry.co_id, entry.id)) continue;
         const scope = scopeMap.get(entry.co_line_item_id);
         const itemName = scope?.item_name ?? 'Labor';
         let desc: string;
@@ -289,70 +309,60 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           desc = `${itemName} – Labor`;
         }
         if (entry.description) desc += ` (${entry.description})`;
-
-        generated.push({
-          description: desc,
-          amount: entry.line_total ?? 0,
-          coId: entry.co_id,
-          type: 'labor',
-        });
+        generated.push({ description: desc, amount: entry.line_total ?? 0, coId: entry.co_id, type: 'labor', entryIds: [entry.id] });
       }
 
       // Materials → line items. Skip when GC procures (supplier bills GC directly).
       for (const mat of materials) {
+        if (fixedIds.has(mat.co_id) || alreadyBilled(mat.co_id, mat.id)) continue;
         if (matRespByCo.get(mat.co_id) === 'GC') continue;
         let desc = mat.description;
         if (mat.quantity && mat.unit_cost) {
           desc += ` – ${mat.quantity} ${mat.uom} × $${mat.unit_cost.toFixed(2)}`;
           if (mat.markup_percent > 0) desc += ` + ${mat.markup_percent}% markup`;
         }
-
-        generated.push({
-          description: desc,
-          amount: mat.billed_amount ?? 0,
-          coId: mat.co_id,
-          type: 'material',
-        });
+        generated.push({ description: desc, amount: mat.billed_amount ?? 0, coId: mat.co_id, type: 'material', entryIds: [mat.id] });
       }
 
       // Equipment → line items. Skip when GC procures.
       for (const eq of equipment) {
+        if (fixedIds.has(eq.co_id) || alreadyBilled(eq.co_id, eq.id)) continue;
         if (eqRespByCo.get(eq.co_id) === 'GC') continue;
-
         let desc = eq.description;
         if (eq.duration_note) desc += ` – ${eq.duration_note}`;
         if (eq.markup_percent > 0) desc += ` + ${eq.markup_percent}% markup`;
+        generated.push({ description: desc, amount: eq.billed_amount ?? 0, coId: eq.co_id, type: 'equipment', entryIds: [eq.id] });
+      }
 
-        generated.push({
-          description: desc,
-          amount: eq.billed_amount ?? 0,
-          coId: eq.co_id,
-          type: 'equipment',
-        });
+      // Guardrail: cumulative billing can't pass the approved price / NTE cap.
+      for (const id of ids) {
+        const co = coById.get(id);
+        if (!co || fixedIds.has(id)) continue;
+        const s = summaryFor(co);
+        if (s.limit <= 0) continue;
+        const thisInvoice = generated.filter(g => g.coId === id).reduce((a, g) => a + g.amount, 0);
+        if (thisInvoice > s.remaining + 0.005) {
+          throw new Error(`${co.co_number ?? co.title ?? 'Work order'} would bill $${thisInvoice.toFixed(2)}, but only $${s.remaining.toFixed(2)} remains of its approved amount.`);
+        }
       }
 
       // Optional aggregation: collapse to one row per (CO × type) when 'aggregate' mode.
-      // This matches AIA-style combined CO SOV billing where the invoice references
-      // the CO bundle, not each labor/material/equipment line individually.
       let finalItems = generated;
       if (invoiceMode === 'aggregate') {
-        const coMeta = new Map(availableCOs.map((c) => [c.id, c]));
         const buckets = new Map<string, GeneratedLineItem>();
         for (const li of generated) {
           const key = `${li.coId}::${li.type}`;
           const existing = buckets.get(key);
           if (existing) {
             existing.amount += li.amount;
+            existing.entryIds.push(...li.entryIds);
+          } else if (li.type === 'progress') {
+            buckets.set(key, { ...li, entryIds: [] });
           } else {
-            const co = coMeta.get(li.coId);
+            const co = coById.get(li.coId);
             const label = co?.co_number ?? co?.title ?? 'CO';
             const typeLabel = li.type === 'labor' ? 'Labor' : li.type === 'material' ? 'Materials' : 'Equipment';
-            buckets.set(key, {
-              description: `${label} — ${typeLabel}`,
-              amount: li.amount,
-              coId: li.coId,
-              type: li.type,
-            });
+            buckets.set(key, { description: `${label} — ${typeLabel}`, amount: li.amount, coId: li.coId, type: li.type, entryIds: [...li.entryIds] });
           }
         }
         finalItems = Array.from(buckets.values());
