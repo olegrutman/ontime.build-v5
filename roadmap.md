@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Implement approved PO picker Design A and verify catalog selection, order readback and phone layout
 - [x] Add Lumber Type before framing lumber dimensions; 19 tests pass, signed-in type/size/length/species selection and order readback verified at desktop/320/394px; picker layout clear, broader phone audit flags four existing unrelated views
 - [x] Add guided hardware family, application and size choices within five steps, with model search and smart Back
 - [x] Test hardware classification/navigation (18 tests) and verify signed-in selection, smart Back and 20-piece box readback at desktop/320/394px; hardware layouts clear. Broader account audit flags existing access-denied/dashboard overflow outside this task.
