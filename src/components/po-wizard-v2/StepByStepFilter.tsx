@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';
@@ -73,6 +73,24 @@ export interface StepByStepFilterHandle {
   goBack: () => void;
 }
 
+/**
+ * Find the step Back should land on, skipping steps that were auto-applied
+ * (single-option or empty steps the user never chose). Returns 0 when every
+ * prior step was auto-applied — the caller then treats index 0 as the first
+ * real choice, or exits via onBack when already at 0.
+ */
+export function computeBackStep(
+  sequence: string[],
+  autoApplied: ReadonlySet<string>,
+  currentIndex: number
+): number {
+  let idx = currentIndex - 1;
+  while (idx > 0 && autoApplied.has(sequence[idx])) {
+    idx--;
+  }
+  return Math.max(idx, 0);
+}
+
 export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFilterProps>(function StepByStepFilter({
   supplierId,
   category,
@@ -90,7 +108,12 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   const [loading, setLoading] = useState(true);
   const [filterSequence, setFilterSequence] = useState<string[]>([]);
   const [discoveryComplete, setDiscoveryComplete] = useState(false);
-  
+  // Fields whose step was auto-applied (single option) or auto-skipped (empty),
+  // so Back can skip over them instead of re-asking a question with no choice.
+  const autoAppliedRef = useRef<Set<string>>(new Set());
+  // Set once onComplete fires so a re-render can't complete the funnel twice.
+  const completedRef = useRef(false);
+
   const currentField = filterSequence[currentStepIndex];
   const totalSteps = filterSequence.length;
 
@@ -101,6 +124,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     setCurrentStepIndex(0);
     setAppliedFilters({});
     setFilterSequence([]);
+    autoAppliedRef.current = new Set();
     setLoading(true);
 
     // Fast path: caller supplied a fixed sequence (e.g. from CATEGORY_FUNNELS).
@@ -192,11 +216,34 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
       setAvailableValues(values);
 
       if (values.length === 0) {
+        // No options for this field — auto-skip and remember it so Back
+        // doesn't land here again.
+        autoAppliedRef.current.add(currentField);
         if (currentStepIndex >= totalSteps - 1) {
-          onComplete(appliedFilters);
+          if (!completedRef.current) {
+            completedRef.current = true;
+            onComplete(appliedFilters);
+          }
         } else {
           setCurrentStepIndex(prev => prev + 1);
         }
+        return;
+      }
+
+      if (values.length === 1) {
+        // Only one possible choice (e.g. siding with a single length) —
+        // apply it and move on without asking.
+        if (currentStepIndex >= totalSteps - 1) {
+          if (!completedRef.current) {
+            completedRef.current = true;
+            autoAppliedRef.current.add(currentField);
+            onComplete({ ...appliedFilters, [currentField]: values[0].value });
+          }
+          return;
+        }
+        autoAppliedRef.current.add(currentField);
+        setAppliedFilters({ ...appliedFilters, [currentField]: values[0].value });
+        setCurrentStepIndex(prev => prev + 1);
         return;
       }
     } catch (error) {
@@ -230,13 +277,20 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   const handleBackStep = useCallback(() => {
     if (currentStepIndex === 0) {
       onBack();
-    } else {
-      const prevField = filterSequence[currentStepIndex - 1];
-      const newFilters = { ...appliedFilters };
-      delete newFilters[prevField];
-      setAppliedFilters(newFilters);
-      setCurrentStepIndex(prev => prev - 1);
+      return;
     }
+    // Walk back past any auto-applied steps so Back returns to the last
+    // step where the user actually made a choice.
+    const target = computeBackStep(filterSequence, autoAppliedRef.current, currentStepIndex);
+    const newFilters = { ...appliedFilters };
+    for (let i = target; i < currentStepIndex; i++) {
+      const field = filterSequence[i];
+      delete newFilters[field];
+      autoAppliedRef.current.delete(field);
+    }
+    completedRef.current = false; // allow completing again after re-choosing
+    setAppliedFilters(newFilters);
+    setCurrentStepIndex(target);
   }, [currentStepIndex, filterSequence, appliedFilters, onBack]);
 
   useImperativeHandle(ref, () => ({

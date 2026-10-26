@@ -341,11 +341,15 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         if (selectedSecondary) {
           setStep('funnel');
           setProducts([]);
+          // The filter stayed mounted with its state; step back once so the
+          // user lands on their last real choice, skipping auto-applied steps.
+          setTimeout(() => filterRef.current?.goBack(), 0);
         } else if (selectedCategoryKey && CATEGORY_FUNNELS[selectedCategoryKey]?.pattern === 'search') {
           goToLanding();
         } else {
           setStep('funnel');
           setProducts([]);
+          setTimeout(() => filterRef.current?.goBack(), 0);
         }
         break;
       case 'quantity':
@@ -508,17 +512,21 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               />
             )}
 
-            {step === 'funnel' && dbCategory && (
-              <StepByStepFilter
-                ref={filterRef}
-                supplierId={supplierId}
-                category={dbCategory}
-                secondaryCategory={selectedSecondary}
-                onComplete={handleFunnelComplete}
-                onBack={() => setStep(selectedSecondary ? 'secondary' : 'landing')}
-                onClose={onClose}
-                fixedSequence={funnelFields}
-              />
+            {(step === 'funnel' || step === 'products') && dbCategory && (
+              // Keep the filter mounted while products show so Back returns
+              // to the user's last real choice instead of restarting the funnel.
+              <div className={step === 'products' ? 'hidden' : 'contents'}>
+                <StepByStepFilter
+                  ref={filterRef}
+                  supplierId={supplierId}
+                  category={dbCategory}
+                  secondaryCategory={selectedSecondary}
+                  onComplete={handleFunnelComplete}
+                  onBack={() => setStep(selectedSecondary ? 'secondary' : 'landing')}
+                  onClose={onClose}
+                  fixedSequence={funnelFields}
+                />
+              </div>
             )}
 
             {step === 'products' && (
