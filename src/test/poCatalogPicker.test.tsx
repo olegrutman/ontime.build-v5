@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QuantityPanel } from '@/components/po-wizard-v2/QuantityPanel';
 import { StepByStepFilter, type StepByStepFilterHandle } from '@/components/po-wizard-v2/StepByStepFilter';
@@ -68,6 +68,25 @@ describe('catalog funnel candidate scope', () => {
   });
 });
 describe('single-option funnel steps', () => {
+  it('editing an earlier workspace choice clears later selections before completing again', async () => {
+    const complete = vi.fn();
+    const ref = createRef<StepByStepFilterHandle>();
+    const sequence = ['dimension', 'length'];
+    query.select.mockReturnValue(query); query.eq.mockReturnValue(query);
+    query.match.mockImplementation(scope => Promise.resolve({ data: !scope.dimension
+      ? [{ dimension: '2×4' }, { dimension: '6×6' }]
+      : [{ length: '10 ft' }, { length: '12 ft' }], count: 2 }));
+    render(<StepByStepFilter ref={ref} supplierId="master" category="FramingLumber" secondaryCategory={null}
+      onComplete={complete} onBack={() => {}} onClose={() => {}} fixedSequence={sequence} />);
+    fireEvent.click(await screen.findByRole('button', { name: /2×4/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /10 ft/ }));
+    expect(complete).toHaveBeenLastCalledWith({ dimension: '2×4', length: '10 ft' });
+    act(() => ref.current?.editField('dimension'));
+    fireEvent.click(await screen.findByRole('button', { name: /6×6/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /12 ft/ }));
+    expect(complete).toHaveBeenLastCalledWith({ dimension: '6×6', length: '12 ft' });
+    expect(complete).toHaveBeenCalledTimes(2);
+  });
   it('asks lumber type first and carries that raw type through size, length and species', async () => {
     expect(CATEGORY_FUNNELS.FRAMING_LUMBER.funnelFields).toEqual(['secondary_category', 'dimension', 'length', 'wood_species']);
     const complete = vi.fn();

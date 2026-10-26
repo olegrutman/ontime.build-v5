@@ -455,7 +455,12 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         return typeof value === 'string' && value ? [[field, value]] : [];
       })) : workspaceFilters;
   const editWorkspaceField = (field: string) => {
-    if (!selectedCategoryKey || selectedCategoryKey === 'HARDWARE') return;
+    if (!selectedCategoryKey) return;
+    if (selectedCategoryKey === 'HARDWARE') {
+      setStep('hardware'); setSelectedProduct(null);
+      hardwareRef.current?.editField(field);
+      return;
+    }
     setStep('funnel');
     setSelectedProduct(null);
     setTimeout(() => filterRef.current?.editField(field), 0);
@@ -497,14 +502,14 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       <div className={`flex-1 min-h-0 ${showWorkspace ? 'flex flex-col md:flex-row overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} ${libraryMode && step !== 'landing' ? '[&>div]:max-w-2xl [&>div]:mx-auto [&>div]:w-full' : ''}`}>
         {showWorkspace && <SelectionRail
           category={selectedCategoryKey ? CATEGORY_FUNNELS[selectedCategoryKey]?.displayName ?? 'Materials' : selectedProduct?.category ?? 'Materials'}
-          fields={funnelFields ?? Object.keys(displayFilters)} filters={displayFilters}
-          currentField={step === 'funnel' ? workspaceField : undefined} secondary={selectedSecondary}
+          fields={selectedCategoryKey === 'HARDWARE' ? ['family', 'application', 'size'] : funnelFields ?? Object.keys(displayFilters)} filters={displayFilters}
+          currentField={step === 'funnel' || step === 'hardware' ? workspaceField : undefined} secondary={selectedSecondary}
           product={selectedProduct} onEdit={editWorkspaceField} onCategories={goToLanding}
         />}
         <div className={showWorkspace ? 'flex-1 min-w-0 md:overflow-y-auto md:min-h-0' : 'contents'}>
         {selectedCategoryKey === 'HARDWARE' && (
           <div className={step === 'hardware' && !searchActive ? 'contents' : 'hidden'}>
-            <HardwarePicker ref={hardwareRef} supplierId={supplierId} onSelect={handleProductSelect} onBack={goToLanding} />
+            <HardwarePicker ref={hardwareRef} supplierId={supplierId} onSelect={handleProductSelect} onBack={goToLanding} onSelectionChange={workspaceMode ? trackSelections : undefined} />
           </div>
         )}
         {searchActive ? (
@@ -613,7 +618,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
             )}
             {step === 'quantity' && selectedProduct && !showWorkspaceProducts && (
               <QuantityPanel
-                workspaceMode={workspaceMode}
+                workspaceMode={false}
                 product={selectedProduct}
                 onAdd={onAddItem}
                 onUpdate={onUpdateItem}

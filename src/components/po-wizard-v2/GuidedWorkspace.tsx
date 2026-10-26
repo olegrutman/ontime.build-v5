@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FIELD_LABELS, SECONDARY_DISPLAY_NAMES, type CatalogProduct } from '@/types/poWizardV2';
 import lumberImage from '@/assets/framing-lumber-product.jpg';
+const workspaceLabels: Record<string, string> = { ...FIELD_LABELS, family: 'Connection family', application: 'Application', size: 'Member size' };
 
 export function selectionLabel(field: string, value: string) {
   if (field !== 'secondary_category') return value;
@@ -33,12 +34,12 @@ export function SelectionRail({ category, fields, filters, currentField, seconda
         const value = filters[field];
         const active = currentField === field;
         return <Button key={field} variant="ghost" disabled={!value && !active} onClick={() => onEdit(field)}
-          aria-label={`Change ${FIELD_LABELS[field] ?? field}`}
+          aria-label={`Change ${workspaceLabels[field] ?? field}`}
           className={`h-auto min-h-10 md:min-h-16 justify-start gap-3 px-2 py-2 md:py-3 text-left whitespace-normal sm:whitespace-normal md:w-full ${active ? 'bg-command/10' : ''}`}>
           <span className={`flex h-6 w-6 items-center justify-center rounded-full shrink-0 text-xs ${value ? 'bg-state-approved text-command-foreground' : active ? 'bg-command text-command-foreground' : 'border text-muted-foreground'}`}>
             {value ? <Check className="!size-3.5" /> : index + 1}
           </span>
-          <span className="min-w-0 flex-1"><span className="block text-xs font-semibold">{FIELD_LABELS[field] ?? field}</span>
+          <span className="min-w-0 flex-1"><span className="block text-xs font-semibold">{workspaceLabels[field] ?? field}</span>
             {value && <span className="block text-xs font-normal text-muted-foreground mt-1 break-words">{selectionLabel(field, value)}</span>}
           </span>
           {value && <Pencil className="!size-3 text-muted-foreground hidden md:block" />}
