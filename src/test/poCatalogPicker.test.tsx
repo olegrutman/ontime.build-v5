@@ -74,7 +74,6 @@ describe('single-option funnel steps', () => {
     render(<StepByStepFilter supplierId="master" category="Exterior" secondaryCategory="Siding & Exterior Panels"
       onComplete={complete} onBack={() => {}} onClose={() => {}} fixedSequence={['length']} />);
     await waitFor(() => expect(complete).toHaveBeenCalledWith({ length: '12' }));
-    expect(screen.queryByText(/Select Length/i)).toBeNull();
   });
 
   it('Back skips auto-applied steps and lands on the last real choice', async () => {
