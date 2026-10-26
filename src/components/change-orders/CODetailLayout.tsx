@@ -26,6 +26,7 @@ import { CONextActionBanner } from './CONextActionBanner';
 import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
 import { COBillingStatusCard } from './COBillingStatusCard';
+import { COPriceRevisionCard } from './COPriceRevisionCard';
 import { COSidebar } from './COSidebar';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { WOBilledToDateCard } from './WOBilledToDateCard';
@@ -597,6 +598,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* Next Action Banner */}
+          <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} />
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
           {/* External (owner / architect) approval status */}
