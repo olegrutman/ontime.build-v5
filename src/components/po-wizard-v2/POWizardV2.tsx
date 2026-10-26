@@ -594,7 +594,7 @@ export function POWizardV2({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={`flex flex-col min-h-0 p-0 gap-0 overflow-hidden [&>button]:hidden ${screen === 'picker' ? 'w-[calc(100vw-48px)] max-w-6xl h-[min(850px,90vh)] rounded-2xl' : 'h-[90vh] max-w-lg'}`}>
+      <DialogContent className={`flex flex-col min-h-0 p-0 gap-0 overflow-hidden [&>button]:hidden ${screen === 'picker' ? 'w-[calc(100vw-48px)] lg:w-[calc(100vw-248px)] xl:w-[calc(100vw-268px)] max-w-6xl h-[min(850px,90vh)] rounded-2xl' : 'h-[90vh] max-w-lg'}`}>
         {content}
       </DialogContent>
     </Dialog>
