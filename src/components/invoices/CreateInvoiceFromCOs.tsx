@@ -123,8 +123,11 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         // Filter: TC sees COs assigned to them; FC sees COs their own org performed
         const filtered = (cos ?? []).filter(co => {
           if (invoicingRole === 'TC') {
-            // TC invoices GC: only COs assigned to TC's org with completion acknowledged
-            return co.assigned_to_org_id === currentOrgId && co.completion_acknowledged_at;
+            // TC invoices GC for orders it is a party to — whether the sub wrote it
+            // (org_id) or the GC assigned it (assigned_to_org_id) — once the GC
+            // has acknowledged completion.
+            return (co.assigned_to_org_id === currentOrgId || co.org_id === currentOrgId)
+              && co.completion_acknowledged_at;
           }
           if (invoicingRole === 'FC') {
             // FC invoices TC: COs they created, originated, or collaborated on
