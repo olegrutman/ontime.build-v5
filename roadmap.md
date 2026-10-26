@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Implement approved PO picker Design A; 19 tests and build pass, signed-in category/search/package addition and 100 EA order readback checked at 1280/320/394px. Full account audit remains blocked by existing password-sign-in failure.
 - [x] Add Lumber Type before framing lumber dimensions; 19 tests pass, signed-in type/size/length/species selection and order readback verified at desktop/320/394px; picker layout clear, broader phone audit flags four existing unrelated views
 - [x] Add guided hardware family, application and size choices within five steps, with model search and smart Back
 - [x] Test hardware classification/navigation (18 tests) and verify signed-in selection, smart Back and 20-piece box readback at desktop/320/394px; hardware layouts clear. Broader account audit flags existing access-denied/dashboard overflow outside this task.

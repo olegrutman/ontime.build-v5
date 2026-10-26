@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, X, ArrowRight, ShoppingCart } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { ReviewScreen } from './ReviewScreen';
 import { SmartPicker as ProductPickerContent, SmartPickerHandle as ProductPickerHandle } from './SmartPicker';
 import { UnmatchedItemPanel } from './UnmatchedItemEditor';
 import { StepIndicator } from './StepIndicator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Screen = 'header' | 'items' | 'review' | 'picker' | 'unmatched-editor';
 type PickerInitialStep = 'source' | 'estimate' | undefined;
@@ -453,12 +454,12 @@ export function POWizardV2({
 
       {/* Internal header for picker/editor screens */}
       {showInternalHeader && (
-        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleBack}>
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b bg-card">
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Back" title="Back" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-sm font-semibold flex-1 truncate">{getHeaderTitle()}</h2>
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setScreen('items')}>
+          <div className="flex-1 min-w-0"><h2 className="font-heading text-2xl font-semibold uppercase leading-tight break-words">{getHeaderTitle()}</h2><p className="text-xs text-muted-foreground mt-1 break-words">{projectName}</p></div>
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Return to order items" title="Return to order items" onClick={() => setScreen('items')}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -532,6 +533,18 @@ export function POWizardV2({
         {screen === 'picker' && formData.supplier_id && (
           <ProductPickerContent
             ref={pickerRef}
+            libraryMode
+            supplierControl={(
+              <div className="w-full sm:w-64 shrink-0">
+                <Select value={formData.supplier_id ?? undefined} onValueChange={id => {
+                  const supplier = suppliers.find(s => s.id === id);
+                  if (supplier) handleChange({ supplier_id: id, supplier_name: supplier.name });
+                }} disabled={editMode || !!restrictToSupplierId || formData.line_items.length > 0}>
+                  <SelectTrigger aria-label="Supplier catalog" className="bg-background"><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                  <SelectContent>{suppliers.map(supplier => <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
             supplierId={formData.supplier_id}
             onAddItem={handleAddItem}
             onUpdateItem={handleUpdateItem}
@@ -560,13 +573,19 @@ export function POWizardV2({
           />
         )}
       </div>
+      {screen === 'picker' && (
+        <footer className="shrink-0 border-t bg-card px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <span className="text-xs flex items-center gap-2"><ShoppingCart className="h-4 w-4 shrink-0 text-muted-foreground" />{formData.line_items.length} {formData.line_items.length === 1 ? 'item' : 'items'} in order</span>
+          <Button variant="secondary" disabled={!canAdvanceFromItems} onClick={() => { setEditingItem(null); setScreen('review'); }}>Review order<ArrowRight /></Button>
+        </footer>
+      )}
     </div>
   );
 
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[95vh] p-0 rounded-t-2xl">
+        <SheetContent side="bottom" className={`h-[95vh] p-0 rounded-t-2xl ${showInternalHeader ? '[&>button]:hidden' : ''}`}>
           {content}
         </SheetContent>
       </Sheet>
@@ -575,7 +594,7 @@ export function POWizardV2({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="flex flex-col h-[90vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden [&>button]:hidden">
+      <DialogContent className={`flex flex-col min-h-0 p-0 gap-0 overflow-hidden [&>button]:hidden ${screen === 'picker' ? 'w-[calc(100vw-48px)] lg:w-[calc(100vw-248px)] xl:w-[calc(100vw-268px)] max-w-6xl h-[min(850px,90vh)] rounded-2xl' : 'h-[90vh] max-w-lg'}`}>
         {content}
       </DialogContent>
     </Dialog>
