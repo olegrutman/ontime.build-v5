@@ -1,0 +1,55 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QuantityPanel } from '@/components/po-wizard-v2/QuantityPanel';
+import { StepByStepFilter } from '@/components/po-wizard-v2/StepByStepFilter';
+import type { CatalogProduct } from '@/types/poWizardV2';
+
+const query = vi.hoisted(() => ({ eq: vi.fn(), match: vi.fn(), select: vi.fn() }));
+vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: () => query } }));
+afterEach(() => { cleanup(); vi.clearAllMocks(); });
+const product = {
+  id: 'box', supplier_sku: 'OTB-00689', name: 'Connector', description: 'Connector',
+  category: 'Hardware', bundle_type: 'Box', bundle_qty: 25, uom_default: 'EA',
+} as CatalogProduct;
+
+describe('catalog package quantities', () => {
+  it('adds two boxes of 25 as 50 base units, without losing package mode', () => {
+    const add = vi.fn();
+    render(<QuantityPanel product={product} onAdd={add} onClose={() => {}} />);
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add to PO' }));
+    expect(add.mock.calls[0][0]).toMatchObject({ quantity: 50, uom: 'EA', unit_mode: 'BUNDLE', bundle_count: 25 });
+  });
+  it('preserves two boxes when reopening an existing 50-unit line', () => {
+    const update = vi.fn();
+    render(<QuantityPanel product={product} onAdd={() => {}} onUpdate={update} onClose={() => {}}
+      editingItem={{ id: 'line', catalog_item_id: 'box', supplier_sku: 'OTB-00689', name: 'Connector', specs: '', quantity: 50, unit_mode: 'BUNDLE', uom: 'EA', unit_price: 2 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Update Item' }));
+    expect(update.mock.calls[0][0]).toMatchObject({ quantity: 50, line_total: 100, unit_mode: 'BUNDLE' });
+  });
+  it('orders individual units without package multiplication', () => {
+    const add = vi.fn();
+    render(<QuantityPanel product={product} onAdd={add} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Individual' }));
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add to PO' }));
+    expect(add.mock.calls[0][0]).toMatchObject({ quantity: 2, unit_mode: 'EACH' });
+  });
+});
+
+describe('catalog funnel candidate scope', () => {
+  it('only discovers active items for the selected supplier, excluding retired-only dimensions', async () => {
+    const matches: Record<string, string>[] = [];
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.match.mockImplementation((scope) => {
+      matches.push(scope);
+      return Promise.resolve({ data: [{ dimension: '2×4' }], count: 1 });
+    });
+    render(<StepByStepFilter supplierId="master" category="FramingLumber" secondaryCategory={null}
+      onComplete={() => {}} onBack={() => {}} onClose={() => {}} fixedSequence={['dimension']} />);
+    await waitFor(() => expect(query.match).toHaveBeenCalledTimes(2));
+    expect(query.eq.mock.calls).toEqual([['is_active', true], ['is_active', true]]);
+    expect(matches).toEqual([{ supplier_id: 'master', category: 'FramingLumber' }, { supplier_id: 'master', category: 'FramingLumber' }]);
+  });
+});
