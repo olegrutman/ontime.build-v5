@@ -73,6 +73,24 @@ export interface StepByStepFilterHandle {
   goBack: () => void;
 }
 
+/**
+ * Find the step Back should land on, skipping steps that were auto-applied
+ * (single-option or empty steps the user never chose). Returns 0 when every
+ * prior step was auto-applied — the caller then treats index 0 as the first
+ * real choice, or exits via onBack when already at 0.
+ */
+export function computeBackStep(
+  sequence: string[],
+  autoApplied: ReadonlySet<string>,
+  currentIndex: number
+): number {
+  let idx = currentIndex - 1;
+  while (idx > 0 && autoApplied.has(sequence[idx])) {
+    idx--;
+  }
+  return Math.max(idx, 0);
+}
+
 export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFilterProps>(function StepByStepFilter({
   supplierId,
   category,
