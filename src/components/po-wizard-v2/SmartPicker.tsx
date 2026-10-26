@@ -512,17 +512,21 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               />
             )}
 
-            {step === 'funnel' && dbCategory && (
-              <StepByStepFilter
-                ref={filterRef}
-                supplierId={supplierId}
-                category={dbCategory}
-                secondaryCategory={selectedSecondary}
-                onComplete={handleFunnelComplete}
-                onBack={() => setStep(selectedSecondary ? 'secondary' : 'landing')}
-                onClose={onClose}
-                fixedSequence={funnelFields}
-              />
+            {(step === 'funnel' || step === 'products') && dbCategory && (
+              // Keep the filter mounted while products show so Back returns
+              // to the user's last real choice instead of restarting the funnel.
+              <div className={step === 'products' ? 'hidden' : 'contents'}>
+                <StepByStepFilter
+                  ref={filterRef}
+                  supplierId={supplierId}
+                  category={dbCategory}
+                  secondaryCategory={selectedSecondary}
+                  onComplete={handleFunnelComplete}
+                  onBack={() => setStep(selectedSecondary ? 'secondary' : 'landing')}
+                  onClose={onClose}
+                  fixedSequence={funnelFields}
+                />
+              </div>
             )}
 
             {step === 'products' && (
