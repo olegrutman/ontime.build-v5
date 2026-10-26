@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] Replace Ontime Master Catalog with the approved v2 file while preserving historical order links
+- [ ] Verify product counts, units, reference pricing and assigned-supplier priority
 - [x] Show pricing readiness consistently on CO/WO list and detail without changing approval states
 - [x] Test readiness rules and verify live priced/internal/approved orders (17 tests; list/detail matched; 72 phone views without issues)
 
