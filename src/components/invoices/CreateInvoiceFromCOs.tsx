@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { CO_REASON_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COLaborEntry, COMaterialItem, COEquipmentItem, COLineItem } from '@/types/changeOrder';
 import { buildInvoiceNumber } from '@/lib/invoiceNumber';
+import { fetchWoBilledToDate, type WoBilledInfo } from '@/lib/woProgressBillingData';
+import { woBillingSummary, fixedProgressAmount } from '@/lib/woProgressBilling';
 
 
 interface CreateInvoiceFromCOsProps {
@@ -35,13 +37,18 @@ interface ApprovedCO {
   reason: string | null;
   reason_note: string | null;
   pricing_type: string;
+  tc_submitted_price?: number | null;
+  nte_cap?: number | null;
+  completion_acknowledged_at?: string | null;
 }
 
 interface GeneratedLineItem {
   description: string;
   amount: number;
   coId: string;
-  type: 'labor' | 'material' | 'equipment';
+  type: 'labor' | 'material' | 'equipment' | 'progress';
+  entryIds: string[];
+  percent?: number;
 }
 
 interface EligibleContract {
