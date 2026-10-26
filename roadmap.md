@@ -1,6 +1,6 @@
 # Roadmap
-- [ ] Replace Ontime Master Catalog with the approved v2 file while preserving historical order links
-- [ ] Verify product counts, units, reference pricing and assigned-supplier priority
+- [x] Replace Ontime Master Catalog with approved v2: 1,719 active products, 1,588 reference prices, 131 unpriced; preserve matching IDs and retire 33 absent products
+- [x] Verify database counts/units, saved reference-price bases, existing supplier priority and signed-in PO picking (new Hardie item and SH drywall added to unsaved orders)
 - [x] Show pricing readiness consistently on CO/WO list and detail without changing approval states
 - [x] Test readiness rules and verify live priced/internal/approved orders (17 tests; list/detail matched; 72 phone views without issues)
 
