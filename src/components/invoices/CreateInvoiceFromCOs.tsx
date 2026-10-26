@@ -449,14 +449,20 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const invoiceLineItems = lineItems.map((li, i) => {
         const isFirstForCO = !seenCoIds.has(li.coId);
         if (isFirstForCO) seenCoIds.add(li.coId);
+        const co = approvedCOs.find(c => c.id === li.coId);
+        const isProgress = li.type === 'progress' && co;
+        const prev = isProgress ? (billedMap.get(li.coId)?.billed ?? 0) : 0;
         return {
           invoice_id: invoice.id,
           description: li.description,
           line_notes: isFirstForCO ? (coNotesMap.get(li.coId) || null) : null,
-          scheduled_value: li.amount,
-          previous_billed: 0,
+          scheduled_value: isProgress ? Number(co!.tc_submitted_price ?? 0) : li.amount,
+          previous_billed: prev,
           current_billed: li.amount,
-          total_billed: li.amount,
+          total_billed: prev + li.amount,
+          billed_percent: li.percent ?? null,
+          source_co_id: li.coId,
+          source_entry_ids: li.entryIds.length ? li.entryIds : null,
           retainage_percent: retainagePercent,
           retainage_amount: li.amount * (retainagePercent / 100),
           sort_order: i + 1,
