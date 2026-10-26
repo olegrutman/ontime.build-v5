@@ -100,6 +100,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
     if (!open || !projectId || !currentOrgId) return;
     setStep('select');
     setSelectedIds(new Set());
+    setPercentById({});
     setLineItems([]);
 
     (async () => {
