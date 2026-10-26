@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Audit all CO/WO approval gaps and create deduplicated notifications for responsible companies; report unresolved pricing differences without changing approvals
 - [x] Fix revised-price acceptance hitting the project creator guard through a protected acceptance trigger; creator-only direct editing remains unchanged
 - [x] Add protected, auditable price revisions without removing existing approval; WO-5 $4,120 submitted and original $3,120 preserved
 - [x] Add submit/approve/reject revision controls; verified signed-in IMIS submission/readback and Haley approval/rejection buttons, 11 tests pass, build OK, 72 phone views clear
