@@ -79,7 +79,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
   const [step, setStep] = useState<'select' | 'review'>('select');
   const [approvedCOs, setApprovedCOs] = useState<ApprovedCO[]>([]);
-  const [existingCoIds, setExistingCoIds] = useState<Set<string>>(new Set());
+  const [billedMap, setBilledMap] = useState<Map<string, WoBilledInfo>>(new Map());
+  const [percentById, setPercentById] = useState<Record<string, number>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lineItems, setLineItems] = useState<GeneratedLineItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -191,9 +192,24 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
   const hasDuplicateContracts = eligibleContracts.length > 1;
 
+  const isFixedProgress = (co: ApprovedCO) =>
+    invoicingRole === 'TC' && co.pricing_type === 'fixed' && Number(co.tc_submitted_price ?? 0) > 0;
+
+  const summaryFor = (co: ApprovedCO) => {
+    const info = billedMap.get(co.id);
+    const value = Number(co.tc_submitted_price ?? 0);
+    return woBillingSummary(value, info?.legacyFullyBilled ? value : (info?.billed ?? 0), co.nte_cap);
+  };
+
   const availableCOs = useMemo(
-    () => approvedCOs.filter(co => !existingCoIds.has(co.id)),
-    [approvedCOs, existingCoIds],
+    () => approvedCOs.filter(co => {
+      const info = billedMap.get(co.id);
+      if (info?.legacyFullyBilled) return false;
+      if (isFixedProgress(co)) return summaryFor(co).remaining > 0;
+      return true;
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [approvedCOs, billedMap],
   );
 
 
