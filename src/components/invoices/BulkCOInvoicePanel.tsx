@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
+import { validateCoInvoiceRows, type BillableInvoiceRow } from '@/lib/coInvoiceRows';
 
 export interface BulkBillableCO {
   co_id: string;
@@ -125,41 +126,45 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
   };
 
   // Itemize each CO into its priced rows (labor per scope line, materials, equipment).
-  // Falls back to one summary line when the CO is partly billed or its items don't add up to the amount due.
+  // Preserve scope and source IDs; mismatched approval totals must be reviewed.
   const itemRowsFor = async (co: BulkBillableCO, billingOrgId: string | null) => {
-    if (co.already_billed > 0.005) return null;
+    if (!billingOrgId) throw new Error('The invoicing company could not be resolved.');
     const [li, le, mat, eq] = await Promise.all([
       supabase.from('co_line_items').select('id, item_name, sort_order').eq('co_id', co.co_id),
-      supabase.from('co_labor_entries').select('co_line_item_id, line_total, org_id, is_actual_cost').eq('co_id', co.co_id).eq('is_actual_cost', false),
-      supabase.from('co_material_items').select('description, quantity, uom, billed_amount, line_number').eq('co_id', co.co_id),
-      supabase.from('co_equipment_items').select('description, billed_amount').eq('co_id', co.co_id),
+      supabase.from('co_labor_entries').select('id, co_line_item_id, line_total, org_id, is_actual_cost').eq('co_id', co.co_id).eq('is_actual_cost', false).eq('org_id', billingOrgId),
+      supabase.from('co_material_items').select('id, description, quantity, uom, billed_amount, line_number').eq('co_id', co.co_id).eq('org_id', billingOrgId),
+      supabase.from('co_equipment_items').select('id, description, billed_amount').eq('co_id', co.co_id).eq('org_id', billingOrgId),
     ]);
+    for (const result of [li, le, mat, eq]) if (result.error) throw result.error;
+    // Partial draws use the entry-aware progress dialog; do not consume the
+    // whole order again through the bulk path.
+    if (co.already_billed > 0.005) throw new Error('Use progress billing for a work order that is already partially billed.');
     const labor = (le.data || []).filter(e => !billingOrgId || e.org_id === billingOrgId);
     const lines = (li.data || [])
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map(l => ({
         label: l.item_name || 'Labor',
         amount: labor.filter(e => e.co_line_item_id === l.id).reduce((s, e) => s + Number(e.line_total || 0), 0),
+        entryIds: labor.filter(e => e.co_line_item_id === l.id).map(e => e.id),
       }))
       .filter(r => r.amount > 0.005);
     const mats = (mat.data || [])
       .sort((a, b) => a.line_number - b.line_number)
-      .map(m => ({ label: `Material: ${m.description}${m.quantity ? ` (${m.quantity} ${m.uom || ''})`.replace(' )', ')') : ''}`, amount: Number(m.billed_amount || 0) }))
+      .map(m => ({ label: `Material: ${m.description}${m.quantity ? ` (${m.quantity} ${m.uom || ''})`.replace(' )', ')') : ''}`, amount: Number(m.billed_amount || 0), entryIds: [m.id] }))
       .filter(r => r.amount > 0.005);
     const eqs = (eq.data || [])
-      .map(e => ({ label: `Equipment: ${e.description}`, amount: Number(e.billed_amount || 0) }))
+      .map(e => ({ label: `Equipment: ${e.description}`, amount: Number(e.billed_amount || 0), entryIds: [e.id] }))
       .filter(r => r.amount > 0.005);
     const sum = (rows: { amount: number }[]) => rows.reduce((s, r) => s + r.amount, 0);
     // Try with materials+equipment, then labor+materials, then labor only — must match the approved amount to the cent.
     for (const rows of [[...lines, ...mats, ...eqs], [...lines, ...mats], [...lines, ...eqs], lines]) {
-      if (rows.length > 1 && Math.abs(sum(rows) - co.remaining) < 0.01) return rows;
+      if (rows.length > 0 && Math.abs(sum(rows) - co.remaining) < 0.005) return validateCoInvoiceRows(rows, co.remaining);
     }
-    return null;
+    return validateCoInvoiceRows([...lines, ...mats, ...eqs], co.remaining);
   };
 
   const linesForCO = async (co: BulkBillableCO, invoiceId: string, startIdx: number, ret: number, billingOrgId: string | null) => {
     const rows = await itemRowsFor(co, billingOrgId);
-    if (!rows) return [lineFor(co, invoiceId, startIdx, ret)];
     const tag = shortNum(co.co_number);
     const coTitle = coLabel(co);
     return rows.map((r, i) => {
@@ -168,6 +173,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
         invoice_id: invoiceId,
         sov_item_id: null,
         source_co_id: co.co_id,
+        source_entry_ids: r.entryIds,
         description: label.length > 240 ? label.slice(0, 237) + '…' : label,
         line_notes: i === 0 ? `${coTitle}${co.description ? ` — ${co.description}` : ''}` : null,
         scheduled_value: r.amount,
@@ -187,6 +193,9 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
     const ret = contract?.retainage_percent || 0;
     const { data: pc } = await supabase.from('project_contracts').select('from_org_id').eq('id', contractId).maybeSingle();
     const billingOrgId = (pc as { from_org_id?: string } | null)?.from_org_id ?? null;
+    // Validate all items before creating a draft, avoiding orphan invoices on failure.
+    const prepared = new Map<string, BillableInvoiceRow[]>();
+    for (const co of list) prepared.set(co.co_id, await itemRowsFor(co, billingOrgId));
     const gross = list.reduce((s, c) => s + c.remaining, 0);
     const retAmt = gross * (ret / 100);
     const number = await buildInvoiceNumber({
@@ -215,8 +224,18 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
       .select()
       .single();
     if (error) throw error;
-    const allLines: ReturnType<typeof lineFor>[] = [];
-    for (const c of list) allLines.push(...(await linesForCO(c, inv.id, allLines.length, ret, billingOrgId)));
+    const allLines: Awaited<ReturnType<typeof linesForCO>> = [];
+    for (const co of list) {
+      const rows = prepared.get(co.co_id) ?? [];
+      allLines.push(...rows.map((row, index) => ({
+        ...lineFor(co, inv.id, allLines.length + index, ret),
+        description: `${shortNum(co.co_number)} · ${row.label}`.slice(0, 240),
+        source_entry_ids: row.entryIds,
+        scheduled_value: row.amount, previous_billed: 0,
+        current_billed: row.amount, total_billed: row.amount,
+        retainage_amount: row.amount * ret / 100,
+      })));
+    }
     const { error: lErr } = await supabase
       .from('invoice_line_items')
       .insert(allLines as never);
