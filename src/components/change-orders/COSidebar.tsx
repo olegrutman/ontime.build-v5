@@ -38,6 +38,7 @@ interface COSidebarProps {
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
   tcBillableTotal?: number;
+  currentLaborTotal?: number;
 }
 
 function fmtCurrency(value: number) {
@@ -227,6 +228,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           {(isTC || isFC) && (() => {
             const upstream = isTC ? rl.short('GC') : rl.short('TC');
             const ownLabor = financials.viewer.ownLaborToUpstream;
+            const currentLabor = props.currentLaborTotal ?? ownLabor;
+            const laborDifference = currentLabor - ownLabor;
             const ownMats = financials.viewer.ownMaterialsTotal;
             const ownEq = financials.viewer.ownEquipmentTotal;
             const ownLaborTax = financials.laborTaxable ? ownLabor * (financials.taxRate / 100) : 0;
@@ -236,9 +239,21 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             return (
             <>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Labor</span>
-                <span className="font-mono font-medium">{fmtCurrency(ownLabor)}</span>
+                <span className="text-muted-foreground">Labor total</span>
+                <span className="font-mono font-medium">{fmtCurrency(currentLabor)}</span>
               </div>
+              {Math.abs(laborDifference) > 0.005 && (
+                <div className="border-t border-border pt-2 space-y-1">
+                  <div className="flex justify-between gap-3 text-xs text-muted-foreground">
+                    <span>{co.status === 'approved' || co.status === 'contracted' ? 'Approved labor' : 'Submitted labor'}</span>
+                    <span className="font-mono shrink-0">{fmtCurrency(ownLabor)}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-xs text-destructive">
+                    <span>Pricing difference · needs review</span>
+                    <span className="font-mono shrink-0">{fmtCurrency(laborDifference)}</span>
+                  </div>
+                </div>
+              )}
               {ownEq > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Equipment</span>
