@@ -19,6 +19,7 @@ interface StepByStepFilterProps {
    * Used by SmartPicker via CATEGORY_FUNNELS.funnelFields.
    */
   fixedSequence?: string[];
+  onSelectionChange?: (filters: Record<string, string>, currentField?: string) => void;
 }
 
 async function discoverFilterSequence(
@@ -71,6 +72,7 @@ async function discoverFilterSequence(
 
 export interface StepByStepFilterHandle {
   goBack: () => void;
+  editField: (field: string) => void;
 }
 
 /**
@@ -100,6 +102,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   onClose,
   estimateCatalogIds,
   fixedSequence,
+  onSelectionChange,
 }, ref) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
@@ -116,6 +119,10 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
 
   const currentField = filterSequence[currentStepIndex];
   const totalSteps = filterSequence.length;
+
+  useEffect(() => {
+    onSelectionChange?.(appliedFilters, currentField);
+  }, [appliedFilters, currentField, onSelectionChange]);
 
   useEffect(() => {
     if (!supplierId || !category) return;
@@ -169,7 +176,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   }, [supplierId, category, secondaryCategory, onComplete, estimateCatalogIds, fixedSequence]);
 
   const fetchFilterValues = useCallback(async () => {
-    if (!discoveryComplete || !supplierId || !category || !currentField) return;
+    if (!discoveryComplete || !supplierId || !category || !currentField || completedRef.current) return;
 
     setLoading(true);
     try {
@@ -198,6 +205,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
 
       const { data, error } = await query;
       if (error) throw error;
+      if (completedRef.current) return;
 
       const counts: Record<string, number> = {};
       let totalProducts = 0;
@@ -265,6 +273,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     setAppliedFilters(newFilters);
 
     if (currentStepIndex >= totalSteps - 1) {
+      completedRef.current = true;
       onComplete(newFilters);
     } else {
       setCurrentStepIndex(prev => prev + 1);
@@ -272,6 +281,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   }, [currentField, currentStepIndex, totalSteps, appliedFilters, onComplete]);
 
   const handleSkip = useCallback(() => {
+    completedRef.current = true;
     onComplete(appliedFilters);
   }, [appliedFilters, onComplete]);
 
@@ -300,7 +310,19 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
 
   useImperativeHandle(ref, () => ({
     goBack: handleBackStep,
-  }), [handleBackStep]);
+    editField: (field: string) => {
+      const target = filterSequence.indexOf(field);
+      if (target < 0) return;
+      const nextFilters = { ...appliedFilters };
+      filterSequence.slice(target).forEach(key => {
+        delete nextFilters[key];
+        autoAppliedRef.current.delete(key);
+      });
+      completedRef.current = false;
+      setAppliedFilters(nextFilters);
+      setCurrentStepIndex(target);
+    },
+  }), [handleBackStep, filterSequence, appliedFilters]);
 
   const buildBreadcrumb = () => {
     const parts: string[] = [];

@@ -6,18 +6,20 @@ import { supabase } from '@/integrations/supabase/client';
 import type { CatalogProduct } from '@/types/poWizardV2';
 import { advanceHardware, classifyHardware, filterHardware, HARDWARE_FIELDS, hardwareOptions, type HardwareCandidate, type HardwareSelection } from '@/lib/hardwareFunnel';
 
-export interface HardwarePickerHandle { goBack: () => void }
-interface Props { supplierId: string | null; onSelect: (product: CatalogProduct) => void; onBack: () => void }
+export interface HardwarePickerHandle { goBack: () => void; editField: (field: string) => void }
+interface Props { supplierId: string | null; onSelect: (product: CatalogProduct) => void; onBack: () => void; onSelectionChange?: (filters: Record<string, string>, currentField?: string) => void }
 const headings = ['What are you connecting?', 'Application / mount style', 'Member / hardware size'];
 const icons = [Layers, Package, Link, Wrench, Anchor, Hammer];
 
-export const HardwarePicker = forwardRef<HardwarePickerHandle, Props>(function HardwarePicker({ supplierId, onSelect, onBack }, ref) {
+export const HardwarePicker = forwardRef<HardwarePickerHandle, Props>(function HardwarePicker({ supplierId, onSelect, onBack, onSelectionChange }, ref) {
   const [rows, setRows] = useState<HardwareCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   const [state, setState] = useState<{ selection: HardwareSelection; index: number }>({ selection: {}, index: 0 });
   const [history, setHistory] = useState<typeof state[]>([]);
+
+  useEffect(() => { onSelectionChange?.(state.selection, HARDWARE_FIELDS[state.index]); }, [state, onSelectionChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +50,14 @@ export const HardwarePicker = forwardRef<HardwarePickerHandle, Props>(function H
     const previous = history.at(-1);
     if (!previous) { onBack(); return; }
     setState(previous); setHistory(history.slice(0, -1));
-  } }), [history, onBack]);
+  }, editField: (field: string) => {
+    const target = HARDWARE_FIELDS.findIndex(key => key === field);
+    if (target < 0) return;
+    const selection = { ...state.selection };
+    HARDWARE_FIELDS.slice(target).forEach(key => { delete selection[key]; });
+    setState({ selection, index: target });
+    setHistory(history.filter(previous => previous.index < target));
+  } }), [history, onBack, state]);
   const candidates = useMemo(() => filterHardware(rows, state.selection), [rows, state.selection]);
   const field = HARDWARE_FIELDS[state.index];
   const options = field ? hardwareOptions(candidates, field) : [];

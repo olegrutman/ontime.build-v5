@@ -24,9 +24,10 @@ interface QuantityPanelProps {
   estimateItemId?: string | null;
   estimatePackName?: string | null;
   hidePricing?: boolean;
+  workspaceMode?: boolean;
 }
 
-export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false }: QuantityPanelProps) {
+export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false, workspaceMode = false }: QuantityPanelProps) {
   const isEditing = !!editingItem;
   
   const isEngineered = product.category === 'Engineered' && product.uom_default === 'LF';
@@ -140,10 +141,11 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
   const decrementQty = () => setQuantity(q => Math.max(1, q - 1));
 
   return (
-    <div className="h-full overflow-y-auto min-h-0">
-      <div className="p-4 space-y-5">
+    <div className={workspaceMode ? "border-t pt-5" : "h-full overflow-y-auto min-h-0"}>
+      {workspaceMode && <h3 className="font-heading text-xl font-semibold uppercase mb-4">Order quantity</h3>}
+      <div className={workspaceMode ? "grid grid-cols-1 lg:grid-cols-2 gap-4 items-start" : "p-4 space-y-5"}>
         {/* Product summary card */}
-        <div className="rounded-xl border bg-muted/30 p-4">
+        <div className={workspaceMode ? 'hidden' : 'rounded-xl border bg-muted/30 p-4'}>
           <h3 className="font-semibold text-sm">{product.name || product.description}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{product.supplier_sku} · {formatSpecs()}</p>
           {isEngineered && (
@@ -207,18 +209,18 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
           <>
             {/* Order mode toggle */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Order As</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{workspaceMode ? 'Packaging' : 'Order As'}</Label>
               <div className="flex gap-2">
-                <Button variant={orderMode === 'bundle' ? 'default' : 'outline'}
-                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                <Button variant={orderMode === 'bundle' ? (workspaceMode ? 'outline' : 'default') : 'outline'}
+                  className={`flex-1 min-w-0 h-auto min-h-10 whitespace-normal ${workspaceMode && orderMode === 'bundle' ? 'bg-command text-command-foreground hover:bg-command/90 hover:text-command-foreground' : ''}`}
                   aria-pressed={orderMode === 'bundle'}
                   onClick={() => changeOrderMode('bundle')}
                 >
                   <Package className="h-4 w-4 mr-1" />
                   {product.bundle_type} ({bundleQty})
                 </Button>
-                <Button variant={orderMode === 'each' ? 'default' : 'outline'}
-                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                <Button variant={orderMode === 'each' ? (workspaceMode ? 'outline' : 'default') : 'outline'}
+                  className={`flex-1 min-w-0 h-auto min-h-10 whitespace-normal ${workspaceMode && orderMode === 'each' ? 'bg-command text-command-foreground hover:bg-command/90 hover:text-command-foreground' : ''}`}
                   aria-pressed={orderMode === 'each'}
                   onClick={() => changeOrderMode('each')}
                 >
@@ -230,7 +232,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             {/* Quantity stepper */}
             <div className="space-y-2">
               <Label htmlFor="package-quantity" className="text-xs text-muted-foreground uppercase tracking-wide">Quantity ({quantityUnitLabel})</Label>
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-3">
                 <Button variant="outline" className="wz-stepper-btn" aria-label={isPackageOrder ? 'Remove one package' : 'Decrease quantity'} onClick={decrementQty} disabled={quantity <= 1}>
                   <Minus className="h-4 w-4" />
                 </Button>
@@ -252,7 +254,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             </div>
 
             {isPackageOrder && (
-              <p className="text-sm text-center text-muted-foreground">
+              <p className={`text-xs text-center text-muted-foreground ${workspaceMode ? 'lg:col-start-2 -mt-2' : ''}`}>
                 {quantity} {product.bundle_type?.toLowerCase()}{quantity === 1 ? '' : product.bundle_type?.toLowerCase() === 'box' ? 'es' : 's'} × {bundleQty} {quantityUnitLabel}
               </p>
             )}
@@ -281,14 +283,14 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
 
         {/* Line total bar */}
         {!hidePricing && displayLineTotal != null && (
-          <div className="wz-totals-bar flex items-center justify-between">
+          <div className={`wz-totals-bar flex items-center justify-between ${workspaceMode ? 'lg:col-span-2' : ''}`}>
             <span className="text-sm text-secondary-foreground/70">Line Total</span>
             <span className="wz-totals-value">{formatCurrency(displayLineTotal)}</span>
           </div>
         )}
 
         {/* Notes */}
-        <div className="space-y-1.5">
+        <div className={`space-y-1.5 ${workspaceMode ? 'lg:col-start-1' : ''}`}>
           <Label className="text-xs text-muted-foreground uppercase tracking-wide">Notes (Optional)</Label>
           <Input
             placeholder="Add a note for this item..."
@@ -299,7 +301,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
         </div>
 
         {/* Submit */}
-        <Button className="w-full h-12 text-sm" onClick={handleSubmit}>
+        <Button variant={workspaceMode ? 'secondary' : 'default'} className={`w-full h-12 text-sm ${workspaceMode ? 'lg:col-start-2 lg:self-end' : ''}`} onClick={handleSubmit}>
           <Check className="h-4 w-4 mr-2" />
           {isEditing ? 'Update Item' : 'Add to PO'}
         </Button>

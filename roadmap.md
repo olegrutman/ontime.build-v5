@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Replace PO Design A with approved Design B Guided Workspace; 20 tests and build pass. Signed-in lumber rail edits, product cards, 294→588 package quantities and order readback verified at 1280/320/394px; hardware rail and 20 EA order readback verified. Broader phone audit sampled 40 views and flagged existing dashboard clipping; repeat picker audit blocked after preview account access changed.
 - [x] Implement approved PO picker Design A; 19 tests and build pass, signed-in category/search/package addition and 100 EA order readback checked at 1280/320/394px. Full account audit remains blocked by existing password-sign-in failure.
 - [x] Add Lumber Type before framing lumber dimensions; 19 tests pass, signed-in type/size/length/species selection and order readback verified at desktop/320/394px; picker layout clear, broader phone audit flags four existing unrelated views
 - [x] Add guided hardware family, application and size choices within five steps, with model search and smart Back

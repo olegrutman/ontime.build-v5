@@ -1,5 +1,5 @@
 # Project architecture rules
-- PO Material Library presentation is opt-in on the shared SmartPicker; the PO wizard owns supplier and order controls so change-order material pickers retain their existing context and behavior.
+- PO Guided Workspace presentation is opt-in on the shared SmartPicker and reuses the existing funnel/quantity logic; the PO wizard owns supplier and order controls so change-order material pickers retain their context and behavior.
 
 - CO/WO pricing readiness is a shared viewer-role-scoped presentation calculation, not a stored lifecycle state; this keeps list/detail consistent without bypassing crew or upstream approval.
 

@@ -32,6 +32,7 @@ import { SecondaryCategoryList } from './SecondaryCategoryList';
 import { ProductList } from './ProductList';
 import { QuantityPanel } from './QuantityPanel';
 import { EstimateSubTabs } from './EstimateSubTabs';
+import { SelectionRail, WorkspaceProducts, SpecificationChips } from './GuidedWorkspace';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -98,6 +99,7 @@ interface SmartPickerProps {
    */
   onStateChange?: (step: PickerStep, title: string) => void;
   libraryMode?: boolean;
+  workspaceMode?: boolean;
   supplierControl?: React.ReactNode;
 }
 
@@ -109,7 +111,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   {
     supplierId, projectId, editingItem, hasApprovedEstimate = false, hidePricing = false,
     onAddItem, onUpdateItem, onLoadPack, onAddPSMItem, onClearEdit, onClose, onExitPicker,
-    initialStep, onStateChange, libraryMode = false, supplierControl,
+    initialStep, onStateChange, libraryMode = false, workspaceMode = false, supplierControl,
   },
   ref,
 ) {
@@ -125,6 +127,13 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const [selectedSecondary, setSelectedSecondary] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
+  const [workspaceFilters, setWorkspaceFilters] = useState<Record<string, string>>({});
+  const [workspaceField, setWorkspaceField] = useState<string | undefined>();
+  const styledPicker = libraryMode || workspaceMode;
+  const trackSelections = useCallback((filters: Record<string, string>, field?: string) => {
+    setWorkspaceFilters(filters);
+    setWorkspaceField(field);
+  }, []);
 
   // Landing-screen data
   const [facets, setFacets] = useState<CategoryFacet[]>([]);
@@ -272,6 +281,9 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     if (!config || !supplierId) return;
     setSelectedCategoryKey(categoryKey);
     setSelectedSecondary(null);
+    setSelectedProduct(null);
+    setWorkspaceFilters({});
+    setWorkspaceField(undefined);
 
     if (categoryKey === 'HARDWARE') {
       setStep('hardware');
@@ -305,6 +317,8 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     if (!supplierId || !selectedCategoryKey) return;
     const config = CATEGORY_FUNNELS[selectedCategoryKey];
     if (!config) return;
+    setWorkspaceFilters(filters);
+    setWorkspaceField(undefined);
     setProductsLoading(true);
     let q = supabase
       .from('catalog_items')
@@ -332,6 +346,9 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     setSelectedCategoryKey(null);
     setSelectedSecondary(null);
     setProducts([]);
+    setSelectedProduct(null);
+    setWorkspaceFilters({});
+    setWorkspaceField(undefined);
   }, []);
 
   const handleBack = useCallback(() => {
@@ -429,18 +446,36 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     void openQuantityForId(item.id);
   }, [openQuantityForId]);
 
-  const showSearchBar = step !== 'quantity';
+  const showSearchBar = workspaceMode || step !== 'quantity';
+  const showWorkspace = workspaceMode && !searchActive && !['landing', 'estimate'].includes(step);
+  const showWorkspaceProducts = showWorkspace && selectedCategoryKey !== 'HARDWARE' && (step === 'products' || step === 'quantity');
+  const displayFilters = step === 'quantity' && selectedProduct && Object.keys(workspaceFilters).length === 0
+    ? Object.fromEntries(['secondary_category', 'dimension', 'length', 'wood_species'].flatMap(field => {
+        const value = selectedProduct[field as keyof CatalogProduct];
+        return typeof value === 'string' && value ? [[field, value]] : [];
+      })) : workspaceFilters;
+  const editWorkspaceField = (field: string) => {
+    if (!selectedCategoryKey) return;
+    if (selectedCategoryKey === 'HARDWARE') {
+      setStep('hardware'); setSelectedProduct(null);
+      hardwareRef.current?.editField(field);
+      return;
+    }
+    setStep('funnel');
+    setSelectedProduct(null);
+    setTimeout(() => filterRef.current?.editField(field), 0);
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Persistent search bar */}
       {showSearchBar && (
-        <div className={libraryMode ? "px-4 sm:px-6 py-4 border-b bg-muted/20 sticky top-0 z-10 flex flex-col sm:flex-row gap-3 sm:items-center" : "px-4 py-2 border-b bg-background sticky top-0 z-10"}>
-          {libraryMode && supplierControl}
+        <div className={styledPicker ? "px-4 sm:px-6 py-4 border-b bg-card sticky top-0 z-10 flex flex-col sm:flex-row gap-3 sm:items-center" : "px-4 py-2 border-b bg-background sticky top-0 z-10"}>
+          {styledPicker && supplierControl}
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder={libraryMode ? "Search product, SKU or dimensions" : "Search SKU, name, or dimensions (e.g. 2x4x8)"}
+              placeholder={styledPicker ? "Search product, SKU or dimensions" : "Search SKU, name, or dimensions (e.g. 2x4x8)"}
               aria-label="Search catalog"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -457,17 +492,24 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               </Button>
             )}
           </div>
-          {libraryMode && hasApprovedEstimate && (
+          {styledPicker && hasApprovedEstimate && (
             <Button variant="outline" className="shrink-0" onClick={() => { setSearchQuery(''); setStep('estimate'); }}><Package />From estimate</Button>
           )}
         </div>
       )}
 
       {/* Body */}
-      <div className={`flex-1 overflow-y-auto min-h-0 ${libraryMode && step !== 'landing' ? '[&>div]:max-w-2xl [&>div]:mx-auto [&>div]:w-full' : ''}`}>
+      <div className={`flex-1 min-h-0 ${showWorkspace ? 'flex flex-col md:flex-row overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} ${libraryMode && step !== 'landing' ? '[&>div]:max-w-2xl [&>div]:mx-auto [&>div]:w-full' : ''}`}>
+        {showWorkspace && <SelectionRail
+          category={selectedCategoryKey ? CATEGORY_FUNNELS[selectedCategoryKey]?.displayName ?? 'Materials' : selectedProduct?.category ?? 'Materials'}
+          fields={selectedCategoryKey === 'HARDWARE' ? ['family', 'application', 'size'] : funnelFields ?? Object.keys(displayFilters)} filters={displayFilters}
+          currentField={step === 'funnel' || step === 'hardware' ? workspaceField : undefined} secondary={selectedSecondary}
+          product={selectedProduct} onEdit={editWorkspaceField} onCategories={goToLanding}
+        />}
+        <div className={showWorkspace ? 'flex-1 min-w-0 md:overflow-y-auto md:min-h-0' : 'contents'}>
         {selectedCategoryKey === 'HARDWARE' && (
           <div className={step === 'hardware' && !searchActive ? 'contents' : 'hidden'}>
-            <HardwarePicker ref={hardwareRef} supplierId={supplierId} onSelect={handleProductSelect} onBack={goToLanding} />
+            <HardwarePicker ref={hardwareRef} supplierId={supplierId} onSelect={handleProductSelect} onBack={goToLanding} onSelectionChange={workspaceMode ? trackSelections : undefined} />
           </div>
         )}
         {searchActive ? (
@@ -479,7 +521,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
           <>
             {step === 'landing' && (
               <LandingView
-                libraryMode={libraryMode}
+                libraryMode={styledPicker}
                 loading={landingLoading}
                 recent={recent}
                 categories={categoryCards}
@@ -537,10 +579,10 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               />
             )}
 
-            {(step === 'funnel' || step === 'products') && dbCategory && selectedCategoryKey !== 'HARDWARE' && (
+            {(step === 'funnel' || step === 'products' || (workspaceMode && step === 'quantity')) && dbCategory && selectedCategoryKey !== 'HARDWARE' && (
               // Keep the filter mounted while products show so Back returns
               // to the user's last real choice instead of restarting the funnel.
-              <div className={step === 'products' ? 'hidden' : 'contents'}>
+              <div className={step !== 'funnel' ? 'hidden' : 'contents'}>
                 <StepByStepFilter
                   ref={filterRef}
                   supplierId={supplierId}
@@ -550,11 +592,12 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
                   onBack={() => setStep(selectedSecondary ? 'secondary' : 'landing')}
                   onClose={onClose}
                   fixedSequence={funnelFields}
+                  onSelectionChange={workspaceMode ? trackSelections : undefined}
                 />
               </div>
             )}
 
-            {step === 'products' && (
+            {step === 'products' && !showWorkspaceProducts && (
               <ProductList
                 products={products}
                 loading={productsLoading}
@@ -562,8 +605,20 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               />
             )}
 
-            {step === 'quantity' && selectedProduct && (
+            {showWorkspaceProducts && (
+              <section className="px-4 py-5 sm:px-6 space-y-4">
+                <header className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+                  <div><h3 className="font-heading text-xl font-semibold uppercase">Choose your product</h3><p className="text-xs text-muted-foreground mt-1">{products.length || (selectedProduct ? 1 : 0)} matching products</p></div>
+                  <div className="lg:max-w-[55%]"><p className="text-[11px] text-muted-foreground mb-1.5">Selected specifications</p><SpecificationChips filters={displayFilters} /></div>
+                </header>
+                {productsLoading ? <Skeleton className="h-48 w-full" /> : <WorkspaceProducts products={products.length ? products : selectedProduct ? [selectedProduct] : []} selected={selectedProduct} onSelect={handleProductSelect} />}
+                {step === 'quantity' && selectedProduct && <QuantityPanel key={selectedProduct.id} workspaceMode product={selectedProduct} onAdd={onAddItem} onUpdate={onUpdateItem} onClose={onExitPicker} editingItem={editingItem} hidePricing={hidePricing} />}
+                {!productsLoading && products.length === 0 && !selectedProduct && <p className="text-sm text-muted-foreground py-8">No products found.</p>}
+              </section>
+            )}
+            {step === 'quantity' && selectedProduct && !showWorkspaceProducts && (
               <QuantityPanel
+                workspaceMode={false}
                 product={selectedProduct}
                 onAdd={onAddItem}
                 onUpdate={onUpdateItem}
@@ -574,6 +629,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
