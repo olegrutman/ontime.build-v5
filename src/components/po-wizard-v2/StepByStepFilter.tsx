@@ -176,7 +176,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   }, [supplierId, category, secondaryCategory, onComplete, estimateCatalogIds, fixedSequence]);
 
   const fetchFilterValues = useCallback(async () => {
-    if (!discoveryComplete || !supplierId || !category || !currentField) return;
+    if (!discoveryComplete || !supplierId || !category || !currentField || completedRef.current) return;
 
     setLoading(true);
     try {
@@ -205,6 +205,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
 
       const { data, error } = await query;
       if (error) throw error;
+      if (completedRef.current) return;
 
       const counts: Record<string, number> = {};
       let totalProducts = 0;
@@ -272,6 +273,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     setAppliedFilters(newFilters);
 
     if (currentStepIndex >= totalSteps - 1) {
+      completedRef.current = true;
       onComplete(newFilters);
     } else {
       setCurrentStepIndex(prev => prev + 1);
@@ -279,6 +281,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   }, [currentField, currentStepIndex, totalSteps, appliedFilters, onComplete]);
 
   const handleSkip = useCallback(() => {
+    completedRef.current = true;
     onComplete(appliedFilters);
   }, [appliedFilters, onComplete]);
 
