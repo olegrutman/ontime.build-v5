@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] Add protected, auditable price revisions without removing existing approval
+- [ ] Add submit/approve/reject revision controls and verify permission, totals and signed-in flow
 - [x] Show all itemized labor in the sidebar separately from frozen pricing; live WO-5 shows $4,120 total, $3,120 approved and $1,000 difference; 15 tests pass, build OK, 72 phone-audit views clear
 - [x] Include subcontractor-added work in submission pricing and itemized invoices, preserving frozen approval limits; 20 regression tests passed and automatic build checks passed
 - [x] Verify signed-in Knowles itemized invoice creation/readback: saved $1,200 draft INV-KNO-IM-HA-WO05-0001 with source entry tracking; previously reported combined draft is no longer present, and existing approved WO-5 prices were not increased without renewed approval
