@@ -341,11 +341,15 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         if (selectedSecondary) {
           setStep('funnel');
           setProducts([]);
+          // The filter stayed mounted with its state; step back once so the
+          // user lands on their last real choice, skipping auto-applied steps.
+          setTimeout(() => filterRef.current?.goBack(), 0);
         } else if (selectedCategoryKey && CATEGORY_FUNNELS[selectedCategoryKey]?.pattern === 'search') {
           goToLanding();
         } else {
           setStep('funnel');
           setProducts([]);
+          setTimeout(() => filterRef.current?.goBack(), 0);
         }
         break;
       case 'quantity':

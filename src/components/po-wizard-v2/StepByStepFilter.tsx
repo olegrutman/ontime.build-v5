@@ -288,6 +288,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
       delete newFilters[field];
       autoAppliedRef.current.delete(field);
     }
+    completedRef.current = false; // allow completing again after re-choosing
     setAppliedFilters(newFilters);
     setCurrentStepIndex(target);
   }, [currentStepIndex, filterSequence, appliedFilters, onBack]);
