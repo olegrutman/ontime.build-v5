@@ -220,7 +220,10 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
         // doesn't land here again.
         autoAppliedRef.current.add(currentField);
         if (currentStepIndex >= totalSteps - 1) {
-          onComplete(appliedFilters);
+          if (!completedRef.current) {
+            completedRef.current = true;
+            onComplete(appliedFilters);
+          }
         } else {
           setCurrentStepIndex(prev => prev + 1);
         }
@@ -234,7 +237,10 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
         const newFilters = { ...appliedFilters, [currentField]: values[0].value };
         setAppliedFilters(newFilters);
         if (currentStepIndex >= totalSteps - 1) {
-          onComplete(newFilters);
+          if (!completedRef.current) {
+            completedRef.current = true;
+            onComplete(newFilters);
+          }
         } else {
           setCurrentStepIndex(prev => prev + 1);
         }
