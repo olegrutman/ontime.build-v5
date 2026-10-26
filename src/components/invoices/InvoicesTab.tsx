@@ -67,7 +67,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   // ?action=create (from the project quick-actions bar) opens the create-invoice dialog
   useEffect(() => {
     if (searchParams.get('action') !== 'create') return;
-    if (isTM) { setBulkMode(true); setCreateDialogOpen(true); }
+    if (isTM) setCreateFromCOsOpen(true);
     else setCreateDialogOpen(true);
     const next = new URLSearchParams(searchParams);
     next.delete('action');
@@ -431,7 +431,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             {roleContext.emptyMessage}
           </p>
           {canCreateInvoice && (currentOrgType !== 'TC' || invoiceDirection === 'sent') && (
-            <Button onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }}>
+            <Button onClick={() => { if (isTM) setCreateFromCOsOpen(true); else { setBulkMode(false); setCreateDialogOpen(true); } }}>
               <Plus className="h-4 w-4 mr-2" />
               Create Invoice
             </Button>
@@ -577,7 +577,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button size="sm" variant="default" onClick={() => { setBulkMode(isTM); setCreateDialogOpen(true); }} disabled={isBlocked}>
+                  <Button size="sm" variant="default" onClick={() => { if (isTM) setCreateFromCOsOpen(true); else { setBulkMode(false); setCreateDialogOpen(true); } }} disabled={isBlocked}>
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">New Invoice</span>
                   </Button>
