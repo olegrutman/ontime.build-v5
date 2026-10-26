@@ -1,6 +1,6 @@
 # Roadmap
-- [ ] Fix active supplier-scoped catalog filtering and verify nonempty dimension results
-- [ ] Restore safe package ordering with explicit base-unit conversions and verify multi-package quantities
+- [x] Fix active supplier-scoped catalog filtering; live 2×4 / 10 ft / Doug Fir returns the correct item and random-length aliases are unified
+- [x] Restore 948 documented package conversions; verify two boxes of 25 read back as 50 EA, nine regressions pass, phone 320/394px checks clear; 59 ambiguous conversions deliberately remain unavailable
 - [x] Replace Ontime Master Catalog with approved v2: 1,719 active products, 1,588 reference prices, 131 unpriced; preserve matching IDs and retire 33 absent products
 - [x] Verify database counts/units, saved reference-price bases, existing supplier priority and signed-in PO picking (new Hardie item and SH drywall added to unsaved orders)
 - [x] Show pricing readiness consistently on CO/WO list and detail without changing approval states
