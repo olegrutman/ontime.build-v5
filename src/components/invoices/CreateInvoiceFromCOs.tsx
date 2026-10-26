@@ -581,7 +581,38 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                             <Badge variant="secondary" className="text-[10px]">
                               {co.pricing_type === 'fixed' ? 'Fixed' : co.pricing_type === 'tm' ? 'T&M' : 'NTE'}
                             </Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              {co.completion_acknowledged_at ? 'Complete' : 'In progress'}
+                            </Badge>
                           </div>
+                          {(() => {
+                            const s = summaryFor(co);
+                            if (s.limit <= 0) return null;
+                            return (
+                              <p className="text-xs font-mono text-muted-foreground">
+                                {fmtCurrency(s.billed)} billed · {fmtCurrency(s.remaining)} remaining of {fmtCurrency(s.limit)}
+                              </p>
+                            );
+                          })()}
+                          {selected && isFixedProgress(co) && (() => {
+                            const s = summaryFor(co);
+                            const value = Number(co.tc_submitted_price ?? 0);
+                            const maxPct = Math.round((s.remaining / value) * 10000) / 100;
+                            const pct = percentById[co.id] ?? (co.completion_acknowledged_at ? maxPct : 0);
+                            return (
+                              <div className="flex flex-wrap items-center gap-2 pt-1" onClick={e => e.stopPropagation()}>
+                                <Label htmlFor={`pct-${co.id}`} className="text-xs">Bill this period</Label>
+                                <Input
+                                  id={`pct-${co.id}`}
+                                  type="number" min={0} max={maxPct} step={1}
+                                  value={pct}
+                                  onChange={e => setPercentById(p => ({ ...p, [co.id]: Math.min(maxPct, Math.max(0, Number(e.target.value) || 0)) }))}
+                                  className="w-20 h-8"
+                                />
+                                <span className="text-xs text-muted-foreground">% of price = <span className="font-mono text-foreground">{fmtCurrency(fixedProgressAmount(value, pct, s.billed))}</span></span>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
