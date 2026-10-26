@@ -233,17 +233,17 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
       if (values.length === 1) {
         // Only one possible choice (e.g. siding with a single length) —
         // apply it and move on without asking.
-        autoAppliedRef.current.add(currentField);
-        const newFilters = { ...appliedFilters, [currentField]: values[0].value };
-        setAppliedFilters(newFilters);
         if (currentStepIndex >= totalSteps - 1) {
           if (!completedRef.current) {
             completedRef.current = true;
-            onComplete(newFilters);
+            autoAppliedRef.current.add(currentField);
+            onComplete({ ...appliedFilters, [currentField]: values[0].value });
           }
-        } else {
-          setCurrentStepIndex(prev => prev + 1);
+          return;
         }
+        autoAppliedRef.current.add(currentField);
+        setAppliedFilters({ ...appliedFilters, [currentField]: values[0].value });
+        setCurrentStepIndex(prev => prev + 1);
         return;
       }
     } catch (error) {
