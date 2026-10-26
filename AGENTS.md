@@ -18,3 +18,4 @@
 - Operational KPI cards use shared KpiCard; adapters preserve values, basis, privacy and drilldowns, while connected pipelines and document money bars retain their specialized layouts. This keeps presentation uniform without changing ledger math.
 
 - Supplier KPI calculations use shared supplierMetrics status, tax and PO-scoped coverage helpers; estimate totals and PO totals are already tax-inclusive, while estimate lines require their source estimate tax, preventing quote commitments, duplicate tax and cross-order offsets.
+- Master-catalog replacements upsert by supplier and stable Ontime SKU and retire missing products; base ordering units and reference-price units remain separate, with unvalidated package conversions stored only as metadata, to preserve historical links and prevent pack prices from becoming each prices.
