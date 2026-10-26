@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Show total pieces in package counters; 5 tests pass, live 294 → 588 and order item 588 EA verified; 320/394px counter checks clear (full audit blocked by existing account sign-in failure)
 - [x] Fix active supplier-scoped catalog filtering; live 2×4 / 10 ft / Doug Fir returns the correct item and random-length aliases are unified
 - [x] Restore 948 documented package conversions; verify two boxes of 25 read back as 50 EA, nine regressions pass, phone 320/394px checks clear; 59 ambiguous conversions deliberately remain unavailable
 - [x] Replace Ontime Master Catalog with approved v2: 1,719 active products, 1,588 reference prices, 131 unpriced; preserve matching IDs and retire 33 absent products

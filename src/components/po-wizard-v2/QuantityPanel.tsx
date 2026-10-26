@@ -55,6 +55,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
 
   const isPackageOrder = hasBundle && orderMode === 'bundle';
   const baseQuantity = isPackageOrder ? quantity * bundleQty : quantity;
+  const quantityUnitLabel = product.uom_default === 'EA' ? 'pieces' : product.uom_default;
 
   const changeOrderMode = (mode: 'bundle' | 'each') => {
     setOrderMode(mode);
@@ -228,19 +229,23 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
 
             {/* Quantity stepper */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{isPackageOrder ? `${product.bundle_type} count` : `Quantity (${product.uom_default})`}</Label>
+              <Label htmlFor="package-quantity" className="text-xs text-muted-foreground uppercase tracking-wide">Quantity ({quantityUnitLabel})</Label>
               <div className="flex items-center justify-center gap-4">
-                <Button variant="outline" className="wz-stepper-btn" onClick={decrementQty} disabled={quantity <= 1}>
+                <Button variant="outline" className="wz-stepper-btn" aria-label={isPackageOrder ? 'Remove one package' : 'Decrease quantity'} onClick={decrementQty} disabled={quantity <= 1}>
                   <Minus className="h-4 w-4" />
                 </Button>
                 <Input
-                  type="number" value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                  id="package-quantity" type="number" value={baseQuantity}
+                  onChange={(e) => {
+                    const entered = Math.max(1, Number(e.target.value) || 1);
+                    setQuantity(isPackageOrder ? Math.max(1, Math.ceil(entered / bundleQty)) : entered);
+                  }}
                   onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
-                  className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  min={1}
+                  className="text-2xl font-bold w-28 min-w-0 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min={isPackageOrder ? bundleQty : 1}
+                  step={isPackageOrder ? bundleQty : 1}
                 />
-                <Button variant="outline" className="wz-stepper-btn" onClick={incrementQty}>
+                <Button variant="outline" className="wz-stepper-btn" aria-label={isPackageOrder ? 'Add one package' : 'Increase quantity'} onClick={incrementQty}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -248,7 +253,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
 
             {isPackageOrder && (
               <p className="text-sm text-center text-muted-foreground">
-                {quantity} × {bundleQty} {product.uom_default} = {baseQuantity} {product.uom_default}
+                {quantity} {product.bundle_type?.toLowerCase()}{quantity === 1 ? '' : product.bundle_type?.toLowerCase() === 'box' ? 'es' : 's'} × {bundleQty} {quantityUnitLabel}
               </p>
             )}
           </>
