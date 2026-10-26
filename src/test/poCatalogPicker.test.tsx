@@ -65,3 +65,26 @@ describe('catalog funnel candidate scope', () => {
     expect(matches).toEqual([{ supplier_id: 'master', category: 'FramingLumber' }, { supplier_id: 'master', category: 'FramingLumber' }]);
   });
 });
+describe('single-option funnel steps', () => {
+  it('auto-applies a step with exactly one option and completes without asking', async () => {
+    const complete = vi.fn();
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.match.mockResolvedValue({ data: [{ length: '12' }], count: 1 });
+    render(<StepByStepFilter supplierId="master" category="Exterior" secondaryCategory="Siding & Exterior Panels"
+      onComplete={complete} onBack={() => {}} onClose={() => {}} fixedSequence={['length']} />);
+    await waitFor(() => expect(complete).toHaveBeenCalledWith({ length: '12' }));
+    expect(screen.queryByText(/Select Length/i)).toBeNull();
+  });
+
+  it('Back skips auto-applied steps and lands on the last real choice', async () => {
+    const { computeBackStep } = await import('@/components/po-wizard-v2/StepByStepFilter');
+    const seq = ['manufacturer', 'dimension', 'length'];
+    // length was auto-applied (single option): Back from the end lands on dimension
+    expect(computeBackStep(seq, new Set(['length']), 2)).toBe(1);
+    // both trailing steps auto-applied: Back lands on manufacturer
+    expect(computeBackStep(seq, new Set(['dimension', 'length']), 2)).toBe(0);
+    // nothing auto-applied: normal one-step back
+    expect(computeBackStep(seq, new Set(), 2)).toBe(1);
+  });
+});
