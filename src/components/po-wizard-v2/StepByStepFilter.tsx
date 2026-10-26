@@ -111,6 +111,8 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   // Fields whose step was auto-applied (single option) or auto-skipped (empty),
   // so Back can skip over them instead of re-asking a question with no choice.
   const autoAppliedRef = useRef<Set<string>>(new Set());
+  // Set once onComplete fires so a re-render can't complete the funnel twice.
+  const completedRef = useRef(false);
 
   const currentField = filterSequence[currentStepIndex];
   const totalSteps = filterSequence.length;
