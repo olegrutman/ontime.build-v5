@@ -4348,6 +4348,7 @@ export type Database = {
           created_by: string | null
           entity_id: string
           entity_type: string
+          event_key: string | null
           id: string
           is_read: boolean
           recipient_org_id: string
@@ -4362,6 +4363,7 @@ export type Database = {
           created_by?: string | null
           entity_id: string
           entity_type: string
+          event_key?: string | null
           id?: string
           is_read?: boolean
           recipient_org_id: string
@@ -4376,6 +4378,7 @@ export type Database = {
           created_by?: string | null
           entity_id?: string
           entity_type?: string
+          event_key?: string | null
           id?: string
           is_read?: boolean
           recipient_org_id?: string
