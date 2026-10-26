@@ -330,6 +330,13 @@
       "when": 1793045217980,
       "tag": "0046_apply_price_revision_through_protected_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793045669443,
+      "tag": "0047_deduplicate_order_approval_audit_notifications",
+      "breakpoints": true
     }
   ]
 }
