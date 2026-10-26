@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, X, Package, Clock, ChevronRight } from 'lucide-react';
+import { Search, X, Package, Clock, ChevronRight, Wrench, Layers, House, Ruler, Columns3, PanelsTopLeft, ClipboardList, CirclePlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { POWizardV2LineItem, CatalogProduct, SecondaryCount } from '@/types/poWizardV2';
 import { CATEGORY_FUNNELS } from '@/lib/categoryFunnels';
@@ -97,6 +97,8 @@ interface SmartPickerProps {
    * Use this to keep an outer header in sync (Bug 2 fix).
    */
   onStateChange?: (step: PickerStep, title: string) => void;
+  libraryMode?: boolean;
+  supplierControl?: React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +109,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   {
     supplierId, projectId, editingItem, hasApprovedEstimate = false, hidePricing = false,
     onAddItem, onUpdateItem, onLoadPack, onAddPSMItem, onClearEdit, onClose, onExitPicker,
-    initialStep, onStateChange,
+    initialStep, onStateChange, libraryMode = false, supplierControl,
   },
   ref,
 ) {
@@ -433,11 +435,13 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     <div className="flex flex-col h-full min-h-0">
       {/* Persistent search bar */}
       {showSearchBar && (
-        <div className="px-4 py-2 border-b bg-background sticky top-0 z-10">
-          <div className="relative">
+        <div className={libraryMode ? "px-4 sm:px-6 py-4 border-b bg-muted/20 sticky top-0 z-10 flex flex-col sm:flex-row gap-3 sm:items-center" : "px-4 py-2 border-b bg-background sticky top-0 z-10"}>
+          {libraryMode && supplierControl}
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search SKU, name, or dimensions (e.g. 2x4x8)"
+              placeholder={libraryMode ? "Search product, SKU or dimensions" : "Search SKU, name, or dimensions (e.g. 2x4x8)"}
+              aria-label="Search catalog"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
@@ -453,11 +457,14 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               </Button>
             )}
           </div>
+          {libraryMode && hasApprovedEstimate && (
+            <Button variant="outline" className="shrink-0" onClick={() => { setSearchQuery(''); setStep('estimate'); }}><Package />From estimate</Button>
+          )}
         </div>
       )}
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className={`flex-1 overflow-y-auto min-h-0 ${libraryMode && step !== 'landing' ? '[&>div]:max-w-2xl [&>div]:mx-auto [&>div]:w-full' : ''}`}>
         {selectedCategoryKey === 'HARDWARE' && (
           <div className={step === 'hardware' && !searchActive ? 'contents' : 'hidden'}>
             <HardwarePicker ref={hardwareRef} supplierId={supplierId} onSelect={handleProductSelect} onBack={goToLanding} />
@@ -472,6 +479,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
           <>
             {step === 'landing' && (
               <LandingView
+                libraryMode={libraryMode}
                 loading={landingLoading}
                 recent={recent}
                 categories={categoryCards}
@@ -577,6 +585,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
 
 interface LandingViewProps {
   loading: boolean;
+  libraryMode?: boolean;
   recent: RecentItem[];
   categories: { key: string; cfg: typeof CATEGORY_FUNNELS[string]; count: number }[];
   hasApprovedEstimate: boolean;
@@ -586,7 +595,7 @@ interface LandingViewProps {
 }
 
 function LandingView({
-  loading, recent, categories, hasApprovedEstimate,
+  loading, recent, categories, hasApprovedEstimate, libraryMode = false,
   onRecentSelect, onCategorySelect, onOpenEstimate,
 }: LandingViewProps) {
   if (loading) {
@@ -599,80 +608,53 @@ function LandingView({
     );
   }
 
-  return (
-    <div className="p-4 space-y-6">
-      {/* From Estimate shortcut */}
-      {hasApprovedEstimate && (
-        <button className="wz-ans w-full" onClick={onOpenEstimate}>
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Package className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 text-left">
-            <p className="font-medium text-sm">From Project Estimate</p>
-            <p className="text-xs text-muted-foreground">Packs & matched materials</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </button>
-      )}
-
-      {/* Recent items */}
-      {recent.length > 0 && (
-        <section>
-          <header className="flex items-center gap-2 mb-2">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Recently Ordered
-            </h3>
-          </header>
-          <div className="grid gap-2">
-            {recent.slice(0, 6).map(item => (
-              <button
-                key={item.id}
-                className="wz-ans text-left"
-                onClick={() => onRecentSelect(item)}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {item.name || item.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {item.supplier_sku} · ordered {item.times_ordered}×
-                  </p>
-                </div>
-                <Badge variant="secondary" className="text-xs shrink-0">
-                  {item.uom_default}
-                </Badge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Category grid */}
-      <section>
-        <header className="flex items-center gap-2 mb-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Browse by Category
-          </h3>
-        </header>
-        <div className="grid grid-cols-2 gap-2">
-          {categories.map(({ key, cfg, count }) => (
-            <button
-              key={key}
-              className="flex flex-col items-start gap-1 p-3 rounded-xl border bg-card hover:bg-accent/50 transition-colors text-left"
-              onClick={() => onCategorySelect(key)}
-            >
-              <span className="text-2xl">{cfg.icon}</span>
-              <span className="font-medium text-sm leading-tight">{cfg.displayName}</span>
-              <span className="text-xs text-muted-foreground">
-                {count} items
-                {cfg.pattern === 'search' && ' · search'}
+  const icons: Record<string, typeof Package> = {
+    HARDWARE: Wrench, FRAMING_LUMBER: Layers, FINISH_LUMBER: Layers,
+    EXTERIOR: House, DECKING: PanelsTopLeft, ENGINEERED: Ruler,
+    STRUCTURAL: Columns3, SHEATHING: Layers, DRYWALL: ClipboardList,
+  };
+  const categorySection = (
+    <section aria-label="Material categories">
+      <h3 className="font-heading text-lg font-semibold uppercase mb-3">{libraryMode ? 'Material categories' : 'Browse by Category'}</h3>
+      <div className={libraryMode ? "grid grid-cols-1 min-[380px]:grid-cols-2 md:grid-cols-3 gap-3" : "grid grid-cols-2 gap-2"}>
+        {categories.map(({ key, cfg, count }) => {
+          const Icon = icons[key] ?? Package;
+          return (
+            <Button key={key} variant="outline" onClick={() => onCategorySelect(key)}
+              className={libraryMode ? "h-auto min-h-[80px] justify-start gap-3 rounded-2xl bg-card px-4 py-3 text-left sm:whitespace-normal" : "h-auto flex-col items-start gap-1 p-3 rounded-xl text-left sm:whitespace-normal"}>
+              {libraryMode ? <Icon className="!size-6 text-foreground shrink-0" /> : <span className="text-2xl">{cfg.icon}</span>}
+              <span className="flex-1 min-w-0">
+                <span className="block font-semibold text-sm leading-snug break-words">{cfg.displayName}</span>
+                <span className="block text-xs text-muted-foreground mt-1 font-normal">{count.toLocaleString()} items</span>
               </span>
-            </button>
-          ))}
-        </div>
-      </section>
+              {libraryMode && <ChevronRight className="text-muted-foreground" />}
+            </Button>
+          );
+        })}
+      </div>
+    </section>
+  );
+  const recentSection = recent.length > 0 && (
+    <section aria-label="Recently ordered products">
+      <header className="flex items-center gap-2 mb-3"><Clock className="h-4 w-4 text-muted-foreground" /><h3 className="font-heading text-lg font-semibold uppercase">Recently ordered</h3></header>
+      {libraryMode && <div className="hidden sm:grid grid-cols-[minmax(0,1fr)_140px_60px_32px] gap-3 px-3 py-2 bg-muted/40 text-[11px] uppercase text-muted-foreground"><span>Product</span><span>SKU</span><span>Unit</span><span /></div>}
+      <div className={libraryMode ? "divide-y divide-border" : "grid gap-2"}>
+        {recent.slice(0, libraryMode ? 3 : 6).map(item => (
+          <Button key={item.id} variant={libraryMode ? 'ghost' : 'outline'} onClick={() => onRecentSelect(item)}
+            className={libraryMode ? "w-full h-auto min-h-[64px] grid grid-cols-[minmax(0,1fr)_32px] sm:grid-cols-[minmax(0,1fr)_140px_60px_32px] gap-3 px-3 py-3 text-left rounded-none sm:whitespace-normal" : "w-full h-auto py-3 justify-start text-left"}>
+            <span className="min-w-0"><span className="block font-medium text-sm break-words">{item.name || item.description}</span><span className="block sm:hidden text-xs text-muted-foreground mt-1 break-all">{item.supplier_sku} · {item.uom_default}</span></span>
+            <span className="hidden sm:block font-mono text-xs text-muted-foreground break-all">{item.supplier_sku}</span>
+            <span className="hidden sm:block font-mono text-xs text-muted-foreground">{item.uom_default}</span>
+            <CirclePlus className="text-secondary justify-self-end" />
+          </Button>
+        ))}
+      </div>
+    </section>
+  );
+  return (
+    <div className={libraryMode ? "px-4 sm:px-6 py-5 space-y-7" : "p-4 space-y-6"}>
+      {!libraryMode && hasApprovedEstimate && <Button variant="outline" className="w-full justify-start h-auto p-3" onClick={onOpenEstimate}><Package /><span className="flex-1 text-left">From Project Estimate<span className="block text-xs text-muted-foreground">Packs & matched materials</span></span><ChevronRight /></Button>}
+      {libraryMode ? <>{categorySection}{recentSection}</> : <>{recentSection}{categorySection}</>}
     </div>
   );
 }
