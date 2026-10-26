@@ -9441,6 +9441,10 @@ export type Database = {
         Returns: undefined
       }
       delete_own_account: { Args: never; Returns: Json }
+      ensure_tm_project_contracts: {
+        Args: { _project_id: string }
+        Returns: undefined
+      }
       finalize_tm_work_order: {
         Args: {
           p_change_order_id: string
