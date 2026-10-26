@@ -302,6 +302,7 @@ export const FILTER_PRIORITY: Record<string, number> = {
 
 // Field labels for display
 export const FIELD_LABELS: Record<string, string> = {
+  secondary_category: 'Lumber Type',
   dimension: 'Dimension',
   length: 'Length',
   color: 'Color',

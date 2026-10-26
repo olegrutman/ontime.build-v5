@@ -39,7 +39,7 @@ export const CATEGORY_FUNNELS: Record<string, CategoryFunnel> = {
     displayName: 'Framing Lumber',
     icon: '🪵',
     pattern: 'structured',
-    funnelFields: ['dimension', 'length', 'wood_species'],
+    funnelFields: ['secondary_category', 'dimension', 'length', 'wood_species'],
   },
   FINISH_LUMBER: {
     dbCategory: 'FinishLumber',

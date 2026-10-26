@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QuantityPanel } from '@/components/po-wizard-v2/QuantityPanel';
-import { StepByStepFilter } from '@/components/po-wizard-v2/StepByStepFilter';
+import { StepByStepFilter, type StepByStepFilterHandle } from '@/components/po-wizard-v2/StepByStepFilter';
+import { createRef } from 'react';
+import { CATEGORY_FUNNELS } from '@/lib/categoryFunnels';
 import type { CatalogProduct } from '@/types/poWizardV2';
 
 const query = vi.hoisted(() => ({ eq: vi.fn(), match: vi.fn(), select: vi.fn() }));
@@ -66,6 +68,55 @@ describe('catalog funnel candidate scope', () => {
   });
 });
 describe('single-option funnel steps', () => {
+  it('asks lumber type first and carries that raw type through size, length and species', async () => {
+    expect(CATEGORY_FUNNELS.FRAMING_LUMBER.funnelFields).toEqual(['secondary_category', 'dimension', 'length', 'wood_species']);
+    const complete = vi.fn();
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.match.mockImplementation(scope => Promise.resolve({ data: !scope.secondary_category
+      ? [{ secondary_category: 'Framing Lumber' }, { secondary_category: 'Posts & Timbers' }]
+      : !scope.dimension ? [{ dimension: '6×6' }, { dimension: '8×8' }]
+      : !scope.length ? [{ length: '12 ft' }] : [{ wood_species: 'Doug Fir' }], count: 2 }));
+    render(<StepByStepFilter supplierId="master" category="FramingLumber" secondaryCategory={null}
+      onComplete={complete} onBack={() => {}} onClose={() => {}} fixedSequence={CATEGORY_FUNNELS.FRAMING_LUMBER.funnelFields} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Structural Timbers & Posts/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /6×6/ }));
+    await waitFor(() => expect(complete).toHaveBeenCalledWith({ secondary_category: 'Posts & Timbers', dimension: '6×6', length: '12 ft', wood_species: 'Doug Fir' }));
+    expect(query.match).toHaveBeenCalledWith({ supplier_id: 'master', category: 'FramingLumber', secondary_category: 'Posts & Timbers' });
+  });
+
+  it('Back clears the terminal choice so a different lumber type cannot inherit its dimension', async () => {
+    const complete = vi.fn();
+    const ref = createRef<StepByStepFilterHandle>();
+    const sequence = ['secondary_category', 'dimension'];
+    query.select.mockReturnValue(query); query.eq.mockReturnValue(query);
+    query.match.mockImplementation(scope => Promise.resolve({ data: !scope.secondary_category
+      ? [{ secondary_category: 'STUDS' }, { secondary_category: 'POST/TIMBER' }]
+      : [{ dimension: '2×4' }, { dimension: '6×6' }], count: 2 }));
+    render(<StepByStepFilter ref={ref} supplierId="master" category="FramingLumber" secondaryCategory={null}
+      onComplete={complete} onBack={() => {}} onClose={() => {}} fixedSequence={sequence} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Studs/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /2×4/ }));
+    ref.current?.goBack();
+    fireEvent.click(await screen.findByRole('button', { name: /Posts & Timbers/ }));
+    await screen.findByRole('button', { name: /6×6/ });
+    expect(query.match).toHaveBeenLastCalledWith({ supplier_id: 'master', category: 'FramingLumber', secondary_category: 'POST/TIMBER' });
+  });
+
+  it('Back exits instead of re-asking an automatically applied lumber type', async () => {
+    const back = vi.fn();
+    const ref = createRef<StepByStepFilterHandle>();
+    const sequence = ['secondary_category', 'dimension'];
+    query.select.mockReturnValue(query); query.eq.mockReturnValue(query);
+    query.match.mockImplementation(scope => Promise.resolve({ data: !scope.secondary_category
+      ? [{ secondary_category: 'STUDS' }] : [{ dimension: '2×4' }, { dimension: '2×6' }], count: 2 }));
+    render(<StepByStepFilter ref={ref} supplierId="master" category="FramingLumber" secondaryCategory={null}
+      onComplete={() => {}} onBack={back} onClose={() => {}} fixedSequence={sequence} />);
+    await screen.findByRole('button', { name: /2×4/ });
+    ref.current?.goBack();
+    expect(back).toHaveBeenCalledOnce();
+  });
+
   it('auto-applies a step with exactly one option and completes without asking', async () => {
     const complete = vi.fn();
     query.select.mockReturnValue(query);
