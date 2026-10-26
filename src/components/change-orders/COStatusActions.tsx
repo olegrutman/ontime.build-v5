@@ -378,6 +378,11 @@ export function COStatusActions({
           const { error: apprErr } = await supabase.rpc('approve_crew_change_order', { _co_id: co.id, _keep_internal: false });
           if (apprErr) throw apprErr;
         }
+        await snapshotCOSubmission({
+          coId: co.id, projectId, isTC, currentOrgId,
+          useFcPricingBase: co.use_fc_pricing_base,
+          pricingType: co.pricing_type, financials,
+        });
         const { data, error } = await supabase.rpc('forward_change_order_to_upstream_gc', {
           _co_id: co.id,
         });
