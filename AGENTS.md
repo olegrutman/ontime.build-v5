@@ -1,5 +1,6 @@
 # Project architecture rules
 - Approved-price revisions are immutable party-scoped records decided through authenticated RPCs; acceptance atomically applies only the price delta to the governing contract, while pending/rejected revisions preserve the original approval.
+- Accepted price revisions apply their CO and contract delta through a protected revision trigger, so authorized approvals remain atomic without bypassing creator-only direct-edit guards.
 - CO/WO sidebar labor totals present current viewer-role billable rows separately from frozen upstream pricing, so extra scope remains visible without expanding approval or revenue.
 - Crew-base submission snapshots sum saved organization-owned billable labor once, including manual scope; invoice itemization preserves source-entry IDs and rejects approval mismatches rather than silently dropping work or expanding approved prices.
 - PO Guided Workspace presentation is opt-in on the shared SmartPicker and reuses the existing funnel/quantity logic; the PO wizard owns supplier and order controls so change-order material pickers retain their context and behavior.
