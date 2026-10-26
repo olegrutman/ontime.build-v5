@@ -108,7 +108,10 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   const [loading, setLoading] = useState(true);
   const [filterSequence, setFilterSequence] = useState<string[]>([]);
   const [discoveryComplete, setDiscoveryComplete] = useState(false);
-  
+  // Fields whose step was auto-applied (single option) or auto-skipped (empty),
+  // so Back can skip over them instead of re-asking a question with no choice.
+  const autoAppliedRef = useRef<Set<string>>(new Set());
+
   const currentField = filterSequence[currentStepIndex];
   const totalSteps = filterSequence.length;
 
@@ -119,6 +122,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     setCurrentStepIndex(0);
     setAppliedFilters({});
     setFilterSequence([]);
+    autoAppliedRef.current = new Set();
     setLoading(true);
 
     // Fast path: caller supplied a fixed sequence (e.g. from CATEGORY_FUNNELS).
