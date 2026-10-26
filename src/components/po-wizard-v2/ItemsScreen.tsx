@@ -160,7 +160,9 @@ export function ItemsScreen({
                         <span>
                           {item.is_engineered && item.length_ft
                             ? `${item.quantity} pcs × ${item.length_ft}' = ${item.computed_lf} LF`
-                            : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`}
+                            : item.unit_mode === 'BUNDLE' && item.bundle_count
+                              ? `${item.quantity / item.bundle_count} × ${item.bundle_name || 'package'} (${item.bundle_count} ${item.uom}) · ${item.quantity} ${item.uom}`
+                              : `${item.quantity} ${item.uom}`}
                         </span>
                         {!hidePricing && item.unit_price != null && (
                           <span className="text-muted-foreground">

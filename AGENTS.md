@@ -19,3 +19,4 @@
 
 - Supplier KPI calculations use shared supplierMetrics status, tax and PO-scoped coverage helpers; estimate totals and PO totals are already tax-inclusive, while estimate lines require their source estimate tax, preventing quote commitments, duplicate tax and cross-order offsets.
 - Master-catalog replacements upsert by supplier and stable Ontime SKU and retire missing products; base ordering units and reference-price units remain separate, with unvalidated package conversions stored only as metadata, to preserve historical links and prevent pack prices from becoming each prices.
+- PO catalog funnels query only active rows for the selected supplier, and package counts multiply documented base-unit quantities; ambiguous or nested package evidence stays metadata to prevent empty selections and incorrect order units.

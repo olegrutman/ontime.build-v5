@@ -187,8 +187,8 @@ export function POWizardV2({
         if (projectSuppliers.length >= 1) {
           setFormData(prev => ({
             ...prev,
-            supplier_id: projectSuppliers[0].id,
-            supplier_name: projectSuppliers[0].name,
+            supplier_id: prev.supplier_id ?? projectSuppliers[0].id,
+            supplier_name: prev.supplier_id ? prev.supplier_name : projectSuppliers[0].name,
           }));
         }
       } catch (error) {
@@ -232,7 +232,7 @@ export function POWizardV2({
 
   // Auto-advance past header for single supplier (non-edit mode)
   useEffect(() => {
-    if (!open || editMode || loadingSuppliers || screen !== 'header') return;
+    if (!open || editMode || loadingSuppliers || screen !== 'header' || !formData.supplier_id) return;
     if (suppliers.length === 1) {
       // Supplier already set in supplier fetch effect, skip to items/picker
       if (formData.line_items.length === 0) {
@@ -241,7 +241,7 @@ export function POWizardV2({
         setScreen('items');
       }
     }
-  }, [open, editMode, loadingSuppliers, suppliers.length]);
+  }, [open, editMode, loadingSuppliers, suppliers.length, screen, formData.supplier_id, formData.line_items.length]);
 
   // Check for approved estimate and resolve tax when supplier changes
   useEffect(() => {
@@ -250,6 +250,7 @@ export function POWizardV2({
       return;
     }
     checkApprovedEstimate(projectId, formData.supplier_id).then(setHasApprovedEstimate);
+    const supplierId = formData.supplier_id;
 
     // Resolve tax rate from most recent approved estimate for this supplier
     const resolveTax = async () => {
@@ -258,7 +259,7 @@ export function POWizardV2({
         const { data: supplierData } = await supabase
           .from('suppliers')
           .select('organization_id')
-          .eq('id', formData.supplier_id!)
+          .eq('id', supplierId)
           .single();
         if (!supplierData?.organization_id) return;
 
@@ -528,7 +529,7 @@ export function POWizardV2({
             onDeliveryChange={handleChange}
           />
         )}
-        {screen === 'picker' && (
+        {screen === 'picker' && formData.supplier_id && (
           <ProductPickerContent
             ref={pickerRef}
             supplierId={formData.supplier_id}

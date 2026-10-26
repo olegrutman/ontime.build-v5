@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +29,8 @@ interface QuantityPanelProps {
 export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false }: QuantityPanelProps) {
   const isEditing = !!editingItem;
   
-  const isEngineered = product.category === 'Engineered';
-  const hasBundle = !!product.bundle_type && !!product.bundle_qty;
+  const isEngineered = product.category === 'Engineered' && product.uom_default === 'LF';
+  const hasBundle = !!product.bundle_type && (product.bundle_qty ?? 0) > 0;
   const bundleQty = product.bundle_qty || 0;
 
   const [pieces, setPieces] = useState(() => 
@@ -46,21 +46,20 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
     return hasBundle ? 'bundle' : 'each';
   });
   const [quantity, setQuantity] = useState(() => {
-    if (editingItem && !editingItem.is_engineered) return editingItem.quantity;
-    return hasBundle ? bundleQty : 1;
+    if (editingItem && !editingItem.is_engineered) {
+      return editingItem.unit_mode === 'BUNDLE' && hasBundle ? editingItem.quantity / bundleQty : editingItem.quantity;
+    }
+    return 1;
   });
   const [notes, setNotes] = useState(() => editingItem?.item_notes || '');
 
-  const isFullBundle = hasBundle && quantity === bundleQty && orderMode === 'bundle';
-  const isModifiedBundle = hasBundle && orderMode === 'bundle' && quantity !== bundleQty;
+  const isPackageOrder = hasBundle && orderMode === 'bundle';
+  const baseQuantity = isPackageOrder ? quantity * bundleQty : quantity;
 
-  useEffect(() => {
-    if (orderMode === 'bundle' && hasBundle) {
-      setQuantity(bundleQty);
-    } else if (orderMode === 'each' && !isEditing) {
-      setQuantity(1);
-    }
-  }, [orderMode, hasBundle, bundleQty, isEditing]);
+  const changeOrderMode = (mode: 'bundle' | 'each') => {
+    setOrderMode(mode);
+    setQuantity(1);
+  };
 
   const formatSpecs = () => {
     const parts: string[] = [];
@@ -76,7 +75,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
   const resolvedUnitPrice = editingItem?.unit_price ?? estimateUnitPrice ?? null;
   const displayLineTotal = isEngineered
     ? (resolvedUnitPrice != null ? computedLf * resolvedUnitPrice : null)
-    : (resolvedUnitPrice != null ? quantity * resolvedUnitPrice : null);
+    : (resolvedUnitPrice != null ? baseQuantity * resolvedUnitPrice : null);
 
   const handleSubmit = () => {
     const resolvedEstItemId = editingItem?.source_estimate_item_id ?? estimateItemId ?? null;
@@ -107,17 +106,17 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
       };
       if (isEditing && onUpdate) onUpdate(item); else onAdd(item);
     } else {
-      const computedLineTotal = resolvedUnitPrice != null ? quantity * resolvedUnitPrice : null;
+      const computedLineTotal = resolvedUnitPrice != null ? baseQuantity * resolvedUnitPrice : null;
       const item: POWizardV2LineItem = {
         id: editingItem?.id || crypto.randomUUID(),
         catalog_item_id: product.id,
         supplier_sku: product.supplier_sku,
         name: product.name || product.description,
         specs: formatSpecs(),
-        quantity,
-        unit_mode: isFullBundle ? 'BUNDLE' : 'EACH',
-        bundle_count: isFullBundle ? bundleQty : undefined,
-        bundle_name: isFullBundle ? product.bundle_type ?? undefined : undefined,
+        quantity: baseQuantity,
+        unit_mode: isPackageOrder ? 'BUNDLE' : 'EACH',
+        bundle_count: isPackageOrder ? bundleQty : undefined,
+        bundle_name: isPackageOrder ? product.bundle_type ?? undefined : undefined,
         uom: product.uom_default,
         item_notes: notes || undefined,
         unit_price: resolvedUnitPrice,
@@ -159,9 +158,9 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Pieces</Label>
               <div className="flex items-center justify-center gap-4">
-                <button className="wz-stepper-btn" onClick={decrementPieces} disabled={pieces <= 1}>
+                <Button variant="outline" className="wz-stepper-btn" onClick={decrementPieces} disabled={pieces <= 1}>
                   <Minus className="h-4 w-4" />
-                </button>
+                </Button>
                 <Input
                   type="number" value={pieces}
                   onChange={(e) => setPieces(Math.max(1, parseInt(e.target.value) || 0))}
@@ -169,9 +168,9 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
                   className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   min={1}
                 />
-                <button className="wz-stepper-btn" onClick={incrementPieces}>
+                <Button variant="outline" className="wz-stepper-btn" onClick={incrementPieces}>
                   <Plus className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -179,9 +178,9 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Length (ft)</Label>
               <div className="flex items-center justify-center gap-4">
-                <button className="wz-stepper-btn" onClick={decrementLength} disabled={lengthFt <= 1}>
+                <Button variant="outline" className="wz-stepper-btn" onClick={decrementLength} disabled={lengthFt <= 1}>
                   <Minus className="h-4 w-4" />
-                </button>
+                </Button>
                 <Input
                   type="number" value={lengthFt}
                   onChange={(e) => setLengthFt(Math.min(60, Math.max(1, parseInt(e.target.value) || 0)))}
@@ -189,9 +188,9 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
                   className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   min={1} max={60}
                 />
-                <button className="wz-stepper-btn" onClick={incrementLength} disabled={lengthFt >= 60}>
+                <Button variant="outline" className="wz-stepper-btn" onClick={incrementLength} disabled={lengthFt >= 60}>
                   <Plus className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -209,29 +208,31 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Order As</Label>
               <div className="flex gap-2">
-                <button
-                  className={`wz-pill flex-1 ${orderMode === 'bundle' ? 'wz-pill--active' : 'wz-pill--inactive'}`}
-                  onClick={() => setOrderMode('bundle')}
+                <Button variant={orderMode === 'bundle' ? 'default' : 'outline'}
+                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                  aria-pressed={orderMode === 'bundle'}
+                  onClick={() => changeOrderMode('bundle')}
                 >
                   <Package className="h-4 w-4 mr-1" />
                   {product.bundle_type} ({bundleQty})
-                </button>
-                <button
-                  className={`wz-pill flex-1 ${orderMode === 'each' ? 'wz-pill--active' : 'wz-pill--inactive'}`}
-                  onClick={() => setOrderMode('each')}
+                </Button>
+                <Button variant={orderMode === 'each' ? 'default' : 'outline'}
+                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                  aria-pressed={orderMode === 'each'}
+                  onClick={() => changeOrderMode('each')}
                 >
                   Individual
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Quantity stepper */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Quantity</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{isPackageOrder ? `${product.bundle_type} count` : `Quantity (${product.uom_default})`}</Label>
               <div className="flex items-center justify-center gap-4">
-                <button className="wz-stepper-btn" onClick={decrementQty} disabled={quantity <= 1}>
+                <Button variant="outline" className="wz-stepper-btn" onClick={decrementQty} disabled={quantity <= 1}>
                   <Minus className="h-4 w-4" />
-                </button>
+                </Button>
                 <Input
                   type="number" value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
@@ -239,27 +240,26 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
                   className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   min={1}
                 />
-                <button className="wz-stepper-btn" onClick={incrementQty}>
+                <Button variant="outline" className="wz-stepper-btn" onClick={incrementQty}>
                   <Plus className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
 
-            {/* Status */}
-            {isModifiedBundle && (
-              <p className="text-xs text-center text-primary">
-                ⚠ {quantity} pieces (not a full {product.bundle_type?.toLowerCase()})
+            {isPackageOrder && (
+              <p className="text-sm text-center text-muted-foreground">
+                {quantity} × {bundleQty} {product.uom_default} = {baseQuantity} {product.uom_default}
               </p>
             )}
           </>
         ) : (
           /* Standard quantity */
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Quantity</Label>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">{isPackageOrder ? `${product.bundle_type} count` : `Quantity (${product.uom_default})`}</Label>
             <div className="flex items-center justify-center gap-4">
-              <button className="wz-stepper-btn" onClick={decrementQty} disabled={quantity <= 1}>
+              <Button variant="outline" className="wz-stepper-btn" onClick={decrementQty} disabled={quantity <= 1}>
                 <Minus className="h-4 w-4" />
-              </button>
+              </Button>
               <Input
                 type="number" value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
@@ -267,9 +267,9 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
                 className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 min={1}
               />
-              <button className="wz-stepper-btn" onClick={incrementQty}>
+              <Button variant="outline" className="wz-stepper-btn" onClick={incrementQty}>
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </div>
         )}
