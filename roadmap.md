@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Show all itemized labor in the sidebar, separately from frozen submitted/approved pricing; verify WO-5 and phone layouts
 - [x] Include subcontractor-added work in submission pricing and itemized invoices, preserving frozen approval limits; 20 regression tests passed and automatic build checks passed
 - [x] Verify signed-in Knowles itemized invoice creation/readback: saved $1,200 draft INV-KNO-IM-HA-WO05-0001 with source entry tracking; previously reported combined draft is no longer present, and existing approved WO-5 prices were not increased without renewed approval
 - [x] Replace PO Design A with approved Design B Guided Workspace; 20 tests and build pass. Signed-in lumber rail edits, product cards, 294→588 package quantities and order readback verified at 1280/320/394px; hardware rail and 20 EA order readback verified. Broader phone audit sampled 40 views and flagged existing dashboard clipping; repeat picker audit blocked after preview account access changed.

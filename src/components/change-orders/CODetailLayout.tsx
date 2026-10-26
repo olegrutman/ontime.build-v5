@@ -860,7 +860,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             {/* Sidebar */}
             {!isMobile && (
               <div className="w-[300px] shrink-0 space-y-3 sticky top-14 self-start">
-                <COSidebar {...sidebarProps} />
+                <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
                 {billedCard}
                 {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
               </div>
@@ -869,7 +869,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           {isMobile && (
             <>
-              <COSidebar {...sidebarProps} />
+              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
               {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
             </>

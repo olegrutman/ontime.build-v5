@@ -1,4 +1,5 @@
 # Project architecture rules
+- CO/WO sidebar labor totals present current viewer-role billable rows separately from frozen upstream pricing, so extra scope remains visible without expanding approval or revenue.
 - Crew-base submission snapshots sum saved organization-owned billable labor once, including manual scope; invoice itemization preserves source-entry IDs and rejects approval mismatches rather than silently dropping work or expanding approved prices.
 - PO Guided Workspace presentation is opt-in on the shared SmartPicker and reuses the existing funnel/quantity logic; the PO wizard owns supplier and order controls so change-order material pickers retain their context and behavior.
 
