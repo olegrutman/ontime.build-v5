@@ -13,10 +13,22 @@ const product = {
 } as CatalogProduct;
 
 describe('catalog package quantities', () => {
+  it('starts at 294 pieces and steps one entire bundle to 588 and back', () => {
+    const add = vi.fn();
+    render(<QuantityPanel product={{ ...product, bundle_type: 'Bundle', bundle_qty: 294 }} onAdd={add} onClose={() => {}} />);
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('294');
+    fireEvent.click(screen.getByRole('button', { name: 'Add one package' }));
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('588');
+    fireEvent.click(screen.getByRole('button', { name: 'Remove one package' }));
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('294');
+    expect(screen.getByRole('button', { name: 'Remove one package' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Add to PO' }));
+    expect(add.mock.calls[0][0]).toMatchObject({ quantity: 294, bundle_count: 294, unit_mode: 'BUNDLE' });
+  });
   it('adds two boxes of 25 as 50 base units, without losing package mode', () => {
     const add = vi.fn();
     render(<QuantityPanel product={product} onAdd={add} onClose={() => {}} />);
-    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '2' } });
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '50' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add to PO' }));
     expect(add.mock.calls[0][0]).toMatchObject({ quantity: 50, uom: 'EA', unit_mode: 'BUNDLE', bundle_count: 25 });
   });
