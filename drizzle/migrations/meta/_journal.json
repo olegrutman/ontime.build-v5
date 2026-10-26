@@ -323,6 +323,13 @@
       "when": 1793043784638,
       "tag": "0045_co_price_revision_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793045217980,
+      "tag": "0046_apply_price_revision_through_protected_trigger",
+      "breakpoints": true
     }
   ]
 }
