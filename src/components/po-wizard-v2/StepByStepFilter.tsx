@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { SpecValue, FILTERABLE_FIELDS, FILTER_PRIORITY, FIELD_LABELS } from '@/types/poWizardV2';
+import { SpecValue, FILTERABLE_FIELDS, FILTER_PRIORITY, FIELD_LABELS, SECONDARY_DISPLAY_NAMES } from '@/types/poWizardV2';
 
 interface StepByStepFilterProps {
   supplierId: string | null;
@@ -125,6 +125,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     setAppliedFilters({});
     setFilterSequence([]);
     autoAppliedRef.current = new Set();
+    completedRef.current = false;
     setLoading(true);
 
     // Fast path: caller supplied a fixed sequence (e.g. from CATEGORY_FUNNELS).
@@ -282,8 +283,12 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     // Walk back past any auto-applied steps so Back returns to the last
     // step where the user actually made a choice.
     const target = computeBackStep(filterSequence, autoAppliedRef.current, currentStepIndex);
+    if (target === 0 && autoAppliedRef.current.has(filterSequence[0])) {
+      onBack();
+      return;
+    }
     const newFilters = { ...appliedFilters };
-    for (let i = target; i < currentStepIndex; i++) {
+    for (let i = target; i < filterSequence.length; i++) {
       const field = filterSequence[i];
       delete newFilters[field];
       autoAppliedRef.current.delete(field);
@@ -302,9 +307,16 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
     if (category) parts.push(category);
     if (secondaryCategory) parts.push(secondaryCategory);
     filterSequence.slice(0, currentStepIndex).forEach(field => {
-      if (appliedFilters[field]) parts.push(appliedFilters[field]);
+      if (appliedFilters[field]) parts.push(displayValue(field, appliedFilters[field]));
     });
     return parts.join(' › ');
+  };
+
+  const displayValue = (field: string, value: string) => {
+    if (field !== 'secondary_category') return value;
+    if (value === 'Framing Lumber') return 'Dimensional Lumber & Studs';
+    if (value === 'Posts & Timbers') return 'Structural Timbers & Posts';
+    return SECONDARY_DISPLAY_NAMES[value] ?? value;
   };
 
   if (loading || !discoveryComplete) {
@@ -349,32 +361,32 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
         ) : usePills ? (
           <div className="flex flex-wrap gap-2">
             {availableValues.map(spec => (
-              <button
+              <Button variant="outline"
                 key={spec.value}
-                className="wz-pill wz-pill--inactive"
+                className="wz-pill wz-pill--inactive h-auto sm:whitespace-normal"
                 onClick={() => handleSelectValue(spec.value)}
               >
-                {spec.value}
+                {displayValue(currentField, spec.value)}
                 <span className="ml-1.5 text-xs opacity-60">{spec.count}</span>
-              </button>
+              </Button>
             ))}
           </div>
         ) : (
           <div className="space-y-2">
             {availableValues.map(spec => (
-              <button
+              <Button variant="outline"
                 key={spec.value}
-                className="wz-ans"
+                className="wz-ans h-auto w-full justify-start whitespace-normal sm:whitespace-normal"
                 onClick={() => handleSelectValue(spec.value)}
               >
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="font-medium text-sm">{spec.value}</p>
+                  <p className="font-medium text-sm break-words">{displayValue(currentField, spec.value)}</p>
                 </div>
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
                   {spec.count}
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
+              </Button>
             ))}
           </div>
         )}
