@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1979,6 +1979,83 @@ export type Database = {
             columns: ["co_line_item_id"]
             isOneToOne: false
             referencedRelation: "co_line_items_role_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_price_revisions: {
+        Row: {
+          co_id: string
+          decided_at: string | null
+          decided_by: string | null
+          from_org_id: string
+          id: string
+          previous_price: number
+          proposed_price: number
+          proposed_total: number
+          scope_snapshot: Json
+          status: string
+          submitted_at: string
+          submitted_by: string
+          to_org_id: string
+        }
+        Insert: {
+          co_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          from_org_id: string
+          id?: string
+          previous_price: number
+          proposed_price: number
+          proposed_total: number
+          scope_snapshot?: Json
+          status?: string
+          submitted_at?: string
+          submitted_by: string
+          to_org_id: string
+        }
+        Update: {
+          co_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          from_org_id?: string
+          id?: string
+          previous_price?: number
+          proposed_price?: number
+          proposed_total?: number
+          scope_snapshot?: Json
+          status?: string
+          submitted_at?: string
+          submitted_by?: string
+          to_org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_price_revisions_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_price_revisions_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_price_revisions_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_price_revisions_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -9441,6 +9518,30 @@ export type Database = {
         Returns: Json
       }
       current_user_verified_email: { Args: never; Returns: string }
+      decide_co_price_revision: {
+        Args: { _approve: boolean; _revision_id: string }
+        Returns: {
+          co_id: string
+          decided_at: string | null
+          decided_by: string | null
+          from_org_id: string
+          id: string
+          previous_price: number
+          proposed_price: number
+          proposed_total: number
+          scope_snapshot: Json
+          status: string
+          submitted_at: string
+          submitted_by: string
+          to_org_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "co_price_revisions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decline_org_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -10081,6 +10182,30 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       storage_first_folder_uuid: { Args: { _name: string }; Returns: string }
+      submit_co_price_revision: {
+        Args: { _co_id: string }
+        Returns: {
+          co_id: string
+          decided_at: string | null
+          decided_by: string | null
+          from_org_id: string
+          id: string
+          previous_price: number
+          proposed_price: number
+          proposed_total: number
+          scope_snapshot: Json
+          status: string
+          submitted_at: string
+          submitted_by: string
+          to_org_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "co_price_revisions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       suggest_orgs_by_email_domain: {
         Args: { _email: string }
         Returns: {
