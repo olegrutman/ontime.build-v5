@@ -228,17 +228,18 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const ids = Array.from(selectedIds);
 
       // Fetch labor, materials, equipment for selected COs — filtered by invoicing role
-      let laborQuery = supabase.from(t.labor).select('*').in('co_id', ids).eq('is_actual_cost', false).order('entry_date');
+      if (!currentOrgId) throw new Error('Your invoicing company could not be resolved.');
+      let laborQuery = supabase.from(t.labor).select('*').in('co_id', ids).eq('org_id', currentOrgId).eq('is_actual_cost', false).order('entry_date');
       if (invoicingRole) {
         laborQuery = laborQuery.eq('entered_by_role', invoicingRole);
       }
 
-      let materialsQuery = supabase.from(t.mats).select('*').in('co_id', ids).order('line_number');
+      let materialsQuery = supabase.from(t.mats).select('*').in('co_id', ids).eq('org_id', currentOrgId).order('line_number');
       if (invoicingRole) {
         materialsQuery = materialsQuery.eq('added_by_role', invoicingRole);
       }
 
-      let equipmentQuery = supabase.from(t.eq).select('*').in('co_id', ids).order('created_at');
+      let equipmentQuery = supabase.from(t.eq).select('*').in('co_id', ids).eq('org_id', currentOrgId).order('created_at');
       if (invoicingRole) {
         equipmentQuery = equipmentQuery.eq('added_by_role', invoicingRole);
       }
@@ -282,7 +283,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       // Fixed price → one progress line per WO for this period's percent complete.
       // Once the GC acknowledges completion, the default is the remaining balance (final true-up).
       for (const id of fixedIds) {
-        const co = coById.get(id)!;
+        const co = coById.get(id);
+        if (!co) continue;
         const value = Number(co.tc_submitted_price ?? 0);
         const s = summaryFor(co);
         const pct = percentById[id] ?? (co.completion_acknowledged_at ? Math.round((s.remaining / value) * 10000) / 100 : 0);
@@ -291,7 +293,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const isFinal = amount >= s.remaining - 0.005;
         const label = co.co_number ?? co.title ?? 'WO';
         generated.push({
-          description: `${label} — ${isFinal ? 'Final billing' : 'Progress billing'} (${pct}% of $${value.toLocaleString('en-US', { minimumFractionDigits: 2 })})`,
+          description: `${label} — ${isFinal ? 'Final billing' : 'Progress billing'} (${pct}% of $${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}) — ${scopeItems.filter(item => item.co_id === id).map(item => item.item_name).join('; ')}`,
           amount, coId: id, type: 'progress', entryIds: [], percent: pct,
         });
       }
@@ -457,7 +459,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           invoice_id: invoice.id,
           description: li.description,
           line_notes: isFirstForCO ? (coNotesMap.get(li.coId) || null) : null,
-          scheduled_value: isProgress ? Number(co!.tc_submitted_price ?? 0) : li.amount,
+          scheduled_value: isProgress ? Number(co?.tc_submitted_price ?? 0) : li.amount,
           previous_billed: prev,
           current_billed: li.amount,
           total_billed: prev + li.amount,

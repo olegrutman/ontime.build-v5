@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
+import { submittedLaborTotal } from '@/lib/coInvoiceRows';
 
 
 /**
@@ -122,6 +123,18 @@ export async function snapshotCOSubmission({
       pricingType,
     });
 
+    // Saved billable rows already include the crew-derived base and independent
+    // subcontractor scope. Sum them once; never freeze only the crew portion.
+    const { data: billableRows, error: billableError } = await supabase
+      .from('co_labor_entries')
+      .select('line_total')
+      .eq('co_id', coId)
+      .eq('org_id', currentOrgId)
+      .eq('entered_by_role', 'TC')
+      .eq('is_actual_cost', false);
+    if (billableError) throw billableError;
+    updates.tc_submitted_price = submittedLaborTotal(billableRows ?? []);
+
   } else if (isTC) {
 
     // Never freeze GC-procured materials/equipment into the price billed to the
@@ -163,7 +176,8 @@ export async function materializeCrewPricing({
     .from('co_labor_entries')
     .select('id, co_line_item_id, org_id, entered_by_role, is_actual_cost, pricing_mode, hours, lump_sum, line_total')
     .eq('co_id', coId);
-  if (error || !rows) return;
+  if (error) throw error;
+  if (!rows) return;
 
   const today = new Date().toISOString().slice(0, 10);
   const byItem = new Map<string, typeof rows>();
