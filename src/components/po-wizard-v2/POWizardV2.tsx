@@ -585,7 +585,7 @@ export function POWizardV2({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[95vh] p-0 rounded-t-2xl">
+        <SheetContent side="bottom" className={`h-[95vh] p-0 rounded-t-2xl ${showInternalHeader ? '[&>button]:hidden' : ''}`}>
           {content}
         </SheetContent>
       </Sheet>
