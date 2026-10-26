@@ -107,7 +107,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
           .from(t.co)
-          .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
+          .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, tc_submitted_price, nte_cap, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
           .order('created_at', { ascending: false });
@@ -131,10 +131,9 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const filtered = (cos ?? []).filter(co => {
           if (invoicingRole === 'TC') {
             // TC invoices GC for orders it is a party to — whether the sub wrote it
-            // (org_id) or the GC assigned it (assigned_to_org_id) — once the GC
-            // has acknowledged completion.
-            return (co.assigned_to_org_id === currentOrgId || co.org_id === currentOrgId)
-              && co.completion_acknowledged_at;
+            // (org_id) or the GC assigned it (assigned_to_org_id). Progress billing
+            // starts at approval; GC completion acknowledgment only gates the final bill.
+            return co.assigned_to_org_id === currentOrgId || co.org_id === currentOrgId;
           }
           if (invoicingRole === 'FC') {
             // FC invoices TC: COs they created, originated, or collaborated on
@@ -145,21 +144,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           return false; // GC doesn't create invoices from COs
         });
 
-        // Get already-billed CO IDs from existing invoices
-        const { data: invoices, error: invErr } = await supabase
-          .from('invoices')
-          .select('co_ids')
-          .eq('project_id', projectId)
-          .not('co_ids', 'is', null);
-        if (invErr) throw invErr;
-
-        const billed = new Set<string>();
-        for (const inv of invoices ?? []) {
-          const ids = (inv as any).co_ids as string[] | null;
-          if (ids) ids.forEach(id => billed.add(id));
-        }
-
-        setExistingCoIds(billed);
+        const billed = await fetchWoBilledToDate(projectId, currentOrgId, filtered.map(c => c.id));
+        setBilledMap(billed);
         setApprovedCOs(filtered as ApprovedCO[]);
       } catch (err: any) {
         toast.error(err.message || 'Failed to load change orders');
