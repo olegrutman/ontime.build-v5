@@ -458,7 +458,7 @@ export function POWizardV2({
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Back" title="Back" onClick={handleBack}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1 min-w-0"><h2 className="font-heading text-2xl font-semibold uppercase leading-tight break-words">{getHeaderTitle()}</h2><p className="text-xs text-muted-foreground mt-1 break-words">{projectName}</p></div>
+          <div className="flex-1 min-w-0"><h2 className="font-heading text-2xl font-semibold uppercase leading-tight break-words">{screen === 'picker' ? 'Add materials' : getHeaderTitle()}</h2><p className="text-xs text-muted-foreground mt-1 break-words">{projectName}</p></div>
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Return to order items" title="Return to order items" onClick={() => setScreen('items')}>
             <X className="h-4 w-4" />
           </Button>
@@ -533,9 +533,10 @@ export function POWizardV2({
         {screen === 'picker' && formData.supplier_id && (
           <ProductPickerContent
             ref={pickerRef}
-            libraryMode
+            workspaceMode
             supplierControl={(
-              <div className="w-full sm:w-64 shrink-0">
+              <div className="w-full sm:w-64 shrink-0 flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">Supplier</span>
                 <Select value={formData.supplier_id ?? undefined} onValueChange={id => {
                   const supplier = suppliers.find(s => s.id === id);
                   if (supplier) handleChange({ supplier_id: id, supplier_name: supplier.name });
@@ -576,7 +577,7 @@ export function POWizardV2({
       {screen === 'picker' && (
         <footer className="shrink-0 border-t bg-card px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <span className="text-xs flex items-center gap-2"><ShoppingCart className="h-4 w-4 shrink-0 text-muted-foreground" />{formData.line_items.length} {formData.line_items.length === 1 ? 'item' : 'items'} in order</span>
-          <Button variant="secondary" disabled={!canAdvanceFromItems} onClick={() => { setEditingItem(null); setScreen('review'); }}>Review order<ArrowRight /></Button>
+          <Button variant="outline" disabled={!canAdvanceFromItems} onClick={() => { setEditingItem(null); setScreen('review'); }}>Review order<ArrowRight /></Button>
         </footer>
       )}
     </div>
