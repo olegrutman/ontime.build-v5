@@ -34,8 +34,8 @@ export function SelectionRail({ category, fields, filters, currentField, seconda
         const active = currentField === field;
         return <Button key={field} variant="ghost" disabled={!value && !active} onClick={() => onEdit(field)}
           aria-label={`Change ${FIELD_LABELS[field] ?? field}`}
-          className={`h-auto min-h-10 md:min-h-16 justify-start gap-3 px-2 py-2 md:py-3 text-left whitespace-normal sm:whitespace-normal md:w-full ${active ? 'bg-secondary/10' : ''}`}>
-          <span className={`flex h-6 w-6 items-center justify-center rounded-full shrink-0 text-xs ${value ? 'bg-success text-success-foreground' : active ? 'bg-secondary text-secondary-foreground' : 'border text-muted-foreground'}`}>
+          className={`h-auto min-h-10 md:min-h-16 justify-start gap-3 px-2 py-2 md:py-3 text-left whitespace-normal sm:whitespace-normal md:w-full ${active ? 'bg-command/10' : ''}`}>
+          <span className={`flex h-6 w-6 items-center justify-center rounded-full shrink-0 text-xs ${value ? 'bg-state-approved text-command-foreground' : active ? 'bg-command text-command-foreground' : 'border text-muted-foreground'}`}>
             {value ? <Check className="!size-3.5" /> : index + 1}
           </span>
           <span className="min-w-0 flex-1"><span className="block text-xs font-semibold">{FIELD_LABELS[field] ?? field}</span>
@@ -44,8 +44,8 @@ export function SelectionRail({ category, fields, filters, currentField, seconda
           {value && <Pencil className="!size-3 text-muted-foreground hidden md:block" />}
         </Button>;
       })}
-      <div className={`hidden md:flex items-center gap-3 px-2 py-3 rounded-md ${!currentField ? 'bg-secondary/10' : ''}`}>
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs shrink-0">{product ? <Check className="size-3.5" /> : fields.length + 1}</span>
+      <div className={`hidden md:flex items-center gap-3 px-2 py-3 rounded-md ${!currentField ? 'bg-command/10' : ''}`}>
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-command text-command-foreground text-xs shrink-0">{product ? <Check className="size-3.5" /> : fields.length + 1}</span>
         <span className="text-xs font-semibold">Product</span>
       </div>
     </div>
@@ -65,10 +65,10 @@ export function WorkspaceProducts({ products, selected, onSelect }: ProductsProp
       const isSelected = selected?.id === product.id;
       const isLumber = product.category === 'FramingLumber' || product.category === 'FinishLumber';
       return <Button key={product.id} variant="outline" aria-pressed={isSelected} onClick={() => onSelect(product)}
-        className={`relative h-auto w-full flex-col items-stretch justify-start gap-0 overflow-hidden rounded-lg p-0 text-left whitespace-normal sm:whitespace-normal ${isSelected ? 'border-success ring-1 ring-success bg-success/5' : 'bg-card'}`}>
+        className={`relative h-auto w-full flex-col items-stretch justify-start gap-0 overflow-hidden rounded-lg p-0 text-left whitespace-normal sm:whitespace-normal ${isSelected ? 'border-state-approved ring-1 ring-state-approved bg-state-approved/5' : 'bg-card'}`}>
         {isLumber ? <img src={lumberImage} alt="Representative framing lumber" loading="lazy" width={992} height={672} className="w-full h-32 lg:h-36 object-contain bg-background" />
           : <div className="h-20 flex items-center justify-center bg-muted/30"><Package className="!size-8 text-muted-foreground" /></div>}
-        <span className={`absolute top-3 right-3 size-5 rounded-full flex items-center justify-center ${isSelected ? 'bg-success text-success-foreground' : 'bg-background border border-muted-foreground/40'}`}>
+        <span className={`absolute top-3 right-3 size-5 rounded-full flex items-center justify-center ${isSelected ? 'bg-state-approved text-command-foreground' : 'bg-background border border-muted-foreground/40'}`}>
           {isSelected && <Check className="!size-3" />}
         </span>
         <span className="block p-3 space-y-1 min-w-0">
@@ -83,6 +83,6 @@ export function WorkspaceProducts({ products, selected, onSelect }: ProductsProp
 
 export function SpecificationChips({ filters }: { filters: Record<string, string> }) {
   return <div className="flex flex-wrap gap-1.5" aria-label="Selected specifications">
-    {Object.entries(filters).filter(([, value]) => value).map(([field, value]) => <Badge key={field} variant="secondary" className="text-[10px] font-normal bg-success/10 text-foreground border-0 break-words whitespace-normal">{selectionLabel(field, value)}</Badge>)}
+    {Object.entries(filters).filter(([, value]) => value).map(([field, value]) => <Badge key={field} variant="secondary" className="text-[10px] font-normal bg-state-approved/10 text-foreground border-0 break-words whitespace-normal">{selectionLabel(field, value)}</Badge>)}
   </div>;
 }

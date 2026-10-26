@@ -211,16 +211,16 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">{workspaceMode ? 'Packaging' : 'Order As'}</Label>
               <div className="flex gap-2">
-                <Button variant={orderMode === 'bundle' ? (workspaceMode ? 'secondary' : 'default') : 'outline'}
-                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                <Button variant={orderMode === 'bundle' ? (workspaceMode ? 'outline' : 'default') : 'outline'}
+                  className={`flex-1 min-w-0 h-auto min-h-10 whitespace-normal ${workspaceMode && orderMode === 'bundle' ? 'bg-command text-command-foreground hover:bg-command/90 hover:text-command-foreground' : ''}`}
                   aria-pressed={orderMode === 'bundle'}
                   onClick={() => changeOrderMode('bundle')}
                 >
                   <Package className="h-4 w-4 mr-1" />
                   {product.bundle_type} ({bundleQty})
                 </Button>
-                <Button variant={orderMode === 'each' ? (workspaceMode ? 'secondary' : 'default') : 'outline'}
-                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                <Button variant={orderMode === 'each' ? (workspaceMode ? 'outline' : 'default') : 'outline'}
+                  className={`flex-1 min-w-0 h-auto min-h-10 whitespace-normal ${workspaceMode && orderMode === 'each' ? 'bg-command text-command-foreground hover:bg-command/90 hover:text-command-foreground' : ''}`}
                   aria-pressed={orderMode === 'each'}
                   onClick={() => changeOrderMode('each')}
                 >
@@ -301,7 +301,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
         </div>
 
         {/* Submit */}
-        <Button className={`w-full h-12 text-sm ${workspaceMode ? 'lg:col-start-2 lg:self-end' : ''}`} onClick={handleSubmit}>
+        <Button variant={workspaceMode ? 'secondary' : 'default'} className={`w-full h-12 text-sm ${workspaceMode ? 'lg:col-start-2 lg:self-end' : ''}`} onClick={handleSubmit}>
           <Check className="h-4 w-4 mr-2" />
           {isEditing ? 'Update Item' : 'Add to PO'}
         </Button>
