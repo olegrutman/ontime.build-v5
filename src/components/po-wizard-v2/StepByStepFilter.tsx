@@ -39,6 +39,7 @@ async function discoverFilterSequence(
   let query = supabase
     .from('catalog_items')
     .select(selectFields)
+    .eq('is_active', true)
     .match(matchObj);
 
   if (estimateCatalogIds && estimateCatalogIds.length > 0) {
@@ -117,6 +118,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
       let countQuery = supabase
         .from('catalog_items')
         .select('id', { count: 'exact', head: true })
+        .eq('is_active', true)
         .match(matchObj);
       if (estimateCatalogIds && estimateCatalogIds.length > 0) {
         countQuery = countQuery.in('id', estimateCatalogIds);
@@ -162,6 +164,7 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
       let query = supabase
         .from('catalog_items')
         .select(currentField)
+        .eq('is_active', true)
         .match(filterObj);
 
       if (estimateCatalogIds && estimateCatalogIds.length > 0) {
