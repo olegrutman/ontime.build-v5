@@ -66,7 +66,7 @@ export const HardwarePicker = forwardRef<HardwarePickerHandle, Props>(function H
     {field ? <div className="grid gap-2">
       {options.map(({ value, count }, i) => {
         const Icon = icons[i % icons.length];
-        return <Button key={value} variant="outline" className="h-auto min-h-16 w-full justify-start gap-3 whitespace-normal text-left py-3"
+        return <Button key={value} variant="outline" className="h-auto min-h-16 w-full justify-start gap-3 whitespace-normal sm:whitespace-normal text-left py-3"
           onClick={() => { setHistory([...history, state]); setState(advanceHardware(rows, { ...state.selection, [field]: value }, state.index + 1)); }}>
           {field === 'family' && <Icon className="h-5 w-5 text-primary shrink-0" />}
           <span className="flex-1 min-w-0 break-words">{value}</span>
@@ -75,7 +75,7 @@ export const HardwarePicker = forwardRef<HardwarePickerHandle, Props>(function H
       })}
     </div> : <div className="space-y-2">
       <p className="text-xs text-muted-foreground">{candidates.length} matching products</p>
-      {candidates.map(({ product }) => <Button key={product.id} variant="outline" className="h-auto w-full justify-start gap-2 whitespace-normal text-left py-3" onClick={() => onSelect(product)}>
+      {candidates.map(({ product }) => <Button key={product.id} variant="outline" className="h-auto w-full justify-start gap-2 whitespace-normal sm:whitespace-normal text-left py-3" onClick={() => onSelect(product)}>
         <span className="flex-1 min-w-0 space-y-1">
           <span className="block font-medium break-words">{product.name ?? product.description}</span>
           <span className="block text-xs text-muted-foreground break-words">{product.supplier_sku}{product.finish ? ` · ${product.finish}` : ''}</span>

@@ -29,6 +29,13 @@ describe('guided hardware rules', () => {
     const row = classifyHardware(p('Special connector', 'No documented dimensions', ' OTHER '));
     expect(filterHardware([row], { family: 'Other hardware' })).toEqual([row]);
   });
+  it('uses explicit screw and protective-plate evidence over coarse categories', () => {
+    expect(classifyHardware(p('Framing bracket/plate', 'Supplier details: SD #9X1-1/2" Structural Connector Screw.', 'PLATES CONNECTORS AND CLIPS')).family).toBe('Screws & Fasteners');
+    expect(classifyHardware(p('Nail stopper plate', 'Protective plate', 'FASTENERS')).family).toBe('Angles, Brackets & Clips');
+  });
+  it('preserves fractional anchor dimensions rather than dropping the denominator', () => {
+    expect(classifyHardware(p('Concrete anchor', 'Supplier details: Wedge-all Concrete Anchor 1/2X3-3/4.', 'ANCHORS')).size).toBe('1/2 × 3-3/4');
+  });
   it('auto-applies one-option steps and retains the full matching set', () => {
     const rows = [base44, cap44].map(classifyHardware);
     const first = advanceHardware(rows, {}, 0);

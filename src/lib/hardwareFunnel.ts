@@ -11,8 +11,11 @@ const normalize = (text: string) => text.toLowerCase().replace(/[×]/g, 'x').rep
 export function classifyHardware(product: CatalogProduct): HardwareCandidate {
   const sec = normalize(product.secondary_category ?? '').trim();
   const text = normalize(`${product.name ?? ''} ${product.description}`);
+  const detailText = text.includes('supplier details:') ? text.split('supplier details:')[1] : text;
   let family = 'Other hardware';
-  if (/hanger/.test(sec) || /hanger/.test(text)) family = 'Joist & Beam Hangers';
+  if (/stopper plate|shield plate|protective plate/.test(text)) family = 'Angles, Brackets & Clips';
+  else if (/structural.*screw|connector screw|\bsds\b/.test(detailText)) family = 'Screws & Fasteners';
+  else if (/hanger/.test(sec) || /hanger/.test(text)) family = 'Joist & Beam Hangers';
   else if (/post|column/.test(sec) || /post base|post cap|column connector/.test(text)) family = 'Post Bases & Caps';
   else if (/tie|strap/.test(sec)) family = 'Ties & Straps';
   else if (/hold.?down|anchor/.test(sec)) family = 'Concrete Anchors & Hold-Downs';
@@ -57,9 +60,10 @@ export function classifyHardware(product: CatalogProduct): HardwareCandidate {
   if (size === 'Size not specified') {
     // Only sizes explicitly written in supplier details or the descriptive name.
     const details = text.includes('supplier details:') ? text.split('supplier details:')[1] : text;
-    const lumber = details.match(/\b(\d+(?:-\d+\/\d+)?|\d+\/\d+)\s*x\s*(\d+(?:-\d+\/\d+)?)\b/);
-    const width = details.match(/\b(\d+(?:-\d+\/\d+)?|\d+\/\d+)\s*(?:"|in\b)\s*wide/);
-    const diameter = text.match(/diameter\s+(\d+(?:-\d+\/\d+)?|\d+\/\d+)\s*(?:in\b|")/);
+    const number = '(?:\\d+-\\d+/\\d+|\\d+/\\d+|\\d+(?:\\.\\d+)?)';
+    const lumber = details.match(new RegExp(`\\b(${number})\\s*x\\s*(${number})\\b`));
+    const width = details.match(new RegExp(`\\b(${number})\\s*(?:"|in\\b)\\s*wide`));
+    const diameter = text.match(new RegExp(`diameter\\s+(${number})\\s*(?:in\\b|")`));
     if (lumber) size = `${lumber[1]} × ${lumber[2]}`;
     else if (width) size = `${width[1]} in wide`;
     else if (diameter) size = `${diameter[1]} in diameter`;
