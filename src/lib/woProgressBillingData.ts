@@ -25,7 +25,7 @@ export async function fetchWoBilledToDate(projectId: string, orgId: string, coId
 
   const { data: lines } = await supabase
     .from('invoice_line_items')
-    .select('invoice_id, source_co_id, source_entry_id, current_billed')
+    .select('invoice_id, source_co_id, source_entry_ids, current_billed')
     .in('invoice_id', live.map(i => i.id));
 
   const invoicesWithTaggedLines = new Set<string>();
@@ -35,7 +35,7 @@ export async function fetchWoBilledToDate(projectId: string, orgId: string, coId
     const info = out.get(l.source_co_id);
     if (!info) continue;
     info.billed += Number(l.current_billed) || 0;
-    if (l.source_entry_id) info.entryIds.add(l.source_entry_id);
+    for (const e of (l.source_entry_ids ?? []) as string[]) info.entryIds.add(e);
   }
   for (const inv of live) {
     if (invoicesWithTaggedLines.has(inv.id)) continue;
