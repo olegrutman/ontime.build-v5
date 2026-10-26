@@ -1,6 +1,6 @@
 # Roadmap
-- [ ] Add guided hardware family, application and size choices within five steps, with model search and smart Back
-- [ ] Test hardware classification/navigation and verify signed-in PO selection and phone layouts
+- [x] Add guided hardware family, application and size choices within five steps, with model search and smart Back
+- [x] Test hardware classification/navigation (18 tests) and verify signed-in selection, smart Back and 20-piece box readback at desktop/320/394px; hardware layouts clear. Broader account audit flags existing access-denied/dashboard overflow outside this task.
 - [x] Show total pieces in package counters; 5 tests pass, live 294 → 588 and order item 588 EA verified; 320/394px counter checks clear (full audit blocked by existing account sign-in failure)
 - [x] Fix active supplier-scoped catalog filtering; live 2×4 / 10 ft / Doug Fir returns the correct item and random-length aliases are unified
 - [x] Restore 948 documented package conversions; verify two boxes of 25 read back as 50 EA, nine regressions pass, phone 320/394px checks clear; 59 ambiguous conversions deliberately remain unavailable
