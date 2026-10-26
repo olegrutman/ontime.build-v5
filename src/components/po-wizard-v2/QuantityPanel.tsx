@@ -208,15 +208,17 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Order As</Label>
               <div className="flex gap-2">
-                <Button variant="outline"
-                  className={`wz-pill flex-1 ${orderMode === 'bundle' ? 'wz-pill--active' : 'wz-pill--inactive'}`}
+                <Button variant={orderMode === 'bundle' ? 'default' : 'outline'}
+                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                  aria-pressed={orderMode === 'bundle'}
                   onClick={() => changeOrderMode('bundle')}
                 >
                   <Package className="h-4 w-4 mr-1" />
                   {product.bundle_type} ({bundleQty})
                 </Button>
-                <Button variant="outline"
-                  className={`wz-pill flex-1 ${orderMode === 'each' ? 'wz-pill--active' : 'wz-pill--inactive'}`}
+                <Button variant={orderMode === 'each' ? 'default' : 'outline'}
+                  className="flex-1 min-w-0 h-auto min-h-10 whitespace-normal"
+                  aria-pressed={orderMode === 'each'}
                   onClick={() => changeOrderMode('each')}
                 >
                   Individual
