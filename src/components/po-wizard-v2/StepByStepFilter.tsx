@@ -214,8 +214,25 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
       setAvailableValues(values);
 
       if (values.length === 0) {
+        // No options for this field — auto-skip and remember it so Back
+        // doesn't land here again.
+        autoAppliedRef.current.add(currentField);
         if (currentStepIndex >= totalSteps - 1) {
           onComplete(appliedFilters);
+        } else {
+          setCurrentStepIndex(prev => prev + 1);
+        }
+        return;
+      }
+
+      if (values.length === 1) {
+        // Only one possible choice (e.g. siding with a single length) —
+        // apply it and move on without asking.
+        autoAppliedRef.current.add(currentField);
+        const newFilters = { ...appliedFilters, [currentField]: values[0].value };
+        setAppliedFilters(newFilters);
+        if (currentStepIndex >= totalSteps - 1) {
+          onComplete(newFilters);
         } else {
           setCurrentStepIndex(prev => prev + 1);
         }
@@ -252,13 +269,19 @@ export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFil
   const handleBackStep = useCallback(() => {
     if (currentStepIndex === 0) {
       onBack();
-    } else {
-      const prevField = filterSequence[currentStepIndex - 1];
-      const newFilters = { ...appliedFilters };
-      delete newFilters[prevField];
-      setAppliedFilters(newFilters);
-      setCurrentStepIndex(prev => prev - 1);
+      return;
     }
+    // Walk back past any auto-applied steps so Back returns to the last
+    // step where the user actually made a choice.
+    const target = computeBackStep(filterSequence, autoAppliedRef.current, currentStepIndex);
+    const newFilters = { ...appliedFilters };
+    for (let i = target; i < currentStepIndex; i++) {
+      const field = filterSequence[i];
+      delete newFilters[field];
+      autoAppliedRef.current.delete(field);
+    }
+    setAppliedFilters(newFilters);
+    setCurrentStepIndex(target);
   }, [currentStepIndex, filterSequence, appliedFilters, onBack]);
 
   useImperativeHandle(ref, () => ({
