@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Fix revised-price acceptance hitting the project creator guard, preserving direct-edit restrictions; verify acceptance transaction without deciding Haley’s pending revision
 - [x] Add protected, auditable price revisions without removing existing approval; WO-5 $4,120 submitted and original $3,120 preserved
 - [x] Add submit/approve/reject revision controls; verified signed-in IMIS submission/readback and Haley approval/rejection buttons, 11 tests pass, build OK, 72 phone views clear
 - [ ] Verify accepted revision and contract-delta readback after Haley makes the real decision; blocked on contractor approval, not performed on their behalf
