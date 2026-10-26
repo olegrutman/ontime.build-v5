@@ -24,3 +24,4 @@
 - Hardware guidance derives family/application/size from explicit catalog text in a shared pure classifier, paginates the supplier's active candidates, and retains unclassified products; this avoids invented fit specifications and truncated hardware selections.
 - Framing lumber type is the first field in the shared structured catalog funnel; display labels never replace stored filter values, preserving supplier-specific choices and scoped results.
 - Remodel/T&M projects get $0 GC↔Sub and Sub↔Crew contracts auto-created by ensure_tm_project_contracts (on participant accept / WO status change), because work-order approval and invoicing both require a contract between the two companies.
+- WO progress billing derives billed-to-date from invoice lines tagged with source_co_id/source_entry_ids (never stored on the WO); approved WOs bill incrementally, and deleting an invoice releases its entries through the line cascade.

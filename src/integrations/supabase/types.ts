@@ -3840,6 +3840,9 @@ export type Database = {
           scheduled_value: number
           sort_order: number
           source_co_id: string | null
+          source_entry_id: string | null
+          source_entry_ids: string[] | null
+          source_entry_type: string | null
           sov_item_id: string | null
           total_billed: number
         }
@@ -3857,6 +3860,9 @@ export type Database = {
           scheduled_value?: number
           sort_order?: number
           source_co_id?: string | null
+          source_entry_id?: string | null
+          source_entry_ids?: string[] | null
+          source_entry_type?: string | null
           sov_item_id?: string | null
           total_billed?: number
         }
@@ -3874,6 +3880,9 @@ export type Database = {
           scheduled_value?: number
           sort_order?: number
           source_co_id?: string | null
+          source_entry_id?: string | null
+          source_entry_ids?: string[] | null
+          source_entry_type?: string | null
           sov_item_id?: string | null
           total_billed?: number
         }

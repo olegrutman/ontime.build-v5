@@ -302,6 +302,20 @@
       "when": 1793033933197,
       "tag": "0042_tm_project_contracts",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793036658896,
+      "tag": "0043_wo_progress_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793036755976,
+      "tag": "0044_wo_progress_billing_entry_ids",
+      "breakpoints": true
     }
   ]
 }

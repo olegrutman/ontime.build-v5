@@ -28,6 +28,7 @@ import { COHeaderStrip } from './COHeaderStrip';
 import { COBillingStatusCard } from './COBillingStatusCard';
 import { COSidebar } from './COSidebar';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
+import { WOBilledToDateCard } from './WOBilledToDateCard';
 import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStickyFooter } from './COStickyFooter';
@@ -494,6 +495,19 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     tcBillableTotal,
   };
 
+  const billedCard = co && (isTC || isFC) ? (
+    <WOBilledToDateCard
+      projectId={projectId}
+      coId={co.id}
+      orgId={myOrgId}
+      status={co.status}
+      nteCap={(co as any).nte_cap ?? null}
+      value={isFC
+        ? Number(financials.viewer.ownLaborToUpstream ?? 0)
+        : Number((co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
+    />
+  ) : null;
+
   return (
     <div className="flex flex-col flex-1 min-h-0" style={{ background: 'hsl(var(--background))' }}>
       {/* Breadcrumb bar */}
@@ -847,6 +861,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             {!isMobile && (
               <div className="w-[300px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} />
+                {billedCard}
                 {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
               </div>
             )}
@@ -855,6 +870,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           {isMobile && (
             <>
               <COSidebar {...sidebarProps} />
+              {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
             </>
           )}
