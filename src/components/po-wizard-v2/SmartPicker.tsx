@@ -25,6 +25,8 @@ import { Search, X, Package, Clock, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { POWizardV2LineItem, CatalogProduct, SecondaryCount } from '@/types/poWizardV2';
 import { CATEGORY_FUNNELS } from '@/lib/categoryFunnels';
+import { isExactHardwareModel } from '@/lib/hardwareFunnel';
+import { HardwarePicker, type HardwarePickerHandle } from './HardwarePicker';
 import { StepByStepFilter, type StepByStepFilterHandle } from './StepByStepFilter';
 import { SecondaryCategoryList } from './SecondaryCategoryList';
 import { ProductList } from './ProductList';
@@ -40,6 +42,7 @@ export type PickerStep =
   | 'estimate'     // estimate picker
   | 'funnel'       // StepByStepFilter for 'structured' categories
   | 'secondary'    // Secondary list for 'hybrid' first step
+  | 'hardware'     // Guided family / application / size / model
   | 'products'     // Terminal product list
   | 'quantity';    // QuantityPanel
 
@@ -109,6 +112,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   ref,
 ) {
   const filterRef = useRef<StepByStepFilterHandle>(null);
+  const hardwareRef = useRef<HardwarePickerHandle>(null);
 
   // Map legacy 'source' alias → 'landing'
   const resolvedInitialStep: PickerStep =
@@ -212,7 +216,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         const { data } = await supabase.rpc('search_catalog_v3', {
           p_query: searchQuery,
           p_supplier_id: supplierId,
-          p_category: (step === 'funnel' || step === 'secondary' || step === 'products')
+          p_category: (step === 'funnel' || step === 'secondary' || step === 'products' || step === 'hardware')
             ? dbCategoryForSearch
             : null,
           p_secondary: secondaryForSearch,
@@ -231,11 +235,14 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     const top = searchResults[0] as (CatalogProduct & { score?: number }) | undefined;
-    if (top && (top as any).score >= 1000) {
-      setSelectedProduct(top);
+    const exactModels = searchResults.filter(p => isExactHardwareModel(p, searchQuery));
+    const exact = top && (top as any).score >= 1000 ? top : exactModels.length === 1 ? exactModels[0] : undefined;
+    if (exact) {
+      setSelectedProduct(exact);
+      setSearchQuery('');
       setStep('quantity');
     }
-  }, [searchResults]);
+  }, [searchResults, searchQuery]);
 
   // -------------------------------------------------------------------------
   // Helper: hydrate a partial recent-item row into a full CatalogProduct
@@ -264,7 +271,9 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
     setSelectedCategoryKey(categoryKey);
     setSelectedSecondary(null);
 
-    if (config.pattern === 'search') {
+    if (categoryKey === 'HARDWARE') {
+      setStep('hardware');
+    } else if (config.pattern === 'search') {
       // Open terminal list of all items in category, search will refine.
       setProductsLoading(true);
       const { data } = await supabase
@@ -333,6 +342,8 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         setStep('landing'); break;
       case 'secondary':
         goToLanding(); break;
+      case 'hardware':
+        hardwareRef.current?.goBack(); break;
       case 'funnel':
         // Let StepByStepFilter handle internal step-back; if it's at step 0
         // it will call onBack which we wired to land/secondary.
@@ -354,7 +365,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
         break;
       case 'quantity':
         if (editingItem) { onClearEdit(); onExitPicker(); return; }
-        setStep('products'); setSelectedProduct(null); break;
+        setStep(selectedCategoryKey === 'HARDWARE' ? 'hardware' : 'products'); setSelectedProduct(null); break;
     }
   }, [searchActive, step, selectedSecondary, selectedCategoryKey, editingItem, onExitPicker, onClearEdit, goToLanding]);
 
@@ -366,6 +377,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
       case 'estimate': return 'From Estimate';
       case 'secondary':return config?.displayName ?? 'Select Type';
       case 'funnel':   return selectedSecondary ?? config?.displayName ?? 'Filter';
+      case 'hardware': return 'Select Hardware';
       case 'products': return selectedSecondary ?? config?.displayName ?? 'Products';
       case 'quantity': return editingItem ? 'Edit Item' : 'Add to PO';
     }
@@ -446,6 +458,11 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto min-h-0">
+        {selectedCategoryKey === 'HARDWARE' && (
+          <div className={step === 'hardware' && !searchActive ? 'contents' : 'hidden'}>
+            <HardwarePicker ref={hardwareRef} supplierId={supplierId} onSelect={handleProductSelect} onBack={goToLanding} />
+          </div>
+        )}
         {searchActive ? (
           <SearchResultsView
             results={searchResults} loading={searching}
@@ -512,7 +529,7 @@ export const SmartPicker = forwardRef<SmartPickerHandle, SmartPickerProps>(funct
               />
             )}
 
-            {(step === 'funnel' || step === 'products') && dbCategory && (
+            {(step === 'funnel' || step === 'products') && dbCategory && selectedCategoryKey !== 'HARDWARE' && (
               // Keep the filter mounted while products show so Back returns
               // to the user's last real choice instead of restarting the funnel.
               <div className={step === 'products' ? 'hidden' : 'contents'}>

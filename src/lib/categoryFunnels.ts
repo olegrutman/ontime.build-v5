@@ -11,7 +11,7 @@
  *   - 'search'     — skip funnel entirely, terminal list + search
  */
 
-export type FunnelPattern = 'structured' | 'hybrid' | 'search';
+export type FunnelPattern = 'structured' | 'hybrid' | 'search' | 'hardware';
 
 export interface CategoryFunnel {
   /** The enum value stored in catalog_items.category */
@@ -87,7 +87,7 @@ export const CATEGORY_FUNNELS: Record<string, CategoryFunnel> = {
     dbCategory: 'Hardware',
     displayName: 'Hardware',
     icon: '🔩',
-    pattern: 'search',
+    pattern: 'hardware',
   },
   FRAMING_ACCESSORIES: {
     dbCategory: 'FramingAccessories',
@@ -113,9 +113,10 @@ export const CATEGORY_FUNNELS: Record<string, CategoryFunnel> = {
  * Helper: given a category key, decide the first screen the picker
  * should show.
  */
-export function initialStepFor(categoryKey: string): 'funnel' | 'search' | 'secondary' {
+export function initialStepFor(categoryKey: string): 'funnel' | 'search' | 'secondary' | 'hardware' {
   const config = CATEGORY_FUNNELS[categoryKey];
   if (!config) return 'search';
+  if (config.pattern === 'hardware') return 'hardware';
   if (config.pattern === 'search') return 'search';
   if (config.pattern === 'hybrid') return 'secondary';
   return 'funnel';
