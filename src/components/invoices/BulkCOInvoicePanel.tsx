@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { buildInvoiceNumber } from '@/lib/invoiceNumber';
+import { buildInvoiceNumber, invoiceOrderReference } from '@/lib/invoiceNumber';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -42,11 +42,6 @@ interface Props {
 const money = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
 
-function shortNum(n: string | null) {
-  const m = n?.match(/(\d+)\s*$/);
-  return m ? `CO-${m[1]}` : n || 'CO';
-}
-
 function extractScopeOfWork(desc: string | null | undefined): string | null {
   if (!desc) return null;
   const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
@@ -74,7 +69,7 @@ function coLabel(co: BulkBillableCO) {
   const base = (!looksLikeAutoTitle && rawTitle)
     ? rawTitle
     : (scopeFirstLine && scopeFirstLine.length > 4 ? scopeFirstLine : (rawTitle || 'Change Order'));
-  return `${base} (${shortNum(co.co_number)})`;
+  return `${invoiceOrderReference(co.co_number)} · ${base}`;
 }
 
 export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel, onDone }: Props) {
@@ -165,7 +160,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
 
   const linesForCO = async (co: BulkBillableCO, invoiceId: string, startIdx: number, ret: number, billingOrgId: string | null) => {
     const rows = await itemRowsFor(co, billingOrgId);
-    const tag = shortNum(co.co_number);
+    const tag = invoiceOrderReference(co.co_number);
     const coTitle = coLabel(co);
     return rows.map((r, i) => {
       const label = `${tag} · ${r.label}`;
@@ -229,7 +224,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
       const rows = prepared.get(co.co_id) ?? [];
       allLines.push(...rows.map((row, index) => ({
         ...lineFor(co, inv.id, allLines.length + index, ret),
-        description: `${shortNum(co.co_number)} · ${row.label}`.slice(0, 240),
+        description: `${invoiceOrderReference(co.co_number)} · ${row.label}`.slice(0, 240),
         source_entry_ids: row.entryIds,
         scheduled_value: row.amount, previous_billed: 0,
         current_billed: row.amount, total_billed: row.amount,
@@ -243,7 +238,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
     await supabase.from('project_activity').insert({
       project_id: projectId,
       activity_type: 'INVOICE_CREATED',
-      description: `Invoice ${number} created for ${list.map(c => shortNum(c.co_number)).join(', ')} (${money(gross)})`,
+      description: `Invoice ${number} created for ${list.map(c => invoiceOrderReference(c.co_number)).join(', ')} (${money(gross)})`,
       actor_user_id: userId,
     });
   };
@@ -299,7 +294,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
                 <Checkbox checked={selected.has(co.co_id)} onCheckedChange={() => toggle(co.co_id)} />
                 <div className="ml-3 min-w-0 flex-1">
                   <div className="truncate text-sm text-foreground">
-                    {shortNum(co.co_number)} · {co.title || 'Change Order'}
+                    {invoiceOrderReference(co.co_number)} · {co.title || 'Change Order'}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {co.to_org_name ? `Bill to ${co.to_org_name}` : 'Upstream party'}

@@ -312,7 +312,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           desc = `${itemName} – Labor`;
         }
         if (entry.description) desc += ` (${entry.description})`;
-        generated.push({ description: desc, amount: entry.line_total ?? 0, coId: entry.co_id, type: 'labor', entryIds: [entry.id] });
+        generated.push({ description: `${coById.get(entry.co_id)?.co_number ?? 'Order'} · ${desc}`, amount: entry.line_total ?? 0, coId: entry.co_id, type: 'labor', entryIds: [entry.id] });
       }
 
       // Materials → line items. Skip when GC procures (supplier bills GC directly).
@@ -324,7 +324,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           desc += ` – ${mat.quantity} ${mat.uom} × $${mat.unit_cost.toFixed(2)}`;
           if (mat.markup_percent > 0) desc += ` + ${mat.markup_percent}% markup`;
         }
-        generated.push({ description: desc, amount: mat.billed_amount ?? 0, coId: mat.co_id, type: 'material', entryIds: [mat.id] });
+        generated.push({ description: `${coById.get(mat.co_id)?.co_number ?? 'Order'} · ${desc}`, amount: mat.billed_amount ?? 0, coId: mat.co_id, type: 'material', entryIds: [mat.id] });
       }
 
       // Equipment → line items. Skip when GC procures.
@@ -334,7 +334,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         let desc = eq.description;
         if (eq.duration_note) desc += ` – ${eq.duration_note}`;
         if (eq.markup_percent > 0) desc += ` + ${eq.markup_percent}% markup`;
-        generated.push({ description: desc, amount: eq.billed_amount ?? 0, coId: eq.co_id, type: 'equipment', entryIds: [eq.id] });
+        generated.push({ description: `${coById.get(eq.co_id)?.co_number ?? 'Order'} · ${desc}`, amount: eq.billed_amount ?? 0, coId: eq.co_id, type: 'equipment', entryIds: [eq.id] });
       }
 
       // Guardrail: cumulative billing can't pass the approved price / NTE cap.
