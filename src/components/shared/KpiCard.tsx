@@ -147,8 +147,12 @@ export function THead({ cols }: { cols: string[] }) {
   );
 }
 
-export function TdN({ children }: { children: ReactNode }) { return <span style={{ fontWeight: 700, color: C.ink }}>{children}</span>; }
-export function TdM({ children }: { children: ReactNode }) { return <span style={{ ...fontMono, fontSize: '0.78rem', color: C.ink2 }}>{children}</span>; }
+export const TdN = forwardRef<HTMLSpanElement, React.ComponentPropsWithoutRef<'span'>>(function TdN({ children, style, ...props }, ref) {
+  return <span {...props} ref={ref} style={{ fontWeight: 700, color: C.ink, ...style }}>{children}</span>;
+});
+export const TdM = forwardRef<HTMLSpanElement, React.ComponentPropsWithoutRef<'span'>>(function TdM({ children, style, ...props }, ref) {
+  return <span {...props} ref={ref} style={{ ...fontMono, fontSize: '0.78rem', color: C.ink2, ...style }}>{children}</span>;
+});
 
 export const cellStyle = { padding: '7px 9px', fontSize: '0.74rem', color: C.muted, borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' as const };
 export const cellStyleR = { ...cellStyle, textAlign: 'right' as const };

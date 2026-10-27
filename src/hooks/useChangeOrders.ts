@@ -287,7 +287,8 @@ export function useChangeOrders(projectId: string | null) {
   const { data: correctionRows = [] } = useQuery({
     queryKey: ['co-corrections', projectId, 'all'],
     enabled: !!projectId,
-    refetchInterval: 15000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
     queryFn: async () => {
       if (!projectId) return [];
       const { data, error } = await supabase.from('co_corrections').select('*').eq('project_id', projectId);

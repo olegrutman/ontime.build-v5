@@ -4,31 +4,12 @@ import App from "./App.tsx";
 import "./index.css";
 
 if (!Capacitor.isNativePlatform()) {
-  import("virtual:pwa-register").then(({ registerSW }) => {
-    registerSW({
-      immediate: true,
-      onRegisteredSW(_url, registration) {
-        if (!registration) return;
-        // Check for a new published build on load, on focus, and hourly, so a
-        // cached app shell can never keep serving an old UI.
-        const check = () => registration.update().catch(() => {});
-        check();
-        window.addEventListener("focus", check);
-        setInterval(check, 60 * 60 * 1000);
-      },
-    });
-  });
-
-  // A new service worker took control => the shell changed. Reload once so the
-  // user sees the freshly published UI instead of the cached one.
-  if ("serviceWorker" in navigator) {
-    let reloading = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloading) return;
-      reloading = true;
-      window.location.reload();
-    });
-  }
+  // Keep home-screen identity, without an app-shell cache or automatic reloads.
+  const manifest = document.createElement("link");
+  manifest.rel = "manifest";
+  manifest.href = "/manifest.webmanifest";
+  document.head.appendChild(manifest);
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+const root = document.getElementById("root");
+if (root) createRoot(root).render(<App />);

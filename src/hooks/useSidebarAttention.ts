@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 export function useSidebarAttention(projectId: string | undefined) {
   const { user, userOrgRoles } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization_id;
-  const [counts, setCounts] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    if (!projectId || !user) return;
-
-    const fetch = async () => {
+  const { data: counts = {} } = useQuery({
+    queryKey: ['sidebar-attention', projectId, user?.id, currentOrgId],
+    enabled: !!projectId && !!user,
+    staleTime: 60_000,
+    queryFn: async () => {
+      if (!projectId) return {};
       // CO attention = COs submitted for review UNION active FC input requests.
       // Fetch ids (not head counts) so the two sets can be unioned without
       // double-counting a CO that is both submitted and input-requested.
@@ -69,11 +69,9 @@ export function useSidebarAttention(projectId: string | undefined) {
         (e: any) => e.supplier_org_id !== currentOrgId
       ).length;
       if (pendingEstimates > 0) result['estimates'] = pendingEstimates;
-      setCounts(result);
-    };
-
-    fetch();
-  }, [projectId, user, currentOrgId]);
+      return result;
+    },
+  });
 
   return counts;
 }

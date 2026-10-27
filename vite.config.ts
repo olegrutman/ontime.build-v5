@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -16,47 +15,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    VitePWA({
-      registerType: "autoUpdate",
-      // Registration is done manually in src/main.tsx so it can be skipped
-      // on native (Capacitor) builds.
-      injectRegister: false,
-      strategies: "generateSW",
-      filename: "sw.js",
-      workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-        // Never let a published build be served from a stale shell.
-        skipWaiting: true,
-        clientsClaim: true,
-        cleanupOutdatedCaches: true,
-      },
-      manifest: {
-        name: "OnTime.Build — Construction Intelligence",
-        short_name: "OnTime.Build",
-        description: "Build Smarter. Deliver On Time. Modern construction billing, change order management, and project intelligence.",
-        theme_color: "#0F172A",
-        background_color: "#0F172A",
-        display: "standalone",
-        orientation: "portrait-primary",
-        start_url: "/dashboard",
-        scope: "/",
-        icons: [
-          {
-            src: "/ontime-logo.png",
-            sizes: "192x192",
-            type: "image/png",
-            purpose: "any maskable",
-          },
-          {
-            src: "/ontime-logo.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable",
-          },
-        ],
-      },
-    }),
   ].filter(Boolean),
   build: {
     // Explicit browser-support floor: Safari 14+, so newer syntax is downleveled.
