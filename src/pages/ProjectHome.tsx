@@ -346,7 +346,7 @@ export default function ProjectHome() {
                   address={formattedAddress}
                   status={projectStatus}
                   projectType={project.project_type}
-                  health={null}
+                  health={projectStatus === 'active' ? healthLabel : null}
                   rightSlot={<NotificationSheet />}
                   metaSlot={
                     !showAdoptionBanner && !isFC && (currentOrg?.type === 'GC' || currentOrg?.type === 'TC')
@@ -363,7 +363,7 @@ export default function ProjectHome() {
                   address={formattedAddress}
                   status={projectStatus}
                   projectType={project.project_type}
-                  health={projectStatus === 'active' ? healthLabel : null}
+                  health={null}
                   rightSlot={<NotificationSheet />}
                 />
               </div>

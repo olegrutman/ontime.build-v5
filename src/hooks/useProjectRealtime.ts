@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { coalescedRefresh } from '@/lib/coalescedRefresh';
 
 /**
  * Subscribes to realtime changes on change_order_projects, purchase_orders,
@@ -15,7 +16,12 @@ export function useProjectRealtime(projectId: string | undefined) {
   useEffect(() => {
     if (!projectId) return;
 
-    const bump = () => setRefreshKey((k) => k + 1);
+    const refresh = coalescedRefresh(() => {
+      queryClient.invalidateQueries({ queryKey: ['project-purchase-orders', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-attention', projectId] });
+      setRefreshKey((k) => k + 1);
+    });
+    const bump = refresh.schedule;
 
     const channel = supabase
       .channel(`project-realtime-${projectId}`)
@@ -107,6 +113,7 @@ export function useProjectRealtime(projectId: string | undefined) {
       .subscribe();
 
     return () => {
+      refresh.cancel();
       supabase.removeChannel(channel);
     };
   }, [projectId, queryClient]);

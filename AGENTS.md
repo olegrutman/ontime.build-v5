@@ -1,4 +1,7 @@
 # Project architecture rules
+- Auth hydration is identity-scoped and coalesced; same-user sign-in/token events never toggle route loading or refetch roles, because background session maintenance must preserve screen state.
+- Home-screen metadata stays manifest-only; the same-path /sw.js kill-switch removes old Workbox shell caches for one release, leaving /push/sw.js untouched, because automatic shell activation previously forced reloads.
+- Realtime bursts coalesce refreshes without changing mounted invoice/PO keys; overview financial queries run only on Overview and sidebar counts reuse organization-scoped cache, because navigation and edits must not reset forms or repeat unrelated work.
 - Invoice creation preserves full source order references through shared numbering helpers and saved line descriptions; issued invoices are not renumbered, preserving document traceability and billing history.
 - CO/WO correction versions are tracked atomically per editing organization; private costs never trigger upstream review, pending decisions are version-checked, and existing approvals remain unchanged until explicit acceptance.
 - Approval-audit reminders use unique notification event keys and separate price drift, missing snapshots, submission, and closeout; drift stays private to the submitting company until an explicit revision is submitted.

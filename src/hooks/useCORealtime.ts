@@ -1,12 +1,22 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { coalescedRefresh } from '@/lib/coalescedRefresh';
 
 export function useCORealtime(coId: string | null) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!coId) return; // ✓ verified
+    const keys = new Map<string, readonly unknown[]>();
+    const refresh = coalescedRefresh(() => {
+      for (const queryKey of keys.values()) queryClient.invalidateQueries({ queryKey });
+      keys.clear();
+    });
+    const invalidate = ({ queryKey }: { queryKey: readonly unknown[] }) => {
+      keys.set(JSON.stringify(queryKey), queryKey);
+      refresh.schedule();
+    };
 
     const channel = supabase
       .channel(`co-realtime-${coId}`)
@@ -72,6 +82,7 @@ export function useCORealtime(coId: string | null) {
       .subscribe();
 
     return () => {
+      refresh.cancel();
       supabase.removeChannel(channel); // ✓ verified
     };
   }, [coId, queryClient]);
