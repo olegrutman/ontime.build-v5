@@ -1344,6 +1344,7 @@ export type Database = {
           from_org_id: string
           project_id: string
           revision_id: string | null
+          scope_snapshot: Json
           state: string
           submitted_at: string | null
           submitted_version: number | null
@@ -1359,6 +1360,7 @@ export type Database = {
           from_org_id: string
           project_id: string
           revision_id?: string | null
+          scope_snapshot?: Json
           state?: string
           submitted_at?: string | null
           submitted_version?: number | null
@@ -1374,6 +1376,7 @@ export type Database = {
           from_org_id?: string
           project_id?: string
           revision_id?: string | null
+          scope_snapshot?: Json
           state?: string
           submitted_at?: string | null
           submitted_version?: number | null
