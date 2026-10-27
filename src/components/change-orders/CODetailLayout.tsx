@@ -27,6 +27,8 @@ import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
 import { COBillingStatusCard } from './COBillingStatusCard';
 import { COPriceRevisionCard } from './COPriceRevisionCard';
+import { COCorrectionCard } from './COCorrectionCard';
+import { useCOCorrections } from '@/hooks/useCOCorrections';
 import { COSidebar } from './COSidebar';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { WOBilledToDateCard } from './WOBilledToDateCard';
@@ -69,6 +71,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const coV4 = useCoV4Flag();
+  const { data: corrections = [] } = useCOCorrections(projectId, coId);
   const rl = useRoleLabelsContext();
   const { data: coRouting } = useCORoutingTargets(projectId);
 
@@ -241,6 +244,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   );
 
   function refreshDetail() {
+    queryClient.invalidateQueries({ queryKey: ['co-corrections', projectId] });
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
     queryClient.invalidateQueries({ queryKey: ['co-financials-v2', coId] });
@@ -598,7 +602,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* Next Action Banner */}
-          <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} />
+          <COCorrectionCard corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
+          <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
           {/* External (owner / architect) approval status */}

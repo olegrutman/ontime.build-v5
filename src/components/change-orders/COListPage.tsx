@@ -16,6 +16,8 @@ import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermission } from '@/components/auth/RequirePermission';
 import { useCOsInProposals } from '@/hooks/useCOProposals';
+import { useCOCorrections } from '@/hooks/useCOCorrections';
+import { correctionLabel, correctionNeedsAction } from '@/lib/coCorrection';
 
 
 
@@ -26,14 +28,16 @@ interface COListPageProps {
   isTM?: boolean;
 }
 
-type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter' | 'withdrawn_filter' | 'crew_approved';
+type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter' | 'withdrawn_filter' | 'crew_approved' | 'corrections';
 
 export function COListPage({ projectId, isTM = false }: COListPageProps) {
   const dt = docTypeFromMode(isTM);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { userOrgRoles } = useAuth();
-  const { changeOrders, isLoading } = useChangeOrders(projectId);
+  const { changeOrders: orders, isLoading } = useChangeOrders(projectId);
+  const { data: corrections = [] } = useCOCorrections(projectId);
+  const changeOrders = useMemo(() => orders.map(co => ({ ...co, correction: corrections.find(c => c.co_id === co.id && correctionLabel(c)) })), [orders, corrections]);
 
 
   const canCreateCO = usePermission('canCreateChangeOrders');
@@ -90,6 +94,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
       }
       if (co.status === 'withdrawn') withdrawnCount++;
       if (
+        correctionNeedsAction(co.correction, orgId) ||
         (co.status === 'submitted' && co.org_id === orgId) ||
         (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
         (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId)
@@ -107,7 +112,9 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   // Filter
   const filteredCOs = useMemo(() => {
     if (filter === 'all') return changeOrders;
+    if (filter === 'corrections') return changeOrders.filter(co => correctionLabel(co.correction));
     if (filter === 'my_action') return changeOrders.filter(co =>
+      correctionNeedsAction(co.correction, orgId) ||
       (co.status === 'submitted' && co.org_id === orgId) ||
       (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
       (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId)
@@ -126,6 +133,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   // Float COs needing this org's action to the top
   const sortedCOs = useMemo(() => {
     const isAction = (co: typeof filteredCOs[number]) =>
+      correctionNeedsAction(co.correction, orgId) ||
       (co.status === 'submitted' && co.org_id === orgId) ||
       (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
       (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId);
@@ -141,6 +149,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
   }
 
   const needsAction = (co: typeof changeOrders[number]) =>
+    correctionNeedsAction(co.correction, orgId) ||
     (co.status === 'submitted' && co.org_id === orgId) ||
     (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
     (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId);
@@ -196,12 +205,13 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
         {([
           { key: 'all', label: 'All', count: total },
           { key: 'my_action', label: 'Action', count: stats.myActionCount },
+          { key: 'corrections', label: 'Corrections', count: changeOrders.filter(co => correctionLabel(co.correction)).length },
           { key: 'in_progress', label: 'Active', count: stats.inProgressCount },
           { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
           ...(crewApprovedCount > 0 ? [{ key: 'crew_approved' as FilterKey, label: 'Crew approved · ready to bill', count: crewApprovedCount }] : []),
           ...(stats.withdrawnCount > 0 ? [{ key: 'withdrawn_filter' as FilterKey, label: 'Withdrawn', count: stats.withdrawnCount }] : []),
         ] as { key: FilterKey; label: string; count: number }[]).map(f => (
-          <button
+          <Button variant="outline"
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={cn(
@@ -215,7 +225,7 @@ export function COListPage({ projectId, isTM = false }: COListPageProps) {
             <span className="text-[11px] sm:text-xs tabular-nums opacity-70 ml-0.5">
               {f.count}
             </span>
-          </button>
+          </Button>
         ))}
       </div>
 

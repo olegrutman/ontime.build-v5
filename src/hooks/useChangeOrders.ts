@@ -4,8 +4,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { getCOPricingReadiness, type COPricingReadiness } from '@/lib/coPricingReadiness';
 import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/changeOrder';
+import type { OrderCorrection } from '@/lib/coCorrection';
+import { correctionLabel } from '@/lib/coCorrection';
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
+  correction?: OrderCorrection | null;
   pricing_readiness?: COPricingReadiness;
   collaboratorStatus?: COCollaboratorStatus;
   collaboratorOrgId?: string;
@@ -281,7 +284,18 @@ export function useChangeOrders(projectId: string | null) {
     },
   });
 
-  const changeOrders = queryResult?.items ?? [];
+  const { data: correctionRows = [] } = useQuery({
+    queryKey: ['co-corrections', projectId, 'all'],
+    enabled: !!projectId,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      if (!projectId) return [];
+      const { data, error } = await supabase.from('co_corrections').select('*').eq('project_id', projectId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const changeOrders = (queryResult?.items ?? []).map(co => ({ ...co, correction: correctionRows.find(row => row.co_id === co.id && correctionLabel(row as unknown as OrderCorrection)) as unknown as OrderCorrection | undefined }));
   const isGCOnProject = queryResult?.isGCOnProject ?? false;
 
   const grouped: GroupedChangeOrders = {

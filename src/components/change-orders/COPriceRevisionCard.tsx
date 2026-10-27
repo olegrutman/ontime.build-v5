@@ -10,8 +10,8 @@ import type { ChangeOrder } from '@/types/changeOrder';
 
 const money = (value: number) => value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onRefresh }: {
-  co: ChangeOrder; myOrgId: string; isTC: boolean; isGC: boolean; currentLabor: number; onRefresh: () => void;
+export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onRefresh, correctionManaged = false }: {
+  co: ChangeOrder; myOrgId: string; isTC: boolean; isGC: boolean; currentLabor: number; onRefresh: () => void; correctionManaged?: boolean;
 }) {
   const queryClient = useQueryClient();
   const canCreate = usePermission('canCreateChangeOrders');
@@ -69,8 +69,8 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
       )}
       {pending && <p className="text-xs text-muted-foreground">The original approved price remains in effect until this revision is accepted.</p>}
       <div className="flex flex-wrap gap-2">
-        {!pending && canSubmit && changed && <Button disabled={saving} onClick={() => void act()}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit revised price</Button>}
-        {pending && isGC && canDecidePriceRevision(pending.status, pending.to_org_id, myOrgId, canApprove) && <>
+        {!correctionManaged && !pending && canSubmit && changed && <Button disabled={saving} onClick={() => void act()}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit revised price</Button>}
+        {!correctionManaged && pending && isGC && canDecidePriceRevision(pending.status, pending.to_org_id, myOrgId, canApprove) && <>
           <Button disabled={saving} onClick={() => void act(true)}><Check className="h-4 w-4" />Approve revised price</Button>
           <Button variant="outline" disabled={saving} onClick={() => void act(false)}><X className="h-4 w-4" />Reject revision</Button>
         </>}

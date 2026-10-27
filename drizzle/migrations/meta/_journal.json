@@ -337,6 +337,27 @@
       "when": 1793045669443,
       "tag": "0047_deduplicate_order_approval_audit_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793061043402,
+      "tag": "0048_track_order_corrections_by_party",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793061154482,
+      "tag": "0049_complete_correction_snapshot_and_resubmission",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793061786531,
+      "tag": "0050_clear_corrections_on_normal_order_approval",
+      "breakpoints": true
     }
   ]
 }

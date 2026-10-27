@@ -10,6 +10,13 @@ export function useCORealtime(coId: string | null) {
 
     const channel = supabase
       .channel(`co-realtime-${coId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'co_corrections', filter: `co_id=eq.${coId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['co-corrections'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'co_price_revisions', filter: `co_id=eq.${coId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['co-corrections'] });
+        queryClient.invalidateQueries({ queryKey: ['co-price-revisions', coId] });
+      })
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'co_line_items', filter: `co_id=eq.${coId}` },
@@ -23,6 +30,7 @@ export function useCORealtime(coId: string | null) {
         () => {
           queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'labor'] }); // ✓ verified
           queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'co'] });
+          queryClient.invalidateQueries({ queryKey: ['co-corrections'] });
         }
       )
       .on(

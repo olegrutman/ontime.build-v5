@@ -1334,6 +1334,100 @@ export type Database = {
           },
         ]
       }
+      co_corrections: {
+        Row: {
+          approved_version: number
+          changed_at: string
+          changed_by: string | null
+          co_id: string
+          decided_at: string | null
+          from_org_id: string
+          project_id: string
+          revision_id: string | null
+          scope_snapshot: Json
+          state: string
+          submitted_at: string | null
+          submitted_version: number | null
+          to_org_id: string | null
+          version: number
+        }
+        Insert: {
+          approved_version?: number
+          changed_at?: string
+          changed_by?: string | null
+          co_id: string
+          decided_at?: string | null
+          from_org_id: string
+          project_id: string
+          revision_id?: string | null
+          scope_snapshot?: Json
+          state?: string
+          submitted_at?: string | null
+          submitted_version?: number | null
+          to_org_id?: string | null
+          version?: number
+        }
+        Update: {
+          approved_version?: number
+          changed_at?: string
+          changed_by?: string | null
+          co_id?: string
+          decided_at?: string | null
+          from_org_id?: string
+          project_id?: string
+          revision_id?: string | null
+          scope_snapshot?: Json
+          state?: string
+          submitted_at?: string | null
+          submitted_version?: number | null
+          to_org_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_corrections_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_corrections_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders_role_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_corrections_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_corrections_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_corrections_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "co_price_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_corrections_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_equipment_items: {
         Row: {
           added_by_role: string
@@ -9521,6 +9615,10 @@ export type Database = {
         Returns: Json
       }
       current_user_verified_email: { Args: never; Returns: string }
+      decide_co_correction: {
+        Args: { _approve: boolean; _co_id: string; _from_org_id: string }
+        Returns: undefined
+      }
       decide_co_price_revision: {
         Args: { _approve: boolean; _revision_id: string }
         Returns: {
@@ -10185,6 +10283,10 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       storage_first_folder_uuid: { Args: { _name: string }; Returns: string }
+      submit_co_correction: {
+        Args: { _co_id: string; _from_org_id: string }
+        Returns: undefined
+      }
       submit_co_price_revision: {
         Args: { _co_id: string }
         Returns: {
