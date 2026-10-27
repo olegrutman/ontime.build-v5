@@ -427,13 +427,13 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
+        <div className="flex items-center gap-4 min-w-0 sm:flex-1">
           <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold truncate">{invoice.invoice_number}</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="min-w-0 max-w-full text-xl font-bold break-words [overflow-wrap:anywhere]">{invoice.invoice_number}</h2>
               <InvoiceStatusBadge status={status} />
               {(invoice as any).revision_count > 0 && (
                 <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
