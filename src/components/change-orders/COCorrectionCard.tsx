@@ -33,6 +33,7 @@ export function COCorrectionCard({ corrections, myOrgId, projectId, onRefresh }:
     {active.map(c => <div key={c.from_org_id} className="space-y-3">
       <COCorrectionBadge correction={c} />
       <p className="text-xs text-muted-foreground">Scope or billable details changed. Existing approval remains in effect until the correction is accepted.</p>
+      {c.state === 'pending' && c.scope_snapshot?.length ? <ul className="divide-y divide-border">{c.scope_snapshot.map((item, index) => <li key={index} className="flex flex-wrap items-start justify-between gap-2 py-2 text-sm"><span className="min-w-0 break-words">{item.item}{item.description && <span className="block text-xs text-muted-foreground">{item.description}</span>}</span><span className="shrink-0 font-mono text-xs">{item.qty ?? '—'} {item.unit}</span></li>)}</ul> : null}
       <div className="flex flex-wrap gap-2">
         {c.state !== 'pending' && c.from_org_id === myOrgId && canCreate && <Button disabled={saving} onClick={() => void act(c)}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit correction</Button>}
         {c.state === 'pending' && c.to_org_id === myOrgId && canApprove && <>

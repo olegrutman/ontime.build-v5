@@ -7,6 +7,7 @@ export interface OrderCorrection {
   submitted_version: number | null;
   state: string;
   changed_at: string;
+  scope_snapshot?: { item: string; description?: string; qty?: number; unit?: string; amount?: number }[];
 }
 
 export function correctionLabel(correction?: OrderCorrection | null): string | null {
