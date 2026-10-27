@@ -11,7 +11,7 @@ export function useCOCorrections(projectId: string, coId?: string) {
       if (coId) query = query.eq('co_id', coId);
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as OrderCorrection[];
+      return (data ?? []).map(row => ({ ...row, scope_snapshot: Array.isArray(row.scope_snapshot) ? row.scope_snapshot as unknown as OrderCorrection['scope_snapshot'] : [] }));
     },
   });
 }
