@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] Automatically track party-private CO/WO edits, show correction flags on list/detail, and require explicit correction approval without replacing existing approvals
+- [ ] Verify correction tracking, submission/decision guards, live flags and phone layouts
 - [x] Audit 54 CO/WO records; create 22 deduplicated action notifications for real companies (four pricing gaps, one missing snapshot, two missing submission notices, five closeouts, ten drafts), excluding test companies; verify notification readback
 - [x] Fix revised-price acceptance hitting the project creator guard through a protected acceptance trigger; creator-only direct editing remains unchanged
 - [x] Add protected, auditable price revisions without removing existing approval; WO-5 $4,120 submitted and original $3,120 preserved
