@@ -6,6 +6,7 @@ import type { COStatus } from '@/types/changeOrder';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import { EntrySourcePill } from './EntrySourcePill';
 import { coPricingStatusLabel } from '@/lib/coPricingReadiness';
+import { COCorrectionBadge } from './COCorrectionBadge';
 
 interface COBoardCardProps {
   co: ChangeOrderWithMembers;
@@ -146,6 +147,8 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
             {coPricingStatusLabel(co.status, co.pricing_readiness, co.kept_internal) ?? CO_STATUS_LABELS[co.status as COStatus]}
           </span>
         </div>
+
+        <COCorrectionBadge correction={co.correction} />
 
         <div className="h-[3px] bg-muted rounded-full overflow-hidden">
           <div

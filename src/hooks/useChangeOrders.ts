@@ -4,8 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { getCOPricingReadiness, type COPricingReadiness } from '@/lib/coPricingReadiness';
 import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/changeOrder';
+import type { OrderCorrection } from '@/lib/coCorrection';
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
+  correction?: OrderCorrection | null;
   pricing_readiness?: COPricingReadiness;
   collaboratorStatus?: COCollaboratorStatus;
   collaboratorOrgId?: string;

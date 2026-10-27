@@ -5,6 +5,7 @@ import type { ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import type { COStatus } from '@/types/changeOrder';
 import { COApprovalTrail } from './COApprovalTrail';
 import { EntrySourcePill } from './EntrySourcePill';
+import { COCorrectionBadge } from './COCorrectionBadge';
 
 const PRICING_BADGE: Record<string, string> = { fixed: 'Fixed', tm: 'T&M', nte: 'NTE' };
 
@@ -77,6 +78,7 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
             </span>
           )}
           <EntrySourcePill source={(co as { entry_source?: 'picker_v3' | 'ai_intake' | 'guided_v4' | 'field_pn' | null }).entry_source} />
+          <COCorrectionBadge correction={co.correction} />
 
           {co.pricing_type && (
             <Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px]">
