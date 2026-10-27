@@ -351,6 +351,13 @@
       "when": 1793061154482,
       "tag": "0049_complete_correction_snapshot_and_resubmission",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793061786531,
+      "tag": "0050_clear_corrections_on_normal_order_approval",
+      "breakpoints": true
     }
   ]
 }
