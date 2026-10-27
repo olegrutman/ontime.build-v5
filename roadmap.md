@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Use full original CO/WO references in invoice lines and single-order invoice numbers; verify creation paths without renumbering issued invoices
 - [x] Automatically track party-private CO/WO scope and billable edits; list/board/detail correction flags and filter; explicit version-checked correction decisions preserve existing approvals
 - [x] Verify live gazebo correction submission and pending readback; 15 tests passed, build OK; 72 phone views audited with one unrelated dashboard clipping finding. Real upstream acceptance remains the contractor's decision.
 - [x] Audit 54 CO/WO records; create 22 deduplicated action notifications for real companies (four pricing gaps, one missing snapshot, two missing submission notices, five closeouts, ten drafts), excluding test companies; verify notification readback

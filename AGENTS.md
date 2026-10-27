@@ -1,4 +1,5 @@
 # Project architecture rules
+- Invoice creation preserves full source order references through shared numbering helpers and saved line descriptions; issued invoices are not renumbered, preserving document traceability and billing history.
 - CO/WO correction versions are tracked atomically per editing organization; private costs never trigger upstream review, pending decisions are version-checked, and existing approvals remain unchanged until explicit acceptance.
 - Approval-audit reminders use unique notification event keys and separate price drift, missing snapshots, submission, and closeout; drift stays private to the submitting company until an explicit revision is submitted.
 - Approved-price revisions are immutable party-scoped records decided through authenticated RPCs; acceptance atomically applies only the price delta to the governing contract, while pending/rejected revisions preserve the original approval.

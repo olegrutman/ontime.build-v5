@@ -12,14 +12,13 @@ export function orgInitials(name: string | null | undefined): string {
   return name.replace(/^(the\s+)/i, '').trim().substring(0, 2).toUpperCase();
 }
 
-/** "CO-MAI-TC-TE-0007" -> "CO07" (used to tag change-order invoices). */
-export function coTag(coNumber: string | null | undefined, isTM = false): string | null {
-  if (!coNumber) return null;
-  const m = String(coNumber).match(/(\d+)\s*$/);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  if (!Number.isFinite(n)) return null;
-  return `${isTM ? 'WO' : 'CO'}${n.toString().padStart(2, '0')}`;
+/** Preserve the order's complete identity, including its original CO/WO type. */
+export function coTag(coNumber: string | null | undefined): string | null {
+  return coNumber?.trim() || null;
+}
+
+export function invoiceOrderReference(coNumber: string | null | undefined): string {
+  return coTag(coNumber) ?? 'Order';
 }
 
 interface Args {
@@ -35,7 +34,7 @@ interface Args {
 }
 
 /**
- * Canonical invoice number: INV-<PROJ>-<FROM>-<TO>[-CO07]-0001
+ * Canonical invoice number: INV-<PROJ>-<FROM>-<TO>[-<FULL ORDER NUMBER>]-0001
  * CO/WO invoices get their own sequence so they never continue (or collide with)
  * the base contract's progress-billing sequence.
  */
@@ -51,7 +50,7 @@ export async function buildInvoiceNumber({
   const parts = ['INV', projectCode(name), orgInitials(fromOrgName), orgInitials(toOrgName)];
   const tag = multiCoCount && multiCoCount > 1
     ? `${isTM ? 'WO' : 'CO'}MULTI`
-    : coTag(coNumber, isTM);
+    : coTag(coNumber);
   if (tag) parts.push(tag);
   const prefix = parts.join('-');
 
@@ -59,9 +58,10 @@ export async function buildInvoiceNumber({
     .from('invoices')
     .select('invoice_number')
     .eq('project_id', projectId)
-    .like('invoice_number', `${prefix}-%`);
+    .like('invoice_number', `${prefix.replace(/[\\%_]/g, '\\$&')}-%`);
 
-  const pattern = new RegExp(`^${prefix}-(\\d+)$`);
+  const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`^${escapedPrefix}-(\\d+)$`);
   let max = 0;
   (data ?? []).forEach(inv => {
     const m = inv.invoice_number?.match(pattern);

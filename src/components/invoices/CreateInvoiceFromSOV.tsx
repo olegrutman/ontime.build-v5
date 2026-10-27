@@ -29,7 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getContractDisplayName } from '@/hooks/useContractSOV';
-import { buildInvoiceNumber } from '@/lib/invoiceNumber';
+import { buildInvoiceNumber, invoiceOrderReference } from '@/lib/invoiceNumber';
 import { BulkCOInvoicePanel } from './BulkCOInvoicePanel';
 
 
@@ -88,13 +88,6 @@ interface BillableCO {
   grand_total: number;
   already_billed: number;
   remaining: number;
-}
-
-// Strip project/org prefix from a CO number like "CO-FUL-IM-HA-0001" -> "CO-0001"
-function shortCONumber(coNumber: string | null | undefined): string {
-  if (!coNumber) return 'CO';
-  const m = coNumber.match(/(\d+)\s*$/);
-  return m ? `CO-${m[1]}` : coNumber;
 }
 
 export interface RevisionData {
@@ -658,8 +651,8 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
           const labelBase = (!looksLikeAutoTitle && rawTitle)
             ? rawTitle
             : (scopeFirstLine && scopeFirstLine.length > 4 ? scopeFirstLine : (rawTitle || 'Change Order'));
-          const coRef = shortCONumber(selectedCO.co_number);
-          const label = coRef ? `${labelBase} (${coRef})` : labelBase;
+          const coRef = invoiceOrderReference(selectedCO.co_number);
+          const label = `${coRef} · ${labelBase}`;
           lineItemsToInsert = [{
             invoice_id: invoice.id,
             sov_item_id: null,
@@ -840,7 +833,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                       </div>
                     )}
                     {approvedCOs.map(co => {
-                      const num = shortCONumber(co.co_number);
+                      const num = invoiceOrderReference(co.co_number);
                       const label = co.title || 'Change Order';
                       const target = co.to_org_name ? ` → ${co.to_org_name}` : '';
                       const fullyBilled = co.remaining <= 0.005;
@@ -935,7 +928,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                                   </p>
                                 )}
                                 <p className="text-[11px] text-muted-foreground/80 mt-1">
-                                  Ref: {shortCONumber(selectedCO.co_number)}
+                                  Ref: {invoiceOrderReference(selectedCO.co_number)}
                                 </p>
                               </div>
                               <span className="text-sm text-muted-foreground flex-shrink-0">
