@@ -603,7 +603,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           {/* Next Action Banner */}
           <COCorrectionCard corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
-          <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} />
+          <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
           {/* External (owner / architect) approval status */}
