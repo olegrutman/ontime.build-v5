@@ -16,8 +16,8 @@ interface FCPricingToggleCardProps {
 }
 
 const OPTIONS = [
-  { value: true, label: 'Crew prices' },
-  { value: false, label: 'My prices' },
+  { value: true, label: 'Use crew hours' },
+  { value: false, label: 'Set manually' },
 ] as const;
 
 export function FCPricingToggleCard({
@@ -35,8 +35,8 @@ export function FCPricingToggleCard({
   const helper = !editable
     ? `Locked while this order is with ${gcSideName}. Recall it to change billing.`
     : isOn
-      ? `Billing follows what ${fcCollabName} logged. Their charges stay private.`
-      : 'You set your own prices. Crew charges stay private.';
+      ? `Your price = hours ${fcCollabName} logged × your billable rate. Crew pay stays private.`
+      : 'Enter your own lump sum or hours on each scope item. Crew pay stays private.';
 
   async function handleToggle(checked: boolean) {
     setToggling(true);
@@ -46,7 +46,7 @@ export function FCPricingToggleCard({
       });
       if (error) throw error;
       onRefresh();
-      toast.success(checked ? 'Crew pricing base enabled' : 'Crew-derived billing cleared');
+      toast.success(checked ? 'Now pricing from crew hours' : 'Now pricing manually — crew-hour prices cleared');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not change pricing base');
     } finally {
@@ -75,7 +75,7 @@ export function FCPricingToggleCard({
           </span>
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 text-sm font-semibold leading-tight text-foreground">
-              Who sets the price?
+              Pricing method
               {toggling && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />}
             </p>
             <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
@@ -94,7 +94,7 @@ export function FCPricingToggleCard({
           )}
           <div
             role="group"
-            aria-label="Who sets the price"
+            aria-label="Pricing method"
             data-testid="crew-pricing-base"
             className="grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-background p-1 sm:flex sm:w-auto"
           >
