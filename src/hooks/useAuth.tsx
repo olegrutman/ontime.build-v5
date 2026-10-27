@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { Profile, UserOrgRole, AppRole, MemberPermissions, RolePermissions, getEffectivePermissions } from '@/types/organization';
@@ -43,14 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [twoFactorVerified, setTwoFactorVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
+  const activeUserId = useRef<string | null>(null);
+  const dataVersion = useRef(0);
 
   const fetchUserData = async (userId: string) => {
+    const version = ++dataVersion.current;
     // Fetch all data in parallel to avoid race conditions
     const [profileResult, rolesResult, platformResult] = await Promise.all([
       supabase.from('profiles').select('id, user_id, email, full_name, first_name, last_name, phone, preferred_contact_method, timezone, language, job_title, view_preference, address, created_at, updated_at').eq('user_id', userId).maybeSingle(),
       supabase.from('user_org_roles').select('*, organization:organizations(*)').eq('user_id', userId),
       supabase.from('platform_users').select('platform_role, two_factor_verified').eq('user_id', userId).maybeSingle(),
     ]);
+    if (activeUserId.current !== userId || version !== dataVersion.current) return;
+    if (profileResult.error) throw profileResult.error;
+    if (rolesResult.error) throw rolesResult.error;
+    if (platformResult.error) throw platformResult.error;
 
     // Set platform role FIRST so isPlatformUser is accurate before userOrgRoles triggers re-render
     if (platformResult.data) {
@@ -78,7 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select('*')
           .eq('user_org_role_id', sortedRoles[0].id)
           .maybeSingle();
+        if (activeUserId.current !== userId || version !== dataVersion.current) return;
         setMemberPermissions(permsData as MemberPermissions | null);
+      } else {
+        setMemberPermissions(null);
       }
     }
   };
@@ -91,36 +101,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let hydratedUserId: string | null = null;
+    let pending: { userId: string; promise: Promise<void> } | null = null;
+    let startupTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    const applySession = async (nextSession: Session | null, refreshProfile = false) => {
+      if (!isMounted) return;
+      const userId = nextSession?.user.id ?? null;
+      const identityChanged = activeUserId.current !== userId;
+      activeUserId.current = userId;
+      setSession(nextSession);
+      // Token refreshes must not replace the user object: many query effects
+      // depend on it, and their screen state must survive background refreshes.
+      if (identityChanged || refreshProfile) setUser(nextSession?.user ?? null);
 
-        if (session?.user) {
-          // Set loading true so consumers wait for user data before redirecting
-          setLoading(true);
-          const userId = session.user.id;
-          setTimeout(async () => {
-            await fetchUserData(userId);
-            if (isMounted) setLoading(false);
-          }, 0);
-        } else {
-          setProfile(null);
-          setUserOrgRoles([]);
-          setMemberPermissions(null);
-          setPlatformRole(null);
-          setTwoFactorVerified(false);
+      if (!userId) {
+        ++dataVersion.current;
+        hydratedUserId = null;
+        pending = null;
+        setProfile(null);
+        setUserOrgRoles([]);
+        setMemberPermissions(null);
+        setPlatformRole(null);
+        setTwoFactorVerified(false);
+        setLoading(false);
+        setConnectionError(false);
+        clearTimeout(startupTimeout);
+        return;
+      }
+      if (identityChanged) {
+        hydratedUserId = null;
+        setProfile(null);
+        setUserOrgRoles([]);
+        setMemberPermissions(null);
+        setPlatformRole(null);
+        setTwoFactorVerified(false);
+        setLoading(true);
+      }
+      if (hydratedUserId === userId && !refreshProfile) return;
+      if (!pending || pending.userId !== userId) {
+        pending = { userId, promise: fetchUserData(userId) };
+      }
+      const request = pending;
+      try {
+        await request.promise;
+        if (isMounted && activeUserId.current === userId) {
+          hydratedUserId = userId;
+          setConnectionError(false);
+        }
+      } catch {
+        if (isMounted && activeUserId.current === userId) setConnectionError(true);
+      } finally {
+        if (pending === request) pending = null;
+        if (isMounted && activeUserId.current === userId) {
+          clearTimeout(startupTimeout);
           setLoading(false);
         }
+      }
+    };
+
+    // Subscribe first; never await data calls inside the auth callback lock.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, nextSession) => {
+        setTimeout(() => { void applySession(nextSession, event === 'USER_UPDATED'); }, 0);
       }
     );
 
     // THEN check initial session. If the backend host is unreachable (corporate
     // firewall, offline, DNS filtering) this must fail loudly instead of leaving
     // the app in a permanent loading state.
-    const startupTimeout = setTimeout(() => {
+    startupTimeout = setTimeout(() => {
       if (isMounted) {
         setConnectionError(true);
         setLoading(false);
@@ -129,23 +179,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase.auth
       .getSession()
-      .then(async ({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchUserData(session.user.id);
-        }
-      })
+      .then(({ data: { session } }) => applySession(session))
       .catch(() => {
         if (isMounted) setConnectionError(true);
-      })
-      .finally(() => {
-        clearTimeout(startupTimeout);
-        if (isMounted) setLoading(false);
       });
 
     return () => {
       isMounted = false;
+      activeUserId.current = null;
+      ++dataVersion.current;
       clearTimeout(startupTimeout);
       subscription.unsubscribe();
     };

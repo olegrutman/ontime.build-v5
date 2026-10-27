@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Stop background-auth screen resets, remove stale app-shell refresh loops, and reduce repeated project queries; verify signed-in stability and regression tests
 - [x] Use full original CO/WO references in invoice lines and single-order invoice numbers; 14 tests passed and signed-in WO-0005 draft creation/readback verified with both $3,120 and $1,000 lines; temporary draft removed, historical invoices unchanged
 - [x] Automatically track party-private CO/WO scope and billable edits; list/board/detail correction flags and filter; explicit version-checked correction decisions preserve existing approvals
 - [x] Verify live gazebo correction submission and pending readback; 15 tests passed, build OK; 72 phone views audited with one unrelated dashboard clipping finding. Real upstream acceptance remains the contractor's decision.
