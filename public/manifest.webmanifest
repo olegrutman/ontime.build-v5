@@ -1,0 +1,15 @@
+{
+  "name": "OnTime.Build — Construction Intelligence",
+  "short_name": "OnTime.Build",
+  "description": "Build Smarter. Deliver On Time. Modern construction billing, change order management, and project intelligence.",
+  "theme_color": "#0F172A",
+  "background_color": "#0F172A",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "icons": [
+    { "src": "/ontime-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/ontime-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

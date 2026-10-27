@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, Package, Layers } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +30,7 @@ import { useSOVReadiness } from '@/hooks/useSOVReadiness';
 import { toast } from 'sonner';
 
 interface InvoicesTabProps {
+  refreshKey?: number;
   projectId: string;
   retainagePercent: number;
   projectStatus?: string;
@@ -46,7 +47,7 @@ interface Contract {
   to_org_name?: string | null;
 }
 
-export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM = false }: InvoicesTabProps) {
+export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM = false, refreshKey = 0 }: InvoicesTabProps) {
   const { userOrgRoles, permissions, loading: authLoading } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -168,8 +169,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     return statusFilter === 'ALL' ? base : base.filter(i => i.status === statusFilter);
   }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices, statusFilter, isApproverView]);
 
-  const fetchAll = async () => {
-    setLoading(true);
+  const fetchAll = async (background = false) => {
+    if (!background) setLoading(true);
     setTotalsError(false);
     try {
       // 1. Load contracts FIRST so downstream sent/received splits have data
@@ -243,7 +244,13 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const fetchInvoices = fetchAll;
+  const refreshData = useRef(fetchAll);
+  refreshData.current = fetchAll;
+  useEffect(() => {
+    if (refreshKey > 0) void refreshData.current(true);
+  }, [refreshKey]);
+
+  const fetchInvoices = () => fetchAll();
 
   const handleCreateSuccess = () => {
     fetchInvoices();
@@ -323,7 +330,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     return sentInvoices;
   }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
 
-  if (totalsError) return <div role="alert" className="p-4 text-destructive">Could not load invoice totals. <Button variant="outline" onClick={fetchAll}>Retry</Button></div>;
+  if (totalsError) return <div role="alert" className="p-4 text-destructive">Could not load invoice totals. <Button variant="outline" onClick={() => fetchAll()}>Retry</Button></div>;
 
   if (selectedInvoiceId) {
     return (

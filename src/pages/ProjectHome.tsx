@@ -98,7 +98,6 @@ export default function ProjectHome() {
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tabResetKey, setTabResetKey] = useState(0);
   const [materialResponsibility, setMaterialResponsibility] = useState<string | null>(null);
 
   const { isDemoMode, demoRole } = useDemo();
@@ -120,13 +119,13 @@ export default function ProjectHome() {
   const supplierOrgId = isSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
 
   const realtimeKey = useProjectRealtime(id);
-  const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
+  const activeTab = section || 'overview';
+  const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId, activeTab === 'overview' && !isInDemoMode);
   const readiness = useProjectReadiness(id);
   const isTM = project?.contract_mode === 'tm';
 
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
-  const activeTab = section || 'overview';
 
   useEffect(() => {
     if (id && !section) {
@@ -139,7 +138,6 @@ export default function ProjectHome() {
     const finalTab = tabName === 'sov' ? 'sov' : tabName;
     const queryString = query ? `?${query}` : '';
     navigate(`/project/${id}/${finalTab}${queryString}`);
-    setTabResetKey(prev => prev + 1);
   };
 
   useEffect(() => {
@@ -365,7 +363,7 @@ export default function ProjectHome() {
                   address={formattedAddress}
                   status={projectStatus}
                   projectType={project.project_type}
-                  health={projectStatus === 'active' ? healthLabel : null}
+                  health={null}
                   rightSlot={<NotificationSheet />}
                 />
               </div>
@@ -498,7 +496,7 @@ export default function ProjectHome() {
               <FeatureGate feature="invoicing">
                 {isInDemoMode
                   ? <DemoInvoicesTab projectId={id!} />
-                  : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} isTM={isTM} />
+                  : <InvoicesTab key={project.id} refreshKey={realtimeKey} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} isTM={isTM} />
                 }
               </FeatureGate>
             )}
@@ -506,7 +504,7 @@ export default function ProjectHome() {
               <FeatureGate feature="purchase_orders">
                 {isInDemoMode
                   ? <DemoPurchaseOrdersTab projectId={id!} />
-                  : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
+                  : <PurchaseOrdersTab key={project.id} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
                       projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
                 }
               </FeatureGate>

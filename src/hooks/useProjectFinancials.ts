@@ -153,7 +153,7 @@ export interface ProjectFinancials {
   updateMaterialMarkup: (contractId: string, type: string, value: number) => Promise<boolean>;
 }
 
-export function useProjectFinancials(projectId: string, isSupplier?: boolean, supplierOrgId?: string | null): ProjectFinancials {
+export function useProjectFinancials(projectId: string, isSupplier?: boolean, supplierOrgId?: string | null, enabled = true): ProjectFinancials {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
   const [viewerRole, setViewerRole] = useState<ViewerRole>('Subcontractor');
@@ -752,7 +752,9 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     }
   };
 
-  useEffect(() => { fetchData({ reset: true }); }, [projectId, user, isSupplier, supplierOrgId]);
+  useEffect(() => {
+    if (enabled) void fetchData({ reset: true });
+  }, [projectId, user, isSupplier, supplierOrgId, enabled]);
 
   // Derived
   // Filter out placeholder/stale contracts — prefer ones with a non-null trade and non-zero sum
