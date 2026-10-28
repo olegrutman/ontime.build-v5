@@ -765,6 +765,7 @@ export type Database = {
           architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
+          architect_signed_record_path: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
           blocked_by_rfi_id: string | null
@@ -813,6 +814,7 @@ export type Database = {
           owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
+          owner_signed_record_path: string | null
           parent_co_id: string | null
           passed_to_owner: boolean | null
           pricing_type: string
@@ -850,6 +852,7 @@ export type Database = {
           architect_approver_email?: string | null
           architect_approver_name?: string | null
           architect_rejection_note?: string | null
+          architect_signed_record_path?: string | null
           assembly_state?: string | null
           assigned_to_org_id?: string | null
           blocked_by_rfi_id?: string | null
@@ -898,6 +901,7 @@ export type Database = {
           owner_approver_email?: string | null
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
+          owner_signed_record_path?: string | null
           parent_co_id?: string | null
           passed_to_owner?: boolean | null
           pricing_type?: string
@@ -935,6 +939,7 @@ export type Database = {
           architect_approver_email?: string | null
           architect_approver_name?: string | null
           architect_rejection_note?: string | null
+          architect_signed_record_path?: string | null
           assembly_state?: string | null
           assigned_to_org_id?: string | null
           blocked_by_rfi_id?: string | null
@@ -983,6 +988,7 @@ export type Database = {
           owner_approver_email?: string | null
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
+          owner_signed_record_path?: string | null
           parent_co_id?: string | null
           passed_to_owner?: boolean | null
           pricing_type?: string
@@ -9388,6 +9394,7 @@ export type Database = {
           architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
+          architect_signed_record_path: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
           blocked_by_rfi_id: string | null
@@ -9436,6 +9443,7 @@ export type Database = {
           owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
+          owner_signed_record_path: string | null
           parent_co_id: string | null
           passed_to_owner: boolean | null
           pricing_type: string
@@ -9686,6 +9694,7 @@ export type Database = {
           architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
+          architect_signed_record_path: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
           blocked_by_rfi_id: string | null
@@ -9734,6 +9743,7 @@ export type Database = {
           owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
+          owner_signed_record_path: string | null
           parent_co_id: string | null
           passed_to_owner: boolean | null
           pricing_type: string
@@ -10197,6 +10207,7 @@ export type Database = {
           architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
+          architect_signed_record_path: string | null
           assembly_state: string | null
           assigned_to_org_id: string | null
           blocked_by_rfi_id: string | null
@@ -10245,6 +10256,7 @@ export type Database = {
           owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
+          owner_signed_record_path: string | null
           parent_co_id: string | null
           passed_to_owner: boolean | null
           pricing_type: string
