@@ -3,6 +3,7 @@
 // single-use decisions. Never returns internal costs, rates or markup.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { renderEmail, queueEmail, fmtMoney } from '../_shared/coEmail.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -184,7 +185,45 @@ Deno.serve(async (req) => {
       co.tc_submitted_price ?? null,
     );
 
-    return json({ ok: true });
+    // Signed copy to the approver (the record they just executed).
+    let copySent = false;
+    try {
+      const total = Number(co.tc_submitted_price ?? 0) + Number(co.total_tax ?? 0);
+      const signedAt = new Date(decidedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC';
+      const origin = String(body?.origin ?? '').startsWith('http') ? String(body.origin) : 'https://ontime.build';
+      const viewUrl = `${origin}/external/co-approve/${token}`;
+      const html = renderEmail({
+        heading: decision === 'approved' ? 'Your signed approval' : 'Your recorded rejection',
+        status: decision === 'approved' ? 'success' : 'danger',
+        intro: `This is your copy of the decision you signed${project?.name ? ` on ${project.name}` : ''}. Keep it for your records — the same timestamped entry is part of the project's permanent audit trail.`,
+        rows: [
+          ['Project', project?.name ?? ''],
+          ['Change order', co.co_number ?? ''],
+          ['Description', co.title ?? ''],
+          ['Amount', fmtMoney(total)],
+          ['Decision', decision === 'approved' ? 'Approved' : 'Rejected'],
+          ['Signed by', approverName],
+          ['Signed at', signedAt],
+          ...(decision === 'rejected' ? [['Reason', rejectionNote.slice(0, 300)] as [string, string]] : []),
+        ],
+        ctaLabel: 'View signed record',
+        ctaUrl: viewUrl,
+        footnote: 'You can print or save this record as a PDF from the link above at any time.',
+      });
+      const text = `${decision === 'approved' ? 'Approved' : 'Rejected'}: ${co.co_number ?? ''} ${co.title ?? ''}\nSigned by ${approverName} at ${signedAt}\nAmount: ${fmtMoney(total)}\n${viewUrl}`;
+      const r = await queueEmail(supabase, {
+        to: approverEmail,
+        subject: `Signed copy — ${co.co_number ?? 'Change order'}${project?.name ? ` · ${project.name}` : ''}`,
+        html,
+        text,
+        label: 'co_external_approval_receipt',
+      });
+      copySent = r.sent;
+    } catch (err) {
+      console.error('Signed copy email failed', err instanceof Error ? err.message : err);
+    }
+
+    return json({ ok: true, copy_sent: copySent });
   }
 
   /* ---------------------------------------------------------------- *
