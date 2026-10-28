@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, Send, Loader2, ShieldCheck, X } from 'lucide-react';
+import { Clock, Send, Loader2, ShieldCheck, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -34,6 +34,25 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
   const rejectedArchitect = architectStatus === 'rejected';
 
   if (!pendingOwner && !pendingArchitect && !rejectedOwner && !rejectedArchitect && ownerStatus !== 'approved' && architectStatus !== 'approved') return null;
+
+  const [opening, setOpening] = useState<string | null>(null);
+  async function openRecord(type: 'owner' | 'architect') {
+    setOpening(type);
+    const win = window.open('', '_blank');
+    const { data, error } = await supabase.functions.invoke('co-public-access', {
+      body: { action: 'signed_record', co_id: co.id, type },
+    });
+    setOpening(null);
+    if (error || !data?.url) { win?.close(); toast.error(data?.error ?? 'Could not open the signed document'); return; }
+    if (win) win.location.href = data.url; else window.location.href = data.url;
+  }
+
+  const recordButton = (type: 'owner' | 'architect') => (
+    <Button size="sm" variant="outline" className="h-7 text-xs gap-1 shrink-0" onClick={() => openRecord(type)} disabled={opening === type}>
+      {opening === type ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+      Signed document
+    </Button>
+  );
 
   async function resendEmail(type: 'owner' | 'architect') {
     setResending(type);
@@ -117,6 +136,7 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
               <p className="text-xs text-red-600 dark:text-red-400 italic">{(co as any).owner_rejection_note}</p>
             )}
           </div>
+          {recordButton('owner')}
         </div>
       )}
       {rejectedArchitect && (
@@ -128,17 +148,19 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
               <p className="text-xs text-red-600 dark:text-red-400 italic">{(co as any).architect_rejection_note}</p>
             )}
           </div>
+          {recordButton('architect')}
         </div>
       )}
       {((ownerStatus === 'approved') || (architectStatus === 'approved')) && (
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20">
           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+          <p className="flex-1 min-w-0 text-xs text-emerald-700 dark:text-emerald-400">
             {ownerStatus === 'approved' && `${ownerLabel} approved`}
             {ownerStatus === 'approved' && architectStatus === 'approved' && ' · '}
             {architectStatus === 'approved' && `${architectLabel} approved`}
             {(co as any).owner_approver_name && ` by ${(co as any).owner_approver_name}`}
           </p>
+          {recordButton(ownerStatus === 'approved' ? 'owner' : 'architect')}
         </div>
       )}
     </div>
