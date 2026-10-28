@@ -38,6 +38,7 @@ export default function COApprovalPage() {
   const [projectName, setProjectName] = useState<string | null>(null);
   const [submittedBy, setSubmittedBy] = useState<string | null>(null);
   const [lines, setLines] = useState<Array<{ id: string; item_name: string; description: string | null; unit: string | null; qty: number | null; location_tag: string | null }>>([]);
+  const [justSignedAt, setJustSignedAt] = useState<string | null>(null);
   const [copySent, setCopySent] = useState<string | null>(null);
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(approverEmail.trim());
   const [rejectMode, setRejectMode] = useState(false);
@@ -90,6 +91,7 @@ export default function COApprovalPage() {
       });
       if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to approve');
       if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
+      setJustSignedAt(new Date().toISOString());
       setDone('approved');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to approve');
@@ -114,6 +116,7 @@ export default function COApprovalPage() {
       });
       if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to reject');
       if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
+      setJustSignedAt(new Date().toISOString());
       setDone('rejected');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to reject');
@@ -152,7 +155,7 @@ export default function COApprovalPage() {
   const pre = approvalType === 'architect' ? 'architect' : 'owner';
   const c = co as any;
   const signerName: string | null = c[`${pre}_approver_name`] ?? (approverName.trim() || null);
-  const signedAtRaw: string | null = c[`${pre}_approved_at`] ?? null;
+  const signedAtRaw: string | null = c[`${pre}_approved_at`] ?? justSignedAt;
   const signedAt = signedAtRaw ? new Date(signedAtRaw).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : null;
   const rejectionReason: string | null = c[`${pre}_rejection_note`] ?? (rejectNote.trim() || null);
 
