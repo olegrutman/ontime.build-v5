@@ -23,7 +23,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const CO_APPROVAL_COLS =
   'id, project_id, org_id, created_by_user_id, created_by_role, co_number, title, status, document_type, ' +
   'location_tag, reason_note, pricing_type, tc_submitted_price, total_tax, ' +
-  'owner_approval_status, architect_approval_status';
+  'owner_approval_status, architect_approval_status, owner_approver_name, owner_approved_at, owner_rejection_note, ' +
+  'architect_approver_name, architect_approved_at, architect_rejection_note';
 
 /**
  * Who the external approver is, in the requester's own words.

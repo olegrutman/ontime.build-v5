@@ -38,6 +38,7 @@ export default function COApprovalPage() {
   const [projectName, setProjectName] = useState<string | null>(null);
   const [submittedBy, setSubmittedBy] = useState<string | null>(null);
   const [lines, setLines] = useState<Array<{ id: string; item_name: string; description: string | null; unit: string | null; qty: number | null; location_tag: string | null }>>([]);
+  const [justSignedAt, setJustSignedAt] = useState<string | null>(null);
   const [copySent, setCopySent] = useState<string | null>(null);
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(approverEmail.trim());
   const [rejectMode, setRejectMode] = useState(false);
@@ -90,6 +91,7 @@ export default function COApprovalPage() {
       });
       if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to approve');
       if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
+      setJustSignedAt(new Date().toISOString());
       setDone('approved');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to approve');
@@ -114,6 +116,7 @@ export default function COApprovalPage() {
       });
       if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to reject');
       if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
+      setJustSignedAt(new Date().toISOString());
       setDone('rejected');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to reject');
@@ -141,40 +144,6 @@ export default function COApprovalPage() {
     );
   }
 
-  if (done) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-md text-center space-y-3">
-          {done === 'approved' ? (
-            <>
-              <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/30 flex items-center justify-center">
-                <Check className="h-8 w-8 text-emerald-600" />
-              </div>
-              <h1 className="text-xl font-bold text-foreground">Approved</h1>
-              <p className="text-sm text-muted-foreground">
-                Your approval has been recorded. The project team has been notified.
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-950/30 flex items-center justify-center">
-                <X className="h-8 w-8 text-red-600" />
-              </div>
-              <h1 className="text-xl font-bold text-foreground">Rejected</h1>
-              <p className="text-sm text-muted-foreground">
-                Your rejection has been recorded. The project team has been notified.
-              </p>
-            </>
-          )}
-          {copySent && (
-            <p className="text-sm text-foreground">A signed copy has been sent to <span className="font-semibold">{copySent}</span>.</p>
-          )}
-          <ValueCard />
-        </div>
-      </div>
-    );
-  }
-
   if (!co) return null;
 
   const total = co.tc_submitted_price ?? 0;
@@ -183,6 +152,12 @@ export default function COApprovalPage() {
   const roleLabel = roleLabelFromServer ?? (approvalType === 'owner' ? 'Owner' : 'Architect');
 
   const today = new Date().toLocaleDateString('en-US', { dateStyle: 'long' });
+  const pre = approvalType === 'architect' ? 'architect' : 'owner';
+  const c = co as any;
+  const signerName: string | null = c[`${pre}_approver_name`] ?? (approverName.trim() || null);
+  const signedAtRaw: string | null = c[`${pre}_approved_at`] ?? justSignedAt;
+  const signedAt = signedAtRaw ? new Date(signedAtRaw).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : null;
+  const rejectionReason: string | null = c[`${pre}_rejection_note`] ?? (rejectNote.trim() || null);
 
   return (
     <div className="min-h-screen bg-muted/40">
@@ -200,7 +175,7 @@ export default function COApprovalPage() {
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-6 py-5 border-b border-border flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">{roleLabel} approval requested</p>
+              <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">{roleLabel} {done ? "approval record" : "approval requested"}</p>
               <h1 className="text-xl font-bold text-foreground mt-1 break-words">{co.title}</h1>
               {co.co_number && <span className="inline-block mt-2 text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{co.co_number}</span>}
             </div>
@@ -249,6 +224,32 @@ export default function COApprovalPage() {
           </div>
         </div>
 
+        {done && (
+          <div className={`bg-card border-2 rounded-2xl p-5 ${done === 'approved' ? 'border-emerald-500' : 'border-destructive'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${done === 'approved' ? 'bg-emerald-100 dark:bg-emerald-950/30' : 'bg-red-100 dark:bg-red-950/30'}`}>
+                {done === 'approved' ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-destructive" />}
+              </div>
+              <div>
+                <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">Signed record</p>
+                <h2 className="text-lg font-bold text-foreground">{done === 'approved' ? 'Approved' : 'Rejected'}</h2>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-sm">
+              <div><p className="text-xs text-muted-foreground">Signed by</p><p className="font-medium break-words">{signerName ?? '—'}</p></div>
+              <div><p className="text-xs text-muted-foreground">Signed at</p><p className="font-medium">{signedAt ?? (done === 'rejected' ? 'Recorded' : '—')}</p></div>
+              {done === 'rejected' && rejectionReason && (
+                <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Reason</p><p className="font-medium break-words">{rejectionReason}</p></div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              This decision is timestamped in the project's audit trail and the project team has been notified.
+              {copySent && <> A signed copy was emailed to <span className="font-semibold text-foreground">{copySent}</span>.</>}
+            </p>
+          </div>
+        )}
+
+        {!done && (<>
         <div className="bg-card border border-border rounded-2xl p-5 no-print">
           <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-3">How signing works</p>
           <div className="grid sm:grid-cols-3 gap-3 text-sm">
@@ -332,6 +333,7 @@ export default function COApprovalPage() {
             </div>
           )}
         </div>
+        </>)}
         <div className="no-print"><ValueCard /></div>
       </div>
     </div>
