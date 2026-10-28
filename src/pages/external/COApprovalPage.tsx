@@ -175,7 +175,7 @@ export default function COApprovalPage() {
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-6 py-5 border-b border-border flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">{roleLabel} approval requested</p>
+              <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">{roleLabel} {done ? "approval record" : "approval requested"}</p>
               <h1 className="text-xl font-bold text-foreground mt-1 break-words">{co.title}</h1>
               {co.co_number && <span className="inline-block mt-2 text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{co.co_number}</span>}
             </div>
