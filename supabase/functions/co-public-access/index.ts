@@ -101,12 +101,19 @@ Deno.serve(async (req) => {
         .eq('co_id', co.id)
         .order('sort_order');
 
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', co.org_id)
+        .maybeSingle();
+
       return json({
         approval_type: approvalType,
         role_label: roleLabelFor(co.created_by_role, approvalType),
         co,
         line_items: lines ?? [],
         project_name: project?.name ?? null,
+        submitted_by: org?.name ?? null,
       });
     }
 
@@ -119,9 +126,13 @@ Deno.serve(async (req) => {
     const decision = body?.decision;
     const approverName = String(body?.approver_name ?? '').trim();
     const rejectionNote = String(body?.rejection_note ?? '').trim();
+    const approverEmail = String(body?.approver_email ?? '').trim().toLowerCase();
 
     if (!['approved', 'rejected'].includes(decision)) return json({ error: 'Invalid decision' }, 400);
     if (approverName.length < 2 || approverName.length > 120) return json({ error: 'Name required' }, 400);
+    if (approverEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(approverEmail)) {
+      return json({ error: 'A valid email is required to receive your signed copy' }, 400);
+    }
     if (decision === 'rejected' && rejectionNote.length < 3) {
       return json({ error: 'Rejection reason required' }, 400);
     }
@@ -130,9 +141,11 @@ Deno.serve(async (req) => {
     const patch: Record<string, unknown> = {
       [`${prefix}_approval_status`]: decision,
       [`${prefix}_approver_name`]: approverName,
+      [`${prefix}_approver_email`]: approverEmail,
       [`${prefix}_rejection_note`]: decision === 'rejected' ? rejectionNote.slice(0, 2000) : null,
     };
-    if (decision === 'approved') patch[`${prefix}_approved_at`] = new Date().toISOString();
+    const decidedAt = new Date().toISOString();
+    if (decision === 'approved') patch[`${prefix}_approved_at`] = decidedAt;
 
     const { error: updErr } = await supabase
       .from('change_orders')
