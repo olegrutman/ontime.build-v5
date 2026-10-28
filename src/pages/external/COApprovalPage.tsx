@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, X, Loader2, ShieldCheck, AlertTriangle, FileDown } from 'lucide-react';
+import { Check, X, Loader2, ShieldCheck, AlertTriangle, FileDown, Lock, Clock, FileCheck2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +34,12 @@ export default function COApprovalPage() {
   const [done, setDone] = useState<'approved' | 'rejected' | null>(null);
 
   const [approverName, setApproverName] = useState('');
+  const [approverEmail, setApproverEmail] = useState('');
+  const [projectName, setProjectName] = useState<string | null>(null);
+  const [submittedBy, setSubmittedBy] = useState<string | null>(null);
+  const [lines, setLines] = useState<Array<{ id: string; item_name: string; description: string | null; unit: string | null; qty: number | null; location_tag: string | null }>>([]);
+  const [copySent, setCopySent] = useState<string | null>(null);
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(approverEmail.trim());
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [acting, setActing] = useState(false);
@@ -50,7 +56,10 @@ export default function COApprovalPage() {
         setLoading(false);
         return;
       }
-      const { co: coData, approval_type, role_label } = data as any;
+      const { co: coData, approval_type, role_label, line_items, project_name, submitted_by } = data as any;
+      setLines(line_items ?? []);
+      setProjectName(project_name ?? null);
+      setSubmittedBy(submitted_by ?? null);
       if (role_label) setRoleLabelFromServer(role_label as string);
       setCO({ ...coData, description: null });
       setApprovalType(approval_type as ApprovalType);
@@ -66,7 +75,7 @@ export default function COApprovalPage() {
   }, [token]);
 
   async function handleApprove() {
-    if (!co || !approvalType || !approverName.trim() || !token) return;
+    if (!co || !approvalType || !approverName.trim() || !emailValid || !token) return;
     setActing(true);
     try {
       const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', {
@@ -75,9 +84,12 @@ export default function COApprovalPage() {
           token,
           decision: 'approved',
           approver_name: approverName.trim(),
+          approver_email: approverEmail.trim(),
+          origin: window.location.origin,
         },
       });
       if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to approve');
+      if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
       setDone('approved');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to approve');
@@ -86,7 +98,7 @@ export default function COApprovalPage() {
   }
 
   async function handleReject() {
-    if (!co || !approvalType || !rejectNote.trim() || !approverName.trim() || !token) return;
+    if (!co || !approvalType || !rejectNote.trim() || !approverName.trim() || !emailValid || !token) return;
     setActing(true);
     try {
       const { data, error: fnErr } = await supabase.functions.invoke('co-public-access', {
@@ -95,10 +107,13 @@ export default function COApprovalPage() {
           token,
           decision: 'rejected',
           approver_name: approverName.trim(),
+          approver_email: approverEmail.trim(),
+          origin: window.location.origin,
           rejection_note: rejectNote.trim(),
         },
       });
       if (fnErr || (data as any)?.error) throw new Error((data as any)?.error ?? 'Failed to reject');
+      if ((data as any)?.copy_sent) setCopySent(approverEmail.trim());
       setDone('rejected');
     } catch (err: any) {
       setError(err?.message ?? 'Failed to reject');
@@ -151,6 +166,10 @@ export default function COApprovalPage() {
               </p>
             </>
           )}
+          {copySent && (
+            <p className="text-sm text-foreground">A signed copy has been sent to <span className="font-semibold">{copySent}</span>.</p>
+          )}
+          <ValueCard />
         </div>
       </div>
     );
@@ -163,34 +182,56 @@ export default function COApprovalPage() {
   const grandTotal = total + tax;
   const roleLabel = roleLabelFromServer ?? (approvalType === 'owner' ? 'Owner' : 'Architect');
 
+  const today = new Date().toLocaleDateString('en-US', { dateStyle: 'long' });
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-card border-b border-border no-print">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-lg font-bold text-foreground">{roleLabel} Approval</h1>
-              <p className="text-xs text-muted-foreground">Change Order Review</p>
-            </div>
+    <div className="min-h-screen bg-muted/40">
+      <div className="bg-sidebar text-sidebar-foreground no-print">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <img src="/ontime-logo.png" alt="" className="h-7 w-7" />
+            <span className="font-bold tracking-wide">Ontime<span className="text-primary">.Build</span></span>
           </div>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <FileDown className="h-4 w-4 mr-1" /> PDF
-          </Button>
+          <div className="flex items-center gap-2 text-xs opacity-80"><Lock className="h-3.5 w-3.5" /> Secure signing link</div>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-5 print-page">
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              {co.co_number && (
-                <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{co.co_number}</span>
-              )}
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-5 print-page">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-border flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">{roleLabel} approval requested</p>
+              <h1 className="text-xl font-bold text-foreground mt-1 break-words">{co.title}</h1>
+              {co.co_number && <span className="inline-block mt-2 text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{co.co_number}</span>}
             </div>
-            <h2 className="text-base font-semibold text-foreground mt-2">{co.title}</h2>
+            <Button variant="outline" size="sm" onClick={() => window.print()} className="no-print shrink-0">
+              <FileDown className="h-4 w-4 mr-1" /> Save PDF
+            </Button>
           </div>
-          <div className="px-5 py-4 space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-6 py-4 border-b border-border text-sm">
+            <div><p className="text-xs text-muted-foreground">Project</p><p className="font-medium break-words">{projectName ?? '—'}</p></div>
+            <div><p className="text-xs text-muted-foreground">Submitted by</p><p className="font-medium break-words">{submittedBy ?? '—'}</p></div>
+            <div><p className="text-xs text-muted-foreground">Date</p><p className="font-medium">{today}</p></div>
+          </div>
+          {lines.length > 0 && (
+            <div className="px-6 py-4 border-b border-border">
+              <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Scope of work</p>
+              <ul className="divide-y divide-border">
+                {lines.map((l, i) => (
+                  <li key={l.id} className="py-2 flex gap-3 text-sm">
+                    <span className="text-muted-foreground font-mono w-5 shrink-0">{i + 1}.</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium break-words">{l.item_name}</p>
+                      {l.description && <p className="text-muted-foreground text-xs break-words">{l.description}</p>}
+                      {l.location_tag && <p className="text-muted-foreground text-xs">Location: {l.location_tag}</p>}
+                    </div>
+                    {l.qty != null && <span className="font-mono text-xs text-muted-foreground shrink-0">{l.qty} {l.unit ?? ''}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="px-6 py-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-mono font-medium">{fmtCurrency(total)}</span>
@@ -201,16 +242,26 @@ export default function COApprovalPage() {
                 <span className="font-mono font-medium">{fmtCurrency(tax)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
-              <span>Total</span>
+            <div className="flex justify-between text-base font-bold border-t border-border pt-2">
+              <span>Contract change</span>
               <span className="font-mono">{fmtCurrency(grandTotal)}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4 no-print">
+        <div className="bg-card border border-border rounded-2xl p-5 no-print">
+          <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold mb-3">How signing works</p>
+          <div className="grid sm:grid-cols-3 gap-3 text-sm">
+            <div className="flex gap-2"><FileCheck2 className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Review the scope and amount above.</span></div>
+            <div className="flex gap-2"><ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Type your full name — it is your electronic signature.</span></div>
+            <div className="flex gap-2"><Clock className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>Your decision is timestamped and a signed copy is emailed to you.</span></div>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-4 no-print">
+          <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <Label className="text-sm font-medium">Your Name (legal signature) *</Label>
+            <Label className="text-sm font-medium">Full name (electronic signature) *</Label>
             <Input
               value={approverName}
               onChange={e => setApproverName(e.target.value)}
@@ -218,16 +269,30 @@ export default function COApprovalPage() {
               className="mt-1.5"
             />
           </div>
+          <div>
+            <Label className="text-sm font-medium">Your email (for your signed copy) *</Label>
+            <Input
+              type="email"
+              value={approverEmail}
+              onChange={e => setApproverEmail(e.target.value)}
+              placeholder="name@company.com"
+              className="mt-1.5"
+            />
+          </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            By signing you {rejectMode ? 'decline' : 'authorize'} this change to the contract scope and price{rejectMode ? '' : ` of ${fmtCurrency(grandTotal)}`}. Your name, email, decision and time are recorded and shared with the project team.
+          </p>
 
           {!rejectMode ? (
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={handleApprove}
-                disabled={!approverName.trim() || acting}
+                disabled={!approverName.trim() || !emailValid || acting}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700"
               >
                 {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
-                Approve
+                Approve & sign
               </Button>
               <Button
                 variant="outline"
@@ -254,7 +319,7 @@ export default function COApprovalPage() {
               <div className="flex gap-2">
                 <Button
                   onClick={handleReject}
-                  disabled={!approverName.trim() || !rejectNote.trim() || acting}
+                  disabled={!approverName.trim() || !emailValid || !rejectNote.trim() || acting}
                   variant="destructive"
                   className="flex-1"
                 >
@@ -267,7 +332,25 @@ export default function COApprovalPage() {
             </div>
           )}
         </div>
+        <div className="no-print"><ValueCard /></div>
       </div>
+    </div>
+  );
+}
+
+function ValueCard() {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5 text-left">
+      <p className="text-[0.7rem] uppercase tracking-wider text-primary font-semibold">Powered by Ontime.Build</p>
+      <h3 className="text-base font-bold text-foreground mt-1">Change orders without the disputes</h3>
+      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+        <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />Signed approvals with a permanent, timestamped audit trail</li>
+        <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />Contract totals update the moment work is approved</li>
+        <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />Owners, contractors and crews on one live project ledger</li>
+      </ul>
+      <a href="https://ontime.build" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-primary hover:underline">
+        Run your projects on Ontime.Build <ArrowRight className="h-4 w-4" />
+      </a>
     </div>
   );
 }

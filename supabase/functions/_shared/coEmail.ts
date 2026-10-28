@@ -42,6 +42,8 @@ interface Layout {
   /** Optional secondary button, e.g. a document download link. */
   secondaryLabel?: string;
   secondaryUrl?: string;
+  /** Optional numbered "how it works" steps shown under the summary. */
+  steps?: string[];
 }
 
 const LOGO_URL = 'https://ontime.build/ontime-logo-email.png';
@@ -53,7 +55,7 @@ const STATUS_BANDS: Record<string, { bg: string; text: string; label: string }> 
   info: { bg: '#f97316', text: '#ffffff', label: 'Update' },
 };
 
-export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, status, secondaryLabel, secondaryUrl }: Layout): string {
+export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, status, secondaryLabel, secondaryUrl, steps }: Layout): string {
   const rowsHtml = rows
     .filter(([, v]) => v)
     .map(
@@ -91,6 +93,10 @@ export function renderEmail({ heading, intro, rows, ctaLabel, ctaUrl, footnote, 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;margin-bottom:20px;">
         ${rowsHtml}
       </table>
+      ${steps?.length ? `<div style="margin:0 0 20px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+        <div style="color:#0f172a;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">How it works</div>
+        ${steps.map((st, i) => `<div style="color:#334155;font-size:13px;line-height:1.5;margin:4px 0;"><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:9px;background:#0f172a;color:#ffffff;font-size:11px;font-weight:700;margin-right:8px;">${i + 1}</span>${escapeHtml(st)}</div>`).join('')}
+      </div>` : ''}
       <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:10px;">${escapeHtml(ctaLabel)}</a>
       ${secondaryUrl && secondaryLabel
         ? `<a href="${escapeHtml(secondaryUrl)}" style="display:inline-block;margin-left:10px;background:#ffffff;color:#0f172a;text-decoration:none;font-weight:700;font-size:14px;padding:11px 20px;border:1px solid #cbd5e1;border-radius:10px;">${escapeHtml(secondaryLabel)}</a>`

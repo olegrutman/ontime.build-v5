@@ -762,6 +762,7 @@ export type Database = {
           architect_approval_status: string
           architect_approval_token: string | null
           architect_approved_at: string | null
+          architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
           assembly_state: string | null
@@ -809,6 +810,7 @@ export type Database = {
           owner_approval_status: string
           owner_approval_token: string | null
           owner_approved_at: string | null
+          owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
           parent_co_id: string | null
@@ -845,6 +847,7 @@ export type Database = {
           architect_approval_status?: string
           architect_approval_token?: string | null
           architect_approved_at?: string | null
+          architect_approver_email?: string | null
           architect_approver_name?: string | null
           architect_rejection_note?: string | null
           assembly_state?: string | null
@@ -892,6 +895,7 @@ export type Database = {
           owner_approval_status?: string
           owner_approval_token?: string | null
           owner_approved_at?: string | null
+          owner_approver_email?: string | null
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
           parent_co_id?: string | null
@@ -928,6 +932,7 @@ export type Database = {
           architect_approval_status?: string
           architect_approval_token?: string | null
           architect_approved_at?: string | null
+          architect_approver_email?: string | null
           architect_approver_name?: string | null
           architect_rejection_note?: string | null
           assembly_state?: string | null
@@ -975,6 +980,7 @@ export type Database = {
           owner_approval_status?: string
           owner_approval_token?: string | null
           owner_approved_at?: string | null
+          owner_approver_email?: string | null
           owner_approver_name?: string | null
           owner_rejection_note?: string | null
           parent_co_id?: string | null
@@ -9379,6 +9385,7 @@ export type Database = {
           architect_approval_status: string
           architect_approval_token: string | null
           architect_approved_at: string | null
+          architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
           assembly_state: string | null
@@ -9426,6 +9433,7 @@ export type Database = {
           owner_approval_status: string
           owner_approval_token: string | null
           owner_approved_at: string | null
+          owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
           parent_co_id: string | null
@@ -9675,6 +9683,7 @@ export type Database = {
           architect_approval_status: string
           architect_approval_token: string | null
           architect_approved_at: string | null
+          architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
           assembly_state: string | null
@@ -9722,6 +9731,7 @@ export type Database = {
           owner_approval_status: string
           owner_approval_token: string | null
           owner_approved_at: string | null
+          owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
           parent_co_id: string | null
@@ -10184,6 +10194,7 @@ export type Database = {
           architect_approval_status: string
           architect_approval_token: string | null
           architect_approved_at: string | null
+          architect_approver_email: string | null
           architect_approver_name: string | null
           architect_rejection_note: string | null
           assembly_state: string | null
@@ -10231,6 +10242,7 @@ export type Database = {
           owner_approval_status: string
           owner_approval_token: string | null
           owner_approved_at: string | null
+          owner_approver_email: string | null
           owner_approver_name: string | null
           owner_rejection_note: string | null
           parent_co_id: string | null

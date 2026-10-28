@@ -358,6 +358,13 @@
       "when": 1793061786531,
       "tag": "0050_clear_corrections_on_normal_order_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793210356517,
+      "tag": "0051_co_external_approver_email",
+      "breakpoints": true
     }
   ]
 }
