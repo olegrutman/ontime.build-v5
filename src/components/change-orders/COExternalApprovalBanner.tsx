@@ -33,7 +33,7 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
   const rejectedOwner = ownerStatus === 'rejected';
   const rejectedArchitect = architectStatus === 'rejected';
 
-  if (!pendingOwner && !pendingArchitect && !rejectedOwner && !rejectedArchitect) return null;
+  if (!pendingOwner && !pendingArchitect && !rejectedOwner && !rejectedArchitect && ownerStatus !== 'approved' && architectStatus !== 'approved') return null;
 
   async function resendEmail(type: 'owner' | 'architect') {
     setResending(type);
