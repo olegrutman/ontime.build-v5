@@ -4,6 +4,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { renderEmail, queueEmail, fmtMoney } from '../_shared/coEmail.ts';
+import { buildSignedRecord, signedRecordUrl } from '../_shared/coSignedRecord.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -62,6 +63,26 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
   const action = typeof body?.action === 'string' ? body.action : null;
+  // Signed-in project member fetching the stored signed document (creates it if missing).
+  if (action === 'signed_record') {
+    const coId = String(body?.co_id ?? '');
+    const type = body?.type === 'architect' ? 'architect' : 'owner';
+    if (!UUID_RE.test(coId)) return json({ error: 'Invalid order' }, 400);
+    const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    const { data: u } = await supabase.auth.getUser(jwt);
+    if (!u?.user) return json({ error: 'Sign in required' }, 401);
+    const { data: ok } = await supabase.rpc('can_access_change_order', { _co_id: coId, _user_id: u.user.id });
+    if (!ok) return json({ error: 'Not allowed' }, 403);
+    try {
+      const { data: row } = await supabase.from('change_orders').select(`${type}_signed_record_path`).eq('id', coId).maybeSingle();
+      let path = (row as any)?.[`${type}_signed_record_path`] as string | null;
+      if (!path) path = (await buildSignedRecord(supabase, coId, type)).path;
+      return json({ url: await signedRecordUrl(supabase, path) });
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : 'Could not create record' }, 400);
+    }
+  }
+
   const token = typeof body?.token === 'string' ? body.token.trim() : null;
   if (!action || !token || token.length > 100) return json({ error: 'Missing action or token' }, 400);
 
@@ -185,6 +206,10 @@ Deno.serve(async (req) => {
         : `${label} rejected by ${approverName}: ${rejectionNote.slice(0, 300)}`,
       co.tc_submitted_price ?? null,
     );
+
+    // Store the actual signed document on the order's record.
+    try { await buildSignedRecord(supabase, co.id, approvalType); }
+    catch (err) { console.error('Signed record PDF failed', err instanceof Error ? err.message : err); }
 
     // Signed copy to the approver (the record they just executed).
     let copySent = false;
