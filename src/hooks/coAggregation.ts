@@ -18,6 +18,10 @@ export interface ContractLike {
 
 export interface COLike {
   id: string;
+  org_id?: string | null;
+  assigned_to_org_id?: string | null;
+  created_by_role?: string | null;
+  originating_org_id?: string | null;
   status: string;
   document_type: 'CO' | 'WO' | string;
   tc_submitted_price?: number | null;
@@ -102,7 +106,9 @@ export const APPROVED_CO_STATUSES = ['approved', 'contracted', 'completed'] as c
 export function resolveBillingOrgId(
   contracts: ContractLike[],
   viewerRole: COViewerRole,
+  viewerOrgIds: string[] = [],
 ): string | null {
+  if (viewerRole !== 'General Contractor' && viewerOrgIds.length > 0) return viewerOrgIds[0];
   const notWO = (c: ContractLike) =>
     c.trade !== 'Work Order' && c.trade !== 'Work Order Labor';
 
@@ -157,6 +163,7 @@ export function aggregateCOTotals(
   billingOrgId: string | null,
   isGCPerspective: boolean,
   fallbackResponsibility?: { materials?: string | null; equipment?: string | null },
+  resolveCOBillingOrg?: (co: COLike) => string | null,
 ): AggregatedCOTotals {
   const emptyBreakdown = (): COCostBreakdown => ({
     ownLabor: 0, subcontract: 0, materials: 0, equipment: 0, total: 0,
@@ -177,13 +184,14 @@ export function aggregateCOTotals(
     coAbsorbedCost: 0,
     coUndecidedCost: 0,
   };
-  if (!billingOrgId || cos.length === 0) return empty;
+  if ((!billingOrgId && !resolveCOBillingOrg) || cos.length === 0) return empty;
 
   const num = (v: unknown) => Number(v ?? 0);
 
   const perCO = cos.map((c) => {
+    const scopedOrgId = resolveCOBillingOrg?.(c) ?? billingOrgId;
     const rows = labor.filter((r) => r.co_id === c.id);
-    const mine = rows.filter((r) => r.org_id === billingOrgId);
+    const mine = rows.filter((r) => r.org_id === scopedOrgId);
 
     // Revenue: the viewer's billable rows only.
     const laborRevenue = mine
@@ -205,7 +213,7 @@ export function aggregateCOTotals(
         (r) =>
           r.entered_by_role === 'FC' &&
           !r.is_actual_cost &&
-          r.org_id !== billingOrgId &&
+          r.org_id !== scopedOrgId &&
           !(r.id && importedFCIds.has(r.id as string)),
       )
       .reduce((s, r) => s + num(r.line_total), 0);
@@ -234,11 +242,11 @@ export function aggregateCOTotals(
       'TC';
     const sumMine = (rowsIn: COLineRow[], field: string) =>
       rowsIn
-        .filter((r) => r.co_id === c.id && r.org_id === billingOrgId)
+        .filter((r) => r.co_id === c.id && r.org_id === scopedOrgId)
         .reduce((s, r) => s + num(r[field]), 0);
     const sumOthers = (rowsIn: COLineRow[], field: string) =>
       rowsIn
-        .filter((r) => r.co_id === c.id && r.org_id !== billingOrgId)
+        .filter((r) => r.co_id === c.id && r.org_id !== scopedOrgId)
         .reduce((s, r) => s + num(r[field]), 0);
 
     const matRev = matResp === 'GC' ? 0 : sumMine(materials, 'billed_amount');

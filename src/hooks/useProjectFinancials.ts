@@ -416,12 +416,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setApprovedEstimateSum(estSum);
 
 
-      const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole);
+      const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole, orgIds);
       const isGCPerspective = detectedRole === 'General Contractor';
 
       const { data: allCOs = [] } = await supabase
         .from('change_orders')
-        .select('id, status, document_type, tc_submitted_price, gc_budget, gc_owner_markup_percent, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
+        .select('id, status, document_type, org_id, assigned_to_org_id, created_by_role, originating_org_id, tc_submitted_price, gc_budget, gc_owner_markup_percent, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
         .eq('project_id', projectId)
         .in('status', [...APPROVED_CO_STATUSES, ...PENDING_CO_STATUSES]);
 
@@ -429,7 +429,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       let coLabor: any[] = [];
       let coMats: any[] = [];
       let coEquip: any[] = [];
-      if (allCOIds.length > 0 && billingOrgId) {
+      if (allCOIds.length > 0 && (billingOrgId || isGCPerspective)) {
         const [{ data: l = [] }, { data: m = [] }, { data: e = [] }] = await Promise.all([
           // Actual-cost rows are fetched too: aggregateCOTotals excludes them
           // from revenue but needs them for cost/margin.
@@ -461,6 +461,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           materials: respContract?.material_responsibility ?? null,
           equipment: null,
         },
+        isGCPerspective ? (co) => co.created_by_role === 'FC' && (!co.originating_org_id || co.originating_org_id === co.org_id) ? co.assigned_to_org_id ?? co.org_id ?? billingOrgId : co.org_id ?? billingOrgId : undefined,
       );
 
 
