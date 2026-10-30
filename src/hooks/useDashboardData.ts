@@ -200,6 +200,7 @@ export function useDashboardData(): DashboardData {
     outstandingToPay: 0,
     outstandingToCollect: 0,
     pendingInvoices: [] as DashboardPendingInvoice[],
+    invoiceRows: [] as DashboardPendingInvoice[],
     profit: 0,
   });
   const [thisMonth, setThisMonth] = useState({ invoices: 0 });
@@ -1015,6 +1016,14 @@ export function useDashboardData(): DashboardData {
         }
       });
 
+      if (orgType === 'GC') {
+        for (const [pid, owner] of ownerByProject) {
+          const pf = pfMap.get(pid);
+          if (!pf) continue;
+          pf.paidToYou = owner.collected;
+          pf.pendingToCollect = ownerBillingBalance(owner.billed, owner.collected, pf.revenue).pending;
+        }
+      }
       setProjectFinancials(Array.from(pfMap.values()));
 
     } catch (error) {
