@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Separate subcontractor pending receivables and Pending payables; verify matching amounts, counts and breakdowns with tests and live dashboard checks
 - [x] Stop background-auth screen resets, remove stale app-shell refresh loops, cache sidebar counts, batch realtime bursts without invoice/PO remounts, and run financial queries only on Overview; 76 regressions pass and signed-in Knowles invoice survived an authenticated background event with zero document reloads or repeated requests. Real token exchange could not be verified with the managed test session; published returning-worker cleanup requires publishing.
 - [x] Use full original CO/WO references in invoice lines and single-order invoice numbers; 14 tests passed and signed-in WO-0005 draft creation/readback verified with both $3,120 and $1,000 lines; temporary draft removed, historical invoices unchanged
 - [x] Automatically track party-private CO/WO scope and billable edits; list/board/detail correction flags and filter; explicit version-checked correction decisions preserve existing approvals
