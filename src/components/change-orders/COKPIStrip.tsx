@@ -136,9 +136,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
       // Crew-time pricing: crew billable rows and the TC internal-cost copy
       // mirror the same work — count once to avoid a fake loss.
-      const tcLaborCost = financials.useFcPricingBase
-        ? (financials.tcActualCostTotal > 0 ? financials.tcActualCostTotal : financials.fcLaborTotal)
-        : financials.fcLaborTotal + financials.tcActualCostTotal;
+      const tcLaborCost = financials.tcLaborCostTotal;
       const tcInternalCost = tcLaborCost + ownMatCost + ownEqCost;
       const tcMargin = tcSubmitted - tcInternalCost;
       const tcMarginPct = tcSubmitted > 0 ? (tcMargin / tcSubmitted) * 100 : 0;

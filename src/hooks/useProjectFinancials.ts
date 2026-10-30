@@ -10,6 +10,7 @@ import {
 } from '@/hooks/coAggregation';
 import { buildProjectLedger, type ProjectLedger } from '@/lib/kpiLedger';
 import { sumOrdered, sumBilled, sumReceived } from '@/lib/supplierMetrics';
+import { uniqueInvoices } from '@/lib/invoiceIntegrity';
 
 
 
@@ -415,12 +416,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setApprovedEstimateSum(estSum);
 
 
-      const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole);
+      const billingOrgId = resolveBillingOrgId(contractsWithNames as any, detectedRole, orgIds);
       const isGCPerspective = detectedRole === 'General Contractor';
 
       const { data: allCOs = [] } = await supabase
         .from('change_orders')
-        .select('id, status, document_type, tc_submitted_price, gc_budget, gc_owner_markup_percent, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
+        .select('id, status, document_type, org_id, assigned_to_org_id, created_by_role, originating_org_id, tc_submitted_price, gc_budget, gc_owner_markup_percent, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
         .eq('project_id', projectId)
         .in('status', [...APPROVED_CO_STATUSES, ...PENDING_CO_STATUSES]);
 
@@ -428,7 +429,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       let coLabor: any[] = [];
       let coMats: any[] = [];
       let coEquip: any[] = [];
-      if (allCOIds.length > 0 && billingOrgId) {
+      if (allCOIds.length > 0 && (billingOrgId || isGCPerspective)) {
         const [{ data: l = [] }, { data: m = [] }, { data: e = [] }] = await Promise.all([
           // Actual-cost rows are fetched too: aggregateCOTotals excludes them
           // from revenue but needs them for cost/margin.
@@ -460,6 +461,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           materials: respContract?.material_responsibility ?? null,
           equipment: null,
         },
+        isGCPerspective ? (co) => co.created_by_role === 'FC' && (!co.originating_org_id || co.originating_org_id === co.org_id) ? co.assigned_to_org_id ?? co.org_id ?? billingOrgId : co.org_id ?? billingOrgId : undefined,
       );
 
 
@@ -614,7 +616,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!)
         );
 
-        const gcPayableInvs = [...gcContractInvs, ...gcPoInvs];
+        const gcPayableInvs = uniqueInvoices([...gcContractInvs, ...gcPoInvs]);
         const gcPayables = gcPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
         setGcPayablesInvoiced(gcPayables);
         setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
@@ -670,7 +672,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         .from('purchase_orders')
         .select('id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
         .eq('project_id', projectId)
-        .in('status', ['ORDERED', 'DELIVERED']);
+        .in('status', ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED']);
 
       const calcPOTotal = (pos: any[]) => pos.reduce((sum, po: any) => {
         const subtotal = (po.po_line_items || []).reduce((s: number, li: any) => s + (li.line_total || 0), 0);
@@ -682,14 +684,14 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // this a GC saw TC-procured POs charged against its own budget (and vice
       // versa). Legacy rows with no owner fall back to being visible to all.
       const allPOs = (orderedPOs || []).filter((po: any) =>
-        !po.pricing_owner_org_id || orgIds.includes(po.pricing_owner_org_id),
+        !!po.pricing_owner_org_id && orgIds.includes(po.pricing_owner_org_id),
       );
       const matOrdered = calcPOTotal(allPOs);
       setMaterialOrdered(matOrdered);
 
       // Split by delivery status
-      const deliveredPOs = allPOs.filter((po: any) => po.status === 'DELIVERED');
-      const pendingPOs = allPOs.filter((po: any) => po.status === 'ORDERED');
+      const deliveredPOs = allPOs.filter((po: any) => ['DELIVERED', 'FINALIZED'].includes(po.status));
+      const pendingPOs = allPOs.filter((po: any) => ['ORDERED', 'READY_FOR_DELIVERY'].includes(po.status));
       setMaterialDelivered(calcPOTotal(deliveredPOs));
       setMaterialOrderedPending(calcPOTotal(pendingPOs));
 

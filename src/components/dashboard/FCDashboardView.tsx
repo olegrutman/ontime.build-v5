@@ -6,6 +6,7 @@ import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel'
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
+import type { DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { PortfolioOverviewHeader } from '@/components/dashboard/overview/PortfolioOverviewHeader';
@@ -42,7 +43,7 @@ export interface FCDashboardViewProps {
   projects: ProjectWithDetails[];
   financials: FinancialSummary;
   projectFinancials: ProjectFinancialDetail[];
-  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
+  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string; invoiceRows: DashboardPendingInvoice[] };
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
   recentDocs: RecentDoc[];
@@ -77,24 +78,25 @@ export function FCDashboardView({
 
   // Primary project — FC usually has one
   const primaryProject = projects[0] || null;
-  const pf = projectFinancials[0] || null;
+  const pf = projectFinancials.find(project => project.projectId === primaryProject?.id) || null;
 
   // Financials
   const contractValue = pf ? pf.revenue : financials.totalRevenue;
   const costs = pf ? pf.costs : financials.totalCosts;
 
   // COs from recentDocs
-  const coList = recentDocs.filter(d => d.type === 'change_order');
+  const coList = recentDocs.filter(d => d.type === 'change_order' && d.projectId === primaryProject?.id);
   const approvedCOs = coList.filter(d => ['approved', 'contracted', 'completed'].includes(d.status));
-  const coTotal = approvedCOs.reduce((s, d) => s + (d.amount || 0), 0);
+  const coTotal = pf?.approvedCORevenue ?? 0;
 
   // Margin
   const totalScope = contractValue + coTotal;
   const netMargin = totalScope - costs;
-  const marginPct = totalScope > 0 ? ((netMargin / totalScope) * 100).toFixed(1) : '0';
+  const marginKnown = costs > 0;
+  const marginPct = totalScope > 0 && marginKnown ? ((netMargin / totalScope) * 100).toFixed(1) : '—';
 
   // Invoices
-  const invoiceDocs = recentDocs.filter(d => d.type === 'invoice');
+  const invoiceDocs = (billing.invoiceRows || []).filter(d => d.direction === 'receivable' && d.projectId === primaryProject?.id);
   const paidInvoices = invoiceDocs.filter(d => d.status === 'PAID');
   const pendingInvoiceDocs = invoiceDocs.filter(d => ['SUBMITTED', 'APPROVED'].includes(d.status));
   const paidTotal = paidInvoices.reduce((s, d) => s + (d.amount || 0), 0);
@@ -204,8 +206,8 @@ export function FCDashboardView({
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{fmt(costs)}</TdM>, <span>Labor + materials cost</span>]} />
                 <TRow cells={[
                   <TdN>Net Margin</TdN>,
-                  <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.green }}>{fmt(netMargin)}</span>,
-                  <span style={{ color: C.green, fontWeight: 700 }}>{marginPct}% margin</span>,
+                  <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.green }}>{marginKnown ? fmt(netMargin) : '—'}</span>,
+                  <span style={{ color: C.green, fontWeight: 700 }}>{marginKnown ? `${marginPct}% margin` : 'Cost not recorded'}</span>,
                 ]} isTotal greenText />
               </tbody>
             </table>
@@ -288,14 +290,6 @@ export function FCDashboardView({
                     <Pill type="pg">Paid</Pill>,
                   ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
                 ))}
-                {pendingInvoiceDocs.map(inv => (
-                  <TRow key={inv.id} cells={[
-                    <TdN>{inv.title}</TdN>,
-                    <span>{inv.projectName}</span>,
-                    <TdM>{fmt(inv.amount || 0)}</TdM>,
-                     <Pill type="pw">Pending Subcontractor</Pill>,
-                  ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
-                ))}
               </tbody>
             </table>
           </KpiCard>
@@ -305,7 +299,7 @@ export function FCDashboardView({
             accent={C.yellow} icon="⏳" iconBg={C.yellowBg}
             label="PENDING FROM TRADE CONTRACTOR"
             value={pendingTotal > 0 ? fmt(pendingTotal) : '—'}
-            sub={pendingInvoiceDocs.length > 0 ? `Awaiting Subcontractor approval · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
+            sub={pendingInvoiceDocs.length > 0 ? `Awaiting approval or payment · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
             pills={pendingTotal > 0 ? [{ type: 'pw', text: 'Pending Subcontractor' }] : [{ type: 'pm', text: 'None' }]}
             idx={4}
           >

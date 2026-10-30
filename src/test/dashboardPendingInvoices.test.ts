@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dashboardPendingInvoices, pendingInvoiceSummary } from '@/lib/dashboardPendingInvoices';
+import { dashboardPendingInvoices, dashboardInvoiceRows, pendingInvoiceSummary } from '@/lib/dashboardPendingInvoices';
 
 const contracts = new Map([
   ['upstream', { from_org_id: 'sub', to_org_id: 'contractor' }],
@@ -15,6 +15,11 @@ const invoice = (id: string, amount: number, contract_id: string | null, status 
 const resolve = (rows: ReturnType<typeof invoice>[]) => dashboardPendingInvoices(rows, 'sub', contracts, pos, projects);
 
 describe('subcontractor pending invoice cards', () => {
+  it('keeps paid history separate from pending even when complete records are supplied', () => {
+    const rows = dashboardInvoiceRows([invoice('paid', 500, 'upstream', 'PAID'), invoice('unpaid', 100, 'upstream', 'APPROVED')], 'sub', contracts, pos, projects);
+    expect(rows.filter(row => row.status === 'PAID').reduce((sum, row) => sum + row.amount, 0)).toBe(500);
+    expect(pendingInvoiceSummary(rows, 'receivable')).toMatchObject({ count: 1, total: 100 });
+  });
   it('keeps invoices billed to the general contractor separate from crew invoices', () => {
     const rows = resolve([invoice('to-contractor', 3120, 'upstream'), invoice('from-crew', 1200, 'crew')]);
     expect(pendingInvoiceSummary(rows, 'receivable')).toMatchObject({ count: 1, total: 3120 });
@@ -34,6 +39,12 @@ describe('subcontractor pending invoice cards', () => {
       invoice('unrelated', 8000, 'other'), invoice('missing', 700, 'missing'),
     ]);
     expect(rows).toEqual([]);
+  });
+
+  it('deduplicates the same pending invoice by ID, never by invoice number', () => {
+    const original = invoice('pending', 3120, 'upstream');
+    const rows = resolve([original, original]);
+    expect(pendingInvoiceSummary(rows, 'receivable')).toMatchObject({ count: 1, total: 3120 });
   });
 
   it('keeps amounts, counts and every breakdown row aligned beyond recent-document limits', () => {

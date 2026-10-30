@@ -7,6 +7,7 @@ import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel'
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
+import type { DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
 import { C, fontVal, fontMono, fontLabel, fmt, KpiCard, Pill, Bar, THead, TdN, TdM, TRow, WarnItem, ProjectCard, BAR_COLORS, type PillType } from '@/components/shared/KpiCard';
 import { KpiGrid } from '@/components/shared/KpiGrid';
 import { MaterialsPulseStrip } from '@/components/dashboard/MaterialsPulseStrip';
@@ -71,7 +72,7 @@ export interface GCDashboardViewProps {
   projects: ProjectWithDetails[];
   financials: FinancialSummary;
   projectFinancials: ProjectFinancialDetail[];
-  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
+  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string; invoiceRows: DashboardPendingInvoice[] };
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
   recentDocs: RecentDoc[];
@@ -119,11 +120,11 @@ export function GCDashboardView({
   const pendingCOs = coList.filter(d => ['draft', 'shared', 'submitted'].includes(d.status));
 
   // Invoices from recentDocs
-  const invoiceDocs = recentDocs.filter(d => d.type === 'invoice');
-  const pendingInvoiceDocs = invoiceDocs.filter(d => d.status === 'SUBMITTED');
+  const invoiceDocs = (billing.invoiceRows || []).filter(d => d.direction === 'payable' && d.status === 'PAID');
+  const pendingInvoiceDocs = (billing.invoiceRows || []).filter(d => d.direction === 'payable' && d.status === 'SUBMITTED');
 
   // POs from recentDocs
-  const poDocs = recentDocs.filter(d => d.type === 'purchase_order');
+  const poDocs = recentDocs.filter(d => d.type === 'purchase_order' && ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(d.status));
   const poTotal = poDocs.reduce((s, d) => s + (d.amount || 0), 0);
 
   // Margin
@@ -243,15 +244,15 @@ export function GCDashboardView({
             const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
             return (
               <KpiCard idx={1} accent={C.green} icon={<TrendingUp size={18} color={C.green} />} iconBg={C.greenBg}
-                label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'}
-                sub={earned > 0 ? `${pctRounded}% realized · billed vs costs incurred` : 'No revenue earned yet'}
+                label="CASH SURPLUS TO DATE" value={earned > 0 ? fmt(m2d) : '—'}
+                sub={earned > 0 ? `${pctRounded}% · collected minus paid` : 'No payments collected yet'}
                 pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Earned Revenue (billed to date)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                    <TRow cells={[<TdN>Incurred Cost (paid + materials + CO)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
-                    <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
+                    <TRow cells={[<TdN>Payments collected</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                    <TRow cells={[<TdN>Invoices paid</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                    <TRow isTotal cells={[<TdN>Cash surplus</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
                   </tbody>
                 </table>
               </KpiCard>
@@ -332,7 +333,7 @@ export function GCDashboardView({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Invoice', 'Project', 'Amount', 'Status']} />
               <tbody>
-                {invoiceDocs.length > 0 ? invoiceDocs.slice(0, 8).map(inv => (
+                {invoiceDocs.length > 0 ? invoiceDocs.map(inv => (
                   <TRow key={inv.id} onClick={() => navigate(`/project/${inv.projectId}/invoices`)} cells={[
                     <TdN>{inv.title}</TdN>,
                     <>{inv.projectName}</>,
@@ -354,7 +355,7 @@ export function GCDashboardView({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Invoice', 'Project', 'Amount', '']} />
               <tbody>
-                {pendingInvoiceDocs.length > 0 ? pendingInvoiceDocs.slice(0, 8).map(inv => (
+                {pendingInvoiceDocs.length > 0 ? pendingInvoiceDocs.map(inv => (
                   <TRow key={inv.id} onClick={() => navigate(`/project/${inv.projectId}/invoices`)} cells={[
                     <TdN>{inv.title}</TdN>,
                     <>{inv.projectName}</>,

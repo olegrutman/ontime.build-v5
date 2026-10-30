@@ -145,6 +145,7 @@ export interface COLaborEntry {
   line_total: number;
   description: string | null;
   is_actual_cost: boolean;
+  source_fc_entry_ids?: string[] | null;
   actual_cost_note: string | null;
   created_at: string;
   /** Crew workload breakdown: crew size × days × hours/day = hours */
@@ -240,6 +241,8 @@ export interface COFinancials {
   equipmentResponsible: 'GC' | 'TC';
   actualCostTotal: number;
   tcActualCostTotal: number;
+  /** Own actual costs plus unimported crew billables; each source obligation counts once. */
+  tcLaborCostTotal: number;
   fcActualCostTotal: number;
   /**
    * True when the subcontractor priced from the crew's submitted time. In that

@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfMonth, endOfMonth } from 'date-fns';
-import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES } from '@/hooks/coAggregation';
+import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES, aggregateCOTotals } from '@/hooks/coAggregation';
+import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
 import { baseContractSum } from '@/lib/contractSums';
 import { dedupeContracts, findCostContracts, findRevenueContract, isAwardedContract } from '@/lib/kpiLedger';
-import { dashboardPendingInvoices, type DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
+import { dashboardPendingInvoices, dashboardInvoiceRows, type DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
+import { ownerBillingBalance, projectMaterialCommitment } from '@/lib/invoiceIntegrity';
 
 // contract_sum already includes approved COs (DB trigger). Dashboard cards add
 // approved CO value separately, so contract totals must use the base value.
@@ -111,6 +113,7 @@ export interface ProjectFinancialDetail {
   paidByYou: number;
   pendingToCollect: number;
   pendingToPay: number;
+  approvedCORevenue: number;
 }
 
 export interface MaterialsRollup {
@@ -142,12 +145,14 @@ interface DashboardData {
     outstandingToPay: number;
     outstandingToCollect: number;
     pendingInvoices: DashboardPendingInvoice[];
+    invoiceRows: DashboardPendingInvoice[];
     profit: number;
   };
   financials: FinancialSummary;
   projectFinancials: ProjectFinancialDetail[];
   reminders: Reminder[];
   recentDocs: RecentDoc[];
+  financialDocs: RecentDoc[];
   thisMonth: {
     invoices: number;
   };
@@ -162,6 +167,7 @@ export function useDashboardData(): DashboardData {
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
+  const [financialDocs, setFinancialDocs] = useState<RecentDoc[]>([]);
   const [materials, setMaterials] = useState<MaterialsRollup>({ estimate: 0, ordered: 0, forecast: 0 });
   const [financials, setFinancials] = useState<FinancialSummary>({
     totalContracts: 0,
@@ -198,6 +204,7 @@ export function useDashboardData(): DashboardData {
     outstandingToPay: 0,
     outstandingToCollect: 0,
     pendingInvoices: [] as DashboardPendingInvoice[],
+    invoiceRows: [] as DashboardPendingInvoice[],
     profit: 0,
   });
   const [thisMonth, setThisMonth] = useState({ invoices: 0 });
@@ -275,7 +282,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('project_contracts')
-              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, original_contract_sum, from_org_id, to_org_id, trade, status, owner_contract_value, material_responsibility')
+              .select('project_id, to_role, from_role, contract_sum, co_approved_sum, original_contract_sum, from_org_id, to_org_id, trade, status, owner_contract_value, material_responsibility, labor_budget')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         Promise.resolve({ data: [] }),
@@ -494,10 +501,9 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('change_orders')
-              .select('id, co_number, title, status, created_at, project_id, org_id, tc_submitted_price, gc_budget')
+              .select('id, co_number, title, status, created_at, project_id, org_id, assigned_to_org_id, created_by_role, originating_org_id, tc_submitted_price, gc_budget')
               .in('project_id', projectIds)
               .order('created_at', { ascending: false })
-              .limit(20)
           : Promise.resolve({ data: [] }),
         // Recent purchase orders
         projectIds.length > 0
@@ -505,9 +511,8 @@ export function useDashboardData(): DashboardData {
               .from('purchase_orders')
               .select('id, po_number, po_name, status, po_total, created_at, project_id')
               .in('project_id', projectIds)
-              .eq('organization_id', currentOrg.id)
+              .eq('pricing_owner_org_id', currentOrg.id)
               .order('created_at', { ascending: false })
-              .limit(20)
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -598,6 +603,7 @@ export function useDashboardData(): DashboardData {
       // Add change orders to recent docs
       const recentCOs = (recentCOsResult.data || []) as any[];
       recentCOs.forEach((co: any) => {
+        if (orgType !== 'GC' && co.org_id !== currentOrg.id && resolveUpstreamBillerOrgId(co) !== currentOrg.id && !(orgType === 'FC' && co.originating_org_id === currentOrg.id)) return;
         const proj = allProjects.find(p => p.id === co.project_id);
         recentDocsList.push({
           id: co.id,
@@ -629,6 +635,7 @@ export function useDashboardData(): DashboardData {
 
       recentDocsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setRecentDocs(recentDocsList.slice(0, 15));
+      setFinancialDocs(recentDocsList.filter(doc => doc.type !== 'invoice'));
 
       // contractDetailMap already built above — reuse it
 
@@ -673,6 +680,7 @@ export function useDashboardData(): DashboardData {
         outstandingToPay,
         outstandingToCollect,
         pendingInvoices: dashboardPendingInvoices(allInvoices, currentOrg.id, contractDetailMap, poOrgMap, new Map(allProjects.map(p => [p.id, p.name]))),
+        invoiceRows: dashboardInvoiceRows(allInvoices, currentOrg.id, contractDetailMap, poOrgMap, new Map(allProjects.map(p => [p.id, p.name]))),
         profit: 0,
       });
 
@@ -696,7 +704,7 @@ export function useDashboardData(): DashboardData {
       const revenueContractByProject = new Map<string, any>();
       projectIds.forEach(pid => {
         const rev = findRevenueContract(contracts.filter(c => c.project_id === pid) as any, [currentOrg.id]);
-        if (rev) revenueContractByProject.set(pid, rev);
+        if (rev && isAwardedContract(rev)) revenueContractByProject.set(pid, rev);
       });
       // Committed cost = AWARDED downstream contracts only; supplier material
       // contracts are excluded (materials arrive via the commitment below).
@@ -739,14 +747,21 @@ export function useDashboardData(): DashboardData {
       // depend on it (they previously read 0 from paidToYou).
       let ownerBilled = 0;
       let ownerCollected = 0;
+      const ownerByProject = new Map<string, { billed: number; collected: number }>();
       if (orgType === 'GC' && projectIds.length > 0) {
         const { data: gcBillings } = await supabase
           .from('gc_owner_billings')
-          .select('billed_amount, collected_amount')
+          .select('project_id, billed_amount, collected_amount')
           .eq('gc_org_id', currentOrg.id)
           .in('project_id', projectIds);
         ownerBilled = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.billed_amount || 0), 0);
         ownerCollected = (gcBillings || []).reduce((s: number, b: any) => s + Number(b.collected_amount || 0), 0);
+        for (const row of gcBillings || []) {
+          const value = ownerByProject.get(row.project_id) || { billed: 0, collected: 0 };
+          value.billed += Number(row.billed_amount || 0);
+          value.collected += Number(row.collected_amount || 0);
+          ownerByProject.set(row.project_id, value);
+        }
       }
 
       // Portfolio materials rollup — real estimate vs ordered vs forecast.
@@ -758,7 +773,7 @@ export function useDashboardData(): DashboardData {
         const [estRes, poRes] = await Promise.all([
           supabase
             .from('supplier_estimates')
-            .select('total_amount, project_id')
+            .select('total_amount, project_id, scope')
             .in('project_id', projectIds)
             .eq('status', 'APPROVED'),
           supabase
@@ -782,7 +797,7 @@ export function useDashboardData(): DashboardData {
         );
         const mineOnly = (pid: string) => orgType === 'SUPPLIER' || materialsMine.has(pid);
         const matEstimate = (estRes.data || [])
-          .filter((e: any) => mineOnly(e.project_id))
+          .filter((e: any) => mineOnly(e.project_id) && (e.scope ?? 'BASE') === 'BASE')
           .reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
         const ownedPOs = (poRes.data || []).filter((po: any) =>
           orgType === 'SUPPLIER' ? true : po.pricing_owner_org_id === currentOrg.id,
@@ -796,16 +811,16 @@ export function useDashboardData(): DashboardData {
         const matOrdered = ownedPOs.filter((po: any) => COMMITTED.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
         const matInFlight = ownedPOs.filter((po: any) => IN_FLIGHT.includes(po.status)).reduce((s2: number, po: any) => s2 + poTotal(po), 0);
         // An estimate becomes a PO, so take the max instead of adding both.
-        materialCommitment = Math.max(matEstimate, matOrdered);
         projectIds.forEach(pid => {
           const est = (estRes.data || [])
-            .filter((e: any) => e.project_id === pid && mineOnly(pid))
+            .filter((e: any) => e.project_id === pid && mineOnly(pid) && (e.scope ?? 'BASE') === 'BASE')
             .reduce((s2: number, e: any) => s2 + Number(e.total_amount || 0), 0);
           const ord = ownedPOs
             .filter((po: any) => po.project_id === pid && COMMITTED.includes(po.status))
             .reduce((s2: number, po: any) => s2 + poTotal(po), 0);
-          materialByProject.set(pid, Math.max(est, ord));
+          materialByProject.set(pid, projectMaterialCommitment(est, ord));
         });
+        materialCommitment = [...materialByProject.values()].reduce((sum, amount) => sum + amount, 0);
         setMaterials({
           estimate: matEstimate,
           ordered: matOrdered,
@@ -851,79 +866,59 @@ export function useDashboardData(): DashboardData {
       const cashPosition = receivedToDate - paidByYou;
 
       // Pending invoiced (you've billed, not yet paid) vs unbilled remaining.
-      const pendingInvoiced = outstandingToCollect;
-      const pendingToPayAll = outstandingToPay;
+      const pendingInvoiced = orgType === 'GC' ? ownerBillingBalance(ownerBilled, ownerCollected, totalRevenue).pending : outstandingToCollect;
+      const pendingToPayAll = dashboardPendingInvoices(allInvoices, currentOrg.id, contractDetailMap, poOrgMap, new Map(allProjects.map(p => [p.id, p.name]))).filter(invoice => invoice.direction === 'payable').reduce((sum, invoice) => sum + invoice.amount, 0);
 
       // ---- Portfolio CO rollup (lightweight, contract-impact $) ----
       let coApprovedCount = 0;
       let coPendingCount = 0;
       let coApprovedNet = 0;
       let coPendingNetAtRisk = 0;
+      let coApprovedCost = 0;
+      const coRevenueByProject = new Map<string, number>();
       if (projectIds.length > 0) {
         const { data: allCOs } = await supabase
           .from('change_orders')
-          .select('id, status, document_type, tc_submitted_price, gc_budget, org_id, project_id')
+          .select('id, status, document_type, tc_submitted_price, gc_budget, org_id, project_id, assigned_to_org_id, created_by_role, originating_org_id, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
           .in('project_id', projectIds);
         const cos = (allCOs || []) as any[];
 
-        // COs with no priced snapshot still carry real value in their line rows.
-        // Mirror the DB's co_grand_total so dashboard $ matches contract_sum.
-        const unpricedIds = cos
-          .filter((co) => !(Number(co.tc_submitted_price ?? 0) > 0) && !(Number(co.gc_budget ?? 0) > 0))
-          .map((co) => co.id);
-        const fallbackTotals = new Map<string, number>();
-        if (unpricedIds.length > 0) {
-          const [laborRes, matRes, eqRes] = await Promise.all([
-            supabase.from('co_labor_entries').select('co_id, line_total, is_actual_cost').in('co_id', unpricedIds),
-            supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', unpricedIds),
-            supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', unpricedIds),
-          ]);
-          const add = (id: string, amt: number) =>
-            fallbackTotals.set(id, (fallbackTotals.get(id) || 0) + amt);
-          for (const r of (laborRes.data || []) as any[]) {
-            if (!r.is_actual_cost) add(r.co_id, Number(r.line_total ?? 0));
-          }
-          for (const r of (matRes.data || []) as any[]) add(r.co_id, Number(r.billed_amount ?? 0));
-          for (const r of (eqRes.data || []) as any[]) add(r.co_id, Number(r.billed_amount ?? 0));
-        }
-
-        const pricedValue = (co: any): number => {
-          const snap = Number(co.tc_submitted_price ?? 0);
-          if (snap > 0) return snap;
-          const budget = Number(co.gc_budget ?? 0);
-          if (budget > 0) return budget;
-          return fallbackTotals.get(co.id) || 0;
-        };
-        const valueForViewer = (co: any): number => {
-          // GC sees contract impact via the priced snapshot, else the CO's line rollup
-          if (orgType === 'GC') return pricedValue(co);
-          // TC/FC: their own org's CO line = what they bill upstream
-          if (co.org_id === currentOrg.id) return pricedValue(co);
-          return 0;
-        };
         for (const co of cos) {
-          const v = valueForViewer(co);
+          if (orgType !== 'GC' && co.org_id !== currentOrg.id && resolveUpstreamBillerOrgId(co) !== currentOrg.id && !(orgType === 'FC' && co.originating_org_id === currentOrg.id)) continue;
           if ((APPROVED_CO_STATUSES as readonly string[]).includes(co.status)) {
             coApprovedCount += 1;
-            coApprovedNet += v;
           } else if ((PENDING_CO_STATUSES as readonly string[]).includes(co.status)) {
             coPendingCount += 1;
-            coPendingNetAtRisk += v;
+          }
+        }
+        const ids = cos.map(co => co.id);
+        if (ids.length > 0) {
+          const [labor, mats, equip] = await Promise.all([
+            supabase.from('co_labor_entries').select('id, co_id, org_id, line_total, is_actual_cost, entered_by_role, source_fc_entry_ids').in('co_id', ids),
+            supabase.from('co_material_items').select('co_id, org_id, billed_amount, line_cost').in('co_id', ids),
+            supabase.from('co_equipment_items').select('co_id, org_id, billed_amount, cost').in('co_id', ids),
+          ]);
+          coApprovedNet = 0;
+          coPendingNetAtRisk = 0;
+          for (const pid of projectIds) {
+            const scoped = cos.filter(co => co.project_id === pid && (orgType === 'GC' || co.org_id === currentOrg.id || resolveUpstreamBillerOrgId(co) === currentOrg.id || (orgType === 'FC' && co.originating_org_id === currentOrg.id)));
+            const resp = contracts.find(c => c.project_id === pid && c.from_role !== 'Owner' && c.material_responsibility != null);
+            const totals = aggregateCOTotals(scoped, labor.data || [], mats.data || [], equip.data || [], currentOrg.id, orgType === 'GC', { materials: resp?.material_responsibility }, orgType === 'GC' ? co => resolveUpstreamBillerOrgId(co) : undefined);
+            coRevenueByProject.set(pid, totals.approvedCORevenue);
+            coApprovedNet += totals.approvedCORevenue;
+            coApprovedCost += totals.approvedCOCost;
+            coPendingNetAtRisk += totals.pendingCONetAtRisk;
           }
         }
       }
 
-      // Revised totals — original contract value + approved CO impact on revenue side.
-      // For costs, we don't have CO cost without line items, so use the same delta as a
-      // conservative neutral assumption (margin stays flat from approved COs at portfolio level).
+      // Revised totals use independent approved revenue and cost, never a neutral-cost guess.
       const revisedRevenue = totalRevenue + coApprovedNet;
-      const revisedCosts = totalCosts + coApprovedNet; // neutral; per-project view shows true margin
-      const projectedMarginRevised = revisedRevenue - revisedCosts + (potentialProfit > 0 ? 0 : 0);
-      // Until line-item CO cost is rolled up at portfolio level, fall back to original margin.
-      const effectiveProjectedMargin = totalRevenue > 0 ? potentialProfit : 0;
-      const effectiveMarginPct = totalRevenue > 0 ? (effectiveProjectedMargin / totalRevenue) * 100 : 0;
+      const revisedCosts = totalCosts + coApprovedCost;
+      const effectiveProjectedMargin = revisedRevenue - revisedCosts;
+      const effectiveMarginPct = revisedRevenue > 0 ? (effectiveProjectedMargin / revisedRevenue) * 100 : 0;
 
-      const pendingUnbilled = Math.max(0, revisedRevenue - receivedToDate - pendingInvoiced);
+      const pendingUnbilled = Math.max(0, revisedRevenue - totalBilled);
 
       setFinancials({
         totalContracts: totalContractValue,
@@ -958,7 +953,7 @@ export function useDashboardData(): DashboardData {
       // Build per-project financial details
       const pfMap = new Map<string, ProjectFinancialDetail>();
       allProjects.forEach(p => {
-        pfMap.set(p.id, { projectId: p.id, projectName: p.name, revenue: 0, costs: 0, paidToYou: 0, paidByYou: 0, pendingToCollect: 0, pendingToPay: 0 });
+        pfMap.set(p.id, { projectId: p.id, projectName: p.name, revenue: 0, costs: 0, paidToYou: 0, paidByYou: 0, pendingToCollect: 0, pendingToPay: 0, approvedCORevenue: coRevenueByProject.get(p.id) || 0 });
       });
 
       // Per-project revenue/cost use the SAME resolution as the project ledger.
@@ -968,7 +963,7 @@ export function useDashboardData(): DashboardData {
         const rows = contracts.filter(c => c.project_id === pid) as any[];
         pf.revenue = orgType === 'GC'
           ? ownerValueFor(pid)
-          : baseSum((findRevenueContract(rows, [currentOrg.id]) as any) || { contract_sum: 0 });
+          : baseSum(revenueContractByProject.get(pid) || { contract_sum: 0 });
         pf.costs = findCostContracts(rows, [currentOrg.id])
           .filter(isAwardedContract)
           .reduce((sum, c) => sum + baseSum(c), 0);
@@ -1005,6 +1000,14 @@ export function useDashboardData(): DashboardData {
         }
       });
 
+      if (orgType === 'GC') {
+        for (const [pid, owner] of ownerByProject) {
+          const pf = pfMap.get(pid);
+          if (!pf) continue;
+          pf.paidToYou = owner.collected;
+          pf.pendingToCollect = ownerBillingBalance(owner.billed, owner.collected, pf.revenue).pending;
+        }
+      }
       setProjectFinancials(Array.from(pfMap.values()));
 
     } catch (error) {
@@ -1047,6 +1050,7 @@ export function useDashboardData(): DashboardData {
     projectFinancials,
     reminders,
     recentDocs,
+    financialDocs,
     thisMonth,
     loading,
     refetch: fetchData,

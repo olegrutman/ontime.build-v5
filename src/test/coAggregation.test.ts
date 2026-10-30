@@ -31,6 +31,10 @@ const downstream = (over: Partial<ContractLike> = {}): ContractLike => ({
 });
 
 describe('resolveBillingOrgId', () => {
+  it('resolves the viewing company rather than the first subcontractor or crew contract', () => {
+    expect(resolveBillingOrgId([upstream(), downstream()], 'Subcontractor', [OTHER])).toBe(OTHER);
+    expect(resolveBillingOrgId([upstream(), downstream()], 'Crew', [OTHER])).toBe(OTHER);
+  });
   it('returns TC org for GC viewer (regardless of contract direction)', () => {
     expect(resolveBillingOrgId([upstream()], 'General Contractor')).toBe(TC);
     expect(
@@ -68,6 +72,13 @@ describe('resolveBillingOrgId', () => {
 });
 
 describe('aggregateCOTotals', () => {
+  it('aggregates separate subcontractors on their own orders for the contractor', () => {
+    const orders = [{ id: 'a', org_id: TC, status: 'approved', document_type: 'CO', gc_budget: 150 }, { id: 'b', org_id: OTHER, status: 'approved', document_type: 'CO', gc_budget: 250 }];
+    const labor = [{ co_id: 'a', org_id: TC, line_total: 100 }, { co_id: 'b', org_id: OTHER, line_total: 200 }];
+    const totals = aggregateCOTotals(orders, labor, [], [], null, true, undefined, co => co.org_id ?? null);
+    expect(totals.approvedCOCost).toBe(300);
+    expect(totals.approvedCORevenue).toBe(400);
+  });
   const co = (over: Partial<COLike> = {}): COLike => ({
     id: 'co-1',
     status: 'approved',
