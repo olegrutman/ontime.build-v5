@@ -23,6 +23,7 @@ function timeAgo(dateStr: string) {
 
 export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) {
   const [resending, setResending] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
   const ownerLabel = role === 'GC' ? 'owner' : 'general contractor';
   const architectLabel = role === 'GC' ? 'architect' : 'owner or architect';
   const ownerStatus = (co as any).owner_approval_status as string;
@@ -35,7 +36,6 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
 
   if (!pendingOwner && !pendingArchitect && !rejectedOwner && !rejectedArchitect && ownerStatus !== 'approved' && architectStatus !== 'approved') return null;
 
-  const [opening, setOpening] = useState<string | null>(null);
   async function openRecord(type: 'owner' | 'architect') {
     setOpening(type);
     const win = window.open('', '_blank');
