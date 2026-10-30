@@ -14,6 +14,7 @@ import { PortfolioOverviewHeader } from '@/components/dashboard/overview/Portfol
 import { MyProjectsHero } from '@/components/dashboard/projects/MyProjectsHero';
 import { PortfolioInsightsSection } from '@/components/dashboard/PortfolioInsightsSection';
 import { useMaterialsPulse } from '@/hooks/useMaterialsPulse';
+import { pendingInvoiceSummary, type DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -33,7 +34,7 @@ export interface TCDashboardViewProps {
   projects: ProjectWithDetails[];
   financials: FinancialSummary;
   projectFinancials: ProjectFinancialDetail[];
-  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
+  billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; pendingInvoices: DashboardPendingInvoice[]; profit: number; role: string };
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
   recentDocs: RecentDoc[];
@@ -86,16 +87,17 @@ export function TCDashboardView({
   const coList = recentDocs.filter(d => d.type === 'change_order');
   const coCount = coList.length;
 
-  // Invoices from recentDocs
-  const invoiceDocs = recentDocs.filter(d => d.type === 'invoice');
-  const pendingInvoiceDocs = invoiceDocs.filter(d => ['SUBMITTED', 'APPROVED'].includes(d.status));
+  // Full directional invoice sets, independent of the recent-activity limit.
+  const receivables = pendingInvoiceSummary(billing.pendingInvoices, 'receivable');
+  const payables = pendingInvoiceSummary(billing.pendingInvoices, 'payable');
+  const pendingInvoiceDocs = receivables.rows;
 
   // POs from recentDocs
   const poDocs = recentDocs.filter(d => d.type === 'purchase_order');
   const poTotal = poDocs.reduce((s, d) => s + (d.amount || 0), 0);
 
   const receivedFromGC = financials.paidToYou;
-  const pendingFromGC = billing.outstandingToCollect;
+  const pendingFromGC = receivables.total;
 
   const getProjectColor = (idx: number) => BAR_COLORS[idx % BAR_COLORS.length];
 
@@ -296,12 +298,12 @@ export function TCDashboardView({
           {/* Card 6: Pending from GC */}
           <KpiCard idx={5} accent={C.yellow} icon={<Clock size={18} color={C.yellow} />} iconBg={C.yellowBg}
             label="PENDING FROM GENERAL CONTRACTOR" value={pendingFromGC > 0 ? fmt(pendingFromGC) : '—'}
-            sub={pendingInvoiceDocs.length > 0 ? `${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length !== 1 ? 's' : ''} awaiting General Contractor approval` : 'No pending invoices'}
-            pills={pendingFromGC > 0 ? [{ type: 'pw', text: 'Chasing General Contractor' }] : [{ type: 'pg', text: 'All clear' }]}>
+            sub={receivables.count > 0 ? `${receivables.count} invoice${receivables.count !== 1 ? 's' : ''} awaiting approval or payment` : 'No pending invoices'}
+            pills={receivables.count > 0 ? [{ type: 'pw', text: 'Owed to you' }] : [{ type: 'pg', text: 'All clear' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Invoice', 'Amount', 'Status']} />
               <tbody>
-                {pendingInvoiceDocs.length > 0 ? pendingInvoiceDocs.slice(0, 8).map(inv => (
+                {pendingInvoiceDocs.length > 0 ? pendingInvoiceDocs.map(inv => (
                   <TRow key={inv.id} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} cells={[
                     <TdN><div>{inv.title}</div><div style={{ fontSize:'0.68rem', color:C.muted, marginTop:2 }}>{inv.projectName}</div></TdN>,
                     <TdM>{inv.amount ? fmt(inv.amount) : '—'}</TdM>,
@@ -309,6 +311,25 @@ export function TCDashboardView({
                   ]} />
                 )) : <TRow cells={[<span style={{ color: C.faint }}>No pending invoices</span>, '', '']} />}
                 {pendingFromGC > 0 && <TRow isTotal cells={['', <TdM>{fmt(pendingFromGC)}</TdM>, '']} />}
+              </tbody>
+            </table>
+          </KpiCard>
+
+          <KpiCard idx={6} accent={C.red} icon={<FileText size={18} color={C.red} />} iconBg={C.redBg}
+            label="PENDING PAYABLES" value={payables.total > 0 ? fmt(payables.total) : '—'}
+            sub={payables.count > 0 ? `${payables.count} invoice${payables.count !== 1 ? 's' : ''} awaiting your approval or payment` : 'No pending payables'}
+            pills={payables.count > 0 ? [{ type: 'pw', text: 'You owe' }] : [{ type: 'pg', text: 'All clear' }]}>
+            <table className="w-full border-collapse">
+              <THead cols={['Invoice', 'Amount', 'Status']} />
+              <tbody>
+                {payables.rows.length > 0 ? payables.rows.map(inv => (
+                  <TRow key={inv.id} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} cells={[
+                    <TdN><div>{inv.title}</div><div className="mt-0.5 text-xs text-muted-foreground">{inv.projectName}</div></TdN>,
+                    <TdM>{fmt(inv.amount)}</TdM>,
+                    <Pill type={inv.status === 'SUBMITTED' ? 'pw' : 'pb'}>{inv.status}</Pill>,
+                  ]} />
+                )) : <TRow cells={[<span className="text-muted-foreground">No pending payables</span>, '', '']} />}
+                {payables.count > 0 && <TRow isTotal cells={['', <TdM>{fmt(payables.total)}</TdM>, '']} />}
               </tbody>
             </table>
           </KpiCard>

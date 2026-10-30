@@ -5,6 +5,7 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 import { APPROVED_CO_STATUSES, PENDING_CO_STATUSES } from '@/hooks/coAggregation';
 import { baseContractSum } from '@/lib/contractSums';
 import { dedupeContracts, findCostContracts, findRevenueContract, isAwardedContract } from '@/lib/kpiLedger';
+import { dashboardPendingInvoices, type DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
 
 // contract_sum already includes approved COs (DB trigger). Dashboard cards add
 // approved CO value separately, so contract totals must use the base value.
@@ -140,6 +141,7 @@ interface DashboardData {
     invoicesSent: number;
     outstandingToPay: number;
     outstandingToCollect: number;
+    pendingInvoices: DashboardPendingInvoice[];
     profit: number;
   };
   financials: FinancialSummary;
@@ -195,6 +197,7 @@ export function useDashboardData(): DashboardData {
     invoicesSent: 0,
     outstandingToPay: 0,
     outstandingToCollect: 0,
+    pendingInvoices: [] as DashboardPendingInvoice[],
     profit: 0,
   });
   const [thisMonth, setThisMonth] = useState({ invoices: 0 });
@@ -459,7 +462,7 @@ export function useDashboardData(): DashboardData {
       projectIds.length > 0
           ? supabase
               .from('invoices')
-              .select('status, total_amount, created_at, contract_id, po_id, project_id')
+              .select('id, invoice_number, status, total_amount, created_at, contract_id, po_id, project_id')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         user?.id
@@ -508,7 +511,7 @@ export function useDashboardData(): DashboardData {
           : Promise.resolve({ data: [] }),
       ]);
 
-      const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null; po_id: string | null; project_id: string }[];
+      const allInvoices = (allInvoicesResult.data || []) as { id: string; invoice_number: string | null; status: string; total_amount: number; created_at: string; contract_id: string | null; po_id: string | null; project_id: string }[];
 
       // Process reminders
       const remindersList: Reminder[] = ((remindersResult.data || []) as any[]).map((r: any) => ({
@@ -669,6 +672,7 @@ export function useDashboardData(): DashboardData {
         }).length,
         outstandingToPay,
         outstandingToCollect,
+        pendingInvoices: dashboardPendingInvoices(allInvoices, currentOrg.id, contractDetailMap, poOrgMap, new Map(allProjects.map(p => [p.id, p.name]))),
         profit: 0,
       });
 
