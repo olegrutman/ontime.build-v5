@@ -372,6 +372,13 @@
       "when": 1793212856241,
       "tag": "0052_co_signed_records",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793389500299,
+      "tag": "0053_clear_assigned_party_corrections_on_approval",
+      "breakpoints": true
     }
   ]
 }
