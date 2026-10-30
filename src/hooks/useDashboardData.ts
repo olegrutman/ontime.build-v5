@@ -113,6 +113,7 @@ export interface ProjectFinancialDetail {
   paidByYou: number;
   pendingToCollect: number;
   pendingToPay: number;
+  approvedCORevenue: number;
 }
 
 export interface MaterialsRollup {
@@ -602,7 +603,7 @@ export function useDashboardData(): DashboardData {
       // Add change orders to recent docs
       const recentCOs = (recentCOsResult.data || []) as any[];
       recentCOs.forEach((co: any) => {
-        if (orgType !== 'GC' && co.org_id !== currentOrg.id && resolveUpstreamBillerOrgId(co) !== currentOrg.id) return;
+        if (orgType !== 'GC' && co.org_id !== currentOrg.id && resolveUpstreamBillerOrgId(co) !== currentOrg.id && !(orgType === 'FC' && co.originating_org_id === currentOrg.id)) return;
         const proj = allProjects.find(p => p.id === co.project_id);
         recentDocsList.push({
           id: co.id,
@@ -882,50 +883,12 @@ export function useDashboardData(): DashboardData {
           .in('project_id', projectIds);
         const cos = (allCOs || []) as any[];
 
-        // COs with no priced snapshot still carry real value in their line rows.
-        // Mirror the DB's co_grand_total so dashboard $ matches contract_sum.
-        const unpricedIds = cos
-          .filter((co) => !(Number(co.tc_submitted_price ?? 0) > 0) && !(Number(co.gc_budget ?? 0) > 0))
-          .map((co) => co.id);
-        const fallbackTotals = new Map<string, number>();
-        if (unpricedIds.length > 0) {
-          const [laborRes, matRes, eqRes] = await Promise.all([
-            supabase.from('co_labor_entries').select('co_id, line_total, is_actual_cost').in('co_id', unpricedIds),
-            supabase.from('co_material_items').select('co_id, billed_amount').in('co_id', unpricedIds),
-            supabase.from('co_equipment_items').select('co_id, billed_amount').in('co_id', unpricedIds),
-          ]);
-          const add = (id: string, amt: number) =>
-            fallbackTotals.set(id, (fallbackTotals.get(id) || 0) + amt);
-          for (const r of (laborRes.data || []) as any[]) {
-            if (!r.is_actual_cost) add(r.co_id, Number(r.line_total ?? 0));
-          }
-          for (const r of (matRes.data || []) as any[]) add(r.co_id, Number(r.billed_amount ?? 0));
-          for (const r of (eqRes.data || []) as any[]) add(r.co_id, Number(r.billed_amount ?? 0));
-        }
-
-        const pricedValue = (co: any): number => {
-          const snap = Number(co.tc_submitted_price ?? 0);
-          if (snap > 0) return snap;
-          const budget = Number(co.gc_budget ?? 0);
-          if (budget > 0) return budget;
-          return fallbackTotals.get(co.id) || 0;
-        };
-        const valueForViewer = (co: any): number => {
-          // GC sees contract impact via the priced snapshot, else the CO's line rollup
-          if (orgType === 'GC') return pricedValue(co);
-          // TC/FC: their own org's CO line = what they bill upstream
-          if (co.org_id === currentOrg.id) return pricedValue(co);
-          return 0;
-        };
         for (const co of cos) {
-          if (orgType !== 'GC' && co.org_id !== currentOrg.id && resolveUpstreamBillerOrgId(co) !== currentOrg.id) continue;
-          const v = valueForViewer(co);
+          if (orgType !== 'GC' && co.org_id !== currentOrg.id && resolveUpstreamBillerOrgId(co) !== currentOrg.id && !(orgType === 'FC' && co.originating_org_id === currentOrg.id)) continue;
           if ((APPROVED_CO_STATUSES as readonly string[]).includes(co.status)) {
             coApprovedCount += 1;
-            coApprovedNet += v;
           } else if ((PENDING_CO_STATUSES as readonly string[]).includes(co.status)) {
             coPendingCount += 1;
-            coPendingNetAtRisk += v;
           }
         }
         const ids = cos.map(co => co.id);
@@ -949,13 +912,9 @@ export function useDashboardData(): DashboardData {
         }
       }
 
-      // Revised totals — original contract value + approved CO impact on revenue side.
-      // For costs, we don't have CO cost without line items, so use the same delta as a
-      // conservative neutral assumption (margin stays flat from approved COs at portfolio level).
+      // Revised totals use independent approved revenue and cost, never a neutral-cost guess.
       const revisedRevenue = totalRevenue + coApprovedNet;
       const revisedCosts = totalCosts + coApprovedCost;
-      const projectedMarginRevised = revisedRevenue - revisedCosts + (potentialProfit > 0 ? 0 : 0);
-      // Until line-item CO cost is rolled up at portfolio level, fall back to original margin.
       const effectiveProjectedMargin = revisedRevenue - revisedCosts;
       const effectiveMarginPct = revisedRevenue > 0 ? (effectiveProjectedMargin / revisedRevenue) * 100 : 0;
 
@@ -994,7 +953,7 @@ export function useDashboardData(): DashboardData {
       // Build per-project financial details
       const pfMap = new Map<string, ProjectFinancialDetail>();
       allProjects.forEach(p => {
-        pfMap.set(p.id, { projectId: p.id, projectName: p.name, revenue: 0, costs: 0, paidToYou: 0, paidByYou: 0, pendingToCollect: 0, pendingToPay: 0 });
+        pfMap.set(p.id, { projectId: p.id, projectName: p.name, revenue: 0, costs: 0, paidToYou: 0, paidByYou: 0, pendingToCollect: 0, pendingToPay: 0, approvedCORevenue: coRevenueByProject.get(p.id) || 0 });
       });
 
       // Per-project revenue/cost use the SAME resolution as the project ledger.

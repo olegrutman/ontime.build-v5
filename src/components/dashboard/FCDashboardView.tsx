@@ -87,7 +87,7 @@ export function FCDashboardView({
   // COs from recentDocs
   const coList = recentDocs.filter(d => d.type === 'change_order' && d.projectId === primaryProject?.id);
   const approvedCOs = coList.filter(d => ['approved', 'contracted', 'completed'].includes(d.status));
-  const coTotal = approvedCOs.reduce((s, d) => s + (d.amount || 0), 0);
+  const coTotal = pf?.approvedCORevenue ?? 0;
 
   // Margin
   const totalScope = contractValue + coTotal;
