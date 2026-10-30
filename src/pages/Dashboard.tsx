@@ -45,6 +45,7 @@ export default function Dashboard() {
     pendingInvites,
     reminders,
     recentDocs,
+    financialDocs,
     billing,
     financials,
     projectFinancials,
@@ -214,7 +215,7 @@ export default function Dashboard() {
           billing={billing}
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}
-          recentDocs={recentDocs}
+          recentDocs={financialDocs}
           statusCounts={statusCounts}
           profile={profile}
           organization={organization}
@@ -248,7 +249,7 @@ export default function Dashboard() {
           billing={billing}
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}
-          recentDocs={recentDocs}
+          recentDocs={financialDocs}
           statusCounts={statusCounts}
           profile={profile}
           organization={organization}
@@ -282,7 +283,7 @@ export default function Dashboard() {
           billing={billing}
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}
-          recentDocs={recentDocs}
+          recentDocs={financialDocs}
           statusCounts={statusCounts}
           profile={profile}
           organization={organization}

@@ -81,7 +81,7 @@ export function PortfolioOverviewHeader({
         received: financials.receivedToDate ?? financials.paidToYou,
         paid: financials.paidByYou,
         cashPosition: financials.cashPosition,
-        owedToYou: financials.pendingInvoiced + financials.pendingUnbilled,
+        owedToYou: financials.pendingInvoiced,
         youOwe: financials.pendingToPay,
       }}
       changeOrders={{

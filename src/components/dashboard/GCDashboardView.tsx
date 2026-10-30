@@ -124,7 +124,7 @@ export function GCDashboardView({
   const pendingInvoiceDocs = (billing.invoiceRows || []).filter(d => d.direction === 'payable' && d.status === 'SUBMITTED');
 
   // POs from recentDocs
-  const poDocs = recentDocs.filter(d => d.type === 'purchase_order');
+  const poDocs = recentDocs.filter(d => d.type === 'purchase_order' && ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED'].includes(d.status));
   const poTotal = poDocs.reduce((s, d) => s + (d.amount || 0), 0);
 
   // Margin

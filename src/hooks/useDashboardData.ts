@@ -866,7 +866,7 @@ export function useDashboardData(): DashboardData {
 
       // Pending invoiced (you've billed, not yet paid) vs unbilled remaining.
       const pendingInvoiced = orgType === 'GC' ? ownerBillingBalance(ownerBilled, ownerCollected, totalRevenue).pending : outstandingToCollect;
-      const pendingToPayAll = outstandingToPay;
+      const pendingToPayAll = dashboardPendingInvoices(allInvoices, currentOrg.id, contractDetailMap, poOrgMap, new Map(allProjects.map(p => [p.id, p.name]))).filter(invoice => invoice.direction === 'payable').reduce((sum, invoice) => sum + invoice.amount, 0);
 
       // ---- Portfolio CO rollup (lightweight, contract-impact $) ----
       let coApprovedCount = 0;
