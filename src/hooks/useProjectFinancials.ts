@@ -10,6 +10,7 @@ import {
 } from '@/hooks/coAggregation';
 import { buildProjectLedger, type ProjectLedger } from '@/lib/kpiLedger';
 import { sumOrdered, sumBilled, sumReceived } from '@/lib/supplierMetrics';
+import { uniqueInvoices } from '@/lib/invoiceIntegrity';
 
 
 
@@ -614,7 +615,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!)
         );
 
-        const gcPayableInvs = [...gcContractInvs, ...gcPoInvs];
+        const gcPayableInvs = uniqueInvoices([...gcContractInvs, ...gcPoInvs]);
         const gcPayables = gcPayableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0);
         setGcPayablesInvoiced(gcPayables);
         setMaterialInvoiced(gcPoInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
@@ -670,7 +671,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         .from('purchase_orders')
         .select('id, status, sales_tax_percent, pricing_owner_org_id, po_line_items(line_total)')
         .eq('project_id', projectId)
-        .in('status', ['ORDERED', 'DELIVERED']);
+        .in('status', ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED']);
 
       const calcPOTotal = (pos: any[]) => pos.reduce((sum, po: any) => {
         const subtotal = (po.po_line_items || []).reduce((s: number, li: any) => s + (li.line_total || 0), 0);
@@ -682,14 +683,14 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // this a GC saw TC-procured POs charged against its own budget (and vice
       // versa). Legacy rows with no owner fall back to being visible to all.
       const allPOs = (orderedPOs || []).filter((po: any) =>
-        !po.pricing_owner_org_id || orgIds.includes(po.pricing_owner_org_id),
+        !!po.pricing_owner_org_id && orgIds.includes(po.pricing_owner_org_id),
       );
       const matOrdered = calcPOTotal(allPOs);
       setMaterialOrdered(matOrdered);
 
       // Split by delivery status
-      const deliveredPOs = allPOs.filter((po: any) => po.status === 'DELIVERED');
-      const pendingPOs = allPOs.filter((po: any) => po.status === 'ORDERED');
+      const deliveredPOs = allPOs.filter((po: any) => ['DELIVERED', 'FINALIZED'].includes(po.status));
+      const pendingPOs = allPOs.filter((po: any) => ['ORDERED', 'READY_FOR_DELIVERY'].includes(po.status));
       setMaterialDelivered(calcPOTotal(deliveredPOs));
       setMaterialOrderedPending(calcPOTotal(pendingPOs));
 

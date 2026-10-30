@@ -1,3 +1,5 @@
+import { uniqueInvoices, invoiceAmountSum } from '@/lib/invoiceIntegrity';
+
 export interface DashboardPendingInvoice {
   id: string;
   title: string;
@@ -27,8 +29,18 @@ export function dashboardPendingInvoices(
   purchaseOrders: ReadonlyMap<string, { supplier_org_id: string | null; pricing_owner_org_id: string | null }>,
   projects: ReadonlyMap<string, string>,
 ): DashboardPendingInvoice[] {
-  return invoices.flatMap((invoice): DashboardPendingInvoice[] => {
-    if (!['SUBMITTED', 'APPROVED'].includes(invoice.status)) return [];
+  return dashboardInvoiceRows(invoices, orgId, contracts, purchaseOrders, projects).filter(invoice => ['SUBMITTED', 'APPROVED'].includes(invoice.status));
+}
+
+export function dashboardInvoiceRows(
+  invoices: InvoiceSource[],
+  orgId: string,
+  contracts: ReadonlyMap<string, { from_org_id: string | null; to_org_id: string | null }>,
+  purchaseOrders: ReadonlyMap<string, { supplier_org_id: string | null; pricing_owner_org_id: string | null }>,
+  projects: ReadonlyMap<string, string>,
+): DashboardPendingInvoice[] {
+  return uniqueInvoices(invoices).flatMap((invoice): DashboardPendingInvoice[] => {
+    if (!['SUBMITTED', 'APPROVED', 'PAID'].includes(invoice.status)) return [];
     const contract = invoice.contract_id ? contracts.get(invoice.contract_id) : undefined;
     const po = !invoice.contract_id && invoice.po_id ? purchaseOrders.get(invoice.po_id) : undefined;
     const sender = contract?.from_org_id ?? po?.supplier_org_id;
@@ -48,6 +60,6 @@ export function dashboardPendingInvoices(
 }
 
 export function pendingInvoiceSummary(invoices: DashboardPendingInvoice[], direction: DashboardPendingInvoice['direction']) {
-  const rows = invoices.filter(invoice => invoice.direction === direction);
-  return { rows, count: rows.length, total: rows.reduce((sum, invoice) => sum + invoice.amount, 0) };
+  const rows = uniqueInvoices(invoices).filter(invoice => invoice.direction === direction && ['SUBMITTED', 'APPROVED'].includes(invoice.status));
+  return { rows, count: rows.length, total: invoiceAmountSum(rows.map(row => ({ total_amount: row.amount }))) };
 }

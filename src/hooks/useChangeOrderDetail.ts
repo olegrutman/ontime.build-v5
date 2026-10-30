@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
+import { coLaborCost } from '@/lib/coLaborCost';
 
 import type {
   ChangeOrder,
@@ -297,6 +298,7 @@ export function useChangeOrderDetail(coId: string | null) {
   // one billing upstream — so they get the toggle-derived billable price, while
   // the creating crew bills only its own labor down-line.
   const upstreamBillerOrgId = resolveUpstreamBillerOrgId(co as any);
+  const tcLaborCostTotal = coLaborCost(laborEntries, upstreamBillerOrgId).total;
   const isUpstreamBiller = !!orgId && orgId === upstreamBillerOrgId;
   const viewerLaborTotal = orgId
     ? billableLaborEntries.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.line_total ?? 0), 0)
@@ -355,6 +357,7 @@ export function useChangeOrderDetail(coId: string | null) {
     equipmentResponsible: eqResp,
     actualCostTotal,
     tcActualCostTotal,
+    tcLaborCostTotal,
     fcActualCostTotal,
     useFcPricingBase: !!co?.use_fc_pricing_base,
     profitMargin,

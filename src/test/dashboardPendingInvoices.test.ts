@@ -36,6 +36,12 @@ describe('subcontractor pending invoice cards', () => {
     expect(rows).toEqual([]);
   });
 
+  it('deduplicates the same pending invoice by ID, never by invoice number', () => {
+    const original = invoice('pending', 3120, 'upstream');
+    const rows = resolve([original, original]);
+    expect(pendingInvoiceSummary(rows, 'receivable')).toMatchObject({ count: 1, total: 3120 });
+  });
+
   it('keeps amounts, counts and every breakdown row aligned beyond recent-document limits', () => {
     const rows = resolve(Array.from({ length: 20 }, (_, index) => invoice(`upstream-${index}`, 100.25, 'upstream', 'APPROVED')));
     const summary = pendingInvoiceSummary(rows, 'receivable');

@@ -459,7 +459,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     .reduce((s, e) => s + (e.line_total ?? 0), 0);
   const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
   const scopeCost = isTC
-    ? (financials.useFcPricingBase ? Math.max(financials.tcActualCostTotal, financials.fcLaborTotal) : financials.tcActualCostTotal + financials.fcLaborTotal)
+    ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost
     : roleActualCost;
   const displayBillable = (isTC || isFC) ? financials.viewer.totalToUpstream : totalLogged;
   const grossMargin = displayBillable - roleActualCost;
