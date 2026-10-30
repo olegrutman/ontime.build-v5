@@ -234,15 +234,15 @@ export function TCDashboardView({
             const pillType: PillType = earned === 0 ? 'pm' : m2dPct >= 15 ? 'pg' : m2dPct >= 5 ? 'pw' : 'pr';
             return (
               <KpiCard idx={2} accent={C.green} icon={<TrendingUp size={18} color={C.green} />} iconBg={C.greenBg}
-                label="MARGIN TO DATE" value={earned > 0 ? fmt(m2d) : '—'}
-                sub={earned > 0 ? `${pctRounded}% realized · billed vs incurred` : 'No revenue earned yet'}
+                label="CASH SURPLUS TO DATE" value={earned > 0 ? fmt(m2d) : '—'}
+                sub={earned > 0 ? `${pctRounded}% · collected minus paid` : 'No payments collected yet'}
                 pills={earned > 0 ? [{ type: pillType, text: `${pctRounded}%` }] : [{ type: 'pm', text: 'No data' }]}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <THead cols={['Metric', 'Value']} />
                   <tbody>
-                    <TRow cells={[<TdN>Earned Revenue (invoiced)</TdN>, <TdM>{fmt(earned)}</TdM>]} />
-                    <TRow cells={[<TdN>Incurred Cost (paid + labor + CO)</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
-                    <TRow isTotal cells={[<TdN>Realized Margin</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
+                    <TRow cells={[<TdN>Payments collected</TdN>, <TdM>{fmt(earned)}</TdM>]} />
+                    <TRow cells={[<TdN>Invoices paid</TdN>, <TdM>{fmt(incurred)}</TdM>]} />
+                    <TRow isTotal cells={[<TdN>Cash surplus</TdN>, <TdM>{fmt(m2d)}</TdM>]} />
                   </tbody>
                 </table>
               </KpiCard>

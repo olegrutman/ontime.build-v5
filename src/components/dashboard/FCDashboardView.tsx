@@ -77,14 +77,14 @@ export function FCDashboardView({
 
   // Primary project — FC usually has one
   const primaryProject = projects[0] || null;
-  const pf = projectFinancials[0] || null;
+  const pf = projectFinancials.find(project => project.projectId === primaryProject?.id) || null;
 
   // Financials
   const contractValue = pf ? pf.revenue : financials.totalRevenue;
   const costs = pf ? pf.costs : financials.totalCosts;
 
   // COs from recentDocs
-  const coList = recentDocs.filter(d => d.type === 'change_order');
+  const coList = recentDocs.filter(d => d.type === 'change_order' && d.projectId === primaryProject?.id);
   const approvedCOs = coList.filter(d => ['approved', 'contracted', 'completed'].includes(d.status));
   const coTotal = approvedCOs.reduce((s, d) => s + (d.amount || 0), 0);
 
@@ -94,7 +94,7 @@ export function FCDashboardView({
   const marginPct = totalScope > 0 ? ((netMargin / totalScope) * 100).toFixed(1) : '0';
 
   // Invoices
-  const invoiceDocs = recentDocs.filter(d => d.type === 'invoice');
+  const invoiceDocs = (billing.invoiceRows || []).filter(d => d.direction === 'receivable' && d.projectId === primaryProject?.id);
   const paidInvoices = invoiceDocs.filter(d => d.status === 'PAID');
   const pendingInvoiceDocs = invoiceDocs.filter(d => ['SUBMITTED', 'APPROVED'].includes(d.status));
   const paidTotal = paidInvoices.reduce((s, d) => s + (d.amount || 0), 0);
@@ -288,14 +288,6 @@ export function FCDashboardView({
                     <Pill type="pg">Paid</Pill>,
                   ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
                 ))}
-                {pendingInvoiceDocs.map(inv => (
-                  <TRow key={inv.id} cells={[
-                    <TdN>{inv.title}</TdN>,
-                    <span>{inv.projectName}</span>,
-                    <TdM>{fmt(inv.amount || 0)}</TdM>,
-                     <Pill type="pw">Pending Subcontractor</Pill>,
-                  ]} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} />
-                ))}
               </tbody>
             </table>
           </KpiCard>
@@ -305,7 +297,7 @@ export function FCDashboardView({
             accent={C.yellow} icon="⏳" iconBg={C.yellowBg}
             label="PENDING FROM TRADE CONTRACTOR"
             value={pendingTotal > 0 ? fmt(pendingTotal) : '—'}
-            sub={pendingInvoiceDocs.length > 0 ? `Awaiting Subcontractor approval · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
+            sub={pendingInvoiceDocs.length > 0 ? `Awaiting approval or payment · ${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length > 1 ? 's' : ''}` : 'Nothing pending'}
             pills={pendingTotal > 0 ? [{ type: 'pw', text: 'Pending Subcontractor' }] : [{ type: 'pm', text: 'None' }]}
             idx={4}
           >
