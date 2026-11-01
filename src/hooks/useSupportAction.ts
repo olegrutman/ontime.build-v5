@@ -19,7 +19,16 @@ export function useSupportAction() {
       });
 
       if (error) {
-        toast({ title: 'Action failed', description: error.message, variant: 'destructive' });
+        // Read the server's real reason (e.g. weak password) instead of the generic status text.
+        let description = error.message;
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) description = String(body.error);
+          }
+        } catch { /* keep generic message */ }
+        toast({ title: 'Action failed', description, variant: 'destructive' });
         return false;
       }
 
