@@ -123,7 +123,7 @@ export default function PlatformUserDetail() {
   };
 
   const handleChangeEmail = async (reason: string) => {
-    const ok = await execute({ action_type: 'CHANGE_USER_EMAIL', reason, user_id: userId, new_email: newEmail });
+    const ok = await execute({ action_type: 'CHANGE_USER_EMAIL', reason, user_id: userId, new_email: newEmail, old_email: profile?.email });
     if (ok) {
       setChangeEmailReasonOpen(false);
       setChangeEmailOpen(false);

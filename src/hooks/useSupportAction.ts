@@ -44,7 +44,7 @@ export function useSupportAction() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('platform-support-action', {
-        body: params,
+        body: (({ old_email, ...rest }) => rest)(params),
       });
 
       if (error) {
