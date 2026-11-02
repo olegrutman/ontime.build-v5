@@ -39,3 +39,4 @@
 - Framing lumber type is the first field in the shared structured catalog funnel; display labels never replace stored filter values, preserving supplier-specific choices and scoped results.
 - Remodel/T&M projects get $0 GC↔Sub and Sub↔Crew contracts auto-created by ensure_tm_project_contracts (on participant accept / WO status change), because work-order approval and invoicing both require a contract between the two companies.
 - WO progress billing derives billed-to-date from invoice lines tagged with source_co_id/source_entry_ids (never stored on the WO); approved WOs bill incrementally, and deleting an invoice releases its entries through the line cascade.
+- Platform-staff account emails (reset, welcome, email/access change) are sent by the separate platform-account-notify function after the support action succeeds, because the support-action function's source is not in this project; a failed email never undoes the action.
