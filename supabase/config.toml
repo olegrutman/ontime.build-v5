@@ -49,3 +49,6 @@ project_id = "gzqgbfazwvmwmirbqfwf"
     verify_jwt = false
   [functions.po-supplier-access]
     verify_jwt = false
+
+  [functions.platform-account-notify]
+  verify_jwt = false
