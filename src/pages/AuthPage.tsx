@@ -286,15 +286,40 @@ function ResetPasswordInline() {
   const [showPw, setShowPw] = useStateRP(false);
   const [error, setError] = useStateRP('');
 
+  const [linkError, setLinkError] = useStateRP('');
+  const [resendEmail, setResendEmail] = useStateRP('');
+  const [resendState, setResendState] = useStateRP<'idle' | 'sending' | 'sent'>('idle');
+
   useEffectRP(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true);
+    // The auth server redirects here with an error in the hash or query when the
+    // link was already used, replaced by a newer link, or expired.
+    const params = new URLSearchParams(window.location.hash.substring(1) || window.location.search.substring(1));
+    if (params.get('error') || params.get('error_code')) {
+      const code = params.get('error_code');
+      setLinkError(code === 'otp_expired'
+        ? 'This reset link has expired or was already used. Each new reset email replaces the previous link — use the newest email, or request a new link below.'
+        : (params.get('error_description')?.replace(/\+/g, ' ') || 'This reset link is not valid.'));
+      return;
+    }
+    let done = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (session && event === 'SIGNED_IN')) { done = true; setReady(true); }
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
+      if (session) { done = true; setReady(true); }
     });
-    return () => subscription.unsubscribe();
+    const t = setTimeout(() => {
+      if (!done) setLinkError('We could not verify this reset link. It may have expired — request a new one below.');
+    }, 8000);
+    return () => { subscription.unsubscribe(); clearTimeout(t); };
   }, []);
+
+  const handleResend = async () => {
+    if (!resendEmail.includes('@')) return;
+    setResendState('sending');
+    await supabase.auth.resetPasswordForEmail(resendEmail.trim(), { redirectTo: passwordResetUrl() });
+    setResendState('sent');
+  };
 
   const handleSubmit = async () => {
     setError('');
@@ -331,7 +356,34 @@ function ResetPasswordInline() {
                   <div className="auth-sub">Enter your new password below</div>
                 </div>
 
-                {!ready ? (
+                {linkError ? (
+                  <div>
+                    <div className="auth-alert err" style={{ marginBottom: 16 }}>
+                      <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠</span>
+                      <span>{linkError}</span>
+                    </div>
+                    {resendState === 'sent' ? (
+                      <div className="auth-sub" style={{ marginBottom: 16 }}>If that email has an account, a new reset link is on its way. Use only the newest email.</div>
+                    ) : (
+                      <>
+                        <div className="auth-field">
+                          <div className="auth-field-label">Your email</div>
+                          <div className="auth-field-wrap">
+                            <input type="email" className="auth-input-field" placeholder="you@company.com"
+                              value={resendEmail} onChange={e => setResendEmail(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && handleResend()} />
+                          </div>
+                        </div>
+                        <button className="auth-cta-btn" onClick={handleResend} disabled={resendState === 'sending'}>
+                          {resendState === 'sending' ? <div className="auth-spinner" /> : <span>Send a new reset link</span>}
+                        </button>
+                      </>
+                    )}
+                    <button className="auth-cta-btn" style={{ marginTop: 12, background: 'transparent', color: 'inherit', border: '1px solid currentColor' }} onClick={() => navigate('/auth')}>
+                      <span>Back to sign in</span>
+                    </button>
+                  </div>
+                ) : !ready ? (
                   <div style={{ textAlign: 'center', padding: 20 }}>
                     <div className="auth-spinner" style={{ margin: '0 auto 16px', borderTopColor: 'var(--auth-amber)' }} />
                     <div className="auth-sub">Verifying recovery link…</div>
