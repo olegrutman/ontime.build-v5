@@ -8,6 +8,7 @@ import { baseContractSum } from '@/lib/contractSums';
 import { dedupeContracts, findCostContracts, findRevenueContract, isAwardedContract } from '@/lib/kpiLedger';
 import { dashboardPendingInvoices, dashboardInvoiceRows, type DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
 import { ownerBillingBalance, projectMaterialCommitment } from '@/lib/invoiceIntegrity';
+import { resolveOwnerPrice } from '@/lib/ownerContract';
 
 // contract_sum already includes approved COs (DB trigger). Dashboard cards add
 // approved CO value separately, so contract totals must use the base value.
