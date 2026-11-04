@@ -869,10 +869,39 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     return true;
   };
 
-  const updateOwnerContract = async (contractId: string, value: number): Promise<boolean> => {
-    const { error } = await supabase.from('project_contracts').update({ owner_contract_value: value } as any).eq('id', contractId).select('id').maybeSingle();
-    if (error) { console.error('Failed to update owner contract:', error); return false; }
-    setOwnerContractValue(value);
+  // One canonical write path for the owner price. Both columns that have
+  // historically carried it are set together (KPIs read owner_contract_value,
+  // the SOV page reads contract_sum), so the overview and the dashboard can
+  // never disagree. A missing Owner → GC row is created on first entry: a GC who
+  // skipped the optional setup question must still be able to record the price.
+  const setOwnerPrice = async (value: number): Promise<boolean> => {
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount <= 0) return false;
+    const existing = findOwnerContractRow(contracts, gcOrgId);
+    const payload = { owner_contract_value: amount, contract_sum: amount };
+    if (existing?.id) {
+      const { error } = await supabase
+        .from('project_contracts')
+        .update(payload)
+        .eq('id', existing.id)
+        .select('id')
+        .maybeSingle();
+      if (error) { console.error('Failed to update owner price:', error); return false; }
+    } else {
+      if (!gcOrgId) return false;
+      const { error } = await supabase.from('project_contracts').insert({
+        project_id: projectId,
+        from_org_id: null,
+        from_role: 'Owner',
+        to_org_id: gcOrgId,
+        to_role: 'General Contractor',
+        status: 'Active',
+        created_by_user_id: user?.id ?? null,
+        ...payload,
+      });
+      if (error) { console.error('Failed to create owner contract:', error); return false; }
+    }
+    setOwnerContractValue(amount);
     return true;
   };
 
@@ -942,7 +971,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     payablesPaidToSubs: Math.max(0, payablesPaid - materialPaid),
     recentInvoices, fcParticipants,
     refetch: () => { void fetchData({ reset: false }); }, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
-    updateOwnerContract, updateMaterialMarkup,
+    setOwnerPrice, updateMaterialMarkup,
   };
 }
 
