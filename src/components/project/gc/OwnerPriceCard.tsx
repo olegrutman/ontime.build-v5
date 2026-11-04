@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Check, Loader2, Pencil, Plus, X } from 'lucide-react';
-import { C, fontLabel, fontMono, fmt } from '@/components/shared/KpiCard';
+import { C, fontLabel, fontMono } from '@/components/shared/KpiCard';
+
+/**
+ * Exact, never abbreviated: this is a contract figure the GC types in, so
+ * $1,250,000 must read as $1,250,000 rather than the rounded "$1.3M" a KPI tile
+ * would use.
+ */
+const moneyExact = (n: number) =>
+  `$${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 interface Props {
   /** Current owner price; null or 0 when the GC has never entered one. */
@@ -145,7 +153,7 @@ export function OwnerPriceCard({ value, onSave, busy = false }: Props) {  const 
                 <span style={{ ...fontMono, fontSize: '1.15rem', fontWeight: 700, color: C.amberD }}>—</span>
               ) : (
                 <span style={{ ...fontMono, fontSize: '1.15rem', fontWeight: 700, color: C.ink }}>
-                  {fmt(Number(value))}
+                  {moneyExact(Number(value))}
                 </span>
               )}
               <button onClick={start} disabled={busy} style={btn(C.amber, '#fff')}>
