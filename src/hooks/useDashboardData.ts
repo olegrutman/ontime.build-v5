@@ -428,12 +428,10 @@ export function useDashboardData(): DashboardData {
         // and the project's own header can never print different values.
         if (orgType === 'GC') {
           // GC revenue is the OWNER instrument only — sub contracts pointing at
-          // the GC are its cost, not its revenue.
-          const ownerVal = projectContracts
-            .map(c => Number((c as any).owner_contract_value || 0))
-            .find(v => v > 0);
-          const ownerRow = projectContracts.find(c => c.from_role === 'Owner');
-          contractValue = ownerVal ?? (ownerRow ? baseSum(ownerRow) : null);
+          // the GC are its cost, not its revenue. Same shared resolver the
+          // project overview uses, so card and header can never print different
+          // values, and another company's prime contract is never read.
+          contractValue = resolveOwnerPrice(projectContracts as any, currentOrg.id);
         } else {
           const rev = findRevenueContract(projectContracts as any, [currentOrg.id]);
           contractValue = rev ? baseSum(rev) : null;
@@ -696,12 +694,10 @@ export function useDashboardData(): DashboardData {
 
       // 7. Calculate financial summary
       // Revenue instrument per project, resolved exactly like the project ledger.
-      const ownerValueFor = (pid: string) => {
-        const rows = contracts.filter(c => c.project_id === pid);
-        const v = rows.map(c => Number((c as any).owner_contract_value || 0)).find(x => x > 0);
-        const ownerRow = rows.find(c => c.from_role === 'Owner');
-        return v ?? (ownerRow ? baseSum(ownerRow) : 0);
-      };
+      // Same shared resolver as the project overview: this viewer's own owner
+      // prime contract, so the dashboard total and each project card agree.
+      const ownerValueFor = (pid: string) =>
+        resolveOwnerPrice(contracts.filter(c => c.project_id === pid) as any, currentOrg.id) ?? 0;
       const revenueContractByProject = new Map<string, any>();
       projectIds.forEach(pid => {
         const rev = findRevenueContract(contracts.filter(c => c.project_id === pid) as any, [currentOrg.id]);
