@@ -17,8 +17,7 @@ interface Props {
  * baseline every GC revenue and margin figure is measured against, so it is
  * editable here at any time — during setup or long after the project is active.
  */
-export function OwnerPriceCard({ value, onSave, busy = false }: Props) {
-  const missing = value === null || !Number.isFinite(value) || value <= 0;
+export function OwnerPriceCard({ value, onSave, busy = false }: Props) {  const missing = value === null || !Number.isFinite(value) || value <= 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
