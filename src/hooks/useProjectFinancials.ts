@@ -11,6 +11,7 @@ import {
 import { buildProjectLedger, type ProjectLedger } from '@/lib/kpiLedger';
 import { sumOrdered, sumBilled, sumReceived } from '@/lib/supplierMetrics';
 import { uniqueInvoices } from '@/lib/invoiceIntegrity';
+import { findOwnerContractRow, resolveOwnerPrice } from '@/lib/ownerContract';
 
 
 
@@ -24,6 +25,8 @@ interface Contract {
   /** Portion of contract_sum contributed by approved COs. */
   co_approved_sum?: number | null;
   original_contract_sum?: number | null;
+  /** GC revenue baseline on an Owner → GC row; see lib/ownerContract. */
+  owner_contract_value?: number | null;
   retainage_percent: number;
   trade: string | null;
   from_org_id: string | null;
@@ -150,7 +153,8 @@ export interface ProjectFinancials {
   createFcContract: (fcOrgId: string, sum: number, retainage: number) => Promise<boolean>;
   updateMaterialEstimate: (contractId: string, amount: number) => Promise<boolean>;
   updateLaborBudget: (contractId: string, amount: number) => Promise<boolean>;
-  updateOwnerContract: (contractId: string, value: number) => Promise<boolean>;
+  /** Record the GC's owner price, creating the Owner → GC contract when missing. */
+  setOwnerPrice: (value: number) => Promise<boolean>;
   updateMaterialMarkup: (contractId: string, type: string, value: number) => Promise<boolean>;
 }
 
@@ -292,6 +296,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setUserOrgIds(orgIds);
 
       let detectedRole: ViewerRole = 'Subcontractor';
+      let gcOrgForProject: string | null = null;
       if (isSupplier) {
         detectedRole = 'Supplier';
       } else if (orgIds.length > 0) {
@@ -312,7 +317,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           // Resolve the viewer's GC org on THIS project (multi-org safe) so the
           // owner-billings ledger writes with an org id that passes RLS.
           const gcRow = teamMembers.find((m: any) => m.role === 'General Contractor');
-          setGcOrgId(gcRow?.org_id ?? null);
+          gcOrgForProject = gcRow?.org_id ?? null;
+          setGcOrgId(gcOrgForProject);
         }
 
       }
@@ -715,19 +721,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setLaborBudget((primaryC as any)?.labor_budget ?? null);
       }
 
-      // Extract owner_contract_value — prefer the explicit Owner→GC contract row
-      // (created by the GC setup wizard), then fall back to the GC↔TC primary row.
-      const ownerGcContract = contractsWithNames.find((c: any) =>
-        c.from_role === 'Owner' && c.to_role === 'General Contractor'
+      // The GC's revenue baseline is its Owner → GC prime contract; the GC↔TC
+      // primary row only ever carries a legacy owner value. Both columns on the
+      // owner row are kept in sync on write (see setOwnerPrice).
+      setOwnerContractValue(
+        resolveOwnerPrice(contractsWithNames, gcOrgForProject, primaryC),
       );
-      const ownerVal =
-        (ownerGcContract as any)?.owner_contract_value ??
-        ((ownerGcContract as any)?.contract_sum && (ownerGcContract as any).contract_sum > 0
-          ? (ownerGcContract as any).contract_sum
-          : null) ??
-        (primaryC as any)?.owner_contract_value ??
-        null;
-      setOwnerContractValue(ownerVal);
       setMaterialMarkupType((primaryC as any)?.material_markup_type ?? null);
       setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
 
