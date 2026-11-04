@@ -716,14 +716,6 @@ export function useDashboardData(): DashboardData {
       const totalContractValue = orgType === 'GC'
         ? projectIds.reduce((sum, pid) => sum + ownerValueFor(pid), 0)
         : [...revenueContractByProject.values()].reduce((sum, c) => sum + baseSum(c), 0);
-      console.log('[owner-probe]', JSON.stringify({
-        orgType, n: projectIds.length, totalContractValue,
-        sample: projectIds.slice(0, 2).map(pid => ({
-          pid, v: ownerValueFor(pid),
-          rows: contracts.filter(c => c.project_id === pid)
-            .map(c => [c.from_role, c.to_role, c.owner_contract_value, c.contract_sum, c.to_org_id]),
-        })),
-      }));
 
       let totalRevenue = 0;
       let totalCosts = 0;
