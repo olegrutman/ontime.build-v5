@@ -10,6 +10,7 @@ import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import type { OrgType } from '@/types/organization';
 import { C, fontLabel, fmt, type PillType } from '@/components/shared/KpiCard';
 import { CanonicalKpiGrid } from '@/components/project/kpi/CanonicalKpiGrid';
+import { OwnerPriceCard } from '@/components/project/gc/OwnerPriceCard';
 
 import { useBuyerMaterialsAnalytics } from '@/hooks/useBuyerMaterialsAnalytics';
 import { BuyerMaterialsAnalyticsSection } from '@/components/project/BuyerMaterialsAnalyticsSection';
@@ -102,33 +103,18 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     return upContract.to_org_name || upContract.from_org_name || 'Subcontractor';
   })();
 
-  // ─── Owner Budget editing ───
-  const [draftOwnerBudget, setDraftOwnerBudget] = useState(ownerBudgetReal);
-  const [dirtyOwner, setDirtyOwner] = useState(false);
+  // ─── Owner price — the GC's own revenue baseline (Owner → You contract) ───
   const [savingOwner, setSavingOwner] = useState(false);
 
-  useEffect(() => {
-    setDraftOwnerBudget(ownerBudgetReal);
-    setDirtyOwner(false);
-  }, [ownerBudgetReal]);
-
-  const ownerGcContract = financials.contracts?.find(
-    (c: any) => c.from_role === 'Owner' && c.to_role === 'General Contractor'
-  );
-
-  const saveOwnerBudget = async () => {
-    const targetId = ownerGcContract?.id || upContract?.id;
-    if (!targetId) return;
+  const saveOwnerPrice = async (amount: number): Promise<boolean> => {
     setSavingOwner(true);
-    const ok = await financials.updateOwnerContract(targetId, draftOwnerBudget);
+    const ok = await financials.setOwnerPrice(amount);
     setSavingOwner(false);
-    if (ok) {
-      financials.refetch();
-      setDirtyOwner(false);
-    }
+    if (ok) financials.refetch();
+    return ok;
   };
 
-  const ownerBudget = draftOwnerBudget;
+  const ownerBudget = ownerBudgetReal;
   const marginDollar = ownerBudget - tcContractVal;
   const marginPct = ownerBudget > 0 ? ((marginDollar / ownerBudget) * 100).toFixed(1) : '0';
 
@@ -380,6 +366,15 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
           />
         );
       })()}
+
+      {/* ─── Owner price — GC-only revenue baseline, editable at any time ─── */}
+      {viewerOrgType === 'GC' && (
+        <OwnerPriceCard
+          value={financials.ownerContractValue}
+          onSave={saveOwnerPrice}
+          busy={savingOwner}
+        />
+      )}
 
       {/* ─── Canonical financial cards — one ledger, one formula per number ─── */}
       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.8px', color: C.faint, fontWeight: 700, paddingTop: 4 }}>
