@@ -393,6 +393,13 @@
       "when": 1793918054641,
       "tag": "0055_invoice_line_rejection_line_based_totals",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1793918219817,
+      "tag": "0056_invoice_line_rejection_subtotal_fix",
+      "breakpoints": true
     }
   ]
 }

@@ -992,7 +992,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           </div>
           <div className="text-sm flex justify-between gap-2">
             <span className="text-muted-foreground">Approving</span>
-            <span className="font-mono tabular-nums font-semibold">{formatCurrency(Number(invoice?.subtotal || 0) - rejectedTotal)}</span>
+            <span className="font-mono tabular-nums font-semibold">{formatCurrency(lineItems.reduce((s, li) => s + Number(li.current_billed || 0), 0) - rejectedTotal)}</span>
           </div>
           <div className="text-sm flex justify-between gap-2 -mt-2">
             <span className="text-muted-foreground">Returning to sender</span>
