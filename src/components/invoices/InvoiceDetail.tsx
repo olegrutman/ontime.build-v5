@@ -89,6 +89,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [editDescription, setEditDescription] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [editAmount, setEditAmount] = useState('');
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
@@ -98,6 +99,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     setEditingItemId(item.id);
     setEditDescription(item.description || '');
     setEditNotes(item.line_notes || '');
+    setEditAmount(String(item.current_billed ?? 0));
   };
 
   const cancelEditLine = () => {
@@ -124,16 +126,40 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       toast.error('This invoice is locked and can no longer be edited');
       return;
     }
+    const editing = lineItems.find(li => li.id === itemId);
+    const amountEditable = !!editing && !(editing as any).sov_item_id && invoice?.status === 'DRAFT';
+    const newAmount = amountEditable ? Math.round(Number(editAmount) * 100) / 100 : editing?.current_billed ?? 0;
+    if (amountEditable && (!Number.isFinite(newAmount) || newAmount < 0)) {
+      toast.error('Amount must be 0 or more');
+      return;
+    }
     setEditSaving(true);
     try {
+      const patch: Record<string, any> = { description: desc, line_notes: editNotes.trim() || null };
+      if (amountEditable && editing) {
+        patch.current_billed = newAmount;
+        patch.total_billed = Number(editing.previous_billed || 0) + newAmount;
+      }
       const { error } = await supabase
         .from('invoice_line_items')
-        .update({ description: desc, line_notes: editNotes.trim() || null })
+        .update(patch)
         .eq('id', itemId);
       if (error) throw error;
+      if (amountEditable && editing && invoice && newAmount !== editing.current_billed) {
+        const delta = newAmount - Number(editing.current_billed || 0);
+        const { error: invErr } = await supabase
+          .from('invoices')
+          .update({
+            subtotal: Math.round((Number(invoice.subtotal) + delta) * 100) / 100,
+            total_amount: Math.round((Number(invoice.total_amount) + delta) * 100) / 100,
+          })
+          .eq('id', invoice.id);
+        if (invErr) throw invErr;
+        setInvoice({ ...invoice, subtotal: Number(invoice.subtotal) + delta, total_amount: Number(invoice.total_amount) + delta });
+      }
       setLineItems((prev) =>
         prev.map((li) =>
-          li.id === itemId ? { ...li, description: desc, line_notes: editNotes.trim() || null } : li
+          li.id === itemId ? { ...li, ...patch } as InvoiceLineItem : li
         )
       );
       toast.success('Line item updated');
@@ -359,6 +385,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   };
 
   const handleRevise = () => {
+    // SOV invoices use the SOV revision wizard; returned order/PO lines are fixed in place as a draft.
+    const hasSovLines = lineItems.some(li => (li as any).sov_item_id);
+    if (!hasSovLines && invoice?.status === 'REJECTED') {
+      updateInvoiceStatus('DRAFT', { revision_count: ((invoice as any).revision_count || 0) + 1 });
+      return;
+    }
     setReviseDialogOpen(true);
   };
 
@@ -753,6 +785,18 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                             rows={4}
                             className="text-xs font-normal"
                           />
+                          {!(item as any).sov_item_id && status === 'DRAFT' && (
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={editAmount}
+                              onChange={(e) => setEditAmount(e.target.value)}
+                              aria-label="Line amount"
+                              placeholder="Amount"
+                              className="text-sm w-40"
+                            />
+                          )}
                           <div className="flex items-center gap-2">
                             <Button size="sm" onClick={() => saveEditLine(item.id)} disabled={editSaving}>
                               {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
@@ -948,7 +992,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           </div>
           <div className="text-sm flex justify-between gap-2">
             <span className="text-muted-foreground">Approving</span>
-            <span className="font-mono tabular-nums font-semibold">{formatCurrency(Number(invoice?.subtotal || 0) - rejectedTotal)}</span>
+            <span className="font-mono tabular-nums font-semibold">{formatCurrency(lineItems.reduce((s, li) => s + Number(li.current_billed || 0), 0) - rejectedTotal)}</span>
           </div>
           <div className="text-sm flex justify-between gap-2 -mt-2">
             <span className="text-muted-foreground">Returning to sender</span>
