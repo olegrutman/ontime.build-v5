@@ -77,7 +77,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [attachPdf, setAttachPdf] = useState(true);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [lineRejections, setLineRejections] = useState<Record<string, string>>({});
   const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string; pricing_owner_org_id: string | null; supplier_org_id: string | null } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
@@ -298,18 +298,39 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     });
   };
 
-  const handleReject = () => {
-    if (!rejectionReason.trim()) {
-      toast.error('Please provide a rejection reason');
+  const rejectedIds = Object.keys(lineRejections);
+  const rejectedTotal = lineItems
+    .filter(li => rejectedIds.includes(li.id))
+    .reduce((s, li) => s + Number(li.current_billed || 0), 0);
+
+  const handleReject = async () => {
+    if (rejectedIds.length === 0) {
+      toast.error('Select at least one line to reject');
       return;
     }
-    updateInvoiceStatus('REJECTED', {
-      rejected_at: new Date().toISOString(),
-      rejected_by: user?.id,
-      rejection_reason: rejectionReason,
+    if (rejectedIds.length >= lineItems.length) {
+      toast.error('At least one line must stay approved — the whole invoice cannot be rejected');
+      return;
+    }
+    if (rejectedIds.some(id => (lineRejections[id] || '').trim().length < 3)) {
+      toast.error('Give a reason for each rejected line');
+      return;
+    }
+    setActionLoading(true);
+    const { data, error } = await supabase.rpc('approve_invoice_with_line_rejections' as any, {
+      _invoice_id: invoiceId,
+      _rejections: rejectedIds.map(id => ({ line_id: id, reason: lineRejections[id].trim() })),
     });
+    setActionLoading(false);
+    if (error) {
+      toast.error(error.message || 'Could not approve the invoice');
+      return;
+    }
+    toast.success(`Approved the rest; ${rejectedIds.length} line(s) returned to the sender${data ? '' : ''}`);
     setRejectDialogOpen(false);
-    setRejectionReason('');
+    setLineRejections({});
+    fetchInvoice();
+    onUpdate();
   };
 
   const handleRecordPayment = (details: PaymentDetails) => {
@@ -523,10 +544,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
           {status === 'SUBMITTED' && canApprove && (
             <>
-              <Button variant="outline" onClick={() => setRejectDialogOpen(true)} disabled={actionLoading}>
-                <XCircle className="h-4 w-4 mr-2" />
-                Reject
-              </Button>
+              {lineItems.length > 1 && (
+                <Button variant="outline" onClick={() => { setLineRejections({}); setRejectDialogOpen(true); }} disabled={actionLoading}>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Reject some lines
+                </Button>
+              )}
               <Button onClick={handleApprove} disabled={actionLoading}>
                 {actionLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -879,22 +902,59 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reject Invoice</AlertDialogTitle>
+            <AlertDialogTitle>Reject some lines</AlertDialogTitle>
             <AlertDialogDescription>
-              Please provide a reason for rejecting this invoice. This will be visible to the submitter.
+              Tick the lines you don't accept and say why. Everything else is approved now; the rejected lines go back to the sender as a separate invoice to fix and resubmit.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Textarea
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="Enter rejection reason..."
-            rows={3}
-          />
+          <div className="max-h-[50vh] overflow-y-auto space-y-2">
+            {lineItems.map(li => {
+              const checked = li.id in lineRejections;
+              return (
+                <div key={li.id} className="rounded-lg border border-border p-2 space-y-2">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1 shrink-0"
+                      checked={checked}
+                      onChange={(e) => setLineRejections(prev => {
+                        const next = { ...prev };
+                        if (e.target.checked) next[li.id] = ''; else delete next[li.id];
+                        return next;
+                      })}
+                    />
+                    <span className="flex-1 min-w-0 text-sm break-words">{li.description}</span>
+                    <span className="shrink-0 font-mono tabular-nums text-sm">{formatCurrency(li.current_billed)}</span>
+                  </label>
+                  {checked && (
+                    <Input
+                      value={lineRejections[li.id]}
+                      onChange={(e) => setLineRejections(prev => ({ ...prev, [li.id]: e.target.value }))}
+                      placeholder="Reason for rejecting this line"
+                      maxLength={500}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="text-sm flex justify-between gap-2">
+            <span className="text-muted-foreground">Approving</span>
+            <span className="font-mono tabular-nums font-semibold">{formatCurrency(Number(invoice?.subtotal || 0) - rejectedTotal)}</span>
+          </div>
+          <div className="text-sm flex justify-between gap-2 -mt-2">
+            <span className="text-muted-foreground">Returning to sender</span>
+            <span className="font-mono tabular-nums text-destructive">{formatCurrency(rejectedTotal)}</span>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject} className="bg-destructive text-destructive-foreground">
-              Reject Invoice
-            </AlertDialogAction>
+            <Button
+              onClick={handleReject}
+              disabled={actionLoading || rejectedIds.length === 0 || rejectedIds.length >= lineItems.length}
+              variant="destructive"
+            >
+              Approve rest & return {rejectedIds.length || ''} line(s)
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
