@@ -675,6 +675,9 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
               return (
                 <div key={`m-${item.id}`} className={`p-3 ${isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
                   <div className="text-sm font-medium mb-2 break-words">{item.description}</div>
+                  {(item as any).rejection_reason && (
+                    <div className="text-xs text-destructive mb-2 break-words">Rejected: {(item as any).rejection_reason}</div>
+                  )}
                   {noteText && (
                     <div className="text-xs text-muted-foreground mb-2 whitespace-pre-wrap">{noteText}</div>
                   )}
@@ -764,7 +767,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                       ) : (
                         <div className="group">
                           <div className="flex items-start gap-2">
-                            <div className="flex-1">{item.description}</div>
+                            <div className="flex-1">
+                              {item.description}
+                              {(item as any).rejection_reason && (
+                                <div className="text-xs text-destructive font-normal mt-0.5">Rejected: {(item as any).rejection_reason}</div>
+                              )}
+                            </div>
                             {status !== 'APPROVED' && status !== 'PAID' && (
                               <Button
                                 size="sm"
