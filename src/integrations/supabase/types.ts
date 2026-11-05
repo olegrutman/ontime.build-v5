@@ -4018,6 +4018,8 @@ export type Database = {
           invoice_id: string
           line_notes: string | null
           previous_billed: number
+          rejected_from_invoice_id: string | null
+          rejection_reason: string | null
           retainage_amount: number
           retainage_percent: number
           scheduled_value: number
@@ -4038,6 +4040,8 @@ export type Database = {
           invoice_id: string
           line_notes?: string | null
           previous_billed?: number
+          rejected_from_invoice_id?: string | null
+          rejection_reason?: string | null
           retainage_amount?: number
           retainage_percent?: number
           scheduled_value?: number
@@ -4058,6 +4062,8 @@ export type Database = {
           invoice_id?: string
           line_notes?: string | null
           previous_billed?: number
+          rejected_from_invoice_id?: string | null
+          rejection_reason?: string | null
           retainage_amount?: number
           retainage_percent?: number
           scheduled_value?: number
@@ -4128,6 +4134,7 @@ export type Database = {
           retainage_amount: number
           revision_count: number
           sov_id: string | null
+          split_from_invoice_id: string | null
           status: string
           submitted_at: string | null
           submitted_by: string | null
@@ -4165,6 +4172,7 @@ export type Database = {
           retainage_amount?: number
           revision_count?: number
           sov_id?: string | null
+          split_from_invoice_id?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -4202,6 +4210,7 @@ export type Database = {
           retainage_amount?: number
           revision_count?: number
           sov_id?: string | null
+          split_from_invoice_id?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -9478,6 +9487,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      approve_invoice_with_line_rejections: {
+        Args: { _invoice_id: string; _rejections: Json }
+        Returns: string
       }
       approve_join_request: {
         Args: { _request_id: string }

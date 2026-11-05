@@ -379,6 +379,13 @@
       "when": 1793389500299,
       "tag": "0053_clear_assigned_party_corrections_on_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793917899457,
+      "tag": "0054_invoice_partial_line_rejection",
+      "breakpoints": true
     }
   ]
 }
