@@ -148,6 +148,8 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       if (error) throw error;
       if (amountEditable && editing && invoice && newAmount !== editing.current_billed) {
         const delta = newAmount - Number(editing.current_billed || 0);
+        // Order invoices keep tax as its own line outside the pre-tax subtotal.
+        const subDelta = /\btax\b/i.test(desc) ? 0 : delta;
         const { error: invErr } = await supabase
           .from('invoices')
           .update({
