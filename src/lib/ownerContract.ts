@@ -74,7 +74,9 @@ export function resolveOwnerPrice(
   const fromOwnerRow = ownerPriceOf(findOwnerContractRow(contracts, gcOrgId));
   if (fromOwnerRow !== null) return fromOwnerRow;
   // Every caller resolves the same legacy row unless one is passed explicitly.
-  const legacyRow = fallback === undefined ? findPrimaryGcSubRow(contracts) : fallback;
+  // A legacy row only counts when it actually carries a positive owner value.
+  const found = findPrimaryGcSubRow(contracts);
+  const legacyRow = fallback === undefined ? (Number(found?.owner_contract_value) > 0 ? found : null) : fallback;
   const legacy = legacyRow?.owner_contract_value;
   if (legacy !== null && legacy !== undefined && Number.isFinite(Number(legacy))) {
     return Number(legacy);
