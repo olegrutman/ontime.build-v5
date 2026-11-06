@@ -16,6 +16,18 @@ export interface OwnerContractLike {
   contract_sum?: number | null;
   owner_contract_value?: number | null;
   to_org_id?: string | null;
+  trade?: string | null;
+}
+
+/** The primary GC↔Subcontractor row, where older projects stored the owner value. */
+export function findPrimaryGcSubRow<T extends OwnerContractLike>(contracts: T[]): T | undefined {
+  return contracts.find(
+    (c) =>
+      ((c.from_role === 'General Contractor' && c.to_role === 'Subcontractor') ||
+        (c.to_role === 'General Contractor' && c.from_role === 'Subcontractor')) &&
+      c.trade !== 'Work Order' &&
+      c.trade !== 'Work Order Labor',
+  );
 }
 
 /**
@@ -61,7 +73,11 @@ export function resolveOwnerPrice(
 ): number | null {
   const fromOwnerRow = ownerPriceOf(findOwnerContractRow(contracts, gcOrgId));
   if (fromOwnerRow !== null) return fromOwnerRow;
-  const legacy = fallback?.owner_contract_value;
+  // Every caller resolves the same legacy row unless one is passed explicitly.
+  // A legacy row only counts when it actually carries a positive owner value.
+  const found = findPrimaryGcSubRow(contracts);
+  const legacyRow = fallback === undefined ? (Number(found?.owner_contract_value) > 0 ? found : null) : fallback;
+  const legacy = legacyRow?.owner_contract_value;
   if (legacy !== null && legacy !== undefined && Number.isFinite(Number(legacy))) {
     return Number(legacy);
   }
