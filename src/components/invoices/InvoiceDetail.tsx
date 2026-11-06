@@ -139,6 +139,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       if (amountEditable && editing) {
         patch.current_billed = newAmount;
         patch.total_billed = Number(editing.previous_billed || 0) + newAmount;
+        if (Number(editing.scheduled_value || 0) < patch.total_billed) patch.scheduled_value = patch.total_billed;
       }
       const { error } = await supabase
         .from('invoice_line_items')
