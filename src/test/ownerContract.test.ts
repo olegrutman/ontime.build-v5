@@ -73,3 +73,11 @@ describe('owner price (GC revenue baseline)', () => {
     expect(resolveOwnerPrice([ownerRow({ to_org_id: null, contract_sum: 400000 })], GC)).toBe(400000);
   });
 });
+
+import { resolveOwnerPrice as resolveForDashboard } from '@/lib/ownerContract';
+describe('legacy owner value without explicit fallback', () => {
+  it('dashboard-style call reads the owner value stored on the GC–subcontractor row', () => {
+    const rows = [{ from_role: 'Subcontractor', to_role: 'General Contractor', owner_contract_value: 900000, contract_sum: 400000, to_org_id: 'gc' }];
+    expect(resolveForDashboard(rows, 'gc')).toBe(900000);
+  });
+});
