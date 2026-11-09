@@ -898,8 +898,11 @@ export function useDashboardData(): DashboardData {
           ]);
           coApprovedNet = 0;
           coPendingNetAtRisk = 0;
+          // Crews join WOs as collaborators, not owners/assignees — include orders
+          // where this crew logged its own billable labor.
+          const fcWorkedCoIds = new Set<string>(orgType === 'FC' ? (labor.data || []).filter((l: any) => l.org_id === currentOrg.id).map((l: any) => l.co_id) : []);
           for (const pid of projectIds) {
-            const scoped = cos.filter(co => co.project_id === pid && (orgType === 'GC' || co.org_id === currentOrg.id || resolveUpstreamBillerOrgId(co) === currentOrg.id || (orgType === 'FC' && co.originating_org_id === currentOrg.id)));
+            const scoped = cos.filter(co => co.project_id === pid && (orgType === 'GC' || fcWorkedCoIds.has(co.id) || co.org_id === currentOrg.id || resolveUpstreamBillerOrgId(co) === currentOrg.id || (orgType === 'FC' && co.originating_org_id === currentOrg.id)));
             const resp = contracts.find(c => c.project_id === pid && c.from_role !== 'Owner' && c.material_responsibility != null);
             const totals = aggregateCOTotals(scoped, labor.data || [], mats.data || [], equip.data || [], currentOrg.id, orgType === 'GC', { materials: resp?.material_responsibility }, orgType === 'GC' ? co => resolveUpstreamBillerOrgId(co) : undefined);
             coRevenueByProject.set(pid, totals.approvedCORevenue);
