@@ -233,7 +233,7 @@ export function useDashboardData(): DashboardData {
       ] = await Promise.all([
         supabase
           .from('projects')
-          .select('id, name, description, status, project_type, build_type, updated_at, organization_id')
+          .select('id, name, description, status, project_type, build_type, updated_at, organization_id, contract_mode')
           .eq('organization_id', currentOrg.id),
         supabase
           .from('project_participants')
@@ -260,7 +260,7 @@ export function useDashboardData(): DashboardData {
       if (allProjectIds.length > 0) {
         const { data } = await supabase
           .from('projects')
-          .select('id, name, description, status, project_type, build_type, updated_at, organization_id')
+          .select('id, name, description, status, project_type, build_type, updated_at, organization_id, contract_mode')
           .in('id', allProjectIds);
         assignedProjects = (data || []) as Project[];
       }
@@ -873,6 +873,7 @@ export function useDashboardData(): DashboardData {
       let coPendingNetAtRisk = 0;
       let coApprovedCost = 0;
       const coRevenueByProject = new Map<string, number>();
+      const coCostByProject = new Map<string, number>();
       if (projectIds.length > 0) {
         const { data: allCOs } = await supabase
           .from('change_orders')
@@ -902,6 +903,7 @@ export function useDashboardData(): DashboardData {
             const resp = contracts.find(c => c.project_id === pid && c.from_role !== 'Owner' && c.material_responsibility != null);
             const totals = aggregateCOTotals(scoped, labor.data || [], mats.data || [], equip.data || [], currentOrg.id, orgType === 'GC', { materials: resp?.material_responsibility }, orgType === 'GC' ? co => resolveUpstreamBillerOrgId(co) : undefined);
             coRevenueByProject.set(pid, totals.approvedCORevenue);
+            coCostByProject.set(pid, totals.approvedCOCost);
             coApprovedNet += totals.approvedCORevenue;
             coApprovedCost += totals.approvedCOCost;
             coPendingNetAtRisk += totals.pendingCONetAtRisk;
@@ -953,6 +955,7 @@ export function useDashboardData(): DashboardData {
         pfMap.set(p.id, { projectId: p.id, projectName: p.name, revenue: 0, costs: 0, paidToYou: 0, paidByYou: 0, pendingToCollect: 0, pendingToPay: 0, approvedCORevenue: coRevenueByProject.get(p.id) || 0 });
       });
 
+      const tmProjectIds = new Set(allProjects.filter(p => (p as any).contract_mode === 'tm' || /remodel/i.test(String((p as any).project_type || ''))).map(p => p.id));
       // Per-project revenue/cost use the SAME resolution as the project ledger.
       projectIds.forEach(pid => {
         const pf = pfMap.get(pid);
@@ -967,6 +970,17 @@ export function useDashboardData(): DashboardData {
         if (orgType === 'GC' || orgType === 'TC') pf.costs += materialByProject.get(pid) || 0;
         if (orgType === 'FC') {
           pf.costs += Number((findRevenueContract(rows, [currentOrg.id]) as any)?.labor_budget || 0);
+        }
+        // T&M / Remodel: base contracts are $0 and work is earned through approved
+        // WOs — use the same role-scoped approved-WO aggregation as the overview.
+        // Only fill when the base is empty, so an explicit owner price or base
+        // contract is never added to (no double counting).
+        if (tmProjectIds.has(pid)) {
+          if (pf.revenue <= 0) pf.revenue = coRevenueByProject.get(pid) || 0;
+          const baseCost = findCostContracts(rows, [currentOrg.id])
+            .filter(isAwardedContract)
+            .reduce((sum, c) => sum + baseSum(c), 0);
+          if (baseCost <= 0) pf.costs += coCostByProject.get(pid) || 0;
         }
       });
 
