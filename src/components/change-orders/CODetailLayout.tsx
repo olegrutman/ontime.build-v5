@@ -667,14 +667,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                             type="material"
                             responsible={responsibility.materialResponsible}
                             isOverridden={responsibility.materialOverridden}
-                            canEdit={canEditInternal && (isGC || isTC)}
+                            canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
+                            isSaving={responsibility.isSaving}
                             onSet={responsibility.setMaterialOverride}
                           />
                           <COMaterialResponsibilityToggle
                             type="equipment"
                             responsible={responsibility.equipmentResponsible}
                             isOverridden={responsibility.equipmentOverridden}
-                            canEdit={canEditInternal && (isGC || isTC)}
+                            canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
+                            isSaving={responsibility.isSaving}
                             onSet={responsibility.setEquipmentOverride}
                           />
                         </div>

@@ -421,6 +421,13 @@
       "when": 1794336152529,
       "tag": "0059_synchronize_co_description_edits",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794337461423,
+      "tag": "0060_allow_party_procurement_responsibility_updates",
+      "breakpoints": true
     }
   ]
 }
