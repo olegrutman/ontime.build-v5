@@ -27,6 +27,8 @@ import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
 import { COBillingStatusCard } from './COBillingStatusCard';
 import { COPriceRevisionCard } from './COPriceRevisionCard';
+import { COPricingUnlockBar } from './COPricingUnlockBar';
+import { canSubmitPriceRevision } from '@/lib/coPriceRevision';
 import { COCorrectionCard } from './COCorrectionCard';
 import { useCOCorrections } from '@/hooks/useCOCorrections';
 import { COSidebar } from './COSidebar';
@@ -197,11 +199,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     },
   });
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
+  const [revisionUnlocked, setRevisionUnlocked] = useState(false);
+  const canCreateOrders = usePermission('canCreateChangeOrders');
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
     canEdit, canEditExternal, canEditInternal, canRequestFCInput, canCompleteFCInput, nteBlocked,
     pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
-  } = useCORoleContext(co ?? null, collaborators, financials);
+  } = useCORoleContext(co ?? null, collaborators, financials, revisionUnlocked);
 
   // My own labor rate / markup — used to show the crew-derived amount on unpriced
   // scope items so the item card matches the side panel.
@@ -603,6 +607,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           {/* Next Action Banner */}
           <COCorrectionCard corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
+          <COPricingUnlockBar
+            co={co}
+            canUnlock={isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
+            unlocked={revisionUnlocked}
+            onToggle={setRevisionUnlocked}
+          />
           <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
