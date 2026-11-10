@@ -189,14 +189,14 @@ export default function COExternalView() {
         <div className="max-w-2xl mx-auto px-4 py-6 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-3 mb-3">
-              <PurposeIcon className={`h-6 w-6 ${purposeConfig.color === 'text-type-sov' ? 'text-type-sov' : purposeConfig.color === 'text-state-approved' ? 'text-state-approved' : 'text-muted-foreground'}`} />
+              <PurposeIcon className={`h-6 w-6 ${purposeConfig.color === 'text-type-sov' ? 'text-type-sov' : purposeConfig.color === 'text-state-approved' ? 'text-state-approved' : 'text-white/60'}`} />
               <h1 className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
                 {purposeConfig.title}
               </h1>
             </div>
             {co && (
               <div className="flex items-baseline gap-3 flex-wrap">
-                <span className="font-mono text-sm text-muted-foreground">{co.co_number}</span>
+                <span className="font-mono text-sm text-white/60">{co.co_number}</span>
                 <span className="text-white font-medium">{co.title}</span>
               </div>
             )}

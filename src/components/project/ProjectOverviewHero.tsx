@@ -51,7 +51,7 @@ export function ProjectOverviewHero({
           >
             <ChevronLeft className="w-[18px] h-[18px]" />
           </button>
-          <span className="font-mono text-[0.62rem] uppercase tracking-[0.25em] text-muted-foreground leading-none truncate">
+          <span className="font-mono text-[0.62rem] uppercase tracking-[0.25em] text-white/60 leading-none truncate">
             Project Hub
           </span>
         </div>
@@ -65,7 +65,7 @@ export function ProjectOverviewHero({
       <h1 className="max-w-full font-heading text-[1.65rem] min-[360px]:text-3xl sm:text-4xl font-bold uppercase tracking-normal leading-[1.02] break-words [overflow-wrap:anywhere]">
         {projectName}
       </h1>
-      {address && <p className="text-[0.8rem] text-muted-foreground mt-1 break-words">{address}</p>}
+      {address && <p className="text-[0.8rem] text-white/60 mt-1 break-words">{address}</p>}
 
       {/* Metadata wraps on phones so no label is pushed outside the project card. */}
       <div className="flex flex-wrap items-center gap-2 mt-3.5">
@@ -74,7 +74,7 @@ export function ProjectOverviewHero({
             PILL,
             status === 'active'
               ? 'bg-state-approved/15 border-state-approved/30 text-state-approved'
-              : 'bg-foreground border-border text-muted-foreground',
+              : 'bg-foreground border-border text-white/60',
           )}
         >
           {statusLabel}
@@ -94,7 +94,7 @@ export function ProjectOverviewHero({
           </span>
         )}
         {typeLabel && (
-          <span className={cn(PILL, 'bg-foreground border-border text-muted-foreground font-medium')}>
+          <span className={cn(PILL, 'bg-foreground border-border text-white/60 font-medium')}>
             {typeLabel}
           </span>
         )}

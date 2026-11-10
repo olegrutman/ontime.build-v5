@@ -37,12 +37,12 @@ export function DashboardHero({
     <div className="bg-[hsl(var(--foreground))] text-white rounded-2xl px-4 sm:px-5 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[0.7rem] uppercase tracking-widest text-muted-foreground font-medium mb-1">Dashboard</p>
+          <p className="text-[0.7rem] uppercase tracking-widest text-white/60 font-medium mb-1">Dashboard</p>
           <h1 className="text-2xl font-semibold tracking-tight truncate">
             {greeting}, {name}
           </h1>
           {(orgName || typeLabel) && (
-            <p className="text-[0.8rem] text-muted-foreground mt-0.5 truncate">
+            <p className="text-[0.8rem] text-white/60 mt-0.5 truncate">
               {[orgName, typeLabel].filter(Boolean).join(' · ')}
             </p>
           )}
@@ -50,7 +50,7 @@ export function DashboardHero({
             <span className="text-white/60">Active <span className="text-white font-medium">{statusCounts.active}</span></span>
             <span className="text-white/60">Setup <span className="text-white font-medium">{statusCounts.setup}</span></span>
             <span className="text-white/60">On Hold <span className="text-white font-medium">{statusCounts.on_hold}</span></span>
-            <span className="text-muted-foreground">Needs Attention <span className={cn('font-medium', attentionCount > 0 ? 'text-state-open' : 'text-state-approved')}>{attentionCount}</span></span>
+            <span className="text-white/60">Needs Attention <span className={cn('font-medium', attentionCount > 0 ? 'text-state-open' : 'text-state-approved')}>{attentionCount}</span></span>
           </div>
         </div>
       </div>
