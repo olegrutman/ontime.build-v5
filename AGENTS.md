@@ -1,4 +1,5 @@
 # Project architecture rules
+- CO/WO procurement responsibility uses a narrow authenticated party-checked RPC across non-withdrawn states; saves refresh responsibility-aware financial queries and preserve approved prices, because procurement reassignment must not silently bypass review or fail under row policies.
 - CO/WO description edits synchronize a sole creator-owned scope item and its header atomically through update_co_description; multi-item edits rebuild the aggregate summary without overwriting distinct items or another company's scope, preserving pricing and approval state.
 - Subcontractor pending invoice KPI amounts, counts and breakdowns derive from the same full organization-directional invoice set, independent of recent activity limits; this prevents receivables and payables from mixing without changing other ledger totals.
 - Invoice KPI sources union by invoice identity before summing; paid drilldowns use full directional records, and portfolio material commitments sum per-project maxima, preventing cross-link duplicates and cross-project offsets.

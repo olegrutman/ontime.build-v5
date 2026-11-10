@@ -10209,6 +10209,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_co_procurement_responsibility: {
+        Args: { _co_id: string; _kind: string; _responsible: string }
+        Returns: undefined
+      }
       set_crew_change_order_internal: {
         Args: { _co_id: string; _internal: boolean }
         Returns: {

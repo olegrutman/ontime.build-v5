@@ -10,6 +10,7 @@ interface UseCOResponsibilityResult {
   setMaterialOverride: (value: 'GC' | 'TC' | null) => void;
   setEquipmentOverride: (value: 'GC' | 'TC' | null) => void;
   isLoading: boolean;
+  isSaving: boolean;
 }
 
 export function useCOResponsibility(
@@ -34,7 +35,7 @@ export function useCOResponsibility(
       const { data } = await supabase
         .from('project_contracts')
         .select('from_role, to_role, material_responsibility, created_at')
-        .eq('project_id', projectId!)
+        .eq('project_id', projectId ?? '')
         .not('material_responsibility', 'is', null);
       const rows = data ?? [];
       const trade = rows.find(r => (r.from_role ?? '') !== 'Owner');
@@ -63,16 +64,19 @@ export function useCOResponsibility(
       : 'TC';
 
   const updateOverride = useMutation({
-    mutationFn: async (patch: Record<string, string | null>) => {
-      if (!coId) throw new Error('No CO ID');
-      const { error } = await supabase
-        .from('change_orders')
-        .update(patch)
-        .eq('id', coId);
+    mutationFn: async ({ kind, value }: { kind: 'material' | 'equipment'; value: 'GC' | 'TC' | null }) => {
+      if (!coId) throw new Error('No order selected');
+      const { error } = await supabase.rpc('set_co_procurement_responsibility', {
+        _co_id: coId, _kind: kind, _responsible: value as string,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
+      queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['co-corrections'] });
+      queryClient.invalidateQueries({ queryKey: ['co-financials-v2', coId] });
+      toast.success('Responsibility updated');
     },
     onError: (err: any) => {
       toast.error(err?.message ?? 'Failed to update responsibility');
@@ -80,11 +84,11 @@ export function useCOResponsibility(
   });
 
   function setMaterialOverride(value: 'GC' | 'TC' | null) {
-    updateOverride.mutate({ co_material_responsible_override: value });
+    updateOverride.mutate({ kind: 'material', value });
   }
 
   function setEquipmentOverride(value: 'GC' | 'TC' | null) {
-    updateOverride.mutate({ co_equipment_responsible_override: value });
+    updateOverride.mutate({ kind: 'equipment', value });
   }
 
   return {
@@ -95,5 +99,6 @@ export function useCOResponsibility(
     setMaterialOverride,
     setEquipmentOverride,
     isLoading,
+    isSaving: updateOverride.isPending,
   };
 }
