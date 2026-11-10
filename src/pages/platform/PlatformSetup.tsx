@@ -197,7 +197,7 @@ export default function PlatformSetup() {
                   type="color"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="h-10 w-10 rounded border border-input cursor-pointer"
+                  className="h-10 w-10 rounded-xl border border-input cursor-pointer"
                 />
                 <Input
                   id="primary-color"
