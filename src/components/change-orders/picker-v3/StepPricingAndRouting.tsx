@@ -226,7 +226,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
                 return (
                   <button key={r} type="button"
                     onClick={() => dispatch({ type: 'SET_MATERIAL_RESPONSIBLE', value: r })}
-                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-muted-foreground')}
+                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-white/60')}
                   >{r}</button>
                 );
               })}
@@ -257,7 +257,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
                 return (
                   <button key={r} type="button"
                     onClick={() => dispatch({ type: 'SET_EQUIPMENT_RESPONSIBLE', value: r })}
-                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-muted-foreground')}
+                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-white/60')}
                   >{r}</button>
                 );
               })}

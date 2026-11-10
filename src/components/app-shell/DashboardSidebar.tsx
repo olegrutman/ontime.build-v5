@@ -103,7 +103,7 @@ export function DashboardSidebar() {
       <nav className="flex flex-col gap-0.5 p-3 pt-2 flex-1 overflow-y-auto">
         {sections.map((section, si) => (
           <div key={section.label} className={cn(si > 0 && 'mt-3')}>
-            <div className="px-3 mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="px-3 mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/60">
               {section.label}
             </div>
             {section.items.map((item) => {
@@ -117,7 +117,7 @@ export function DashboardSidebar() {
                     'flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-colors text-left w-full',
                     active
                       ? 'bg-white/15 text-white'
-                      : 'text-muted-foreground hover:text-white hover:bg-white/10'
+                      : 'text-white/60 hover:text-white hover:bg-white/10'
                   )}
                 >
                   <Icon className="w-4 h-4 shrink-0" strokeWidth={1.8} />
@@ -135,7 +135,7 @@ export function DashboardSidebar() {
               'flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-colors text-left w-full',
               location.pathname === '/settings'
                 ? 'bg-white/15 text-white'
-                : 'text-muted-foreground hover:text-white hover:bg-white/10'
+                : 'text-white/60 hover:text-white hover:bg-white/10'
             )}
           >
             <Settings className="w-4 h-4 shrink-0" strokeWidth={1.8} />
@@ -145,7 +145,7 @@ export function DashboardSidebar() {
       </nav>
 
       {/* Company section — light card so logos stand out */}
-      <div className="mx-3 mb-2 mt-2 rounded-xl bg-muted px-3 py-3">
+      <div className="mx-3 mb-2 mt-2 rounded-xl bg-white/10 px-3 py-3">
         {currentOrg?.logo_url && (
           <img
             src={currentOrg.logo_url}
@@ -153,7 +153,7 @@ export function DashboardSidebar() {
             className="max-h-[100px] max-w-[170px] object-contain mx-auto block mb-2"
           />
         )}
-        <p className="text-[0.8rem] font-semibold text-foreground truncate leading-tight">{orgName}</p>
+        <p className="text-[0.8rem] font-semibold text-white truncate leading-tight">{orgName}</p>
       </div>
 
       {/* Profile + Sign Out */}
@@ -173,7 +173,7 @@ export function DashboardSidebar() {
         </button>
         <button
           onClick={() => signOut()}
-          className="flex items-center gap-2.5 w-full px-2 py-2 mt-0.5 rounded-xl text-muted-foreground hover:text-white hover:bg-white/10 transition-colors text-left text-sm"
+          className="flex items-center gap-2.5 w-full px-2 py-2 mt-0.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors text-left text-sm"
         >
           <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.8} />
           <span>Sign out</span>

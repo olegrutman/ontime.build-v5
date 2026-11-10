@@ -47,9 +47,9 @@ export function DashboardHero({
             </p>
           )}
           <div className="flex items-center gap-4 mt-2 text-[0.85rem] flex-wrap">
-            <span className="text-muted-foreground">Active <span className="text-white font-medium">{statusCounts.active}</span></span>
-            <span className="text-muted-foreground">Setup <span className="text-white font-medium">{statusCounts.setup}</span></span>
-            <span className="text-muted-foreground">On Hold <span className="text-white font-medium">{statusCounts.on_hold}</span></span>
+            <span className="text-white/60">Active <span className="text-white font-medium">{statusCounts.active}</span></span>
+            <span className="text-white/60">Setup <span className="text-white font-medium">{statusCounts.setup}</span></span>
+            <span className="text-white/60">On Hold <span className="text-white font-medium">{statusCounts.on_hold}</span></span>
             <span className="text-muted-foreground">Needs Attention <span className={cn('font-medium', attentionCount > 0 ? 'text-state-open' : 'text-state-approved')}>{attentionCount}</span></span>
           </div>
         </div>

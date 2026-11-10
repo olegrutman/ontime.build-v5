@@ -814,7 +814,7 @@ export default function FinishProjectSetup() {
                   <span className={cn(
                     'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0',
                     active ? 'bg-primary-foreground/20 text-primary-foreground' :
-                    done ? 'bg-state-approved text-white' : 'bg-background text-muted-foreground',
+                    done ? 'bg-state-approved text-white' : 'bg-background text-white/60',
                   )}>
                     {done ? <Check className="h-2.5 w-2.5" /> : index + 1}
                   </span>

@@ -83,7 +83,7 @@ function Tile({
       <p
         className={cn(
           'text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.14em] truncate',
-          isDark ? 'text-white/60' : tone === 'alert' ? 'text-secondary' : 'text-muted-foreground',
+          isDark ? 'text-white/60' : tone === 'alert' ? 'text-secondary' : 'text-white/60',
         )}
       >
         {label}
@@ -97,7 +97,7 @@ function Tile({
         {value}
       </p>
       {sub && (
-        <p className={cn('text-[0.65rem] mt-1 truncate', isDark ? 'text-white/50' : 'text-muted-foreground')}>
+        <p className={cn('text-[0.65rem] mt-1 truncate', isDark ? 'text-white/50' : 'text-white/60')}>
           {sub}
         </p>
       )}

@@ -46,7 +46,7 @@ export function ProjectOverviewHero({
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => navigate('/dashboard')}
-            className="md:hidden shrink-0 -ml-1 p-1 rounded-md text-muted-foreground hover:text-white hover:bg-white/10 transition-colors"
+            className="md:hidden shrink-0 -ml-1 p-1 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors"
             aria-label="Back to dashboard"
           >
             <ChevronLeft className="w-[18px] h-[18px]" />
