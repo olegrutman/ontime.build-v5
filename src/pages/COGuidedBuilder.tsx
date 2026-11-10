@@ -136,8 +136,9 @@ export default function COGuidedBuilder() {
       multifamily: 'apartment',
       multi_family: 'apartment',
       townhouse: 'townhome',
-      remodel_t_and_m: 'single_family',
-      remodel: 'single_family',
+      remodel_t_and_m: 'remodel',
+      remodel_tandm: 'remodel',
+      remodel: 'remodel',
     };
     const key = normalize(project.project_type);
     const mapped = aliasMap[key] ?? key;
