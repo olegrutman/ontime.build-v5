@@ -167,7 +167,7 @@ export function useChangeOrders(projectId: string | null) {
           .select('id, status, total_amount, co_ids, contract_id')
           .eq('project_id', projectId!) as any,
         coIds.length
-          ? supabase.from('co_line_items').select('id, co_id').in('co_id', coIds)
+          ? supabase.from('co_line_items').select('id, co_id, item_name, sort_order').in('co_id', coIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
       if (scopeResult.error) throw scopeResult.error;
@@ -296,6 +296,11 @@ export function useChangeOrders(projectId: string | null) {
           billing_state: billingFor(c).state,
           billed_amount: billingFor(c).billed,
           fc_cost_total: fcLaborByCo.get(c.id) ?? 0,
+          scope_item_names: ((scopeResult.data ?? []) as any[])
+            .filter(item => item.co_id === c.id)
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map(item => item.item_name)
+            .filter(Boolean) as string[],
           _isDownstreamOrg: downstreamOrgIds.has(c.org_id),
         })) as (ChangeOrderWithMembers & { _isDownstreamOrg?: boolean })[],
         isGCOnProject,
