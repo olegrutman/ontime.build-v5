@@ -700,7 +700,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
                     </div>
                     {/* Compact money summary — replaces the big KPI cards for TC/FC */}
-                    {!isGC && (
+                    {false && !isGC && (
                       <span className="hidden md:inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
                         {isFC ? (
                           <>My billable <span className="font-semibold text-foreground">${(financials.viewer.ownLaborToUpstream ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
@@ -727,10 +727,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
                   {isTC && (collaborators.length > 0 || co.created_by_role === 'FC') && (
-                    <div className="mt-3">
-                      <FCPricingToggleCard co={co} financials={financials} myOrgId={myOrgId}
-                        onRefresh={refreshDetail} fcCollabName={fcCollabName} gcSideName={rl.short('GC')} />
-                    </div>
+                    <details className="mt-3 rounded-lg border border-border bg-muted/20 group">
+                      <summary className="cursor-pointer list-none select-none px-3 py-2 text-xs text-muted-foreground hover:text-foreground flex items-center justify-between gap-2">
+                        <span>Pricing method: <span className="font-semibold text-foreground">{financials.useFcPricingBase ? 'Use crew hours' : 'Set manually'}</span></span>
+                        <span className="shrink-0 underline underline-offset-2">Change</span>
+                      </summary>
+                      <div className="px-2 pb-2">
+                        <FCPricingToggleCard co={co} financials={financials} myOrgId={myOrgId}
+                          onRefresh={refreshDetail} fcCollabName={fcCollabName} gcSideName={rl.short('GC')} />
+                      </div>
+                    </details>
                   )}
 
                   {/* Progress bar */}

@@ -234,15 +234,7 @@ export function COEquipmentPanel({
       )}
 
       {equipment.length === 0 && drafts.length === 0 ? (
-        <div className="px-4 py-8 text-center">
-          <p className="text-sm text-muted-foreground">No equipment added yet</p>
-          {canManageEquipment && (
-            <Button variant="outline" size="sm" className="mt-3 text-xs gap-1" onClick={() => setShowPicker(true)}>
-              <Plus className="h-3 w-3" />
-              Add equipment
-            </Button>
-          )}
-        </div>
+        <p className="px-4 py-3 text-xs text-muted-foreground">None added.</p>
       ) : (
         <>
           <div className="divide-y divide-border">
