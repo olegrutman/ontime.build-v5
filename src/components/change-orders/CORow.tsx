@@ -96,8 +96,8 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
         >
           {co.title ?? co.co_number ?? 'Untitled'}
         </h3>
-        {co.problem_summary && (
-          <p className="mt-0.5 text-xs leading-snug text-muted-foreground line-clamp-2">{co.problem_summary}</p>
+        {(co as { problem_summary?: string | null }).problem_summary && (
+          <p className="mt-0.5 text-xs leading-snug text-muted-foreground line-clamp-2">{(co as { problem_summary?: string | null }).problem_summary}</p>
         )}
       </div>
 
