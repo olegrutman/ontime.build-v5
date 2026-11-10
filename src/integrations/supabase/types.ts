@@ -10359,6 +10359,16 @@ export type Database = {
         }[]
       }
       transfer_admin: { Args: { _target_role_id: string }; Returns: undefined }
+      update_co_description: {
+        Args: {
+          _co_id: string
+          _description: string
+          _line_item_id: string
+          _request_review: boolean
+          _title: string
+        }
+        Returns: undefined
+      }
       update_member_job_title: {
         Args: { _job_title: string; _target_user_id: string }
         Returns: undefined
