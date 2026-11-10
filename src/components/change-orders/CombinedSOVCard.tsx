@@ -78,6 +78,7 @@ export function CombinedSOVCard({ projectId, currentCoId }: CombinedSOVCardProps
   const totalRemaining = byContract.reduce((s, r) => s + Number(r.total_remaining ?? 0), 0);
 
   if (perCo.length === 0 && byContract.length === 0) {
+    return null;
     return (
       <Card className="p-4 rounded-2xl">
         <div className="flex items-center gap-2 mb-1">

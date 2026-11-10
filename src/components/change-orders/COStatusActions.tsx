@@ -665,7 +665,7 @@ export function COStatusActions({
 
   /* Draft actions — suppress Share when Send-to-WIP is available (M5) */
   const canSendToWIP = isGC && isCreator && status === 'draft' && !!effectiveAssignee;
-  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP && !!effectiveAssignee;
+  const canShare = false && isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP && !!effectiveAssignee;
   /* GC can close for pricing (Flow 1) */
   const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
   /* TC/FC submit for approval — include 'rejected' (C3). FC collaborators (any status) should NOT see primary submit.
@@ -890,10 +890,10 @@ export function COStatusActions({
 
         {/* Destructive zone — deliberately separated from workflow actions */}
         {(canWithdraw || canDelete) && (
-          <div className="border-t border-border px-4 pt-3 pb-3 space-y-1.5">
-            <p className="text-[0.6rem] uppercase tracking-[0.12em] font-semibold text-muted-foreground/70">
-              Danger zone
-            </p>
+          <details className="border-t border-border px-4 pt-2 pb-2 space-y-1.5 group">
+            <summary className="cursor-pointer list-none text-xs text-muted-foreground hover:text-foreground py-1 select-none">
+              More options
+            </summary>
             {canWithdraw && (
               <Button variant="ghost" size="sm" className="w-full h-8 justify-start text-xs gap-1.5 text-muted-foreground hover:text-foreground" onClick={() => setWithdrawOpen(true)} disabled={acting}>
                 <RotateCcw className="h-3 w-3" />
@@ -906,7 +906,7 @@ export function COStatusActions({
                 Delete permanently
               </Button>
             )}
-          </div>
+          </details>
         )}
 
       </div>
