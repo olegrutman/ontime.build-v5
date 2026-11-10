@@ -69,16 +69,7 @@ export const COPhotosCard = forwardRef<COPhotosCardHandle, COPhotosCardProps>(fu
         </div>
       ) : photos.length === 0 ? (
         /* Empty state */
-        <div className="px-6 py-10 text-center">
-          <Camera className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-foreground">No photos yet</p>
-          <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-            Photos help document conditions and protect against disputes.
-          </p>
-          <Button size="sm" className="mt-4 gap-1.5" onClick={() => setAddOpen(true)}>
-            <Camera className="h-3.5 w-3.5" /> Take first photo
-          </Button>
-        </div>
+        <p className="px-4 py-3 text-xs text-muted-foreground">No photos yet — they help protect against disputes.</p>
       ) : (
         /* Photo grid */
         <div className="p-3 grid grid-cols-3 md:grid-cols-4 gap-2">

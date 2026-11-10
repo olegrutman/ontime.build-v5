@@ -102,7 +102,7 @@ export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }
 
                 {co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order')}
               </h1>
-              <span className={cn(
+              {(status === 'rejected' || co.kept_internal) && <span className={cn(
                 'inline-flex items-center text-[0.7rem] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide',
                 status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
                 status === 'submitted' ? 'bg-blue-100 text-blue-700' :
@@ -111,7 +111,7 @@ export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }
                 'bg-muted text-muted-foreground'
               )}>
                 {coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}
-              </span>
+              </span>}
             </div>
             {editing ? (
               <input

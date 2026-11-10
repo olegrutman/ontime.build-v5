@@ -238,7 +238,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             const ownTotalTax = ownLaborTax + ownMatsTax + ownEqTax;
             return (
             <>
-              <div className="flex justify-between text-sm">
+              <div className={cn('flex justify-between text-sm', Math.abs(laborDifference) < 0.005 && 'hidden')}>
                 <span className="text-muted-foreground">Labor total</span>
                 <span className="font-mono font-medium">{fmtCurrency(currentLabor)}</span>
               </div>
@@ -388,7 +388,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
       <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={myOrgId} />
 
       {/* Crew Card — only when there is something to do */}
-      {isTC && (canRequestFCInput || canCompleteFCInput) && (
+      {isTC && (canCompleteFCInput || (canRequestFCInput && !collaborators.some(c => ['active', 'completed'].includes(String(c.status))))) && (
         <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-border">
             <h3 className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">{rl.FC} involvement</h3>
