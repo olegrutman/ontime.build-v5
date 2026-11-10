@@ -1,3 +1,4 @@
+import { CODescriptionEditor } from './CODescriptionEditor';
 import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -559,6 +560,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
 
             <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+              {!canEditHeader && isMyOrgItem && coStatus && coStatus !== 'withdrawn' && (
+                <CODescriptionEditor coId={item.co_id} status={coStatus} lineItemId={item.id} title={item.item_name} description={item.description ?? ''} label="Edit item description" onSaved={onRefresh} />
+              )}
               {canEditHeader && (
                 <Popover open={editHeaderOpen} onOpenChange={(o) => {
                   setEditHeaderOpen(o);
