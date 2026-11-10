@@ -32,6 +32,7 @@ export function useCORealtime(coId: string | null) {
         { event: '*', schema: 'public', table: 'co_line_items', filter: `co_id=eq.${coId}` },
         () => {
           invalidate({ queryKey: ['co-detail', coId, 'line-items'] });
+          invalidate({ queryKey: ['change-orders'] });
         }
       )
       .on(
@@ -70,6 +71,7 @@ export function useCORealtime(coId: string | null) {
         { event: '*', schema: 'public', table: 'change_orders', filter: `id=eq.${coId}` },
         () => {
           invalidate({ queryKey: ['co-detail', coId, 'co'] });
+          invalidate({ queryKey: ['change-orders'] });
         }
       )
       .on(

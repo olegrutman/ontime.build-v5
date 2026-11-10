@@ -119,8 +119,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
       const { error } = await supabase
         .from('co_line_items')
         .update({
-          item_name: draftName.trim() || item.item_name,
-          description: draftDesc.trim() || null,
           qty: qtyNum,
           location_tag: draftLocation.trim() || null,
           reason: draftReason || null,
@@ -129,6 +127,14 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         })
         .eq('id', item.id);
       if (error) throw error;
+      const { error: descriptionError } = await supabase.rpc('update_co_description', {
+        _co_id: coId,
+        _line_item_id: item.id,
+        _title: draftName.trim() || item.item_name,
+        _description: draftDesc,
+        _request_review: coStatus !== 'draft',
+      });
+      if (descriptionError) throw descriptionError;
       toast.success('Item updated');
       setEditHeaderOpen(false);
       onRefresh();
@@ -402,7 +408,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-1.5">
                 <p className="min-w-0 break-words font-heading text-foreground leading-tight tracking-tight" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.item_name}</p>
-                {!canEditHeader && isMyOrgItem && coStatus && coStatus !== 'withdrawn' && (
+                {isMyOrgItem && coStatus && coStatus !== 'withdrawn' && (
                   <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <CODescriptionEditor coId={item.co_id} status={coStatus} lineItemId={item.id} title={item.item_name} description={item.description ?? ''} label="Edit item description" onSaved={onRefresh} />
                   </span>
