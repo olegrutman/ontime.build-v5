@@ -593,7 +593,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
           {/* Full-width Header Card + Pipeline */}
-          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} pricingReadiness={getCOPricingReadiness(
+          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} myOrgId={myOrgId} pricingReadiness={getCOPricingReadiness(
             lineItems, laborEntries, role,
             [...materials, ...equipment].filter(row => row.added_by_role !== 'GC' && (role !== 'FC' || row.added_by_role === 'FC')),
           )} />

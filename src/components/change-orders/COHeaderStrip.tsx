@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cleanTitle } from '@/lib/coTitle';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
+import { CODescriptionEditor } from './CODescriptionEditor';
 import { coPricingStatusLabel, type COPricingReadiness } from '@/lib/coPricingReadiness';
 
 interface COHeaderStripProps {
@@ -15,6 +16,7 @@ interface COHeaderStripProps {
   role: COCreatedByRole;
   myOrgName: string;
   pricingReadiness?: COPricingReadiness;
+  myOrgId?: string;
 }
 
 const ROLE_PILL_COLORS: Record<string, string> = {
@@ -46,13 +48,15 @@ function getActiveStep(status: string): number {
   }
 }
 
-export function COHeaderStrip({ co, role, myOrgName, pricingReadiness }: COHeaderStripProps) {
+export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }: COHeaderStripProps) {
   const rl = useRoleLabelsContext();
   const status = co.status as COStatus;
   const isWithdrawn = status === 'withdrawn';
   const activeStep = getActiveStep(status);
   const userName = co.title && co.title !== co.co_number ? co.title : null;
-  const canRename = !['approved', 'contracted', 'withdrawn'].includes(status);
+  const isCreator = !!myOrgId && co.org_id === myOrgId && !isWithdrawn;
+  const summary = (co as { problem_summary?: string | null }).problem_summary ?? '';
+  const canRename = !isCreator && !['approved', 'contracted', 'withdrawn'].includes(status);
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(co.title ?? '');
@@ -134,9 +138,15 @@ export function COHeaderStrip({ co, role, myOrgName, pricingReadiness }: COHeade
                 <span className="break-words">{userName ?? 'Add a title'}</span>
                 <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
               </button>
+            ) : isCreator ? (
+              <div className="mt-1 flex max-w-full items-start gap-1.5">
+                <span className="break-words text-sm text-muted-foreground">{userName ?? 'Add a title'}</span>
+                <CODescriptionEditor coId={co.id} status={status} title={co.title ?? ''} description={summary} label="Edit title & description" />
+              </div>
             ) : userName && (
               <p className="text-sm text-muted-foreground mt-1 break-words">{userName}</p>
             )}
+            {summary && <p className="mt-1 text-xs text-muted-foreground break-words whitespace-pre-line">{summary}</p>}
           </div>
 
           {/* TC name / role */}
