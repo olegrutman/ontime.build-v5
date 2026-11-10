@@ -38,7 +38,7 @@ export function PlatformLayout({ children, title, breadcrumbs }: PlatformLayoutP
                 ))}
               </nav>
             )}
-            {title && <h1 className="text-base font-semibold text-foreground truncate">{title}</h1>}
+            {title && <h1 className="font-heading text-lg font-bold text-foreground truncate">{title}</h1>}
           </div>
         </header>
 
@@ -60,7 +60,7 @@ export function PlatformLayout({ children, title, breadcrumbs }: PlatformLayoutP
                   ))}
                 </nav>
               )}
-              {title && <h1 className="text-lg font-semibold text-foreground">{title}</h1>}
+              {title && <h1 className="font-heading text-2xl font-bold text-foreground">{title}</h1>}
             </div>
           )}
           <div className="px-4 py-4 lg:p-6 pb-20">{children}</div>
