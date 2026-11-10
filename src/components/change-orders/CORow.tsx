@@ -42,6 +42,11 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
   const isClosed = status === 'withdrawn' || status === 'rejected';
   const days = differenceInDays(new Date(), new Date(co.created_at));
   const stale = !isApproved && !isClosed && days > 14;
+  const summary = (co as { problem_summary?: string | null }).problem_summary;
+  const scopeNames = (co as { scope_item_names?: string[] }).scope_item_names ?? [];
+  const normalize = (text?: string | null) => text?.trim().toLocaleLowerCase().replace(/[.]+$/, '') ?? '';
+  const showSummary = !!summary && normalize(summary) !== normalize(co.title);
+  const distinctScopeNames = scopeNames.filter(name => normalize(name) !== normalize(co.title) && normalize(name) !== normalize(summary));
 
   return (
     <article
@@ -96,13 +101,13 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
         >
           {co.title ?? co.co_number ?? 'Untitled'}
         </h3>
-        {(co as { problem_summary?: string | null }).problem_summary && (
-          <p className="mt-0.5 text-xs leading-snug text-muted-foreground line-clamp-2">{(co as { problem_summary?: string | null }).problem_summary}</p>
+        {showSummary && (
+          <p className="mt-0.5 text-xs leading-snug text-muted-foreground line-clamp-2">{summary}</p>
         )}
-        {((co as { scope_item_names?: string[] }).scope_item_names?.length ?? 0) > 0 && (
+        {distinctScopeNames.length > 0 && (
           <p className="mt-0.5 text-xs leading-snug text-foreground/80 line-clamp-2">
             <span className="font-medium text-muted-foreground">Scope: </span>
-            {(co as { scope_item_names?: string[] }).scope_item_names!.join(' · ')}
+            {distinctScopeNames.join(' · ')}
           </p>
         )}
       </div>

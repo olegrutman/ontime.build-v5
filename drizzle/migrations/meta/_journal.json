@@ -414,6 +414,13 @@
       "when": 1794334442965,
       "tag": "0058_realtime_change_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794336152529,
+      "tag": "0059_synchronize_co_description_edits",
+      "breakpoints": true
     }
   ]
 }
