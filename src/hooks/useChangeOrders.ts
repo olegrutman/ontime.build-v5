@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -74,6 +75,24 @@ export function useChangeOrders(projectId: string | null) {
   const invalidateChangeOrders = () => {
     queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
   };
+
+  useEffect(() => {
+    if (!projectId) return;
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['co-detail'] });
+      }, 400);
+    };
+    const channel = supabase
+      .channel(`co-list-${projectId}-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'change_orders', filter: `project_id=eq.${projectId}` }, refresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'co_line_items' }, refresh)
+      .subscribe();
+    return () => { if (t) clearTimeout(t); supabase.removeChannel(channel); };
+  }, [projectId, queryClient]);
 
   const { data: queryResult, isLoading } = useQuery({
     queryKey: ['change-orders', projectId, orgId, coV4],
