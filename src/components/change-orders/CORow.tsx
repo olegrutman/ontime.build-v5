@@ -99,6 +99,12 @@ export function CORow({ co, onClick, needsAction = false, selectable = false, is
         {(co as { problem_summary?: string | null }).problem_summary && (
           <p className="mt-0.5 text-xs leading-snug text-muted-foreground line-clamp-2">{(co as { problem_summary?: string | null }).problem_summary}</p>
         )}
+        {((co as { scope_item_names?: string[] }).scope_item_names?.length ?? 0) > 0 && (
+          <p className="mt-0.5 text-xs leading-snug text-foreground/80 line-clamp-2">
+            <span className="font-medium text-muted-foreground">Scope: </span>
+            {(co as { scope_item_names?: string[] }).scope_item_names!.join(' · ')}
+          </p>
+        )}
       </div>
 
       {/* Approval trail */}
