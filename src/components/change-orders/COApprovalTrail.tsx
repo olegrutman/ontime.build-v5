@@ -62,7 +62,7 @@ export function COApprovalTrail({ status, pricingReadiness, keptInternal, classN
               className={cn(
                 'h-1.5 flex-1 rounded-full transition-all duration-700',
                 closed && 'bg-muted',
-                !closed && done && 'bg-emerald-500',
+                !closed && done && 'bg-state-approved',
                 !closed && active && 'bg-secondary',
                 !closed && !done && !active && 'bg-muted',
               )}
@@ -75,7 +75,7 @@ export function COApprovalTrail({ status, pricingReadiness, keptInternal, classN
           className={cn(
             'mt-1 text-[0.6rem] font-semibold uppercase tracking-wider break-words',
             status === 'approved' || status === 'contracted'
-              ? 'text-emerald-600 dark:text-emerald-400'
+              ? 'text-state-approved'
               : status === 'rejected'
                 ? 'text-destructive'
                 : pending

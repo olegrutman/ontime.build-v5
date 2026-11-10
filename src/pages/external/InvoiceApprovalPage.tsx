@@ -99,16 +99,16 @@ export default function InvoiceApprovalPage() {
       <div className="max-w-md text-center space-y-3">
         {done === 'approved' ? (
           <>
-            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/30 flex items-center justify-center">
-              <Check className="h-8 w-8 text-emerald-600" />
+            <div className="w-16 h-16 mx-auto rounded-full bg-state-approved-bg flex items-center justify-center">
+              <Check className="h-8 w-8 text-state-approved" />
             </div>
             <h1 className="text-xl font-bold text-foreground">Invoice Approved</h1>
             <p className="text-sm text-muted-foreground">Your approval has been recorded.</p>
           </>
         ) : (
           <>
-            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-950/30 flex items-center justify-center">
-              <X className="h-8 w-8 text-red-600" />
+            <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
+              <X className="h-8 w-8 text-destructive" />
             </div>
             <h1 className="text-xl font-bold text-foreground">Invoice Rejected</h1>
             <p className="text-sm text-muted-foreground">Your rejection has been recorded.</p>
@@ -213,7 +213,7 @@ export default function InvoiceApprovalPage() {
               <Button
                 onClick={() => submit('approved')}
                 disabled={!approverName.trim() || acting}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                className="flex-1 bg-state-approved hover:bg-state-approved"
               >
                 {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
                 Approve

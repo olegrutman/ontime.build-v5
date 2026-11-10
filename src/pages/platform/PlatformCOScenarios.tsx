@@ -271,7 +271,7 @@ export default function PlatformCOScenarios() {
 
               {lastResult && (
                 <div className="flex items-start gap-2 text-sm p-3 rounded-md bg-muted">
-                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-600" />
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-state-approved" />
                   <pre className="text-xs">{JSON.stringify(lastResult, null, 2)}</pre>
                 </div>
               )}

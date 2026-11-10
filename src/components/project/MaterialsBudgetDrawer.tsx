@@ -115,19 +115,19 @@ export function MaterialsBudgetDrawer({ open, onOpenChange, data }: Props) {
             <div className="space-y-2">
               {riskFactors.unpricedItems > 0 && (
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-state-open mt-0.5 shrink-0" />
                   <span className="text-sm">Unpriced items pending: {riskFactors.unpricedItems} items across {riskFactors.unpricedPOs} POs</span>
                 </div>
               )}
               {riskFactors.packsNotStarted > 0 && (
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-state-open mt-0.5 shrink-0" />
                   <span className="text-sm">Packs not started: {riskFactors.packsNotStarted} of {riskFactors.totalPacks}</span>
                 </div>
               )}
               {riskFactors.biggestUpcomingPack && (
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-state-open mt-0.5 shrink-0" />
                   <span className="text-sm">Biggest upcoming pack: {riskFactors.biggestUpcomingPack.name} ({fmt(riskFactors.biggestUpcomingPack.amount)})</span>
                 </div>
               )}
@@ -149,7 +149,7 @@ function Row({ label, value, sub, over }: { label: string; value: string; sub?: 
       <div className="flex items-center gap-1.5">
         <span className="text-sm font-semibold tabular-nums">{value}</span>
         {sub && (
-          <span className={cn("text-xs font-medium", over ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+          <span className={cn("text-xs font-medium", over ? 'text-destructive' : 'text-state-approved')}>
             {sub}
           </span>
         )}

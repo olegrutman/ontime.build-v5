@@ -13,9 +13,9 @@ interface AssignToCardProps {
 }
 
 const AVATAR_COLORS: Record<string, string> = {
-  GC: 'bg-blue-600',
-  TC: 'bg-emerald-600',
-  FC: 'bg-amber-500',
+  GC: 'bg-type-sov',
+  TC: 'bg-state-approved',
+  FC: 'bg-state-open',
 };
 
 export function AssignToCard({

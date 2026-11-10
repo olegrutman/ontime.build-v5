@@ -135,7 +135,7 @@ function SOVContractSection({
                         <Badge variant="outline" className="text-xs">v{currentSOV.version}</Badge>
                       )}
                       {isLocked && (
-                        <Badge className="bg-green-100 text-green-800 text-xs">
+                        <Badge className="bg-state-approved-bg text-state-approved-foreground text-xs">
                           <Lock className="h-3 w-3 mr-1" />Locked
                         </Badge>
                       )}
@@ -157,7 +157,7 @@ function SOVContractSection({
                     <>
                       <Button
                         size="sm"
-                        className="bg-amber-500 hover:bg-amber-600 text-white"
+                        className="bg-state-open hover:bg-state-open text-white"
                         onClick={generateSOV}
                         disabled={generating}
                       >
@@ -180,13 +180,13 @@ function SOVContractSection({
             {/* Contract mismatch banner */}
             {contractMismatch && currentSOV && (
               <div className="mx-4 mb-3">
-                <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/10">
-                  <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+                <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-state-open/30 bg-state-open-bg">
+                  <div className="flex items-center gap-2 text-sm text-state-open-foreground">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
                     <span>Contract value changed to <strong>${(prereqs.contractValue || 0).toLocaleString()}</strong>.</span>
                   </div>
                   {isContractClient && (
-                    <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white shrink-0" onClick={generateSOV} disabled={generating}>
+                    <Button size="sm" className="bg-state-open hover:bg-state-open text-white shrink-0" onClick={generateSOV} disabled={generating}>
                       {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : isLocked ? 'Create New Version' : 'Regenerate'}
                     </Button>
                   )}
@@ -197,7 +197,7 @@ function SOVContractSection({
             {/* Prerequisites */}
             {!allReady && (
               <CardContent className="pt-0 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300 mb-2">
+                <div className="flex items-center gap-2 text-sm text-state-open-foreground mb-2">
                   <AlertTriangle className="h-4 w-4" />
                   <span className="font-medium">Prerequisites required</span>
                 </div>
@@ -241,7 +241,7 @@ function SOVContractSection({
                         <span className="text-sm font-medium">SOV Lines</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={cn("text-sm font-mono", Math.abs(totalPct - 100) > 0.05 ? "text-destructive" : "text-green-600")}>
+                        <span className={cn("text-sm font-mono", Math.abs(totalPct - 100) > 0.05 ? "text-destructive" : "text-state-approved")}>
                           {totalPct.toFixed(2)}%
                         </span>
                         {canEdit && items.length > 0 && (
@@ -414,11 +414,11 @@ function SOVContractSection({
                                     <td className="px-2 py-2">
                                       <div className="flex items-center gap-1 justify-end">
                                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleLineLock(item.id)} title={item.is_locked ? "Unlock" : "Lock"}>
-                                          {item.is_locked ? <Lock className="h-3.5 w-3.5 text-green-600" /> : <Unlock className="h-3.5 w-3.5 text-muted-foreground" />}
+                                          {item.is_locked ? <Lock className="h-3.5 w-3.5 text-state-approved" /> : <Unlock className="h-3.5 w-3.5 text-muted-foreground" />}
                                         </Button>
                                         {isEdited && (
                                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => resetLine(item.id)} title="Reset to AI">
-                                            <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
+                                            <RotateCcw className="h-3.5 w-3.5 text-state-open" />
                                           </Button>
                                         )}
                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLine(item.id)}>
@@ -436,7 +436,7 @@ function SOVContractSection({
                               <td></td>
                               <td className="px-3 py-2">Total</td>
                               <td className="hidden md:table-cell"></td>
-                              <td className={cn("px-3 py-2 text-right font-mono", Math.abs(totalPct - 100) > 0.05 ? "text-destructive" : "text-green-600")}>
+                              <td className={cn("px-3 py-2 text-right font-mono", Math.abs(totalPct - 100) > 0.05 ? "text-destructive" : "text-state-approved")}>
                                 {totalPct.toFixed(2)}%
                               </td>
                               <td className="px-3 py-2 text-right font-mono hidden sm:table-cell">
@@ -464,7 +464,7 @@ function SOVContractSection({
                         <div className="space-y-1.5">
                           {scopeCoverage.map(sc => (
                             <div key={sc.sectionSlug} className="flex items-center gap-2 text-xs">
-                              <div className={cn("h-2 w-2 rounded-full shrink-0", sc.covered ? "bg-green-500" : "bg-amber-500")} />
+                              <div className={cn("h-2 w-2 rounded-full shrink-0", sc.covered ? "bg-state-approved" : "bg-state-open")} />
                               <span className="flex-1 truncate">{sc.sectionLabel}</span>
                               <span className="font-mono w-12 text-right">{sc.allocatedPct.toFixed(1)}%</span>
                             </div>
@@ -505,7 +505,7 @@ function SOVContractSection({
                   <span className="text-muted-foreground ml-2">{new Date(v.created_at).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {v.is_locked && <Badge className="bg-green-100 text-green-800 text-xs"><Lock className="h-3 w-3 mr-1" />Locked</Badge>}
+                  {v.is_locked && <Badge className="bg-state-approved-bg text-state-approved-foreground text-xs"><Lock className="h-3 w-3 mr-1" />Locked</Badge>}
                   {v.id === currentSOV?.id && <Badge variant="outline" className="text-xs">Current</Badge>}
                 </div>
               </div>
@@ -624,8 +624,8 @@ function StatusChip({ ok, label, link }: { ok: boolean; label: string; link: str
       className={cn(
         "flex items-center gap-1.5 px-2.5 py-1 rounded-full whitespace-nowrap border transition-colors",
         ok
-          ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
-          : "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300 cursor-pointer hover:bg-amber-100"
+          ? "bg-state-approved-bg border-state-approved/30 text-state-approved-foreground"
+          : "bg-state-open-bg border-state-open/30 text-state-open-foreground cursor-pointer hover:bg-state-open-bg"
       )}
     >
       {ok ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
@@ -643,7 +643,7 @@ function deriveBillingStatus(totalBilled: number | null, valueAmount: number | n
 }
 
 function BillingStatusBadge({ status }: { status: string }) {
-  if (status === 'fully_billed' || status === 'paid') return <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-xs">Fully Billed</Badge>;
-  if (status === 'partially_billed' || status === 'partial') return <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 text-xs">Partially Billed</Badge>;
+  if (status === 'fully_billed' || status === 'paid') return <Badge className="bg-state-approved-bg text-state-approved-foreground text-xs">Fully Billed</Badge>;
+  if (status === 'partially_billed' || status === 'partial') return <Badge className="bg-state-open-bg text-state-open-foreground text-xs">Partially Billed</Badge>;
   return <Badge variant="outline" className="text-xs">Unbilled</Badge>;
 }

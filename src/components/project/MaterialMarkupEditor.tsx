@@ -76,7 +76,7 @@ export function MaterialMarkupEditor({ financials, projectId, projectStatus }: M
           <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Material Markup</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className={cn("text-sm font-semibold tabular-nums", !hasMarkup && 'text-amber-600 dark:text-amber-400')}>
+          <span className={cn("text-sm font-semibold tabular-nums", !hasMarkup && 'text-state-open')}>
             {hasMarkup
               ? materialMarkupType === 'percent'
                 ? `${materialMarkupValue}%`

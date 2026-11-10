@@ -20,9 +20,9 @@ interface COHeaderStripProps {
 }
 
 const ROLE_PILL_COLORS: Record<string, string> = {
-  GC: 'bg-blue-500',
-  TC: 'bg-emerald-500',
-  FC: 'bg-amber-500',
+  GC: 'bg-type-sov',
+  TC: 'bg-state-approved',
+  FC: 'bg-state-open',
 };
 
 // Pipeline steps — labels match the status pill / action button vocabulary
@@ -104,10 +104,10 @@ export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }
               </h1>
               {(status === 'rejected' || co.kept_internal) && <span className={cn(
                 'inline-flex items-center text-[0.7rem] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide',
-                status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                status === 'submitted' ? 'bg-blue-100 text-blue-700' :
-                status === 'rejected' ? 'bg-red-100 text-red-700' :
-                status === 'work_in_progress' || status === 'closed_for_pricing' ? 'bg-amber-100 text-amber-700' :
+                status === 'approved' ? 'bg-state-approved-bg text-state-approved-foreground' :
+                status === 'submitted' ? 'bg-type-sov/10 text-type-sov' :
+                status === 'rejected' ? 'bg-destructive/10 text-destructive' :
+                status === 'work_in_progress' || status === 'closed_for_pricing' ? 'bg-state-open-bg text-state-open-foreground' :
                 'bg-muted text-muted-foreground'
               )}>
                 {coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}

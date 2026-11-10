@@ -119,26 +119,26 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
       <div className={cn(
         'rounded-2xl p-5 shadow-sm',
         isOverBudget
-          ? 'bg-amber-50 dark:bg-amber-950/30'
-          : 'bg-green-50 dark:bg-green-950/30',
+          ? 'bg-state-open-bg'
+          : 'bg-state-approved-bg',
       )}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="flex items-start gap-3">
             {isOverBudget ? (
-              <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="h-6 w-6 text-state-open shrink-0 mt-0.5" />
             ) : (
-              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+              <CheckCircle className="h-6 w-6 text-state-approved shrink-0 mt-0.5" />
             )}
             <div>
               <p className={cn(
                 'text-lg font-bold',
-                isOverBudget ? 'text-amber-900 dark:text-amber-200' : 'text-green-900 dark:text-green-200',
+                isOverBudget ? 'text-state-open-foreground' : 'text-state-approved-foreground',
               )}>
                 Projected {fmt(Math.abs(data.forecastVariance))} ({fmtPct(Math.abs(data.forecastVariancePct), false)}) {isOverBudget ? 'Over' : 'Under'} Budget
               </p>
               <p className={cn(
                 'text-sm mt-1',
-                isOverBudget ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300',
+                isOverBudget ? 'text-state-open-foreground' : 'text-state-approved-foreground',
               )}>
                 Based on how the first {data.forecastOrderedPacks} packs were ordered, the project is trending {fmtPct(Math.abs(data.forecastVariancePct), false)} {isOverBudget ? 'over' : 'under'} budget.
                 {data.forecastConfidence === 'low' && (
@@ -150,18 +150,18 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
           <div className={cn(
             'text-right shrink-0 px-4 py-2 rounded-xl',
             isCurrentlyOver
-              ? 'bg-amber-100/60 dark:bg-amber-900/20'
-              : 'bg-green-100/60 dark:bg-green-900/20',
+              ? 'bg-state-open/60'
+              : 'bg-state-approved/60',
           )}>
             <p className={cn(
               'text-xs uppercase tracking-wide font-medium',
-              isCurrentlyOver ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400',
+              isCurrentlyOver ? 'text-state-open' : 'text-state-approved',
             )}>
               Currently
             </p>
             <p className={cn(
               'text-sm font-bold',
-              isCurrentlyOver ? 'text-amber-800 dark:text-amber-300' : 'text-green-800 dark:text-green-300',
+              isCurrentlyOver ? 'text-state-open-foreground' : 'text-state-approved-foreground',
             )}>
               {isCurrentlyOver ? '+' : ''}{fmt(data.orderedVariance)} ({fmtPct(data.orderedVariancePct)}) {isCurrentlyOver ? 'over budget' : 'under budget'}
             </p>
@@ -188,11 +188,11 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
             {data.orderedVariance > 0 ? (
               <TrendingUp className="h-3.5 w-3.5 text-destructive" />
             ) : data.orderedVariance < 0 ? (
-              <TrendingDown className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+              <TrendingDown className="h-3.5 w-3.5 text-state-approved" />
             ) : null}
             <span className={cn(
               'text-xs font-semibold',
-              data.orderedVariance > 0 ? 'text-destructive' : data.orderedVariance < 0 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground',
+              data.orderedVariance > 0 ? 'text-destructive' : data.orderedVariance < 0 ? 'text-state-approved' : 'text-muted-foreground',
             )}>
               {data.orderedVariance >= 0 ? '+' : ''}{fmt(data.orderedVariance)} ({fmtPct(data.orderedVariancePct)})
             </span>
@@ -309,7 +309,7 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
         <div className="space-y-2.5">
           {data.riskFactors.unpricedItems > 0 && (
             <div className="flex items-center gap-2.5 text-sm">
-              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+              <AlertTriangle className="h-4 w-4 text-state-open shrink-0" />
               <span>
                 <strong>{data.riskFactors.unpricedItems}</strong> unpriced items pending across <strong>{data.riskFactors.unpricedPOs}</strong> POs
               </span>
@@ -317,7 +317,7 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
           )}
           {data.riskFactors.packsNotStarted > 0 && (
             <div className="flex items-center gap-2.5 text-sm">
-              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+              <AlertTriangle className="h-4 w-4 text-state-open shrink-0" />
               <span>
                 <strong>{data.riskFactors.packsNotStarted}</strong> of {data.riskFactors.totalPacks} packs not started
               </span>
@@ -333,7 +333,7 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
           )}
           {data.riskFactors.unpricedItems === 0 && data.riskFactors.packsNotStarted === 0 && !data.riskFactors.biggestUpcomingPack && (
             <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-              <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+              <CheckCircle className="h-4 w-4 text-state-approved shrink-0" />
               <span>No outstanding risk factors</span>
             </div>
           )}

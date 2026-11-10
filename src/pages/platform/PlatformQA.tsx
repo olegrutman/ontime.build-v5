@@ -247,15 +247,15 @@ export default function PlatformQA() {
                         </td>
                         <td className="p-2 text-center">
                           <div className="flex justify-center gap-0.5 flex-wrap">
-                            {p.gcConnected && <Badge className="bg-green-600 text-[9px] px-1">Contractor</Badge>}
-                            {p.tcConnected && <Badge className="bg-blue-600 text-[9px] px-1">Sub</Badge>}
+                            {p.gcConnected && <Badge className="bg-state-approved text-[9px] px-1">Contractor</Badge>}
+                            {p.tcConnected && <Badge className="bg-type-sov text-[9px] px-1">Sub</Badge>}
                             {p.fcConnected && <Badge className="bg-purple-600 text-[9px] px-1">Crew</Badge>}
-                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 border-orange-400 text-orange-500">Crew ⏳</Badge>}
-                            {p.suppConnected && <Badge className="bg-amber-600 text-[9px] px-1">SUP</Badge>}
+                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 border-state-open text-state-open">Crew ⏳</Badge>}
+                            {p.suppConnected && <Badge className="bg-state-open text-[9px] px-1">SUP</Badge>}
                           </div>
                         </td>
                         <td className="p-2 text-center">
-                          {p.hasSov ? <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" /> : <XCircle className="h-4 w-4 text-red-400 mx-auto" />}
+                          {p.hasSov ? <CheckCircle2 className="h-4 w-4 text-state-approved mx-auto" /> : <XCircle className="h-4 w-4 text-destructive mx-auto" />}
                         </td>
                         <td className="p-2 text-center font-mono">{p.poCount}</td>
                         <td className="p-2 text-center font-mono">{p.coCount}</td>
@@ -266,9 +266,9 @@ export default function PlatformQA() {
                           <div className="flex flex-wrap gap-0.5">
                             {p.hasRejectedInvoice && <Badge variant="destructive" className="text-[9px] px-1">Rej Inv</Badge>}
                             {p.hasRejectedCO && <Badge variant="destructive" className="text-[9px] px-1">Rej CO</Badge>}
-                            {p.hasPaidInvoice && <Badge className="bg-green-600 text-[9px] px-1">Paid</Badge>}
-                            {!p.hasSov && <Badge variant="outline" className="text-[9px] px-1 text-orange-500">No SOV</Badge>}
-                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 text-orange-500">Crew Pending</Badge>}
+                            {p.hasPaidInvoice && <Badge className="bg-state-approved text-[9px] px-1">Paid</Badge>}
+                            {!p.hasSov && <Badge variant="outline" className="text-[9px] px-1 text-state-open">No SOV</Badge>}
+                            {p.fcPending && <Badge variant="outline" className="text-[9px] px-1 text-state-open">Crew Pending</Badge>}
                             {p.status === 'setup' && <Badge variant="outline" className="text-[9px] px-1">Setup</Badge>}
                           </div>
                         </td>

@@ -208,7 +208,7 @@ export function COEquipmentPanel({
       </div>
 
       {!isResponsibleForEquipment && responsibleLabel && (
-        <div className="px-4 py-2 border-b border-border bg-amber-50/60 text-[11px] text-amber-900 flex items-center gap-1.5">
+        <div className="px-4 py-2 border-b border-border bg-state-open/60 text-[11px] text-state-open-foreground flex items-center gap-1.5">
           <Wrench className="h-3 w-3 shrink-0" />
           <span>
             <span className="font-semibold">{responsibleLabel}</span> is responsible for equipment on this order — items and pricing are entered by {responsibleLabel}.

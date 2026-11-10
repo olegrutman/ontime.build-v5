@@ -190,7 +190,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
                           />
                           <span className="text-sm">{item.label}</span>
                           {fcAssignments.has(item.id) && (
-                            <Badge className="ml-auto text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-0">{rl.FCShort}</Badge>
+                            <Badge className="ml-auto text-xs bg-type-sov/10 text-type-sov border-0">{rl.FCShort}</Badge>
                           )}
                         </label>
                       ))}
@@ -280,7 +280,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) 
                         />
                         <span className="text-sm">{item.label}</span>
                         {fcAssignments.has(item.id) && (
-                          <Badge className="ml-auto text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-0">{rl.FCShort}</Badge>
+                          <Badge className="ml-auto text-xs bg-type-sov/10 text-type-sov border-0">{rl.FCShort}</Badge>
                         )}
                       </label>
                     ))}

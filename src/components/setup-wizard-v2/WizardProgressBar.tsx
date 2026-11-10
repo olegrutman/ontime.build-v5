@@ -19,7 +19,7 @@ export function WizardProgressBar({ currentStep }: Props) {
                 <div
                   className={cn(
                     'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
-                    done ? 'bg-emerald-500 text-white' :
+                    done ? 'bg-state-approved text-white' :
                     active ? 'bg-primary text-primary-foreground' :
                     'bg-muted/60 text-muted-foreground',
                   )}
@@ -36,7 +36,7 @@ export function WizardProgressBar({ currentStep }: Props) {
                 </span>
               </div>
               {i < WIZARD_STEPS.length - 1 && (
-                <div className={cn('w-4 h-0.5 shrink-0', done ? 'bg-emerald-500' : 'bg-muted/40')} />
+                <div className={cn('w-4 h-0.5 shrink-0', done ? 'bg-state-approved' : 'bg-muted/40')} />
               )}
             </div>
           );

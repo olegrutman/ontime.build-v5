@@ -60,7 +60,7 @@ export function VoiceInputButton({ onTranscript, className, size = 'sm', autoSta
       className={cn(
         'inline-flex items-center justify-center rounded-full transition-all shrink-0',
         isListening
-          ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
+          ? 'bg-destructive text-white animate-pulse shadow-lg shadow-red-500/30'
           : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground',
         btnSize,
         className,

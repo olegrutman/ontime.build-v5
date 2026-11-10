@@ -9,9 +9,9 @@ const urgencyBorder: Record<string, string> = {
 };
 
 const urgencyBadge: Record<string, string> = {
-  red: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  amber: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  blue: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  red: 'bg-destructive/10 text-destructive',
+  amber: 'bg-state-open-bg text-state-open-foreground',
+  blue: 'bg-type-sov/10 text-type-sov',
 };
 
 interface Props { items: ActionItem[]; }
@@ -26,7 +26,7 @@ export function SupplierActionQueue({ items }: Props) {
           Action Queue
         </h3>
         {items.length > 0 && (
-          <span className="text-[0.68rem] font-semibold bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-0.5 rounded-full">
+          <span className="text-[0.68rem] font-semibold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">
             {items.length}
           </span>
         )}

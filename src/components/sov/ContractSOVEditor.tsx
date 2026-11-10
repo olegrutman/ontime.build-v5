@@ -318,7 +318,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 className="h-8"
               />
               <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveEdit}>
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-state-approved" />
               </Button>
               <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingItem(null)}>
                 <X className="h-4 w-4" />
@@ -356,7 +356,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   />
                   <span className="text-sm">%</span>
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSavePercentEdit}>
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-state-approved" />
                   </Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingPercent(null)}>
                     <X className="h-4 w-4" />
@@ -382,7 +382,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     className="h-8 w-28"
                   />
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveAmountEdit}>
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-state-approved" />
                   </Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingAmount(null)}>
                     <X className="h-4 w-4" />
@@ -526,7 +526,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       {/* Billing Active badge - takes precedence over manual lock */}
                       {hasBilling && (
-                        <Badge variant="secondary" className="gap-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        <Badge variant="secondary" className="gap-1 bg-state-approved-bg text-state-approved-foreground">
                           <DollarSign className="h-3 w-3" />
                           Billing Active
                         </Badge>
@@ -534,7 +534,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       
                       {/* Manual lock status badge - only show if not billing active */}
                       {!hasBilling && sov.is_locked && (
-                        <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                        <Badge variant="secondary" className="gap-1 bg-state-open-bg text-state-open-foreground">
                           <Lock className="h-3 w-3" />
                           Locked
                         </Badge>
@@ -547,7 +547,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         </Badge>
                       )}
                       {totals.isValid && items.length > 0 && !hasBilling && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        <Badge variant="secondary" className="bg-state-approved-bg text-state-approved-foreground">
                           100%
                         </Badge>
                       )}
@@ -621,7 +621,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="cursor-help">
-                                <Lock className="h-4 w-4 text-green-600" />
+                                <Lock className="h-4 w-4 text-state-approved" />
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -684,9 +684,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 <div className="px-5 pb-5 pt-0">
                   {/* Billing Active notice */}
                   {hasBilling && (
-                    <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
-                      <DollarSign className="h-4 w-4 text-green-600" />
-                      <AlertDescription className="text-green-800 dark:text-green-200">
+                    <Alert className="mb-4 border-state-approved/30 bg-state-approved-bg">
+                      <DollarSign className="h-4 w-4 text-state-approved" />
+                      <AlertDescription className="text-state-approved-foreground">
                         This SOV has active billing. Editing is disabled because invoices have been submitted.
                       </AlertDescription>
                     </Alert>
@@ -694,9 +694,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   
                   {/* Manual Locked notice - only show if not billing active */}
                   {!hasBilling && sov.is_locked && (
-                    <Alert className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-                      <Lock className="h-4 w-4 text-amber-600" />
-                      <AlertDescription className="text-amber-800 dark:text-amber-200">
+                    <Alert className="mb-4 border-state-open/30 bg-state-open-bg">
+                      <Lock className="h-4 w-4 text-state-open" />
+                      <AlertDescription className="text-state-open-foreground">
                         This SOV is locked. Unlock to make changes.
                       </AlertDescription>
                     </Alert>
@@ -817,10 +817,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
 
       {/* Contracts Missing SOV Section */}
       {contractsMissingSOVs.length > 0 && !isFC && (
-        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+        <Card className="border-state-open/30 bg-state-open-bg">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertCircle className="h-4 w-4 text-state-open" />
               Contracts Missing SOV
             </CardTitle>
             <CardDescription>

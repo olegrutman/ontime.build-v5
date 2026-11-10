@@ -22,10 +22,10 @@ interface ContractData {
 }
 
 const ROLE_DOTS: Record<string, string> = {
-  'General Contractor': 'bg-blue-500',
-  'Subcontractor': 'bg-emerald-500',
+  'General Contractor': 'bg-type-sov',
+  'Subcontractor': 'bg-state-approved',
   'Crew': 'bg-purple-500',
-  'Supplier': 'bg-amber-500',
+  'Supplier': 'bg-state-open',
 };
 
 const ROLE_SHORT: Record<string, string> = {

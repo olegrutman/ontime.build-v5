@@ -15,9 +15,9 @@ interface DeliveriesCardProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'received', label: 'Received', icon: Check, color: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' },
-  { value: 'not_received', label: 'Not Received', icon: X, color: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700' },
-  { value: 'partial', label: 'Partial', icon: AlertTriangle, color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700' },
+  { value: 'received', label: 'Received', icon: Check, color: 'bg-state-approved-bg text-state-approved-foreground border-state-approved/30' },
+  { value: 'not_received', label: 'Not Received', icon: X, color: 'bg-destructive/10 text-destructive border-destructive/30' },
+  { value: 'partial', label: 'Partial', icon: AlertTriangle, color: 'bg-state-open-bg text-state-open-foreground border-state-open/30' },
 ];
 
 export function DeliveriesCard({ deliveries, onChange, disabled }: DeliveriesCardProps) {

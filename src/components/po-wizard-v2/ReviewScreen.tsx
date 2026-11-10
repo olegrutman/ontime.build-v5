@@ -361,7 +361,7 @@ export function ReviewScreen({
               </div>
             )}
             {totals.taxPercent === 0 && (
-              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs pt-1">
+              <div className="flex items-center gap-1.5 text-state-open text-xs pt-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 <span>No tax rate set — tap to edit</span>
               </div>

@@ -29,9 +29,9 @@ export function PickerStepper({ currentStep, onStepClick, completedSteps }: Pick
               <span
                 className={cn(
                   'w-[22px] h-[22px] rounded-full flex items-center justify-center text-[0.7rem] font-bold shrink-0 border-[1.5px] transition-all',
-                  isDone && 'bg-green-600 border-green-600 text-white',
+                  isDone && 'bg-state-approved border-state-approved text-white',
                   isActive && 'bg-[hsl(var(--navy))] border-[hsl(var(--navy))] text-white shadow-[0_0_0_4px_rgba(13,31,60,0.12)]',
-                  !isDone && !isActive && isRequired && 'bg-amber-50 border-amber-300 text-amber-600',
+                  !isDone && !isActive && isRequired && 'bg-state-open-bg border-state-open/30 text-state-open',
                   !isDone && !isActive && !isRequired && 'bg-muted border-border text-muted-foreground',
                 )}
               >
@@ -52,7 +52,7 @@ export function PickerStepper({ currentStep, onStepClick, completedSteps }: Pick
               <div
                 className={cn(
                   'w-[18px] h-[1.5px] shrink-0 transition-colors',
-                  isDone ? 'bg-green-600' : 'bg-border',
+                  isDone ? 'bg-state-approved' : 'bg-border',
                 )}
               />
             )}

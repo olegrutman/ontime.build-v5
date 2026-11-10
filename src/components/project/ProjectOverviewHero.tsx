@@ -46,12 +46,12 @@ export function ProjectOverviewHero({
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => navigate('/dashboard')}
-            className="md:hidden shrink-0 -ml-1 p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="md:hidden shrink-0 -ml-1 p-1 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors"
             aria-label="Back to dashboard"
           >
             <ChevronLeft className="w-[18px] h-[18px]" />
           </button>
-          <span className="font-mono text-[0.62rem] uppercase tracking-[0.25em] text-slate-400 leading-none truncate">
+          <span className="font-mono text-[0.62rem] uppercase tracking-[0.25em] text-white/60 leading-none truncate">
             Project Hub
           </span>
         </div>
@@ -65,7 +65,7 @@ export function ProjectOverviewHero({
       <h1 className="max-w-full font-heading text-[1.65rem] min-[360px]:text-3xl sm:text-4xl font-bold uppercase tracking-normal leading-[1.02] break-words [overflow-wrap:anywhere]">
         {projectName}
       </h1>
-      {address && <p className="text-[0.8rem] text-slate-400 mt-1 break-words">{address}</p>}
+      {address && <p className="text-[0.8rem] text-white/60 mt-1 break-words">{address}</p>}
 
       {/* Metadata wraps on phones so no label is pushed outside the project card. */}
       <div className="flex flex-wrap items-center gap-2 mt-3.5">
@@ -73,8 +73,8 @@ export function ProjectOverviewHero({
           className={cn(
             PILL,
             status === 'active'
-              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-              : 'bg-slate-700/50 border-slate-600/50 text-slate-300',
+              ? 'bg-state-approved/15 border-state-approved/30 text-state-approved'
+              : 'bg-foreground border-border text-white/60',
           )}
         >
           {statusLabel}
@@ -84,17 +84,17 @@ export function ProjectOverviewHero({
             className={cn(
               PILL,
               health === 'healthy'
-                ? 'bg-sky-500/15 border-sky-500/30 text-sky-300'
+                ? 'bg-type-sov/15 border-type-sov/30 text-type-sov'
                 : health === 'watch'
-                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-                  : 'bg-red-500/15 border-red-500/30 text-red-300',
+                  ? 'bg-state-open/15 border-state-open/30 text-state-open'
+                  : 'bg-destructive/15 border-destructive/30 text-destructive',
             )}
           >
             {HEALTH_LABELS[health]}
           </span>
         )}
         {typeLabel && (
-          <span className={cn(PILL, 'bg-slate-700/50 border-slate-600/50 text-slate-300 font-medium')}>
+          <span className={cn(PILL, 'bg-foreground border-border text-white/60 font-medium')}>
             {typeLabel}
           </span>
         )}

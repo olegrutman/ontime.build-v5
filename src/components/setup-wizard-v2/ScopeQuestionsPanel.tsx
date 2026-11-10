@@ -141,7 +141,7 @@ export function ScopeQuestionsPanel({
                     <span className="font-heading text-sm font-bold text-foreground">
                       {step.label}
                     </span>
-                    <span className={`text-xs tabular-nums ${complete ? 'text-emerald-600 font-semibold' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs tabular-nums ${complete ? 'text-state-approved font-semibold' : 'text-muted-foreground'}`}>
                       {answered} / {total}
                     </span>
                   </div>

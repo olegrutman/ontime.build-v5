@@ -27,7 +27,7 @@ const money = (v: number) => `$${Number(v).toLocaleString('en-US', { minimumFrac
 const STATUS_STYLES: Record<ProposalStatus, string> = {
   draft: 'border-border bg-muted text-muted-foreground',
   sent: 'border-secondary/30 bg-secondary/10 text-secondary',
-  accepted: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600',
+  accepted: 'border-state-approved/30 bg-state-approved/10 text-state-approved',
   declined: 'border-destructive/30 bg-destructive/10 text-destructive',
 };
 

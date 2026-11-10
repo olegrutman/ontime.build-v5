@@ -509,7 +509,7 @@ export default function EditProject() {
 
                 {/* Validation message */}
                 {newMember.role !== 'Supplier' && newContractSum <= 0 && newMember.companyName && newMember.contactEmail && (
-                  <p className="text-sm text-amber-600">Contract sum must be greater than $0</p>
+                  <p className="text-sm text-state-open">Contract sum must be greater than $0</p>
                 )}
 
                 <Button 

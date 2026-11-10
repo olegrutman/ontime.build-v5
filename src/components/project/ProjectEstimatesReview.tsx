@@ -325,7 +325,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
   };
 
   const getStatusBadgeClass = (status: string) => {
-    if (status === 'APPROVED') return 'bg-green-600';
+    if (status === 'APPROVED') return 'bg-state-approved';
     return '';
   };
 

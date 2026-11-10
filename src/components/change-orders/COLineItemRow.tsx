@@ -421,7 +421,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
               <div className="flex items-center gap-1.5 flex-wrap mt-2">
                 {unpricedFCHours > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-state-open-bg text-state-open-foreground">
                     <AlertTriangle className="h-2.5 w-2.5" />
                     {unpricedFCHours}h {rl.FC} time unpriced
                   </span>
@@ -469,7 +469,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     type="button"
                     disabled={confirmingCrewPrice}
                     onClick={(e) => { e.stopPropagation(); confirmCrewPrice(); }}
-                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 font-mono text-xs font-semibold text-foreground"
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 font-mono text-xs font-semibold text-foreground"
                   >
                     {confirmingCrewPrice ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" style={{ color: 'hsl(var(--amber-d))' }} />}
                     Confirm ${fmt(provisionalAmount)}
@@ -478,7 +478,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
-                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
                     style={{ color: 'hsl(var(--amber-d))' }}
                   >
                     <DollarSign className="h-3 w-3" /> Set price
@@ -487,12 +487,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   <span className="text-muted-foreground">Not priced</span>
                 )}
                 {isTC && fcTotal > 0 && (
-                  <span className="inline-flex items-center gap-1 font-mono text-emerald-700 dark:text-emerald-400">
+                  <span className="inline-flex items-center gap-1 font-mono text-state-approved-foreground">
                     <Lock className="h-3 w-3" /> ${fmt(fcTotal)} crew
                   </span>
                 )}
                 {showInternalCell && hasMargin && (
-                  <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                  <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-state-approved' : 'text-destructive')}>
                     {marginPct.toFixed(1)}%
                   </span>
                 )}
@@ -506,7 +506,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <>
                 <span className="inline-flex items-center justify-end gap-1 font-mono text-sm font-semibold text-foreground">
                   ${fmt(fcTotal)}
-                  <Lock className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                  <Lock className="h-3 w-3 text-state-approved" />
                 </span>
                 <span className="block text-[10px] text-muted-foreground">
                   {crewHoursOnItem > 0 ? `${fmtHours(crewHoursOnItem)}h` : 'lump sum'} · private
@@ -538,7 +538,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 type="button"
                 disabled={confirmingCrewPrice}
                 onClick={(e) => { e.stopPropagation(); confirmCrewPrice(); }}
-                className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 font-mono text-xs font-semibold text-foreground transition-colors"
+                className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 font-mono text-xs font-semibold text-foreground transition-colors"
               >
                 {confirmingCrewPrice ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" style={{ color: 'hsl(var(--amber-d))' }} />}
                 Confirm ${fmt(provisionalAmount)}
@@ -547,7 +547,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
-                className="inline-flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
+                className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
                 style={{ color: 'hsl(var(--amber-d))' }}
               >
                 <DollarSign className="h-3 w-3" /> Set price
@@ -562,7 +562,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             {showInternalCell && hasMargin ? (
               <span className={cn(
                 'font-mono text-sm font-semibold',
-                marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+                marginAmount >= 0 ? 'text-state-approved' : 'text-destructive',
               )}>
                 {marginPct.toFixed(1)}%
               </span>
@@ -750,12 +750,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             <>
               {/* Crew ledger — read only */}
               <div className="px-3 sm:px-5 pt-3 pb-1.5 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-state-approved-foreground flex items-center gap-1">
                   <Lock className="h-2.5 w-2.5" /> {rl.FC}'s work · your private cost
                 </span>
-                <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-semibold uppercase tracking-wide">View only</span>
+                <span className="text-[9px] px-1.5 py-px rounded-full bg-state-approved-bg text-state-approved-foreground font-semibold uppercase tracking-wide">View only</span>
               </div>
-              <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-emerald-200/70 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/10 divide-y divide-emerald-200/60 dark:divide-emerald-900/30">
+              <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-state-approved/70 bg-state-approved/50 divide-y divide-emerald-200/60 dark:divide-emerald-900/30">
                 {fcBillable.map(entry => {
                   const rate = entry.hourly_rate;
                   return (
@@ -765,7 +765,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           <p className="text-xs font-medium text-foreground">{entry.description || 'Submitted time'}</p>
                           <p className="text-[10px] text-muted-foreground">{entry.entry_date}</p>
                         </div>
-                        <p className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">${fmt(entry.line_total ?? 0)}</p>
+                        <p className="font-mono text-sm font-bold text-state-approved-foreground">${fmt(entry.line_total ?? 0)}</p>
                       </div>
                       {hasCrewMath(entry) ? (
                         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -775,7 +775,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           <span className="text-muted-foreground">×</span>
                           <span className="inline-flex items-center gap-1 rounded-md bg-card border border-border px-2 py-1"><Clock className="h-3 w-3 text-muted-foreground" />{entry.hours_per_day} hrs/day</span>
                           <span className="text-muted-foreground">=</span>
-                          <span className="inline-flex items-center rounded-md bg-emerald-100 dark:bg-emerald-950/50 px-2 py-1 font-mono font-bold text-emerald-800 dark:text-emerald-300">{fmtHours(entry.hours ?? 0)} hrs</span>
+                          <span className="inline-flex items-center rounded-md bg-state-approved-bg px-2 py-1 font-mono font-bold text-state-approved-foreground">{fmtHours(entry.hours ?? 0)} hrs</span>
                           {rate != null && rate > 0 && <span className="text-muted-foreground">@ ${fmt(rate)}/hr</span>}
                         </div>
                       ) : entry.pricing_mode === 'lump_sum' ? (
@@ -887,7 +887,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                               <p className="text-[10px] text-muted-foreground">{a.entry_date}</p>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <p className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
+                              <p className="font-mono text-xs font-semibold text-state-approved-foreground inline-flex items-center gap-1">
                                 <Lock className="h-2.5 w-2.5" /> ${fmt(a.line_total ?? 0)}
                               </p>
                               {editable && (
@@ -895,7 +895,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                   type="button"
                                   aria-label="Edit internal cost"
                                   onClick={(e) => { e.stopPropagation(); setEditEntryId(isEditingThisRow ? null : a.id); }}
-                                  className="p-1 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                                  className="p-1 rounded hover:bg-muted text-state-approved-foreground hover:text-state-approved-foreground"
                                   title="Edit internal cost"
                                 >
                                   <Pencil className="h-3 w-3" />
@@ -907,7 +907,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                   aria-label="Remove internal cost"
                                   onClick={(e) => { e.stopPropagation(); deleteEntry(a); }}
                                   disabled={deletingEntryId === a.id}
-                                  className="p-1 rounded hover:bg-destructive/10 text-emerald-700 hover:text-destructive"
+                                  className="p-1 rounded hover:bg-destructive/10 text-state-approved-foreground hover:text-destructive"
                                   title="Remove internal cost"
                                 >
                                   {deletingEntryId === a.id
@@ -943,7 +943,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <span className="text-muted-foreground">Cost <span className="font-mono font-semibold text-foreground">${fmt(roleCostTotal)}</span></span>
                 <span className="text-muted-foreground">Billable <span className="font-mono font-semibold text-foreground">${fmt(billableTotal)}</span></span>
                 {hasMargin && (
-                  <span className="text-muted-foreground">Margin <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>${fmt(marginAmount)} · {marginPct.toFixed(1)}%</span></span>
+                  <span className="text-muted-foreground">Margin <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-state-approved' : 'text-destructive')}>${fmt(marginAmount)} · {marginPct.toFixed(1)}%</span></span>
                 )}
               </div>
             </>
@@ -984,7 +984,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       <span className="w-14 sm:w-20 shrink-0 text-muted-foreground">{entry.entry_date}</span>
                       <span className="min-w-0 basis-[calc(100%-3.5rem)] sm:basis-0 sm:flex-1 text-foreground truncate">
                         {isDownstream && (
-                          <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 align-middle">{rl.FC}</span>
+                          <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-state-approved-bg text-state-approved-foreground align-middle">{rl.FC}</span>
                         )}
                         {entry.description || '—'}
                       </span>
@@ -1029,12 +1029,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
                         <span className="ml-3 sm:ml-0 sm:w-24 text-right inline-flex items-center justify-end gap-1 whitespace-nowrap">
                           {isDownstream ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium font-mono">
+                            <span className="inline-flex items-center gap-1 text-state-approved-foreground font-medium font-mono">
                               <Lock className="h-2.5 w-2.5" /> ${fmt(entry.line_total ?? 0)}
                             </span>
                           ) : matchingActual ? (
                             <>
-                              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium">
+                              <span className="inline-flex items-center gap-1 text-state-approved-foreground font-medium">
                                 <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
                               </span>
                               {internalEditable && (
@@ -1042,7 +1042,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                   type="button"
                                   aria-label="Edit internal cost"
                                   onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === matchingActual.id ? null : matchingActual.id); }}
-                                  className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                                  className="p-0.5 rounded hover:bg-muted text-state-approved-foreground hover:text-state-approved-foreground"
                                   title="Edit internal cost"
                                 >
                                   <Pencil className="h-3 w-3" />
@@ -1054,7 +1054,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                    aria-label="Remove internal cost"
                                    onClick={(e) => { e.stopPropagation(); deleteEntry(matchingActual); }}
                                    disabled={deletingEntryId === matchingActual.id}
-                                   className="p-0.5 rounded hover:bg-destructive/10 text-emerald-700 hover:text-destructive"
+                                   className="p-0.5 rounded hover:bg-destructive/10 text-state-approved-foreground hover:text-destructive"
                                    title="Remove internal cost"
                                  >
                                    {deletingEntryId === matchingActual.id
@@ -1105,8 +1105,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 const orphanActuals = actualCosts.filter(a => !billableDates.has(a.entry_date));
                 if (orphanActuals.length === 0) return null;
                 return (
-                  <div className="border-t border-border/40 bg-emerald-50/30 dark:bg-emerald-950/10">
-                    <div className="px-3 sm:px-5 py-1.5 text-[10px] uppercase tracking-wider text-emerald-700/70 dark:text-emerald-400/70 font-semibold flex items-center gap-1">
+                  <div className="border-t border-border/40 bg-state-approved/30">
+                    <div className="px-3 sm:px-5 py-1.5 text-[10px] uppercase tracking-wider text-state-approved-foreground font-semibold flex items-center gap-1">
                       <Lock className="h-2.5 w-2.5" /> Internal-only entries
                     </div>
                     {orphanActuals.map(a => {
@@ -1125,7 +1125,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                             </span>
                             <span className="w-20 sm:w-24 text-right font-mono text-muted-foreground/40">—</span>
                             <span className="w-20 sm:w-28 text-right inline-flex items-center justify-end gap-1">
-                              <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-medium font-mono">
+                              <span className="inline-flex items-center gap-1 text-state-approved-foreground font-medium font-mono">
                                 <Lock className="h-2.5 w-2.5" /> ${fmt(a.line_total ?? 0)}
                               </span>
                               {editable && (
@@ -1133,7 +1133,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                   type="button"
                                   aria-label="Edit internal cost"
                                   onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === a.id ? null : a.id); }}
-                                  className="p-0.5 rounded hover:bg-muted text-emerald-700 hover:text-emerald-800"
+                                  className="p-0.5 rounded hover:bg-muted text-state-approved-foreground hover:text-state-approved-foreground"
                                   title="Edit internal cost"
                                 >
                                    <Pencil className="h-3 w-3" />
@@ -1145,7 +1145,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                                    aria-label="Remove internal cost"
                                    onClick={(e) => { e.stopPropagation(); deleteEntry(a); }}
                                    disabled={deletingEntryId === a.id}
-                                   className="p-0.5 rounded hover:bg-destructive/10 text-emerald-700 hover:text-destructive"
+                                   className="p-0.5 rounded hover:bg-destructive/10 text-state-approved-foreground hover:text-destructive"
                                    title="Remove internal cost"
                                  >
                                    {deletingEntryId === a.id
@@ -1201,7 +1201,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   {billableTotal > 0 && (
                     <div className="flex justify-between text-xs pt-1 text-muted-foreground">
                       <span>Margin on this item</span>
-                      <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                      <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-state-approved' : 'text-destructive')}>
                         ${fmt(marginAmount)} · {marginPct.toFixed(1)}%
                       </span>
                     </div>
@@ -1260,8 +1260,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
               className="w-full flex items-center gap-2.5 px-3 sm:px-5 py-3 text-xs border-t border-border/50 hover:bg-accent/40 transition-colors"
             >
-              <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <Plus className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
+              <div className="w-6 h-6 rounded-full bg-state-approved/10 flex items-center justify-center">
+                <Plus className="h-3.5 w-3.5 text-state-approved-foreground" />
               </div>
               <div className="text-left">
                 <p className="font-semibold text-foreground">Log internal cost</p>

@@ -32,7 +32,7 @@ export function SafetyCard({ incidents, onChange, disabled }: SafetyCardProps) {
     <div className="bg-card rounded-2xl border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-xs uppercase tracking-wide text-muted-foreground font-medium flex items-center gap-1.5">
-          {hasIncidents ? <ShieldAlert className="h-3.5 w-3.5 text-destructive" /> : <ShieldCheck className="h-3.5 w-3.5 text-green-500" />}
+          {hasIncidents ? <ShieldAlert className="h-3.5 w-3.5 text-destructive" /> : <ShieldCheck className="h-3.5 w-3.5 text-state-approved" />}
           Safety
         </h3>
         <div className="flex items-center gap-2">

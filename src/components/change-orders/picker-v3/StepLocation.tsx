@@ -156,7 +156,7 @@ export function StepLocation({ state, dispatch, projectId }: StepLocationProps) 
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">
           Step 1 of 6 · Location
         </p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
@@ -179,7 +179,7 @@ export function StepLocation({ state, dispatch, projectId }: StepLocationProps) 
           <p className="text-[0.7rem] text-muted-foreground">Same work, different spots — quantities multiply</p>
         </div>
         {cur.multiLocation && cur.locations.length > 0 && (
-          <span className="text-[0.72rem] font-semibold font-mono text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full">
+          <span className="text-[0.72rem] font-semibold font-mono text-state-open-foreground bg-state-open-bg px-2.5 py-0.5 rounded-full">
             {cur.locations.length} selected
           </span>
         )}

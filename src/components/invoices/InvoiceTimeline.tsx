@@ -101,7 +101,7 @@ export function InvoiceTimeline({ invoice }: { invoice: Invoice }) {
       at: invoice.submitted_at,
       by: invoice.submitted_by,
       icon: Send,
-      tone: 'text-blue-600 dark:text-blue-400',
+      tone: 'text-type-sov',
       pendingLabel: 'Not submitted yet',
     },
   ];
@@ -113,7 +113,7 @@ export function InvoiceTimeline({ invoice }: { invoice: Invoice }) {
       at: invoice.rejected_at,
       by: invoice.rejected_by,
       icon: XCircle,
-      tone: 'text-red-600 dark:text-red-400',
+      tone: 'text-destructive',
       note: invoice.rejection_reason,
     });
   }
@@ -124,7 +124,7 @@ export function InvoiceTimeline({ invoice }: { invoice: Invoice }) {
     at: invoice.approved_at,
     by: invoice.approved_by,
     icon: CheckCircle2,
-    tone: 'text-emerald-600 dark:text-emerald-400',
+    tone: 'text-state-approved',
     pendingLabel: 'Awaiting approval',
   });
 
@@ -140,7 +140,7 @@ export function InvoiceTimeline({ invoice }: { invoice: Invoice }) {
     at: invoice.paid_at,
     by: invoice.paid_by,
     icon: DollarSign,
-    tone: 'text-emerald-700 dark:text-emerald-300',
+    tone: 'text-state-approved-foreground',
     note: paymentNote,
     pendingLabel: 'Awaiting payment',
   });

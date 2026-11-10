@@ -85,7 +85,7 @@ export function ActualCostPopup({
           </div>
           <div className="flex justify-between border-t pt-2">
             <span className="font-medium">Margin</span>
-            <span className={margin >= 0 ? 'text-green-600 font-semibold' : 'text-destructive font-semibold'}>
+            <span className={margin >= 0 ? 'text-state-approved font-semibold' : 'text-destructive font-semibold'}>
               {fmt(margin)}
             </span>
           </div>

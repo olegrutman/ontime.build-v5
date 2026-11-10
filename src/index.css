@@ -145,6 +145,15 @@
   }
 
   .dark {
+    --state-open-foreground: 40 95% 75%;
+    --state-open-bg: 38 60% 14%;
+    --state-priced-foreground: 252 90% 85%;
+    --state-priced-bg: 252 40% 16%;
+    --state-approved: 153 62% 45%;
+    --state-approved-foreground: 153 70% 78%;
+    --state-approved-bg: 153 45% 12%;
+    --state-executed-foreground: 220 9% 82%;
+    --state-executed-bg: 220 9% 16%;
     --background: 216 56% 14%;
     --foreground: 220 27% 96%;
 
@@ -216,6 +225,12 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
     font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  /* Page and section titles use the condensed heading face app-wide */
+  h1, h2 {
+    font-family: 'Barlow Condensed', 'DM Sans', sans-serif;
+    @apply font-bold tracking-normal;
   }
 
   code, pre {

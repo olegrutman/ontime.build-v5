@@ -88,7 +88,7 @@ export function ItemsScreen({
       return <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">Adjusted</Badge>;
     }
     if (item.source_estimate_item_id && item.unit_price != null) {
-      return <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-700 dark:text-emerald-400">Est.</Badge>;
+      return <Badge variant="outline" className="text-[10px] border-state-approved/50 text-state-approved-foreground">Est.</Badge>;
     }
     if (!item.source_estimate_item_id && item.unit_price == null) {
       return <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">Needs Price</Badge>;

@@ -31,10 +31,10 @@ interface InvoiceRow {
 
 
 const roleDotColors: Record<string, string> = {
-  'General Contractor': 'bg-blue-500',
-  'Subcontractor': 'bg-emerald-500',
+  'General Contractor': 'bg-type-sov',
+  'Subcontractor': 'bg-state-approved',
   'Crew': 'bg-purple-500',
-  'Supplier': 'bg-amber-500',
+  'Supplier': 'bg-state-open',
 };
 
 const roleLabel: Record<string, string> = {
@@ -46,15 +46,15 @@ const roleLabel: Record<string, string> = {
 
 const statusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
-  submitted: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  contracted: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  submitted: 'bg-state-open-bg text-state-open-foreground',
+  pending: 'bg-state-open-bg text-state-open-foreground',
+  approved: 'bg-state-approved-bg text-state-approved-foreground',
+  contracted: 'bg-state-approved-bg text-state-approved-foreground',
   DRAFT: 'bg-muted text-muted-foreground',
-  SUBMITTED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  PAID: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  SUBMITTED: 'bg-state-open-bg text-state-open-foreground',
+  APPROVED: 'bg-state-approved-bg text-state-approved-foreground',
+  PAID: 'bg-type-sov/10 text-type-sov',
+  REJECTED: 'bg-destructive/10 text-destructive',
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -207,7 +207,7 @@ export function SupplierOperationalSummary({ projectId, supplierOrgId, onNavigat
         ) : openRfiCount > 0 ? (
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold tabular-nums">{openRfiCount}</span>
-            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-0 text-[10px]">
+            <Badge className="bg-state-open-bg text-state-open-foreground border-0 text-[10px]">
               {openRfiCount} Open
             </Badge>
           </div>

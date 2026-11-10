@@ -36,8 +36,8 @@ import {
 
 const TYPE_BADGE: Record<string, { label: string; className: string }> = {
   phase: { label: 'Phase', className: 'bg-primary/10 text-primary' },
-  task: { label: 'Task', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
-  milestone: { label: 'Milestone', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+  task: { label: 'Task', className: 'bg-state-approved-bg text-state-approved-foreground' },
+  milestone: { label: 'Milestone', className: 'bg-state-open-bg text-state-open-foreground' },
 };
 
 interface ScheduleTabProps {
@@ -498,8 +498,8 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                           <TableCell className="text-right text-sm">{item.progress}%</TableCell>
                           <TableCell className="text-right text-sm">
                             {item.sov_item ? (
-                              <span className={`${item.sov_item.billing_progress > item.progress ? 'text-amber-600' :
-                                item.progress > item.sov_item.billing_progress ? 'text-green-600' : ''}`}>
+                              <span className={`${item.sov_item.billing_progress > item.progress ? 'text-state-open' :
+                                item.progress > item.sov_item.billing_progress ? 'text-state-approved' : ''}`}>
                                 {item.sov_item.billing_progress}%
                               </span>
                             ) : '—'}

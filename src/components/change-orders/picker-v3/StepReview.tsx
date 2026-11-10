@@ -22,7 +22,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">Step 4 of 4 · Final Review</p>
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 4 of 4 · Final Review</p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
           Review and submit.
         </h2>
@@ -39,7 +39,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
         <button
           type="button"
           onClick={onAddItem}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[1.5px] border-dashed border-amber-400 bg-background text-amber-700 text-[0.74rem] font-bold hover:bg-amber-50 transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-[1.5px] border-dashed border-state-open bg-background text-state-open-foreground text-[0.74rem] font-bold hover:bg-state-open-bg transition-all"
         >
           + Add Item
         </button>
@@ -69,7 +69,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
               onClick={() => onSwitchItem(i)}
               className="grid w-full min-w-0 grid-cols-[32px_minmax(0,1fr)_28px] items-start gap-2 border-b px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:grid-cols-[36px_1fr_120px_36px] sm:items-center sm:gap-3 sm:px-3.5"
             >
-              <span className="font-mono text-[0.75rem] font-bold text-foreground bg-amber-50 py-1 rounded-md text-center">
+              <span className="font-mono text-[0.75rem] font-bold text-foreground bg-state-open-bg py-1 rounded-md text-center">
                 {String(i + 1).padStart(2, '0')}
               </span>
               <div className="min-w-0">
@@ -82,7 +82,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
               <div className="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center gap-1.5 sm:col-start-auto sm:row-start-auto sm:justify-end">
                 <span className={cn(
                   'text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full uppercase',
-                  item.docType === 'CO' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700',
+                  item.docType === 'CO' ? 'bg-type-sov/10 text-type-sov' : 'bg-state-open-bg text-state-open-foreground',
                 )}>
                   {item.docType}
                 </span>
@@ -95,7 +95,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
                   <span
                     role="button"
                     onClick={e => { e.stopPropagation(); dispatch({ type: 'DELETE_ITEM', index: i }); }}
-                    className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:border-red-300 hover:text-red-600 text-[0.85rem] transition-all"
+                    className="w-7 h-7 rounded-md bg-muted border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive text-[0.85rem] transition-all"
                   >
                     ×
                   </span>
@@ -111,7 +111,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
           <span className="break-words font-heading text-sm font-extrabold uppercase tracking-[0.5px] text-white/55">
             {state.items.length} item{state.items.length !== 1 ? 's' : ''} · Pricing deferred
           </span>
-          <span className="break-words text-[0.7rem] font-semibold text-amber-400 sm:text-right">
+          <span className="break-words text-[0.7rem] font-semibold text-state-open sm:text-right">
             {state.items[0]?.pricingName}
           </span>
           <span className="hidden sm:block" />
@@ -145,8 +145,8 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
       <div className="bg-background border rounded-xl p-[18px] mb-3.5 shadow-xs">
         <p className="text-[0.62rem] font-bold text-muted-foreground uppercase tracking-[1.2px] mb-3.5">Approval Chain</p>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-amber-50 border border-amber-400 rounded-lg">
-            <span className="w-[30px] h-[30px] rounded-full bg-amber-500 text-white flex items-center justify-center text-[0.78rem] font-extrabold">You</span>
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-state-open-bg border border-state-open rounded-lg">
+            <span className="w-[30px] h-[30px] rounded-full bg-state-open text-white flex items-center justify-center text-[0.78rem] font-extrabold">You</span>
             <div>
               <p className="text-[0.78rem] font-bold text-foreground">You</p>
               <p className="text-[0.62rem] text-muted-foreground">Submitted</p>
@@ -154,7 +154,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
           </div>
           <span className="text-muted-foreground/50 text-[0.85rem]">→</span>
           <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-muted/30 border rounded-lg">
-            <span className="w-[30px] h-[30px] rounded-full bg-blue-600 text-white flex items-center justify-center text-[0.78rem] font-extrabold">{rl.initials('GC')}</span>
+            <span className="w-[30px] h-[30px] rounded-full bg-type-sov text-white flex items-center justify-center text-[0.78rem] font-extrabold">{rl.initials('GC')}</span>
             <div>
               <p className="text-[0.78rem] font-bold text-foreground">{rl.GC} approval</p>
               <p className="text-[0.62rem] text-muted-foreground">Required</p>
@@ -162,7 +162,7 @@ export function StepReview({ state, dispatch, onSwitchItem, onAddItem }: StepRev
           </div>
         </div>
         <p className="text-[0.7rem] text-muted-foreground mt-3.5 pt-3.5 border-t flex items-center gap-2">
-          <span className="w-[18px] h-[18px] rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[0.65rem]">✓</span>
+          <span className="w-[18px] h-[18px] rounded-full bg-state-approved-bg text-state-approved flex items-center justify-center text-[0.65rem]">✓</span>
           Auto-routed based on project settings.
         </p>
       </div>

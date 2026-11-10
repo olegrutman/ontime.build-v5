@@ -7,9 +7,9 @@ interface BillingCashCardProps {
 }
 
 const colorClass = (c?: 'green' | 'red' | 'amber') =>
-  c === 'green' ? 'text-green-600 dark:text-green-400'
-  : c === 'red' ? 'text-red-600 dark:text-red-400'
-  : c === 'amber' ? 'text-amber-600 dark:text-amber-400'
+  c === 'green' ? 'text-state-approved'
+  : c === 'red' ? 'text-destructive'
+  : c === 'amber' ? 'text-state-open'
   : 'text-foreground';
 
 interface Row { label: string; value: string; color?: 'green' | 'red' | 'amber'; bold?: boolean }
@@ -93,7 +93,7 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
                 {isGC ? 'Billed to Owner − Invoices Received' : 'Total Invoiced to GC − Total Invoiced by FC'}
               </p>
             </div>
-            <span className={cn("text-base font-bold tabular-nums", netCash >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+            <span className={cn("text-base font-bold tabular-nums", netCash >= 0 ? 'text-state-approved' : 'text-destructive')}>
               {fmt(netCash)}
             </span>
           </div>

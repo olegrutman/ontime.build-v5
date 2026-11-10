@@ -3,8 +3,8 @@ import { formatCurrency } from '@/lib/utils';
 import type { OpenPO } from '@/hooks/useSupplierDashboardData';
 
 const statusStyles: Record<string, string> = {
-  SUBMITTED: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  PRICED: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  SUBMITTED: 'bg-type-sov/10 text-type-sov',
+  PRICED: 'bg-state-open-bg text-state-open-foreground',
   ORDERED: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
 };
 

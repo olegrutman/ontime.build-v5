@@ -797,7 +797,7 @@ export default function ProjectDetailsWizard() {
                 onClick={() => i < step && setStep(i)}
                 className={cn(
                   'flex items-center gap-1.5 text-xs font-medium transition-colors min-h-[44px] px-1',
-                  done && 'text-green-600 cursor-pointer',
+                  done && 'text-state-approved cursor-pointer',
                   active && 'text-primary font-bold',
                   !done && !active && 'text-muted-foreground',
                   i > step && 'opacity-40 cursor-not-allowed',
@@ -805,7 +805,7 @@ export default function ProjectDetailsWizard() {
               >
                 <span className={cn(
                   'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-heading shrink-0',
-                  done && 'bg-green-600 text-white',
+                  done && 'bg-state-approved text-white',
                   active && 'bg-secondary text-secondary-foreground',
                   !done && !active && 'bg-muted/30 text-muted-foreground',
                 )}>
@@ -836,7 +836,7 @@ export default function ProjectDetailsWizard() {
                   onClick={() => i <= step && setStep(i)}
                   className={cn(
                     'flex items-center gap-2 w-full text-left text-sm py-2 px-2 rounded-md transition-colors min-h-[40px]',
-                    done && 'text-green-600 cursor-pointer hover:bg-muted/50',
+                    done && 'text-state-approved cursor-pointer hover:bg-muted/50',
                     active && 'text-primary font-semibold bg-muted',
                     !done && !active && 'text-muted-foreground',
                     i > step && 'opacity-40 cursor-not-allowed',
@@ -844,7 +844,7 @@ export default function ProjectDetailsWizard() {
                 >
                   <span className={cn(
                     'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-heading shrink-0',
-                    done && 'bg-green-600 text-white',
+                    done && 'bg-state-approved text-white',
                     active && 'bg-secondary text-secondary-foreground',
                     !done && !active && 'bg-muted/30 text-muted-foreground',
                   )}>

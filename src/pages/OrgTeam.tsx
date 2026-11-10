@@ -285,7 +285,7 @@ export default function OrgTeam() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleApproveJoinRequest(req.id)}
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      className="text-state-approved hover:text-state-approved-foreground hover:bg-state-approved-bg"
                     >
                       <Check className="h-4 w-4" />
                     </Button>

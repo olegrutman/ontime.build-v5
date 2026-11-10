@@ -27,21 +27,21 @@ interface ProjectQuickOverviewProps {
 
 const SEVERITY_STYLES = {
   red: {
-    bg: 'bg-red-50 dark:bg-red-950/30',
-    border: 'border-red-200 dark:border-red-800/40',
-    text: 'text-red-700 dark:text-red-300',
+    bg: 'bg-destructive/10',
+    border: 'border-destructive/30',
+    text: 'text-destructive',
     icon: AlertTriangle,
   },
   amber: {
-    bg: 'bg-amber-50 dark:bg-amber-950/30',
-    border: 'border-amber-200 dark:border-amber-800/40',
-    text: 'text-amber-700 dark:text-amber-300',
+    bg: 'bg-state-open-bg',
+    border: 'border-state-open/30',
+    text: 'text-state-open-foreground',
     icon: CircleAlert,
   },
   blue: {
-    bg: 'bg-blue-50 dark:bg-blue-950/30',
-    border: 'border-blue-200 dark:border-blue-800/40',
-    text: 'text-blue-700 dark:text-blue-300',
+    bg: 'bg-type-sov/10',
+    border: 'border-type-sov/30',
+    text: 'text-type-sov',
     icon: Info,
   },
 };
@@ -134,7 +134,7 @@ function CriticalScheduleSection({
                   OVERDUE
                 </Badge>
               ) : (
-                <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-0 text-[10px] shrink-0 h-4 px-1.5">
+                <Badge className="bg-state-open-bg text-state-open-foreground border-0 text-[10px] shrink-0 h-4 px-1.5">
                   {item.daysUntil === 0 ? 'TODAY' : `${item.daysUntil}d`}
                 </Badge>
               )}
@@ -283,7 +283,7 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
           ))}
         </div>
       ) : !hasCritical && !isBehindSchedule ? (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+        <div className="flex items-center gap-2 rounded-lg border border-state-approved/30 bg-state-approved-bg px-3 py-2.5 text-sm font-medium text-state-approved-foreground">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           All clear — no items need attention
         </div>

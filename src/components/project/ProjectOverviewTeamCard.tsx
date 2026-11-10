@@ -26,10 +26,10 @@ interface TeamMember {
 }
 
 const roleDotColors: Record<string, string> = {
-  'General Contractor': 'bg-blue-500',
-  'Subcontractor': 'bg-emerald-500',
+  'General Contractor': 'bg-type-sov',
+  'Subcontractor': 'bg-state-approved',
   'Crew': 'bg-purple-500',
-  'Supplier': 'bg-amber-500',
+  'Supplier': 'bg-state-open',
 };
 
 const roleLabel: Record<string, string> = {
@@ -145,7 +145,7 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
 
         {designatedSupplier && (
           <div className="flex items-center gap-2 text-[0.75rem] text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            <span className="h-2 w-2 rounded-full bg-state-open" />
             <span>Supplier: {designatedSupplier}</span>
           </div>
         )}

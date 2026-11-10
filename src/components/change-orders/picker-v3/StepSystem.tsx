@@ -51,7 +51,7 @@ export function StepSystem({ state, dispatch }: StepSystemProps) {
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">
           Step 2 of 6 · System
         </p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
@@ -63,7 +63,7 @@ export function StepSystem({ state, dispatch }: StepSystemProps) {
       </div>
 
       {!hasLocations ? (
-        <div className="flex items-start gap-2.5 p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
+        <div className="flex items-start gap-2.5 p-4 rounded-lg border border-state-open/30 bg-state-open-bg text-state-open-foreground">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div className="text-[0.8rem]">
             Pick a location first — that controls which systems are available here.

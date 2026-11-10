@@ -19,10 +19,10 @@ const STATUS_PILL_MAP: Record<string, { variant: 'healthy' | 'watch' | 'at_risk'
 };
 
 const URGENCY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-amber-500',
-  normal: 'bg-blue-500',
-  low: 'bg-slate-400',
+  critical: 'bg-destructive',
+  high: 'bg-state-open',
+  normal: 'bg-type-sov',
+  low: 'bg-muted',
 };
 
 function RFIListCard({ rfi, onClick }: { rfi: RFIRow; onClick: () => void }) {

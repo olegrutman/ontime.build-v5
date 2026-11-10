@@ -123,7 +123,7 @@ export function CombinedSOVCard({ projectId, currentCoId }: CombinedSOVCardProps
           </div>
           <div className="font-mono text-base font-bold break-words [overflow-wrap:anywhere]">{fmt(totalBilled)}</div>
         </div>
-        <div className="min-w-0 p-2.5 rounded-lg border bg-amber-50/40">
+        <div className="min-w-0 p-2.5 rounded-lg border bg-state-open/40">
           <div className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-semibold">
             Remaining
           </div>
@@ -148,7 +148,7 @@ export function CombinedSOVCard({ projectId, currentCoId }: CombinedSOVCardProps
                 <div
                   key={r.source_co_id}
                   className={`flex items-center justify-between text-xs p-1.5 rounded ${
-                    active ? 'bg-amber-50 border border-amber-300' : ''
+                    active ? 'bg-state-open-bg border border-state-open/30' : ''
                   }`}
                 >
                   <div className="font-mono truncate max-w-[140px]" title={r.source_co_id}>

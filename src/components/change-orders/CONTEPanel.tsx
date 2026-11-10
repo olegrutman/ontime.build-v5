@@ -324,7 +324,7 @@ export function CONTEPanel({
                 .filter(e => e.approved_at || e.rejected_at)
                 .map(entry => (
                   <div key={entry.id} className="flex items-center justify-between text-xs">
-                    <span className={entry.approved_at ? 'text-green-600' : 'text-destructive'}>
+                    <span className={entry.approved_at ? 'text-state-approved' : 'text-destructive'}>
                       {entry.approved_at ? '↑ Cap increased' : '✕ Increase declined'}
                     </span>
                     <span className="text-muted-foreground">

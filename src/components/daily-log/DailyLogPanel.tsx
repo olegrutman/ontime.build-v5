@@ -142,7 +142,7 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
         <div className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-semibold">{format(logDate, 'EEEE, MMM d, yyyy')}</span>
-          {isSubmitted && <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">Submitted</Badge>}
+          {isSubmitted && <Badge className="bg-state-approved-bg text-state-approved-foreground">Submitted</Badge>}
           {!isSubmitted && log && <Badge variant="outline">Draft</Badge>}
         </div>
         <button

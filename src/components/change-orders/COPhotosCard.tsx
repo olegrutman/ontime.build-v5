@@ -339,7 +339,7 @@ function PhotoViewer({ photo, onClose, onDelete }: PhotoViewerProps) {
         <div className="flex items-center gap-2">
           {onDelete && (
             <button onClick={onDelete} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-              <Trash2 className="h-4 w-4 text-red-400" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </button>
           )}
           <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 transition-colors">

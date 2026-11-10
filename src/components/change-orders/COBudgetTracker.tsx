@@ -18,7 +18,7 @@ export function COBudgetTracker({ gcBudget, totalApprovedSpend, isGC }: COBudget
   const pct = (totalApprovedSpend / gcBudget) * 100;
   const remaining = gcBudget - totalApprovedSpend;
 
-  const barColor = pct >= 95 ? 'bg-destructive' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+  const barColor = pct >= 95 ? 'bg-destructive' : pct >= 80 ? 'bg-state-open' : 'bg-state-approved';
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -54,7 +54,7 @@ export function COBudgetTracker({ gcBudget, totalApprovedSpend, isGC }: COBudget
         <div className="flex items-center justify-between text-xs">
           <span className={cn(
             'font-medium',
-            pct >= 95 ? 'text-destructive' : pct >= 80 ? 'text-amber-600' : 'text-emerald-600',
+            pct >= 95 ? 'text-destructive' : pct >= 80 ? 'text-state-open' : 'text-state-approved',
           )}>
             {pct.toFixed(0)}% used
           </span>

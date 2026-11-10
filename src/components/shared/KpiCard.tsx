@@ -47,7 +47,7 @@ const PILL_S: Record<PillType, { bg: string; color: string; border?: string }> =
 export const Pill = forwardRef<HTMLSpanElement, { type: PillType; children: ReactNode }>(function Pill({ type, children }, ref) {
   const s = PILL_S[type];
   return (
-    <span ref={ref} style={{ fontSize: '0.59rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color, border: s.border || 'none', maxWidth: '100%', overflowWrap: 'anywhere', ...fontLabel }}>
+    <span ref={ref} style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color, border: s.border || 'none', maxWidth: '100%', overflowWrap: 'anywhere', ...fontLabel }}>
       {children}
     </span>
   );
@@ -99,7 +99,7 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills = [], c
           <Button variant="ghost" onClick={() => setOpen(true)} aria-label={`View ${label} breakdown`} className="h-auto w-full flex-1 flex-col items-start justify-start gap-0 rounded-none p-0 text-left hover:bg-transparent hover:text-foreground">
             <span className="min-h-8 text-[0.7rem] font-semibold uppercase leading-snug text-muted-foreground [overflow-wrap:anywhere]">{label}</span>
             <span className="flex w-full min-w-0 items-end justify-between gap-2">
-              <span className="min-w-0 text-2xl sm:text-[2rem] leading-tight tabular-nums text-foreground [overflow-wrap:anywhere]" style={fontVal}>{value}</span>
+              <span className="min-w-0 text-xl sm:text-2xl leading-tight tabular-nums text-foreground [overflow-wrap:anywhere]" style={fontMono}>{value}</span>
               {spark && <span className="shrink-0">{spark}</span>}
             </span>
             <span className="mt-1 min-h-9 text-[0.75rem] font-normal leading-snug text-muted-foreground [overflow-wrap:anywhere]">{sub}</span>
@@ -118,7 +118,7 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills = [], c
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-[0.7rem] uppercase text-muted-foreground [overflow-wrap:anywhere]">{label}</DialogTitle>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-3xl leading-tight text-foreground [overflow-wrap:anywhere]" style={fontVal}>{value}</span>
+                  <span className="text-3xl leading-tight text-foreground [overflow-wrap:anywhere]" style={fontMono}>{value}</span>
                   {pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}
                 </div>
               </div>
@@ -140,7 +140,7 @@ export function THead({ cols }: { cols: string[] }) {
     <thead>
       <tr style={{ background: C.surface2, borderBottom: `1px solid ${C.border}` }}>
         {cols.map((c, i) => (
-          <th key={i} style={{ fontSize: '0.59rem', textTransform: 'uppercase', letterSpacing: '0.9px', color: C.faint, padding: '8px 12px', fontWeight: 600, textAlign: i === cols.length - 1 ? 'right' : 'left', ...fontLabel }}>{c}</th>
+          <th key={i} style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.9px', color: C.faint, padding: '8px 12px', fontWeight: 600, textAlign: i === cols.length - 1 ? 'right' : 'left', ...fontLabel }}>{c}</th>
         ))}
       </tr>
     </thead>
@@ -160,7 +160,7 @@ export const totalRowStyle = { background: C.surface2, fontWeight: 700 };
 
 export const TRow = forwardRef<HTMLTableRowElement, { cells: ReactNode[]; isTotal?: boolean; greenText?: boolean; onClick?: () => void }>(function TRow({ cells, isTotal, greenText, onClick }, ref) {
   return (
-    <tr ref={ref} style={{ ...(isTotal ? totalRowStyle : { cursor: 'pointer' }), ...(greenText ? { color: C.green } : {}) }} className={isTotal ? '' : 'hover:bg-[rgba(245,166,35,.05)]'} onClick={onClick}>
+    <tr ref={ref} style={{ ...(isTotal ? totalRowStyle : { cursor: 'pointer' }), ...(greenText ? { color: C.green } : {}) }} className={isTotal ? '' : 'hover:bg-primary/5'} onClick={onClick}>
       {cells.map((c, i) => <td key={i} style={i === cells.length - 1 ? cellStyleR : cellStyle}>{c}</td>)}
     </tr>
   );
@@ -171,7 +171,7 @@ export function WarnItem({ color, icon, title, sub, value, pill, pillType, onCli
   color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; onClick?: () => void;
 }) {
   return (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderLeft: `3px solid ${color}`, borderBottom: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.15s', ...fontLabel }} className="hover:translate-x-[2px] hover:bg-[#F7F9FC]">
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderLeft: `3px solid ${color}`, borderBottom: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.15s', ...fontLabel }} className="hover:translate-x-[2px] hover:bg-muted">
       <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, color: C.ink, fontSize: '0.78rem' }}>{title}</div>
@@ -205,7 +205,7 @@ export function ProjectCard({ name, status, budget, costs, labels, onClick }: {
   const dotColor = status === 'active' ? C.green : status === 'on_hold' ? C.yellow : status === 'completed' ? C.blue : C.faint;
   const l = labels || { budget: 'Contract', costs: 'Cost', margin: 'Margin' };
   return (
-    <div style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', cursor: 'pointer', ...fontLabel }} className="hover:border-[#F5A623] hover:shadow-sm transition-all" onClick={onClick}>
+    <div style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', cursor: 'pointer', ...fontLabel }} className="hover:border-primary hover:shadow-sm transition-all" onClick={onClick}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor }} />
         <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.82rem', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>

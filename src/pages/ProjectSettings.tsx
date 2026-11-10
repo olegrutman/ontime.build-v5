@@ -148,7 +148,7 @@ export default function ProjectSettings() {
           <h1 className="text-xl font-bold text-foreground">{project?.name ?? 'Project'} Settings</h1>
           <p className="text-sm text-muted-foreground mt-1">Configure project-level behavior and visibility rules.</p>
           {!canEditFinancials && (
-            <div className="mt-3 rounded-lg border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+            <div className="mt-3 rounded-lg border border-state-open/50 bg-state-open-bg px-3 py-2 text-xs text-state-open-foreground">
               You have view-only access to financial settings (tax, retainage, markup disclosure). Only a GC admin can change these.
             </div>
           )}

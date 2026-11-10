@@ -77,7 +77,7 @@ export function ContractReviewActions({ contractId, onActionComplete }: Contract
         variant="outline"
         onClick={handleAccept}
         disabled={acting}
-        className="h-7 text-xs gap-1 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10"
+        className="h-7 text-xs gap-1 border-state-approved/30 text-state-approved-foreground hover:bg-state-approved/10"
       >
         <Check className="w-3 h-3" />
         Accept

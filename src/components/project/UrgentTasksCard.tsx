@@ -68,7 +68,7 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
   return (
     <div data-sasha-card="Urgent Tasks" className="bg-card border border-border rounded-lg px-3.5 py-3.5">
       <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="h-4 w-4 text-amber-500" />
+        <AlertTriangle className="h-4 w-4 text-state-open" />
         <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Urgent Tasks</p>
       </div>
       <div className="space-y-2">
@@ -78,8 +78,8 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
             onClick={() => onNavigate(item.tab)}
             className={cn(
               "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg",
-              "bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40",
-              "text-amber-800 dark:text-amber-200 text-[0.82rem] font-medium",
+              "bg-state-open-bg hover:bg-state-open-bg",
+              "text-state-open-foreground text-[0.82rem] font-medium",
               "transition-colors text-left"
             )}
           >

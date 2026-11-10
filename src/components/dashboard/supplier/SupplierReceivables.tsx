@@ -1,8 +1,8 @@
 import { formatCurrency } from '@/lib/utils';
 import type { AgingBucket, VelocityPoint } from '@/hooks/useSupplierDashboardData';
 
-const bucketColors = ['bg-emerald-500', 'bg-amber-500', 'bg-red-500'];
-const bucketTextColors = ['text-emerald-700 dark:text-emerald-300', 'text-amber-700 dark:text-amber-300', 'text-red-700 dark:text-red-300'];
+const bucketColors = ['bg-state-approved', 'bg-state-open', 'bg-destructive'];
+const bucketTextColors = ['text-state-approved-foreground', 'text-state-open-foreground', 'text-destructive'];
 
 interface Props {
   buckets: AgingBucket[];
@@ -54,7 +54,7 @@ export function SupplierReceivables({ buckets, velocity, oldestDays }: Props) {
         ))}
 
         {oldestDays != null && oldestDays > 30 && (
-          <div className="text-[0.7rem] text-red-600 dark:text-red-400 font-medium mt-1">
+          <div className="text-[0.7rem] text-destructive font-medium mt-1">
             ⚠ Oldest invoice: {oldestDays} days
           </div>
         )}

@@ -49,9 +49,9 @@ function AgeBadge({ days }: { days: number | null }) {
   if (days === null) return <span className="text-muted-foreground">—</span>;
   const variant = days <= 7 ? 'green' : days <= 21 ? 'amber' : 'red';
   const colors = {
-    green: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    green: 'bg-state-approved-bg text-state-approved-foreground',
+    amber: 'bg-state-open-bg text-state-open-foreground',
+    red: 'bg-destructive/10 text-destructive',
   };
   return (
     <Badge className={cn('font-mono text-xs', colors[variant])}>
@@ -144,7 +144,7 @@ export function POTableView({
                   <div className="flex items-center gap-2">
                     {po.po_number}
                     {invoiced && (
-                      <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 text-[10px] px-1.5">
+                      <Badge className="bg-state-approved-bg text-state-approved-foreground text-[10px] px-1.5">
                         Invoiced
                       </Badge>
                     )}
@@ -186,7 +186,7 @@ export function POTableView({
                     )}
                     {canCreatePO && po.status === 'ACTIVE' && onSubmit && (
                       <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-blue-600"
+                        variant="ghost" size="icon" className="h-8 w-8 text-type-sov"
                         disabled={isLoading}
                         onClick={() => handleAction(po, onSubmit)}
                       >

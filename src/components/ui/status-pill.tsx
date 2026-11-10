@@ -9,10 +9,10 @@ import { cn } from '@/lib/utils';
 type PillVariant = 'healthy' | 'watch' | 'at_risk' | 'info' | 'neutral';
 
 const VARIANT_CLASSES: Record<PillVariant, string> = {
-  healthy: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-  watch: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
-  at_risk: 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
-  info: 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
+  healthy: 'bg-state-approved-bg text-state-approved-foreground',
+  watch: 'bg-state-open-bg text-state-open-foreground',
+  at_risk: 'bg-destructive/10 text-destructive',
+  info: 'bg-type-sov/10 text-type-sov',
   neutral: 'bg-accent text-muted-foreground',
 };
 

@@ -6,10 +6,10 @@ function PaceBadge({ avgDays }: { avgDays: number | null }) {
   if (avgDays == null) return <span className="text-[0.6rem] text-muted-foreground">—</span>;
   const label = avgDays <= 7 ? 'Fast' : avgDays <= 21 ? 'Normal' : 'Slow';
   const color = avgDays <= 7
-    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+    ? 'bg-state-approved-bg text-state-approved-foreground'
     : avgDays <= 21
-    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-    : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+    ? 'bg-type-sov/10 text-type-sov'
+    : 'bg-destructive/10 text-destructive';
   return (
     <span className={`text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${color}`}>
       {label} ({avgDays}d)
@@ -58,10 +58,10 @@ export function SupplierProjectHealth({ rows }: Props) {
                   Delivered: <span className="font-semibold text-foreground">{formatCurrency(row.deliveredTotal)}</span>
                 </span>
                 <span className="text-muted-foreground">
-                  Approved: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(row.approvedTotal)}</span>
+                  Approved: <span className="font-semibold text-state-approved">{formatCurrency(row.approvedTotal)}</span>
                 </span>
                 {row.exposure > 0 && (
-                  <span className="font-semibold text-red-600 dark:text-red-400">
+                  <span className="font-semibold text-destructive">
                     At risk: {formatCurrency(row.exposure)}
                   </span>
                 )}
@@ -75,7 +75,7 @@ export function SupplierProjectHealth({ rows }: Props) {
         <div className="px-4 py-3 border-t border-border">
           <div className="flex items-center justify-between">
             <span className="text-[0.72rem] font-medium text-muted-foreground">Total Exposure</span>
-            <span className="font-heading text-[1.1rem] font-black text-red-600 dark:text-red-400">
+            <span className="font-heading text-[1.1rem] font-black text-destructive">
               {formatCurrency(totalExposure)}
             </span>
           </div>

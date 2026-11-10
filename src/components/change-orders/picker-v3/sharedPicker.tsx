@@ -22,7 +22,7 @@ export const SYSTEMS: SystemOption[] = [
 
 export const CAUSES: { group: string; groupColor: string; groupLabel: string; groupMeta: string; items: CauseOption[] }[] = [
   {
-    group: 'conflict', groupColor: 'bg-blue-600',
+    group: 'conflict', groupColor: 'bg-type-sov',
     groupLabel: 'Someone else changed something', groupMeta: '→ usually a Change Order, billable',
     items: [
       { id: 'mech', group: 'conflict', icon: '🔧', label: 'Mechanical Conflict', sub: 'HVAC needs clearance', docType: 'CO', billable: 'yes', suggested: true, reason: 'gc_request' as import('@/types/changeOrder').COReasonCode, allowedSystems: ['floor', 'wall', 'ceiling', 'roof'] },
@@ -34,7 +34,7 @@ export const CAUSES: { group: string; groupColor: string; groupLabel: string; gr
     ],
   },
   {
-    group: 'site_issue', groupColor: 'bg-yellow-600',
+    group: 'site_issue', groupColor: 'bg-state-open',
     groupLabel: 'Something on site went wrong', groupMeta: '→ usually a Work Order, sometimes backcharge',
     items: [
       { id: 'dmg', group: 'site_issue', icon: '⚠', label: 'Damaged Work', sub: 'By us, others, weather, theft', docType: 'WO', billable: 'maybe', reason: 'damaged_by_others' as import('@/types/changeOrder').COReasonCode },
@@ -44,7 +44,7 @@ export const CAUSES: { group: string; groupColor: string; groupLabel: string; gr
     ],
   },
   {
-    group: 'addon', groupColor: 'bg-green-600',
+    group: 'addon', groupColor: 'bg-state-approved',
     groupLabel: 'Add-on / additional scope', groupMeta: '→ Change Order',
     items: [
       { id: 'upg', group: 'addon', icon: '⬆', label: 'Owner Upgrade', sub: 'Spec or finish upgrade', docType: 'CO', billable: 'yes', reason: 'owner_request' as import('@/types/changeOrder').COReasonCode },
@@ -75,17 +75,17 @@ export function Tile({ selected, onClick, icon, label, sub, badge }: {
       className={cn(
         'flex flex-col gap-1.5 p-3 rounded-lg border-[1.5px] text-left min-h-[64px] transition-all relative',
         selected
-          ? 'bg-amber-50 border-amber-400 shadow-[0_0_0_3px_rgba(245,166,35,0.12)]'
-          : 'bg-background border-border hover:border-amber-300 hover:bg-amber-50',
+          ? 'bg-state-open-bg border-state-open shadow-[0_0_0_3px_rgba(245,166,35,0.12)]'
+          : 'bg-background border-border hover:border-state-open/30 hover:bg-state-open-bg',
       )}
     >
       {badge && !selected && (
-        <span className="absolute top-[7px] right-[7px] text-[0.55rem] font-extrabold px-1.5 py-px rounded-lg bg-amber-100 text-amber-700 uppercase tracking-[0.4px]">
+        <span className="absolute top-[7px] right-[7px] text-[0.55rem] font-extrabold px-1.5 py-px rounded-lg bg-state-open-bg text-state-open-foreground uppercase tracking-[0.4px]">
           {badge}
         </span>
       )}
       {selected && (
-        <span className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-amber-500 text-white flex items-center justify-center text-[0.7rem] font-extrabold">
+        <span className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-state-open text-white flex items-center justify-center text-[0.7rem] font-extrabold">
           ✓
         </span>
       )}

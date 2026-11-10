@@ -39,7 +39,7 @@ export function FieldCaptureCard({ capture, onConvert }: FieldCaptureCardProps) 
           {capture.photo_url && <Camera className="h-3.5 w-3.5 text-muted-foreground" />}
           {capture.voice_note_url && <Mic className="h-3.5 w-3.5 text-muted-foreground" />}
           {capture.status === 'converted' && (
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-[10px] px-1.5 py-0">
+            <Badge className="bg-state-approved-bg text-state-approved-foreground text-[10px] px-1.5 py-0">
               Converted
             </Badge>
           )}

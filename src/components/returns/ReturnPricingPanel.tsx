@@ -182,7 +182,7 @@ export function ReturnPricingPanel({ returnId, items, projectId }: ReturnPricing
           )}
           <div className="flex justify-between font-semibold">
             <span>Net Credit</span>
-            <span className="text-emerald-700 dark:text-emerald-400">${netCredit.toFixed(2)}</span>
+            <span className="text-state-approved-foreground">${netCredit.toFixed(2)}</span>
           </div>
         </div>
 

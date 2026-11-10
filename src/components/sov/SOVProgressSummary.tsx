@@ -71,13 +71,13 @@ export function SOVProgressSummary({ items }: SOVProgressSummaryProps) {
           </div>
           
           <div className="text-center p-3 bg-muted/50 rounded-lg">
-            <TrendingUp className="h-5 w-5 mx-auto mb-1 text-blue-500" />
+            <TrendingUp className="h-5 w-5 mx-auto mb-1 text-type-sov" />
             <p className="text-lg font-semibold">{formatCurrency(totalBilled)}</p>
             <p className="text-xs text-muted-foreground">Total Billed</p>
           </div>
           
           <div className="text-center p-3 bg-muted/50 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-green-500" />
+            <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-state-approved" />
             <p className="text-lg font-semibold">{completedItems.length}</p>
             <p className="text-xs text-muted-foreground">Completed Items</p>
           </div>
@@ -85,13 +85,13 @@ export function SOVProgressSummary({ items }: SOVProgressSummaryProps) {
           <div className="text-center p-3 bg-muted/50 rounded-lg">
             {overbilledItems.length > 0 ? (
               <>
-                <AlertTriangle className="h-5 w-5 mx-auto mb-1 text-red-500" />
-                <p className="text-lg font-semibold text-red-600">{overbilledItems.length}</p>
+                <AlertTriangle className="h-5 w-5 mx-auto mb-1 text-destructive" />
+                <p className="text-lg font-semibold text-destructive">{overbilledItems.length}</p>
                 <p className="text-xs text-muted-foreground">Overbilled</p>
               </>
             ) : (
               <>
-                <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-amber-500" />
+                <CheckCircle2 className="h-5 w-5 mx-auto mb-1 text-state-open" />
                 <p className="text-lg font-semibold">{inProgressItems.length}</p>
                 <p className="text-xs text-muted-foreground">In Progress</p>
               </>
@@ -102,27 +102,27 @@ export function SOVProgressSummary({ items }: SOVProgressSummaryProps) {
         {/* Legend */}
         <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-slate-400" />
+            <div className="w-3 h-3 rounded-full bg-muted" />
             <span>0-25%</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-orange-500" />
+            <div className="w-3 h-3 rounded-full bg-state-open" />
             <span>25-50%</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-amber-500" />
+            <div className="w-3 h-3 rounded-full bg-state-open" />
             <span>50-75%</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <div className="w-3 h-3 rounded-full bg-type-sov" />
             <span>75-99%</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <div className="w-3 h-3 rounded-full bg-state-approved" />
             <span>Complete</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <div className="w-3 h-3 rounded-full bg-destructive" />
             <span>Overbilled</span>
           </div>
         </div>

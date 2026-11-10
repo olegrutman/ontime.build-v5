@@ -123,7 +123,7 @@ export function SupplierFinancialsSummaryCard({
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Paid</span>
-          <span className="font-medium text-green-600 dark:text-green-400">
+          <span className="font-medium text-state-approved">
             {formatCurrency(data?.totalPaid || 0)}
           </span>
         </div>
@@ -133,7 +133,7 @@ export function SupplierFinancialsSummaryCard({
           <span
             className={cn(
               'font-bold',
-              outstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'
+              outstanding > 0 ? 'text-state-open' : 'text-state-approved'
             )}
           >
             {formatCurrency(outstanding)}

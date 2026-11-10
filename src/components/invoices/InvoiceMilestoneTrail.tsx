@@ -32,7 +32,7 @@ export function InvoiceMilestoneTrail({ invoice, className }: { invoice: Invoice
                 ? 'bg-muted-foreground/40'
                 : rejected && i === 1
                 ? 'bg-destructive'
-                : 'bg-emerald-500',
+                : 'bg-state-approved',
             )}
           />
         ))}

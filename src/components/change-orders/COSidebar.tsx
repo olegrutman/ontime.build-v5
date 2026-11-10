@@ -208,7 +208,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                     <span className="font-mono">{fmtCurrency(financials.billableGrandTotalWithTax)}</span>
 
                   </div>
-                  <div className="flex justify-between text-xs text-red-600 dark:text-red-400">
+                  <div className="flex justify-between text-xs text-destructive">
                     <span>Less retainage ({financials.retainagePercent}%)</span>
                     <span className="font-mono">-{fmtCurrency(financials.retainageAmount)}</span>
                   </div>
@@ -217,7 +217,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                     <span className="font-mono">{fmtCurrency(financials.netPayableAmount)}</span>
                   </div>
                   {financials.retainageReleased && (
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Retainage released</p>
+                    <p className="text-[10px] text-state-approved font-medium">✓ Retainage released</p>
                   )}
                 </div>
               )}
@@ -308,7 +308,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                     <span>Subtotal</span>
                     <span className="font-mono">{fmtCurrency(financials.viewer.totalToUpstreamWithTax)}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-red-600 dark:text-red-400">
+                  <div className="flex justify-between text-xs text-destructive">
                     <span>Less retainage ({financials.retainagePercent}%)</span>
                     <span className="font-mono">-{fmtCurrency(financials.viewer.retainageAmount)}</span>
                   </div>
@@ -317,7 +317,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                     <span className="font-mono">{fmtCurrency(financials.viewer.netPayableAmount)}</span>
                   </div>
                   {financials.retainageReleased && (
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Retainage released</p>
+                    <p className="text-[10px] text-state-approved font-medium">✓ Retainage released</p>
                   )}
                 </div>
               )}
@@ -356,15 +356,15 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
               ) : (
                 <div className={cn(
                   'rounded-lg px-3 py-2',
-                  margin >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-red-50 dark:bg-red-950/20',
+                  margin >= 0 ? 'bg-state-approved-bg' : 'bg-destructive/10',
                 )}>
                   <div className="flex justify-between text-sm">
                     <span className="font-semibold">Gross Margin</span>
                     <div className="text-right">
-                      <span className={cn('font-mono font-bold', margin >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400')}>
+                      <span className={cn('font-mono font-bold', margin >= 0 ? 'text-state-approved-foreground' : 'text-destructive')}>
                         {fmtCurrency(margin)}
                       </span>
-                      <span className={cn('text-xs ml-1', margin >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                      <span className={cn('text-xs ml-1', margin >= 0 ? 'text-state-approved' : 'text-destructive')}>
                         ({marginPct.toFixed(1)}%)
                       </span>
                     </div>
@@ -372,7 +372,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                   {revenue > 0 && (
                     <div className="mt-1.5 h-1.5 rounded-full bg-muted/30 overflow-hidden">
                       <div
-                        className={cn('h-full rounded-full', margin >= 0 ? 'bg-emerald-500' : 'bg-red-500')}
+                        className={cn('h-full rounded-full', margin >= 0 ? 'bg-state-approved' : 'bg-destructive')}
                         style={{ width: `${Math.min(Math.max(marginPct, 0), 100)}%` }}
                       />
                     </div>

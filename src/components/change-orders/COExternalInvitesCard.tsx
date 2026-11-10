@@ -99,9 +99,9 @@ export function COExternalInvitesCard({ coId, coNumber, coTitle, projectName }: 
                     <span className="text-sm font-medium truncate">{inv.email}</span>
                     <span className={cn(
                       'text-[0.6rem] font-bold uppercase px-1.5 py-0.5 rounded-full',
-                      responded ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                        : expired ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'
-                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                      responded ? 'bg-state-approved-bg text-state-approved-foreground'
+                        : expired ? 'bg-destructive/10 text-destructive'
+                        : 'bg-state-open-bg text-state-open-foreground'
                     )}>
                       {responded ? 'Responded' : expired ? 'Expired' : 'Pending'}
                     </span>
@@ -113,8 +113,8 @@ export function COExternalInvitesCard({ coId, coNumber, coTitle, projectName }: 
 
                   {/* Show response data inline */}
                   {responded && inv.response_data && (
-                    <div className="mt-2 p-2.5 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 rounded-lg">
-                      <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">
+                    <div className="mt-2 p-2.5 bg-state-approved/50 border border-state-approved/30 rounded-lg">
+                      <p className="text-xs font-semibold text-state-approved-foreground">
                         <Check className="h-3 w-3 inline mr-1" />
                         Response from {inv.respondent_name ?? inv.email}
                         {inv.responded_at && ` · ${format(new Date(inv.responded_at), 'MMM d, h:mm a')}`}

@@ -103,10 +103,10 @@ export function AttentionBanner({ projectId, onNavigate, isSupplier, supplierOrg
   const totalCount = items.reduce((sum, item) => sum + item.count, 0);
 
   return (
-    <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4" data-sasha-card="Attention Banner">
+    <div className="rounded-xl border border-state-open/30 bg-state-open-bg p-4" data-sasha-card="Attention Banner">
       <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-        <h3 className="text-base font-semibold text-amber-900 dark:text-amber-100">
+        <AlertTriangle className="h-5 w-5 text-state-open shrink-0" />
+        <h3 className="text-base font-semibold text-state-open-foreground">
           {totalCount} item{totalCount > 1 ? 's' : ''} need{totalCount === 1 ? 's' : ''} your attention
         </h3>
       </div>
@@ -117,8 +117,8 @@ export function AttentionBanner({ projectId, onNavigate, isSupplier, supplierOrg
             onClick={() => onNavigate(item.tab)}
             className={cn(
               "flex items-center gap-2 px-3 py-2.5 rounded-lg",
-              "bg-amber-100/80 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60",
-              "text-amber-800 dark:text-amber-200 text-sm font-medium",
+              "bg-state-open/80 hover:bg-state-open/20",
+              "text-state-open-foreground text-sm font-medium",
               "transition-colors cursor-pointer min-h-[44px]"
             )}
           >

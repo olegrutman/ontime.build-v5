@@ -22,7 +22,7 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">
           Step 3 of 6 · Scope
         </p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
@@ -36,7 +36,7 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
       </div>
 
       {!sys ? (
-        <div className="flex items-start gap-2.5 p-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900">
+        <div className="flex items-start gap-2.5 p-4 rounded-lg border border-state-open/30 bg-state-open-bg text-state-open-foreground">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div className="text-[0.8rem]">
             Pick a system first — that controls which scope items are available here.
@@ -66,12 +66,12 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
                   className={cn(
                     'flex flex-col gap-1.5 p-3 rounded-lg border-[1.5px] text-left min-h-[78px] transition-all relative',
                     selected
-                      ? 'bg-amber-50 border-amber-400 shadow-[0_0_0_3px_rgba(245,166,35,0.12)]'
-                      : 'bg-background border-border hover:border-amber-300 hover:bg-amber-50',
+                      ? 'bg-state-open-bg border-state-open shadow-[0_0_0_3px_rgba(245,166,35,0.12)]'
+                      : 'bg-background border-border hover:border-state-open/30 hover:bg-state-open-bg',
                   )}
                 >
                   {selected && (
-                    <span className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-amber-500 text-white flex items-center justify-center text-[0.7rem] font-extrabold">
+                    <span className="absolute top-2 right-2 w-[18px] h-[18px] rounded-full bg-state-open text-white flex items-center justify-center text-[0.7rem] font-extrabold">
                       ✓
                     </span>
                   )}
@@ -99,7 +99,7 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
           </div>
 
           {cur.workTypes.size > 0 && (
-            <p className="mt-3 text-[0.7rem] font-semibold text-amber-700">
+            <p className="mt-3 text-[0.7rem] font-semibold text-state-open-foreground">
               {cur.workTypes.size} scope item{cur.workTypes.size !== 1 ? 's' : ''} selected
             </p>
           )}
@@ -112,7 +112,7 @@ export function StepScope({ state, dispatch }: StepScopeProps) {
                 onChange={(e) => dispatch({ type: 'SET_NARRATIVE', narrative: e.target.value })}
                 placeholder="Add anything the crew needs to know — access notes, sequencing, finishes, conditions, etc. Leave blank if not needed."
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-[0.82rem] text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-amber-400 focus:ring-[3px] focus:ring-amber-400/15 resize-y leading-relaxed"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-[0.82rem] text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-state-open focus:ring-[3px] focus:ring-amber-400/15 resize-y leading-relaxed"
               />
               <p className="mt-1.5 text-[0.65rem] text-muted-foreground">
                 Appended to every Labor line in this item. Materials &amp; Equipment have their own sections on the next page.

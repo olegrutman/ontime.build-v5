@@ -53,7 +53,7 @@ export function DelaysCard({ delays, onChange, disabled }: DelaysCardProps) {
           <Clock className="h-3.5 w-3.5" /> Delays
         </h3>
         {totalHours > 0 && (
-          <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{totalHours}h lost</span>
+          <span className="text-xs font-semibold text-state-open">{totalHours}h lost</span>
         )}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -67,7 +67,7 @@ export function DelaysCard({ delays, onChange, disabled }: DelaysCardProps) {
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
                 active
-                  ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700'
+                  ? 'bg-state-open-bg text-state-open-foreground border-state-open/30'
                   : 'bg-muted/50 text-muted-foreground border-transparent hover:bg-muted',
                 disabled && 'opacity-50 cursor-not-allowed'
               )}

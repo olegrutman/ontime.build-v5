@@ -62,7 +62,7 @@ export function POActivityTimeline({ po }: POActivityTimelineProps) {
                       <div
                         className={cn(
                           'absolute left-[11px] top-6 w-0.5 h-[calc(100%-12px)]',
-                          isCompleted && index < lastCompletedIndex ? 'bg-green-500' : 'bg-border'
+                          isCompleted && index < lastCompletedIndex ? 'bg-state-approved' : 'bg-border'
                         )}
                       />
                     )}
@@ -70,7 +70,7 @@ export function POActivityTimeline({ po }: POActivityTimelineProps) {
                     <div
                       className={cn(
                         'relative z-10 flex items-center justify-center w-6 h-6 rounded-full border-2 shrink-0',
-                        isCompleted && 'bg-green-500 border-green-500 text-white',
+                        isCompleted && 'bg-state-approved border-state-approved text-white',
                         isFuture && 'bg-muted border-border text-muted-foreground'
                       )}
                     >

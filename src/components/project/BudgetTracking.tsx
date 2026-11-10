@@ -95,7 +95,7 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
         <div className="group flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Budget</span>
           <div className="flex items-center gap-1.5">
-            <span className={cn("text-sm font-semibold tabular-nums", !hasBudget && 'text-amber-600 dark:text-amber-400')}>
+            <span className={cn("text-sm font-semibold tabular-nums", !hasBudget && 'text-state-open')}>
               {hasBudget ? fmt(laborBudget) : 'Not set'}
             </span>
             <button onClick={() => { setEditValue(laborBudget || 0); setEditing(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-accent rounded">
@@ -118,13 +118,13 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
           <>
             <div className="border-t pt-2.5 flex items-center justify-between">
               <span className="text-sm font-medium">Remaining</span>
-              <span className={cn("text-lg font-bold tabular-nums", isOver ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+              <span className={cn("text-lg font-bold tabular-nums", isOver ? 'text-destructive' : 'text-state-approved')}>
                 {isOver ? `-${fmt(Math.abs(variance))}` : fmt(variance)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">% Used</span>
-              <span className={cn("text-xs font-semibold", pctUsed > 100 ? 'text-destructive' : pctUsed > 80 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400')}>
+              <span className={cn("text-xs font-semibold", pctUsed > 100 ? 'text-destructive' : pctUsed > 80 ? 'text-state-open' : 'text-state-approved')}>
                 {pctUsed.toFixed(1)}%
               </span>
             </div>

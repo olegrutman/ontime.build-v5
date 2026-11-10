@@ -15,9 +15,9 @@ import type { ProjectStatusFilter } from './StatusMenu';
 const STATUS_DOT_COLORS: Record<string, string> = {
   setup: 'bg-violet-500',
   draft: 'bg-violet-500',
-  active: 'bg-green-500',
-  on_hold: 'bg-amber-500',
-  completed: 'bg-blue-500',
+  active: 'bg-state-approved',
+  on_hold: 'bg-state-open',
+  completed: 'bg-type-sov',
   archived: 'bg-muted-foreground',
 };
 

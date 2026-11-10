@@ -136,12 +136,12 @@ export function CatalogMatchStep({
     <div className="space-y-4">
       {/* Match Summary */}
       <div className="flex items-center gap-3 flex-wrap">
-        <Badge className="bg-green-600 text-white px-3 py-1">
+        <Badge className="bg-state-approved text-white px-3 py-1">
           <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
           {matchStats.matched} Matched
         </Badge>
         {matchStats.unmatched > 0 && (
-          <Badge variant="outline" className="border-amber-500 text-amber-600 px-3 py-1">
+          <Badge variant="outline" className="border-state-open text-state-open px-3 py-1">
             <AlertCircle className="h-3.5 w-3.5 mr-1" />
             {matchStats.unmatched} Unmatched
           </Badge>
@@ -168,7 +168,7 @@ export function CatalogMatchStep({
                     </div>
                     <Badge
                       variant={packMatched === packTotal ? 'default' : 'outline'}
-                      className={packMatched === packTotal ? 'bg-green-600' : 'border-amber-500 text-amber-600'}
+                      className={packMatched === packTotal ? 'bg-state-approved' : 'border-state-open text-state-open'}
                     >
                       {packMatched}/{packTotal} matched
                     </Badge>
@@ -181,14 +181,14 @@ export function CatalogMatchStep({
                         key={idx}
                         className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
                           item.match_status === 'EXACT'
-                            ? 'bg-green-50 dark:bg-green-950/20'
-                            : 'bg-amber-50 dark:bg-amber-950/20'
+                            ? 'bg-state-approved-bg'
+                            : 'bg-state-open-bg'
                         }`}
                       >
                         {item.match_status === 'EXACT' ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                          <CheckCircle2 className="h-4 w-4 text-state-approved shrink-0" />
                         ) : (
-                          <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                          <AlertCircle className="h-4 w-4 text-state-open shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -198,7 +198,7 @@ export function CatalogMatchStep({
                             </span>
                           </div>
                           {item.catalog_description && (
-                            <p className="text-xs text-green-700 dark:text-green-400 truncate">
+                            <p className="text-xs text-state-approved-foreground truncate">
                               → {item.catalog_description}
                             </p>
                           )}

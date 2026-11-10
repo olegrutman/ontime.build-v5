@@ -750,9 +750,9 @@ export default function SupplierInventory() {
               </p>
             )}
             {duplicateSkuCount > 0 && (
-              <Alert className="border-amber-500/50 bg-amber-500/10">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <AlertDescription className="text-amber-700 dark:text-amber-400">
+              <Alert className="border-state-open/50 bg-state-open/10">
+                <AlertTriangle className="h-4 w-4 text-state-open" />
+                <AlertDescription className="text-state-open-foreground">
                   Found {duplicateSkuCount} duplicate SKUs. Last occurrence of each will be used.
                 </AlertDescription>
               </Alert>

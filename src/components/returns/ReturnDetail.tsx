@@ -291,7 +291,7 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
             </div>
             <div className="flex justify-between font-semibold border-t pt-1">
               <span>Net Credit</span>
-              <span className="text-emerald-700 dark:text-emerald-400">${returnData.net_credit_total.toFixed(2)}</span>
+              <span className="text-state-approved-foreground">${returnData.net_credit_total.toFixed(2)}</span>
             </div>
             {!['PRICED', 'CLOSED'].includes(returnData.status) && (
               <p className="text-[10px] text-muted-foreground text-right">(subject to final pricing adjustment)</p>

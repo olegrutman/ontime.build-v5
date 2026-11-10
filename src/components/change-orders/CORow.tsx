@@ -28,7 +28,7 @@ const BILL_TAG: Record<string, { label: string; cls: string }> = {
   draft: { label: 'Invoice draft', cls: 'border-border bg-muted text-foreground' },
   invoiced: { label: 'Invoiced', cls: 'border-secondary/30 bg-secondary/10 text-secondary' },
   partly_paid: { label: 'Partly paid', cls: 'border-secondary/30 bg-secondary/10 text-secondary' },
-  paid: { label: 'Paid', cls: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600' },
+  paid: { label: 'Paid', cls: 'border-state-approved/30 bg-state-approved/10 text-state-approved' },
 };
 
 const money = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
