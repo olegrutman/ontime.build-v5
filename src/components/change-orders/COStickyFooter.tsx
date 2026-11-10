@@ -17,6 +17,8 @@ interface COStickyFooterProps {
   photoCount?: number;
   photosBlocked?: boolean;
   onOpenCamera?: () => void;
+  /** Order total shown beside the main action. */
+  total?: number;
 }
 
 function fmtCurrency(value: number) {
@@ -102,6 +104,12 @@ export function COStickyFooter(props: COStickyFooterProps) {
           </Tooltip>
         )}
 
+        {typeof props.total === 'number' && (
+          <div className="shrink-0 min-w-0 pr-1">
+            <p className="text-[0.6rem] uppercase tracking-wide text-muted-foreground leading-none">Total</p>
+            <p className="font-mono text-base font-bold text-foreground leading-tight">{fmtCurrency(props.total)}</p>
+          </div>
+        )}
         {/* Main action */}
         {config && (
           <Tooltip>

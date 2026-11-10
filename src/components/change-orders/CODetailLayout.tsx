@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
+import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,8 @@ import { COPhotosCard, type COPhotosCardHandle } from './COPhotosCard';
 import { COPhotoNudgeBanner } from './COPhotoNudgeBanner';
 import { COAcceptBanner } from './COAcceptBanner';
 import { COExternalApprovalBanner } from './COExternalApprovalBanner';
+import { COAttentionChips } from './COAttentionChips';
+import { correctionLabel } from '@/lib/coCorrection';
 import { COOwnerApprovalCard } from './COOwnerApprovalCard';
 import { useCOAuditLog } from '@/hooks/useCOAuditLog';
 import { useCOPhotos } from '@/hooks/useCOPhotos';
@@ -605,8 +607,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
           />
 
-          {/* Next Action Banner */}
-          <COCorrectionCard corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
+          {/* Next step first — one clear action. */}
+          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
           <COPricingUnlockBar
             co={co}
             canUnlock={isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
@@ -614,20 +616,34 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             onToggle={setRevisionUnlocked}
           />
           <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
 
-          {/* External (owner / architect) approval status */}
-          <COExternalApprovalBanner co={co} projectId={projectId} role={role} />
-
-          {(isGC || isTC || isFC) && (
-            <COOwnerApprovalCard
-              co={co}
-              role={role}
-              projectId={projectId}
-              coTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-              onRefresh={refreshDetail}
-            />
-          )}
+          {/* Secondary items collapse into tappable tags. */}
+          {(() => {
+            const activeCorrections = corrections.filter(c => correctionLabel(c));
+            const ownerStatus = (co as any).owner_approval_status as string | null;
+            const archStatus = (co as any).architect_approval_status as string | null;
+            const statuses = [ownerStatus, archStatus].filter(Boolean) as string[];
+            const approvalLabel = statuses.includes('rejected') ? 'Outside approval: declined'
+              : statuses.includes('pending') ? 'Outside approval: waiting'
+              : statuses.includes('approved') ? 'Outside approval: signed'
+              : 'Outside approval: not sent';
+            const items = [
+              ...(activeCorrections.length ? [{
+                key: 'corrections', tone: 'alert' as const, icon: <Flag className="h-3.5 w-3.5" />,
+                label: activeCorrections.length === 1 ? '1 correction needed' : `${activeCorrections.length} corrections needed`,
+                content: <COCorrectionCard corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />,
+              }] : []),
+              ...((isGC || isTC || isFC) ? [{
+                key: 'approvals', tone: statuses.includes('rejected') ? 'alert' as const : 'info' as const, icon: <Users className="h-3.5 w-3.5" />,
+                label: approvalLabel,
+                content: <>
+                  <COExternalApprovalBanner co={co} projectId={projectId} role={role} />
+                  <COOwnerApprovalCard co={co} role={role} projectId={projectId} coTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream} onRefresh={refreshDetail} />
+                </>,
+              }] : []),
+            ];
+            return <COAttentionChips items={items} />;
+          })()}
 
           {/* Photo nudge banner */}
           <COPhotoNudgeBanner
@@ -899,6 +915,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       <COStickyFooter
         status={status} isGC={isGC} isTC={isTC} isFC={isFC}
         financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
+        total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
         photoCount={photos.length} photosBlocked={photosBlocked}
         onOpenCamera={() => photosCardRef.current?.openAdd()}
       />
