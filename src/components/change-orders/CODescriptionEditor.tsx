@@ -43,6 +43,7 @@ export function CODescriptionEditor({ coId, status, lineItemId = null, title, de
     setOpen(false);
     qc.invalidateQueries({ queryKey: ['co-detail', coId] });
     qc.invalidateQueries({ queryKey: ['co-corrections'] });
+    qc.invalidateQueries({ queryKey: ['change-orders'] });
     onSaved?.();
   }
 
