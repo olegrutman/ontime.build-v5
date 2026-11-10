@@ -428,6 +428,13 @@
       "when": 1794337461423,
       "tag": "0060_allow_party_procurement_responsibility_updates",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1794342474430,
+      "tag": "0061_migration",
+      "breakpoints": true
     }
   ]
 }
