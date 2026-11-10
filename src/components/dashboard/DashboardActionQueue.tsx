@@ -48,7 +48,7 @@ export function DashboardActionQueue({ docs }: DashboardActionQueueProps) {
             <button
               key={item.id}
               onClick={() => navigate(`/project/${item.projectId}/${tab}?highlight=${item.id}`)}
-              className="w-full rounded-xl border border-border/60 px-4 py-3 flex items-center justify-between bg-slate-50 dark:bg-accent/20 hover:bg-accent/40 transition-colors text-left"
+              className="w-full rounded-xl border border-border/60 px-4 py-3 flex items-center justify-between bg-muted dark:bg-accent/20 hover:bg-accent/40 transition-colors text-left"
             >
               <span className="text-[0.85rem] font-medium truncate">{item.title}</span>
               <span className="text-[0.7rem] text-muted-foreground shrink-0 ml-2">Open</span>

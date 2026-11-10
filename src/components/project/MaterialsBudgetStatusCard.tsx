@@ -47,10 +47,10 @@ export function MaterialsBudgetStatusCard({ projectId, supplierOrgId, financials
   const variancePct = estimateTotal > 0 ? ((forecastFinal - estimateTotal) / estimateTotal) * 100 : 0;
   const statusLabel = variancePct <= 0 ? 'On Budget' : variancePct <= 5 ? 'Trending Over Budget' : 'Trending Over Budget';
   const statusColor = variancePct <= 0
-    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+    ? 'bg-state-approved-bg text-state-approved-foreground'
     : variancePct <= 5
-      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
-      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      ? 'bg-state-open-bg text-state-open-foreground'
+      : 'bg-destructive/10 text-destructive';
 
   // Micro-highlight: largest driver
   const topPack = packsOverBudget[0];
@@ -105,7 +105,7 @@ function Row({ label, value, sub, over }: { label: string; value: string; sub?: 
       <span className="min-w-0 break-words text-sm text-muted-foreground">{label}</span>
       <div className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
         {sub && (
-          <span className={cn("text-xs font-medium w-14 text-right", over ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+          <span className={cn("text-xs font-medium w-14 text-right", over ? 'text-destructive' : 'text-state-approved')}>
             {sub}
           </span>
         )}

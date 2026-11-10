@@ -246,10 +246,10 @@ export function ContractSOWEditor({
                 )}
                 {canReview && (
                   <>
-                    <Button size="sm" variant="outline" onClick={handleAcceptSOW} className="h-7 text-xs gap-1 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10">
+                    <Button size="sm" variant="outline" onClick={handleAcceptSOW} className="h-7 text-xs gap-1 border-state-approved/30 text-state-approved-foreground hover:bg-state-approved/10">
                       Accept SOW
                     </Button>
-                    <Button size="sm" variant="outline" onClick={handleRequestRevision} className="h-7 text-xs gap-1 border-amber-500/30 text-amber-700 hover:bg-amber-500/10">
+                    <Button size="sm" variant="outline" onClick={handleRequestRevision} className="h-7 text-xs gap-1 border-state-open/30 text-state-open-foreground hover:bg-state-open/10">
                       Request Revision
                     </Button>
                   </>

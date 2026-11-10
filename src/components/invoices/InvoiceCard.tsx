@@ -45,10 +45,10 @@ function InvoiceAgeBadge({ invoice }: { invoice: Invoice }) {
     : (invoice.submitted_at || invoice.created_at);
   const days = differenceInDays(new Date(), new Date(ref));
   const colors = days <= 14
-    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+    ? 'bg-state-approved-bg text-state-approved-foreground'
     : days <= 30
-    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    ? 'bg-state-open-bg text-state-open-foreground'
+    : 'bg-destructive/10 text-destructive';
   return <Badge className={cn('font-mono', 'text-xs', colors)}>{days}d</Badge>;
 }
 
@@ -156,13 +156,13 @@ export function InvoiceCard({
               </Button>
             )}
             {showSubmitButton && (
-              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700 min-h-[44px] sm:min-h-0 flex-1 sm:flex-none">
+              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-type-sov hover:bg-type-sov min-h-[44px] sm:min-h-0 flex-1 sm:flex-none">
                 {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                 Submit
               </Button>
             )}
             {showApproveButton && (
-              <Button size="sm" onClick={handleApprove} disabled={approving} className="bg-green-600 hover:bg-green-700 min-h-[44px] sm:min-h-0 flex-1 sm:flex-none">
+              <Button size="sm" onClick={handleApprove} disabled={approving} className="bg-state-approved hover:bg-state-approved min-h-[44px] sm:min-h-0 flex-1 sm:flex-none">
                 {approving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                 Approve
               </Button>
@@ -171,7 +171,7 @@ export function InvoiceCard({
         )}
 
         {invoice.rejection_reason && invoice.status === 'REJECTED' && (
-          <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded text-sm text-red-700 dark:text-red-300">
+          <div className="mt-3 p-2 bg-destructive/10 rounded text-sm text-destructive">
             <strong>Rejection:</strong> {invoice.rejection_reason}
           </div>
         )}

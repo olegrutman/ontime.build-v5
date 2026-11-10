@@ -54,7 +54,7 @@ export function SupplierDeliverySchedule({ days, rows }: Props) {
               className={`flex flex-col items-start gap-1 rounded-md border px-3 py-2 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between ${
                 row.confirmed
                   ? 'border-border bg-accent/50'
-                  : 'border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-900/10'
+                  : 'border-state-open/30 bg-state-open/50'
               }`}
             >
               <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function SupplierDeliverySchedule({ days, rows }: Props) {
                     {formatCurrency(row.poTotal)}
                   </span>
                 )}
-                <span className={`w-2 h-2 rounded-full ${row.confirmed ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                <span className={`w-2 h-2 rounded-full ${row.confirmed ? 'bg-state-approved' : 'bg-state-open'}`} />
               </div>
             </div>
           ))

@@ -179,8 +179,8 @@ export function SupplierMaterialsChart({ projectId, supplierOrgId }: Props) {
         <div className={cn(
           'flex items-center gap-2 rounded-xl px-3 py-2 text-sm',
           overBudget
-            ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300'
-            : 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300',
+            ? 'bg-state-open-bg text-state-open-foreground'
+            : 'bg-state-approved-bg text-state-approved-foreground',
         )}>
           {overBudget ? (
             <>

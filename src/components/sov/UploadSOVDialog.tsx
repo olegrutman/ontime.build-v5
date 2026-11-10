@@ -250,7 +250,7 @@ export function UploadSOVDialog({ open, onOpenChange, contracts, projectId, onCr
 
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">{items.length} items extracted</p>
-              <Badge variant={isValid ? 'secondary' : 'destructive'} className={isValid ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ''}>
+              <Badge variant={isValid ? 'secondary' : 'destructive'} className={isValid ? 'bg-state-approved-bg text-state-approved-foreground' : ''}>
                 {isValid ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <AlertCircle className="mr-1 h-3 w-3" />}
                 {totalPercent.toFixed(1)}%
               </Badge>

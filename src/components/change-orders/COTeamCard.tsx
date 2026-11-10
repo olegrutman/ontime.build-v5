@@ -26,18 +26,18 @@ interface TeamMember {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  GC: 'bg-blue-500',
-  TC: 'bg-emerald-500',
-  FC: 'bg-amber-500',
+  GC: 'bg-type-sov',
+  TC: 'bg-state-approved',
+  FC: 'bg-state-open',
   OTHER: 'bg-muted-foreground',
 };
 
 const STATUS_STYLES: Record<string, string> = {
   Owner: 'bg-primary/10 text-primary',
-  Active: 'bg-emerald-500/10 text-emerald-600',
-  'Pending accept': 'bg-amber-500/10 text-amber-600',
+  Active: 'bg-state-approved/10 text-state-approved',
+  'Pending accept': 'bg-state-open/10 text-state-open',
   Completed: 'bg-muted text-muted-foreground',
-  Notified: 'bg-blue-500/10 text-blue-600',
+  Notified: 'bg-type-sov/10 text-type-sov',
 };
 
 export function COTeamCard({ co, collaborators }: COTeamCardProps) {

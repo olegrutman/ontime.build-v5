@@ -4,9 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { PartnerOrg, ORG_TYPE_ORDER } from '@/hooks/usePartnerDirectory';
 
 const ORG_TYPE_CONFIG: Record<string, { label: string; icon: typeof Building2; color: string }> = {
-  GC: { label: 'General Contractors', icon: Building2, color: 'text-blue-600' },
-  TC: { label: 'Subcontractors', icon: Wrench, color: 'text-orange-600' },
-  FC: { label: 'Crews', icon: HardHat, color: 'text-green-600' },
+  GC: { label: 'General Contractors', icon: Building2, color: 'text-type-sov' },
+  TC: { label: 'Subcontractors', icon: Wrench, color: 'text-state-open' },
+  FC: { label: 'Crews', icon: HardHat, color: 'text-state-approved' },
   SUPPLIER: { label: 'Suppliers', icon: Package, color: 'text-purple-600' },
 };
 

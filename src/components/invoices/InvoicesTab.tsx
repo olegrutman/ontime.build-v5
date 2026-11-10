@@ -512,15 +512,15 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   const renderSOVAlert = () => {
     if (isTM || !isBlocked) return null;
     return (
-      <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-        <AlertTriangle className="h-4 w-4 text-amber-600" />
-        <AlertTitle className="text-amber-800 dark:text-amber-200">SOV Setup Required</AlertTitle>
-        <AlertDescription className="min-w-0 text-amber-700 dark:text-amber-300 flex flex-col items-start gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
+      <Alert className="border-state-open/30 bg-state-open-bg">
+        <AlertTriangle className="h-4 w-4 text-state-open" />
+        <AlertTitle className="text-state-open-foreground">SOV Setup Required</AlertTitle>
+        <AlertDescription className="min-w-0 text-state-open-foreground flex flex-col items-start gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
           <span className="min-w-0 break-words">{sovReadiness.message}</span>
           <Button
             variant="outline"
             size="sm"
-            className="w-full min-[380px]:ml-2 min-[380px]:w-auto shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50"
+            className="w-full min-[380px]:ml-2 min-[380px]:w-auto shrink-0 border-state-open/30 text-state-open-foreground hover:bg-state-open-bg"
             onClick={() => {
               const sovTabButton = document.querySelector('[data-value="sov"]') as HTMLButtonElement;
               if (sovTabButton) sovTabButton.click();
@@ -617,10 +617,10 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     return (
       <div className="space-y-6">
         {isProjectNotActive && (
-          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
-            <AlertDescription className="text-amber-700 dark:text-amber-300">
+          <Alert className="border-state-open/30 bg-state-open-bg">
+            <AlertTriangle className="h-4 w-4 text-state-open" />
+            <AlertTitle className="text-state-open-foreground">Project Setup Incomplete</AlertTitle>
+            <AlertDescription className="text-state-open-foreground">
               Project setup incomplete. Waiting for required parties.
             </AlertDescription>
           </Alert>
@@ -742,10 +742,10 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   return (
     <div className="space-y-6">
       {isProjectNotActive && (
-        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
-          <AlertDescription className="text-amber-700 dark:text-amber-300">
+        <Alert className="border-state-open/30 bg-state-open-bg">
+          <AlertTriangle className="h-4 w-4 text-state-open" />
+          <AlertTitle className="text-state-open-foreground">Project Setup Incomplete</AlertTitle>
+          <AlertDescription className="text-state-open-foreground">
             Project setup incomplete. Waiting for required parties.
           </AlertDescription>
         </Alert>

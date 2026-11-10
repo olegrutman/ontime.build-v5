@@ -125,13 +125,13 @@ export function POCard({
           <div className="flex items-center gap-1.5 shrink-0">
             <HoverActions actions={hoverActions} />
             {isInvoiced && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-state-approved-bg px-2 py-0.5 text-xs font-medium text-state-approved-foreground">
                 <Receipt className="h-3 w-3" />
                 Invoiced
               </span>
             )}
             {supplierRaised && (
-              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[0.65rem] font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+              <span className="inline-flex items-center rounded-full bg-type-sov/10 px-2 py-0.5 text-[0.65rem] font-medium text-type-sov">
                 Supplier raised
               </span>
             )}
@@ -169,7 +169,7 @@ export function POCard({
                 <span className="mx-1">→</span>
                 <span className="font-medium text-foreground">{fmt(poSubtotal)}</span>
                 {adjustment != null && adjustment !== 0 && (
-                  <span className={`ml-1 ${adjustment > 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+                  <span className={`ml-1 ${adjustment > 0 ? 'text-destructive' : 'text-state-approved'}`}>
                     ({adjustment > 0 ? '+' : ''}{fmt(adjustment)})
                   </span>
                 )}
@@ -214,7 +214,7 @@ export function POCard({
               </Button>
             )}
             {showSubmitButton && (
-              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
+              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-type-sov hover:bg-type-sov">
                 {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                 {supplierRaised ? 'Send for Approval' : 'Submit to Supplier'}
               </Button>
@@ -240,7 +240,7 @@ export function POCard({
                     try { await onApprove!(po); } finally { setApproving(false); }
                   }}
                   disabled={approving}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-state-approved hover:bg-state-approved"
                 >
                   {approving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                   {supplierRaised ? 'Approve Order' : 'Approve & Send'}

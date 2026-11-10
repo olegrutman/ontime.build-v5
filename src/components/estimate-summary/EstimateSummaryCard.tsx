@@ -142,7 +142,7 @@ export function EstimateSummaryCard({ items, totalWithTax, estimateId }: Estimat
                           <div className="flex flex-wrap items-center gap-1.5">
                             <Badge variant="outline" className="shrink-0 whitespace-nowrap text-[10px]">{pack.itemCount} {pack.itemCount === 1 ? 'item' : 'items'}</Badge>
                             {orderedPackNames.has(pack.name) && (
-                              <Badge className="shrink-0 whitespace-nowrap text-[10px] bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                              <Badge className="shrink-0 whitespace-nowrap text-[10px] bg-state-approved-bg text-state-approved-foreground border-state-approved/30">
                                 <ShoppingCart className="h-3 w-3 mr-0.5" />
                                 Ordered
                               </Badge>
@@ -178,7 +178,7 @@ export function EstimateSummaryCard({ items, totalWithTax, estimateId }: Estimat
                                     <div>
                                       <span>{item.description}</span>
                                       {item.catalog_item_id && (
-                                        <Badge variant="outline" className="text-[10px] ml-1.5 bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400">
+                                        <Badge variant="outline" className="text-[10px] ml-1.5 bg-state-approved-bg border-state-approved/30 text-state-approved-foreground">
                                           Matched
                                         </Badge>
                                       )}

@@ -43,9 +43,9 @@ function AgeBadge({ days }: { days: number | null }) {
   if (days === null) return <span className="text-muted-foreground">—</span>;
   const variant = days <= 14 ? 'green' : days <= 30 ? 'amber' : 'red';
   const colors = {
-    green: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    green: 'bg-state-approved-bg text-state-approved-foreground',
+    amber: 'bg-state-open-bg text-state-open-foreground',
+    red: 'bg-destructive/10 text-destructive',
   };
   return (
     <Badge className={cn('font-mono text-xs', colors[variant])}>
@@ -178,7 +178,7 @@ export function InvoiceTableView({
                     )}
                     {canSubmit && invoice.status === 'DRAFT' && onSubmit && (
                       <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-blue-600"
+                        variant="ghost" size="icon" className="h-8 w-8 text-type-sov"
                         disabled={isLoading}
                         onClick={() => handleAction(invoice, onSubmit)}
                       >
@@ -187,7 +187,7 @@ export function InvoiceTableView({
                     )}
                     {canApprove && invoice.status === 'SUBMITTED' && onApprove && (
                       <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-emerald-600"
+                        variant="ghost" size="icon" className="h-8 w-8 text-state-approved"
                         disabled={isLoading}
                         onClick={() => handleAction(invoice, onApprove)}
                       >

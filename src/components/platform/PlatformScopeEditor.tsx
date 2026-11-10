@@ -234,8 +234,8 @@ export function PlatformScopeEditor({ projectId, projectStatus, onRefresh }: Pro
                           onClick={() => handleToggleSelection(sel.id)}
                           className={`px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors ${
                             sel.is_included
-                              ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30'
-                              : 'bg-red-500/10 text-red-600 border-red-400/30'
+                              ? 'bg-state-approved/15 text-state-approved-foreground border-state-approved/30'
+                              : 'bg-destructive/10 text-destructive border-destructive/30'
                           }`}
                         >
                           {sel.is_included ? 'Included' : 'Excluded'}

@@ -39,9 +39,9 @@ export function UnmatchedItemPanel({
   return (
     <div className="space-y-4 p-4">
       {/* Warning banner */}
-      <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
-        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-700 dark:text-amber-400">
+      <div className="flex items-start gap-2 rounded-md border border-state-open/30 bg-state-open/10 p-3">
+        <AlertTriangle className="h-4 w-4 text-state-open shrink-0 mt-0.5" />
+        <p className="text-sm text-state-open-foreground">
           This item is not matched to the catalog. You can adjust the quantity or remove it.
         </p>
       </div>

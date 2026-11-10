@@ -105,10 +105,10 @@ export function UnifiedReviewStep({
 
       {/* T&M mode info */}
       {contractMode === 'tm' && creatorOrgType !== 'SUPPLIER' && (
-        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/10 dark:border-amber-800">
+        <Card className="border-state-open/30 bg-state-open/50">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <Shield className="h-5 w-5 text-state-open mt-0.5 shrink-0" />
               <div>
                 <p className="font-semibold text-sm">Remodel / Time & Material Project</p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -311,7 +311,7 @@ export function UnifiedReviewStep({
                       {member.trade === 'Other' ? member.tradeCustom : member.trade}
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                  <Badge variant="outline" className="text-state-open border-state-open">
                     Will be invited
                   </Badge>
                 </div>

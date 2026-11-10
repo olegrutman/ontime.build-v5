@@ -198,7 +198,7 @@ function COSOVRowCard({
                 <div className="font-mono text-[0.7rem] text-muted-foreground">{fmt(billed)} billed</div>
               </div>
               {fullyBilled ? (
-                <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-xs">
+                <Badge className="bg-state-approved-bg text-state-approved-foreground text-xs">
                   Fully Billed
                 </Badge>
               ) : (

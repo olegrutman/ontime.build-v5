@@ -225,10 +225,10 @@ export default function COApprovalPage() {
         </div>
 
         {done && (
-          <div className={`bg-card border-2 rounded-2xl p-5 ${done === 'approved' ? 'border-emerald-500' : 'border-destructive'}`}>
+          <div className={`bg-card border-2 rounded-2xl p-5 ${done === 'approved' ? 'border-state-approved' : 'border-destructive'}`}>
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${done === 'approved' ? 'bg-emerald-100 dark:bg-emerald-950/30' : 'bg-red-100 dark:bg-red-950/30'}`}>
-                {done === 'approved' ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-destructive" />}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${done === 'approved' ? 'bg-state-approved-bg' : 'bg-destructive/10'}`}>
+                {done === 'approved' ? <Check className="h-5 w-5 text-state-approved" /> : <X className="h-5 w-5 text-destructive" />}
               </div>
               <div>
                 <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">Signed record</p>
@@ -290,7 +290,7 @@ export default function COApprovalPage() {
               <Button
                 onClick={handleApprove}
                 disabled={!approverName.trim() || !emailValid || acting}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                className="flex-1 bg-state-approved hover:bg-state-approved"
               >
                 {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
                 Approve & sign

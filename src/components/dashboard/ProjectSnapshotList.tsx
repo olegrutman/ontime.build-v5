@@ -30,9 +30,9 @@ interface AttentionItem {
 const STATUS_DOT: Record<string, string> = {
   setup: 'bg-violet-500',
   draft: 'bg-violet-500',
-  active: 'bg-emerald-500',
-  on_hold: 'bg-amber-500',
-  completed: 'bg-blue-500',
+  active: 'bg-state-approved',
+  on_hold: 'bg-state-open',
+  completed: 'bg-type-sov',
   archived: 'bg-muted-foreground',
 };
 
@@ -152,13 +152,13 @@ export function ProjectSnapshotList({
                   <p className="text-[0.85rem] font-semibold truncate group-hover:text-primary transition-colors">
                     {project.name}
                     {project.contract_mode === 'tm' && (
-                      <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 text-[0.6rem] font-bold text-amber-800 dark:text-amber-300">T&M</span>
+                      <span className="ml-2 inline-flex items-center rounded-full bg-state-open-bg px-1.5 py-0.5 text-[0.6rem] font-bold text-state-open-foreground">T&M</span>
                     )}
                   </p>
                   <p className="text-[0.75rem] text-muted-foreground mt-0.5">
                     {project.project_type}
                     {project.pendingActions > 0 && (
-                      <span className="ml-2 text-amber-600 dark:text-amber-400 font-medium">
+                      <span className="ml-2 text-state-open font-medium">
                         · {project.pendingActions} pending
                       </span>
                     )}

@@ -147,9 +147,9 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
         <Icon
           className={cn(
             'h-4 w-4 mt-0.5 shrink-0',
-            status === 'approved' ? 'text-emerald-600'
-            : status === 'rejected' ? 'text-red-600'
-            : status === 'pending' ? 'text-amber-600'
+            status === 'approved' ? 'text-state-approved'
+            : status === 'rejected' ? 'text-destructive'
+            : status === 'pending' ? 'text-state-open'
             : 'text-muted-foreground',
           )}
         />
@@ -167,7 +167,7 @@ export function COOwnerApprovalCard({ co, role = 'GC', projectId, projectName, c
             {approver ? `Signed by ${approver}` : emailOnFile ?? 'No email on file'}
           </p>
           {status === 'rejected' && note && (
-            <p className="text-xs text-red-600 dark:text-red-400 italic mt-0.5">{note}</p>
+            <p className="text-xs text-destructive italic mt-0.5">{note}</p>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">

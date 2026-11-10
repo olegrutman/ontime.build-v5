@@ -168,8 +168,8 @@ export default function OrderApprovals() {
   };
 
   const getStatusBadgeClass = (status: string) => {
-    if (status === 'APPROVED') return 'bg-blue-600';
-    if (status === 'FULFILLED') return 'bg-green-600';
+    if (status === 'APPROVED') return 'bg-type-sov';
+    if (status === 'FULFILLED') return 'bg-state-approved';
     return '';
   };
 

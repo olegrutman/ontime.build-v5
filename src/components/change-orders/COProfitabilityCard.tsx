@@ -88,10 +88,10 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-foreground">Margin</span>
               <div className="text-right">
-                <span className={cn('font-bold', isPositive ? 'text-emerald-600' : 'text-destructive')}>
+                <span className={cn('font-bold', isPositive ? 'text-state-approved' : 'text-destructive')}>
                   {fmtCurrency(margin)}
                 </span>
-                <span className={cn('text-xs ml-1', isPositive ? 'text-emerald-600' : 'text-destructive')}>
+                <span className={cn('text-xs ml-1', isPositive ? 'text-state-approved' : 'text-destructive')}>
                   ({marginPct.toFixed(1)}%)
                 </span>
               </div>

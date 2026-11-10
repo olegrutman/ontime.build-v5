@@ -101,7 +101,7 @@ const typeColors: Record<string, string> = {
 
   // POs
   PO_SENT: 'text-primary',
-  PO_PENDING_APPROVAL: 'text-amber-600',
+  PO_PENDING_APPROVAL: 'text-state-open',
   PO_RETURNED: 'text-destructive',
   PO_APPROVED: 'text-success',
 

@@ -119,8 +119,8 @@ export function SupplierEstimateVsOrdersCard({
             className={cn(
               'font-bold',
               difference >= 0
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-amber-600 dark:text-amber-400'
+                ? 'text-state-approved'
+                : 'text-state-open'
             )}
           >
             {difference >= 0 ? '+' : ''}{formatCurrency(difference)}

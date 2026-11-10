@@ -22,10 +22,10 @@ const STATUS_MAP: Record<string, { variant: 'healthy' | 'watch' | 'at_risk' | 'i
 };
 
 const URGENCY_BADGE: Record<string, string> = {
-  critical: 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400',
-  high: 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
-  normal: 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
-  low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  critical: 'bg-destructive/10 text-destructive',
+  high: 'bg-state-open-bg text-state-open-foreground',
+  normal: 'bg-type-sov/10 text-type-sov',
+  low: 'bg-muted text-muted-foreground',
 };
 
 export default function RFIDetailPage() {
@@ -156,10 +156,10 @@ export default function RFIDetailPage() {
 
       {/* Blocked COs banner */}
       {blockedCOs.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+        <div className="bg-state-open-bg border border-state-open/30 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            <AlertTriangle className="h-4 w-4 text-state-open" />
+            <span className="text-sm font-semibold text-state-open-foreground">
               Blocking {blockedCOs.length} Change Order{blockedCOs.length > 1 ? 's' : ''}
             </span>
           </div>
@@ -168,7 +168,7 @@ export default function RFIDetailPage() {
               <button
                 key={co.id}
                 onClick={() => navigate(`/project/${projectId}/change-orders/${co.id}`)}
-                className="text-xs text-amber-700 dark:text-amber-400 hover:underline block"
+                className="text-xs text-state-open-foreground hover:underline block"
               >
                 {co.co_number} — {co.title}
               </button>

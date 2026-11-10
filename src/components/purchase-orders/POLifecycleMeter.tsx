@@ -75,7 +75,7 @@ export function POLifecycleMeter({ po, compact = false, className }: POLifecycle
               key={stage}
               className={cn(
                 'h-1.5 flex-1 rounded-full transition-all duration-700',
-                done && 'bg-emerald-500',
+                done && 'bg-state-approved',
                 active && 'bg-secondary',
                 !done && !active && 'bg-muted',
               )}
@@ -95,7 +95,7 @@ export function POLifecycleMeter({ po, compact = false, className }: POLifecycle
                 <p
                   className={cn(
                     'text-[0.55rem] font-semibold uppercase tracking-[0.08em] truncate',
-                    done ? 'text-emerald-600 dark:text-emerald-400'
+                    done ? 'text-state-approved'
                       : active ? 'text-secondary'
                       : 'text-muted-foreground/50',
                   )}

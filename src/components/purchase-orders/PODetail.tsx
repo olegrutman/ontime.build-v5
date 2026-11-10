@@ -991,7 +991,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
               <Button
                 variant="default"
                 onClick={() => setBillToGCOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-state-approved hover:bg-state-approved"
               >
                 <Receipt className="h-4 w-4 mr-2" />
                 Bill to GC
@@ -1026,7 +1026,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
             {po.ready_for_delivery_at && (
               <div>
                 <p className="text-sm text-muted-foreground">Scheduled Delivery</p>
-                <p className="font-medium flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                <p className="font-medium flex items-center gap-1 text-type-sov">
                   <CalendarClock className="h-4 w-4" />
                   {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
                 </p>
@@ -1035,7 +1035,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
             {po.delivered_at && (
               <div>
                 <p className="text-sm text-muted-foreground">Delivered</p>
-                <p className="font-medium flex items-center gap-1 text-green-600 dark:text-green-400">
+                <p className="font-medium flex items-center gap-1 text-state-approved">
                   <Truck className="h-4 w-4" />
                   {format(new Date(po.delivered_at), 'MMM d, yyyy')}
                 </p>
@@ -1050,9 +1050,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
 
       {/* Pricing Visibility Notice */}
       {!canViewPricing && hasPricing && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+        <Card className="border-state-open/30 bg-state-open-bg">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+            <div className="flex items-center gap-2 text-state-open-foreground">
               <Lock className="h-4 w-4" />
               <p className="text-sm">
                 Pricing information is managed by another organization and is not visible to you.
@@ -1074,9 +1074,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
           {/* Diff legend */}
           {estimateItemsMap && estimateItemsMap.size > 0 && (
             <div className="flex flex-wrap gap-4 px-4 py-2 text-xs border-b">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-yellow-200 dark:bg-yellow-800 inline-block" /> Edited from estimate</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-200 dark:bg-green-800 inline-block" /> Added to PO</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-200 dark:bg-red-800 inline-block" /> Removed from estimate</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-state-open/20 inline-block" /> Edited from estimate</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-state-approved/20 inline-block" /> Added to PO</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-destructive/10 inline-block" /> Removed from estimate</span>
             </div>
           )}
           <Table>
@@ -1104,9 +1104,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
 
                 const rowStatus = getRowStatus(item);
                 const rowClass = rowStatus === 'edited'
-                  ? 'bg-yellow-50 dark:bg-yellow-900/20'
+                  ? 'bg-state-open-bg'
                   : rowStatus === 'added'
-                  ? 'bg-green-50 dark:bg-green-900/20'
+                  ? 'bg-state-approved-bg'
                   : '';
 
                 return (
@@ -1130,7 +1130,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
                           <p className="text-xs text-muted-foreground">{item.notes}</p>
                         )}
                         {!editingPrices && item.supplier_notes && canViewPricing && (
-                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          <p className="text-xs text-type-sov mt-1">
                             Supplier: {item.supplier_notes}
                           </p>
                         )}
@@ -1202,7 +1202,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
               })}
               {/* Deleted estimate items */}
               {deletedEstimateItems.map((item) => (
-                <TableRow key={`deleted-${item.id}`} className="bg-red-50 dark:bg-red-900/20">
+                <TableRow key={`deleted-${item.id}`} className="bg-destructive/10">
                   <TableCell className="text-muted-foreground">—</TableCell>
                   <TableCell className="font-mono text-sm line-through text-muted-foreground">{item.supplier_sku || '—'}</TableCell>
                   <TableCell>

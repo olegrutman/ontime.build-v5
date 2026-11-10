@@ -54,14 +54,14 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
             <div key={item.key}>
               <div className="flex items-center gap-2 text-sm">
                 {item.complete ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-state-approved shrink-0" />
                 ) : item.informational ? (
-                  <Info className="h-4 w-4 text-blue-400 shrink-0" />
+                  <Info className="h-4 w-4 text-type-sov shrink-0" />
                 ) : (
                   <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
                 <span className={cn(
-                  item.complete ? 'text-foreground' : item.informational ? 'text-blue-400' : 'text-muted-foreground'
+                  item.complete ? 'text-foreground' : item.informational ? 'text-type-sov' : 'text-muted-foreground'
                 )}>
                   {item.label}
                 </span>

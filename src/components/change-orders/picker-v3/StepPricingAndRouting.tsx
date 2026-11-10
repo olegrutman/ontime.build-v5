@@ -74,7 +74,7 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">Step 3 of 4 · Routing & Responsibilities</p>
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 3 of 4 · Routing & Responsibilities</p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
           Who's involved and what's needed?
         </h2>
@@ -97,14 +97,14 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
               className={cn(
                 'p-3.5 rounded-xl border-[1.5px] text-left transition-all relative',
                 selected
-                  ? 'bg-amber-50 border-amber-400 shadow-[0_0_0_3px_rgba(245,166,35,0.18)]'
-                  : 'bg-background border-border hover:border-amber-300 hover:bg-amber-50',
+                  ? 'bg-state-open-bg border-state-open shadow-[0_0_0_3px_rgba(245,166,35,0.18)]'
+                  : 'bg-background border-border hover:border-state-open/30 hover:bg-state-open-bg',
               )}
             >
               {selected && (
-                <span className="absolute top-2.5 right-2.5 w-[20px] h-[20px] rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-[0.75rem]">✓</span>
+                <span className="absolute top-2.5 right-2.5 w-[20px] h-[20px] rounded-full bg-state-open text-white flex items-center justify-center font-bold text-[0.75rem]">✓</span>
               )}
-              <p className="text-[0.6rem] font-bold uppercase tracking-[0.5px] text-amber-700 mb-0.5">{opt.tag}</p>
+              <p className="text-[0.6rem] font-bold uppercase tracking-[0.5px] text-state-open-foreground mb-0.5">{opt.tag}</p>
               <p className="font-heading text-[1rem] font-extrabold text-foreground tracking-tight mb-0.5">{opt.name}</p>
               <p className="text-[0.68rem] text-muted-foreground leading-snug">{opt.desc}</p>
             </button>
@@ -131,13 +131,13 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
                 className={cn(
                   'flex items-center gap-2.5 w-full p-2.5 rounded-lg border-[1.5px] text-left transition-all',
                   collab.assignedTcOrgId === tc.id
-                    ? 'bg-amber-50 border-amber-400'
-                    : 'bg-background border-border hover:border-amber-300',
+                    ? 'bg-state-open-bg border-state-open'
+                    : 'bg-background border-border hover:border-state-open/30',
                 )}
               >
-                <span className="w-[30px] h-[30px] rounded-full bg-green-600 text-white flex items-center justify-center text-[0.7rem] font-bold shrink-0">{tc.initials}</span>
+                <span className="w-[30px] h-[30px] rounded-full bg-state-approved text-white flex items-center justify-center text-[0.7rem] font-bold shrink-0">{tc.initials}</span>
                 <p className="text-[0.82rem] font-bold text-foreground flex-1">{tc.name}</p>
-                <div className={cn('w-4 h-4 rounded-full border-2 shrink-0', collab.assignedTcOrgId === tc.id ? 'border-amber-500 bg-amber-500' : 'border-muted-foreground/40')} />
+                <div className={cn('w-4 h-4 rounded-full border-2 shrink-0', collab.assignedTcOrgId === tc.id ? 'border-state-open bg-state-open' : 'border-muted-foreground/40')} />
               </button>
             ))}
             {tcOrgs.length === 0 && <p className="text-[0.78rem] text-muted-foreground text-center py-4">No subcontractors on this project.</p>}
@@ -173,10 +173,10 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
                     onClick={() => dispatch({ type: 'SET_ASSIGNED_FC', orgId: fc.id })}
                     className={cn(
                       'flex items-center gap-2.5 w-full p-2.5 rounded-lg border-[1.5px] text-left transition-all',
-                      collab.assignedFcOrgId === fc.id ? 'bg-amber-50 border-amber-400' : 'bg-background border-border hover:border-amber-300',
+                      collab.assignedFcOrgId === fc.id ? 'bg-state-open-bg border-state-open' : 'bg-background border-border hover:border-state-open/30',
                     )}
                   >
-                    <span className="w-[30px] h-[30px] rounded-full bg-amber-500 text-white flex items-center justify-center text-[0.7rem] font-bold shrink-0">
+                    <span className="w-[30px] h-[30px] rounded-full bg-state-open text-white flex items-center justify-center text-[0.7rem] font-bold shrink-0">
                       {fc.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                     </span>
                     <p className="text-[0.82rem] font-bold text-foreground flex-1">{fc.name}</p>
@@ -218,15 +218,15 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
           />
         </div>
         {cur.materialsNeeded && (
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-amber-50 border-b animate-fade-in">
-            <span className="text-[0.68rem] font-bold text-amber-700 uppercase tracking-[0.8px]">Procured by:</span>
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-state-open-bg border-b animate-fade-in">
+            <span className="text-[0.68rem] font-bold text-state-open-foreground uppercase tracking-[0.8px]">Procured by:</span>
             <div className="flex gap-0.5 bg-background border rounded-lg p-0.5 ml-auto">
               {(['TC', 'GC'] as const).map(r => {
                 const active = cur.materialResponsible === r;
                 return (
                   <button key={r} type="button"
                     onClick={() => dispatch({ type: 'SET_MATERIAL_RESPONSIBLE', value: r })}
-                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-green-600 text-white', active && r === 'GC' && 'bg-blue-600 text-white', !active && 'text-muted-foreground')}
+                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-muted-foreground')}
                   >{r}</button>
                 );
               })}
@@ -249,15 +249,15 @@ export function StepPricingAndRouting({ state, dispatch, projectId }: StepPricin
           />
         </div>
         {cur.equipmentNeeded && (
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-amber-50 animate-fade-in">
-            <span className="text-[0.68rem] font-bold text-amber-700 uppercase tracking-[0.8px]">Procured by:</span>
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-state-open-bg animate-fade-in">
+            <span className="text-[0.68rem] font-bold text-state-open-foreground uppercase tracking-[0.8px]">Procured by:</span>
             <div className="flex gap-0.5 bg-background border rounded-lg p-0.5 ml-auto">
               {(['TC', 'GC'] as const).map(r => {
                 const active = cur.equipmentResponsible === r;
                 return (
                   <button key={r} type="button"
                     onClick={() => dispatch({ type: 'SET_EQUIPMENT_RESPONSIBLE', value: r })}
-                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-green-600 text-white', active && r === 'GC' && 'bg-blue-600 text-white', !active && 'text-muted-foreground')}
+                    className={cn('px-3 py-1 rounded-md text-[0.68rem] font-bold transition-all', active && r === 'TC' && 'bg-state-approved text-white', active && r === 'GC' && 'bg-type-sov text-white', !active && 'text-muted-foreground')}
                   >{r}</button>
                 );
               })}

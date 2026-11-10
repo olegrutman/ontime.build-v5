@@ -10,7 +10,7 @@ export function COExternalApprovedBadge({ co }: { co: any }) {
   return (
     <span
       title={name ? `Signed by ${name}` : undefined}
-      className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-1.5 h-5 text-[10px] font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 shrink-0"
+      className="inline-flex items-center gap-1 rounded-full border border-state-approved/30 bg-state-approved-bg px-1.5 h-5 text-[10px] font-medium text-state-approved-foreground shrink-0"
     >
       <ShieldCheck className="h-3 w-3" /> {who} approved
     </span>

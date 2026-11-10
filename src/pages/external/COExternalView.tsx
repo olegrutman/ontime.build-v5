@@ -140,19 +140,19 @@ export default function COExternalView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      <div className="min-h-screen flex items-center justify-center bg-muted">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted px-4">
         <div className="max-w-md text-center">
-          <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-slate-900 mb-2">Link Issue</h1>
-          <p className="text-slate-600">{error}</p>
+          <AlertTriangle className="h-12 w-12 text-state-open mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-foreground mb-2">Link Issue</h1>
+          <p className="text-muted-foreground">{error}</p>
         </div>
       </div>
     );
@@ -160,13 +160,13 @@ export default function COExternalView() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted px-4">
         <div className="max-w-md text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <Check className="h-8 w-8 text-emerald-600" />
+          <div className="w-16 h-16 rounded-full bg-state-approved-bg flex items-center justify-center mx-auto mb-4">
+            <Check className="h-8 w-8 text-state-approved" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900 mb-2">Response Submitted</h1>
-          <p className="text-slate-600">
+          <h1 className="text-xl font-bold text-foreground mb-2">Response Submitted</h1>
+          <p className="text-muted-foreground">
             Your response has been recorded. The project team will be notified. You can close this page.
           </p>
         </div>
@@ -175,28 +175,28 @@ export default function COExternalView() {
   }
 
   const purposeConfig = {
-    pricing: { icon: DollarSign, title: 'Pricing Request', color: 'text-blue-600' },
-    scope_ack: { icon: ClipboardCheck, title: 'Scope Confirmation', color: 'text-emerald-600' },
-    acknowledge: { icon: MessageSquare, title: 'Acknowledgment Request', color: 'text-slate-600' },
-  }[invite?.invite_purpose ?? 'pricing'] ?? { icon: FileText, title: 'Response', color: 'text-slate-600' };
+    pricing: { icon: DollarSign, title: 'Pricing Request', color: 'text-type-sov' },
+    scope_ack: { icon: ClipboardCheck, title: 'Scope Confirmation', color: 'text-state-approved' },
+    acknowledge: { icon: MessageSquare, title: 'Acknowledgment Request', color: 'text-muted-foreground' },
+  }[invite?.invite_purpose ?? 'pricing'] ?? { icon: FileText, title: 'Response', color: 'text-muted-foreground' };
 
   const PurposeIcon = purposeConfig.icon;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-muted">
       {/* Header */}
-      <div className="bg-slate-900 text-white no-print">
+      <div className="bg-foreground text-white no-print">
         <div className="max-w-2xl mx-auto px-4 py-6 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-3 mb-3">
-              <PurposeIcon className={`h-6 w-6 ${purposeConfig.color === 'text-blue-600' ? 'text-blue-400' : purposeConfig.color === 'text-emerald-600' ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <PurposeIcon className={`h-6 w-6 ${purposeConfig.color === 'text-type-sov' ? 'text-type-sov' : purposeConfig.color === 'text-state-approved' ? 'text-state-approved' : 'text-muted-foreground'}`} />
               <h1 className="text-lg font-bold font-['Barlow_Condensed'] uppercase tracking-wide">
                 {purposeConfig.title}
               </h1>
             </div>
             {co && (
               <div className="flex items-baseline gap-3 flex-wrap">
-                <span className="font-mono text-sm text-slate-300">{co.co_number}</span>
+                <span className="font-mono text-sm text-muted-foreground">{co.co_number}</span>
                 <span className="text-white font-medium">{co.title}</span>
               </div>
             )}
@@ -215,41 +215,41 @@ export default function COExternalView() {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 print-page">
         {/* CO Details - Read Only */}
         {co && (
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">Change Order Details</h2>
+          <div className="bg-white border border-border rounded-xl p-5 shadow-sm">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">Change Order Details</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-slate-500">Number</span><p className="font-mono font-semibold">{co.co_number ?? '—'}</p></div>
-              <div><span className="text-slate-500">Type</span><p className="font-semibold">{co.document_type}</p></div>
-              {co.location_tag && <div><span className="text-slate-500">Location</span><p className="font-semibold">{co.location_tag}</p></div>}
-              {co.reason_note && <div><span className="text-slate-500">Reason</span><p className="font-semibold">{co.reason_note}</p></div>}
+              <div><span className="text-muted-foreground">Number</span><p className="font-mono font-semibold">{co.co_number ?? '—'}</p></div>
+              <div><span className="text-muted-foreground">Type</span><p className="font-semibold">{co.document_type}</p></div>
+              {co.location_tag && <div><span className="text-muted-foreground">Location</span><p className="font-semibold">{co.location_tag}</p></div>}
+              {co.reason_note && <div><span className="text-muted-foreground">Reason</span><p className="font-semibold">{co.reason_note}</p></div>}
             </div>
           </div>
         )}
 
         {/* Scope Items */}
         {lineItems.length > 0 && (
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">
+          <div className="bg-white border border-border rounded-xl p-5 shadow-sm">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">
               Scope Items ({lineItems.length})
             </h2>
             <div className="space-y-3">
               {lineItems.map((item, idx) => (
-                <div key={item.id} className="border border-slate-100 rounded-lg p-3">
+                <div key={item.id} className="border border-border rounded-lg p-3">
                   <div className="flex items-start gap-3">
-                    <span className="text-xs font-mono text-slate-400 mt-0.5">{idx + 1}</span>
+                    <span className="text-xs font-mono text-muted-foreground mt-0.5">{idx + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{item.item_name}</p>
+                      <p className="text-sm font-semibold text-foreground">{item.item_name}</p>
                       {item.description && (
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>
                       )}
 
                       {/* Pricing input for pricing purpose */}
                       {invite?.invite_purpose === 'pricing' && (
                         <div className="mt-3 flex items-center gap-3">
                           <div className="flex-1">
-                            <Label className="text-xs text-slate-500">Your Price</Label>
+                            <Label className="text-xs text-muted-foreground">Your Price</Label>
                             <div className="relative">
-                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                               <Input
                                 type="number"
                                 step="0.01"
@@ -264,7 +264,7 @@ export default function COExternalView() {
                             </div>
                           </div>
                           <div className="flex-1">
-                            <Label className="text-xs text-slate-500">Note (optional)</Label>
+                            <Label className="text-xs text-muted-foreground">Note (optional)</Label>
                             <Input
                               className="h-8 text-sm"
                               placeholder="Any notes…"
@@ -285,9 +285,9 @@ export default function COExternalView() {
 
             {/* Pricing total */}
             {invite?.invite_purpose === 'pricing' && (
-              <div className="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-700">Total</span>
-                <span className="font-mono text-lg font-bold text-slate-900">
+              <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Total</span>
+                <span className="font-mono text-lg font-bold text-foreground">
                   ${Object.values(pricingItems).reduce((s, d) => s + (d.price ? parseFloat(d.price) : 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -297,7 +297,7 @@ export default function COExternalView() {
 
         {/* Scope acknowledgment checkbox */}
         {invite?.invite_purpose === 'scope_ack' && (
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="bg-white border border-border rounded-xl p-5 shadow-sm">
             <label className="flex items-start gap-3 cursor-pointer">
               <Checkbox
                 checked={scopeAcknowledged}
@@ -305,8 +305,8 @@ export default function COExternalView() {
                 className="mt-0.5"
               />
               <div>
-                <p className="text-sm font-semibold text-slate-900">I acknowledge the scope above</p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-sm font-semibold text-foreground">I acknowledge the scope above</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
                   By checking this box, you confirm you have reviewed the scope items and agree to proceed.
                 </p>
               </div>
@@ -315,8 +315,8 @@ export default function COExternalView() {
         )}
 
         {/* Response Form */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 no-print">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Your Response</h2>
+        <div className="bg-white border border-border rounded-xl p-5 shadow-sm space-y-4 no-print">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Your Response</h2>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -348,7 +348,7 @@ export default function COExternalView() {
             />
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             By submitting, you confirm your identity and consent to this response being used as a legal record.
           </p>
 

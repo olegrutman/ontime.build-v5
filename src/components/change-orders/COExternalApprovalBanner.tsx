@@ -97,14 +97,14 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
   return (
     <div className="space-y-2">
       {pendingOwner && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
-          <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-state-open/30 bg-state-open-bg">
+          <Clock className="h-4 w-4 text-state-open shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+            <p className="text-sm font-medium text-state-open-foreground">
               Waiting on {ownerLabel} approval
             </p>
             {(co as any).approved_at && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">Sent {timeAgo((co as any).approved_at)}</p>
+              <p className="text-xs text-state-open">Sent {timeAgo((co as any).approved_at)}</p>
             )}
           </div>
           <Button size="sm" variant="outline" className="h-7 text-xs gap-1 shrink-0" onClick={() => resendEmail('owner')} disabled={resending === 'owner'}>
@@ -114,10 +114,10 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
         </div>
       )}
       {pendingArchitect && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
-          <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-state-open/30 bg-state-open-bg">
+          <Clock className="h-4 w-4 text-state-open shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+            <p className="text-sm font-medium text-state-open-foreground">
               Waiting on {architectLabel} approval
             </p>
           </div>
@@ -128,33 +128,33 @@ export function COExternalApprovalBanner({ co, projectId, role = 'GC' }: Props) 
         </div>
       )}
       {rejectedOwner && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
-          <X className="h-4 w-4 text-red-600 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-destructive/30 bg-destructive/10">
+          <X className="h-4 w-4 text-destructive shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">The {ownerLabel} rejected this CO</p>
+            <p className="text-sm font-medium text-destructive">The {ownerLabel} rejected this CO</p>
             {(co as any).owner_rejection_note && (
-              <p className="text-xs text-red-600 dark:text-red-400 italic">{(co as any).owner_rejection_note}</p>
+              <p className="text-xs text-destructive italic">{(co as any).owner_rejection_note}</p>
             )}
           </div>
           {recordButton('owner')}
         </div>
       )}
       {rejectedArchitect && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
-          <X className="h-4 w-4 text-red-600 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-destructive/30 bg-destructive/10">
+          <X className="h-4 w-4 text-destructive shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">The {architectLabel} rejected this CO</p>
+            <p className="text-sm font-medium text-destructive">The {architectLabel} rejected this CO</p>
             {(co as any).architect_rejection_note && (
-              <p className="text-xs text-red-600 dark:text-red-400 italic">{(co as any).architect_rejection_note}</p>
+              <p className="text-xs text-destructive italic">{(co as any).architect_rejection_note}</p>
             )}
           </div>
           {recordButton('architect')}
         </div>
       )}
       {((ownerStatus === 'approved') || (architectStatus === 'approved')) && (
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20">
-          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-          <p className="flex-1 min-w-0 text-xs text-emerald-700 dark:text-emerald-400">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-state-approved/30 bg-state-approved-bg">
+          <ShieldCheck className="h-4 w-4 text-state-approved shrink-0" />
+          <p className="flex-1 min-w-0 text-xs text-state-approved-foreground">
             {ownerStatus === 'approved' && `${ownerLabel} approved`}
             {ownerStatus === 'approved' && architectStatus === 'approved' && ' · '}
             {architectStatus === 'approved' && `${architectLabel} approved`}

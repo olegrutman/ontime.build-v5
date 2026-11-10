@@ -129,7 +129,7 @@ function ContractRow({ contract, currentOrgId, teamMembers, canEdit, onContractU
             </Badge>
           )}
           {isPending && (
-            <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-amber-600 border-amber-300 shrink-0">
+            <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-state-open border-state-open/30 shrink-0">
               Pending
             </Badge>
           )}

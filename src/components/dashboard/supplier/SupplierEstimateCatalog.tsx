@@ -4,10 +4,10 @@ import { formatCurrency } from '@/lib/utils';
 import type { EstimateRow } from '@/hooks/useSupplierDashboardData';
 
 const statusBadge: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  SUBMITTED: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  APPROVED: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  REJECTED: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  DRAFT: 'bg-muted text-foreground',
+  SUBMITTED: 'bg-type-sov/10 text-type-sov',
+  APPROVED: 'bg-state-approved-bg text-state-approved-foreground',
+  REJECTED: 'bg-destructive/10 text-destructive',
 };
 
 interface Props { estimates: EstimateRow[]; hidePricing?: boolean; }
@@ -65,7 +65,7 @@ export function SupplierEstimateCatalog({ estimates, hidePricing = false }: Prop
                         key={p}
                         className={`text-[0.58rem] px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 ${
                           isOrdered
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold'
+                            ? 'bg-state-approved-bg text-state-approved-foreground font-semibold'
                             : 'bg-secondary/10 text-secondary dark:bg-secondary/20 dark:text-secondary-foreground'
                         }`}
                       >

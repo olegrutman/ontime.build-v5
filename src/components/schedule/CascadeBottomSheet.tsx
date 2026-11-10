@@ -25,8 +25,8 @@ export function CascadeBottomSheet({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader className="text-center">
-          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <AlertTriangle className="h-6 w-6 text-amber-600" />
+          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-state-open-bg flex items-center justify-center">
+            <AlertTriangle className="h-6 w-6 text-state-open" />
           </div>
           <DrawerTitle>Schedule Change</DrawerTitle>
           <DrawerDescription>

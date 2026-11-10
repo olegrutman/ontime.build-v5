@@ -154,7 +154,7 @@ export default function PaymentApplicationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs font-bold text-foreground">{co.co_number ?? '—'}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-state-approved-bg text-state-approved-foreground font-medium">
                         {co.status}
                       </span>
                     </div>
@@ -228,8 +228,8 @@ export default function PaymentApplicationsPage() {
                   <span className="text-sm font-mono font-bold">{fmt(app.current_payment_due)}</span>
                   <span className={cn(
                     'text-xs px-2 py-0.5 rounded-full font-medium',
-                    app.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                    app.status === 'submitted' ? 'bg-amber-100 text-amber-700' :
+                    app.status === 'approved' ? 'bg-state-approved-bg text-state-approved-foreground' :
+                    app.status === 'submitted' ? 'bg-state-open-bg text-state-open-foreground' :
                     'bg-muted text-muted-foreground'
                   )}>
                     {app.status}

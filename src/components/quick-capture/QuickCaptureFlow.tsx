@@ -258,8 +258,8 @@ export function QuickCaptureFlow({ projectId }: QuickCaptureFlowProps) {
   if (screen === 'success') {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center gap-6 p-6 bg-background">
-        <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
-          <Check className="h-10 w-10 text-green-600" />
+        <div className="w-20 h-20 rounded-full bg-state-approved/10 flex items-center justify-center">
+          <Check className="h-10 w-10 text-state-approved" />
         </div>
         <h1 className="text-xl font-bold font-heading text-foreground">Sent to {submitTarget}</h1>
         <p className="text-sm text-muted-foreground text-center max-w-xs">

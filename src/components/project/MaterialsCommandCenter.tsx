@@ -123,7 +123,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
             { label: 'Forecast Final', value: forecast },
             { label: 'Variance', value: Math.abs(variance), prefix: isOverBudget ? '+' : '' },
           ].map(({ label, value, prefix }) => (
-            <div key={label} className="rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-3">
+            <div key={label} className="rounded-xl bg-muted dark:bg-accent/20 border border-border/40 p-3">
               <p className="text-muted-foreground text-[0.7rem]">{label}</p>
               <p className="font-semibold mt-1.5 text-[0.85rem] tabular-nums">
                 {prefix}{formatCurrency(value)}
@@ -156,13 +156,13 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
                   : 0;
 
                 return (
-                  <div key={pack.packName} className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 px-4 py-2.5">
+                  <div key={pack.packName} className="flex items-center justify-between rounded-xl bg-muted dark:bg-accent/20 border border-border/40 px-4 py-2.5">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <div className={cn(
                         'w-2 h-2 rounded-full shrink-0',
                         !pack.isOrdered ? 'bg-muted-foreground/40'
-                          : isOver ? 'bg-red-500'
-                          : 'bg-emerald-500'
+                          : isOver ? 'bg-destructive'
+                          : 'bg-state-approved'
                       )} />
                       <span className="text-[0.85rem] font-medium truncate">{pack.packName}</span>
                     </div>
@@ -175,7 +175,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
                           {pack.estimateTotal > 0 && (
                             <span className={cn(
                               'text-[0.75rem] font-semibold tabular-nums',
-                              isOver ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
+                              isOver ? 'text-destructive' : 'text-state-approved'
                             )}>
                               {isOver ? '+' : ''}{pct}%
                             </span>
@@ -208,10 +208,10 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
 
 function AlertTile({ label, value, color }: { label: string; value: number; color: 'red' | 'amber' }) {
   const textColor = value > 0
-    ? (color === 'red' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400')
+    ? (color === 'red' ? 'text-destructive' : 'text-state-open-foreground')
     : 'text-foreground';
   return (
-    <div className="rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-3">
+    <div className="rounded-xl bg-muted dark:bg-accent/20 border border-border/40 p-3">
       <p className="text-[0.8rem] text-muted-foreground">{label}</p>
       <p className={cn('text-xl font-semibold mt-1.5', textColor)}>{value}</p>
     </div>

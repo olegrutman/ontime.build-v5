@@ -13,7 +13,7 @@ export function StepCause({ state, dispatch }: StepCauseProps) {
   return (
     <div>
       <div className="mb-3.5">
-        <p className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1.5px] mb-1">Step 3 of 5 · Cause</p>
+        <p className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1.5px] mb-1">Step 3 of 5 · Cause</p>
         <h2 className="font-heading text-[1.6rem] font-black text-foreground leading-tight tracking-tight">
           What caused the change?
         </h2>
@@ -54,15 +54,15 @@ export function StepCause({ state, dispatch }: StepCauseProps) {
 
       {/* Inference badges */}
       {cur.causeId && (
-        <div className="flex flex-wrap gap-2 p-4 bg-gradient-to-br from-amber-50 to-amber-50/50 border border-amber-200 rounded-xl mt-2 animate-fade-in">
-          <p className="w-full text-[0.62rem] font-bold text-amber-800 uppercase tracking-[1px] flex items-center gap-1.5">
+        <div className="flex flex-wrap gap-2 p-4 bg-gradient-to-br from-amber-50 to-amber-50/50 border border-state-open/30 rounded-xl mt-2 animate-fade-in">
+          <p className="w-full text-[0.62rem] font-bold text-state-open-foreground uppercase tracking-[1px] flex items-center gap-1.5">
             ✦ Based on your pick, we'll set this up as:
           </p>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-amber-200 text-[0.74rem] font-semibold">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-state-open/30 text-[0.74rem] font-semibold">
             <span className="text-muted-foreground text-[0.68rem]">Document</span>
             <span className="text-foreground">{cur.docType === 'CO' ? 'Change Order (CO)' : 'Work Order (WO)'}</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-amber-200 text-[0.74rem] font-semibold">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-state-open/30 text-[0.74rem] font-semibold">
             <span className="text-muted-foreground text-[0.68rem]">Billable</span>
             <span className="text-foreground">{cur.billable === 'yes' ? 'Yes' : cur.billable === 'maybe' ? 'Maybe' : 'No'}</span>
           </span>

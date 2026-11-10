@@ -42,27 +42,27 @@ export function RoutingChain({
   const nodes: RoutingNode[] = [];
 
   if (role === 'GC') {
-    nodes.push({ label: 'You', initials: gcI, roleColor: 'bg-blue-600', sub: 'Create CO', isYou: true });
+    nodes.push({ label: 'You', initials: gcI, roleColor: 'bg-type-sov', sub: 'Create CO', isYou: true });
     if (requestFc) {
-      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-amber-500', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-state-open', sub: 'Logs hours' });
     }
-    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-green-600', sub: 'Prices & submits' });
-    nodes.push({ label: 'You', initials: gcI, roleColor: 'bg-blue-600', sub: 'Approve', isYou: true });
+    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-state-approved', sub: 'Prices & submits' });
+    nodes.push({ label: 'You', initials: gcI, roleColor: 'bg-type-sov', sub: 'Approve', isYou: true });
   } else if (role === 'TC') {
     if (requestFc) {
-      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-amber-500', sub: 'Logs hours' });
+      nodes.push({ label: resolvedFcName, initials: fcI, roleColor: 'bg-state-open', sub: 'Logs hours' });
     }
-    nodes.push({ label: 'You', initials: tcI, roleColor: 'bg-green-600', sub: 'Price & submit', isYou: true });
-    nodes.push({ label: resolvedGcName, initials: gcI, roleColor: 'bg-blue-600', sub: 'Approves' });
+    nodes.push({ label: 'You', initials: tcI, roleColor: 'bg-state-approved', sub: 'Price & submit', isYou: true });
+    nodes.push({ label: resolvedGcName, initials: gcI, roleColor: 'bg-type-sov', sub: 'Approves' });
   } else {
-    nodes.push({ label: 'You', initials: fcI, roleColor: 'bg-amber-500', sub: 'Log hours', isYou: true });
-    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-green-600', sub: 'Prices' });
-    nodes.push({ label: resolvedGcName, initials: gcI, roleColor: 'bg-blue-600', sub: 'Approves' });
+    nodes.push({ label: 'You', initials: fcI, roleColor: 'bg-state-open', sub: 'Log hours', isYou: true });
+    nodes.push({ label: resolvedTcName, initials: tcI, roleColor: 'bg-state-approved', sub: 'Prices' });
+    nodes.push({ label: resolvedGcName, initials: gcI, roleColor: 'bg-type-sov', sub: 'Approves' });
   }
 
   return (
     <div className="bg-gradient-to-br from-[hsl(var(--navy))] to-[hsl(var(--navy-light,220,50%,20%))] rounded-xl p-4 text-white mt-3">
-      <p className="text-[0.6rem] font-bold text-amber-400 uppercase tracking-[1.5px] mb-2.5">
+      <p className="text-[0.6rem] font-bold text-state-open uppercase tracking-[1.5px] mb-2.5">
         Approval Chain
       </p>
       <div className="flex items-center gap-2 flex-wrap">
@@ -72,7 +72,7 @@ export function RoutingChain({
               className={cn(
                 'flex items-center gap-[7px] px-2.5 py-[7px] rounded-lg text-[0.74rem] font-semibold border',
                 node.isYou
-                  ? 'bg-amber-500 text-[hsl(var(--navy))] border-amber-500'
+                  ? 'bg-state-open text-[hsl(var(--navy))] border-state-open'
                   : 'bg-white/[0.08] border-white/[0.15]',
               )}
             >
@@ -94,7 +94,7 @@ export function RoutingChain({
             )}
           </div>
         ))}
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-600 text-white rounded-lg text-[0.68rem] font-bold uppercase tracking-[0.5px]">
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-state-approved text-white rounded-lg text-[0.68rem] font-bold uppercase tracking-[0.5px]">
           <Check className="h-3 w-3" /> Contracted
         </div>
       </div>

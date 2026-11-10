@@ -370,7 +370,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-6">
         <div className="text-center animate-fade-in">
-          <div className="w-20 h-20 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-4xl mx-auto mb-5 animate-scale-in">
+          <div className="w-20 h-20 rounded-full bg-state-approved-bg text-state-approved flex items-center justify-center text-4xl mx-auto mb-5 animate-scale-in">
             ✓
           </div>
           <h1 className="font-heading text-3xl font-extrabold text-foreground mb-2">
@@ -382,7 +382,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               : 'Your draft is ready for review. Open it to add details, pricing, and submit for approval.'}
           </p>
           {!isAddMode && (
-            <div className="font-mono text-sm font-semibold bg-amber-50 border border-amber-400 rounded-lg px-4 py-2 inline-block mb-6">
+            <div className="font-mono text-sm font-semibold bg-state-open-bg border border-state-open rounded-lg px-4 py-2 inline-block mb-6">
               {cur.docType}-DRAFT · {projectInfo?.name ?? 'Project'}
             </div>
           )}
@@ -393,7 +393,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
                 ? `/project/${projectId}/change-orders/${addToCoId}`
                 : `/project/${projectId}/change-orders`
               )}
-              className="px-5 py-2.5 rounded-lg bg-muted border text-sm font-semibold hover:bg-amber-50 transition-all"
+              className="px-5 py-2.5 rounded-lg bg-muted border text-sm font-semibold hover:bg-state-open-bg transition-all"
             >
               {isAddMode ? 'Back to Order' : 'Back to List'}
             </button>
@@ -424,7 +424,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               ? `/project/${projectId}/change-orders/${addToCoId}`
               : `/project/${projectId}/change-orders`
             )}
-            className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-amber-50 hover:border-amber-400 hover:text-amber-700 transition-all"
+            className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-state-open-bg hover:border-state-open hover:text-state-open-foreground transition-all"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -437,7 +437,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
             </p>
           </div>
           <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted border border-border">
-            <span className={`w-2 h-2 rounded-full ${detectedRole === 'GC' ? 'bg-blue-600' : detectedRole === 'FC' ? 'bg-amber-500' : 'bg-green-600'}`} />
+            <span className={`w-2 h-2 rounded-full ${detectedRole === 'GC' ? 'bg-type-sov' : detectedRole === 'FC' ? 'bg-state-open' : 'bg-state-approved'}`} />
             <span className="text-[0.72rem] font-semibold text-muted-foreground">{isAddMode ? 'Adding as' : 'Creating as'} {detectedRole}</span>
           </div>
         </header>
@@ -447,8 +447,8 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
 
         {/* Item context strip */}
         {state.items.length > 1 && state.step < 4 && (
-          <div className="flex items-center gap-2.5 mx-6 mt-2.5 mb-0 px-3 py-2 bg-gradient-to-r from-amber-50 to-transparent border-l-[3px] border-amber-400 rounded-lg">
-            <span className="text-[0.6rem] font-bold text-amber-700 uppercase tracking-[1px]">
+          <div className="flex items-center gap-2.5 mx-6 mt-2.5 mb-0 px-3 py-2 bg-gradient-to-r from-amber-50 to-transparent border-l-[3px] border-state-open rounded-lg">
+            <span className="text-[0.6rem] font-bold text-state-open-foreground uppercase tracking-[1px]">
               Editing Item
             </span>
             <span className="font-heading font-extrabold text-[0.95rem] text-foreground">
@@ -497,7 +497,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !canSubmit}
-              className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-green-600 text-white disabled:opacity-60"
+              className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-state-approved text-white disabled:opacity-60"
             >
               {isSubmitting ? 'Saving…' : '✓ Create'}
             </button>
@@ -505,7 +505,7 @@ export function PickerShell({ projectId, addToCoId }: PickerShellProps) {
             <button
               type="button"
               onClick={handleNext}
-              className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-amber-500 text-white"
+              className="px-5 py-2.5 rounded-lg text-[0.85rem] font-bold bg-state-open text-white"
             >
               Next →
             </button>

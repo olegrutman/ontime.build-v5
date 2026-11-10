@@ -150,11 +150,11 @@ function VarianceRow({ label, dollar, base }: { label: string; dollar: number; b
       <div className="flex items-center gap-1.5">
         {!isZero && (isOver
           ? <TrendingUp className="h-3.5 w-3.5 text-destructive" />
-          : <TrendingDown className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+          : <TrendingDown className="h-3.5 w-3.5 text-state-approved" />
         )}
         <span className={cn(
           'font-bold text-sm',
-          isZero ? 'text-muted-foreground' : isOver ? 'text-destructive' : 'text-green-600 dark:text-green-400',
+          isZero ? 'text-muted-foreground' : isOver ? 'text-destructive' : 'text-state-approved',
         )}>
           {dollar >= 0 ? '+' : ''}{fmt(dollar)} ({pct(dollar, base)})
         </span>

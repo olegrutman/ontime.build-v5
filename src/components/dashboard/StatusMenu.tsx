@@ -10,9 +10,9 @@ interface StatusMenuProps {
 
 const STATUS_CONFIG = [
 { key: 'setup', label: 'Setup', color: 'bg-violet-500' },
-{ key: 'active', label: 'Active', color: 'bg-green-500' },
-{ key: 'on_hold', label: 'On Hold', color: 'bg-amber-500' },
-{ key: 'completed', label: 'Completed', color: 'bg-blue-500' },
+{ key: 'active', label: 'Active', color: 'bg-state-approved' },
+{ key: 'on_hold', label: 'On Hold', color: 'bg-state-open' },
+{ key: 'completed', label: 'Completed', color: 'bg-type-sov' },
 { key: 'archived', label: 'Archived', color: 'bg-muted-foreground' }] as
 const;
 

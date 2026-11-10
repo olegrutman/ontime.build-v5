@@ -40,7 +40,7 @@ function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConf
   if (isFC) {
     if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
       if (financials.fcTotalHours > 0) {
-        return { label: `Submit ${financials.fcTotalHours} hrs to ${rl.TC} →`, className: 'bg-emerald-600 hover:bg-emerald-700 text-white', disabled: false, action: 'submit_to_tc' };
+        return { label: `Submit ${financials.fcTotalHours} hrs to ${rl.TC} →`, className: 'bg-state-approved hover:bg-state-approved text-white', disabled: false, action: 'submit_to_tc' };
       }
       return { label: 'Log hours first', className: 'bg-muted text-muted-foreground', disabled: true, action: '' };
     }
@@ -65,7 +65,7 @@ function getFooterConfig(props: COStickyFooterProps, rl: RoleLabels): FooterConf
 
   if (isGC) {
     if (status === 'submitted') {
-      return { label: `✓ Approve ${fmtCurrency(totalToApprove)}`, className: 'bg-emerald-600 hover:bg-emerald-700 text-white', disabled: false, action: 'approve' };
+      return { label: `✓ Approve ${fmtCurrency(totalToApprove)}`, className: 'bg-state-approved hover:bg-state-approved text-white', disabled: false, action: 'approve' };
     }
     return null;
   }
@@ -94,7 +94,7 @@ export function COStickyFooter(props: COStickyFooterProps) {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-12 w-12 rounded-xl shrink-0 border-amber-300 text-amber-700 dark:text-amber-400"
+                className="h-12 w-12 rounded-xl shrink-0 border-state-open/30 text-state-open-foreground"
                 onClick={onOpenCamera}
               >
                 <Camera className="h-5 w-5" />

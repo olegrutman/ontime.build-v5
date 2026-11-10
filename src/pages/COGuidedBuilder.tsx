@@ -422,7 +422,7 @@ export default function COGuidedBuilder() {
                             onClick={() => setScenarioId(s.id)}
                             className={`text-left p-3 rounded-xl border transition-all ${
                               active
-                                ? 'border-[hsl(var(--navy))] bg-amber-50/40 shadow-sm'
+                                ? 'border-[hsl(var(--navy))] bg-state-open/40 shadow-sm'
                                 : 'border-border hover:border-muted-foreground/40 bg-background'
                             }`}
                           >
@@ -459,7 +459,7 @@ export default function COGuidedBuilder() {
             <h2 className="font-heading text-2xl font-extrabold mb-4">
               Confirm the affected system
             </h2>
-            <div className="p-4 rounded-xl border bg-amber-50/30">
+            <div className="p-4 rounded-xl border bg-state-open/30">
               <div className="text-xs text-muted-foreground">System tag</div>
               <div className="font-heading text-xl font-bold">{scenario.system_tag ?? '—'}</div>
               <div className="mt-3 text-xs text-muted-foreground">Selected problem</div>
@@ -551,7 +551,7 @@ export default function COGuidedBuilder() {
                       }
                       className={`w-full text-left p-3 rounded-xl border flex items-start gap-3 transition-all ${
                         active
-                          ? 'border-[hsl(var(--navy))] bg-amber-50/40'
+                          ? 'border-[hsl(var(--navy))] bg-state-open/40'
                           : 'border-border bg-background hover:border-muted-foreground/40'
                       }`}
                     >

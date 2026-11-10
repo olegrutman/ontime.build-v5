@@ -399,7 +399,7 @@ export function MaterialOrderWizard({ workItem, onComplete, onCancel }: Material
               )}
             </div>
             {selectedPack && !canModifyPack && (
-              <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded mt-2">
+              <div className="flex items-center gap-2 text-sm text-state-open bg-state-open-bg p-2 rounded mt-2">
                 <Lock className="h-4 w-4" />
                 This is a locked pack. Items cannot be modified.
               </div>

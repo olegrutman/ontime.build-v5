@@ -60,8 +60,8 @@ export function PickerAside({
                 className={cn(
                   'p-2.5 rounded-lg text-left border transition-all relative',
                   isActive
-                    ? 'bg-amber-50 border-amber-400 shadow-[0_0_0_2px_rgba(245,166,35,0.15)]'
-                    : 'bg-background border-border hover:border-amber-300',
+                    ? 'bg-state-open-bg border-state-open shadow-[0_0_0_2px_rgba(245,166,35,0.15)]'
+                    : 'bg-background border-border hover:border-state-open/30',
                 )}
               >
                 <span className="absolute top-2 right-2 text-[0.55rem] font-extrabold text-muted-foreground font-mono">
@@ -81,14 +81,14 @@ export function PickerAside({
                   <div className="flex items-center gap-1.5 mt-1.5">
                     <span className={cn(
                       'text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-[0.5px]',
-                      item.docType === 'CO' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700',
+                      item.docType === 'CO' ? 'bg-type-sov/10 text-type-sov' : 'bg-state-open-bg text-state-open-foreground',
                     )}>
                       {item.docType}
                     </span>
                     <span className={cn(
                       'text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-[0.5px]',
-                      item.billable === 'yes' ? 'bg-green-100 text-green-700'
-                        : item.billable === 'maybe' ? 'bg-amber-100 text-amber-700'
+                      item.billable === 'yes' ? 'bg-state-approved-bg text-state-approved-foreground'
+                        : item.billable === 'maybe' ? 'bg-state-open-bg text-state-open-foreground'
                         : 'bg-muted text-muted-foreground',
                     )}>
                       {item.billable === 'yes' ? 'Billable' : item.billable === 'maybe' ? 'Maybe' : 'Non-billable'}
@@ -114,7 +114,7 @@ export function PickerAside({
         <button
           type="button"
           onClick={onAddItem}
-          className="flex items-center justify-center gap-1.5 w-full py-2.5 px-3 border-[1.5px] border-dashed border-muted-foreground/30 rounded-lg text-[0.74rem] font-semibold text-muted-foreground hover:bg-amber-50 hover:border-amber-400 hover:text-amber-700 transition-all"
+          className="flex items-center justify-center gap-1.5 w-full py-2.5 px-3 border-[1.5px] border-dashed border-muted-foreground/30 rounded-lg text-[0.74rem] font-semibold text-muted-foreground hover:bg-state-open-bg hover:border-state-open hover:text-state-open-foreground transition-all"
         >
           <Plus className="h-3.5 w-3.5" /> Add another item
         </button>
@@ -151,7 +151,7 @@ export function PickerAside({
               {state.collaboration.assignedTcOrgId && (
                 <div className="flex justify-between text-[0.7rem]">
                   <span className="text-white/70">Assigned {rl.TC}</span>
-                  <span className="font-semibold text-amber-400">✓ Assigned</span>
+                  <span className="font-semibold text-state-open">✓ Assigned</span>
                 </div>
               )}
               <div className="flex justify-between text-[0.7rem]">
@@ -188,7 +188,7 @@ export function PickerAside({
           type="button"
           onClick={onBack}
           disabled={!canGoBack}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.72rem] font-semibold bg-muted border border-border text-muted-foreground hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.72rem] font-semibold bg-muted border border-border text-muted-foreground hover:bg-state-open-bg hover:border-state-open/30 hover:text-state-open-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           ← Back
         </button>
@@ -196,7 +196,7 @@ export function PickerAside({
           <button
             type="button"
             onClick={onSubmit}
-            className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.84rem] font-bold bg-green-600 text-white hover:bg-green-700 shadow-sm transition-all"
+            className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.84rem] font-bold bg-state-approved text-white hover:bg-state-approved shadow-sm transition-all"
           >
             ✓ Create {cur.docType}
           </button>
@@ -204,7 +204,7 @@ export function PickerAside({
           <button
             type="button"
             onClick={onNext}
-            className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.84rem] font-bold bg-amber-500 text-white hover:bg-amber-600 shadow-sm transition-all"
+            className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[0.84rem] font-bold bg-state-open text-white hover:bg-state-open shadow-sm transition-all"
           >
             Next →
           </button>
@@ -217,7 +217,7 @@ export function PickerAside({
 function CompletenessRow({ icon, label, done, detail }: { icon: React.ReactNode; label: string; done: boolean; detail?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className={cn('shrink-0', done ? 'text-green-400' : 'text-white/30')}>
+      <span className={cn('shrink-0', done ? 'text-state-approved' : 'text-white/30')}>
         {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
       </span>
       <span className={cn('text-[0.7rem] flex-1', done ? 'text-white' : 'text-white/50')}>{label}</span>

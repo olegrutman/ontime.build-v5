@@ -40,7 +40,7 @@ export function ProjectActionQueue({ financials, projectId, onNavigate }: Projec
           <button
             key={i}
             onClick={action.onClick}
-            className="w-full rounded-xl border border-border/60 px-4 py-3 flex items-center justify-between bg-slate-50 dark:bg-accent/20 hover:bg-accent/40 transition-colors text-left"
+            className="w-full rounded-xl border border-border/60 px-4 py-3 flex items-center justify-between bg-muted dark:bg-accent/20 hover:bg-accent/40 transition-colors text-left"
           >
             <span className="text-[0.85rem] font-medium">{action.label}</span>
             <span className="text-primary text-[0.75rem] font-semibold">Go</span>

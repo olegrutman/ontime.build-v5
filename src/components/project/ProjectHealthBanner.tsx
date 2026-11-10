@@ -35,11 +35,11 @@ export function ProjectHealthBanner({ financials, projectStatus }: ProjectHealth
   if (reasons.length === 0) return null;
 
   const bannerColor = isRisk
-    ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/40'
-    : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40';
+    ? 'bg-destructive/10 border-destructive/30'
+    : 'bg-state-open-bg border-state-open/30';
   const textColor = isRisk
-    ? 'text-red-900 dark:text-red-300'
-    : 'text-amber-900 dark:text-amber-300';
+    ? 'text-destructive'
+    : 'text-state-open-foreground';
 
   return (
     <div className={cn('rounded-2xl border p-4', bannerColor)}>

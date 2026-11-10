@@ -11,8 +11,8 @@ const META: Record<Exclude<EntrySource, null | undefined>, {
 }> = {
   picker_v3: { label: 'Picker', Icon: ListChecks, bg: 'bg-muted', fg: 'text-muted-foreground' },
   ai_intake: { label: 'AI', Icon: Sparkles, bg: 'bg-violet-100', fg: 'text-violet-700' },
-  guided_v4: { label: 'Guided', Icon: Wand2, bg: 'bg-amber-100', fg: 'text-amber-800' },
-  field_pn: { label: 'Field PN', Icon: Mic, bg: 'bg-blue-100', fg: 'text-blue-700' },
+  guided_v4: { label: 'Guided', Icon: Wand2, bg: 'bg-state-open-bg', fg: 'text-state-open-foreground' },
+  field_pn: { label: 'Field PN', Icon: Mic, bg: 'bg-type-sov/10', fg: 'text-type-sov' },
 };
 
 interface EntrySourcePillProps {

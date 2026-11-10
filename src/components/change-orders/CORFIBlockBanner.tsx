@@ -30,20 +30,20 @@ export function CORFIBlockBanner({ blockedByRfiId, projectId }: CORFIBlockBanner
   if (rfi.status === 'answered' || rfi.status === 'closed') return null;
 
   return (
-    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-800 rounded-xl px-4 py-3 flex items-center gap-3">
-      <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+    <div className="bg-state-open-bg border border-state-open/30 rounded-xl px-4 py-3 flex items-center gap-3">
+      <AlertTriangle className="h-5 w-5 text-state-open shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+        <p className="text-sm font-semibold text-state-open-foreground">
           Blocked: Waiting on {rfi.rfi_number} — {rfi.title}
         </p>
-        <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+        <p className="text-xs text-state-open-foreground mt-0.5">
           This change order is paused until the linked RFI is answered.
         </p>
       </div>
       <Button
         size="sm"
         variant="outline"
-        className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100"
+        className="shrink-0 text-xs border-state-open text-state-open-foreground hover:bg-state-open-bg"
         onClick={() => navigate(`/project/${projectId}/rfis/${rfi.id}`)}
       >
         View RFI

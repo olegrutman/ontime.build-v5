@@ -3,14 +3,14 @@ import { formatCurrency } from '@/lib/utils';
 import type { ReturnRow } from '@/hooks/useSupplierDashboardData';
 
 const statusStyles: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  SUBMITTED: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  SUPPLIER_REVIEW: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  APPROVED: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  REJECTED: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  DRAFT: 'bg-muted text-foreground',
+  SUBMITTED: 'bg-type-sov/10 text-type-sov',
+  SUPPLIER_REVIEW: 'bg-state-open-bg text-state-open-foreground',
+  APPROVED: 'bg-state-approved-bg text-state-approved-foreground',
+  REJECTED: 'bg-destructive/10 text-destructive',
   SCHEDULED: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
   PICKED_UP: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  PRICED: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  PRICED: 'bg-state-approved-bg text-state-approved-foreground',
 };
 
 const urgencyBorder: Record<string, string> = {
@@ -65,7 +65,7 @@ export function SupplierReturnsQueue({ returns }: Props) {
                   {formatCurrency(ret.creditSubtotal)}
                 </span>
                 {needsAction && (
-                  <span className="text-[0.6rem] font-bold bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-1.5 py-0.5 rounded flex-shrink-0">
+                  <span className="text-[0.6rem] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded flex-shrink-0">
                     Respond
                   </span>
                 )}

@@ -190,7 +190,7 @@ export function COHourEntryInline({
         <Button
           onClick={handleSubmit}
           disabled={saving || !hours || hours <= 0}
-          className="w-full h-12 text-sm font-semibold gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="w-full h-12 text-sm font-semibold gap-2 rounded-xl bg-state-approved hover:bg-state-approved text-white"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           Submit {hours ?? 0} hours to TC

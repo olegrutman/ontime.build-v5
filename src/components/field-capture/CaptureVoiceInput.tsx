@@ -53,7 +53,7 @@ export function CaptureVoiceInput({ onRecord, hasRecording, onClear, disabled }:
   if (hasRecording && !recording) {
     return (
       <div className="flex items-center gap-3 bg-card rounded-xl border px-4 py-3">
-        <div className="w-3 h-3 rounded-full bg-green-500" />
+        <div className="w-3 h-3 rounded-full bg-state-approved" />
         <span className="text-sm font-medium text-foreground flex-1">Voice note recorded</span>
         {!disabled && (
           <button onClick={onClear} className="text-xs text-destructive font-semibold min-h-[44px] px-2">

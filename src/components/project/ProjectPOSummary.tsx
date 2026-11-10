@@ -59,7 +59,7 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
       />
       <div className="overflow-x-auto">
         <table className="w-full text-[0.85rem]">
-          <thead className="bg-slate-50 dark:bg-accent/20 text-muted-foreground">
+          <thead className="bg-muted dark:bg-accent/20 text-muted-foreground">
             <tr>
               <th className="text-left px-5 py-2.5 font-medium text-[0.75rem]">PO #</th>
               <th className="text-left px-5 py-2.5 font-medium text-[0.75rem]">Package</th>

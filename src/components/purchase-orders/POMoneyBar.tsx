@@ -109,7 +109,7 @@ function Tile({
           'font-mono tabular-nums font-semibold leading-tight mt-1 text-lg sm:text-2xl',
           isDark ? 'text-white'
             : tone === 'alert' ? 'text-secondary'
-            : tone === 'received' ? 'text-emerald-600 dark:text-emerald-400'
+            : tone === 'received' ? 'text-state-approved'
             : 'text-foreground',
         )}
       >
@@ -149,7 +149,7 @@ export function POMoneyBar({
             </div>
             <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                className="h-full rounded-full bg-state-approved transition-all duration-700"
                 style={{ width: `${m.receivedPct}%` }}
               />
             </div>
@@ -175,7 +175,7 @@ export function POMoneyBar({
             </div>
           </div>
         </div>
-        <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-state-approved/10 blur-3xl" />
       </div>
 
       {/* Metric tiles */}

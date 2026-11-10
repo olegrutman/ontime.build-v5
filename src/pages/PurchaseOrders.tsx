@@ -266,7 +266,7 @@ export default function PurchaseOrders() {
   };
 
   const getStatusBadgeClass = (status: POStatus) => {
-    return PO_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800';
+    return PO_STATUS_COLORS[status] || 'bg-muted text-foreground';
   };
 
   if (authLoading || loading) {

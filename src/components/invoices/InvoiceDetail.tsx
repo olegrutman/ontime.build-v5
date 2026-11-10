@@ -492,7 +492,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
               <h2 className="min-w-0 max-w-full text-xl font-bold break-words [overflow-wrap:anywhere]">{invoice.invoice_number}</h2>
               <InvoiceStatusBadge status={status} />
               {(invoice as any).revision_count > 0 && (
-                <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                <span className="inline-flex items-center rounded-md bg-state-open-bg px-2 py-0.5 text-xs font-medium text-state-open-foreground">
                   Rev {(invoice as any).revision_count}
                 </span>
               )}
@@ -623,15 +623,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
       {/* Source PO Reference */}
       {linkedPO && (
-        <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
+        <Card className="border-state-approved/30 bg-state-approved-bg">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Package className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <Package className="h-5 w-5 text-state-approved" />
               <div>
-                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                <p className="text-sm font-medium text-state-approved-foreground">
                   Created from Purchase Order
                 </p>
-                <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                <p className="text-sm text-state-approved-foreground">
                   {linkedPO.po_number} — Status: {linkedPO.status}
                 </p>
               </div>
@@ -656,12 +656,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
       {/* Rejection Notice */}
       {status === 'REJECTED' && invoice.rejection_reason && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+        <Card className="border-destructive/30 bg-destructive/10">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
-                <p className="text-sm text-red-700 dark:text-red-300">{invoice.rejection_reason}</p>
+                <p className="text-sm font-medium text-destructive">Rejection Reason:</p>
+                <p className="text-sm text-destructive">{invoice.rejection_reason}</p>
               </div>
               {canRevise && (
                 <div className="flex items-center gap-2 shrink-0">
@@ -708,7 +708,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
               const isOverbilled = remaining < 0;
               const noteText = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
               return (
-                <div key={`m-${item.id}`} className={`p-3 ${isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
+                <div key={`m-${item.id}`} className={`p-3 ${isOverbilled ? 'bg-destructive/10' : ''}`}>
                   <div className="text-sm font-medium mb-2 break-words">{item.description}</div>
                   {(item as any).rejection_reason && (
                     <div className="text-xs text-destructive mb-2 break-words">Rejected: {(item as any).rejection_reason}</div>
@@ -726,11 +726,11 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                     <div className="text-muted-foreground">Total billed</div>
                     <div className="text-right font-mono tabular-nums">{formatCurrency(item.total_billed)}</div>
                     <div className="text-muted-foreground">Remaining</div>
-                    <div className={`text-right font-mono tabular-nums font-medium ${isOverbilled ? 'text-red-600 dark:text-red-400' : ''}`}>
+                    <div className={`text-right font-mono tabular-nums font-medium ${isOverbilled ? 'text-destructive' : ''}`}>
                       {formatCurrency(remaining)}{isOverbilled && ' ⚠'}
                     </div>
                     <div className="text-muted-foreground">% complete</div>
-                    <div className={`text-right font-mono tabular-nums ${parseFloat(percentComplete) > 100 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
+                    <div className={`text-right font-mono tabular-nums ${parseFloat(percentComplete) > 100 ? 'text-destructive font-medium' : ''}`}>
                       {percentComplete}%
                     </div>
                   </div>
@@ -739,7 +739,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             })}
             <div className="p-3 bg-muted/40 space-y-1 text-xs">
               <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono tabular-nums font-semibold">{formatCurrency(invoice.subtotal)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Retainage withheld</span><span className="font-mono tabular-nums text-amber-600">-{formatCurrency(invoice.retainage_amount)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Retainage withheld</span><span className="font-mono tabular-nums text-state-open">-{formatCurrency(invoice.retainage_amount)}</span></div>
               <div className="flex justify-between pt-1 border-t border-border/60"><span className="font-semibold">Total due</span><span className="font-mono tabular-nums font-bold text-base">{formatCurrency(invoice.total_amount)}</span></div>
             </div>
           </div>
@@ -769,7 +769,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 const isOverbilled = remaining < 0;
 
                 return (
-                  <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
+                  <TableRow key={item.id} className={isOverbilled ? 'bg-destructive/10' : ''}>
                     <TableCell className="font-medium align-top">
                       {editingItemId === item.id ? (
                         <div className="space-y-2">
@@ -847,11 +847,11 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                     <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(item.current_billed)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.total_billed)}</TableCell>
-                    <TableCell className={`text-right font-medium ${isOverbilled ? 'text-red-600 dark:text-red-400' : ''}`}>
+                    <TableCell className={`text-right font-medium ${isOverbilled ? 'text-destructive' : ''}`}>
                       {formatCurrency(remaining)}
                       {isOverbilled && ' ⚠'}
                     </TableCell>
-                    <TableCell className={`text-right ${parseFloat(percentComplete) > 100 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
+                    <TableCell className={`text-right ${parseFloat(percentComplete) > 100 ? 'text-destructive font-medium' : ''}`}>
                       {percentComplete}%
                     </TableCell>
                   </TableRow>
@@ -870,7 +870,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 <TableCell colSpan={3} className="text-right font-medium">
                   Retainage Withheld
                 </TableCell>
-                <TableCell className="text-right font-medium text-amber-600">
+                <TableCell className="text-right font-medium text-state-open">
                   -{formatCurrency(invoice.retainage_amount)}
                 </TableCell>
                 <TableCell colSpan={3}></TableCell>

@@ -13,17 +13,17 @@ interface PackProgressSectionProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; width: string }> = {
-  delivered: { label: 'Delivered', color: 'bg-emerald-500', width: 'w-full' },
-  ordered: { label: 'Ordered', color: 'bg-blue-500', width: 'w-2/3' },
-  not_ordered: { label: 'Not Ordered', color: 'bg-red-500', width: 'w-1/4' },
-  partial: { label: 'Partially Matched', color: 'bg-amber-500', width: 'w-1/2' },
+  delivered: { label: 'Delivered', color: 'bg-state-approved', width: 'w-full' },
+  ordered: { label: 'Ordered', color: 'bg-type-sov', width: 'w-2/3' },
+  not_ordered: { label: 'Not Ordered', color: 'bg-destructive', width: 'w-1/4' },
+  partial: { label: 'Partially Matched', color: 'bg-state-open', width: 'w-1/2' },
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  delivered: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-  ordered: 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
-  not_ordered: 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
-  partial: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
+  delivered: 'bg-state-approved-bg text-state-approved-foreground',
+  ordered: 'bg-type-sov/10 text-type-sov',
+  not_ordered: 'bg-destructive/10 text-destructive',
+  partial: 'bg-state-open-bg text-state-open-foreground',
 };
 
 export function PackProgressSection({ packs }: PackProgressSectionProps) {

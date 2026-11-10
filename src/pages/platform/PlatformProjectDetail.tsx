@@ -467,11 +467,11 @@ export default function PlatformProjectDetail() {
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Paid</p>
-            <p className="text-lg font-bold text-green-600">{formatCurrency(financials.paid)}</p>
+            <p className="text-lg font-bold text-state-approved">{formatCurrency(financials.paid)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Outstanding</p>
-            <p className="text-lg font-bold text-amber-600">{formatCurrency(financials.invoiced - financials.paid)}</p>
+            <p className="text-lg font-bold text-state-open">{formatCurrency(financials.invoiced - financials.paid)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Retainage Held</p>
@@ -764,7 +764,7 @@ export default function PlatformProjectDetail() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={t.status === 'Accepted' ? 'text-xs border-green-500/30 text-green-600' : 'text-xs border-yellow-500/30 text-yellow-600'}
+                        className={t.status === 'Accepted' ? 'text-xs border-state-approved/30 text-state-approved' : 'text-xs border-state-open/30 text-state-open'}
                       >
                         {t.status || 'Pending'}
                       </Badge>
@@ -1051,9 +1051,9 @@ export default function PlatformProjectDetail() {
                                   const billed = item.total_billed_amount ?? 0;
                                   const value = item.value_amount ?? 0;
                                   if (billed > 0 && value > 0 && billed >= value)
-                                    return <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-xs">Fully Billed</Badge>;
+                                    return <Badge className="bg-state-approved-bg text-state-approved-foreground text-xs">Fully Billed</Badge>;
                                   if (billed > 0)
-                                    return <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 text-xs">Partially Billed</Badge>;
+                                    return <Badge className="bg-state-open-bg text-state-open-foreground text-xs">Partially Billed</Badge>;
                                   return <Badge variant="outline" className="text-xs">Unbilled</Badge>;
                                 })()}
                               </TableCell>

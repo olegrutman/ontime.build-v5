@@ -73,7 +73,7 @@ function InclusionDot({ included }: { included: boolean | null }) {
   return (
     <span className={cn(
       "inline-block w-2 h-2 rounded-full shrink-0",
-      included ? "bg-green-500" : "bg-muted-foreground/30"
+      included ? "bg-state-approved" : "bg-muted-foreground/30"
     )} />
   );
 }
@@ -214,7 +214,7 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
                         </span>
                       ))}
                       {inclusions.filter(i => i.included).length > 0 && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-green-500/10 text-green-700 dark:text-green-400 font-medium border border-green-500/20">
+                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-state-approved/10 text-state-approved-foreground font-medium border border-state-approved/20">
                           {inclusions.filter(i => i.included).length} inclusions
                         </span>
                       )}

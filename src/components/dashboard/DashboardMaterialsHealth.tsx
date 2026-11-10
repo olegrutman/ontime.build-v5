@@ -16,9 +16,9 @@ export function DashboardMaterialsHealth({ estimate, ordered, forecast }: Dashbo
 
   const maxVal = Math.max(estimate, ordered, forecast, 1);
   const bars = [
-    { label: 'Est', height: (estimate / maxVal) * 100, color: 'bg-slate-300 dark:bg-slate-600' },
-    { label: 'Ord', height: (ordered / maxVal) * 100, color: 'bg-slate-400 dark:bg-slate-500' },
-    { label: 'Fcst', height: (forecast / maxVal) * 100, color: isOver ? 'bg-amber-500' : 'bg-emerald-500' },
+    { label: 'Est', height: (estimate / maxVal) * 100, color: 'bg-muted' },
+    { label: 'Ord', height: (ordered / maxVal) * 100, color: 'bg-muted' },
+    { label: 'Fcst', height: (forecast / maxVal) * 100, color: isOver ? 'bg-state-open' : 'bg-state-approved' },
   ];
 
   return (
@@ -30,7 +30,7 @@ export function DashboardMaterialsHealth({ estimate, ordered, forecast }: Dashbo
       />
       <SurfaceCardBody className="space-y-4">
         {/* Bar chart */}
-        <div className="h-36 rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-4 flex flex-col justify-end">
+        <div className="h-36 rounded-xl bg-muted dark:bg-accent/20 border border-border/40 p-4 flex flex-col justify-end">
           <div className="flex items-end gap-4 h-full">
             {bars.map((bar) => (
               <div key={bar.label} className="flex-1 flex flex-col items-center gap-1">
@@ -55,9 +55,9 @@ export function DashboardMaterialsHealth({ estimate, ordered, forecast }: Dashbo
             { label: 'Ordered', value: ordered, highlight: false },
             { label: 'Forecast', value: forecast, highlight: isOver },
           ].map(({ label, value, highlight }) => (
-            <div key={label} className="min-w-0 rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-3">
+            <div key={label} className="min-w-0 rounded-xl bg-muted dark:bg-accent/20 border border-border/40 p-3">
               <p className="text-muted-foreground text-[0.7rem]">{label}</p>
-              <p className={cn('break-words [overflow-wrap:anywhere] font-semibold mt-1 text-[0.85rem]', highlight && 'text-amber-700 dark:text-amber-400')}>
+              <p className={cn('break-words [overflow-wrap:anywhere] font-semibold mt-1 text-[0.85rem]', highlight && 'text-state-open-foreground')}>
                 {formatCurrency(value)}
               </p>
             </div>

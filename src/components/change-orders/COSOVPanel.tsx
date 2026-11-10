@@ -20,9 +20,9 @@ interface SOVItem {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-600',
-  approved: 'bg-emerald-500/10 text-emerald-600',
-  partial: 'bg-blue-500/10 text-blue-600',
+  pending: 'bg-state-open/10 text-state-open',
+  approved: 'bg-state-approved/10 text-state-approved',
+  partial: 'bg-type-sov/10 text-type-sov',
   invoiced: 'bg-primary/10 text-primary',
 };
 

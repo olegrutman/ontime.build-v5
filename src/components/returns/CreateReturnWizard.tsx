@@ -736,9 +736,9 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
             </Card>
 
             {/* Warning banner */}
-            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800 p-3">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-800 dark:text-amber-300">
+            <div className="flex items-start gap-2 rounded-lg border border-state-open/30 bg-state-open-bg p-3">
+              <AlertTriangle className="h-4 w-4 text-state-open mt-0.5 shrink-0" />
+              <p className="text-xs text-state-open-foreground">
                 Final credit amount will be confirmed by supplier after review.
               </p>
             </div>

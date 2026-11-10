@@ -60,9 +60,9 @@ export function InvoiceRow({
   const showSubmit = canSubmit && invoice.status === 'DRAFT' && !!onSubmit;
   const showApprove = canApprove && invoice.status === 'SUBMITTED' && !!onApprove;
   const primaryAction = showSubmit
-    ? { label: 'Submit', icon: Send, run: () => onSubmit!(invoice), tone: 'bg-blue-600 hover:bg-blue-700 text-white' }
+    ? { label: 'Submit', icon: Send, run: () => onSubmit!(invoice), tone: 'bg-type-sov hover:bg-type-sov text-white' }
     : showApprove
-    ? { label: 'Approve', icon: CheckCircle, run: () => onApprove!(invoice), tone: 'bg-green-600 hover:bg-green-700 text-white' }
+    ? { label: 'Approve', icon: CheckCircle, run: () => onApprove!(invoice), tone: 'bg-state-approved hover:bg-state-approved text-white' }
     : null;
 
   const handlePrimary = async (e: React.MouseEvent) => {
@@ -74,9 +74,9 @@ export function InvoiceRow({
 
   const ageColors = days === null
     ? ''
-    : days <= 14 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-    : days <= 30 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    : days <= 14 ? 'bg-state-approved-bg text-state-approved-foreground'
+    : days <= 30 ? 'bg-state-open-bg text-state-open-foreground'
+    : 'bg-destructive/10 text-destructive';
 
   return (
     <div
@@ -172,7 +172,7 @@ export function InvoiceRow({
         </div>
 
         {invoice.rejection_reason && invoice.status === 'REJECTED' && (
-          <div className="mt-1.5 text-xs text-red-700 dark:text-red-300 truncate">
+          <div className="mt-1.5 text-xs text-destructive truncate">
             <strong>Rejected:</strong> {invoice.rejection_reason}
           </div>
         )}

@@ -91,7 +91,7 @@ function Tile({
       <p
         className={cn(
           'font-mono tabular-nums font-semibold leading-tight mt-1 text-base min-[360px]:text-lg sm:text-2xl break-words [overflow-wrap:anywhere]',
-          isDark ? 'text-white' : tone === 'alert' ? 'text-secondary' : tone === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground',
+          isDark ? 'text-white' : tone === 'alert' ? 'text-secondary' : tone === 'paid' ? 'text-state-approved' : 'text-foreground',
         )}
       >
         {value}

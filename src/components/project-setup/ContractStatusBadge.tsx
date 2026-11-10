@@ -7,10 +7,10 @@ interface ContractStatusBadgeProps {
 
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
   draft: { label: 'Draft', classes: 'bg-muted text-muted-foreground border-border' },
-  sent: { label: 'Sent', classes: 'bg-amber-500/15 text-amber-700 border-amber-500/30' },
-  accepted: { label: 'Accepted', classes: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30' },
+  sent: { label: 'Sent', classes: 'bg-state-open/15 text-state-open-foreground border-state-open/30' },
+  accepted: { label: 'Accepted', classes: 'bg-state-approved/15 text-state-approved-foreground border-state-approved/30' },
   rejected: { label: 'Rejected', classes: 'bg-destructive/15 text-destructive border-destructive/30' },
-  revised: { label: 'Revised', classes: 'bg-blue-500/15 text-blue-700 border-blue-500/30' },
+  revised: { label: 'Revised', classes: 'bg-type-sov/15 text-type-sov border-type-sov/30' },
 };
 
 export function ContractStatusBadge({ status, className }: ContractStatusBadgeProps) {

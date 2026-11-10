@@ -442,7 +442,7 @@ export default function CONewIntakePage() {
                     {t === 'CO' ? <FileText className="size-3.5" /> : <Wrench className="size-3.5" />}
                     {t === 'CO' ? 'Change Order' : 'Work Order'}
                     {inferredFromMode === t && !active && !existingCO && (
-                      <span className="ml-1 size-1.5 rounded-full bg-amber-500" aria-label="suggested" />
+                      <span className="ml-1 size-1.5 rounded-full bg-state-open" aria-label="suggested" />
                     )}
                   </button>
                 );

@@ -807,14 +807,14 @@ export default function FinishProjectSetup() {
                   className={cn(
                     'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] lg:text-xs font-medium whitespace-nowrap border transition-colors shrink-0',
                     active && 'bg-primary text-primary-foreground border-primary',
-                    done && !active && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
+                    done && !active && 'bg-state-approved/10 text-state-approved-foreground border-state-approved/30',
                     !done && !active && 'bg-muted/40 text-muted-foreground border-border',
                   )}
                 >
                   <span className={cn(
                     'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0',
                     active ? 'bg-primary-foreground/20 text-primary-foreground' :
-                    done ? 'bg-emerald-500 text-white' : 'bg-background text-muted-foreground',
+                    done ? 'bg-state-approved text-white' : 'bg-background text-muted-foreground',
                   )}>
                     {done ? <Check className="h-2.5 w-2.5" /> : index + 1}
                   </span>

@@ -79,16 +79,16 @@ export function CompactAlertBar({ projectId, onNavigate, financials, projectStat
 
   const hasRed = chips.some(c => c.variant === 'red');
   const barBg = hasRed
-    ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40'
-    : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40';
+    ? 'bg-destructive/10 border-destructive/30'
+    : 'bg-state-open-bg border-state-open/30';
 
   return (
     <div className={cn('min-w-0 rounded-xl border px-3 py-2 flex items-start gap-2 flex-wrap', barBg)}>
-      <AlertTriangle className={cn('h-3.5 w-3.5 shrink-0', hasRed ? 'text-red-500' : 'text-amber-500')} />
+      <AlertTriangle className={cn('h-3.5 w-3.5 shrink-0', hasRed ? 'text-destructive' : 'text-state-open')} />
       {chips.map((chip, i) => {
         const chipColor = chip.variant === 'red'
-          ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200'
-          : 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200';
+          ? 'bg-destructive/10 text-destructive'
+          : 'bg-state-open-bg text-state-open-foreground';
         const Tag = chip.tab ? 'button' : 'span';
         return (
           <Tag

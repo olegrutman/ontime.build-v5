@@ -289,7 +289,7 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
                 aria-label={phase === 'idle' ? 'Start recording' : 'Stop recording'}
                 className={`w-28 h-28 rounded-full flex items-center justify-center text-white transition-all shadow-lg ${
                   phase === 'recording'
-                    ? 'bg-red-600 animate-pulse'
+                    ? 'bg-destructive animate-pulse'
                     : 'bg-[hsl(var(--navy))] hover:bg-[hsl(var(--navy))]/90'
                 }`}
               >
@@ -309,7 +309,7 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
               <div className="font-mono text-2xl font-bold tabular-nums">
                 {mm}:{ss}
                 {phase === 'recording' && (
-                  <span className="ml-2 text-xs uppercase tracking-wider text-red-600">REC</span>
+                  <span className="ml-2 text-xs uppercase tracking-wider text-destructive">REC</span>
                 )}
               </div>
             )}
@@ -329,11 +329,11 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
                       <span
                         className={`flex h-5 w-5 items-center justify-center rounded-full border ${
                           st === 'done'
-                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                            ? 'bg-state-approved border-state-approved text-white'
                             : st === 'active'
                             ? 'border-[hsl(var(--navy))] text-[hsl(var(--navy))]'
                             : st === 'failed'
-                            ? 'bg-red-600 border-red-600 text-white'
+                            ? 'bg-destructive border-destructive text-white'
                             : 'border-muted-foreground/40 text-muted-foreground'
                         }`}
                       >
@@ -363,7 +363,7 @@ export function VoicePNRecorder({ projectId, open, onOpenChange }: VoicePNRecord
                 })}
               </ul>
               {phase === 'failed' && errorMsg && (
-                <p className="text-xs text-red-600">{errorMsg}</p>
+                <p className="text-xs text-destructive">{errorMsg}</p>
               )}
               {isProcessing && (
                 <p className="text-xs text-muted-foreground">

@@ -863,9 +863,9 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
 
             {/* Warning if SOV is not locked (contract mode only) */}
             {!selectedCOId && sovNotLocked && selectedContractId && (
-              <Alert className="border-amber-500/50 bg-amber-500/10">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-700">
+              <Alert className="border-state-open/50 bg-state-open/10">
+                <AlertCircle className="h-4 w-4 text-state-open" />
+                <AlertDescription className="text-state-open-foreground">
                   The SOV for this contract is not locked yet. Lock the SOV before creating invoices to prevent billing against draft values.
                 </AlertDescription>
               </Alert>
@@ -946,7 +946,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                                 className={cn(
                                   'font-medium',
                                   fullyBilled
-                                    ? 'text-green-600 dark:text-green-400'
+                                    ? 'text-state-approved'
                                     : 'text-muted-foreground'
                                 )}
                               >
@@ -981,7 +981,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                                     <span
                                       className={cn(
                                         'font-medium',
-                                        newTotalPct >= 99.95 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+                                        newTotalPct >= 99.95 ? 'text-state-approved' : 'text-muted-foreground'
                                       )}
                                     >
                                       {newTotalPct.toFixed(1)}% total
@@ -1146,7 +1146,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                                 <span className={cn(
                                   "font-medium",
                                   item.maxAllowedPercent === 0 
-                                    ? "text-green-600 dark:text-green-400" 
+                                    ? "text-state-approved" 
                                     : "text-muted-foreground"
                                 )}>
                                   {item.maxAllowedPercent === 0 
@@ -1159,7 +1159,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                               {item.enabled && (
                                 <>
                                   {item.maxAllowedPercent === 0 ? (
-                                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                    <div className="flex items-center gap-2 text-sm text-state-approved">
                                       <CheckCircle className="h-4 w-4" />
                                       <span>Fully billed (100%)</span>
                                     </div>
@@ -1187,7 +1187,7 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
                                           </div>
                                           <span className={cn(
                                             "font-medium",
-                                            newTotalPercent === 100 ? "text-green-600 dark:text-green-400" : 
+                                            newTotalPercent === 100 ? "text-state-approved" : 
                                             "text-muted-foreground"
                                           )}>
                                             {newTotalPercent.toFixed(1)}% total

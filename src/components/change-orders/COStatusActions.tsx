@@ -817,7 +817,7 @@ export function COStatusActions({
             </Button>
           )}
           {canCloseForPricing && (
-            <Button size="sm" variant="outline" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={doCloseForPricing} disabled={acting}>
+            <Button size="sm" variant="outline" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1 border-state-open/30 text-state-open-foreground hover:bg-state-open-bg" onClick={doCloseForPricing} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
               Close CO for Final Pricing
             </Button>
@@ -1007,7 +1007,7 @@ export function COStatusActions({
                     placeholder="e.g. our error, goodwill, covered by allowance…"
                     className="mt-1 resize-none"
                   />
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                  <p className="text-[10px] text-state-open mt-1">
                     {money(gcCostBase)} will hit your margin with no owner revenue.
                   </p>
                 </div>
@@ -1018,7 +1018,7 @@ export function COStatusActions({
           {/* Backcharge fields for damaged_by_others */}
           {isDamagedByOthers && isGC && !forwardsToGC && (
             <div className="space-y-3 py-2 border-t border-border">
-              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-state-open flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 This CO is for damage caused by another trade. A backcharge will be created.
               </p>

@@ -559,7 +559,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 text-xs gap-1 text-emerald-600"
+                className="h-8 text-xs gap-1 text-state-approved"
                 onClick={() => navigate(`/project/${projectId}/invoices`)}
               >
                 <Receipt className="h-3.5 w-3.5" /> {linkedInvoice.invoice_number}
@@ -744,7 +744,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     <div className="flex items-center gap-3 mt-3">
                       <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                          className="h-full rounded-full bg-state-approved transition-all duration-500"
                           style={{ width: `${lineItems.length > 0 ? (pricedCount / lineItems.length) * 100 : 0}%` }}
                         />
                       </div>
@@ -858,7 +858,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <div className="flex items-center gap-2">
                         <span className={cn(
                           'inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold text-white shrink-0',
-                          role === 'GC' ? 'bg-blue-500' : role === 'TC' ? 'bg-emerald-500' : 'bg-amber-500',
+                          role === 'GC' ? 'bg-type-sov' : role === 'TC' ? 'bg-state-approved' : 'bg-state-open',
                         )}>
                           {role.charAt(0)}
                         </span>

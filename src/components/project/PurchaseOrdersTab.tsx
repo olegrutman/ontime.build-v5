@@ -989,10 +989,10 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     <>
       <div className="space-y-6">
         {isProjectNotActive && (
-          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
-            <AlertDescription className="text-amber-700 dark:text-amber-300">
+          <Alert className="border-state-open/30 bg-state-open-bg">
+            <AlertTriangle className="h-4 w-4 text-state-open" />
+            <AlertTitle className="text-state-open-foreground">Project Setup Incomplete</AlertTitle>
+            <AlertDescription className="text-state-open-foreground">
               Project setup incomplete. Waiting for required parties.
             </AlertDescription>
           </Alert>

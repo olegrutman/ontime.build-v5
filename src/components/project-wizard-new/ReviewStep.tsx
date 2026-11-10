@@ -128,8 +128,8 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
                     <Badge 
                       variant="outline" 
                       className={member.status === 'Accepted' 
-                        ? 'text-green-600 border-green-600' 
-                        : 'text-yellow-600 border-yellow-600'
+                        ? 'text-state-approved border-state-approved' 
+                        : 'text-state-open border-state-open'
                       }
                     >
                       {member.status}

@@ -23,9 +23,9 @@ function getPasswordStrength(password: string): { score: number; label: string; 
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
   if (score <= 2) return { score, label: 'Weak', color: 'bg-destructive' };
-  if (score <= 3) return { score, label: 'Fair', color: 'bg-yellow-500' };
-  if (score <= 4) return { score, label: 'Good', color: 'bg-blue-500' };
-  return { score, label: 'Strong', color: 'bg-green-500' };
+  if (score <= 3) return { score, label: 'Fair', color: 'bg-state-open' };
+  if (score <= 4) return { score, label: 'Good', color: 'bg-type-sov' };
+  return { score, label: 'Strong', color: 'bg-state-approved' };
 }
 
 const schema = z.object({

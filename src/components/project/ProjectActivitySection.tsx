@@ -40,21 +40,21 @@ const activityIcons: Record<string, React.ComponentType<{ className?: string }>>
 };
 
 const activityColors: Record<string, string> = {
-  INVITE_SENT: 'text-blue-500',
-  INVITE_ACCEPTED: 'text-green-500',
+  INVITE_SENT: 'text-type-sov',
+  INVITE_ACCEPTED: 'text-state-approved',
   SCOPE_UPDATED: 'text-purple-500',
-  CONTRACT_UPDATED: 'text-orange-500',
-  CHANGE_ORDER_APPROVED: 'text-green-500',
-  CHANGE_ORDER_SUBMITTED: 'text-amber-500',
+  CONTRACT_UPDATED: 'text-state-open',
+  CHANGE_ORDER_APPROVED: 'text-state-approved',
+  CHANGE_ORDER_SUBMITTED: 'text-state-open',
   CHANGE_ORDER_REJECTED: 'text-destructive',
-  FC_HOURS_SUBMITTED: 'text-blue-500',
+  FC_HOURS_SUBMITTED: 'text-type-sov',
   FC_HOURS_UPDATED: 'text-purple-500',
   PROJECT_CREATED: 'text-primary',
   STATUS_CHANGED: 'text-primary',
-  INVOICE_SUBMITTED: 'text-blue-500',
-  INVOICE_APPROVED: 'text-green-500',
+  INVOICE_SUBMITTED: 'text-type-sov',
+  INVOICE_APPROVED: 'text-state-approved',
   INVOICE_REJECTED: 'text-destructive',
-  INVOICE_PAID: 'text-green-500',
+  INVOICE_PAID: 'text-state-approved',
 };
 
 // Activity types relevant to each role

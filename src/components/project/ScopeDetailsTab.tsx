@@ -157,10 +157,10 @@ export function ScopeDetailsTab({ projectId }: Props) {
   if (!isComplete) {
     return (
       <div className="space-y-6">
-        <div className="sticky top-0 z-30 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div className="sticky top-0 z-30 bg-state-open-bg border border-state-open/30 rounded-xl p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-              <ClipboardList className="h-5 w-5 text-amber-600" />
+            <div className="h-10 w-10 rounded-lg bg-state-open-bg flex items-center justify-center shrink-0">
+              <ClipboardList className="h-5 w-5 text-state-open" />
             </div>
             <div>
               <p className="font-semibold text-sm">Setup Project Scope & Details</p>
@@ -169,7 +169,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
           </div>
           <Button
              onClick={() => navigate(`/project/${projectId}/setup`)}
-            className="bg-amber-500 hover:bg-amber-600 text-white shrink-0"
+            className="bg-state-open hover:bg-state-open text-white shrink-0"
           >
             Get Started
             <ChevronRight className="h-4 w-4 ml-1" />
@@ -258,17 +258,17 @@ export function ScopeDetailsTab({ projectId }: Props) {
 
           <div className="flex flex-wrap gap-1.5">
             {((profile.foundation_types as string[]) || []).map(f => (
-              <Badge key={f} variant="outline" className="text-xs border-amber-300 text-amber-700 dark:text-amber-400">{f}</Badge>
+              <Badge key={f} variant="outline" className="text-xs border-state-open/30 text-state-open-foreground">{f}</Badge>
             ))}
             {profile.roof_type && (
-              <Badge variant="outline" className="text-xs border-amber-300 text-amber-700 dark:text-amber-400">{profile.roof_type}</Badge>
+              <Badge variant="outline" className="text-xs border-state-open/30 text-state-open-foreground">{profile.roof_type}</Badge>
             )}
           </div>
 
           {activeFeatures.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {activeFeatures.map(f => (
-                <Badge key={f.key} className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
+                <Badge key={f.key} className="text-xs bg-state-approved-bg text-state-approved-foreground border-0">
                   <CheckCircle2 className="h-3 w-3 mr-1" /> {f.label}
                 </Badge>
               ))}
@@ -294,7 +294,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
                 className="flex items-center gap-2 text-sm py-1.5 px-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
                 onClick={() => setSelectedSection(sec.slug)}
               >
-                <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                <div className="h-2 w-2 rounded-full bg-state-approved shrink-0" />
                 <span className="flex-1 truncate">{sec.label}</span>
                 <span className="text-muted-foreground text-xs">{sec.count} items</span>
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -320,7 +320,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
                 const onItems = sectionItems.filter(si => onSelections.some(sel => sel.scope_item_id === si.id));
                 return onItems.map(item => (
                   <div key={item.id} className="flex items-center gap-2 py-1.5 px-2 rounded-md bg-muted/30">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-state-approved shrink-0" />
                     <span className="text-sm">{item.label}</span>
                   </div>
                 ));
@@ -376,7 +376,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
             <CardTitle className="text-base font-semibold">Contract Summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-sm text-amber-600">
+            <div className="flex items-center gap-2 text-sm text-state-open">
               <AlertCircle className="h-4 w-4" />
               <span>No contracts configured yet</span>
             </div>

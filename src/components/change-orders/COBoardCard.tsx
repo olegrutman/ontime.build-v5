@@ -46,12 +46,12 @@ function getProgress(status: string): number {
 /** Status-mapped pulsing dot color (BUG 4) */
 function getDotColor(status: string): string {
   switch (status) {
-    case 'submitted': return 'bg-amber-500';
-    case 'closed_for_pricing': return 'bg-yellow-500';
+    case 'submitted': return 'bg-state-open';
+    case 'closed_for_pricing': return 'bg-state-open';
     case 'work_in_progress':
     case 'draft':
-    case 'shared': return 'bg-blue-500';
-    case 'approved': return 'bg-emerald-500';
+    case 'shared': return 'bg-type-sov';
+    case 'approved': return 'bg-state-approved';
     case 'rejected': return 'bg-destructive';
     case 'contracted': return 'bg-muted-foreground';
     case 'withdrawn': return 'bg-muted-foreground';
@@ -65,9 +65,9 @@ function fmtCurrency(value: number) {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  GC: 'bg-blue-500',
-  TC: 'bg-emerald-500',
-  FC: 'bg-amber-500',
+  GC: 'bg-type-sov',
+  TC: 'bg-state-approved',
+  FC: 'bg-state-open',
 };
 
 function getAssignedRole(createdByRole: string | null): string | null {

@@ -23,10 +23,10 @@ function fmtCurrency(value: number) {
 }
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'bg-amber-100 dark:bg-amber-950/30', text: 'text-amber-700 dark:text-amber-400', label: 'Pending' },
-  disputed: { bg: 'bg-red-100 dark:bg-red-950/30', text: 'text-red-700 dark:text-red-400', label: 'Disputed' },
-  accepted: { bg: 'bg-blue-100 dark:bg-blue-950/30', text: 'text-blue-700 dark:text-blue-400', label: 'Accepted' },
-  deducted: { bg: 'bg-emerald-100 dark:bg-emerald-950/30', text: 'text-emerald-700 dark:text-emerald-400', label: 'Deducted' },
+  pending: { bg: 'bg-state-open-bg', text: 'text-state-open-foreground', label: 'Pending' },
+  disputed: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Disputed' },
+  accepted: { bg: 'bg-type-sov/10', text: 'text-type-sov', label: 'Accepted' },
+  deducted: { bg: 'bg-state-approved-bg', text: 'text-state-approved-foreground', label: 'Deducted' },
   withdrawn: { bg: 'bg-muted', text: 'text-muted-foreground', label: 'Withdrawn' },
 };
 
@@ -137,7 +137,7 @@ export function BackchargesList({ projectId }: BackchargesListProps) {
                     Charged to: <span className="font-medium text-foreground">{bc.responsible_party_name ?? bc.responsible_org?.name ?? 'Unassigned'}</span>
                   </p>
                   {bc.dispute_note && (
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1 italic">
+                    <p className="text-xs text-destructive mt-1 italic">
                       Dispute: {bc.dispute_note}
                     </p>
                   )}

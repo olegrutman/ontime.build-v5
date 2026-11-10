@@ -191,7 +191,7 @@ export function PackSelector({
             return (
               <Card
                 key={pack.name}
-                className={`cursor-pointer transition-colors ${isOrdered ? 'border-amber-300 bg-amber-50/50 hover:border-amber-400 dark:border-amber-700 dark:bg-amber-950/20' : 'hover:border-primary/50'}`}
+                className={`cursor-pointer transition-colors ${isOrdered ? 'border-state-open/30 bg-state-open/50 hover:border-state-open' : 'hover:border-primary/50'}`}
                 onClick={handlePackClick}
               >
                 <CardContent className="p-3">
@@ -202,7 +202,7 @@ export function PackSelector({
                         <div className="flex items-center gap-1.5">
                           <p className="font-medium text-sm truncate">{pack.name}</p>
                           {isOrdered && (
-                            <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-700">
+                            <Badge className="text-[10px] bg-state-open-bg text-state-open-foreground border-state-open/30">
                               <ShoppingCart className="h-3 w-3 mr-0.5" />
                               Already Ordered
                             </Badge>
@@ -214,7 +214,7 @@ export function PackSelector({
                       </div>
                     </div>
                     {allMatched && (
-                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-state-approved shrink-0" />
                     )}
                   </div>
                 </CardContent>

@@ -770,7 +770,7 @@ export function COMaterialsPanel({
       </div>
 
       {!isResponsibleForMaterials && responsibleLabel && (
-        <div className="px-4 py-2 border-b border-border bg-amber-50/60 text-[11px] text-amber-900 flex items-center gap-1.5">
+        <div className="px-4 py-2 border-b border-border bg-state-open/60 text-[11px] text-state-open-foreground flex items-center gap-1.5">
           <Package className="h-3 w-3 shrink-0" />
           <span>
             <span className="font-semibold">{responsibleLabel}</span> is responsible for materials on this order — items and pricing are entered by {responsibleLabel}.
@@ -869,7 +869,7 @@ export function COMaterialsPanel({
                           <div className="flex items-center justify-end gap-1">
                             {isEditingMat ? (
                               <>
-                                <button onClick={() => commitMatEdit(material.id)} disabled={savingMatEdit} className="text-emerald-700 hover:text-emerald-800 p-0.5" title="Save">
+                                <button onClick={() => commitMatEdit(material.id)} disabled={savingMatEdit} className="text-state-approved-foreground hover:text-state-approved-foreground p-0.5" title="Save">
                                   {savingMatEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-xs font-bold">✓</span>}
                                 </button>
                                 <button onClick={() => { setEditingMatId(null); setMatDraft(null); }} disabled={savingMatEdit} className="text-muted-foreground hover:text-foreground p-0.5" title="Cancel">

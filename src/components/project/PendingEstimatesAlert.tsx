@@ -46,9 +46,9 @@ export function PendingEstimatesAlert({ projectId, onReview }: PendingEstimatesA
   const total = pending.reduce((sum, e) => sum + (e.total || 0), 0);
 
   return (
-    <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+    <div className="rounded-2xl border border-state-open/40 bg-state-open/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex items-start gap-3 flex-1 min-w-0">
-        <FileText className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <FileText className="h-5 w-5 text-state-open shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-sm font-semibold">
             {pending.length} material {pending.length === 1 ? 'estimate' : 'estimates'} waiting for your approval

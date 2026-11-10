@@ -26,11 +26,11 @@ const cards: Array<{
     cta: 'Start speaking',
     Icon: Mic,
     accent: {
-      ring: 'hover:border-orange-300',
-      iconBg: 'bg-orange-50',
-      iconText: 'text-orange-600',
-      hoverIconBg: 'group-hover:bg-orange-600 group-hover:text-white',
-      ctaText: 'text-orange-600',
+      ring: 'hover:border-state-open/30',
+      iconBg: 'bg-state-open-bg',
+      iconText: 'text-state-open',
+      hoverIconBg: 'group-hover:bg-state-open group-hover:text-white',
+      ctaText: 'text-state-open',
     },
   },
   {
@@ -40,11 +40,11 @@ const cards: Array<{
     cta: 'Launch wizard',
     Icon: Sparkles,
     accent: {
-      ring: 'hover:border-blue-300',
-      iconBg: 'bg-blue-50',
-      iconText: 'text-blue-600',
-      hoverIconBg: 'group-hover:bg-blue-600 group-hover:text-white',
-      ctaText: 'text-blue-600',
+      ring: 'hover:border-type-sov/30',
+      iconBg: 'bg-type-sov/10',
+      iconText: 'text-type-sov',
+      hoverIconBg: 'group-hover:bg-type-sov group-hover:text-white',
+      ctaText: 'text-type-sov',
     },
   },
   {

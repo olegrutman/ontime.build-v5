@@ -306,7 +306,7 @@ export function CreateInvoiceDialog({
                     const isOverbilled = remaining < 0;
 
                     return (
-                      <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
+                      <TableRow key={item.id} className={isOverbilled ? 'bg-destructive/10' : ''}>
                         <TableCell>
                           <Input
                             value={item.description}
@@ -348,7 +348,7 @@ export function CreateInvoiceDialog({
                         <TableCell className="text-right">
                           <span className={cn(
                             'font-medium',
-                            isOverbilled ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+                            isOverbilled ? 'text-destructive' : 'text-muted-foreground'
                           )}>
                             {formatCurrency(remaining)}
                             {isOverbilled && ' ⚠'}
@@ -401,7 +401,7 @@ export function CreateInvoiceDialog({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Retainage ({retainagePercent}%):</span>
-                <span className="font-medium text-amber-600">-{formatCurrency(retainageAmount)}</span>
+                <span className="font-medium text-state-open">-{formatCurrency(retainageAmount)}</span>
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="font-medium">Total Due:</span>

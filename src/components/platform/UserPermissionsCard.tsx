@@ -128,7 +128,7 @@ export function UserPermissionsCard({ memberships, permissionsMap, isOwner, onSa
                       <p className="text-xs text-muted-foreground italic">Admin — all permissions granted</p>
                     )}
                     {!m.is_admin && perms === null && (
-                      <p className="text-xs text-amber-600 italic">
+                      <p className="text-xs text-state-open italic">
                         Stored overrides not visible — showing role defaults. Toggles disabled.
                       </p>
                     )}

@@ -127,7 +127,7 @@ export function getNavGroups(isTM: boolean, isSupplier: boolean, isFC = false): 
 function AttentionBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="bg-amber-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 px-1">
+    <span className="bg-state-open text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 px-1">
       {count}
     </span>
   );
@@ -157,7 +157,7 @@ function NavRow({
         'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full',
         active
           ? 'bg-white/15 text-white'
-          : 'text-slate-300 hover:text-white hover:bg-white/10'
+          : 'text-muted-foreground hover:text-white hover:bg-white/10'
       )}
     >
       <Icon className="w-4 h-4 shrink-0" strokeWidth={1.8} />
@@ -166,7 +166,7 @@ function NavRow({
       {hasBadge ? (
         <AttentionBadge count={attentionCount!} />
       ) : item.premium ? (
-        <Lock className="w-3 h-3 text-slate-500 shrink-0" />
+        <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
       ) : null}
     </button>
   );
@@ -220,7 +220,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false 
         {/* Back to Dashboard */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left text-slate-400 hover:text-white hover:bg-white/10"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left text-muted-foreground hover:text-white hover:bg-white/10"
         >
           <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.8} />
           <span>Dashboard</span>
@@ -228,19 +228,19 @@ export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false 
 
         {/* Search / Jump to */}
         <div className="relative mt-2 mb-1">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Jump to…"
-            className="w-full bg-white/5 focus:bg-white/10 text-[12px] text-white placeholder:text-slate-500 rounded-lg pl-7 pr-2 py-1.5 outline-none border border-transparent focus:border-white/15 transition-colors"
+            className="w-full bg-white/5 focus:bg-white/10 text-[12px] text-white placeholder:text-muted-foreground rounded-lg pl-7 pr-2 py-1.5 outline-none border border-transparent focus:border-white/15 transition-colors"
           />
         </div>
 
         {searchResults ? (
           <div className="space-y-0.5 mt-1">
             {searchResults.length === 0 ? (
-              <p className="text-[12px] text-slate-500 px-3 py-2">No matches.</p>
+              <p className="text-[12px] text-muted-foreground px-3 py-2">No matches.</p>
             ) : (
               searchResults.map((item) => (
                 <NavRow
@@ -258,7 +258,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false 
             {groups.map((group) => (
               <div key={group.key} className={cn(group.label ? 'mt-3' : 'mt-2')}>
                 {group.label && (
-                  <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {group.label}
                   </div>
                 )}
@@ -281,7 +281,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false 
               <div className="mt-3">
                 <button
                   onClick={() => setMoreOpen((v) => !v)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full text-slate-400 hover:text-white hover:bg-white/10"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full text-muted-foreground hover:text-white hover:bg-white/10"
                 >
                   <ChevronDown
                     className={cn('w-4 h-4 shrink-0 transition-transform', !showMore && '-rotate-90')}
@@ -322,7 +322,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false 
         )}
         <button
           onClick={() => navigate('/profile')}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full text-slate-300 hover:text-white hover:bg-white/10"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full text-muted-foreground hover:text-white hover:bg-white/10"
         >
           <Avatar className="h-6 w-6">
             <AvatarFallback className="text-[9px] bg-primary text-primary-foreground">
@@ -333,7 +333,7 @@ export function ProjectSidebar({ isSupplier = false, isTM = false, isFC = false 
         </button>
         <button
           onClick={() => signOut()}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full text-slate-300 hover:text-white hover:bg-white/10"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors text-left w-full text-muted-foreground hover:text-white hover:bg-white/10"
         >
           <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.8} />
           <span>Sign out</span>

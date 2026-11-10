@@ -722,7 +722,7 @@ export function LaborEntryForm({
                 <div className="h-8 w-px bg-border" />
                 <div className="flex flex-col">
                   <span className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground">Est. margin</span>
-                  <span className={cn('text-lg font-bold', marginDollars >= 0 ? 'text-emerald-600' : 'text-destructive')} style={mono}>
+                  <span className={cn('text-lg font-bold', marginDollars >= 0 ? 'text-state-approved' : 'text-destructive')} style={mono}>
                     {marginPercent.toFixed(1)}%
                   </span>
                 </div>

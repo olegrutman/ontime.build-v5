@@ -124,7 +124,7 @@ export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: 
         <span
           className={cn(
             'text-xs font-semibold px-2 py-0.5 rounded-full',
-            state === 'paid' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+            state === 'paid' ? 'bg-state-approved/15 text-state-approved-foreground'
               : state === 'not_billed' ? 'bg-muted text-muted-foreground'
               : 'bg-secondary/15 text-secondary',
           )}
@@ -136,7 +136,7 @@ export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: 
       <div className="flex items-center gap-1.5">
         {steps.map((s, i) => (
           <div key={s} className="flex-1">
-            <div className={cn('h-1.5 rounded-full', i < reached ? 'bg-emerald-500' : 'bg-muted')} />
+            <div className={cn('h-1.5 rounded-full', i < reached ? 'bg-state-approved' : 'bg-muted')} />
             <p className="mt-1 text-[0.6rem] uppercase tracking-wider text-muted-foreground">{s}</p>
           </div>
         ))}
@@ -165,7 +165,7 @@ export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: 
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5 font-mono text-sm">
-                  {inv.status === 'PAID' ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+                  {inv.status === 'PAID' ? <CheckCircle2 className="h-3.5 w-3.5 text-state-approved" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
                   {fmt(inv.amount)}
                 </span>
               </button>

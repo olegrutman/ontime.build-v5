@@ -40,7 +40,7 @@ export function CriticalScheduleCard({ projectId, onNavigate, maxItems = 5 }: Cr
           <span className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Critical Schedule</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <CheckCircle2 className="h-4 w-4 text-state-approved" />
           <span>No critical items — all on track</span>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function CriticalScheduleCard({ projectId, onNavigate, maxItems = 5 }: Cr
                     OVERDUE
                   </Badge>
                 ) : (
-                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-0 text-[10px] shrink-0">
+                  <Badge className="bg-state-open-bg text-state-open-foreground border-0 text-[10px] shrink-0">
                     {daysUntil === 0 ? 'TODAY' : `${daysUntil}d`}
                   </Badge>
                 )}

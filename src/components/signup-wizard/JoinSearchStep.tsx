@@ -159,7 +159,7 @@ export function JoinSearchStep({ onSelectOrg, onBack }: JoinSearchStepProps) {
                     </div>
                   </div>
                   {org.allow_join_requests ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-1" />
+                    <CheckCircle2 className="h-5 w-5 text-state-approved shrink-0 mt-1" />
                   ) : (
                     <Badge variant="outline" className="text-xs shrink-0">Invite Only</Badge>
                   )}

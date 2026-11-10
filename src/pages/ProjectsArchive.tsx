@@ -21,10 +21,10 @@ type ArchiveTab = 'all' | 'active' | 'setup' | 'completed' | 'on_hold' | 'archiv
 
 const TAB_DOTS: Record<ArchiveTab, string> = {
   all: 'bg-primary',
-  active: 'bg-emerald-500',
+  active: 'bg-state-approved',
   setup: 'bg-violet-500',
-  completed: 'bg-blue-500',
-  on_hold: 'bg-amber-500',
+  completed: 'bg-type-sov',
+  on_hold: 'bg-state-open',
   archived: 'bg-muted-foreground',
 };
 

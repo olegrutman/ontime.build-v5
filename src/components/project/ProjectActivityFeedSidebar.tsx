@@ -14,12 +14,12 @@ interface ActivityItem {
 }
 
 const chipColors: Record<string, string> = {
-  INVOICE: 'bg-blue-100 text-blue-700',
+  INVOICE: 'bg-type-sov/10 text-type-sov',
   SCOPE: 'bg-purple-100 text-purple-700',
-  CONTRACT: 'bg-orange-100 text-orange-700',
-  CHANGE_ORDER: 'bg-amber-100 text-amber-700',
-  INVITE: 'bg-emerald-100 text-emerald-700',
-  STATUS: 'bg-slate-100 text-slate-600',
+  CONTRACT: 'bg-state-open-bg text-state-open-foreground',
+  CHANGE_ORDER: 'bg-state-open-bg text-state-open-foreground',
+  INVITE: 'bg-state-approved-bg text-state-approved-foreground',
+  STATUS: 'bg-muted text-muted-foreground',
   FC: 'bg-cyan-100 text-cyan-700',
   DEFAULT: 'bg-muted text-muted-foreground',
 };

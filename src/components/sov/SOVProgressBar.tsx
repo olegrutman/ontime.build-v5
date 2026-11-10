@@ -24,12 +24,12 @@ export function SOVProgressBar({
 
   // Color coding based on percentage
   const getProgressColor = () => {
-    if (isOverbilled) return 'bg-red-500';
-    if (percentage >= 100) return 'bg-green-500';
-    if (percentage >= 75) return 'bg-blue-500';
-    if (percentage >= 50) return 'bg-amber-500';
-    if (percentage >= 25) return 'bg-orange-500';
-    return 'bg-slate-400';
+    if (isOverbilled) return 'bg-destructive';
+    if (percentage >= 100) return 'bg-state-approved';
+    if (percentage >= 75) return 'bg-type-sov';
+    if (percentage >= 50) return 'bg-state-open';
+    if (percentage >= 25) return 'bg-state-open';
+    return 'bg-muted';
   };
 
   const heightClass = {
@@ -65,7 +65,7 @@ export function SOVProgressBar({
           {/* Overbilled indicator */}
           {isOverbilled && (
             <div
-              className="bg-red-600 animate-pulse"
+              className="bg-destructive animate-pulse"
               style={{ width: `${Math.min(overbilledPercent, 50)}%` }}
             />
           )}
@@ -75,7 +75,7 @@ export function SOVProgressBar({
         <div className="flex justify-between items-center mt-1">
           <span className={cn(
             "text-xs font-medium",
-            isOverbilled ? 'text-red-600' : 'text-muted-foreground'
+            isOverbilled ? 'text-destructive' : 'text-muted-foreground'
           )}>
             {percentage.toFixed(0)}% complete
             {isOverbilled && ' (overbilled!)'}

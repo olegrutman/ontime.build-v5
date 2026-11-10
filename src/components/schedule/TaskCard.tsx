@@ -19,7 +19,7 @@ interface TaskCardProps {
 const STATUS_PILL: Record<string, { label: string; className: string }> = {
   not_started: { label: 'Not Started', className: 'bg-muted text-muted-foreground' },
   in_progress: { label: 'In Progress', className: 'bg-primary/15 text-primary' },
-  complete: { label: 'Complete', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+  complete: { label: 'Complete', className: 'bg-state-approved-bg text-state-approved-foreground' },
 };
 
 const TYPE_COLORS: Record<string, string> = {

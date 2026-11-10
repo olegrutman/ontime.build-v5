@@ -15,7 +15,7 @@ export function ImpersonationBanner() {
   if (!isImpersonating) return null;
 
   return (
-    <div className="sticky top-0 z-[100] bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between text-sm font-medium shadow-md">
+    <div className="sticky top-0 z-[100] bg-state-open text-state-open-foreground px-4 py-2 flex items-center justify-between text-sm font-medium shadow-md">
       <div className="flex items-center gap-2">
         <Shield className="h-4 w-4" />
         <span>Viewing as <strong>{targetEmail}</strong> — Support Session</span>

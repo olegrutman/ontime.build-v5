@@ -49,7 +49,7 @@ export function ReturnCard({ returnData, onClick, canViewPricing }: ReturnCardPr
         </div>
 
         {canViewPricing && ['SUBMITTED', 'SUPPLIER_REVIEW', 'APPROVED', 'PRICED', 'CLOSED'].includes(returnData.status) && returnData.net_credit_total > 0 && (
-          <div className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          <div className="text-xs font-medium text-state-approved-foreground">
             {['PRICED', 'CLOSED'].includes(returnData.status) ? 'Net Credit' : 'Est. Credit'}: ${returnData.net_credit_total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
         )}
