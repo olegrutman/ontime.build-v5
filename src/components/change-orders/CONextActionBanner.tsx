@@ -128,6 +128,14 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         ],
       };
     }
+    if (status === 'draft' && priceToUpstream > 0) {
+      return {
+        icon: <Send className="h-5 w-5" />,
+        title: `Priced at ${fmtCurrency(priceToUpstream)} — ready to submit to ${upstream}`,
+        subtitle: 'Review the items below, then submit for approval.',
+        actions: [submitAction],
+      };
+    }
     if (status === 'draft') {
       return {
         icon: <Zap className="h-5 w-5" />,
@@ -218,7 +226,7 @@ export function CONextActionBanner(props: CONextActionBannerProps) {
           </div>
         </div>
         {buttons.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 md:hidden">
             {buttons.map(a => (
               <Button
                 key={a.action}
