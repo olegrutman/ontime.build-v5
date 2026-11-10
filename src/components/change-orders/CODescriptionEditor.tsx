@@ -54,7 +54,7 @@ export function CODescriptionEditor({ coId, status, lineItemId = null, title, de
         {children ?? <Pencil className="h-3.5 w-3.5" />}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>{label}</DialogTitle>
             {sent && <DialogDescription>Prices don't change. Choose whether the other company needs to approve this wording.</DialogDescription>}
