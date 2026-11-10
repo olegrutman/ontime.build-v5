@@ -119,8 +119,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
       const { error } = await supabase
         .from('co_line_items')
         .update({
-          item_name: draftName.trim() || item.item_name,
-          description: draftDesc.trim() || null,
           qty: qtyNum,
           location_tag: draftLocation.trim() || null,
           reason: draftReason || null,
@@ -129,6 +127,14 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         })
         .eq('id', item.id);
       if (error) throw error;
+      const { error: descriptionError } = await supabase.rpc('update_co_description', {
+        _co_id: coId,
+        _line_item_id: item.id,
+        _title: draftName.trim() || item.item_name,
+        _description: draftDesc,
+        _request_review: coStatus !== 'draft',
+      });
+      if (descriptionError) throw descriptionError;
       toast.success('Item updated');
       setEditHeaderOpen(false);
       onRefresh();
