@@ -30,6 +30,8 @@ export function useCORoleContext(
   co: ChangeOrder | null,
   collaborators: COCollaborator[],
   financials: COFinancials,
+  /** Owner chose "Unlock pricing for revision" on an approved order. */
+  revisionUnlocked = false,
 ): UseCORoleContextResult {
   const { currentRole, userOrgRoles } = useAuth();
 
@@ -97,7 +99,11 @@ export function useCORoleContext(
     const fcPostSubmitPricing = isFC && isCollaboratorOrg &&
       ['submitted', 'approved', 'contracted'].includes(co?.status ?? '');
     const baseCanEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted') || fcPostSubmitPricing) && (isGC || isTC || isFC);
-    const canEdit = baseCanEdit && (!isFC || isCollaboratorOrg || isFCCreator);
+    // Approved-order revision: the owning subcontractor may reopen its own pricing.
+    // The approved price keeps governing until the contractor accepts the revision.
+    const revisionOpen = revisionUnlocked && isTC && !!co && co.org_id === myOrgId &&
+      ['approved', 'contracted'].includes(co.status);
+    const canEdit = revisionOpen || baseCanEdit && (!isFC || isCollaboratorOrg || isFCCreator);
     const nteBlocked = co?.pricing_type === 'nte' && !!co?.nte_cap && (financials.nteUsedPercent ?? 0) >= 100;
 
     // External (billable / upstream-facing) edits — locked once the CO is submitted upstream
@@ -114,7 +120,7 @@ export function useCORoleContext(
     const externalFrozenForRole =
       isFC ? (fcFrozen || (submittedOrFinal && !fcPostSubmitPricing))
       : submittedOrFinal;
-    const canEditExternal =
+    const canEditExternal = revisionOpen ||
       !!co && (isGC || isTC || isFC) && !externalFrozenForRole && (!isFC || isCollaboratorOrg || isFCCreator);
 
     // Internal (private cost) edits — NEVER status-locked. Real costs land after
@@ -133,5 +139,5 @@ export function useCORoleContext(
       canRequestFCInput, canCompleteFCInput, nteBlocked, pricingType,
       collaboratorOrgIds, currentCollaborator, fcCollabName, isCollaboratorOrg,
     };
-  }, [co, collaborators, financials, currentRole, userOrgRoles, fcCreatorOrg]);
+  }, [co, collaborators, financials, currentRole, userOrgRoles, fcCreatorOrg, revisionUnlocked]);
 }
