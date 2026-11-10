@@ -139,14 +139,18 @@ export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }
                 <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
               </button>
             ) : isCreator ? (
-              <div className="mt-1 flex max-w-full items-start gap-1.5">
-                <span className="break-words text-sm text-muted-foreground">{userName ?? 'Add a title'}</span>
-                <CODescriptionEditor coId={co.id} status={status} title={co.title ?? ''} description={summary} label="Edit title & description" />
-              </div>
+              <CODescriptionEditor coId={co.id} status={status} title={co.title ?? ''} description={summary} label="Edit title & description"
+                triggerClassName="group mt-1 -mx-1.5 block max-w-full rounded-md px-1.5 py-1 text-left hover:bg-muted/60 transition-colors">
+                <span className="flex items-start gap-1.5 text-sm text-muted-foreground group-hover:text-foreground">
+                  <span className="break-words">{userName ?? 'Add a title'}</span>
+                  <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground break-words whitespace-pre-line">{summary || 'Add a description'}</span>
+              </CODescriptionEditor>
             ) : userName && (
               <p className="text-sm text-muted-foreground mt-1 break-words">{userName}</p>
             )}
-            {summary && <p className="mt-1 text-xs text-muted-foreground break-words whitespace-pre-line">{summary}</p>}
+            {!(isCreator && !canRename && !editing) && summary && <p className="mt-1 text-xs text-muted-foreground break-words whitespace-pre-line">{summary}</p>}
           </div>
 
           {/* TC name / role */}
