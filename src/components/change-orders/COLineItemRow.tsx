@@ -408,7 +408,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-1.5">
                 <p className="min-w-0 break-words font-heading text-foreground leading-tight tracking-tight" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.item_name}</p>
-                {!canEditHeader && isMyOrgItem && coStatus && coStatus !== 'withdrawn' && (
+                {isMyOrgItem && coStatus && coStatus !== 'withdrawn' && (
                   <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <CODescriptionEditor coId={item.co_id} status={coStatus} lineItemId={item.id} title={item.item_name} description={item.description ?? ''} label="Edit item description" onSaved={onRefresh} />
                   </span>
