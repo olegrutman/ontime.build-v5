@@ -360,7 +360,7 @@ export default function COGuidedBuilder() {
           </Button>
           <div className="flex-1 min-w-0">
             <div className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">
-              Guided Change Order
+              {project?.contract_mode === 'tm' ? 'Guided Work Order' : 'Guided Change Order'}
             </div>
             <h1 className="font-heading text-xl font-extrabold truncate">
               {project?.name ?? 'Project'}
