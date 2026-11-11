@@ -36,6 +36,7 @@ interface ApprovedCO {
   location_tag: string | null;
   reason: string | null;
   reason_note: string | null;
+  problem_summary?: string | null;
   pricing_type: string;
   tc_submitted_price?: number | null;
   nte_cap?: number | null;
@@ -109,7 +110,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
           .from(t.co)
-          .select('id, title, co_number, location_tag, reason, reason_note, pricing_type, tc_submitted_price, nte_cap, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
+          .select('id, title, co_number, location_tag, reason, reason_note, problem_summary, pricing_type, tc_submitted_price, nte_cap, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
           .order('created_at', { ascending: false });
@@ -191,6 +192,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
     })();
   }, [open, projectId, currentOrgId, upstreamRole]);
 
+  const [coNotes, setCoNotes] = useState<Record<string, string | null>>({});
   const hasDuplicateContracts = eligibleContracts.length > 1;
 
   const isFixedProgress = (co: ApprovedCO) =>
@@ -275,6 +277,21 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       }
 
       const scopeMap = new Map(scopeItems.map(s => [s.id, s]));
+      const notesByCo: Record<string, string | null> = {};
+      for (const id of ids) {
+        const co = approvedCOs.find(c => c.id === id);
+        const items = scopeItems.filter(item => item.co_id === id);
+        const summary = (co?.problem_summary || co?.reason_note || co?.title || '').trim();
+        const details = items
+          .map(item => {
+            const d = ((item as any).description || '').trim();
+            return d && d !== item.item_name ? `- ${item.item_name}: ${d}` : `- ${item.item_name}`;
+          })
+          .join('\n');
+        const parts = [summary && `**Scope of work:** ${summary}`, details && `**Work items:**\n${details}`].filter(Boolean);
+        notesByCo[id] = parts.length ? parts.join('\n') : null;
+      }
+      setCoNotes(notesByCo);
       const generated: GeneratedLineItem[] = [];
       const coById = new Map(availableCOs.map(c => [c.id, c]));
       const fixedIds = new Set(ids.filter(id => { const c = coById.get(id); return c && isFixedProgress(c); }));
@@ -448,7 +465,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       // Create line items. Attach the parent CO's reason_note as line_notes on the
       // FIRST line for each CO so the scope/description is preserved on the invoice.
       const seenCoIds = new Set<string>();
-      const coNotesMap = new Map(approvedCOs.map(co => [co.id, co.reason_note]));
+      const coNotesMap = new Map(approvedCOs.map(co => [co.id, coNotes[co.id] ?? co.problem_summary ?? co.reason_note]));
       const invoiceLineItems = lineItems.map((li, i) => {
         const isFirstForCO = !seenCoIds.has(li.coId);
         if (isFirstForCO) seenCoIds.add(li.coId);
@@ -504,7 +521,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
               Select approved {isTM ? 'work orders' : 'change orders'} to include in this invoice.
             </p>
 
-            {coV4 && (
+            {(
               <div className="rounded-lg border p-3 bg-muted/30">
                 <Label className="text-[0.7rem] uppercase tracking-wider text-muted-foreground font-semibold">
                   Invoice Mode
