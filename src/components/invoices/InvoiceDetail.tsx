@@ -693,7 +693,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           <div className="flex items-center gap-2">
             <Switch id="show-full-notes" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
             <Label htmlFor="show-full-notes" className="text-sm text-muted-foreground cursor-pointer">
-              {showFullNotes ? 'Full notes' : 'Scope only'}
+              {showFullNotes ? 'Full scope' : 'Scope only'}
             </Label>
           </div>
         </CardHeader>
