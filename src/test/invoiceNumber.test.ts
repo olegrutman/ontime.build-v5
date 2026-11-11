@@ -18,27 +18,33 @@ describe('full invoice order references', () => {
     expect(coTag('CO-FUL-IM-HA-0001')).toBe('CO-FUL-IM-HA-0001');
   });
 
-  it('uses the full order identity in a single-order invoice number', async () => {
-    expect(await buildInvoiceNumber({ projectId: 'project', projectName: 'Cherry Hills', fromOrgName: 'IMIS', toOrgName: 'Haley', coNumber: 'WO-5 C-PA-IM-0005' }))
-      .toBe('INV-CHE-IM-HA-WO-5 C-PA-IM-0005-0001');
+  it('numbers a work order invoice as PROJ-W01', async () => {
+    expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'The Knowles Residence', coNumber: 'WO-KNO-IM-HA-0004' }))
+      .toBe('KNO-W01');
   });
 
-  it('keeps the base-contract numbering unchanged', async () => {
-    expect(await buildInvoiceNumber({ projectId: 'project', projectName: 'Cherry Hills', fromOrgName: 'IMIS', toOrgName: 'Haley' }))
-      .toBe('INV-CHE-IM-HA-0001');
+  it('numbers a change order invoice as PROJ-C01', async () => {
+    expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', coNumber: 'CO-CHE-IM-HA-0001' }))
+      .toBe('CHE-C01');
   });
 
-  it('sequences references containing punctuation literally', async () => {
+  it('numbers contract billing as PROJ-001 and continues its own sequence', async () => {
     like.mockResolvedValue({ data: [
-      { invoice_number: 'INV-CHE-IM-HA-WO-A(1)-0003' },
-      { invoice_number: 'INV-CHE-IM-HA-WO-A1-0099' },
+      { invoice_number: 'CHE-002' }, { invoice_number: 'CHE-W07' }, { invoice_number: 'INV-CHE-IM-HA-0009' },
     ] });
-    expect(await buildInvoiceNumber({ projectId: 'project', projectName: 'Cherry Hills', fromOrgName: 'IMIS', toOrgName: 'Haley', coNumber: 'WO-A(1)' }))
-      .toBe('INV-CHE-IM-HA-WO-A(1)-0004');
+    expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills' })).toBe('CHE-003');
   });
 
-  it('retains multi-order numbering rather than implying one source order', async () => {
-    expect(await buildInvoiceNumber({ projectId: 'project', projectName: 'Cherry Hills', fromOrgName: 'IMIS', toOrgName: 'Haley', multiCoCount: 2, isTM: true }))
-      .toBe('INV-CHE-IM-HA-WOMULTI-0001');
+  it('keeps multi-order invoices on the order sequence', async () => {
+    like.mockResolvedValue({ data: [{ invoice_number: 'CHE-W02' }] });
+    expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', multiCoCount: 2, isTM: true }))
+      .toBe('CHE-W03');
+  });
+
+  it('stays at 8 characters or fewer', async () => {
+    like.mockResolvedValue({ data: [{ invoice_number: 'CHE-W99' }] });
+    const n = await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', coNumber: 'WO-1' });
+    expect(n).toBe('CHE-W100');
+    expect(n.length).toBeLessThanOrEqual(8);
   });
 });
