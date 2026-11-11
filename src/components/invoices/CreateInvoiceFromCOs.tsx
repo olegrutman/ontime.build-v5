@@ -466,7 +466,12 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       // FIRST line for each CO so the scope/description is preserved on the invoice.
       const seenCoIds = new Set<string>();
       const coNotesMap = new Map(approvedCOs.map(co => [co.id, coNotes[co.id] ?? co.problem_summary ?? co.reason_note]));
-      const invoiceLineItems = lineItems.map((li, i) => {
+      const coOrder = new Map(approvedCOs.map((co, idx) => [co.id, idx]));
+      const groupedLines = lineItems
+        .map((li, idx) => ({ li, idx }))
+        .sort((a, b) => ((coOrder.get(a.li.coId) ?? 0) - (coOrder.get(b.li.coId) ?? 0)) || a.idx - b.idx)
+        .map(x => x.li);
+      const invoiceLineItems = groupedLines.map((li, i) => {
         const isFirstForCO = !seenCoIds.has(li.coId);
         if (isFirstForCO) seenCoIds.add(li.coId);
         const co = approvedCOs.find(c => c.id === li.coId);

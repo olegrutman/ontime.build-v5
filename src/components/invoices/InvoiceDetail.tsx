@@ -199,7 +199,9 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         .from('invoice_line_items')
         .select('*')
         .eq('invoice_id', invoiceId)
-        .order('sort_order'),
+        .order('sort_order')
+        .order('source_co_id', { nullsFirst: true })
+        .order('created_at'),
     ]);
 
     if (invoiceRes.data) {
@@ -693,7 +695,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           <div className="flex items-center gap-2">
             <Switch id="show-full-notes" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
             <Label htmlFor="show-full-notes" className="text-sm text-muted-foreground cursor-pointer">
-              {showFullNotes ? 'Full scope' : 'Scope only'}
+              Show full scope
             </Label>
           </div>
         </CardHeader>
