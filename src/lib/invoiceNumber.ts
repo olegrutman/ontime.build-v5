@@ -34,12 +34,12 @@ interface Args {
 }
 
 /**
- * Canonical invoice number: INV-<PROJ>-<FROM>-<TO>[-<FULL ORDER NUMBER>]-0001
- * CO/WO invoices get their own sequence so they never continue (or collide with)
- * the base contract's progress-billing sequence.
+ * Short invoice number (max 8 chars): <PROJ>-001 for contract billing,
+ * <PROJ>-W01 for work orders, <PROJ>-C01 for change orders. Each type has its
+ * own per-project sequence. The full CO/WO reference stays on invoice lines.
  */
 export async function buildInvoiceNumber({
-  projectId, projectName, fromOrgName, toOrgName, coNumber, multiCoCount, isTM = false,
+  projectId, projectName, coNumber, multiCoCount, isTM = false,
 }: Args): Promise<string> {
   let name = projectName ?? null;
   if (!name) {
@@ -47,26 +47,24 @@ export async function buildInvoiceNumber({
     name = data?.name ?? null;
   }
 
-  const parts = ['INV', projectCode(name), orgInitials(fromOrgName), orgInitials(toOrgName)];
-  const tag = multiCoCount && multiCoCount > 1
-    ? `${isTM ? 'WO' : 'CO'}MULTI`
-    : coTag(coNumber);
-  if (tag) parts.push(tag);
-  const prefix = parts.join('-');
+  const order = coTag(coNumber);
+  const isOrder = !!order || (multiCoCount ?? 0) > 1;
+  const type = !isOrder ? '' : (order ? (/^WO/i.test(order) ? 'W' : 'C') : (isTM ? 'W' : 'C'));
+  const prefix = `${projectCode(name)}-${type}`;
 
   const { data } = await supabase
     .from('invoices')
     .select('invoice_number')
     .eq('project_id', projectId)
-    .like('invoice_number', `${prefix.replace(/[\\%_]/g, '\\$&')}-%`);
+    .like('invoice_number', `${prefix.replace(/[\\%_]/g, '\\$&')}%`);
 
   const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`^${escapedPrefix}-(\\d+)$`);
+  const pattern = new RegExp(`^${escapedPrefix}(\\d+)$`);
   let max = 0;
   (data ?? []).forEach(inv => {
     const m = inv.invoice_number?.match(pattern);
     if (m) max = Math.max(max, parseInt(m[1], 10));
   });
 
-  return `${prefix}-${(max + 1).toString().padStart(4, '0')}`;
+  return `${prefix}${(max + 1).toString().padStart(type ? 2 : 3, '0')}`;
 }
