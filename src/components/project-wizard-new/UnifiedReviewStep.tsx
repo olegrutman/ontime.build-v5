@@ -1,3 +1,4 @@
+import { BUILDING_TYPES } from '@/hooks/useSetupWizardV2';
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -134,12 +135,12 @@ export function UnifiedReviewStep({
               {creatorOrgType !== 'SUPPLIER' && (
                 <div>
                   <p className="text-muted-foreground">Material Responsibility</p>
-                  <p className="font-medium">{tmBuildingInfo.materialResponsibility === 'SPLIT' ? 'Split' : tmBuildingInfo.materialResponsibility}</p>
+                  <p className="font-medium">{tmBuildingInfo.materialResponsibility === 'SPLIT' ? 'Split' : tmBuildingInfo.materialResponsibility === 'GC' ? 'General Contractor' : 'Subcontractor'}</p>
                 </div>
               )}
               <div>
                 <p className="text-muted-foreground">Building Type</p>
-                <p className="font-medium">{tmBuildingInfo.buildingType || '—'}</p>
+                <p className="font-medium">{BUILDING_TYPES.find((b) => b.slug === tmBuildingInfo.buildingType)?.label || tmBuildingInfo.buildingType || '—'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Stories</p>
