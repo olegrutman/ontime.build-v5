@@ -335,13 +335,13 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
   // Helper to get initials from company name
   const getOrgInitials = (name: string | undefined): string => {
     if (!name) return 'XX';
-    const cleaned = name.replace(/^(the\s+)/i, '').trim();
+    const cleaned = name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9]/gi, '');
     return cleaned.substring(0, 2).toUpperCase();
   };
 
   const getProjectCode = (name: string | undefined): string => {
     if (!name) return 'XXX';
-    const cleaned = name.replace(/^(the\s+)/i, '').trim();
+    const cleaned = name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9]/gi, '');
     return cleaned.substring(0, 3).toUpperCase();
   };
 

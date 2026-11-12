@@ -79,7 +79,7 @@ export function TMBuildingInfoStep({ data, onChange, hideMaterialResponsibility,
                 <div key={val} className="flex items-center gap-2">
                   <RadioGroupItem value={val} id={`mat-${val}`} />
                   <Label htmlFor={`mat-${val}`} className="cursor-pointer">
-                    {val === 'SPLIT' ? 'Split' : val}
+                    {val === 'SPLIT' ? 'Split' : val === 'GC' ? 'General Contractor' : 'Subcontractor'}
                   </Label>
                 </div>
               ))}

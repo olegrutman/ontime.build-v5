@@ -48,3 +48,16 @@ describe('full invoice order references', () => {
     expect(n.length).toBeLessThanOrEqual(8);
   });
 });
+
+import { projectCode as _projectCode, orgInitials as _orgInitials } from '@/lib/invoiceNumber';
+describe('number prefixes ignore spaces and symbols', () => {
+  it('"QA TEST Remodel 1" -> "QAT" (no space)', () => {
+    expect(_projectCode('QA TEST Remodel 1')).toBe('QAT');
+  });
+  it('"TC_Test" -> "TC"', () => {
+    expect(_orgInitials('TC_Test')).toBe('TC');
+  });
+  it('"A B" org -> "AB"', () => {
+    expect(_orgInitials('A B Framing')).toBe('AB');
+  });
+});

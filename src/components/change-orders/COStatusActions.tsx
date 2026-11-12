@@ -129,6 +129,7 @@ export function COStatusActions({
   const effectiveOwnerPrice = !isNaN(typedOwnerPrice) && typedOwnerPrice > 0
     ? typedOwnerPrice
     : derivedOwnerPrice;
+  const ownerPriceMissing = showOwnerStep && passToOwner === 'yes' && (!effectiveOwnerPrice || effectiveOwnerPrice <= 0);
   const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
   useEffect(() => {
@@ -1048,9 +1049,14 @@ export function COStatusActions({
             </div>
           )}
 
+          {ownerPriceMissing && (
+            <p className="text-xs text-destructive">
+              Enter a markup % or an owner price — or choose "No — we absorb it" — to approve.
+            </p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doApprove} disabled={acting}>
+            <AlertDialogAction onClick={doApprove} disabled={acting || ownerPriceMissing}>
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               {forwardsToGC ? `Send to ${rl.GC}` : isDamagedByOthers && isGC ? 'Approve & Create Backcharge' : 'Approve'}
             </AlertDialogAction>

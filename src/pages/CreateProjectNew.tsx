@@ -245,6 +245,11 @@ export default function CreateProjectNew() {
           role: currentOrg.type as any,
           invite_status: 'ACCEPTED',
           invited_by: user.id,
+          // Remodel/T&M default for who supplies materials; copied onto the
+          // auto-created work-order contract. "Split" stays undecided per order.
+          ...(isTM && tmScope.materialResponsibility !== 'SPLIT'
+            ? { material_responsibility: tmScope.materialResponsibility }
+            : {}),
         }),
         supabase.from('project_team').insert({
           project_id: pid,

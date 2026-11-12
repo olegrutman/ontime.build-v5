@@ -360,11 +360,14 @@ export default function CONewIntakePage() {
   const charCount = text.length;
   const canAnalyze = text.trim().length >= 5 && !isProcessing;
 
-  const docLabel = docType ?? 'CO';
   const inferredFromMode = useMemo(
     () => project?.contract_mode === 'tm' ? 'WO' : 'CO',
     [project],
   );
+  // Remodel / T&M projects only use Work Orders — never offer Change Order.
+  const isTMProject = inferredFromMode === 'WO';
+  const docLabel = isTMProject ? 'WO' : (docType ?? 'CO');
+  const docOptions = (isTMProject ? ['WO'] : ['CO', 'WO']) as ('CO' | 'WO')[];
 
   const examplePrompts = [
     'Owner wants to move the kitchen wall 2ft east, main floor.',
@@ -391,7 +394,7 @@ export default function CONewIntakePage() {
           }
           className="mb-8 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="size-3.5" /> {addToCoId ? 'Back to order' : 'Back to Change Orders'}
+          <ArrowLeft className="size-3.5" /> {addToCoId ? 'Back to order' : isTMProject ? 'Back to Work Orders' : 'Back to Change Orders'}
         </button>
 
         {lines.length === 0 && (
@@ -424,7 +427,7 @@ export default function CONewIntakePage() {
                 existingCO && 'opacity-70',
               )}
             >
-              {(['CO', 'WO'] as const).map((t) => {
+              {docOptions.map((t) => {
                 const active = docLabel === t;
                 return (
                   <button
@@ -570,7 +573,7 @@ export default function CONewIntakePage() {
               {addToCoId && existingCO ? 'Order type' : 'Create as'}
             </p>
             <div className="flex gap-2">
-              {(['CO', 'WO'] as const).map((t) => {
+              {docOptions.map((t) => {
                 const active = docLabel === t;
                 return (
                   <button
@@ -693,7 +696,7 @@ export default function CONewIntakePage() {
                               existingCO && 'cursor-default',
                             )}
                           >
-                            {who}
+                            {who === 'GC' ? rl.GC : rl.TC}
                             {contractDefault === who && (
                               <span className="ml-1 text-[10px] font-normal opacity-60">default</span>
                             )}
