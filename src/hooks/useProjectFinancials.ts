@@ -427,7 +427,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       const { data: allCOs = [] } = await supabase
         .from('change_orders')
-        .select('id, status, document_type, org_id, assigned_to_org_id, created_by_role, originating_org_id, tc_submitted_price, gc_budget, gc_owner_markup_percent, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
+        .select('id, status, document_type, org_id, assigned_to_org_id, created_by_role, originating_org_id, tc_submitted_price, approved_amount, gc_budget, gc_owner_markup_percent, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
         .eq('project_id', projectId)
         .in('status', [...APPROVED_CO_STATUSES, ...PENDING_CO_STATUSES]);
 
@@ -439,7 +439,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const [{ data: l = [] }, { data: m = [] }, { data: e = [] }] = await Promise.all([
           // Actual-cost rows are fetched too: aggregateCOTotals excludes them
           // from revenue but needs them for cost/margin.
-          supabase.from('co_labor_entries').select('id, co_id, org_id, line_total, is_actual_cost, entered_by_role, source_fc_entry_ids').in('co_id', allCOIds),
+          supabase.from('co_labor_entries').select('id, co_id, org_id, line_total, is_actual_cost, entered_by_role, source_fc_entry_ids, co_line_items(approval_status)').in('co_id', allCOIds),
 
           supabase.from('co_material_items').select('co_id, org_id, billed_amount, line_cost').in('co_id', allCOIds),
           supabase.from('co_equipment_items').select('co_id, org_id, billed_amount, cost').in('co_id', allCOIds),

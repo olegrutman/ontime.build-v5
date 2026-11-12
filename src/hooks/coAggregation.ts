@@ -25,6 +25,8 @@ export interface COLike {
   status: string;
   document_type: 'CO' | 'WO' | string;
   tc_submitted_price?: number | null;
+  /** Final value after per-line review; rejected scope must not enter financial rollups. */
+  approved_amount?: number | null;
   /** Owner-facing price the GC set for this CO. Null/0 = not priced yet. */
   gc_budget?: number | null;
   /** GC markup % applied to GC cost to derive the owner price. */
@@ -194,8 +196,10 @@ export function aggregateCOTotals(
     const mine = rows.filter((r) => r.org_id === scopedOrgId);
 
     // Revenue: the viewer's billable rows only.
+    const approvedAmount = c.approved_amount == null ? null : num(c.approved_amount);
+    const scopeApproved = (r: COLineRow) => approvedAmount == null || r.co_line_items?.approval_status !== 'rejected';
     const laborRevenue = mine
-      .filter((r) => !r.is_actual_cost)
+      .filter((r) => !r.is_actual_cost && scopeApproved(r))
       .reduce((s, r) => s + num(r.line_total), 0);
 
     // Own labor cost: the viewer's own actual-cost rows (their crew / internal
@@ -214,6 +218,7 @@ export function aggregateCOTotals(
           r.entered_by_role === 'FC' &&
           !r.is_actual_cost &&
           r.org_id !== scopedOrgId &&
+          scopeApproved(r) &&
           !(r.id && importedFCIds.has(r.id as string)),
       )
       .reduce((s, r) => s + num(r.line_total), 0);
@@ -261,7 +266,7 @@ export function aggregateCOTotals(
       // is exactly the delta the DB pushes into `contract_sum`; fall back to the
       // frozen snapshot when RLS hides the TC's line items from the GC.
       const computedOwed = laborRevenue + matRev + equipRev;
-      const owedToTC = computedOwed > 0 ? computedOwed : snapshot;
+      const owedToTC = approvedAmount ?? (computedOwed > 0 ? computedOwed : snapshot);
       // Everything the GC entered on this CO is the GC's own procurement cost,
       // regardless of the responsibility flag (the flag is often left NULL).
       const gcMatCost = sumOthers(materials, 'line_cost');
@@ -287,10 +292,12 @@ export function aggregateCOTotals(
       };
     }
 
+    const isUpstreamBiller = scopedOrgId === c.org_id
+      || (c.created_by_role !== 'FC' && scopedOrgId === c.assigned_to_org_id);
     return {
       status: c.status,
       document_type: c.document_type,
-      revenue: revLabor + matRev + equipRev,
+      revenue: isUpstreamBiller && approvedAmount != null ? approvedAmount : revLabor + matRev + equipRev,
       cost: ownLaborCost + subcontractCost + matCost + equipCost,
       ownLabor: ownLaborCost,
       subcontract: subcontractCost,
