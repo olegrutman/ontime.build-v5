@@ -979,7 +979,13 @@ export function useDashboardData(): DashboardData {
         // Only fill when the base is empty, so an explicit owner price or base
         // contract is never added to (no double counting).
         if (tmProjectIds.has(pid)) {
-          if (pf.revenue <= 0) pf.revenue = coRevenueByProject.get(pid) || 0;
+          if (pf.revenue <= 0) {
+            pf.revenue = coRevenueByProject.get(pid) || 0;
+            // The approved-WO total is now the project's revenue itself, not an
+            // addition on top of a base contract. Drop the separate CO total so
+            // views computing revenue + approvedCORevenue don't count it twice.
+            pf.approvedCORevenue = 0;
+          }
           const baseCost = findCostContracts(rows, [currentOrg.id])
             .filter(isAwardedContract)
             .reduce((sum, c) => sum + baseSum(c), 0);
