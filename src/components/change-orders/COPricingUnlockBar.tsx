@@ -9,7 +9,7 @@ export function COPricingUnlockBar({ co, canUnlock, unlocked, onToggle }: {
   co: ChangeOrder; canUnlock: boolean; unlocked: boolean; onToggle: (next: boolean) => void;
 }) {
   if (!canUnlock) return null;
-  const approved = Number(co.tc_submitted_price ?? 0);
+  const approved = Number(co.approved_amount ?? co.tc_submitted_price ?? 0);
   return (
     <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
       <div className="min-w-0 flex-1 space-y-1">

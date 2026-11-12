@@ -456,6 +456,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const status = co.status as COStatus;
   const canReviewLineItems = isGC && canApprove && status === 'submitted' && lineItems.length > 1
     && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId);
+  const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
 
@@ -626,11 +627,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} />
           <COPricingUnlockBar
             co={co}
-            canUnlock={isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
+            canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
           />
-          <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />
+          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {

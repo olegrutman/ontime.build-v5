@@ -234,6 +234,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             const ownLabor = financials.viewer.ownLaborToUpstream;
             const currentLabor = props.currentLaborTotal ?? ownLabor;
             const laborDifference = currentLabor - ownLabor;
+            const hasRejectedItems = props.lineItems?.some(item => item.approval_status === 'rejected') ?? false;
             const ownMats = financials.viewer.ownMaterialsTotal;
             const ownEq = financials.viewer.ownEquipmentTotal;
             const ownLaborTax = financials.laborTaxable ? ownLabor * (financials.taxRate / 100) : 0;
@@ -252,8 +253,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
                     <span>{co.status === 'approved' || co.status === 'contracted' ? 'Approved labor' : 'Submitted labor'}</span>
                     <span className="font-mono shrink-0">{fmtCurrency(ownLabor)}</span>
                   </div>
-                  <div className="flex justify-between gap-3 text-xs text-destructive">
-                    <span>Pricing difference · needs review</span>
+                  <div className={cn('flex justify-between gap-3 text-xs', hasRejectedItems ? 'text-muted-foreground' : 'text-destructive')}>
+                    <span>{hasRejectedItems ? 'Rejected during item review' : 'Pricing difference · needs review'}</span>
                     <span className="font-mono shrink-0">{fmtCurrency(laborDifference)}</span>
                   </div>
                 </div>
