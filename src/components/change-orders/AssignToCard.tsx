@@ -1,3 +1,4 @@
+import { ROLE_LONG_NAMES } from '@/lib/roleTerminology';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import type { CORoutingTarget } from '@/hooks/useCORoutingTargets';
@@ -67,7 +68,7 @@ export function AssignToCard({
                 </span>
                 <span className="flex-1 text-sm font-semibold text-foreground">{t.name}</span>
                 <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                  {t.type}
+                  {ROLE_LONG_NAMES[t.type as keyof typeof ROLE_LONG_NAMES] ?? ''}
                 </span>
                 <span
                   className={cn(
