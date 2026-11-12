@@ -1,5 +1,10 @@
 # Roadmap
-- [ ] Add per-item CO/WO approval and rejection with required rejection reasons, an Approve all action, and approved-only contract/billing totals; verify multi-item decisions and phone layouts.
+- [ ] Finish per-item CO/WO approval verification: final phone/build checks and saved invoice readback.
+- [ ] Run autonomous end-to-end QA for T&M/remodel work orders across General Contractor, Subcontractor, Crew and Supplier roles; fix clear high-impact bugs.
+- [ ] Run fixed-contract change-order and line-item invoice QA, including partial rejection, resubmission, payment and approved-only totals.
+- [ ] Run material-order and supplier-side QA from catalog/PO through pricing, delivery and invoice.
+- [ ] Reconcile dashboard and money KPIs for every role against source records.
+- [ ] Run cross-company privacy and 320/394px phone-screen sweeps; fix clear issues and report uncertain product decisions separately.
 - [ ] Enable saved material/equipment responsibility changes for the owning or assigned contractor on COs/WOs, including approved orders; verify saves, defaults, and unchanged approvals.
 - [x] Synchronize creator-owned single-item CO/WO descriptions in both directions; preserve distinct multi-item scope and reconcile WO-KNO-IM-HA-0004. Signed-in header→item and item→header saves verified; multi-item preservation was not completed in-app.
 - [x] Audit 70 live invoices and operational KPI paths; fix dual-link duplicate aggregation, full directional invoice drilldowns, per-project material commitments, unsigned revenue, owner receivables, CO party/cost rollups and misleading cash labels. All 49 paid invoices excluded from pending; 108 financial regressions pass, build OK, signed-in IMIS breakdowns reconcile (5 / $51,648.72 incoming; 7 / $35,882.53 outgoing), 26 phone views clear. Other roles reviewed through source/live-data/tests, not signed-in UI; historical financial records unchanged.
