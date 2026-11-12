@@ -338,9 +338,9 @@ export function AddTeamMemberDialog({
       const currentOrgId = userOrgData?.organization_id;
       const currentOrgType = (userOrgData?.organizations as any)?.type;
       const currentOrgName = (userOrgData?.organizations as any)?.name as string | undefined;
-      const isCreatorUpstream = currentOrgType === 'GC' || (currentOrgType === 'TC' && inviteForm.role === 'Crew');
-      const downstreamPayer = isCreatorUpstream && currentOrgId && inviteForm.role !== 'Supplier'
-        ? await resolveDownstreamPayer({ projectId, currentOrgId, currentOrgType, invitedRole: inviteForm.role })
+      const isCreatorUpstream = currentOrgType === 'GC' || (currentOrgType === 'TC' && selectedRole === 'Crew');
+      const downstreamPayer = isCreatorUpstream && currentOrgId && selectedRole !== 'Supplier'
+        ? await resolveDownstreamPayer({ projectId, currentOrgId, currentOrgType, invitedRole: selectedRole })
         : null;
 
       // Insert into project_team with status = Invited
@@ -499,6 +499,10 @@ export function AddTeamMemberDialog({
       const currentOrgId = userOrgData?.organization_id;
       const currentOrgType = (userOrgData?.organizations as any)?.type;
       const currentOrgName = (userOrgData?.organizations as any)?.name as string | undefined;
+      const isCreatorUpstream = currentOrgType === 'GC' || (currentOrgType === 'TC' && inviteForm.role === 'Crew');
+      const downstreamPayer = isCreatorUpstream && currentOrgId && inviteForm.role !== 'Supplier'
+        ? await resolveDownstreamPayer({ projectId, currentOrgId, currentOrgType, invitedRole: inviteForm.role })
+        : null;
 
       // Insert into project_team with status = Invited
       const { data: teamMember, error: teamError } = await supabase
