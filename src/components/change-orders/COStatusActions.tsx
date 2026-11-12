@@ -901,7 +901,7 @@ export function COStatusActions({
                 {forwardsToGC
                   ? `Send to ${rl.GC}`
                   : itemReview
-                    ? lineReview.approved === 0 ? 'Finish rejection' : lineReview.rejected > 0 ? 'Finish partial approval' : 'Finish approval'
+                    ? !lineReview.complete ? 'Finish review' : lineReview.approved === 0 ? 'Finish rejection' : lineReview.rejected > 0 ? 'Finish partial approval' : 'Finish approval'
                     : 'Approve'}
               </Button>
             </>
