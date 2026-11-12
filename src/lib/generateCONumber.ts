@@ -2,13 +2,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 function getProjectCode(name: string | undefined | null, fallbackId: string): string {
   if (!name) return fallbackId.replace(/-/g, '').substring(0, 3).toUpperCase();
-  const cleaned = name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9 ]/gi, '').trim();
+  const cleaned = name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9]/gi, '');
   return cleaned.substring(0, 3).toUpperCase() || fallbackId.replace(/-/g, '').substring(0, 3).toUpperCase();
 }
 
 function getOrgInitials(name: string | undefined | null, fallbackId: string | null): string {
   if (!name) return (fallbackId ?? 'XX').replace(/-/g, '').substring(0, 2).toUpperCase();
-  return name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9 ]/gi, '').trim().substring(0, 2).toUpperCase() || (fallbackId ?? 'XX').substring(0, 2).toUpperCase();
+  return name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9]/gi, '').substring(0, 2).toUpperCase() || (fallbackId ?? 'XX').substring(0, 2).toUpperCase();
 }
 
 function escapeRegExp(s: string): string {

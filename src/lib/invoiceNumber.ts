@@ -3,13 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 /** "The Maple House" -> "MAP" */
 export function projectCode(name: string | null | undefined): string {
   if (!name) return 'XXX';
-  return name.replace(/^(the\s+)/i, '').trim().substring(0, 3).toUpperCase();
+  return name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9]/gi, '').substring(0, 3).toUpperCase();
 }
 
 /** "TC_Test Framing" -> "TC" */
 export function orgInitials(name: string | null | undefined): string {
   if (!name) return 'XX';
-  return name.replace(/^(the\s+)/i, '').trim().substring(0, 2).toUpperCase();
+  return name.replace(/^(the\s+)/i, '').replace(/[^a-z0-9]/gi, '').substring(0, 2).toUpperCase();
 }
 
 /** Preserve the order's complete identity, including its original CO/WO type. */
