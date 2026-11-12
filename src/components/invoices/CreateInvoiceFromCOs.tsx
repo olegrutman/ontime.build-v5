@@ -552,7 +552,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                         : 'border-border hover:border-primary/40',
                     )}
                   >
-                    <div className="text-xs font-semibold">Per-CO detail</div>
+                    <div className="text-xs font-semibold">{isTM ? 'Per-WO detail' : 'Per-CO detail'}</div>
                     <div className="text-[11px] text-muted-foreground">
                       One line per labor / material / equipment row.
                     </div>
@@ -617,7 +617,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                               {co.pricing_type === 'fixed' ? 'Fixed' : co.pricing_type === 'tm' ? 'T&M' : 'NTE'}
                             </Badge>
                             <Badge variant="outline" className="text-[10px]">
-                              {co.completion_acknowledged_at ? 'Complete' : 'In progress'}
+                              {co.completion_acknowledged_at ? 'Work complete' : 'Work in progress'}
                             </Badge>
                           </div>
                           {(() => {

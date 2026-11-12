@@ -173,7 +173,7 @@ export function COBillingStatusCard({ coId, projectId, status, approvedTotal }: 
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground">No invoice yet for this change order.</p>
+        <p className="text-xs text-muted-foreground">No invoice yet for this order.</p>
       )}
     </div>
   );
