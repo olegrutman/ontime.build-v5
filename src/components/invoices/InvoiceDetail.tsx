@@ -35,21 +35,7 @@ import {
   getAttachPdfPreference,
   setAttachPdfPreference,
 } from '@/lib/invoicePdf';
-
-function extractScopeOfWork(desc: string | null | undefined): string | null {
-  if (!desc) return null;
-  const re = /\*{0,2}\s*scope of work\s*:?\s*\*{0,2}/i;
-  const m = desc.match(re);
-  if (!m || m.index === undefined) {
-    const trimmed = desc.trim();
-    return trimmed || null;
-  }
-  const start = m.index + m[0].length;
-  const rest = desc.slice(start);
-  const stop = rest.match(/\n?\s*\*\*[^*\n]+\*\*/);
-  const body = stop && stop.index !== undefined ? rest.slice(0, stop.index) : rest;
-  return body.trim() || null;
-}
+import { getInvoiceLineScopeText, hasInvoiceLineScopeText } from '@/lib/invoiceLineScope';
 
 
 interface InvoiceDetailProps {
@@ -692,12 +678,14 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Line Items</CardTitle>
-          <div className="flex items-center gap-2">
-            <Switch id="show-full-notes" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
-            <Label htmlFor="show-full-notes" className="text-sm text-muted-foreground cursor-pointer">
-              Show full scope
-            </Label>
-          </div>
+          {hasInvoiceLineScopeText(lineItems) && (
+            <div className="flex items-center gap-2">
+              <Switch id="show-full-notes" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
+              <Label htmlFor="show-full-notes" className="text-sm text-muted-foreground cursor-pointer">
+                Show full scope
+              </Label>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {/* Mobile: stacked cards */}
@@ -708,7 +696,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 : '0';
               const remaining = item.scheduled_value - item.total_billed;
               const isOverbilled = remaining < 0;
-              const noteText = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
+              const noteText = getInvoiceLineScopeText(item, showFullNotes);
               return (
                 <div key={`m-${item.id}`} className={`p-3 ${isOverbilled ? 'bg-destructive/10' : ''}`}>
                   <div className="text-sm font-medium mb-2 break-words">{item.description}</div>
@@ -835,7 +823,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                             )}
                           </div>
                           {(() => {
-                            const text = showFullNotes ? (item.line_notes || null) : extractScopeOfWork(item.line_notes);
+                            const text = getInvoiceLineScopeText(item, showFullNotes);
                             return text ? (
                               <div className="text-xs text-muted-foreground font-normal mt-1 whitespace-pre-wrap">
                                 {text}
