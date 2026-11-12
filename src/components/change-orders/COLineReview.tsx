@@ -68,7 +68,7 @@ export function COLineReviewBar({ coId, items, canReview, onRefresh }: ReviewBar
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           {summary.pending > 0
             ? `${summary.pending} pending · ${summary.approved} approved · ${summary.rejected} rejected`
-            : `${summary.approved} approved · ${summary.rejected} rejected — finish the review in Actions`}
+            : `${summary.approved} approved · ${summary.rejected} rejected${canReview ? ' — finish the review in Actions' : ''}`}
         </p>
       </div>
       {canReview && (

@@ -822,7 +822,9 @@ export function COStatusActions({
       return (
         <div className="co-light-shell px-4 py-3 flex items-center gap-2">
           <Check className="h-4 w-4 co-light-success-text" />
-          <span className="text-sm font-medium text-foreground">Approved</span>
+          <span className="text-sm font-medium text-foreground">
+            {lineReview.rejected > 0 ? `Partially approved — ${lineReview.approved} of ${lineReview.total} items` : 'Approved'}
+          </span>
         </div>
       );
     }
