@@ -6,7 +6,7 @@ import { FCInputRequestCard } from './FCInputRequestCard';
 import { COStatusActions } from './COStatusActions';
 import { COSOVPanel } from './COSOVPanel';
 import { COTeamCard } from './COTeamCard';
-import type { ChangeOrder, COFinancials, COCollaborator, COFCOrgOption, COCreatedByRole } from '@/types/changeOrder';
+import type { ChangeOrder, COFinancials, COCollaborator, COFCOrgOption, COCreatedByRole, COLineItem, COLaborEntry } from '@/types/changeOrder';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { CONTELogEntry } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
@@ -34,6 +34,8 @@ interface COSidebarProps {
   rejectNTEIncrease: UseMutationResult<any, Error, any, unknown>;
   onRefresh: () => void;
   lineItemCount?: number;
+  lineItems?: COLineItem[];
+  laborEntries?: COLaborEntry[];
   markupVisibility?: MarkupVisibility;
   materialResponsible?: 'GC' | 'TC';
   equipmentResponsible?: 'GC' | 'TC';
@@ -115,6 +117,8 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
             financials={financials} collaborators={collaborators}
             onRefresh={onRefresh}
             lineItemCount={props.lineItemCount}
+            lineItems={props.lineItems}
+            laborEntries={props.laborEntries}
           />
         </div>
       </div>

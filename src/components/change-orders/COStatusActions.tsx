@@ -26,8 +26,9 @@ import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
+import { approvedLaborForReview, summarizeLineReview } from '@/lib/coLineReview';
 import { toast } from 'sonner';
-import type { ChangeOrder, COCollaborator, COFinancials, COStatus } from '@/types/changeOrder';
+import type { ChangeOrder, COCollaborator, COFinancials, COStatus, COLineItem, COLaborEntry } from '@/types/changeOrder';
 
 interface COStatusActionsProps {
   co: ChangeOrder;
@@ -41,6 +42,8 @@ interface COStatusActionsProps {
   assignedOrgName?: string;
   onRefresh: () => void;
   lineItemCount?: number;
+  lineItems?: COLineItem[];
+  laborEntries?: COLaborEntry[];
 }
 
 export function COStatusActions({
@@ -55,6 +58,8 @@ export function COStatusActions({
   assignedOrgName,
   onRefresh,
   lineItemCount = 0,
+  lineItems = [],
+  laborEntries = [],
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
   const { shareCO, updateCO } = useChangeOrders(projectId);
@@ -116,11 +121,17 @@ export function COStatusActions({
   const crewApproved = (forwardsToGC || crewDraft) && !!co.crew_approved_at;
   const crewPending = (forwardsToGC || crewDraft) && !co.crew_approved_at;
   const submitAmount = financials?.viewer?.totalToUpstream ?? financials?.grandTotal ?? 0;
+  const itemReview = lineItems.length > 1 && status === 'submitted' && !forwardsToGC;
+  const lineReview = summarizeLineReview(lineItems);
 
   /* GC cost on this CO = everything it will pay out (downstream billable +
-     anything the GC procures itself). Markup % is applied to this number. */
-  const gcCostBase = financials?.grandTotal ?? 0;
-  const showOwnerStep = isGC && !forwardsToGC;
+     anything the GC procures itself). A partial review prices approved labor only. */
+  const approvedReviewLabor = approvedLaborForReview(lineItems, laborEntries);
+  const approvedReviewCost = lineReview.rejected === 0
+    ? (financials?.grandTotal ?? 0)
+    : approvedReviewLabor + (financials?.billableMaterialsTotal ?? 0) + (financials?.billableEquipmentTotal ?? 0);
+  const gcCostBase = itemReview ? approvedReviewCost : (financials?.grandTotal ?? 0);
+  const showOwnerStep = isGC && !forwardsToGC && (!itemReview || lineReview.approved > 0);
   const parsedOwnerMarkup = parseFloat(ownerMarkup.replace(/[^0-9.\-]/g, ''));
   const derivedOwnerPrice = !isNaN(parsedOwnerMarkup) && gcCostBase > 0
     ? gcCostBase * (1 + parsedOwnerMarkup / 100)
@@ -356,6 +367,10 @@ export function COStatusActions({
   }
 
   async function doApprove() {
+    if (itemReview && !lineReview.complete) {
+      toast.error('Approve or reject every item before finishing the review.');
+      return;
+    }
     setActing(true);
     try {
       if (forwardsToGC) {
@@ -405,7 +420,7 @@ export function COStatusActions({
           .eq('id', projectId)
           .single();
         const retPct = projRetainage?.retainage_percent ?? 0;
-        const grandTotalForRetainage = financials?.grandTotal ?? 0;
+        const grandTotalForRetainage = gcCostBase;
         const retainageAmt = grandTotalForRetainage * (retPct / 100);
 
         // Update retainage snapshot on approval
@@ -464,18 +479,34 @@ export function COStatusActions({
           }
         }
 
-        await approveCO.mutateAsync(co.id);
-        toast.success('CO approved');
-        await logActivity('approved', undefined, financials?.grandTotal || undefined);
+        let finalStatus: 'approved' | 'rejected' = 'approved';
+        let approvedAmount = gcCostBase;
+        if (itemReview) {
+          const { data, error } = await supabase.rpc('finalize_co_line_review', { _co_id: co.id });
+          if (error) throw error;
+          const result = data as { status: 'approved' | 'rejected'; approved_amount: number };
+          finalStatus = result.status;
+          approvedAmount = Number(result.approved_amount ?? 0);
+        } else {
+          await approveCO.mutateAsync(co.id);
+        }
+        const partiallyApproved = finalStatus === 'approved' && lineReview.rejected > 0;
+        toast.success(finalStatus === 'rejected'
+          ? 'All items rejected'
+          : partiallyApproved
+            ? `Approved ${lineReview.approved} item${lineReview.approved === 1 ? '' : 's'}; rejected items were excluded`
+            : 'CO approved');
+        await logActivity(finalStatus === 'approved' ? 'approved' : 'rejected',
+          itemReview ? `${lineReview.approved} approved · ${lineReview.rejected} rejected` : undefined,
+          finalStatus === 'approved' ? approvedAmount : undefined);
         // The DB trigger notify_co_status_change already alerts the CO creator,
         // so exclude them here to avoid duplicate notifications.
-        await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined, [
-          co.created_by_user_id,
-        ]);
+        await notifyAllCOParties(finalStatus === 'approved' ? 'CHANGE_APPROVED' : 'CHANGE_REJECTED',
+          finalStatus === 'approved' ? approvedAmount : undefined, [co.created_by_user_id]);
 
         // Auto-create backcharge for damaged_by_others COs
-        if (isDamagedByOthers && user) {
-          const bcAmount = parseFloat(backchargeAmount) || (financials?.grandTotal ?? 0);
+        if (finalStatus === 'approved' && isDamagedByOthers && user) {
+          const bcAmount = parseFloat(backchargeAmount) || approvedAmount;
           const selectedOrg = projectParticipants.find(p => p.org_id === backchargeOrgId);
           await supabase.from('backcharges').insert({
             project_id: projectId,
@@ -688,7 +719,7 @@ export function COStatusActions({
     && !isActiveCollaborator;
   const canReject = ((isGC && status === 'submitted'
     && (co.org_id === currentOrgId || co.assigned_to_org_id === currentOrgId)) || (forwardsToGC && crewPending))
-    && !isActiveCollaborator;
+    && !isActiveCollaborator && !itemReview;
   /* Flow 2 completion */
   const isApproved = status === 'approved';
   const canMarkCompleted = isTC && isApproved && !co.completed_at;
@@ -859,10 +890,21 @@ export function COStatusActions({
             </div>
           )}
           {canApprove && (
-            <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting}>
-              {forwardsToGC ? <Send className="h-3 w-3" /> : <Check className="h-3 w-3" />}
-              {forwardsToGC ? `Send to ${rl.GC}` : 'Approve'}
-            </Button>
+            <>
+              {itemReview && !lineReview.complete && (
+                <p className="text-[0.7rem] text-muted-foreground">
+                  Decide all {lineReview.pending} pending item{lineReview.pending === 1 ? '' : 's'} in Scope &amp; Labor to finish the review.
+                </p>
+              )}
+              <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting || (itemReview && !lineReview.complete)}>
+                {forwardsToGC ? <Send className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+                {forwardsToGC
+                  ? `Send to ${rl.GC}`
+                  : itemReview
+                    ? lineReview.approved === 0 ? 'Finish rejection' : lineReview.rejected > 0 ? 'Finish partial approval' : 'Finish approval'
+                    : 'Approve'}
+              </Button>
+            </>
           )}
           {crewApproved && (
             <Button variant="outline" size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={() => doToggleInternal(!co.kept_internal)} disabled={acting}>
@@ -915,19 +957,25 @@ export function COStatusActions({
       <AlertDialog open={approveOpen} onOpenChange={(open) => {
         setApproveOpen(open);
         if (open && isDamagedByOthers) {
-          setBackchargeAmount(String(financials?.grandTotal ?? 0));
+          setBackchargeAmount(String(gcCostBase));
         }
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{forwardsToGC ? `Send to ${rl.GC}` : (co.document_type === 'WO' ? 'Approve work order' : 'Approve change order')}</AlertDialogTitle>
+            <AlertDialogTitle>{forwardsToGC
+              ? `Send to ${rl.GC}`
+              : itemReview
+                ? lineReview.approved === 0 ? 'Reject all items' : lineReview.rejected > 0 ? 'Finish partial approval' : 'Approve all items'
+                : co.document_type === 'WO' ? 'Approve work order' : 'Approve change order'}</AlertDialogTitle>
             <AlertDialogDescription>
               {forwardsToGC
                 ? `This sends the approved ${co.document_type === 'WO' ? 'work order' : 'change order'} to ${rl.GC} for their approval.`
-                : `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`}
-              {!forwardsToGC && co.pricing_type === 'fixed' && (
+                : itemReview
+                  ? `${lineReview.approved} approved · ${lineReview.rejected} rejected. ${lineReview.approved > 0 ? `Only the approved amount of ${money(gcCostBase)} will be added to the contract.` : 'No amount will be added to the contract.'}`
+                  : `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`}
+              {!forwardsToGC && (!itemReview || lineReview.approved > 0) && co.pricing_type === 'fixed' && (
                 <span className="block mt-1">
-                  The TC will be able to submit an invoice once approved.
+                  The subcontractor will be able to submit an invoice for approved work.
                 </span>
               )}
             </AlertDialogDescription>
@@ -1058,7 +1106,11 @@ export function COStatusActions({
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={doApprove} disabled={acting || ownerPriceMissing}>
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {forwardsToGC ? `Send to ${rl.GC}` : isDamagedByOthers && isGC ? 'Approve & Create Backcharge' : 'Approve'}
+              {forwardsToGC
+                ? `Send to ${rl.GC}`
+                : itemReview
+                  ? lineReview.approved === 0 ? 'Reject all items' : 'Finish review'
+                  : isDamagedByOthers && isGC ? 'Approve & Create Backcharge' : 'Approve'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
