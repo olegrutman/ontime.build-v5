@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Finish per-item CO/WO approval verification: final phone/build checks and saved invoice readback.
+- [x] Add per-item CO/WO review with protected decisions, required rejection reasons, Approve all and approved-only contract/SOV/invoice totals. Verified live mixed review ($1,000 approved / $500 rejected), contract $1,550→$2,550, QAT-W01 draft $1,000 with only the approved item, 364 tests and 320/394px layouts.
 - [ ] Run autonomous end-to-end QA for T&M/remodel work orders across General Contractor, Subcontractor, Crew and Supplier roles; fix clear high-impact bugs.
 - [ ] Run fixed-contract change-order and line-item invoice QA, including partial rejection, resubmission, payment and approved-only totals.
 - [ ] Run material-order and supplier-side QA from catalog/PO through pricing, delivery and invoice.
