@@ -758,6 +758,7 @@ export type Database = {
       change_orders: {
         Row: {
           ai_intake_id: string | null
+          approved_amount: number | null
           approved_at: string | null
           architect_approval_status: string
           architect_approval_token: string | null
@@ -845,6 +846,7 @@ export type Database = {
         }
         Insert: {
           ai_intake_id?: string | null
+          approved_amount?: number | null
           approved_at?: string | null
           architect_approval_status?: string
           architect_approval_token?: string | null
@@ -932,6 +934,7 @@ export type Database = {
         }
         Update: {
           ai_intake_id?: string | null
+          approved_amount?: number | null
           approved_at?: string | null
           architect_approval_status?: string
           architect_approval_token?: string | null
@@ -1753,6 +1756,10 @@ export type Database = {
         Row: {
           ai_confidence: number | null
           ai_reasoning: string | null
+          approval_decided_at: string | null
+          approval_decided_by: string | null
+          approval_rejection_reason: string | null
+          approval_status: string
           catalog_item_id: string | null
           category_name: string | null
           co_id: string
@@ -1781,6 +1788,10 @@ export type Database = {
         Insert: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_rejection_reason?: string | null
+          approval_status?: string
           catalog_item_id?: string | null
           category_name?: string | null
           co_id: string
@@ -1809,6 +1820,10 @@ export type Database = {
         Update: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_rejection_reason?: string | null
+          approval_status?: string
           catalog_item_id?: string | null
           category_name?: string | null
           co_id?: string
@@ -8545,6 +8560,7 @@ export type Database = {
       change_orders_role_view: {
         Row: {
           ai_intake_id: string | null
+          approved_amount: number | null
           approved_at: string | null
           architect_approval_status: string | null
           architect_approved_at: string | null
@@ -8626,6 +8642,7 @@ export type Database = {
         }
         Insert: {
           ai_intake_id?: string | null
+          approved_amount?: never
           approved_at?: string | null
           architect_approval_status?: string | null
           architect_approved_at?: string | null
@@ -8707,6 +8724,7 @@ export type Database = {
         }
         Update: {
           ai_intake_id?: string | null
+          approved_amount?: never
           approved_at?: string | null
           architect_approval_status?: string | null
           architect_approved_at?: string | null
@@ -9054,6 +9072,10 @@ export type Database = {
         Row: {
           ai_confidence: number | null
           ai_reasoning: string | null
+          approval_decided_at: string | null
+          approval_decided_by: string | null
+          approval_rejection_reason: string | null
+          approval_status: string | null
           catalog_item_id: string | null
           category_name: string | null
           co_id: string | null
@@ -9082,6 +9104,10 @@ export type Database = {
         Insert: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_rejection_reason?: string | null
+          approval_status?: string | null
           catalog_item_id?: string | null
           category_name?: string | null
           co_id?: string | null
@@ -9110,6 +9136,10 @@ export type Database = {
         Update: {
           ai_confidence?: number | null
           ai_reasoning?: string | null
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_rejection_reason?: string | null
+          approval_status?: string | null
           catalog_item_id?: string | null
           category_name?: string | null
           co_id?: string | null
@@ -9365,6 +9395,7 @@ export type Database = {
       }
     }
     Functions: {
+      _assert_co_line_reviewer: { Args: { _co_id: string }; Returns: undefined }
       _audit_co_total: { Args: { _co_id: string }; Returns: number }
       _co_target_contract_id: {
         Args: { _org_a: string; _org_b: string; _project_id: string }
@@ -9396,6 +9427,7 @@ export type Database = {
         Args: { _co_id: string; _keep_internal?: boolean }
         Returns: {
           ai_intake_id: string | null
+          approved_amount: number | null
           approved_at: string | null
           architect_approval_status: string
           architect_approval_token: string | null
@@ -9562,6 +9594,7 @@ export type Database = {
       }
       check_org_setup_needed: { Args: never; Returns: Json }
       co_grand_total: { Args: { _co_id: string }; Returns: number }
+      co_proposed_total: { Args: { _co_id: string }; Returns: number }
       co_sov_display_name: {
         Args: { _co_number: string; _title: string }
         Returns: string
@@ -9685,6 +9718,7 @@ export type Database = {
         Args: { _project_id: string }
         Returns: undefined
       }
+      finalize_co_line_review: { Args: { _co_id: string }; Returns: Json }
       finalize_tm_work_order: {
         Args: {
           p_change_order_id: string
@@ -9700,6 +9734,7 @@ export type Database = {
         Args: { _co_id: string }
         Returns: {
           ai_intake_id: string | null
+          approved_amount: number | null
           approved_at: string | null
           architect_approval_status: string
           architect_approval_token: string | null
@@ -10066,6 +10101,10 @@ export type Database = {
         Args: { _project_id: string; _supplier_org_id: string }
         Returns: string
       }
+      review_co_line_items: {
+        Args: { _co_id: string; _decisions: Json }
+        Returns: undefined
+      }
       run_integrity_audit: { Args: { _source?: string }; Returns: string }
       search_catalog: {
         Args: {
@@ -10217,6 +10256,7 @@ export type Database = {
         Args: { _co_id: string; _internal: boolean }
         Returns: {
           ai_intake_id: string | null
+          approved_amount: number | null
           approved_at: string | null
           architect_approval_status: string
           architect_approval_token: string | null
