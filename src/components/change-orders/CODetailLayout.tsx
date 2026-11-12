@@ -38,6 +38,7 @@ import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStickyFooter } from './COStickyFooter';
 import { COLineItemRow } from './COLineItemRow';
+import { COLineItemReview, COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
@@ -375,6 +376,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'approve':
         if (co) {
+          if (lineItems.length > 1) {
+            scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+            toast.info('Review each scope item, then finish the review in Actions.');
+            break;
+          }
           if (!canApprove) { toast.error('You do not have permission to approve'); break; }
           try {
             await approveCO.mutateAsync(co.id);
@@ -384,6 +390,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         break;
       case 'reject':
         if (co) {
+          if (lineItems.length > 1) {
+            scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+            toast.info('Reject individual items with a reason, then finish the review in Actions.');
+            break;
+          }
           if (!canApprove) { toast.error('You do not have permission to reject'); break; }
           const note = window.prompt('Rejection reason:');
           if (note) {
@@ -443,6 +454,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
   const status = co.status as COStatus;
+  const canReviewLineItems = isGC && canApprove && status === 'submitted' && lineItems.length > 1
+    && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId);
+  const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
 
@@ -486,9 +500,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         pricingType: co.pricing_type,
       })
     : null;
-  const tcBillableTotal = financials.billableGrandTotal > 0
+  const tcBillableTotal = co.approved_amount ?? (financials.billableGrandTotal > 0
     ? financials.billableGrandTotal
-    : (crewDerivedPrice?.fcHasSubmitted ? crewDerivedPrice.calculatedPrice : financials.billableGrandTotal);
+    : (crewDerivedPrice?.fcHasSubmitted ? crewDerivedPrice.calculatedPrice : financials.billableGrandTotal));
 
 
 
@@ -500,6 +514,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
     onRefresh: refreshDetail,
     lineItemCount: lineItems.length,
+    lineItems,
+    laborEntries,
     markupVisibility,
     materialResponsible: responsibility.materialResponsible,
     equipmentResponsible: responsibility.equipmentResponsible,
@@ -515,7 +531,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       nteCap={(co as any).nte_cap ?? null}
       value={isFC
         ? Number(financials.viewer.ownLaborToUpstream ?? 0)
-        : Number((co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
+        : Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
     />
   ) : null;
 
@@ -608,14 +624,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* Next step first — one clear action. */}
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} />
+          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} />
           <COPricingUnlockBar
             co={co}
-            canUnlock={isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
+            canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
           />
-          <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />
+          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
@@ -758,6 +774,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
                 {/* Line items */}
                 <div>
+                  <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                   {lineItems.length > 0 && (
                     <div className="hidden md:grid md:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] md:gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
                       <span>#</span>
@@ -780,22 +797,25 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     </div>
                   ) : (
                     lineItems.map((item, idx) => (
-                      <COLineItemRow
-                        key={item.id} item={item}
-                        laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
-                        role={role} isGC={isGC} isTC={isTC} isFC={isFC}
-                        coId={co.id} orgId={myOrgId} coPricingType={pricingType}
-                        coNteCap={co.nte_cap} coNteUsed={financials.laborTotal}
-                        canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
-                        canEditExternal={canEditExternal}
-                        canEditInternal={canEditInternal}
-                        onRefresh={refreshDetail}
-                        isEven={idx % 2 === 0}
-                        index={idx + 1}
-                        markupVisibility={markupVisibility}
-                        crewPricingBase={crewPricingBase}
-                        coStatus={co.status}
-                      />
+                      <div key={item.id}>
+                        <COLineItemRow
+                          item={item}
+                          laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
+                          role={role} isGC={isGC} isTC={isTC} isFC={isFC}
+                          coId={co.id} orgId={myOrgId} coPricingType={pricingType}
+                          coNteCap={co.nte_cap} coNteUsed={financials.laborTotal}
+                          canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
+                          canEditExternal={canEditExternal}
+                          canEditInternal={canEditInternal}
+                          onRefresh={refreshDetail}
+                          isEven={idx % 2 === 0}
+                          index={idx + 1}
+                          markupVisibility={markupVisibility}
+                          crewPricingBase={crewPricingBase}
+                          coStatus={co.status}
+                        />
+                        <COLineItemReview coId={co.id} item={item} canReview={canReviewLineItems} onRefresh={refreshDetail} />
+                      </div>
                     ))
                   )}
                 </div>

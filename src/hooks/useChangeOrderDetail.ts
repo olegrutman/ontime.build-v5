@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
 import { coLaborCost } from '@/lib/coLaborCost';
+import { approvedLaborForReview } from '@/lib/coLineReview';
 
 import type {
   ChangeOrder,
@@ -209,6 +210,10 @@ export function useChangeOrderDetail(coId: string | null) {
     : tcLaborTotal;
   // Bug 2: grandTotal uses tcBillableToGC to avoid double-counting when FC pricing is base
   const grandTotal = tcBillableToGC + materialsTotal + equipmentTotal;
+  const hasPartialLineApproval = co?.approved_amount != null && lineItems.some(item => item.approval_status === 'rejected');
+  const approvedTcBillableToGC = hasPartialLineApproval
+    ? approvedLaborForReview(lineItems, laborEntries)
+    : tcBillableToGC;
   // Bug 4: Split actual costs by role for privacy
   const tcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'TC').reduce((s, e) => s + (e.line_total ?? 0), 0);
   const fcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'FC').reduce((s, e) => s + (e.line_total ?? 0), 0);
@@ -277,10 +282,11 @@ export function useChangeOrderDetail(coId: string | null) {
     ?? 'TC') as 'GC' | 'TC';
   const billableMaterialsTotal = matResp === 'TC' ? materialsTotal : 0;
   const billableEquipmentTotal = eqResp === 'TC' ? equipmentTotal : 0;
-  const billableGrandTotal = tcBillableToGC + billableMaterialsTotal + billableEquipmentTotal;
+  const billableGrandTotal = co?.approved_amount ?? (approvedTcBillableToGC + billableMaterialsTotal + billableEquipmentTotal);
   const billableMaterialsTax = billableMaterialsTotal * taxPct;
   const billableEquipmentTax = billableEquipmentTotal * taxPct;
-  const billableTotalTax = laborTax + billableMaterialsTax + billableEquipmentTax;
+  const billableLaborTax = laborTaxable ? approvedTcBillableToGC * taxPct : 0;
+  const billableTotalTax = billableLaborTax + billableMaterialsTax + billableEquipmentTax;
   const billableGrandTotalWithTax = billableGrandTotal + billableTotalTax;
 
   // Retainage — computed off the billable subtotal (NOT the raw grand total) so the
@@ -303,7 +309,12 @@ export function useChangeOrderDetail(coId: string | null) {
   const viewerLaborTotal = orgId
     ? billableLaborEntries.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.line_total ?? 0), 0)
     : 0;
-  const viewerOwnLaborToUpstream = isUpstreamBiller ? tcBillableToGC : viewerLaborTotal;
+  const approvedViewerLaborTotal = hasPartialLineApproval
+    ? billableLaborEntries
+      .filter(entry => entry.org_id === orgId && lineItems.some(item => item.id === entry.co_line_item_id && item.approval_status === 'approved'))
+      .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0)
+    : viewerLaborTotal;
+  const viewerOwnLaborToUpstream = isUpstreamBiller ? approvedTcBillableToGC : approvedViewerLaborTotal;
   const viewerMaterialsTotal = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.billed_amount ?? 0), 0) : 0;
   const viewerMaterialsCost  = orgId ? materials.filter(m => m.org_id === orgId).reduce((s, m) => s + (m.line_cost ?? 0), 0) : 0;
   const viewerEquipmentTotal = orgId ? equipment.filter(e => e.org_id === orgId).reduce((s, e) => s + (e.billed_amount ?? 0), 0) : 0;
@@ -344,7 +355,7 @@ export function useChangeOrderDetail(coId: string | null) {
     equipmentTotal,
     equipmentCost,
     equipmentMarkup,
-    tcBillableToGC,
+    tcBillableToGC: approvedTcBillableToGC,
     grandTotal,
     billableGrandTotal,
     billableGrandTotalWithTax,
@@ -363,7 +374,7 @@ export function useChangeOrderDetail(coId: string | null) {
     profitMargin,
     nteUsedPercent,
     materialsTax,
-    laborTax,
+    laborTax: billableLaborTax,
     equipmentTax,
     totalTax,
     grandTotalWithTax,

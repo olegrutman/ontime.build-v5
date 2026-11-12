@@ -98,6 +98,8 @@ export interface ChangeOrder {
   tc_snapshot_hourly_rate: number | null;
   tc_snapshot_markup_percent: number | null;
   tc_submitted_price: number | null;
+  /** Final value after scope-item review; null on legacy whole-order approvals. */
+  approved_amount?: number | null;
   fc_pricing_submitted_at: string | null;
   document_type: CODocumentType;
   withdrawn_at: string | null;
@@ -128,6 +130,10 @@ export interface COLineItem {
   description: string | null;
   pricing_type: COPricingType | null;
   nte_cap: number | null;
+  approval_status: 'pending' | 'approved' | 'rejected';
+  approval_rejection_reason: string | null;
+  approval_decided_by: string | null;
+  approval_decided_at: string | null;
   created_at: string;
 }
 

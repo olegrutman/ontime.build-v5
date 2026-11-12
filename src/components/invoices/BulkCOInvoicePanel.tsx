@@ -125,7 +125,7 @@ export function BulkCOInvoicePanel({ projectId, userId, cos, contracts, onCancel
   const itemRowsFor = async (co: BulkBillableCO, billingOrgId: string | null) => {
     if (!billingOrgId) throw new Error('The invoicing company could not be resolved.');
     const [li, le, mat, eq] = await Promise.all([
-      supabase.from('co_line_items').select('id, item_name, sort_order').eq('co_id', co.co_id),
+      supabase.from('co_line_items').select('id, item_name, sort_order').eq('co_id', co.co_id).eq('approval_status', 'approved'),
       supabase.from('co_labor_entries').select('id, co_line_item_id, line_total, org_id, is_actual_cost').eq('co_id', co.co_id).eq('is_actual_cost', false).eq('org_id', billingOrgId),
       supabase.from('co_material_items').select('id, description, quantity, uom, billed_amount, line_number').eq('co_id', co.co_id).eq('org_id', billingOrgId),
       supabase.from('co_equipment_items').select('id, description, billed_amount').eq('co_id', co.co_id).eq('org_id', billingOrgId),

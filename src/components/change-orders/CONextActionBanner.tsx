@@ -15,6 +15,8 @@ interface CONextActionBannerProps {
   fcCollabName: string;
   /** Default upstream routing target when the CO has no explicit assignee yet. */
   upstreamOrgId?: string | null;
+  /** Multi-item orders require individual decisions before whole-order finalization. */
+  lineReview?: boolean;
   onAction: (action: string) => void;
 }
 
@@ -33,7 +35,7 @@ function fmtCurrency(value: number) {
 }
 
 function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): BannerConfig | null {
-  const { co, isGC, isTC, isFC, isFCCollaborator, financials, fcCollabName, upstreamOrgId } = props;
+  const { co, isGC, isTC, isFC, isFCCollaborator, financials, fcCollabName, upstreamOrgId, lineReview } = props;
   const status = co.status;
   // Single source of truth: price the GC sees == price the TC submits (responsibility-aware).
   // A crew viewer must only ever see their OWN amount billed up-line — never the
@@ -45,6 +47,14 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
 
   if (isGC) {
     if (status === 'submitted') {
+      if (lineReview) {
+        return {
+          icon: <CheckCircle className="h-5 w-5" />,
+          title: 'Review each scope item',
+          subtitle: 'Approve or reject every item, then finish the review in Actions',
+          actions: [{ label: 'Review items', action: 'scroll_scope' }],
+        };
+      }
       return {
         icon: <CheckCircle className="h-5 w-5" />,
         title: `Review & approve ${fmtCurrency(priceToUpstream)}`,

@@ -39,8 +39,13 @@ interface ApprovedCO {
   problem_summary?: string | null;
   pricing_type: string;
   tc_submitted_price?: number | null;
+  approved_amount?: number | null;
   nte_cap?: number | null;
   completion_acknowledged_at?: string | null;
+}
+
+function approvedInvoiceValue(co: ApprovedCO): number {
+  return Number(co.approved_amount ?? co.tc_submitted_price ?? 0);
 }
 
 interface GeneratedLineItem {
@@ -110,7 +115,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
           .from(t.co)
-          .select('id, title, co_number, location_tag, reason, reason_note, problem_summary, pricing_type, tc_submitted_price, nte_cap, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
+          .select('id, title, co_number, location_tag, reason, reason_note, problem_summary, pricing_type, tc_submitted_price, approved_amount, nte_cap, org_id, originating_org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
           .order('created_at', { ascending: false });
@@ -197,11 +202,11 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const hasDuplicateContracts = eligibleContracts.length > 1;
 
   const isFixedProgress = (co: ApprovedCO) =>
-    invoicingRole === 'TC' && co.pricing_type === 'fixed' && Number(co.tc_submitted_price ?? 0) > 0;
+    invoicingRole === 'TC' && co.pricing_type === 'fixed' && approvedInvoiceValue(co) > 0;
 
   const summaryFor = (co: ApprovedCO) => {
     const info = billedMap.get(co.id);
-    const value = Number(co.tc_submitted_price ?? 0);
+    const value = approvedInvoiceValue(co);
     return woBillingSummary(value, info?.legacyFullyBilled ? value : (info?.billed ?? 0), co.nte_cap);
   };
 
@@ -249,7 +254,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
 
       const [laborRes, lineItemsRes, materialsRes, equipmentRes, cosRes] = await Promise.all([
         laborQuery,
-        supabase.from(t.line).select('*').in('co_id', ids).order('sort_order'),
+        supabase.from(t.line).select('*').in('co_id', ids).eq('approval_status', 'approved').order('sort_order'),
         materialsQuery,
         equipmentQuery,
         supabase.from(t.co)
@@ -263,8 +268,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       if (equipmentRes.error) throw equipmentRes.error;
       if (cosRes.error) throw cosRes.error;
 
-      const labor = (laborRes.data ?? []) as unknown as COLaborEntry[];
       const scopeItems = (lineItemsRes.data ?? []) as unknown as COLineItem[];
+      const scopeMap = new Map(scopeItems.map(s => [s.id, s]));
+      const labor = ((laborRes.data ?? []) as unknown as COLaborEntry[])
+        .filter(entry => scopeMap.has(entry.co_line_item_id));
       const materials = (materialsRes.data ?? []) as unknown as COMaterialItem[];
       const equipment = (equipmentRes.data ?? []) as unknown as COEquipmentItem[];
 
@@ -277,7 +284,6 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         eqRespByCo.set(c.id, ((c as any).co_equipment_responsible_override ?? (c as any).equipment_responsible ?? 'TC') as 'GC' | 'TC');
       }
 
-      const scopeMap = new Map(scopeItems.map(s => [s.id, s]));
       const notesByCo: Record<string, string | null> = {};
       for (const id of ids) {
         const co = approvedCOs.find(c => c.id === id);
@@ -309,7 +315,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       for (const id of fixedIds) {
         const co = coById.get(id);
         if (!co) continue;
-        const value = Number(co.tc_submitted_price ?? 0);
+        const value = approvedInvoiceValue(co);
         const s = summaryFor(co);
         const pct = percentById[id] ?? (co.completion_acknowledged_at ? Math.round((s.remaining / value) * 10000) / 100 : 0);
         const amount = fixedProgressAmount(value, pct, s.billed);
@@ -491,7 +497,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
           line_notes: (coItemDescs[li.coId] ?? [])
             .filter(it => li.description.includes(it.name))
             .sort((a, b) => b.name.length - a.name.length)[0]?.desc || null,
-          scheduled_value: isProgress ? Number(co?.tc_submitted_price ?? 0) : li.amount,
+          scheduled_value: isProgress && co ? approvedInvoiceValue(co) : li.amount,
           previous_billed: prev,
           current_billed: li.amount,
           total_billed: prev + li.amount,
@@ -631,7 +637,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                           })()}
                           {selected && isFixedProgress(co) && (() => {
                             const s = summaryFor(co);
-                            const value = Number(co.tc_submitted_price ?? 0);
+                            const value = approvedInvoiceValue(co);
                             const maxPct = Math.round((s.remaining / value) * 10000) / 100;
                             const pct = percentById[co.id] ?? (co.completion_acknowledged_at ? maxPct : 0);
                             return (
