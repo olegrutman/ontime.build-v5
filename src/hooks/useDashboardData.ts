@@ -986,10 +986,7 @@ export function useDashboardData(): DashboardData {
             // views computing revenue + approvedCORevenue don't count it twice.
             pf.approvedCORevenue = 0;
           }
-          const baseCost = findCostContracts(rows, [currentOrg.id])
-            .filter(isAwardedContract)
-            .reduce((sum, c) => sum + baseSum(c), 0);
-          if (baseCost <= 0) pf.costs += coCostByProject.get(pid) || 0;
+          pf.costs = addApprovedWorkOrderCosts(pf.costs, coCostByProject.get(pid) || 0);
         }
       });
 
