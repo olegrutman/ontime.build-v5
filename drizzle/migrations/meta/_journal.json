@@ -470,6 +470,13 @@
       "when": 1794511337393,
       "tag": "0066_approved_line_billing_totals",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794512060661,
+      "tag": "0067_single_item_approval_guards",
+      "breakpoints": true
     }
   ]
 }

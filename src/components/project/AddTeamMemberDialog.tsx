@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { sendCompanyInviteEmail, fetchProjectName } from '@/lib/sendCompanyInvite';
+import { resolveDownstreamPayer } from '@/lib/inviteContractRouting';
 
 import {
   Dialog,
@@ -337,6 +338,10 @@ export function AddTeamMemberDialog({
       const currentOrgId = userOrgData?.organization_id;
       const currentOrgType = (userOrgData?.organizations as any)?.type;
       const currentOrgName = (userOrgData?.organizations as any)?.name as string | undefined;
+      const isCreatorUpstream = currentOrgType === 'GC' || (currentOrgType === 'TC' && selectedRole === 'Crew');
+      const downstreamPayer = isCreatorUpstream && currentOrgId && selectedRole !== 'Supplier'
+        ? await resolveDownstreamPayer({ projectId, currentOrgId, currentOrgType, invitedRole: selectedRole as 'Crew' | 'Subcontractor' })
+        : null;
 
       // Insert into project_team with status = Invited
       // Existing orgs should NOT be auto-accepted; they must accept via dashboard invite flow.
@@ -380,17 +385,15 @@ export function AddTeamMemberDialog({
       if (selectedRole !== 'Supplier' && currentOrgId) {
         const creatorRoleLabel = currentOrgType === 'GC' ? 'General Contractor' 
           : currentOrgType === 'TC' ? 'Subcontractor' : null;
-        
-        const isCreatorUpstream = 
-          (currentOrgType === 'GC') ||
-          (currentOrgType === 'TC' && selectedRole === 'Crew');
+        const payerOrgId = downstreamPayer?.orgId ?? currentOrgId;
+        const payerRoleLabel = downstreamPayer?.role ?? creatorRoleLabel;
 
         // Check if a contract already exists for this org pair
         const { data: existingContract } = await supabase
           .from('project_contracts')
           .select('id')
           .eq('project_id', projectId)
-          .or(`and(from_org_id.eq.${selectedResult.org_id},to_org_id.eq.${currentOrgId}),and(from_org_id.eq.${currentOrgId},to_org_id.eq.${selectedResult.org_id})`)
+          .or(`and(from_org_id.eq.${selectedResult.org_id},to_org_id.eq.${payerOrgId}),and(from_org_id.eq.${payerOrgId},to_org_id.eq.${selectedResult.org_id})`)
           .limit(1);
 
         if (!existingContract || existingContract.length === 0) {
@@ -398,8 +401,8 @@ export function AddTeamMemberDialog({
             project_id: projectId,
             from_org_id: selectedResult.org_id,
             from_role: selectedRole,
-            to_org_id: currentOrgId,
-            to_role: creatorRoleLabel,
+            to_org_id: payerOrgId,
+            to_role: payerRoleLabel,
             trade: selectedTrade || null,
             contract_sum: 0,
             retainage_percent: 0,
@@ -496,6 +499,10 @@ export function AddTeamMemberDialog({
       const currentOrgId = userOrgData?.organization_id;
       const currentOrgType = (userOrgData?.organizations as any)?.type;
       const currentOrgName = (userOrgData?.organizations as any)?.name as string | undefined;
+      const isCreatorUpstream = currentOrgType === 'GC' || (currentOrgType === 'TC' && inviteForm.role === 'Crew');
+      const downstreamPayer = isCreatorUpstream && currentOrgId && inviteForm.role !== 'Supplier'
+        ? await resolveDownstreamPayer({ projectId, currentOrgId, currentOrgType, invitedRole: inviteForm.role as 'Crew' | 'Subcontractor' })
+        : null;
 
       // Insert into project_team with status = Invited
       const { data: teamMember, error: teamError } = await supabase
@@ -532,18 +539,16 @@ export function AddTeamMemberDialog({
       if (inviteForm.role !== 'Supplier' && currentOrgId) {
         const creatorRoleLabel = currentOrgType === 'GC' ? 'General Contractor' 
           : currentOrgType === 'TC' ? 'Subcontractor' : null;
-        
-        const isCreatorUpstream = 
-          (currentOrgType === 'GC') ||
-          (currentOrgType === 'TC' && inviteForm.role === 'Crew');
+        const payerOrgId = downstreamPayer?.orgId ?? currentOrgId;
+        const payerRoleLabel = downstreamPayer?.role ?? creatorRoleLabel;
 
         const contractPayload = isCreatorUpstream ? {
           // Invitee is worker, creator is payer
           project_id: projectId,
           from_org_id: null, // Invitee org not known yet
           from_role: inviteForm.role,
-          to_org_id: currentOrgId,
-          to_role: creatorRoleLabel,
+          to_org_id: payerOrgId,
+          to_role: payerRoleLabel,
           trade: inviteForm.trade || null,
           to_project_team_id: teamMember.id,
           contract_sum: 0,

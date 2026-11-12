@@ -9,6 +9,7 @@ import { dedupeContracts, findCostContracts, findRevenueContract, isAwardedContr
 import { dashboardPendingInvoices, dashboardInvoiceRows, type DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
 import { ownerBillingBalance, projectMaterialCommitment } from '@/lib/invoiceIntegrity';
 import { resolveOwnerPrice } from '@/lib/ownerContract';
+import { addApprovedWorkOrderCosts } from '@/lib/tmProjectFinancials';
 
 // contract_sum already includes approved COs (DB trigger). Dashboard cards add
 // approved CO value separately, so contract totals must use the base value.
@@ -877,7 +878,7 @@ export function useDashboardData(): DashboardData {
       if (projectIds.length > 0) {
         const { data: allCOs } = await supabase
           .from('change_orders')
-          .select('id, status, document_type, tc_submitted_price, gc_budget, org_id, project_id, assigned_to_org_id, created_by_role, originating_org_id, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
+          .select('id, status, document_type, tc_submitted_price, approved_amount, gc_budget, org_id, project_id, assigned_to_org_id, created_by_role, originating_org_id, passed_to_owner, materials_responsible, equipment_responsible, co_material_responsible_override, co_equipment_responsible_override')
           .in('project_id', projectIds);
         const cos = (allCOs || []) as any[];
 
@@ -892,7 +893,7 @@ export function useDashboardData(): DashboardData {
         const ids = cos.map(co => co.id);
         if (ids.length > 0) {
           const [labor, mats, equip] = await Promise.all([
-            supabase.from('co_labor_entries').select('id, co_id, org_id, line_total, is_actual_cost, entered_by_role, source_fc_entry_ids').in('co_id', ids),
+            supabase.from('co_labor_entries').select('id, co_id, org_id, line_total, is_actual_cost, entered_by_role, source_fc_entry_ids, co_line_items(approval_status)').in('co_id', ids),
             supabase.from('co_material_items').select('co_id, org_id, billed_amount, line_cost').in('co_id', ids),
             supabase.from('co_equipment_items').select('co_id, org_id, billed_amount, cost').in('co_id', ids),
           ]);
@@ -986,10 +987,7 @@ export function useDashboardData(): DashboardData {
             // views computing revenue + approvedCORevenue don't count it twice.
             pf.approvedCORevenue = 0;
           }
-          const baseCost = findCostContracts(rows, [currentOrg.id])
-            .filter(isAwardedContract)
-            .reduce((sum, c) => sum + baseSum(c), 0);
-          if (baseCost <= 0) pf.costs += coCostByProject.get(pid) || 0;
+          pf.costs = addApprovedWorkOrderCosts(pf.costs, coCostByProject.get(pid) || 0);
         }
       });
 
