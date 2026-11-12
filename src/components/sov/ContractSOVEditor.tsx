@@ -454,6 +454,21 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
               billedToDate={item.total_billed_amount || 0}
               size="sm"
             />
+            {(() => {
+              const billed = item.total_billed_amount || 0;
+              const value = item.value_amount || 0;
+              const pct = value > 0 ? (billed / value) * 100 : 0;
+              const over = billed - value;
+              return (
+                <div className="flex justify-between gap-2 mt-1 font-mono text-xs tabular-nums text-muted-foreground">
+                  <span className={over > 0.005 ? 'text-destructive' : undefined}>
+                    {formatCurrency(billed)} billed ({pct.toFixed(0)}%)
+                    {over > 0.005 && ` · ${formatCurrency(over)} overbilled`}
+                  </span>
+                  <span>{formatCurrency(Math.max(0, value - billed))} remaining</span>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
