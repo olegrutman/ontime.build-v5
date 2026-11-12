@@ -530,7 +530,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       nteCap={(co as any).nte_cap ?? null}
       value={isFC
         ? Number(financials.viewer.ownLaborToUpstream ?? 0)
-        : Number((co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
+        : Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
     />
   ) : null;
 
