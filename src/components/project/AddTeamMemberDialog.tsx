@@ -501,7 +501,7 @@ export function AddTeamMemberDialog({
       const currentOrgName = (userOrgData?.organizations as any)?.name as string | undefined;
       const isCreatorUpstream = currentOrgType === 'GC' || (currentOrgType === 'TC' && inviteForm.role === 'Crew');
       const downstreamPayer = isCreatorUpstream && currentOrgId && inviteForm.role !== 'Supplier'
-        ? await resolveDownstreamPayer({ projectId, currentOrgId, currentOrgType, invitedRole: inviteForm.role })
+        ? await resolveDownstreamPayer({ projectId, currentOrgId, currentOrgType, invitedRole: inviteForm.role as 'Crew' | 'Subcontractor' })
         : null;
 
       // Insert into project_team with status = Invited
