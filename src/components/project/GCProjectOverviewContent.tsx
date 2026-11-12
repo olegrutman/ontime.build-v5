@@ -360,7 +360,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
             
             miniStats={[
               { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
-              { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
+              { label: `Approved ${coWord} Net`, value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
               { label: 'Pending at Risk', value: fmt(pendingNetAtRisk), tone: pendingNetAtRisk >= 0 ? 'neutral' : 'neg' },
             ]}
           />
