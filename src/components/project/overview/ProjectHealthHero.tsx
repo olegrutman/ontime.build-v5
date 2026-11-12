@@ -165,8 +165,12 @@ export function buildHealthSummary(opts: {
   hasContract: boolean;
   roleLabel: string;
   marginKnown?: boolean;
+  isTM?: boolean;
 }): string {
-  const { projectedMarginPct, cashPosition, pendingNetAtRisk, hasContract, roleLabel, marginKnown = true } = opts;
+  const { projectedMarginPct, cashPosition, pendingNetAtRisk, hasContract, roleLabel, marginKnown = true, isTM = false } = opts;
+  if (!hasContract && isTM) {
+    return 'Approve a work order to see your projected margin and health.';
+  }
   if (!hasContract) {
     const article = /^[aeiou]/i.test(roleLabel) ? 'an' : 'a';
     return `Set ${article} ${roleLabel} contract to see your projected margin and health.`;

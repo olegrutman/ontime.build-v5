@@ -497,7 +497,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         const status = computeHealthStatus(ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract, ledger.forecastMargin.known);
         const summary = buildHealthSummary({
           projectedMarginPct: ledger.forecastMarginPct, cashPosition, pendingNetAtRisk, approvedNet, hasContract,
-          roleLabel: gcName, marginKnown: ledger.forecastMargin.known,
+          roleLabel: gcName, marginKnown: ledger.forecastMargin.known, isTM,
         });
         return (
           <ProjectHealthHero
@@ -508,7 +508,7 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
             summary={summary}
             miniStats={[
               { label: 'Cash Position', value: fmt(cashPosition), tone: cashPosition >= 0 ? 'pos' : 'neg' },
-              { label: 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
+              { label: isTM ? 'Approved WO Net' : 'Approved CO Net', value: fmt(approvedNet), tone: approvedNet >= 0 ? 'pos' : 'neg' },
               { label: 'Pending at Risk', value: fmt(pendingNetAtRisk), tone: pendingNetAtRisk >= 0 ? 'neutral' : 'neg' },
             ]}
           />
