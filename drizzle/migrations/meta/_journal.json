@@ -463,6 +463,13 @@
       "when": 1794511288491,
       "tag": "0065_per_line_co_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794511337393,
+      "tag": "0066_approved_line_billing_totals",
+      "breakpoints": true
     }
   ]
 }
