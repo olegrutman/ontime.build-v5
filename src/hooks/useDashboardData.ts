@@ -9,6 +9,7 @@ import { dedupeContracts, findCostContracts, findRevenueContract, isAwardedContr
 import { dashboardPendingInvoices, dashboardInvoiceRows, type DashboardPendingInvoice } from '@/lib/dashboardPendingInvoices';
 import { ownerBillingBalance, projectMaterialCommitment } from '@/lib/invoiceIntegrity';
 import { resolveOwnerPrice } from '@/lib/ownerContract';
+import { addApprovedWorkOrderCosts } from '@/lib/tmProjectFinancials';
 
 // contract_sum already includes approved COs (DB trigger). Dashboard cards add
 // approved CO value separately, so contract totals must use the base value.
