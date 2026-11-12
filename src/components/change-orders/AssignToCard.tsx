@@ -1,4 +1,4 @@
-import { ROLE_LONG_NAMES } from '@/lib/roleTerminology';
+import { ROLE_LONG_NAMES } from '@/hooks/useRoleLabels';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import type { CORoutingTarget } from '@/hooks/useCORoutingTargets';
