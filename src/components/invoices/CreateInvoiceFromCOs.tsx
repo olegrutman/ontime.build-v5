@@ -193,6 +193,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   }, [open, projectId, currentOrgId, upstreamRole]);
 
   const [coNotes, setCoNotes] = useState<Record<string, string | null>>({});
+  const [coItemDescs, setCoItemDescs] = useState<Record<string, { name: string; desc: string }[]>>({});
   const hasDuplicateContracts = eligibleContracts.length > 1;
 
   const isFixedProgress = (co: ApprovedCO) =>
@@ -292,6 +293,12 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         notesByCo[id] = parts.length ? parts.join('\n') : null;
       }
       setCoNotes(notesByCo);
+      const itemsByCo: Record<string, { name: string; desc: string }[]> = {};
+      for (const item of scopeItems) {
+        const d = ((item as any).description || '').trim();
+        (itemsByCo[item.co_id] ??= []).push({ name: item.item_name, desc: d && d !== item.item_name ? d : '' });
+      }
+      setCoItemDescs(itemsByCo);
       const generated: GeneratedLineItem[] = [];
       const coById = new Map(availableCOs.map(c => [c.id, c]));
       const fixedIds = new Set(ids.filter(id => { const c = coById.get(id); return c && isFixedProgress(c); }));
@@ -480,7 +487,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         return {
           invoice_id: invoice.id,
           description: li.description,
-          line_notes: isFirstForCO ? (coNotesMap.get(li.coId) || null) : null,
+          // Each line carries only its own work item's write-up — never the order-wide summary.
+          line_notes: (coItemDescs[li.coId] ?? [])
+            .filter(it => li.description.includes(it.name))
+            .sort((a, b) => b.name.length - a.name.length)[0]?.desc || null,
           scheduled_value: isProgress ? Number(co?.tc_submitted_price ?? 0) : li.amount,
           previous_billed: prev,
           current_billed: li.amount,
