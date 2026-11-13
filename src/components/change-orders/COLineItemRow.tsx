@@ -398,7 +398,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               {/* Mobile money line — desktop shows table columns instead */}
               <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
                 {isPriced ? (
-                  <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
+                  <span className="font-mono text-lg font-bold text-foreground">${fmt(totalForRole)}</span>
                 ) : showProvisional ? (
                   <button
                     type="button"
@@ -465,7 +465,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           {/* Billable column (desktop) */}
           <div className="hidden md:block text-right">
             {isPriced ? (
-              <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
+              <span className="font-mono text-lg font-bold text-foreground">${fmt(totalForRole)}</span>
             ) : showProvisional ? (
               <button
                 type="button"
