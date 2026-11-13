@@ -32,6 +32,7 @@ import { useCOCorrections } from '@/hooks/useCOCorrections';
 import { COSidebar } from './COSidebar';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { WOBilledToDateCard } from './WOBilledToDateCard';
+import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStatusActions } from './COStatusActions';
@@ -481,11 +482,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     const entries = laborEntries.filter(e => e.co_line_item_id === li.id);
     const sum = (rows: typeof entries) => rows.reduce((t, e) => t + (e.line_total ?? 0), 0);
     const billRole = isFC ? 'FC' : 'TC';
-    const revenue = sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === billRole));
+    const excludedFromApproval = co.approved_amount != null && li.approval_status === 'rejected';
+    const revenue = excludedFromApproval ? 0 : sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === billRole));
     let cost = 0;
     if (isTC || isFC) {
-      const actual = entries.filter(e => e.is_actual_cost && e.entered_by_role === billRole);
-      cost = sum(actual);
+      const actual = entries.filter(e => e.is_actual_cost && e.entered_by_role === billRole && e.org_id === myOrgId);
+      cost = actual.reduce((total, entry) => total + actualEntryBaseCost(entry), 0);
       if (isTC) {
         const imported = new Set(actual.flatMap(e => ((e as { source_fc_entry_ids?: string[] | null }).source_fc_entry_ids ?? [])));
         cost += sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === 'FC' && !imported.has(e.id)));

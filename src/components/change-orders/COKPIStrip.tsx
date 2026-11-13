@@ -345,7 +345,7 @@ function parseMoney(v: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[] }) {
+function Breakdown({ tile, items, financials }: { tile: KPITile; items: COKPIItemBreakdown[]; financials: COFinancials }) {
   const kind = tile.kind ?? 'other';
   if (kind === 'other' || items.length === 0) return null;
   if (kind === 'progress') {
@@ -363,7 +363,17 @@ function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[]
   const amount = (it: COKPIItemBreakdown) => kind === 'revenue' ? it.revenue : kind === 'cost' ? it.cost : it.revenue - it.cost;
   const total = tile.value === 'Pending' ? null : parseMoney(tile.value);
   const itemsSum = items.reduce((s, it) => s + amount(it), 0);
-  const other = total == null ? 0 : total - itemsSum;
+  const materials = kind === 'revenue'
+    ? financials.viewer.ownMaterialsTotal
+    : kind === 'cost'
+      ? financials.viewer.ownMaterialsCost
+      : financials.viewer.ownMaterialsTotal - financials.viewer.ownMaterialsCost;
+  const equipment = kind === 'revenue'
+    ? financials.viewer.ownEquipmentTotal
+    : kind === 'cost'
+      ? financials.viewer.ownEquipmentCost
+      : financials.viewer.ownEquipmentTotal - financials.viewer.ownEquipmentCost;
+  const adjustment = total == null ? 0 : total - itemsSum - materials - equipment;
   return (
     <div className="divide-y divide-border">
       {items.map((it, i) => (
@@ -372,10 +382,20 @@ function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[]
           <span className="shrink-0 font-mono font-semibold text-foreground">{fmtCurrency(amount(it))}</span>
         </div>
       ))}
-      {Math.abs(other) >= 0.005 && (
+      {Math.abs(materials) >= 0.005 && (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
-          <span>Materials, equipment &amp; approval adjustments</span>
-          <span className="shrink-0 font-mono font-semibold">{fmtCurrency(other)}</span>
+          <span>Materials</span><span className="shrink-0 font-mono font-semibold">{fmtCurrency(materials)}</span>
+        </div>
+      )}
+      {Math.abs(equipment) >= 0.005 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+          <span>Equipment</span><span className="shrink-0 font-mono font-semibold">{fmtCurrency(equipment)}</span>
+        </div>
+      )}
+      {Math.abs(adjustment) >= 0.005 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+          <span>Approval adjustment</span>
+          <span className="shrink-0 font-mono font-semibold">{fmtCurrency(adjustment)}</span>
         </div>
       )}
       <div className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5 text-sm font-bold">
@@ -386,7 +406,7 @@ function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[]
   );
 }
 
-function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[] }) {
+function CompactTile({ tile, items, financials }: { tile: KPITile; items: COKPIItemBreakdown[]; financials: COFinancials }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -401,7 +421,7 @@ function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown
             <DialogTitle className="font-heading text-xl">{tile.label}</DialogTitle>
             {tile.sub && <DialogDescription>{tile.sub}</DialogDescription>}
           </DialogHeader>
-          <Breakdown tile={tile} items={items} /> 
+          <Breakdown tile={tile} items={items} financials={financials} /> 
           {(tile.kind ?? 'other') === 'other' && <p className="p-4 font-mono text-xl">{tile.value}</p>}
         </DialogContent>
       </Dialog>
@@ -419,7 +439,7 @@ export function COKPIStrip(props: COKPIStripProps) {
       <div className="grid grid-cols-2 gap-2">
         {tiles.map(tile => tile.editable
           ? <div key={tile.label} className="col-span-2"><EditableBudgetTile tile={tile} coId={props.co.id} onRefresh={props.onRefresh} /></div>
-          : <CompactTile key={tile.label} tile={tile} items={items} />)}
+          : <CompactTile key={tile.label} tile={tile} items={items} financials={props.financials} />)}
       </div>
     );
   }
@@ -433,7 +453,7 @@ export function COKPIStrip(props: COKPIStripProps) {
             className={tile.primary ? 'sm:col-span-2' : undefined}
             valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}>
             {(tile.kind ?? 'other') !== 'other' && items.length > 0
-              ? <Breakdown tile={tile} items={items} />
+              ? <Breakdown tile={tile} items={items} financials={financials} />
               : undefined}
           </KpiCard>)}
     </div>
