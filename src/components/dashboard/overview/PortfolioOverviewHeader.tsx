@@ -66,6 +66,7 @@ export function PortfolioOverviewHeader({
         approvedNet: financials.coApprovedNet,
         hasContract,
         roleLabel: copy.contractLabel,
+        marginKnown,
       }) + ` Across ${activeProjectCount} active project${activeProjectCount === 1 ? '' : 's'}.`
     : `Set up your first ${copy.contractLabel} contract to see portfolio health.`;
 

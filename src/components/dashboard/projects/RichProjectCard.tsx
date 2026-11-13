@@ -52,6 +52,7 @@ export function RichProjectCard({
   costLabel = 'Cost',
   nextAction,
   hideCost = false,
+  marginKnown = true,
 }: RichProjectCardProps) {
   const navigate = useNavigate();
 

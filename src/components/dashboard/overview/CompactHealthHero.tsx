@@ -25,6 +25,7 @@ export function CompactHealthHero({
   projectedMarginPct,
   label = 'Projected Margin',
   summary,
+  marginKnown = true,
 }: CompactHealthHeroProps) {
   const s = STATUS_STYLE[status];
   const Icon = status === 'green' ? TrendingUp : status === 'red' ? TrendingDown : Minus;

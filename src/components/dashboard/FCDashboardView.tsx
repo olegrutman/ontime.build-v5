@@ -230,8 +230,8 @@ export function FCDashboardView({
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{fmt(costs)}</TdM>, <span>Labor + materials cost</span>]} />
                 <TRow cells={[
                   <TdN>Net Margin</TdN>,
-                  <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.green }}>{fmt(netMargin)}</span>,
-                  <span style={{ color: C.green, fontWeight: 700 }}>{marginPct}% margin</span>,
+                  <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.green }}>{marginKnown ? fmt(netMargin) : '—'}</span>,
+                  <span style={{ color: C.green, fontWeight: 700 }}>{marginKnown ? `${marginPct}% margin` : 'Cost not recorded'}</span>,
                 ]} isTotal greenText />
               </tbody>
             </table>

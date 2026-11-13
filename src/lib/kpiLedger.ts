@@ -380,6 +380,12 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
     known: true,
     formula: 'Σ tax-inclusive total of my PAID invoices',
   };
+  const cashPosition: LedgerTerm = {
+    value: collected - payablesPaid,
+    basis: 'cash',
+    known: true,
+    formula: `${money(collected)} collected − ${money(payablesPaid)} paid`,
+  };
   const retainageTerm: LedgerTerm = {
     value: retainageHeld,
     basis: 'contract',
