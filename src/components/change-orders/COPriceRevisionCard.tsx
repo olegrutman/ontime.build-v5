@@ -49,7 +49,7 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
     } finally { setSaving(false); }
   }
 
-  const revision = pending ?? latest;
+  const revision = pending;
   const scope = Array.isArray(revision?.scope_snapshot) ? revision.scope_snapshot as { item: string; description?: string; amount: number }[] : [];
   return (
     <section className="border border-border rounded-2xl bg-card p-4 space-y-3">
