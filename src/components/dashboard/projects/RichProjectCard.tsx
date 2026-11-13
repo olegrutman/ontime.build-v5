@@ -20,6 +20,8 @@ interface RichProjectCardProps {
   nextAction: NextAction;
   /** If true, the cost column is hidden (e.g. FC viewer who shouldn't see upstream pricing). */
   hideCost?: boolean;
+  /** False when no cost side is tracked; never present revenue as 100% profit. */
+  marginKnown?: boolean;
 }
 
 const STATUS_PILL: Record<HealthStatus, { bg: string; color: string; label: string }> = {

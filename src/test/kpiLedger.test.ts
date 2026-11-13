@@ -126,6 +126,21 @@ describe('billing and margin to date', () => {
     expect(l.marginToDateMeaningful).toBe(false);
   });
 
+  it('cash position is collected cash minus paid cash, independent of incurred costs', () => {
+    const l = buildProjectLedger(baseInput({
+      billed: 0,
+      collected: 0,
+      payablesApproved: 0,
+      payablesPaid: 0,
+      actualCostToDate: 800,
+    }));
+    expect(l.marginToDate.value).toBe(-800);
+    expect(l.cashPosition.value).toBe(0);
+
+    const paid = buildProjectLedger(baseInput({ collected: 1_000, payablesPaid: 250 }));
+    expect(paid.cashPosition.value).toBe(750);
+  });
+
   it('left to bill = revised contract − billed', () => {
     const l = buildProjectLedger(baseInput({ approvedCORevenue: 11_287.25, billed: 200_000 }));
     expect(l.outstanding.value).toBeCloseTo(600_000, 2);

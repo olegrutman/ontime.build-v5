@@ -112,6 +112,8 @@ export interface ProjectLedger {
   forecastMarginPct: number;
   billed: LedgerTerm;
   collected: LedgerTerm;
+  /** Actual working capital: cash collected minus cash paid. */
+  cashPosition: LedgerTerm;
   retainageHeld: LedgerTerm;
   percentComplete: number;
   earnedRevenue: LedgerTerm;

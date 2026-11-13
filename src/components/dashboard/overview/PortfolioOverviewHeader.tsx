@@ -46,6 +46,8 @@ export function PortfolioOverviewHeader({
 }: PortfolioOverviewHeaderProps) {
   const copy = ROLE_COPY[orgType || 'TC'] || ROLE_COPY.TC;
   const hasContract = financials.revisedRevenue > 0;
+  // Crew revenue without a private cost budget is not a 100% profit forecast.
+  const marginKnown = orgType !== 'FC' || financials.revisedCosts > 0;
 
   const status = computeHealthStatus(
     financials.projectedMarginRevisedPct,
@@ -53,6 +55,7 @@ export function PortfolioOverviewHeader({
     financials.coPendingNetAtRisk,
     financials.coApprovedNet,
     hasContract,
+    marginKnown,
   );
 
   const summary = hasContract

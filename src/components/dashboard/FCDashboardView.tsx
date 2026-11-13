@@ -217,9 +217,9 @@ export function FCDashboardView({
           <KpiCard
             accent={C.green} icon="📈" iconBg={C.greenBg}
             label="NET MARGIN"
-            value={fmt(netMargin)}
-            sub={`${marginPct}% on contract + CO additions`}
-            pills={[{ type: 'pg', text: `${marginPct}%` }]}
+            value={marginKnown ? fmt(netMargin) : '—'}
+            sub={marginKnown ? `${marginPct}% on contract + CO additions` : 'Set a private cost budget to calculate margin'}
+            pills={[{ type: marginKnown ? 'pg' : 'pa', text: marginKnown ? `${marginPct}%` : 'Awaiting costs' }]}
             idx={1}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

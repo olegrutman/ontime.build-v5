@@ -8,6 +8,8 @@ interface CompactHealthHeroProps {
   projectedMarginPct: number;
   label?: string;
   summary: string;
+  /** False when costs are not tracked, so a margin would be misleading. */
+  marginKnown?: boolean;
 }
 
 const STATUS_STYLE: Record<HealthStatus, { bg: string; color: string; border: string; label: string }> = {
