@@ -1310,6 +1310,40 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           )}
         </div>
       )}
+
+      {pricingDisplay === 'dialog' && (
+        <Dialog
+          open={formOpen || showActualForm}
+          onOpenChange={(open) => {
+            if (!open) {
+              setFormOpen(false);
+              setShowActualForm(false);
+            }
+          }}
+        >
+          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-2xl">
+            <DialogHeader className="px-5 py-4 pr-12 border-b border-border bg-card">
+              <DialogTitle className="font-heading text-xl text-foreground">
+                {showActualForm ? 'Log private cost' : 'Price this work'}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                {item.item_name}. Your total updates as you enter the work; nothing is saved until you confirm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="p-3 sm:p-4 bg-background [&>div]:shadow-none">
+              <LaborEntryForm
+                key={showActualForm ? 'private-cost' : 'billable'}
+                coId={coId} lineItemId={item.id} orgId={orgId}
+                enteredByRole={enteredByRole} pricingType={pricingType}
+                isTC={isTC} isFC={isFC} isActualCost={showActualForm}
+                nteCap={nteCap} nteUsed={nteUsed}
+                onSaved={() => { setFormOpen(false); setShowActualForm(false); onRefresh(); }}
+                onCancel={() => { setFormOpen(false); setShowActualForm(false); }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 });
