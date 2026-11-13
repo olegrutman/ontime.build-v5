@@ -96,3 +96,4 @@
 - [x] Verify the expanded card live on WO-5 at desktop and 320/390px (no overflow; temporary design preview removed)
 - [x] Let the GC add or edit the owner price from the Overview at any time, with an "Add owner price" prompt when unset; one shared resolver reads it and one write sets both price columns
 - [x] Verify owner-price save, reload readback, missing-row creation, zero rejection and dashboard totals (6 tests; live GC_Test overview and dashboard; 70 phone views clear)
+- [ ] Audit every CO/WO detail and item-pricing figure for duplicates, hierarchy and mismatches; propose one simplified design for approval before building.
