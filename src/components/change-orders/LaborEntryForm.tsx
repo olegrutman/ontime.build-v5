@@ -371,9 +371,9 @@ export function LaborEntryForm({
   const money = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-md">
+    <div className="w-full min-w-0 rounded-2xl overflow-hidden border border-border bg-card shadow-md">
       {/* Header / mode switch */}
-      <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between gap-3">
+      <div className="px-4 py-3 border-b border-border bg-muted/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           {isActualCost ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />}
           <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground truncate font-heading">
@@ -382,7 +382,7 @@ export function LaborEntryForm({
               : (isActualCost ? 'Log internal cost' : 'Add pricing entry')}
           </h3>
         </div>
-        <div className="flex p-1 rounded-lg bg-background border border-border">
+        <div className="grid grid-cols-2 w-full sm:w-auto p-1 rounded-lg bg-background border border-border">
           {([
             { key: 'hourly' as const, label: 'Hours', icon: Clock },
             { key: 'lump_sum' as const, label: 'Flat rate', icon: DollarSign },
@@ -392,7 +392,7 @@ export function LaborEntryForm({
               type="button"
               onClick={() => setMode(opt.key)}
               className={cn(
-                'px-3 py-1.5 text-xs font-bold rounded transition-all flex items-center gap-1.5',
+                'px-3 py-1.5 text-xs font-bold rounded transition-all flex items-center justify-center gap-1.5 whitespace-nowrap',
                 mode === opt.key ? 'shadow-sm' : 'text-muted-foreground hover:text-foreground',
               )}
               style={mode === opt.key ? { background: 'hsl(var(--amber))', color: 'hsl(var(--navy))' } : undefined}
@@ -446,10 +446,9 @@ export function LaborEntryForm({
                     <div className="relative">
                       <input
                         type="number" step="1" min="0" value={crewSize} onChange={e => setCrewSize(e.target.value)} placeholder="0"
-                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        className={cn(fieldInput, 'text-center text-base font-semibold')}
                         style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">men</span>
                     </div>
                   </div>
                   <div className="col-span-4 space-y-1.5">
@@ -457,10 +456,9 @@ export function LaborEntryForm({
                     <div className="relative">
                       <input
                         type="number" step="0.5" min="0" value={days} onChange={e => setDays(e.target.value)} placeholder="0"
-                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        className={cn(fieldInput, 'text-center text-base font-semibold')}
                         style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">days</span>
                     </div>
                   </div>
                   <div className="col-span-4 space-y-1.5">
@@ -468,10 +466,9 @@ export function LaborEntryForm({
                     <div className="relative">
                       <input
                         type="number" step="0.25" min="0" value={hoursPerDay} onChange={e => setHoursPerDay(e.target.value)} placeholder="0"
-                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        className={cn(fieldInput, 'text-center text-base font-semibold')}
                         style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">hr/d</span>
                     </div>
                   </div>
                 </>
@@ -642,7 +639,7 @@ export function LaborEntryForm({
         {/* Private internal cost band */}
         {!isActualCost && !isEditing && (isTC || isFC) && (
           <div className="rounded-xl border border-dashed border-border bg-muted/40 p-3.5">
-            <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2 min-w-0">
                 <Lock className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[11px] font-bold uppercase tracking-tight text-muted-foreground truncate">

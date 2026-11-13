@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle, Users, CalendarDays, Clock } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -51,6 +52,8 @@ interface COLineItemRowProps {
   crewPricingBase?: { enabled: boolean; hourlyRate: number; markupPercent: number };
   /** CO lifecycle status — the subcontractor's price is frozen once submitted upstream. */
   coStatus?: string;
+  /** New pricing entries can use a focused dialog instead of expanding the row. */
+  pricingDisplay?: 'inline' | 'dialog';
 }
 
 
@@ -80,6 +83,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
+  pricingDisplay = 'inline',
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -336,7 +340,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
 
 
-  const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
+  const autoExpand = pricingDisplay === 'inline' && canAddLabor && entryCount === 0 && !showActualForm;
 
   // Strip markdown asterisks AND any trailing "Scope:" bullet list
   // (the AI narrative already covers what's in the bullets — showing both reads as duplicate)
@@ -477,7 +481,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 ) : canAddLabor && !tcPricingLocked ? (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
                     className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
                     style={{ color: 'hsl(var(--amber-d))' }}
                   >
@@ -546,7 +550,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             ) : canAddLabor && !tcPricingLocked ? (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
+                onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
                 className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
                 style={{ color: 'hsl(var(--amber-d))' }}
               >
@@ -573,6 +577,18 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
 
             <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+              {pricingDisplay === 'dialog' && canAddLabor && !tcPricingLocked && (
+                <button
+                  type="button"
+                  aria-label={`Add pricing for ${item.item_name}`}
+                  title="Add pricing"
+                  onClick={() => setFormOpen(true)}
+                  className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 transition-colors text-xs font-semibold"
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Price</span>
+                </button>
+              )}
               {canEditHeader && (
                 <Popover open={editHeaderOpen} onOpenChange={(o) => {
                   setEditHeaderOpen(o);
@@ -1213,7 +1229,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           )}
 
           {/* Add pricing entry toggle */}
-          {canAddLabor && (
+          {canAddLabor && pricingDisplay === 'dialog' && (
+            <button
+              type="button"
+              onClick={() => setFormOpen(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-xs font-semibold border-t border-border/50 text-foreground hover:bg-accent/40 transition-colors"
+            >
+              <Plus className="h-4 w-4" /> Add pricing entry
+              <span className="font-normal text-muted-foreground">— opens a focused window</span>
+            </button>
+          )}
+          {canAddLabor && pricingDisplay === 'inline' && (
             <Collapsible open={formOpen || autoExpand} onOpenChange={setFormOpen}>
               {!autoExpand && (
                 <CollapsibleTrigger asChild>
@@ -1271,7 +1297,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           )}
 
           {/* Actual cost form */}
-          {showActualForm && (
+          {showActualForm && pricingDisplay === 'inline' && (
             <div className="px-3 sm:px-5 pb-4 border-t border-border/50">
               <LaborEntryForm
                 coId={coId} lineItemId={item.id} orgId={orgId}
@@ -1283,6 +1309,40 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </div>
           )}
         </div>
+      )}
+
+      {pricingDisplay === 'dialog' && (
+        <Dialog
+          open={formOpen || showActualForm}
+          onOpenChange={(open) => {
+            if (!open) {
+              setFormOpen(false);
+              setShowActualForm(false);
+            }
+          }}
+        >
+          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-2xl">
+            <DialogHeader className="px-5 py-4 pr-12 border-b border-border bg-card">
+              <DialogTitle className="font-heading text-xl text-foreground">
+                {showActualForm ? 'Log private cost' : 'Price this work'}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                {item.item_name}. Your total updates as you enter the work; nothing is saved until you confirm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="p-3 sm:p-4 bg-background [&>div]:shadow-none">
+              <LaborEntryForm
+                key={showActualForm ? 'private-cost' : 'billable'}
+                coId={coId} lineItemId={item.id} orgId={orgId}
+                enteredByRole={enteredByRole} pricingType={pricingType}
+                isTC={isTC} isFC={isFC} isActualCost={showActualForm}
+                nteCap={nteCap} nteUsed={nteUsed}
+                onSaved={() => { setFormOpen(false); setShowActualForm(false); onRefresh(); }}
+                onCancel={() => { setFormOpen(false); setShowActualForm(false); }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

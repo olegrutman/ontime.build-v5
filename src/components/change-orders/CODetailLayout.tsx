@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, type RefObject } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -17,7 +17,7 @@ import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
-import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
+import { getCOPricingReadiness, coPricingStatusLabel } from '@/lib/coPricingReadiness';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -41,6 +41,7 @@ import { COLineItemReview, COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
+import { CODesignSwitcher, COGuidedNav, COCompactSummary, type CODetailDesign, type COGuidedSection } from './CODesignSwitcher';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -61,7 +62,7 @@ import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
+import { CO_STATUS_LABELS, type COStatus, type COFCOrgOption } from '@/types/changeOrder';
 
 interface CODetailLayoutProps {
   coId: string;
@@ -70,6 +71,10 @@ interface CODetailLayoutProps {
 
 export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedDesign = searchParams.get('design');
+  const design: CODetailDesign = requestedDesign === 'guided' || requestedDesign === 'document' ? requestedDesign : 'focus';
+  const [guidedSection, setGuidedSection] = useState<COGuidedSection>('scope');
   const { user } = useAuth();
   const canApprove = usePermission('canApprove');
   const queryClient = useQueryClient();
@@ -258,14 +263,32 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   function handleBack() { navigate(`/project/${projectId}/change-orders`); }
 
+  function changeDesign(next: CODetailDesign) {
+    setGuidedSection('scope');
+    const params = new URLSearchParams(searchParams);
+    params.set('design', next);
+    setSearchParams(params, { replace: true });
+  }
+
+  function goToSection(section: COGuidedSection, ref?: RefObject<HTMLDivElement>) {
+    if (design === 'guided') setGuidedSection(section);
+    window.setTimeout(() => ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), design === 'guided' ? 60 : 0);
+  }
+
+  function openPhotos(type?: 'before' | 'during' | 'after') {
+    if (design === 'guided') setGuidedSection('procurement');
+    window.setTimeout(() => photosCardRef.current?.openAdd(type), design === 'guided' ? 60 : 0);
+  }
+
   async function handleAction(action: string) {
     switch (action) {
-      case 'scroll_scope': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'scroll_materials': materialsRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'scroll_pricing': pricingRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'scroll_fc': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
+      case 'scroll_scope': goToSection('scope', scopeRef); break;
+      case 'scroll_materials': goToSection('procurement', materialsRef); break;
+      case 'scroll_pricing': goToSection('scope', pricingRef); break;
+      case 'scroll_fc': goToSection('scope', scopeRef); break;
+      case 'log_hours': goToSection('scope', scopeRef); break;
       case 'request_fc':
+        goToSection('scope');
         if (fcOrgOptions.length === 0) {
           toast.info('No crews found on this project');
         } else if (fcOrgOptions.length === 1) {
@@ -296,7 +319,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         if (co) {
           if (photosBlocked) {
             toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
-            photosCardRef.current?.openAdd('during');
+            openPhotos('during');
             break;
           }
           try {
@@ -344,7 +367,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           }
           if (photosBlocked) {
             toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
-            photosCardRef.current?.openAdd('during');
+            openPhotos('during');
             break;
           }
           try {
@@ -375,7 +398,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'approve':
         if (co) {
           if (lineItems.length > 1) {
-            scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+            goToSection('scope', scopeRef);
             toast.info('Review each scope item, then finish the review in Actions.');
             break;
           }
@@ -389,7 +412,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'reject':
         if (co) {
           if (lineItems.length > 1) {
-            scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+            goToSection('scope', scopeRef);
             toast.info('Reject individual items with a reason, then finish the review in Actions.');
             break;
           }
@@ -404,6 +427,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         }
         break;
       case 'noop': {
+        if (design === 'guided') setGuidedSection('summary');
         const team = document.getElementById('co-team-card');
         if (team) team.scrollIntoView({ behavior: 'smooth' });
         toast.info('Assign an upstream party in the Team card before submitting.');
@@ -457,6 +481,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
+  const showScope = design !== 'guided' || guidedSection === 'scope';
+  const showProcurement = design !== 'guided' || guidedSection === 'procurement';
+  const showRecords = design !== 'guided' || guidedSection === 'records';
+  const showSummary = design !== 'guided' || guidedSection === 'summary';
 
 
 
@@ -607,25 +635,40 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         <div className="w-full px-4 lg:px-5 py-4 space-y-4">
 
 
+          <CODesignSwitcher value={design} onChange={changeDesign} />
+
           {/* Full-width Header Card + Pipeline */}
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} myOrgId={myOrgId} pricingReadiness={pricingReadiness} />
 
-          <COBillingStatusCard
-            coId={co.id}
-            projectId={projectId}
-            status={co.status}
-            approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-          />
+          {design !== 'focus' && (
+            <COCompactSummary
+              total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
+              statusLabel={coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}
+              pricedCount={pricedCount}
+              itemCount={lineItems.length}
+            />
+          )}
+
+          {design === 'guided' && <COGuidedNav value={guidedSection} onChange={setGuidedSection} />}
+
+          {showSummary && design === 'document' && (
+            <COBillingStatusCard
+              coId={co.id}
+              projectId={projectId}
+              status={co.status}
+              approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
+            />
+          )}
 
           {/* Next step first — one clear action. */}
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
-          <COPricingUnlockBar
+          {showScope && <COPricingUnlockBar
             co={co}
             canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
-          />
-          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+          />}
+          {showScope && !hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
@@ -659,21 +702,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <COPhotoNudgeBanner
             status={co.status}
             photos={photos}
-            onTakePhoto={(type) => photosCardRef.current?.openAdd(type)}
+            onTakePhoto={openPhotos}
           />
 
 
           {/* KPI Row — GC keeps the full strip (incl. the editable budget tile);
               TC/FC get a compact money summary inside the Scope & Labor header instead. */}
-          {isGC && (
+          {isGC && showSummary && (
             <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
           )}
 
-          {/* Two-column layout */}
-          <div className="flex gap-4">
+          {/* Focus uses a side rail; Document stays intentionally narrow and linear. */}
+          <div className={cn('flex gap-4', design === 'document' && 'mx-auto w-full max-w-5xl')}>
             <div className="flex-1 min-w-0 space-y-4" ref={pricingRef}>
 
               {/* ====== SCOPE & LABOR ====== */}
+              {showScope && (
               <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {/* Card header */}
                 <div className="px-3 py-3 sm:px-5 sm:py-4 border-b border-border">
@@ -807,6 +851,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           markupVisibility={markupVisibility}
                           crewPricingBase={crewPricingBase}
                           coStatus={co.status}
+                          pricingDisplay="dialog"
                         />
                         <COLineItemReview coId={co.id} item={item} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                       </div>
@@ -814,11 +859,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   )}
                 </div>
               </div>
+              )}
 
 
 
               {/* Materials */}
-              {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
+              {showProcurement && (co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
                 <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
@@ -834,7 +880,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Equipment */}
-              {(co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
+              {showProcurement && (co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
@@ -846,12 +892,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Photos */}
-              <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
+              {showProcurement && <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />}
 
               {/* External Invites */}
-              <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
+              {showRecords && <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />}
 
               {/* Activity — Collapsible */}
+              {showRecords && (
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -890,8 +937,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
+              )}
 
               {/* Audit Log — Collapsible */}
+              {showRecords && (
               <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -910,21 +959,34 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
+              )}
             </div>
 
-            {/* Sidebar */}
+            {/* Focus sidebar */}
+            {design === 'focus' && (
               <div className="hidden xl:block w-[300px] 2xl:w-[340px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
                 {billedCard}
                 {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
               </div>
+            )}
           </div>
 
+          {design === 'focus' && (
             <div className="space-y-3 xl:hidden">
               <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
               {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
             </div>
+          )}
+
+          {design !== 'focus' && showSummary && (
+            <div className={cn('space-y-3', design === 'document' ? 'mx-auto w-full max-w-5xl' : 'mx-auto w-full max-w-3xl')}>
+              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
+              {billedCard}
+              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+            </div>
+          )}
         </div>
       </div>
 
@@ -933,7 +995,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
         total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
         photoCount={photos.length} photosBlocked={photosBlocked}
-        onOpenCamera={() => photosCardRef.current?.openAdd()}
+        onOpenCamera={() => openPhotos()}
       />
 
       <COExternalInviteDialog
