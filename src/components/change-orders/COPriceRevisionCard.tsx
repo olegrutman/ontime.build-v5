@@ -55,7 +55,7 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
     <section className="border border-border rounded-2xl bg-card p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-heading text-base font-bold uppercase">Revised price approval</h3>
-        <span className="text-xs font-medium text-muted-foreground">{pending ? 'Awaiting contractor decision' : latest ? `Revision ${latest.status}` : 'Pricing correction'}</span>
+        <span className="text-xs font-medium text-muted-foreground">{pending ? 'Awaiting contractor decision' : 'Pricing correction'}</span>
       </div>
       {revision && (
         <>
