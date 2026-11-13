@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 import { CONextActionBanner } from './CONextActionBanner';
 import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
-import { COPriceRevisionCard } from './COPriceRevisionCard';
+import { COPriceRevisionActions, COPriceRevisionCard } from './COPriceRevisionCard';
 import { COPricingUnlockBar } from './COPricingUnlockBar';
 import { canSubmitPriceRevision } from '@/lib/coPriceRevision';
 import { COCorrectionCard } from './COCorrectionCard';
@@ -680,9 +680,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
           />
+          {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
             </section>
           </div>
-          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
