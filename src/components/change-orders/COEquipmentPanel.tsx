@@ -64,8 +64,10 @@ export function COEquipmentPanel({
   equipmentResponsible,
   canEdit,
   canEditExternal = false,
+  responsibilityControl,
   onRefresh,
 }: COEquipmentPanelProps) {
+  const rl = useRoleLabelsContext();
   const [drafts, setDrafts]         = useState<DraftEquip[]>([]);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState<string | null>(null);
@@ -82,7 +84,7 @@ export function COEquipmentPanel({
     (!equipmentResponsible && (isTC || isGC || isFC));
   const canManageEquipment = canEdit && isResponsibleForEquipment;
   const responsibleLabel =
-    equipmentResponsible === 'GC' ? 'GC' : equipmentResponsible === 'TC' ? 'TC' : null;
+    equipmentResponsible === 'GC' ? rl.GC : equipmentResponsible === 'TC' ? rl.TC : null;
 
   function startEdit(item: COEquipmentItem) {
     setEditingId(item.id);

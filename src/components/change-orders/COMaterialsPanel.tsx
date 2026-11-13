@@ -166,6 +166,7 @@ export function COMaterialsPanel({
   materialsResponsible,
   canEdit,
   canEditExternal = false,
+  responsibilityControl,
   onRefresh,
 }: COMaterialsPanelProps) {
   const rl = useRoleLabelsContext();
