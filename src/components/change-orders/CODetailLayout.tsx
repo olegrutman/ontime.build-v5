@@ -660,7 +660,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
             </div>
             <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm xl:sticky xl:top-14">
-              <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-muted-foreground">Actions</h2>
               <COStatusActions
               co={co}
               isGC={isGC}
