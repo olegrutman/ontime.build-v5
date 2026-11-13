@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 import { seedFromEntry, seedForNewEntry } from '@/lib/laborEntrySeed';
+import { calculateLaborEntryAmount } from '@/lib/laborEntryMath';
 
 
 function fmtHours(n: number) {
@@ -94,7 +95,7 @@ export function LaborEntryForm({
         orgRate: orgRes.data?.default_hourly_rate,
         profileRate: rateRes?.data != null ? Number(rateRes.data) : null,
         orgMarkup: orgRes.data?.labor_markup_percent,
-        isTC,
+        isTC: isTC && !isActualCost,
       });
       if (seed.rate) setRate(seed.rate);
       if (seed.markup) setMarkup(seed.markup);
@@ -102,7 +103,7 @@ export function LaborEntryForm({
     }
     loadDefaults();
     return () => { cancelled = true; };
-  }, [user, orgId, isTC, isEditing]);
+  }, [user, orgId, isTC, isActualCost, isEditing]);
 
 
   // Field-crew logged hours on this line item — importable as internal cost (TC only).
@@ -122,7 +123,8 @@ export function LaborEntryForm({
           .from('co_labor_entries')
           .select('id, hours, hourly_rate, lump_sum, pricing_mode')
           .eq('co_line_item_id', lineItemId)
-          .eq('entered_by_role', 'FC'),
+          .eq('entered_by_role', 'FC')
+          .eq('is_actual_cost', false),
         supabase.from('change_orders').select('use_fc_pricing_base').eq('id', coId).maybeSingle(),
       ]);
       const data = entriesRes.data;
@@ -183,9 +185,16 @@ export function LaborEntryForm({
   const markupPct = parseFloat(markup) || 0;
   const internalCostValue = parseFloat(internalCost) || 0;
 
-  const baseTotal = mode === 'lump_sum' ? lumpSumValue : hoursValue * rateValue;
-  const markupAmount = isTC && markupPct > 0 ? baseTotal * (markupPct / 100) : 0;
-  const computedTotal = baseTotal + markupAmount;
+  const amounts = calculateLaborEntryAmount({
+    mode,
+    hours: hoursValue,
+    rate: rateValue,
+    lumpSum: lumpSumValue,
+    isTC,
+    isActualCost,
+    markupPercent: markupPct,
+  });
+  const { baseTotal, markupAmount, total: computedTotal } = amounts;
 
   const showMarginPreview = !isActualCost && computedTotal > 0 && internalCostValue > 0;
   const marginDollars = computedTotal - internalCostValue;
@@ -239,18 +248,12 @@ export function LaborEntryForm({
     };
   }
 
-  // Base = TC internal cost, billable = post-markup amount GC sees.
-  const effectiveMarkup = isTC && markupPct > 0 ? markupPct : 0;
+  // Base = actual cost or pre-markup charge; only billable TC entries carry markup.
+  const effectiveMarkup = amounts.effectiveMarkup;
   function baseHourly() { return mode === 'hourly' ? rateValue : null; }
-  function billableHourly() {
-    const b = baseHourly();
-    return b == null ? null : b + b * (effectiveMarkup / 100);
-  }
+  function billableHourly() { return amounts.effectiveRate; }
   function baseLump() { return mode === 'lump_sum' ? lumpSumValue : null; }
-  function billableLump() {
-    const b = baseLump();
-    return b == null ? null : b + b * (effectiveMarkup / 100);
-  }
+  function billableLump() { return amounts.effectiveLumpSum; }
 
   async function attemptSave() {
     if (!user) { toast.error('Sign in required'); return; }
@@ -378,8 +381,8 @@ export function LaborEntryForm({
           {isActualCost ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <DollarSign className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />}
           <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground truncate font-heading">
             {isEditing
-              ? (isActualCost ? 'Edit internal cost' : 'Edit pricing entry')
-              : (isActualCost ? 'Log internal cost' : 'Add pricing entry')}
+              ? (isActualCost ? 'Edit private cost' : 'Edit pricing entry')
+              : (isActualCost ? 'Log private cost' : 'Add pricing entry')}
           </h3>
         </div>
         <div className="grid grid-cols-2 w-full sm:w-auto p-1 rounded-lg bg-background border border-border">
@@ -527,9 +530,9 @@ export function LaborEntryForm({
             </div>
           ) : (
             <div className="col-span-12 sm:col-span-4 space-y-1.5">
-              <label className={microLabel}>Line total</label>
-              <div className={cn(fieldInput, 'flex items-center justify-end bg-muted/50 text-foreground font-semibold text-base')} style={mono}>
-                {money(computedTotal)}
+              <label className={microLabel}>Pricing basis</label>
+              <div className={cn(fieldInput, 'flex items-center justify-end bg-muted/50 text-xs font-semibold text-muted-foreground')}>
+                {isActualCost ? 'Actual base cost' : 'No markup'}
               </div>
             </div>
           )}
@@ -632,8 +635,8 @@ export function LaborEntryForm({
               <span>{markupPct}% markup ({money(markupAmount)})</span>
             </>
           )}
-          <span className="text-muted-foreground/60">=</span>
-          <span className="font-bold text-foreground">{money(computedTotal)}</span>
+          <span className="text-muted-foreground/60">→</span>
+          <span className="font-semibold text-foreground">Total below</span>
         </div>
 
         {/* Private internal cost band */}
@@ -643,7 +646,7 @@ export function LaborEntryForm({
               <div className="flex items-center gap-2 min-w-0">
                 <Lock className="h-3 w-3 text-muted-foreground" />
                 <span className="text-[11px] font-bold uppercase tracking-tight text-muted-foreground truncate">
-                  Private internal cost
+                  Additional private cost
                 </span>
               </div>
               {fcAvailable && (
