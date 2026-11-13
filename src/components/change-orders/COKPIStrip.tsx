@@ -41,8 +41,7 @@ export interface COKPIItemBreakdown {
 }
 
 function fmtCurrency(value: number) {
-  if (value === 0) return '$0';
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 interface KPITile {
@@ -58,6 +57,7 @@ interface KPITile {
   markupPercent?: number | null;
   passedToOwner?: boolean | null;
   kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'other';
+  primary?: boolean;
 }
 
 function tilePills(tile: KPITile) {
@@ -95,8 +95,11 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
         label: headlineLabel,
         value: fmtCurrency(tcSubmitted),
         color: 'hsl(var(--primary))',
-        sub: headlineSub,
+        sub: ['approved', 'contracted'].includes(props.co.status)
+          ? 'Frozen approval amount · before tax'
+          : headlineSub,
         kind: 'revenue',
+        primary: true,
       },
     ];
 
@@ -138,17 +141,6 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       color: gcBudget && gcBudget >= gcCost ? C.green : C.amber,
       sub: gcBudget ? 'Owner price minus order cost' : 'Set your owner price to calculate',
     });
-    tiles.push({
-      label: 'Pricing progress',
-      kind: 'progress',
-      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
-      color: C.amber,
-      sub: 'Scope items priced',
-      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
-        ? { text: 'Ready', variant: 'healthy' }
-        : { text: 'In progress', variant: 'watch' },
-    });
-
     // Tax tile when there's tax (responsibility-aware — exclude tax on GC-procured M&E)
     if (financials.billableTotalTax > 0) {
       tiles.push({
@@ -192,18 +184,25 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     const myBillable = ownLaborToUpstream > 0
       ? ownLaborToUpstream
       : (isTC && props.co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
+    const isApproved = ['approved', 'contracted'].includes(props.co.status);
+    const currentRevenue = totalToUpstream > 0 ? totalToUpstream : myBillable;
+    const revenue = isApproved && isTC && props.co.approved_amount != null
+      ? Number(props.co.approved_amount)
+      : currentRevenue;
     tiles.push({
-      label: ['approved', 'contracted'].includes(props.co.status) ? 'Approved revenue' : 'Proposed revenue',
-      value: fmtCurrency(totalToUpstream > 0 ? totalToUpstream : myBillable),
+      label: isApproved ? 'Approved price' : 'Proposed price',
+      value: fmtCurrency(revenue),
       color: 'hsl(var(--primary))',
       kind: 'revenue',
-      badge: myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
+      primary: true,
+      sub: isApproved ? 'Frozen approval amount · before tax' : 'Current billable amount · before tax',
+      badge: isApproved ? { text: 'Approved', variant: 'healthy' } : myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
     });
 
     const privateCost = isTC
       ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost
       : financials.fcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
-    const margin = totalToUpstream - privateCost;
+    const margin = revenue - privateCost;
     tiles.push({
       label: 'Private cost',
       kind: 'cost',
@@ -216,20 +215,9 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       kind: 'margin',
       value: privateCost > 0 ? fmtCurrency(margin) : 'Pending',
       color: privateCost > 0 && margin < 0 ? C.red : C.green,
-      sub: privateCost > 0 && totalToUpstream > 0 ? `${((margin / totalToUpstream) * 100).toFixed(1)}% of revenue` : 'Add a private cost to calculate',
+      sub: privateCost > 0 && revenue > 0 ? `${((margin / revenue) * 100).toFixed(1)}% of ${isApproved ? 'approved' : 'proposed'} revenue` : 'Add a private cost to calculate',
       badge: privateCost > 0 ? { text: margin >= 0 ? 'Positive' : 'Over budget', variant: margin >= 0 ? 'healthy' : 'watch' } : undefined,
     });
-    tiles.push({
-      label: 'Pricing progress',
-      kind: 'progress',
-      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
-      color: C.blue,
-      sub: 'Scope items priced',
-      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
-        ? { text: 'Ready', variant: 'healthy' }
-        : { text: 'In progress', variant: 'watch' },
-    });
-
     if (financials.retainagePercent > 0 && financials.viewer.retainageAmount > 0) {
       tiles.push({
         label: 'Retainage Held',
@@ -383,9 +371,9 @@ function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[]
           <span className="shrink-0 font-mono font-semibold text-foreground">{fmtCurrency(amount(it))}</span>
         </div>
       ))}
-      {Math.abs(other) >= 1 && (
+      {Math.abs(other) >= 0.005 && (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
-          <span>Materials, equipment &amp; other</span>
+          <span>Materials, equipment &amp; approval adjustments</span>
           <span className="shrink-0 font-mono font-semibold">{fmtCurrency(other)}</span>
         </div>
       )}
@@ -402,9 +390,9 @@ function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)} aria-label={`View ${tile.label} breakdown`}
-        className="h-auto min-w-0 flex-col items-start gap-0.5 whitespace-normal rounded-xl px-3 py-2 text-left">
+        className={cn('h-auto min-w-0 flex-col items-start gap-0.5 whitespace-normal rounded-xl px-3 py-2 text-left', tile.primary && 'col-span-2 py-3')}>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{tile.label}</span>
-        <span className="font-mono text-base font-bold text-foreground">{tile.value}</span>
+        <span className={cn('font-mono text-lg font-bold text-foreground', tile.primary && 'text-2xl')}>{tile.value}</span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md gap-0 overflow-hidden rounded-2xl p-0">
