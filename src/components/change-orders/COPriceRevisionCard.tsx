@@ -10,13 +10,24 @@ import type { ChangeOrder } from '@/types/changeOrder';
 
 const money = (value: number) => value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onRefresh, correctionManaged = false }: {
-  co: ChangeOrder; myOrgId: string; isTC: boolean; isGC: boolean; currentLabor: number; onRefresh: () => void; correctionManaged?: boolean;
-}) {
+interface PriceRevisionProps {
+  co: ChangeOrder;
+  myOrgId: string;
+  isTC: boolean;
+  isGC: boolean;
+  currentLabor: number;
+  onRefresh: () => void;
+  /** True when a scope correction version is still awaiting upstream review. */
+  correctionManaged?: boolean;
+}
+
+/** Shared read + mutation for the pricing-correction workflow. */
+function usePriceRevision({ co, myOrgId, isTC, isGC, currentLabor, onRefresh }: PriceRevisionProps) {
   const queryClient = useQueryClient();
   const canCreate = usePermission('canCreateChangeOrders');
   const canApprove = usePermission('canApprove');
   const [saving, setSaving] = useState(false);
+
   const { data: revisions = [] } = useQuery({
     queryKey: ['co-price-revisions', co.id],
     enabled: (isTC || isGC) && ['approved', 'contracted'].includes(co.status),
@@ -26,11 +37,10 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
       return data ?? [];
     },
   });
+
   const pending = revisions.find(revision => revision.status === 'pending');
   const canSubmit = isTC && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreate);
   const changed = Math.abs(currentLabor - Number(co.tc_submitted_price ?? 0)) > 0.005;
-  // Decided revisions remain in the audit log; only active corrections belong in the workspace.
-  if (!pending && !(canSubmit && changed)) return null;
 
   async function act(approve?: boolean) {
     setSaving(true);
@@ -49,32 +59,62 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
     } finally { setSaving(false); }
   }
 
+  return { pending, canSubmit, changed, saving, act, canApprove };
+}
+
+/**
+ * The pricing-correction buttons. They live in the order's Actions box so every
+ * workflow move — submit, complete, unlock, correct — sits in one place.
+ */
+export function COPriceRevisionActions(props: PriceRevisionProps) {
+  const { correctionManaged = false } = props;
+  const { pending, canSubmit, changed, saving, act, canApprove, myOrgId, isGC } = usePriceRevision(props);
+
+  if (pending) {
+    if (!isGC || !canDecidePriceRevision(pending.status, pending.to_org_id, myOrgId, canApprove)) return null;
+    return (
+      <div className="space-y-2 border-t border-border pt-3">
+        <p className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">Price correction</p>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={saving} onClick={() => void act(true)}><Check className="h-4 w-4" />Approve revised price</Button>
+          <Button variant="outline" disabled={saving} onClick={() => void act(false)}><X className="h-4 w-4" />Reject revision</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (correctionManaged || !canSubmit || !changed) return null;
+  return (
+    <div className="space-y-2 border-t border-border pt-3">
+      <p className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground">Price correction</p>
+      <Button disabled={saving} onClick={() => void act()} className="w-full justify-center sm:w-auto">
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit price correction
+      </Button>
+    </div>
+  );
+}
+
+/** Read-only detail of a correction waiting on the contractor's decision. */
+export function COPriceRevisionCard(props: PriceRevisionProps) {
+  const { pending } = usePriceRevision(props);
+  // Decided revisions stay in the audit log; only an active one needs a panel.
+  if (!pending) return null;
+
   const revision = pending;
-  const scope = Array.isArray(revision?.scope_snapshot) ? revision.scope_snapshot as { item: string; description?: string; amount: number }[] : [];
+  const scope = Array.isArray(revision.scope_snapshot) ? revision.scope_snapshot as { item: string; description?: string; amount: number }[] : [];
   return (
     <section className="border border-border rounded-2xl bg-card p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-heading text-base font-bold uppercase">Revised price approval</h3>
-        <span className="text-xs font-medium text-muted-foreground">{pending ? 'Awaiting contractor decision' : 'Pricing correction'}</span>
+        <span className="text-xs font-medium text-muted-foreground">Awaiting contractor decision</span>
       </div>
-      {revision && (
-        <>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <span>Original <strong className="font-mono">{money(Number(revision.previous_price))}</strong></span>
-            <span>Revised <strong className="font-mono">{money(Number(revision.proposed_price))}</strong></span>
-            <span>Difference <strong className="font-mono">{money(revisionPriceChange(Number(revision.previous_price), Number(revision.proposed_price)))}</strong></span>
-          </div>
-          {pending && scope.length > 0 && <ul className="divide-y divide-border">{scope.map((item, index) => <li key={index} className="flex items-start justify-between gap-4 py-2 text-sm"><span className="min-w-0 break-words">{item.item}{item.description && <span className="block text-xs text-muted-foreground">{item.description}</span>}</span><span className="font-mono shrink-0">{money(Number(item.amount))}</span></li>)}</ul>}
-        </>
-      )}
-      {pending && <p className="text-xs text-muted-foreground">The original approved price remains in effect until this revision is accepted.</p>}
-      <div className="flex flex-wrap gap-2">
-        {!correctionManaged && !pending && canSubmit && changed && <Button disabled={saving} onClick={() => void act()}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit revised price</Button>}
-        {!correctionManaged && pending && isGC && canDecidePriceRevision(pending.status, pending.to_org_id, myOrgId, canApprove) && <>
-          <Button disabled={saving} onClick={() => void act(true)}><Check className="h-4 w-4" />Approve revised price</Button>
-          <Button variant="outline" disabled={saving} onClick={() => void act(false)}><X className="h-4 w-4" />Reject revision</Button>
-        </>}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <span>Original <strong className="font-mono">{money(Number(revision.previous_price))}</strong></span>
+        <span>Revised <strong className="font-mono">{money(Number(revision.proposed_price))}</strong></span>
+        <span>Difference <strong className="font-mono">{money(revisionPriceChange(Number(revision.previous_price), Number(revision.proposed_price)))}</strong></span>
       </div>
+      {scope.length > 0 && <ul className="divide-y divide-border">{scope.map((item, index) => <li key={index} className="flex items-start justify-between gap-4 py-2 text-sm"><span className="min-w-0 break-words">{item.item}{item.description && <span className="block text-xs text-muted-foreground">{item.description}</span>}</span><span className="font-mono shrink-0">{money(Number(item.amount))}</span></li>)}</ul>}
+      <p className="text-xs text-muted-foreground">The original approved price remains in effect until this revision is accepted. Use Approve or Reject in the Actions box.</p>
     </section>
   );
 }
