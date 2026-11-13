@@ -19,6 +19,7 @@ import type { COReasonCode, COLaborEntry, COMaterialItem, COEquipmentItem, COLin
 import { buildInvoiceNumber } from '@/lib/invoiceNumber';
 import { fetchWoBilledToDate, type WoBilledInfo } from '@/lib/woProgressBillingData';
 import { woBillingSummary, fixedProgressAmount } from '@/lib/woProgressBilling';
+import { completedItemClaims, isCompletedBillableItem } from '@/lib/coItemCompletion';
 
 
 interface CreateInvoiceFromCOsProps {
@@ -95,6 +96,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
   const [invoiceMode, setInvoiceMode] = useState<'per_co' | 'aggregate'>('per_co');
   const [eligibleContracts, setEligibleContracts] = useState<EligibleContract[]>([]);
   const [selectedContractId, setSelectedContractId] = useState<string>('');
+  const [completedCoIds, setCompletedCoIds] = useState<Set<string>>(new Set());
 
 
   // Determine invoicing role from org type
@@ -153,6 +155,10 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         });
 
         const billed = await fetchWoBilledToDate(projectId, currentOrgId, filtered.map(c => c.id));
+        const { data: completed, error: completedError } = await supabase.from(t.line)
+          .select('co_id').in('co_id', filtered.map(c => c.id)).eq('approval_status', 'approved').not('completed_at', 'is', null);
+        if (completedError) throw completedError;
+        setCompletedCoIds(new Set((completed ?? []).map(item => item.co_id)));
         setBilledMap(billed);
         setApprovedCOs(filtered as ApprovedCO[]);
       } catch (err: any) {
@@ -308,11 +314,30 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       const generated: GeneratedLineItem[] = [];
       const coById = new Map(availableCOs.map(c => [c.id, c]));
       const fixedIds = new Set(ids.filter(id => { const c = coById.get(id); return c && isFixedProgress(c); }));
+      const completedFixedIds = new Set([...fixedIds].filter(id => completedCoIds.has(id)));
       const alreadyBilled = (coId: string, entryId: string) => !!billedMap.get(coId)?.entryIds.has(entryId);
+
+      for (const id of completedFixedIds) {
+        const co = coById.get(id);
+        if (!co) continue;
+        const info = billedMap.get(id);
+        const ownEntries = labor.filter(e => e.co_id === id);
+        // Tagged labor is already reserved; only unitemized historical progress needs a credit.
+        const reservedValue = ownEntries.filter(e => info?.entryIds.has(e.id)).reduce((sum, e) => sum + Number(e.line_total ?? 0), 0);
+        const priorProgress = Math.max(0, (info?.billed ?? 0) + (info?.draft ?? 0) - reservedValue);
+        const claims = completedItemClaims(scopeItems.filter(item => item.co_id === id), ownEntries,
+          info?.entryIds ?? new Set(), Math.max(0, summaryFor(co).remaining - (info?.draft ?? 0)), priorProgress);
+        for (const claim of claims) {
+          const item = scopeMap.get(claim.itemId);
+          generated.push({ description: `${co.co_number ?? 'Order'} · ${item?.item_name ?? 'Completed item'}`, amount: claim.amount,
+            coId: id, type: 'labor', entryIds: claim.entryIds });
+        }
+      }
 
       // Fixed price → one progress line per WO for this period's percent complete.
       // Once the GC acknowledges completion, the default is the remaining balance (final true-up).
       for (const id of fixedIds) {
+        if (completedFixedIds.has(id)) continue;
         const co = coById.get(id);
         if (!co) continue;
         const value = approvedInvoiceValue(co);
@@ -332,6 +357,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
       for (const entry of labor) {
         if (fixedIds.has(entry.co_id) || alreadyBilled(entry.co_id, entry.id)) continue;
         const scope = scopeMap.get(entry.co_line_item_id);
+        if (!scope || !isCompletedBillableItem(scope)) continue;
         const itemName = scope?.item_name ?? 'Labor';
         let desc: string;
         if (entry.pricing_mode === 'lump_sum' && entry.lump_sum) {
@@ -374,7 +400,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
         const s = summaryFor(co);
         if (s.limit <= 0) continue;
         const thisInvoice = generated.filter(g => g.coId === id).reduce((a, g) => a + g.amount, 0);
-        if (thisInvoice > s.remaining + 0.005) {
+        if (thisInvoice > Math.max(0, s.remaining - (billedMap.get(id)?.draft ?? 0)) + 0.005) {
           throw new Error(`${co.co_number ?? co.title ?? 'Work order'} would bill $${thisInvoice.toFixed(2)}, but only $${s.remaining.toFixed(2)} remains of its approved amount.`);
         }
       }
@@ -635,7 +661,8 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess,
                               </p>
                             );
                           })()}
-                          {selected && isFixedProgress(co) && (() => {
+                          {completedCoIds.has(co.id) && <Badge variant="outline">Completed items available</Badge>}
+                          {selected && isFixedProgress(co) && !completedCoIds.has(co.id) && (() => {
                             const s = summaryFor(co);
                             const value = approvedInvoiceValue(co);
                             const maxPct = Math.round((s.remaining / value) * 10000) / 100;
