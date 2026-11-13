@@ -65,5 +65,5 @@ export async function buildInvoiceNumber({
     throw new Error(`The ${prefix} invoice sequence is full; contact the project administrator`);
   }
 
-  return `${prefix}${sequence.toString().padStart(3, '0')}`;
+  return `${prefix}${sequence.toString().padStart(type ? 2 : 3, '0')}`;
 }

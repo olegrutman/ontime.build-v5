@@ -58,13 +58,11 @@ export function CreateSupplierInvoiceFromPO({
   projectId,
   onSuccess,
 }: CreateSupplierInvoiceFromPOProps) {
-  const { user, userOrgRoles } = useAuth();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [periodStart, setPeriodStart] = useState<Date>(startOfMonth(new Date()));
   const [periodEnd, setPeriodEnd] = useState<Date>(endOfMonth(new Date()));
-
-  const supplierOrgName = userOrgRoles[0]?.organization?.name;
 
   // Derive from live line items; cached PO header totals can be stale/zero.
   const lineSubtotal = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);

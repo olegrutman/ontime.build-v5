@@ -23,7 +23,7 @@ describe('full invoice order references', () => {
 
   it('numbers a work order invoice as PROJ-W01', async () => {
     expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'The Knowles Residence', coNumber: 'WO-KNO-IM-HA-0004' }))
-      .toBe('KNO-W001');
+      .toBe('KNO-W01');
   });
 
   it('numbers a change order invoice as PROJ-C01', async () => {

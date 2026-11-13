@@ -89,13 +89,12 @@ export function CreateInvoiceDialog({
   };
 
   const generateInvoiceNumber = async () => {
-    const { count } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('project_id', projectId);
-
-    const nextNumber = (count || 0) + 1;
-    setInvoiceNumber(`INV-${nextNumber.toString().padStart(4, '0')}`);
+    try {
+      setInvoiceNumber(await buildInvoiceNumber({ projectId }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate invoice number';
+      toast.error(message);
+    }
   };
 
   const handleLineItemChange = (id: string, field: keyof LineItemDraft, value: string | number) => {
