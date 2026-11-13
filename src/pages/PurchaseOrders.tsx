@@ -394,12 +394,12 @@ export default function PurchaseOrders() {
                   onClick={() => fetchPODetails(po.id)}
                 >
                   <div className="px-3.5 py-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium">{po.po_number}</p>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0 max-w-full">
+                        <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{po.po_number}</p>
                         <p className="text-xs text-muted-foreground truncate">{po.po_name}</p>
                       </div>
-                      <Badge className={getStatusBadgeClass(po.status as POStatus)}>
+                      <Badge className={`${getStatusBadgeClass(po.status as POStatus)} max-w-full whitespace-normal`}>
                         {PO_STATUS_LABELS[po.status as POStatus]}
                       </Badge>
                     </div>
