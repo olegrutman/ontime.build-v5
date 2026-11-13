@@ -1263,122 +1263,73 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </>
           )}
 
-          {/* Add pricing entry toggle */}
-          {canAddLabor && pricingDisplay === 'dialog' && (
-            <button
-              type="button"
-              onClick={() => setFormOpen(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-xs font-semibold border-t border-border/50 text-foreground hover:bg-accent/40 transition-colors"
-            >
-              <Plus className="h-4 w-4" /> Add pricing entry
-              <span className="font-normal text-muted-foreground">— opens a focused window</span>
-            </button>
-          )}
-          {canAddLabor && pricingDisplay === 'inline' && (
-            <Collapsible open={formOpen || autoExpand} onOpenChange={setFormOpen}>
-              {!autoExpand && (
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      'w-full flex items-center gap-2.5 px-3 sm:px-5 py-3.5 text-xs transition-colors border-t border-border/50',
-                      formOpen
-                        ? 'bg-[hsl(var(--amber)/0.05)]'
-                        : 'hover:bg-accent/40',
-                    )}
-                  >
-                    <div className="w-6 h-6 rounded-full bg-[hsl(var(--amber)/0.1)] flex items-center justify-center">
-                      <Plus className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-foreground">Add pricing entry</p>
-                      <p className="text-[10px] text-muted-foreground">Log hours, flat rate, or unit pricing</p>
-                    </div>
-                  </button>
-                </CollapsibleTrigger>
-              )}
-              <CollapsibleContent>
-                <div className="px-3 sm:px-5 pb-4 pt-2">
-                  <LaborEntryForm
-                    coId={coId} lineItemId={item.id} orgId={orgId}
-                    enteredByRole={enteredByRole} pricingType={pricingType}
-                    isTC={isTC} isFC={isFC}
-                    nteCap={nteCap} nteUsed={nteUsed}
-                    onSaved={() => { setFormOpen(false); onRefresh(); }}
-                    onCancel={() => setFormOpen(false)}
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+          <div className="flex flex-col gap-2 border-t border-border bg-card px-3 py-3 sm:flex-row sm:px-5">
+            {canAddLabor && !formOpen && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => { setFormOpen(true); setShowActualForm(false); }}
+                className="h-9 gap-2 text-xs"
+              >
+                <Plus className="h-4 w-4" /> Add pricing entry
+              </Button>
+            )}
+            {canEditInternal && (isTC || isFC) && !showActualForm && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => { setShowActualForm(true); setFormOpen(false); }}
+                className="h-9 gap-2 text-xs"
+              >
+                <Lock className="h-3.5 w-3.5" /> Log private cost
+              </Button>
+            )}
+            <p className="text-[11px] text-muted-foreground sm:ml-auto sm:self-center">
+              Private costs are never shown to the other company.
+            </p>
+          </div>
 
-
-          {/* Internal cost entry stays open after approval / completion — real costs
-              (invoices, timesheets, receipts) land late and never touch the billable side. */}
-          {!canAddLabor && canEditInternal && (isTC || isFC) && !showActualForm && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
-              className="w-full flex items-center gap-2.5 px-3 sm:px-5 py-3 text-xs border-t border-border/50 hover:bg-accent/40 transition-colors"
-            >
-              <div className="w-6 h-6 rounded-full bg-state-approved/10 flex items-center justify-center">
-                <Plus className="h-3.5 w-3.5 text-state-approved-foreground" />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold text-foreground">Log internal cost</p>
-                <p className="text-[10px] text-muted-foreground">Private — does not change the billable amount</p>
-              </div>
-            </button>
-          )}
-
-          {/* Actual cost form */}
-          {showActualForm && pricingDisplay === 'inline' && (
-            <div className="px-3 sm:px-5 pb-4 border-t border-border/50">
+          {formOpen && (
+            <div className="border-t border-border bg-muted/20 px-3 pb-4 pt-3 sm:px-5 [&>div]:shadow-none">
               <LaborEntryForm
-                coId={coId} lineItemId={item.id} orgId={orgId}
-                enteredByRole={enteredByRole} pricingType={pricingType}
-                isTC={isTC} isFC={isFC} isActualCost
+                key="billable"
+                coId={coId}
+                lineItemId={item.id}
+                orgId={orgId}
+                enteredByRole={enteredByRole}
+                pricingType={pricingType}
+                isTC={isTC}
+                isFC={isFC}
+                nteCap={nteCap}
+                nteUsed={nteUsed}
+                onSaved={() => { setFormOpen(false); onRefresh(); }}
+                onCancel={() => setFormOpen(false)}
+              />
+            </div>
+          )}
+
+          {showActualForm && (
+            <div className="border-t border-border bg-muted/20 px-3 pb-4 pt-3 sm:px-5 [&>div]:shadow-none">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lock className="h-3.5 w-3.5" /> Private cost — never shared upstream</p>
+              <LaborEntryForm
+                key="private-cost"
+                coId={coId}
+                lineItemId={item.id}
+                orgId={orgId}
+                enteredByRole={enteredByRole}
+                pricingType={pricingType}
+                isTC={isTC}
+                isFC={isFC}
+                isActualCost
                 onSaved={() => { setShowActualForm(false); onRefresh(); }}
                 onCancel={() => setShowActualForm(false)}
               />
             </div>
           )}
         </div>
-      )}
-
-      {pricingDisplay === 'dialog' && (
-        <Dialog
-          open={formOpen || showActualForm}
-          onOpenChange={(open) => {
-            if (!open) {
-              setFormOpen(false);
-              setShowActualForm(false);
-            }
-          }}
-        >
-          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-2xl">
-            <DialogHeader className="px-5 py-4 pr-12 border-b border-border bg-card">
-              <DialogTitle className="font-heading text-xl text-foreground">
-                {showActualForm ? 'Log private cost' : 'Price this work'}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                {item.item_name}. Your total updates as you enter the work; nothing is saved until you confirm.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="p-3 sm:p-4 bg-background [&>div]:shadow-none">
-              <LaborEntryForm
-                key={showActualForm ? 'private-cost' : 'billable'}
-                coId={coId} lineItemId={item.id} orgId={orgId}
-                enteredByRole={enteredByRole} pricingType={pricingType}
-                isTC={isTC} isFC={isFC} isActualCost={showActualForm}
-                nteCap={nteCap} nteUsed={nteUsed}
-                onSaved={() => { setFormOpen(false); setShowActualForm(false); onRefresh(); }}
-                onCancel={() => { setFormOpen(false); setShowActualForm(false); }}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });
