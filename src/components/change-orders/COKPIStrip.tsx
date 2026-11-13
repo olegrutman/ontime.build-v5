@@ -117,6 +117,12 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     });
 
     tiles.push({
+      label: 'Order margin',
+      value: passedToOwner === false ? 'Absorbed' : gcBudget ? fmtCurrency(gcBudget - gcCost) : 'Pending',
+      color: gcBudget && gcBudget >= gcCost ? C.green : C.amber,
+      sub: gcBudget ? 'Owner price minus order cost' : 'Set your owner price to calculate',
+    });
+    tiles.push({
       label: 'Pricing progress',
       value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
       color: C.amber,
@@ -125,24 +131,6 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
         ? { text: 'Ready', variant: 'healthy' }
         : { text: 'In progress', variant: 'watch' },
     });
-
-    // Detailed mode: show TC margin (revenue & cost both restricted to TC-responsible buckets)
-    if (markupVisibility === 'detailed') {
-      const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
-      const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
-      // Crew-time pricing: crew billable rows and the TC internal-cost copy
-      // mirror the same work — count once to avoid a fake loss.
-      const tcLaborCost = financials.tcLaborCostTotal;
-      const tcInternalCost = tcLaborCost + ownMatCost + ownEqCost;
-      const tcMargin = tcSubmitted - tcInternalCost;
-      const tcMarginPct = tcSubmitted > 0 ? (tcMargin / tcSubmitted) * 100 : 0;
-      tiles.push({
-        label: `${rl.TC} margin`,
-        value: fmtCurrency(tcMargin),
-        color: tcMargin >= 0 ? C.green : C.red,
-        badge: tcInternalCost > 0 ? { text: `${tcMarginPct.toFixed(0)}%`, variant: tcMargin >= 0 ? 'healthy' as const : 'watch' as const } : undefined,
-      });
-    }
 
     // Tax tile when there's tax (responsibility-aware — exclude tax on GC-procured M&E)
     if (financials.billableTotalTax > 0) {
@@ -175,11 +163,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   }
 
   if (isTC || isFC) {
-    const upstream = isTC ? rl.GC : rl.TC;
-    // Use viewer-scoped totals so FC collaborators don't pull TC's mats/eq
-    const matCost = financials.viewer.ownMaterialsTotal;
-    const eqCost = financials.viewer.ownEquipmentTotal;
-    const matEquip = matCost + eqCost;
+    // Use viewer-scoped totals so FC collaborators don't pull TC's mats/eq.
     const ownLaborToUpstream = financials.viewer.ownLaborToUpstream;
     const totalToUpstream = financials.viewer.totalToUpstream;
 
