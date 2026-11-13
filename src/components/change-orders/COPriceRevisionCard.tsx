@@ -67,8 +67,8 @@ function usePriceRevision({ co, myOrgId, isTC, isGC, currentLabor, onRefresh }: 
  * workflow move — submit, complete, unlock, correct — sits in one place.
  */
 export function COPriceRevisionActions(props: PriceRevisionProps) {
-  const { correctionManaged = false } = props;
-  const { pending, canSubmit, changed, saving, act, canApprove, myOrgId, isGC } = usePriceRevision(props);
+  const { correctionManaged = false, myOrgId, isGC } = props;
+  const { pending, canSubmit, changed, saving, act, canApprove } = usePriceRevision(props);
 
   if (pending) {
     if (!isGC || !canDecidePriceRevision(pending.status, pending.to_org_id, myOrgId, canApprove)) return null;
