@@ -123,7 +123,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         ],
       };
     }
-    if (['shared', 'work_in_progress'].includes(status)) {
+    if (['shared', 'work_in_progress'].includes(status) && props.pricingReadiness !== 'incomplete') {
       // TC requests FC hours; FC has no downstream FC, so just builds price directly.
       if (isTC) {
         return {
