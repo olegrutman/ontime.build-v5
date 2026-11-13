@@ -618,6 +618,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             toLabel={isFC ? rl.TC : rl.GC}
           />
 
+          {/* Desktop: numbers + guidance on the left, one Actions box top right. Phones: actions, then items, then compact numbers. */}
+          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="min-w-0 space-y-3">
+              <div className="hidden lg:block">
           <COKPIStrip
             co={co}
             isGC={isGC}
@@ -633,12 +637,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             markupVisibility={markupVisibility}
             pricedCount={pricedCount}
             itemCount={lineItems.length}
+            itemBreakdown={itemBreakdown}
           />
-
-          {/* Guidance and the only workflow action group sit together at the top. */}
-          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
-            <COStatusActions
+              </div>
+              <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
+            </div>
+            <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm xl:sticky xl:top-14">
+              <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-muted-foreground">Actions</h2>
+              <COStatusActions
               co={co}
               isGC={isGC}
               isTC={isTC}
@@ -652,13 +658,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               lineItems={lineItems}
               laborEntries={laborEntries}
             />
-          </div>
-          <COPricingUnlockBar
+            <COPricingUnlockBar
             co={co}
             canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
           />
+            </section>
+          </div>
           {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
 
           {/* Secondary items collapse into tappable tags. */}
@@ -781,8 +788,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       )}
                     </div>
                   ) : (
-                    lineItems.map((item, idx) => (
-                      <div key={item.id}>
+                    <div className="space-y-2 p-2 sm:p-3">{lineItems.map((item, idx) => (
+                      <div key={item.id} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                         <COLineItemRow
                           item={item}
                           laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
@@ -801,9 +808,31 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           canReview={canReviewLineItems}
                         />
                       </div>
-                    ))
+                    ))}</div>
                   )}
                 </div>
+              </div>
+
+              <div className="lg:hidden">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Order numbers · tap for item breakdown</p>
+                <COKPIStrip
+            co={co}
+            isGC={isGC}
+            isTC={isTC}
+            isFC={isFC}
+            financials={financials}
+            hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)}
+            hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)}
+            materialResponsible={responsibility.materialResponsible}
+            equipmentResponsible={responsibility.equipmentResponsible}
+            tcBillableTotal={tcBillableTotal}
+            onRefresh={refreshDetail}
+            markupVisibility={markupVisibility}
+            pricedCount={pricedCount}
+            itemCount={lineItems.length}
+            itemBreakdown={itemBreakdown}
+                  compact
+                />
               </div>
 
               {/* Materials */}
