@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, Package, Layers } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { attachInvoicePdf, getAttachPdfPreference } from '@/lib/invoicePdf';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -59,6 +58,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
   const [bulkMode, setBulkMode] = useState(false);
   const [createFromCOsOpen, setCreateFromCOsOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [confirmSubmission, setConfirmSubmission] = useState(false);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   // GC sub-tab: 'from_tc' or 'from_supplier'
@@ -256,24 +256,9 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     fetchInvoices();
   };
 
-  const handleQuickSubmit = async (invoice: Invoice) => {
-    try {
-      // Same choice the detail screen offers — remembered per user.
-      if (getAttachPdfPreference()) await attachInvoicePdf(invoice.id, true);
-      const { error } = await supabase
-        .from('invoices')
-        .update({ 
-          status: 'SUBMITTED',
-          submitted_at: new Date().toISOString(),
-        })
-        .eq('id', invoice.id);
-
-      if (error) throw error;
-      toast.success('Invoice submitted successfully');
-      fetchInvoices();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to submit invoice');
-    }
+  const handleQuickSubmit = (invoice: Invoice) => {
+    setConfirmSubmission(true);
+    setSelectedInvoiceId(invoice.id);
   };
 
   const handleQuickApprove = async (invoice: Invoice) => {
@@ -336,8 +321,9 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     return (
       <InvoiceDetail
         invoiceId={selectedInvoiceId}
+        confirmSubmission={confirmSubmission}
         projectId={projectId}
-        onBack={() => setSelectedInvoiceId(null)}
+        onBack={() => { setSelectedInvoiceId(null); setConfirmSubmission(false); }}
         onUpdate={fetchInvoices}
       />
     );

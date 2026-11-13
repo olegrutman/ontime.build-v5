@@ -40,6 +40,7 @@ import { getInvoiceLineScopeText, hasInvoiceLineScopeText } from '@/lib/invoiceL
 
 interface InvoiceDetailProps {
   invoiceId: string;
+  confirmSubmission?: boolean;
   projectId: string;
   onBack: () => void;
   onUpdate: () => void;
@@ -53,7 +54,7 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: InvoiceDetailProps) {
+export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate, confirmSubmission = false }: InvoiceDetailProps) {
   const { user, userOrgRoles } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
@@ -61,8 +62,8 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
-  const [attachPdf, setAttachPdf] = useState(true);
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(confirmSubmission);
+  const [attachPdf, setAttachPdf] = useState(getAttachPdfPreference);
   const [lineRejections, setLineRejections] = useState<Record<string, string>>({});
   const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string; pricing_owner_org_id: string | null; supplier_org_id: string | null } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
