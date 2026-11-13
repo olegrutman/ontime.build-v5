@@ -71,6 +71,10 @@ interface CODetailLayoutProps {
 
 export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedDesign = searchParams.get('design');
+  const design: CODetailDesign = requestedDesign === 'guided' || requestedDesign === 'document' ? requestedDesign : 'focus';
+  const [guidedSection, setGuidedSection] = useState<COGuidedSection>('scope');
   const { user } = useAuth();
   const canApprove = usePermission('canApprove');
   const queryClient = useQueryClient();
