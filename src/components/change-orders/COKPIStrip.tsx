@@ -86,22 +86,6 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     ];
 
 
-    // Show mat/equip breakdown tiles only when TC is responsible AND there's a value
-    if (matResp === 'TC' && tcMaterialCost > 0) {
-      tiles.push({
-        label: 'Material Cost',
-        value: fmtCurrency(tcMaterialCost),
-        color: C.green,
-      });
-    }
-    if (eqResp === 'TC' && tcEquipmentCost > 0) {
-      tiles.push({
-        label: 'Equipment Cost',
-        value: fmtCurrency(tcEquipmentCost),
-        color: C.yellow,
-      });
-    }
-
     const gcOwnMatCost = matResp === 'GC' ? financials.materialsCost : 0;
     const gcOwnEqCost = eqResp === 'GC' ? financials.equipmentCost : 0;
     const gcCost = tcSubmitted + gcOwnMatCost + gcOwnEqCost;
@@ -201,23 +185,6 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
 
     const tiles: KPITile[] = [];
 
-    if (isTC) {
-      tiles.push({
-        label: `${rl.FC} cost`,
-        value: fmtCurrency(financials.fcLaborTotal),
-        color: C.amber,
-        sub: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs logged` : undefined,
-        badge: financials.fcLaborTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
-      });
-    } else {
-      tiles.push({
-        label: 'Hours Logged',
-        value: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs` : '—',
-        color: C.amber,
-        sub: financials.fcTotalHours > 0 ? `${Math.ceil(financials.fcTotalHours / 8)} days` : undefined,
-      });
-    }
-
     // When the TC prices from crew time but no billable rows exist yet (e.g. the
     // crew submitted the WO directly), fall back to the crew-derived total so the
     // card never reads $0 while the pricing panel shows a real number.
@@ -225,29 +192,11 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       ? ownLaborToUpstream
       : (isTC && props.co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
     tiles.push({
-      label: isTC ? 'My Billable' : 'My Labor',
-      value: fmtCurrency(myBillable),
+      label: ['approved', 'contracted'].includes(props.co.status) ? 'Approved revenue' : 'Proposed revenue',
+      value: fmtCurrency(totalToUpstream > 0 ? totalToUpstream : myBillable),
       color: 'hsl(var(--primary))',
       badge: myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
     });
-
-    if (matEquip > 0) {
-      tiles.push({
-        label: 'Materials + Equipment',
-        value: fmtCurrency(matEquip),
-        color: C.green,
-      });
-    }
-
-    // The Action Rail header already prints the headline "Total to {upstream}".
-    // Only repeat it here when it differs from own labor (i.e. mats/eq/tax roll in).
-    if (Math.abs(totalToUpstream - ownLaborToUpstream) > 0.005) {
-      tiles.push({
-        label: `Total to ${upstream}`,
-        value: fmtCurrency(totalToUpstream),
-        color: C.amber,
-      });
-    }
 
     const privateCost = isTC
       ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost

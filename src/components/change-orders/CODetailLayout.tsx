@@ -383,7 +383,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'approve':
         if (co) {
           if (lineItems.length > 1) {
-            goToSection('scope', scopeRef);
+            goToSection(scopeRef);
             toast.info('Review each scope item, then finish the review in Actions.');
             break;
           }
@@ -397,7 +397,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'reject':
         if (co) {
           if (lineItems.length > 1) {
-            goToSection('scope', scopeRef);
+            goToSection(scopeRef);
             toast.info('Reject individual items with a reason, then finish the review in Actions.');
             break;
           }
