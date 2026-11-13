@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type RefObject } from 'react';
+import { useState, useRef, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
