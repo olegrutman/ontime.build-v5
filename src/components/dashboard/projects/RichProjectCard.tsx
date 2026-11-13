@@ -20,6 +20,8 @@ interface RichProjectCardProps {
   nextAction: NextAction;
   /** If true, the cost column is hidden (e.g. FC viewer who shouldn't see upstream pricing). */
   hideCost?: boolean;
+  /** False when no cost side is tracked; never present revenue as 100% profit. */
+  marginKnown?: boolean;
 }
 
 const STATUS_PILL: Record<HealthStatus, { bg: string; color: string; label: string }> = {
@@ -50,6 +52,7 @@ export function RichProjectCard({
   costLabel = 'Cost',
   nextAction,
   hideCost = false,
+  marginKnown = true,
 }: RichProjectCardProps) {
   const navigate = useNavigate();
 
@@ -58,7 +61,7 @@ export function RichProjectCard({
   const hasContract = revenue > 0;
   // Reuse the project-overview health logic; portfolio CO data isn't per-project here, so pass 0/0.
   const cashPosition = paidToYou - paidByYou; // net working capital on this project
-  const health: HealthStatus = computeHealthStatus(marginPct, cashPosition, 0, 0, hasContract);
+  const health: HealthStatus = computeHealthStatus(marginPct, cashPosition, 0, 0, hasContract, marginKnown);
 
   const completionPct = revenue > 0 ? Math.min(Math.round(((paidToYou + pendingToCollect) / revenue) * 100), 100) : 0;
 
@@ -148,9 +151,9 @@ export function RichProjectCard({
         <Cell label={contractLabel} value={fmt(revenue)} />
         <Cell
           label="Margin"
-          value={projectStatus === 'setup' ? '—' : fmt(margin)}
-          tone={projectStatus === 'setup' ? 'muted' : (margin >= 0 ? 'pos' : 'neg')}
-          suffix={projectStatus !== 'setup' && hasContract ? `${marginPct >= 0 ? '+' : ''}${Math.round(marginPct)}%` : undefined}
+          value={projectStatus === 'setup' || !marginKnown ? '—' : fmt(margin)}
+          tone={projectStatus === 'setup' || !marginKnown ? 'muted' : (margin >= 0 ? 'pos' : 'neg')}
+          suffix={projectStatus !== 'setup' && hasContract && marginKnown ? `${marginPct >= 0 ? '+' : ''}${Math.round(marginPct)}%` : undefined}
         />
 
 

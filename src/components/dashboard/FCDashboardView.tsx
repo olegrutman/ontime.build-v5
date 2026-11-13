@@ -217,9 +217,9 @@ export function FCDashboardView({
           <KpiCard
             accent={C.green} icon="📈" iconBg={C.greenBg}
             label="NET MARGIN"
-            value={fmt(netMargin)}
-            sub={`${marginPct}% on contract + CO additions`}
-            pills={[{ type: 'pg', text: `${marginPct}%` }]}
+            value={marginKnown ? fmt(netMargin) : '—'}
+            sub={marginKnown ? `${marginPct}% on contract + CO additions` : 'Set a private cost budget to calculate margin'}
+            pills={[{ type: marginKnown ? 'pg' : 'pa', text: marginKnown ? `${marginPct}%` : 'Awaiting costs' }]}
             idx={1}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -230,8 +230,8 @@ export function FCDashboardView({
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{fmt(costs)}</TdM>, <span>Labor + materials cost</span>]} />
                 <TRow cells={[
                   <TdN>Net Margin</TdN>,
-                  <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.green }}>{fmt(netMargin)}</span>,
-                  <span style={{ color: C.green, fontWeight: 700 }}>{marginPct}% margin</span>,
+                  <span style={{ ...fontMono, fontSize: '0.78rem', fontWeight: 700, color: C.green }}>{marginKnown ? fmt(netMargin) : '—'}</span>,
+                  <span style={{ color: C.green, fontWeight: 700 }}>{marginKnown ? `${marginPct}% margin` : 'Cost not recorded'}</span>,
                 ]} isTotal greenText />
               </tbody>
             </table>

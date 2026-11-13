@@ -112,6 +112,8 @@ export interface ProjectLedger {
   forecastMarginPct: number;
   billed: LedgerTerm;
   collected: LedgerTerm;
+  /** Actual working capital: cash collected minus cash paid. */
+  cashPosition: LedgerTerm;
   retainageHeld: LedgerTerm;
   percentComplete: number;
   earnedRevenue: LedgerTerm;
@@ -378,6 +380,12 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
     known: true,
     formula: 'Σ tax-inclusive total of my PAID invoices',
   };
+  const cashPosition: LedgerTerm = {
+    value: collected - payablesPaid,
+    basis: 'cash',
+    known: true,
+    formula: `${money(collected)} collected − ${money(payablesPaid)} paid`,
+  };
   const retainageTerm: LedgerTerm = {
     value: retainageHeld,
     basis: 'contract',
@@ -441,7 +449,7 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
     baseContract, pendingAwardRevenue, approvedCOAdds, pendingCOAdds, revisedContract,
     baseCost, pendingAwardCost, coCost, materialCommitment, revisedCost,
     forecastMargin, forecastMarginPct,
-    billed: billedTerm, collected: collectedTerm, retainageHeld: retainageTerm,
+    billed: billedTerm, collected: collectedTerm, cashPosition, retainageHeld: retainageTerm,
     percentComplete,
     earnedRevenue, earnedCost, marginToDate, marginToDatePct, marginToDateMeaningful,
     coNetMargin, pendingCONetAtRisk,

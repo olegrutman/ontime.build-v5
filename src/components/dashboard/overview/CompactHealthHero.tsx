@@ -8,6 +8,8 @@ interface CompactHealthHeroProps {
   projectedMarginPct: number;
   label?: string;
   summary: string;
+  /** False when costs are not tracked, so a margin would be misleading. */
+  marginKnown?: boolean;
 }
 
 const STATUS_STYLE: Record<HealthStatus, { bg: string; color: string; border: string; label: string }> = {
@@ -23,6 +25,7 @@ export function CompactHealthHero({
   projectedMarginPct,
   label = 'Projected Margin',
   summary,
+  marginKnown = true,
 }: CompactHealthHeroProps) {
   const s = STATUS_STYLE[status];
   const Icon = status === 'green' ? TrendingUp : status === 'red' ? TrendingDown : Minus;
@@ -65,11 +68,13 @@ export function CompactHealthHero({
           {label}
         </span>
         <span style={{ fontSize: '1.4rem', color: C.ink, lineHeight: 1, ...fontVal }}>
-          {fmtSigned(projectedMargin)}
+          {marginKnown ? fmtSigned(projectedMargin) : '—'}
         </span>
-        <span style={{ fontSize: '0.82rem', color: s.color, ...fontMono }}>
-          {pctRounded >= 0 ? '+' : ''}{pctRounded}%
-        </span>
+        {marginKnown && (
+          <span style={{ fontSize: '0.82rem', color: s.color, ...fontMono }}>
+            {pctRounded >= 0 ? '+' : ''}{pctRounded}%
+          </span>
+        )}
       </div>
 
       <p

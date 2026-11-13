@@ -46,6 +46,8 @@ export function PortfolioOverviewHeader({
 }: PortfolioOverviewHeaderProps) {
   const copy = ROLE_COPY[orgType || 'TC'] || ROLE_COPY.TC;
   const hasContract = financials.revisedRevenue > 0;
+  // Crew revenue without a private cost budget is not a 100% profit forecast.
+  const marginKnown = orgType !== 'FC' || financials.revisedCosts > 0;
 
   const status = computeHealthStatus(
     financials.projectedMarginRevisedPct,
@@ -53,6 +55,7 @@ export function PortfolioOverviewHeader({
     financials.coPendingNetAtRisk,
     financials.coApprovedNet,
     hasContract,
+    marginKnown,
   );
 
   const summary = hasContract
@@ -63,6 +66,7 @@ export function PortfolioOverviewHeader({
         approvedNet: financials.coApprovedNet,
         hasContract,
         roleLabel: copy.contractLabel,
+        marginKnown,
       }) + ` Across ${activeProjectCount} active project${activeProjectCount === 1 ? '' : 's'}.`
     : `Set up your first ${copy.contractLabel} contract to see portfolio health.`;
 
@@ -103,6 +107,7 @@ export function PortfolioOverviewHeader({
         projectedMarginPct={financials.projectedMarginRevisedPct}
         label="Projected Portfolio Margin"
         summary={summary}
+        marginKnown={marginKnown}
       />
     );
   }
@@ -119,6 +124,7 @@ export function PortfolioOverviewHeader({
         projectedMarginPct={financials.projectedMarginRevisedPct}
         label="Projected Portfolio Margin"
         summary={summary}
+        awaitingUpstream={!marginKnown}
       />
       {strip}
     </div>
