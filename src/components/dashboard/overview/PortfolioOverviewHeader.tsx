@@ -107,6 +107,7 @@ export function PortfolioOverviewHeader({
         projectedMarginPct={financials.projectedMarginRevisedPct}
         label="Projected Portfolio Margin"
         summary={summary}
+        marginKnown={marginKnown}
       />
     );
   }

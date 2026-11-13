@@ -151,9 +151,9 @@ export function RichProjectCard({
         <Cell label={contractLabel} value={fmt(revenue)} />
         <Cell
           label="Margin"
-          value={projectStatus === 'setup' ? '—' : fmt(margin)}
-          tone={projectStatus === 'setup' ? 'muted' : (margin >= 0 ? 'pos' : 'neg')}
-          suffix={projectStatus !== 'setup' && hasContract ? `${marginPct >= 0 ? '+' : ''}${Math.round(marginPct)}%` : undefined}
+          value={projectStatus === 'setup' || !marginKnown ? '—' : fmt(margin)}
+          tone={projectStatus === 'setup' || !marginKnown ? 'muted' : (margin >= 0 ? 'pos' : 'neg')}
+          suffix={projectStatus !== 'setup' && hasContract && marginKnown ? `${marginPct >= 0 ? '+' : ''}${Math.round(marginPct)}%` : undefined}
         />
 
 

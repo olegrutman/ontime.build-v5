@@ -148,6 +148,7 @@ export function MyProjectsHero({
                 costLabel={labels.cost}
                 nextAction={action}
                 hideCost={hideCost}
+                marginKnown={orgType !== 'FC' || costs > 0}
               />
             );
           })}
