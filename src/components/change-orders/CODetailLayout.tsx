@@ -635,15 +635,30 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         <div className="w-full px-4 lg:px-5 py-4 space-y-4">
 
 
+          <CODesignSwitcher value={design} onChange={changeDesign} />
+
           {/* Full-width Header Card + Pipeline */}
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} myOrgId={myOrgId} pricingReadiness={pricingReadiness} />
 
-          <COBillingStatusCard
-            coId={co.id}
-            projectId={projectId}
-            status={co.status}
-            approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-          />
+          {design !== 'focus' && (
+            <COCompactSummary
+              total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
+              statusLabel={coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}
+              pricedCount={pricedCount}
+              itemCount={lineItems.length}
+            />
+          )}
+
+          {design === 'guided' && <COGuidedNav value={guidedSection} onChange={setGuidedSection} />}
+
+          {showSummary && design === 'document' && (
+            <COBillingStatusCard
+              coId={co.id}
+              projectId={projectId}
+              status={co.status}
+              approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
+            />
+          )}
 
           {/* Next step first — one clear action. */}
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
@@ -687,13 +702,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <COPhotoNudgeBanner
             status={co.status}
             photos={photos}
-            onTakePhoto={(type) => photosCardRef.current?.openAdd(type)}
+            onTakePhoto={openPhotos}
           />
 
 
           {/* KPI Row — GC keeps the full strip (incl. the editable budget tile);
               TC/FC get a compact money summary inside the Scope & Labor header instead. */}
-          {isGC && (
+          {isGC && showSummary && (
             <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
           )}
 
@@ -961,7 +976,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
         total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
         photoCount={photos.length} photosBlocked={photosBlocked}
-        onOpenCamera={() => photosCardRef.current?.openAdd()}
+        onOpenCamera={() => openPhotos()}
       />
 
       <COExternalInviteDialog
