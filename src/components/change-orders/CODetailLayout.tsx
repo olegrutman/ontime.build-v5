@@ -263,13 +263,30 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   function handleBack() { navigate(`/project/${projectId}/change-orders`); }
 
+  function changeDesign(next: CODetailDesign) {
+    setGuidedSection('scope');
+    const params = new URLSearchParams(searchParams);
+    params.set('design', next);
+    setSearchParams(params, { replace: true });
+  }
+
+  function goToSection(section: COGuidedSection, ref?: React.RefObject<HTMLDivElement>) {
+    if (design === 'guided') setGuidedSection(section);
+    window.setTimeout(() => ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), design === 'guided' ? 60 : 0);
+  }
+
+  function openPhotos(type?: 'before' | 'during' | 'after') {
+    if (design === 'guided') setGuidedSection('procurement');
+    window.setTimeout(() => photosCardRef.current?.openAdd(type), design === 'guided' ? 60 : 0);
+  }
+
   async function handleAction(action: string) {
     switch (action) {
-      case 'scroll_scope': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'scroll_materials': materialsRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'scroll_pricing': pricingRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'scroll_fc': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
+      case 'scroll_scope': goToSection('scope', scopeRef); break;
+      case 'scroll_materials': goToSection('procurement', materialsRef); break;
+      case 'scroll_pricing': goToSection('scope', pricingRef); break;
+      case 'scroll_fc': goToSection('scope', scopeRef); break;
+      case 'log_hours': goToSection('scope', scopeRef); break;
       case 'request_fc':
         if (fcOrgOptions.length === 0) {
           toast.info('No crews found on this project');
