@@ -756,7 +756,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     <div className="flex flex-wrap items-center gap-3 mt-3">
                       <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
                         <div
-                          className={cn('h-full rounded-full transition-all duration-500', pricingReadiness === 'ready' ? 'bg-state-approved' : 'bg-state-pending')}
+                          className={cn('h-full rounded-full transition-all duration-500', pricingReadiness === 'ready' ? 'bg-state-approved' : 'bg-state-open')}
                           style={{ width: `${lineItems.length > 0 ? (pricedCount / lineItems.length) * 100 : 0}%` }}
                         />
                       </div>
