@@ -21,6 +21,7 @@ import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { canRemoveLaborEntry } from '@/lib/laborEntryDelete';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
+import { COLineItemReview } from './COLineReview';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -52,8 +53,8 @@ interface COLineItemRowProps {
   crewPricingBase?: { enabled: boolean; hourlyRate: number; markupPercent: number };
   /** CO lifecycle status — the subcontractor's price is frozen once submitted upstream. */
   coStatus?: string;
-  /** New pricing entries can use a focused dialog instead of expanding the row. */
-  pricingDisplay?: 'inline' | 'dialog';
+  /** Item-level approval stays inside the same item window. */
+  canReview?: boolean;
 }
 
 
@@ -72,10 +73,10 @@ function getStatusColor(entries: COLaborEntry[], showGCApproval: boolean): Statu
   return 'gray';
 }
 
-const STATUS_BORDER_COLOR: Record<StatusColor, string> = {
-  gray: '#E4E8F0',
-  amber: '#F5A623',
-  green: '#059669',
+const STATUS_BORDER_CLASS: Record<StatusColor, string> = {
+  gray: 'border-l-border',
+  amber: 'border-l-state-open',
+  green: 'border-l-state-approved',
 };
 
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
@@ -83,7 +84,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
-  pricingDisplay = 'inline',
+  canReview = false,
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -340,7 +341,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
 
 
-  const autoExpand = pricingDisplay === 'inline' && canAddLabor && entryCount === 0 && !showActualForm;
 
   // Strip markdown asterisks AND any trailing "Scope:" bullet list
   // (the AI narrative already covers what's in the bullets — showing both reads as duplicate)
@@ -388,40 +388,37 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   }
 
   return (
-    <div ref={ref} className={cn('border-b border-border last:border-b-0')} style={{ borderLeft: `3px solid ${STATUS_BORDER_COLOR[statusColor]}` }}>
+    <div ref={ref} className={cn('border-b border-l-2 border-border last:border-b-0', STATUS_BORDER_CLASS[statusColor])}>
       {/* Item header — clickable to expand */}
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setExpanded(!expanded)}
-        onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
-        className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
+        onClick={() => setExpanded(true)}
+        onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(true); } }}
+        aria-label={`Open ${item.item_name} details and pricing`}
+        className="w-full cursor-pointer px-3 py-3 text-left transition-colors hover:bg-accent/30 sm:px-4"
       >
-        <div className="flex flex-col gap-2 2xl:grid 2xl:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] 2xl:items-center 2xl:gap-3">
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
           {/* # column — desktop */}
-          <div className="hidden 2xl:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+          <div className="hidden md:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
             {index !== undefined && <span className="text-sm font-bold">{index}</span>}
           </div>
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Numbered index — mobile */}
             {index !== undefined && (
-              <div className="2xl:hidden flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+              <div className="md:hidden flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
                 <span className="text-sm font-bold">{index}</span>
               </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-1.5">
-                <p className="min-w-0 break-words font-heading text-foreground leading-tight tracking-tight" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.item_name}</p>
+                <p className="min-w-0 break-words font-heading text-base font-bold leading-tight tracking-tight text-foreground">{item.item_name}</p>
                 {isMyOrgItem && coStatus && coStatus !== 'withdrawn' && (
                   <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <CODescriptionEditor coId={item.co_id} status={coStatus} lineItemId={item.id} title={item.item_name} description={item.description ?? ''} label="Edit item description" onSaved={onRefresh} />
                   </span>
                 )}
               </div>
-
-              {cleanDescription && (
-                <p className="mt-1 text-xs italic text-muted-foreground leading-relaxed line-clamp-2">{cleanDescription}</p>
-              )}
 
               <div className="flex items-center gap-1.5 flex-wrap mt-2">
                 {unpricedFCHours > 0 && (
