@@ -1,9 +1,7 @@
 import { forwardRef } from 'react';
-import { cn } from '@/lib/utils';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { CONTEPanel } from './CONTEPanel';
 import { FCInputRequestCard } from './FCInputRequestCard';
-import { COStatusActions } from './COStatusActions';
 import { COSOVPanel } from './COSOVPanel';
 import { COTeamCard } from './COTeamCard';
 import type { ChangeOrder, COFinancials, COCollaborator, COFCOrgOption, COCreatedByRole, COLineItem, COLaborEntry } from '@/types/changeOrder';
@@ -43,368 +41,37 @@ interface COSidebarProps {
   currentLaborTotal?: number;
 }
 
-function fmtCurrency(value: number) {
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COSidebar(props, ref) {
   const {
-    co, isGC, isTC, isFC, role, myOrgId, projectId,
-    financials, collaborators, fcOrgOptions, fcCollabName,
-    canEdit, canRequestFCInput, canCompleteFCInput,
+    co, isGC, isTC, isFC, collaborators, fcOrgOptions, fcCollabName,
+    canRequestFCInput, canCompleteFCInput,
     nteLog, requestFCInput, completeFCInput,
     requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
-    onRefresh,
+    onRefresh, financials,
   } = props;
   const rl = useRoleLabelsContext();
 
-
-
-  // Profitability calc — use viewer-scoped totals so FC collaborators don't pull TC's numbers
-  let revenue = 0, costs = 0;
-  if (isTC) {
-    revenue = financials.viewer.totalToUpstream;
-    // Crew-time pricing: crew billable rows and the TC internal-cost copy
-    // mirror the same work — count once to avoid a fake loss.
-    const tcLaborCost = financials.useFcPricingBase
-      ? (financials.tcActualCostTotal > 0 ? financials.tcActualCostTotal : financials.fcLaborTotal)
-      : financials.fcLaborTotal + financials.tcActualCostTotal;
-    costs = tcLaborCost + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
-  } else if (isFC) {
-    revenue = financials.viewer.totalToUpstream;
-    costs = financials.fcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
-  }
-  const margin = revenue - costs;
-  const marginPct = revenue > 0 ? (margin / revenue) * 100 : 0;
-
-  const statusLabel = co.status === 'work_in_progress' ? 'Work in Progress'
-    : co.status === 'closed_for_pricing' ? 'Closed for Pricing'
-    : co.status === 'submitted' ? 'Submitted for Approval'
-    : co.status === 'approved' ? 'Approved'
-    : co.status === 'rejected' ? 'Rejected'
-    : co.status === 'draft' ? 'Draft'
-    : co.status.replace(/_/g, ' ');
-
-  // Headline financial number — single source of truth for the dark command console
-  const headlineLabel = isGC ? 'Total billable to you' : isTC ? `Total to ${rl.GC}` : `Total to ${rl.TC}`;
-  const headlineValue = isGC
-    ? (props.tcBillableTotal ?? financials.tcBillableToGC)
-    : financials.viewer.totalToUpstream;
-
-  // Visibility derived from co.visibility / external_visibility flag — fall back gracefully
-  const visibilityLabel = (co as any).external_visibility ? 'External' : 'Internal Review';
-
   return (
     <div ref={ref} className="space-y-3">
-      {/* ─── Action Rail (Navy) ───
-          Single owner of every state mutation. Reference number, status and the
-          headline total deliberately live elsewhere (header strip / KPI strip /
-          Financials card) so nothing is printed twice. */}
-      <div className="rounded-xl overflow-hidden shadow-lg" style={{ background: 'hsl(var(--navy))' }}>
-        <div className="px-5 pt-4 pb-3 border-b border-white/10 flex flex-wrap items-baseline justify-between gap-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: 'hsl(220 18% 55%)' }}>
-            {headlineLabel}
-          </p>
-          <span className="font-mono text-lg font-medium text-white shrink-0">
-            ${headlineValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-
-        <div className="px-5 py-4 co-command-actions" style={{ background: 'hsl(222 47% 8%)' }}>
-          <COStatusActions
-            co={co} isGC={isGC} isTC={isTC} isFC={isFC}
-            currentOrgId={myOrgId} projectId={projectId}
-            financials={financials} collaborators={collaborators}
-            onRefresh={onRefresh}
-            lineItemCount={props.lineItemCount}
-            lineItems={props.lineItems}
-            laborEntries={props.laborEntries}
-          />
-        </div>
-      </div>
-
-
-
-      {/* Team & routing — lets any party see (and a creator fix) who this is assigned to */}
       <COTeamCard co={co} collaborators={collaborators} />
 
-      {/* Financials Card */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-        <div className="px-4 py-3 border-b border-border">
-          <h3 className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">Financials</h3>
-        </div>
-        <div className="px-4 py-3 space-y-2">
-          {isGC && (() => {
-            const matResp = props.materialResponsible ?? 'TC';
-            const eqResp = props.equipmentResponsible ?? 'TC';
-            const headline = matResp === 'GC' && eqResp === 'GC'
-              ? `${rl.TC} labor`
-              : matResp === 'GC'
-                ? `${rl.TC} labor + equipment`
-                : eqResp === 'GC'
-                  ? `${rl.TC} labor + materials`
-                  : `${rl.TC} submitted`;
-            const billableTotal = props.tcBillableTotal ?? (financials.tcBillableToGC
-              + (matResp === 'TC' ? financials.materialsTotal : 0)
-              + (eqResp === 'TC' ? financials.equipmentTotal : 0));
-            return (
-            <>
-              {/* Breakdown — explicit lines so a GC always sees who owns Materials & Equipment */}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Labor</span>
-                <span className="font-mono font-medium">{fmtCurrency(financials.tcBillableToGC)}</span>
-              </div>
-              <div className="flex items-start justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">Materials</span>
-                <div className="text-right">
-                  <span className="font-mono font-medium">{fmtCurrency(financials.materialsTotal)}</span>
-                  {matResp === 'GC' && (
-                    <p className="text-[10px] italic text-muted-foreground leading-tight">{rl.GC}-procured — billed separately</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-start justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">Equipment</span>
-                <div className="text-right">
-                  <span className="font-mono font-medium">{fmtCurrency(financials.equipmentTotal)}</span>
-                  {eqResp === 'GC' && (
-                    <p className="text-[10px] italic text-muted-foreground leading-tight">{rl.GC}-procured — billed separately</p>
-                  )}
-                </div>
-              </div>
-              <div className="border-t border-border pt-2 mt-2 flex justify-between text-sm font-semibold">
-                <span>{headline}</span>
-                <span className="font-mono">{fmtCurrency(billableTotal)}</span>
-              </div>
+      <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={props.myOrgId} />
 
-
-              {financials.billableTotalTax > 0 && (
-                <div className="border-t border-border pt-2 mt-2 space-y-1">
-                  {financials.billableMaterialsTax > 0 && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Materials tax</span>
-                      <span className="font-mono">{fmtCurrency(financials.billableMaterialsTax)}</span>
-                    </div>
-                  )}
-                  {financials.laborTaxable && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Labor tax</span>
-                      <span className="font-mono">{fmtCurrency(financials.laborTax)}</span>
-                    </div>
-                  )}
-                  {financials.billableEquipmentTax > 0 && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Equipment tax</span>
-                      <span className="font-mono">{fmtCurrency(financials.billableEquipmentTax)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-semibold pt-1">
-                    <span>Total (incl. {fmtCurrency(financials.billableTotalTax)} tax)</span>
-                    <span className="font-mono">{fmtCurrency(financials.billableGrandTotalWithTax)}</span>
-                  </div>
-                </div>
-              )}
-
-              {financials.retainagePercent > 0 && financials.retainageAmount > 0 && (
-                <div className="border-t border-border pt-2 mt-2 space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Subtotal</span>
-                    <span className="font-mono">{fmtCurrency(financials.billableGrandTotalWithTax)}</span>
-
-                  </div>
-                  <div className="flex justify-between text-xs text-destructive">
-                    <span>Less retainage ({financials.retainagePercent}%)</span>
-                    <span className="font-mono">-{fmtCurrency(financials.retainageAmount)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold pt-1">
-                    <span>Net payable now</span>
-                    <span className="font-mono">{fmtCurrency(financials.netPayableAmount)}</span>
-                  </div>
-                  {financials.retainageReleased && (
-                    <p className="text-[10px] text-state-approved font-medium">✓ Retainage released</p>
-                  )}
-                </div>
-              )}
-            </>
-            );
-          })()}
-
-          {(isTC || isFC) && (() => {
-            const upstream = isTC ? rl.short('GC') : rl.short('TC');
-            const ownLabor = financials.viewer.ownLaborToUpstream;
-            const currentLabor = props.currentLaborTotal ?? ownLabor;
-            const laborDifference = currentLabor - ownLabor;
-            const hasRejectedItems = props.lineItems?.some(item => item.approval_status === 'rejected') ?? false;
-            const ownMats = financials.viewer.ownMaterialsTotal;
-            const ownEq = financials.viewer.ownEquipmentTotal;
-            const ownLaborTax = financials.laborTaxable ? ownLabor * (financials.taxRate / 100) : 0;
-            const ownMatsTax = ownMats * (financials.taxRate / 100);
-            const ownEqTax = ownEq * (financials.taxRate / 100);
-            const ownTotalTax = ownLaborTax + ownMatsTax + ownEqTax;
-            return (
-            <>
-              <div className={cn('flex justify-between text-sm', Math.abs(laborDifference) < 0.005 && 'hidden')}>
-                <span className="text-muted-foreground">Labor total</span>
-                <span className="font-mono font-medium">{fmtCurrency(currentLabor)}</span>
-              </div>
-              {Math.abs(laborDifference) > 0.005 && (
-                <div className="border-t border-border pt-2 space-y-1">
-                  <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-                    <span>{co.status === 'approved' || co.status === 'contracted' ? 'Approved labor' : 'Submitted labor'}</span>
-                    <span className="font-mono shrink-0">{fmtCurrency(ownLabor)}</span>
-                  </div>
-                  <div className={cn('flex justify-between gap-3 text-xs', hasRejectedItems ? 'text-muted-foreground' : 'text-destructive')}>
-                    <span>{hasRejectedItems ? 'Rejected during item review' : 'Pricing difference · needs review'}</span>
-                    <span className="font-mono shrink-0">{fmtCurrency(laborDifference)}</span>
-                  </div>
-                </div>
-              )}
-              {ownEq > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Equipment</span>
-                  <span className="font-mono font-medium">{fmtCurrency(ownEq)}</span>
-                </div>
-              )}
-              {ownMats > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Materials</span>
-                  <span className="font-mono font-medium">{fmtCurrency(ownMats)}</span>
-                </div>
-              )}
-              {/* Only show the roll-up when it actually adds something beyond labor. */}
-              {Math.abs(financials.viewer.totalToUpstream - ownLabor) > 0.005 && (
-              <div className="border-t border-border pt-2 mt-2">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>Total to {upstream}</span>
-                  <span className="font-mono">{fmtCurrency(financials.viewer.totalToUpstream)}</span>
-                </div>
-              </div>
-              )}
-
-              {ownTotalTax > 0 && (
-                <div className="border-t border-border pt-2 mt-2 space-y-1">
-                  {ownMatsTax > 0 && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Materials tax</span>
-                      <span className="font-mono">{fmtCurrency(ownMatsTax)}</span>
-                    </div>
-                  )}
-                  {financials.laborTaxable && ownLaborTax > 0 && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Labor tax</span>
-                      <span className="font-mono">{fmtCurrency(ownLaborTax)}</span>
-                    </div>
-                  )}
-                  {ownEqTax > 0 && (
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Equipment tax</span>
-                      <span className="font-mono">{fmtCurrency(ownEqTax)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-semibold pt-1">
-                    <span>Total (incl. {fmtCurrency(ownTotalTax)} tax)</span>
-                    <span className="font-mono">{fmtCurrency(financials.viewer.totalToUpstreamWithTax)}</span>
-                  </div>
-                </div>
-              )}
-              {financials.retainagePercent > 0 && financials.viewer.retainageAmount > 0 && (
-                <div className="border-t border-border pt-2 mt-2 space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Subtotal</span>
-                    <span className="font-mono">{fmtCurrency(financials.viewer.totalToUpstreamWithTax)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-destructive">
-                    <span>Less retainage ({financials.retainagePercent}%)</span>
-                    <span className="font-mono">-{fmtCurrency(financials.viewer.retainageAmount)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold pt-1">
-                    <span>Net payable now</span>
-                    <span className="font-mono">{fmtCurrency(financials.viewer.netPayableAmount)}</span>
-                  </div>
-                  {financials.retainageReleased && (
-                    <p className="text-[10px] text-state-approved font-medium">✓ Retainage released</p>
-                  )}
-                </div>
-              )}
-            </>
-            );
-          })()}
-
-          {/* TC / FC Profitability — also show to GC when detailed visibility */}
-          {(isTC || isFC || (isGC && props.markupVisibility === 'detailed')) && (
-            <div className="border-t border-border pt-3 mt-3 space-y-2">
-              <p className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted-foreground">
-                {isTC ? rl.TC : rl.FC} Profitability
-              </p>
-              <div className="flex flex-wrap justify-between gap-2 text-sm">
-                <span className="text-muted-foreground">{['approved', 'contracted'].includes(co.status) ? 'Approved revenue' : 'Proposed revenue'}</span>
-                <span className="font-mono font-medium shrink-0">{fmtCurrency(revenue)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Internal Costs</span>
-                <span className="font-mono font-medium">{fmtCurrency(costs)}</span>
-              </div>
-              {revenue <= 0 ? (
-                <div className="rounded-lg px-3 py-2 bg-muted/40">
-                  <p className="text-sm font-semibold">No price set yet</p>
-                  <p className="text-[0.7rem] text-muted-foreground mt-0.5">
-                    Margin appears once a price has been set for this work.
-                  </p>
-                </div>
-              ) : costs <= 0 ? (
-                <div className="rounded-lg px-3 py-2 bg-muted/40">
-                  <p className="text-sm font-semibold">Margin pending</p>
-                  <p className="text-[0.7rem] text-muted-foreground mt-0.5">
-                    No {isTC ? rl.FC : 'internal'} cost logged yet — margin can't be calculated.
-                  </p>
-                </div>
-              ) : (
-                <div className={cn(
-                  'rounded-lg px-3 py-2',
-                  margin >= 0 ? 'bg-state-approved-bg' : 'bg-destructive/10',
-                )}>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-semibold">Gross Margin</span>
-                    <div className="text-right">
-                      <span className={cn('font-mono font-bold', margin >= 0 ? 'text-state-approved-foreground' : 'text-destructive')}>
-                        {fmtCurrency(margin)}
-                      </span>
-                      <span className={cn('text-xs ml-1', margin >= 0 ? 'text-state-approved' : 'text-destructive')}>
-                        ({marginPct.toFixed(1)}%)
-                      </span>
-                    </div>
-                  </div>
-                  {revenue > 0 && (
-                    <div className="mt-1.5 h-1.5 rounded-full bg-muted/30 overflow-hidden">
-                      <div
-                        className={cn('h-full rounded-full', margin >= 0 ? 'bg-state-approved' : 'bg-destructive')}
-                        style={{ width: `${Math.min(Math.max(marginPct, 0), 100)}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* SOV Panel */}
-      <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={myOrgId} />
-
-      {/* Crew Card — only when there is something to do */}
       {isTC && (canCompleteFCInput || (canRequestFCInput && !collaborators.some(c => ['active', 'completed'].includes(String(c.status))))) && (
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-border">
-            <h3 className="text-[0.7rem] uppercase tracking-wider font-semibold text-muted-foreground">{rl.FC} involvement</h3>
+        <div id="fc-request-card" className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border px-4 py-3">
+            <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">{rl.FC} involvement</h3>
           </div>
           <div className="px-4 py-3">
             <FCInputRequestCard
-              canRequest={canRequestFCInput} canComplete={canCompleteFCInput}
+              canRequest={canRequestFCInput}
+              canComplete={canCompleteFCInput}
               coStatus={co.status}
               crewTotal={financials.fcLaborTotal}
               billedUpstream={financials.tcBillableToGC}
-              options={fcOrgOptions} collaborators={collaborators} acting={false}
+              options={fcOrgOptions}
+              collaborators={collaborators}
+              acting={false}
               creatorCrewName={co.created_by_role === 'FC' ? (fcCollabName || undefined) : undefined}
               onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); onRefresh(); }}
               onComplete={async () => { await completeFCInput.mutateAsync(); onRefresh(); }}
@@ -413,11 +80,14 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
         </div>
       )}
 
-      {/* NTE */}
       {co.pricing_type === 'nte' && co.nte_cap && (
         <CONTEPanel
-          co={co} nteLog={nteLog} usedAmount={financials.laborTotal}
-          isGC={isGC} isTC={isTC} isFC={isFC}
+          co={co}
+          nteLog={nteLog}
+          usedAmount={financials.laborTotal}
+          isGC={isGC}
+          isTC={isTC}
+          isFC={isFC}
           requestNTEIncrease={requestNTEIncrease}
           approveNTEIncrease={approveNTEIncrease}
           rejectNTEIncrease={rejectNTEIncrease}
