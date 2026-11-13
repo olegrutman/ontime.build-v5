@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, DollarSign, FileText, Loader2, Receipt } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { buildInvoiceNumber } from '@/lib/invoiceNumber';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {

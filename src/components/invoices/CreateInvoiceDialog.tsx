@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Plus, Trash2 } from 'lucide-react';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
 import { supabase } from '@/integrations/supabase/client';
+import { buildInvoiceNumber } from '@/lib/invoiceNumber';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
