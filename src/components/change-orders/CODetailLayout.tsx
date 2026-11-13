@@ -465,12 +465,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   // Scope & Labor totals
   // "Priced" means the viewer's own billing role has priced the item — a crew
   // entry alone must not mark the item priced for the subcontractor.
-  const pricedCount = lineItems.filter(li =>
-    laborEntries.some(e =>
-      e.co_line_item_id === li.id && !e.is_actual_cost &&
-      (isGC || e.entered_by_role === (isFC ? 'FC' : 'TC'))
-    )
-  ).length;
+  const pricingReadiness = getCOPricingReadiness(
+    lineItems, laborEntries, role,
+    [...materials, ...equipment].filter(row => row.added_by_role !== 'GC' && (role !== 'FC' || row.added_by_role === 'FC')),
+  );
+  const pricedCount = lineItems.filter(li => getCOPricingReadiness([li], laborEntries, role) === 'ready').length;
   // Sum only the viewer's own billing-role entries — adding the crew's cost and
   // the subcontractor's price for the same work would double count it.
   const viewerEntryRole = isFC ? 'FC' : 'TC';
@@ -539,7 +538,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     <div className="flex flex-col flex-1 min-h-0" style={{ background: 'hsl(var(--background))' }}>
       {/* Breadcrumb bar */}
       <div className="sticky top-0 z-20 bg-card/95 backdrop-blur border-b border-border">
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 max-w-7xl mx-auto w-full">
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 w-full">
           <div className="flex items-center gap-2 min-w-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
               <ArrowLeft className="h-4 w-4" />
@@ -600,21 +599,18 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
 
       {/* Accept Banner */}
-      <div className="max-w-7xl mx-auto w-full px-4 pt-3 space-y-3">
+      <div className="w-full px-4 pt-3 space-y-3">
         <COAcceptBanner co={co} projectId={projectId} myOrgId={myOrgId} collaborators={collaborators} onRefresh={refreshDetail} />
         <CORFIBlockBanner blockedByRfiId={(co as any).blocked_by_rfi_id} projectId={projectId} />
       </div>
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto pb-44 md:pb-8">
-        <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+        <div className="w-full px-4 lg:px-5 py-4 space-y-4">
 
 
           {/* Full-width Header Card + Pipeline */}
-          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} myOrgId={myOrgId} pricingReadiness={getCOPricingReadiness(
-            lineItems, laborEntries, role,
-            [...materials, ...equipment].filter(row => row.added_by_role !== 'GC' && (role !== 'FC' || row.added_by_role === 'FC')),
-          )} />
+          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} myOrgId={myOrgId} pricingReadiness={pricingReadiness} />
 
           <COBillingStatusCard
             coId={co.id}
@@ -624,7 +620,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
           {/* Next step first — one clear action. */}
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} />
+          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
           <COPricingUnlockBar
             co={co}
             canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
@@ -757,14 +753,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
                   {/* Progress bar */}
                   {lineItems.length > 0 && (
-                    <div className="flex items-center gap-3 mt-3">
+                    <div className="flex flex-wrap items-center gap-3 mt-3">
                       <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-state-approved transition-all duration-500"
+                          className={cn('h-full rounded-full transition-all duration-500', pricingReadiness === 'ready' ? 'bg-state-approved' : 'bg-state-pending')}
                           style={{ width: `${lineItems.length > 0 ? (pricedCount / lineItems.length) * 100 : 0}%` }}
                         />
                       </div>
-                      <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">
+                      <span className="text-xs font-medium text-muted-foreground">
                         {pricedCount}/{lineItems.length} priced
                         {(isTC || isFC) && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
                       </span>
@@ -920,7 +916,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
             {/* Sidebar */}
             {!isMobile && (
-              <div className="w-[300px] shrink-0 space-y-3 sticky top-14 self-start">
+              <div className="w-[300px] xl:w-[340px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
                 {billedCard}
                 {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
