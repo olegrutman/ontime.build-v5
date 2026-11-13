@@ -577,6 +577,18 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
 
             <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+              {pricingDisplay === 'dialog' && canAddLabor && !tcPricingLocked && (
+                <button
+                  type="button"
+                  aria-label={`Add pricing for ${item.item_name}`}
+                  title="Add pricing"
+                  onClick={() => setFormOpen(true)}
+                  className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 transition-colors text-xs font-semibold"
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Price</span>
+                </button>
+              )}
               {canEditHeader && (
                 <Popover open={editHeaderOpen} onOpenChange={(o) => {
                   setEditHeaderOpen(o);
