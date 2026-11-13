@@ -166,40 +166,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     }
   }
 
-  function canEditEntry(entry: COLaborEntry): boolean {
-    return canRemoveLaborEntry({
-      entryRole: entry.entered_by_role,
-      entryOrgId: entry.org_id,
-      isActualCost: entry.is_actual_cost,
-      myRole: myRoleStr,
-      myOrgId: orgId,
-      canEditExternal,
-      canEditInternal,
-    });
-  }
-
-  async function deleteEntry(entry: COLaborEntry) {
-    if (!canEditEntry(entry)) {
-      toast.error('This entry is locked — it belongs to an agreed amount.');
-      return;
-    }
-    const amount = `$${fmt(entry.line_total ?? 0)}`;
-    const label = entry.is_actual_cost ? 'internal cost entry' : 'entry';
-    if (!window.confirm(`Remove this ${label}? ${amount} will come off this scope item.`)) return;
-    setDeletingEntryId(entry.id);
-    try {
-      const { error } = await supabase.from('co_labor_entries').delete().eq('id', entry.id);
-      if (error) throw error;
-      toast.success('Entry removed');
-      setEditEntryId(null);
-      onRefresh();
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Failed to remove entry');
-    } finally {
-      setDeletingEntryId(null);
-    }
-  }
-
   const billable = laborEntries.filter(e => !e.is_actual_cost);
   const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
   const actualCosts = laborEntries.filter(e => e.is_actual_cost && e.entered_by_role === myRole);
@@ -296,16 +262,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
   const entryCount = visibleBillable.length;
 
-  // Unified entry table: a subcontractor sees their own billable entries and the
-  // crew's downstream charges in one chronological list, each tagged by role.
-  const tableEntries: { entry: COLaborEntry; kind: 'billable' | 'downstream' }[] = isTC
-    ? [
-        ...tcBillable.map(e => ({ entry: e, kind: 'billable' as const })),
-        ...fcBillable.map(e => ({ entry: e, kind: 'downstream' as const })),
-      ].sort((a, b) => (a.entry.entry_date ?? '').localeCompare(b.entry.entry_date ?? ''))
-    : visibleBillable.map(e => ({ entry: e, kind: 'billable' as const }));
-
-  const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
 
   const statusColor = getStatusColor(visibleBillable, showGCApproval);
