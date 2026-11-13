@@ -27,6 +27,9 @@ DETECT = (Path(__file__).parent / "detect.js").read_text()
 
 
 def session_for(acct):
+    session_file = os.environ.get("SESSION_FILE")
+    if session_file:
+        return json.loads(Path(session_file).read_text())["session"]
     if acct == "me":
         return json.loads(os.environ["LOVABLE_BROWSER_SUPABASE_SESSION_JSON"])
     r = requests.post(f"{SUPA}/auth/v1/token?grant_type=password", headers={"apikey": ANON},
