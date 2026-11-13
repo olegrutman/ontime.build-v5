@@ -134,6 +134,8 @@ export interface COLineItem {
   approval_rejection_reason: string | null;
   approval_decided_by: string | null;
   approval_decided_at: string | null;
+  completed_at?: string | null;
+  completed_by_user_id?: string | null;
   created_at: string;
 }
 

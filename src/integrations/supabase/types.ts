@@ -1763,6 +1763,8 @@ export type Database = {
           catalog_item_id: string | null
           category_name: string | null
           co_id: string
+          completed_at: string | null
+          completed_by_user_id: string | null
           created_at: string | null
           created_by_role: string
           description: string | null
@@ -1795,6 +1797,8 @@ export type Database = {
           catalog_item_id?: string | null
           category_name?: string | null
           co_id: string
+          completed_at?: string | null
+          completed_by_user_id?: string | null
           created_at?: string | null
           created_by_role: string
           description?: string | null
@@ -1827,6 +1831,8 @@ export type Database = {
           catalog_item_id?: string | null
           category_name?: string | null
           co_id?: string
+          completed_at?: string | null
+          completed_by_user_id?: string | null
           created_at?: string | null
           created_by_role?: string
           description?: string | null
@@ -9108,6 +9114,8 @@ export type Database = {
           catalog_item_id: string | null
           category_name: string | null
           co_id: string | null
+          completed_at: string | null
+          completed_by_user_id: string | null
           created_at: string | null
           created_by_role: string | null
           description: string | null
@@ -9140,6 +9148,8 @@ export type Database = {
           catalog_item_id?: string | null
           category_name?: string | null
           co_id?: string | null
+          completed_at?: string | null
+          completed_by_user_id?: string | null
           created_at?: string | null
           created_by_role?: string | null
           description?: string | null
@@ -9172,6 +9182,8 @@ export type Database = {
           catalog_item_id?: string | null
           category_name?: string | null
           co_id?: string | null
+          completed_at?: string | null
+          completed_by_user_id?: string | null
           created_at?: string | null
           created_by_role?: string | null
           description?: string | null
@@ -9629,6 +9641,7 @@ export type Database = {
         Returns: string
       }
       co_viewer_role: { Args: { _co_id: string }; Returns: string }
+      complete_co_item: { Args: { _item_id: string }; Returns: string }
       complete_fc_change_order_input: {
         Args: { _co_id: string }
         Returns: {

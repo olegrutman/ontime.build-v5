@@ -498,6 +498,13 @@
       "when": 1794589528191,
       "tag": "0070_normalize_private_actual_labor_costs",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1794594795932,
+      "tag": "0071_co_item_completion",
+      "breakpoints": true
     }
   ]
 }
