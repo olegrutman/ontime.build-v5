@@ -1229,7 +1229,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           )}
 
           {/* Add pricing entry toggle */}
-          {canAddLabor && (
+          {canAddLabor && pricingDisplay === 'dialog' && (
+            <button
+              type="button"
+              onClick={() => setFormOpen(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-xs font-semibold border-t border-border/50 text-foreground hover:bg-accent/40 transition-colors"
+            >
+              <Plus className="h-4 w-4" /> Add pricing entry
+              <span className="font-normal text-muted-foreground">— opens a focused window</span>
+            </button>
+          )}
+          {canAddLabor && pricingDisplay === 'inline' && (
             <Collapsible open={formOpen || autoExpand} onOpenChange={setFormOpen}>
               {!autoExpand && (
                 <CollapsibleTrigger asChild>
