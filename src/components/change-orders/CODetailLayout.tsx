@@ -851,6 +851,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 />
               </div>
 
+              {billedCard}
+
               {/* Materials — always visible so the responsibility tag and add controls never disappear */}
               <div ref={materialsRef}>
                 <COMaterialsPanel
@@ -964,7 +966,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
             <aside className="hidden w-[300px] shrink-0 space-y-3 self-start xl:sticky xl:top-14 xl:block 2xl:w-[320px]">
               <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-              {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
             </aside>
           </div>

@@ -42,21 +42,27 @@ export function WOBilledToDateCard({ projectId, coId, orgId, value, nteCap, stat
         </span>
         <Badge variant="secondary" className="text-[10px] shrink-0">{draft > 0 && s.billed === 0 ? 'Draft in progress' : WO_BILLING_LABEL[s.status]}</Badge>
       </div>
-      <div className="font-mono text-lg">
-        <span className="font-semibold text-foreground">{fmt(s.billed)}</span>
-        <span className="text-muted-foreground"> of {fmt(s.limit)}</span>
-      </div>
-      {draft > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Draft invoice · not billed</span>
-          <span className="shrink-0 font-mono font-semibold text-foreground">{fmt(draft)}</span>
+      <div className={draft > 0 ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-2 gap-3'}>
+        <div className="rounded-lg bg-muted/30 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Billed</p>
+          <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">{fmt(s.billed)}</p>
         </div>
-      )}
+        {draft > 0 && (
+          <div className="rounded-lg bg-muted/30 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Draft · not billed</p>
+            <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">{fmt(draft)}</p>
+          </div>
+        )}
+        <div className="rounded-lg bg-muted/30 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remaining</p>
+          <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">{fmt(s.remaining)}</p>
+        </div>
+      </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div className={`h-full rounded-full ${tone} transition-all`} style={{ width: `${s.percentBilled}%` }} />
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {s.remaining > 0 ? <>{fmt(s.remaining)} remaining to bill · {s.percentBilled}% billed</> : 'Nothing left to bill'}
+        {s.remaining > 0 ? `${s.percentBilled}% of the approved price billed` : 'Nothing left to bill'}
       </p>
     </div>
   );
