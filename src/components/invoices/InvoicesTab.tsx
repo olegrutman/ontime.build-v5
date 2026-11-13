@@ -256,7 +256,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus, isTM =
     fetchInvoices();
   };
 
-  const handleQuickSubmit = (invoice: Invoice) => {
+  const handleQuickSubmit = async (invoice: Invoice) => {
     setConfirmSubmission(true);
     setSelectedInvoiceId(invoice.id);
   };
