@@ -452,7 +452,7 @@ export function COKPIStrip(props: COKPIStripProps) {
             icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}
             className={tile.primary ? 'sm:col-span-2' : undefined}
             valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}>
-            {(tile.kind ?? 'other') !== 'other' && items.length > 0
+            {(tile.kind ?? 'other') !== 'other'
               ? <Breakdown tile={tile} items={items} financials={props.financials} />
               : undefined}
           </KpiCard>)}
