@@ -254,7 +254,7 @@ export function CONextActionBanner(props: CONextActionBannerProps) {
           </div>
         </div>
         {buttons.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 md:hidden">
+          <div className="hidden">
             {buttons.map(a => (
               <Button
                 key={a.action}

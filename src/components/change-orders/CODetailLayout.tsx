@@ -642,8 +642,24 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             itemCount={lineItems.length}
           />
 
-          {/* Next step first — one clear action. */}
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
+          {/* Guidance and the only workflow action group sit together at the top. */}
+          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
+            <COStatusActions
+              co={co}
+              isGC={isGC}
+              isTC={isTC}
+              isFC={isFC}
+              currentOrgId={myOrgId}
+              projectId={projectId}
+              financials={financials}
+              collaborators={collaborators}
+              onRefresh={refreshDetail}
+              lineItemCount={lineItems.length}
+              lineItems={lineItems}
+              laborEntries={laborEntries}
+            />
+          </div>
           {<COPricingUnlockBar
             co={co}
             canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
@@ -688,18 +704,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
 
-          {/* KPI Row — GC keeps the full strip (incl. the editable budget tile);
-              TC/FC get a compact money summary inside the Scope & Labor header instead. */}
-          {isGC && showSummary && (
-            <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
-          )}
-
-          {/* Focus uses a side rail; Document stays intentionally narrow and linear. */}
-          <div className={cn('flex gap-4', design === 'document' && 'mx-auto w-full max-w-5xl')}>
+          <div className="flex gap-4">
             <div className="flex-1 min-w-0 space-y-4" ref={pricingRef}>
 
               {/* ====== SCOPE & LABOR ====== */}
-              {showScope && (
               <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {/* Card header */}
                 <div className="px-3 py-3 sm:px-5 sm:py-4 border-b border-border">
@@ -841,12 +849,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   )}
                 </div>
               </div>
-              )}
-
-
 
               {/* Materials */}
-              {showProcurement && (co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
+              {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
                 <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
@@ -862,7 +867,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Equipment */}
-              {showProcurement && (co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
+              {(co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
@@ -874,10 +879,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Photos */}
-              {showProcurement && <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />}
+              <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
 
               {/* External Invites */}
-              {showRecords && <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />}
+              <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
 
               {/* Activity — Collapsible */}
               {showRecords && (
