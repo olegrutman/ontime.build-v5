@@ -27,10 +27,10 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
     },
   });
   const pending = revisions.find(revision => revision.status === 'pending');
-  const latest = revisions[0];
   const canSubmit = isTC && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreate);
   const changed = Math.abs(currentLabor - Number(co.tc_submitted_price ?? 0)) > 0.005;
-  if (!pending && !(canSubmit && changed) && !latest) return null;
+  // Decided revisions remain in the audit log; only active corrections belong in the workspace.
+  if (!pending && !(canSubmit && changed)) return null;
 
   async function act(approve?: boolean) {
     setSaving(true);
