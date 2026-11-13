@@ -557,6 +557,17 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
 
+          <div className="hidden justify-end md:flex">
+            <span className={cn(
+              'inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold',
+              item.approval_status === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
+              item.approval_status === 'rejected' && 'bg-destructive/10 text-destructive',
+              item.approval_status === 'pending' && 'bg-muted text-muted-foreground',
+            )}>
+              {item.approval_status === 'approved' ? 'Approved' : item.approval_status === 'rejected' ? 'Rejected' : 'Pending'}
+            </span>
+          </div>
+
             <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
               {canAddLabor && !tcPricingLocked && (
                 <button
@@ -564,7 +575,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   aria-label={`Add pricing for ${item.item_name}`}
                   title="Add pricing"
                   onClick={() => { setExpanded(true); setFormOpen(true); }}
-                  className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 transition-colors text-xs font-semibold"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary/20 md:hidden"
                 >
                   <DollarSign className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Price</span>
@@ -710,9 +721,52 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
         </div>
 
-      {/* Expanded entries panel */}
-      {expanded && (
-        <div className="bg-accent/30 border-t border-border">
+      <Dialog open={expanded} onOpenChange={(open) => {
+        setExpanded(open);
+        if (!open) {
+          setFormOpen(false);
+          setShowActualForm(false);
+          setEditEntryId(null);
+        }
+      }}>
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-4xl gap-0 overflow-y-auto rounded-2xl p-0">
+          <DialogHeader className="border-b border-border bg-card px-5 py-4 pr-12 text-left">
+            <DialogTitle className="font-heading text-2xl text-foreground">{item.item_name}</DialogTitle>
+            <DialogDescription className="whitespace-pre-line break-words text-sm text-muted-foreground">
+              {cleanDescription || 'Review scope, pricing and private costs for this item.'}
+            </DialogDescription>
+            <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-muted-foreground">
+              {item.location_tag && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{item.location_tag}</span>}
+              {item.qty != null && <span>Quantity: {item.qty} {friendlyUnit ?? item.unit}</span>}
+              {item.category_name && <span>{item.category_name}</span>}
+              {item.reason && <span>{CO_REASON_LABELS[item.reason as COReasonCode]}</span>}
+            </div>
+          </DialogHeader>
+
+          <div className="grid grid-cols-3 border-b border-border bg-muted/20 px-3 py-3 sm:px-5">
+            <div className="min-w-0 pr-2">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Billable price</p>
+              <p className="mt-1 break-words font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(billableTotal)}</p>
+            </div>
+            {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
+              <div className="min-w-0 border-l border-border px-2 sm:px-4">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Private cost</p>
+                <p className="mt-1 break-words font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(roleCostTotal)}</p>
+              </div>
+            )}
+            {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
+              <div className="min-w-0 border-l border-border pl-2 sm:pl-4">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Item margin</p>
+                <p className={cn('mt-1 break-words font-mono text-sm font-bold sm:text-lg', hasMargin && marginAmount < 0 ? 'text-destructive' : 'text-foreground')}>
+                  {hasMargin ? `${marginPct.toFixed(1)}%` : 'Pending'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <COLineItemReview coId={coId} item={item} canReview={canReview} onRefresh={onRefresh} />
+
+        <div className="bg-background">
           {hideGCBreakdown ? (
             <div className="px-3 sm:px-5 py-4 space-y-2">
               <div className="flex justify-between text-sm">
@@ -733,7 +787,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <p className="text-[10px] text-muted-foreground">{billable.length} entr{billable.length === 1 ? 'y' : 'ies'} · Rates hidden in summary mode</p>
               )}
             </div>
-          ) : tableEntries.length === 0 && !autoExpand ? (
+          ) : tableEntries.length === 0 ? (
             /* Empty state */
             <div className="px-6 py-8 text-center">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
