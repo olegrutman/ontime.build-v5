@@ -482,13 +482,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const totalLogged = laborEntries
     .filter(e => !e.is_actual_cost && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole))
     .reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
-  const scopeCost = isTC
-    ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost
-    : roleActualCost;
-  const displayBillable = (isTC || isFC) ? financials.viewer.totalToUpstream : totalLogged;
-  const grossMargin = displayBillable - roleActualCost;
-  const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
 
   // Responsibility-aware billable-to-GC total. Centralized in useChangeOrderDetail
   // so every consumer (KPI strip, scope strip, sidebar, sticky footer, hero block,
@@ -928,7 +921,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               </Collapsible>
             </div>
 
-            <aside className="hidden w-[300px] shrink-0 self-start xl:sticky xl:top-14 xl:block 2xl:w-[320px]">
+            <aside className="hidden w-[300px] shrink-0 space-y-3 self-start xl:sticky xl:top-14 xl:block 2xl:w-[320px]">
               <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
               {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}

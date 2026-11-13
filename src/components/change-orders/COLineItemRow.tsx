@@ -742,7 +742,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </div>
           </DialogHeader>
 
-          <div className="grid grid-cols-3 border-b border-border bg-muted/20 px-3 py-3 sm:px-5">
+          <div className={cn('grid border-b border-border bg-muted/20 px-3 py-3 sm:px-5', isGC && markupVisibility !== 'detailed' ? 'grid-cols-1' : 'grid-cols-3')}>
             <div className="min-w-0 pr-2">
               <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Billable price</p>
               <p className="mt-1 break-words font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(billableTotal)}</p>
@@ -1284,9 +1284,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <Lock className="h-3.5 w-3.5" /> Log private cost
               </Button>
             )}
-            <p className="text-[11px] text-muted-foreground sm:ml-auto sm:self-center">
-              Private costs are never shown to the other company.
-            </p>
+            {(isTC || isFC) && (
+              <p className="text-[11px] text-muted-foreground sm:ml-auto sm:self-center">
+                Private costs are never shown to the other company.
+              </p>
+            )}
           </div>
 
           {formOpen && (
