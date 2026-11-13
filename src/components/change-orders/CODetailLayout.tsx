@@ -476,6 +476,23 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     [...materials, ...equipment].filter(row => row.added_by_role !== 'GC' && (role !== 'FC' || row.added_by_role === 'FC')),
   );
   const pricedCount = lineItems.filter(li => getCOPricingReadiness([li], laborEntries, role) === 'ready').length;
+  // Viewer-scoped per-item amounts for the number-card breakdowns (same rules as each item row).
+  const itemBreakdown = lineItems.map(li => {
+    const entries = laborEntries.filter(e => e.co_line_item_id === li.id);
+    const sum = (rows: typeof entries) => rows.reduce((t, e) => t + (e.line_total ?? 0), 0);
+    const billRole = isFC ? 'FC' : 'TC';
+    const revenue = sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === billRole));
+    let cost = 0;
+    if (isTC || isFC) {
+      const actual = entries.filter(e => e.is_actual_cost && e.entered_by_role === billRole);
+      cost = sum(actual);
+      if (isTC) {
+        const imported = new Set(actual.flatMap(e => ((e as { source_fc_entry_ids?: string[] | null }).source_fc_entry_ids ?? [])));
+        cost += sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === 'FC' && !imported.has(e.id)));
+      }
+    }
+    return { id: li.id, name: li.item_name, revenue, cost, priced: getCOPricingReadiness([li], laborEntries, role) === 'ready' };
+  });
   // Sum only the viewer's own billing-role entries — adding the crew's cost and
   // the subcontractor's price for the same work would double count it.
   const viewerEntryRole = isFC ? 'FC' : 'TC';
