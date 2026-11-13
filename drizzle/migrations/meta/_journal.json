@@ -505,6 +505,13 @@
       "when": 1794594795932,
       "tag": "0071_co_item_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1794595931823,
+      "tag": "0072_fix_single_item_approval_uuid_aggregate",
+      "breakpoints": true
     }
   ]
 }
