@@ -742,21 +742,21 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </div>
           </DialogHeader>
 
-          <div className={cn('grid border-b border-border bg-muted/20 px-3 py-3 sm:px-5', isGC && markupVisibility !== 'detailed' ? 'grid-cols-1' : 'grid-cols-3')}>
+          <div className={cn('grid border-b border-border bg-muted/20 px-3 py-3 sm:px-5', isGC && markupVisibility !== 'detailed' ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3')}>
             <div className="min-w-0 pr-2">
               <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Billable price</p>
-              <p className="mt-1 break-words font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(billableTotal)}</p>
+              <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(billableTotal)}</p>
             </div>
             {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
               <div className="min-w-0 border-l border-border px-2 sm:px-4">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Private cost</p>
-                <p className="mt-1 break-words font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(roleCostTotal)}</p>
+                <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(roleCostTotal)}</p>
               </div>
             )}
             {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-              <div className="min-w-0 border-l border-border pl-2 sm:pl-4">
+              <div className="col-span-2 min-w-0 border-t border-border pt-3 sm:col-span-1 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Item margin</p>
-                <p className={cn('mt-1 break-words font-mono text-sm font-bold sm:text-lg', hasMargin && marginAmount < 0 ? 'text-destructive' : 'text-foreground')}>
+                <p className={cn('mt-1 whitespace-nowrap font-mono text-sm font-bold sm:text-lg', hasMargin && marginAmount < 0 ? 'text-destructive' : 'text-foreground')}>
                   {hasMargin ? `${marginPct.toFixed(1)}%` : 'Pending'}
                 </p>
               </div>
