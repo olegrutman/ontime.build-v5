@@ -10,6 +10,7 @@ import type { COFinancials, ChangeOrder } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import type { RoleLabels } from '@/hooks/useRoleLabels';
+import { cn } from '@/lib/utils';
 
 interface COKPIStripProps {
   co: ChangeOrder;
@@ -411,9 +412,6 @@ function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown
 export function COKPIStrip(props: COKPIStripProps) {
   const rl = useRoleLabelsContext();
   const tiles = getTiles(props, rl);
-  const colCount = tiles.length;
-  const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : colCount === 3 ? 'lg:grid-cols-3' : colCount === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-1';
-
   const items = props.itemBreakdown ?? [];
 
   if (props.compact) {
@@ -427,13 +425,15 @@ export function COKPIStrip(props: COKPIStripProps) {
   }
 
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-2.5`}>
+    <div className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2">
       {tiles.map((tile, idx) => tile.editable
         ? <EditableBudgetTile key={tile.label} tile={tile} coId={props.co.id} onRefresh={props.onRefresh} />
         : <KpiCard key={tile.label} label={tile.label} value={tile.value} sub={tile.sub ?? tile.label}
-            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}>
+            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}
+            className={tile.primary ? 'sm:col-span-2' : undefined}
+            valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}>
             {(tile.kind ?? 'other') !== 'other' && items.length > 0
-              ? <div><p className="px-4 pt-3 text-xs text-muted-foreground">{tile.sub}</p><Breakdown tile={tile} items={items} /></div>
+              ? <Breakdown tile={tile} items={items} />
               : undefined}
           </KpiCard>)}
     </div>

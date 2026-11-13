@@ -680,10 +680,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
           />
-          {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+          {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
             </section>
           </div>
-          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} />}
+          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
@@ -775,8 +775,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         />
                       </div>
                       <span className="text-xs font-medium text-muted-foreground">
-                        {pricedCount}/{lineItems.length} priced
-                        {(isTC || isFC) && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
+                        {pricedCount}/{lineItems.length} labor items priced · {pricingReadiness === 'ready' ? 'Pricing complete' : 'Pricing incomplete'}
                       </span>
                     </div>
                   )}

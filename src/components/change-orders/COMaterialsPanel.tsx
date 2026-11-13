@@ -821,7 +821,8 @@ export function COMaterialsPanel({
                   const sp = supplierPriceMap.get(material.id);
                   const hasSupplierPrice = sp?.unit_price != null;
                   const displayUnitCost = hasSupplierPrice ? sp!.unit_price! : material.unit_cost;
-                  const displayAmount = hasSupplierPrice
+                  const hasDisplayPrice = hasSupplierPrice || displayUnitCost != null;
+                  const displayAmount = !hasDisplayPrice ? null : hasSupplierPrice
                     ? material.quantity * sp!.unit_price! * (1 + (material.markup_percent ?? 0) / 100)
                     : (material.billed_amount ?? 0);
 
@@ -867,7 +868,9 @@ export function COMaterialsPanel({
                         </td>
                       )}
                       {(showPricingColumns || draftRows.length > 0) && (
-                        <td className="text-right px-4 py-2.5 font-medium text-foreground">${fmt(displayAmount)}</td>
+                        <td className="text-right px-4 py-2.5 font-medium text-foreground">
+                          {displayAmount == null ? <span className="text-xs font-semibold text-state-open">Not priced</span> : `$${fmt(displayAmount)}`}
+                        </td>
                       )}
                       {canManageMaterials && (
                         <td className="px-2 py-2.5">
@@ -1028,9 +1031,12 @@ export function COMaterialsPanel({
                 </div>
               )}
               <div className="flex items-center justify-between text-sm font-semibold">
-                <span className="text-foreground">Total</span>
-                <span className="text-foreground">${fmt(totalBilled)}</span>
+                <span className="text-foreground">{materials.some(m => m.unit_cost == null && supplierPriceMap.get(m.id)?.unit_price == null) ? 'Priced subtotal' : 'Total'}</span>
+                <span className="text-foreground">{materials.every(m => m.unit_cost == null && supplierPriceMap.get(m.id)?.unit_price == null) ? 'Not priced' : `$${fmt(totalBilled)}`}</span>
               </div>
+              {materials.some(m => m.unit_cost == null && supplierPriceMap.get(m.id)?.unit_price == null) && (
+                <p className="text-xs text-state-open">Missing prices are not included in the subtotal.</p>
+              )}
             </div>
           )}
 
