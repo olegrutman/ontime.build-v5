@@ -51,7 +51,7 @@ function EntryRow({
 
   return (
     <div className="border-b border-border/60 px-4 py-4 last:border-b-0 sm:px-5">
-      <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         {showApproval && (
           <Checkbox
             checked={!!(entry as any).gc_approved}
@@ -80,7 +80,7 @@ function EntryRow({
             </div>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
           <span className="whitespace-nowrap font-mono text-base font-bold text-foreground sm:text-lg">{money(amount)}</span>
           {editable && (
             <>
