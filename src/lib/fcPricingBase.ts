@@ -10,6 +10,8 @@
  * freeze (snapshotCOSubmission) MUST use this function or the frozen price will
  * disagree with what the submitter saw.
  */
+import { fromCents, toCents } from '@/lib/money';
+
 export interface FcPricingBaseInput {
   fcTotalHours: number;
   fcLumpSumTotal: number;
@@ -55,7 +57,7 @@ export function computeFcPricingBase({
   const calculatedPrice = isHourly
     ? hours * (hourlyRate ?? 0) * (1 + (markupPercent ?? 0) / 100)
     : lumpSum * (1 + (markupPercent ?? 0) / 100);
-  return { isHourly, fcHasSubmitted, calculatedPrice };
+  return { isHourly, fcHasSubmitted, calculatedPrice: fromCents(toCents(calculatedPrice)) };
 }
 
 /**
