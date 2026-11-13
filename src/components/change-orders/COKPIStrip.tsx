@@ -347,7 +347,8 @@ function parseMoney(v: string) {
 
 function Breakdown({ tile, items, financials }: { tile: KPITile; items: COKPIItemBreakdown[]; financials: COFinancials }) {
   const kind = tile.kind ?? 'other';
-  if (kind === 'other' || items.length === 0) return null;
+  if (kind === 'other') return null;
+  if (items.length === 0) return <p className="px-4 py-5 text-sm text-muted-foreground">No item-level amounts yet.</p>;
   if (kind === 'progress') {
     return (
       <div className="divide-y divide-border">
