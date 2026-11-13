@@ -712,11 +712,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
           )}
 
-          {/* Two-column layout */}
-          <div className="flex gap-4">
+          {/* Focus uses a side rail; Document stays intentionally narrow and linear. */}
+          <div className={cn('flex gap-4', design === 'document' && 'mx-auto w-full max-w-5xl')}>
             <div className="flex-1 min-w-0 space-y-4" ref={pricingRef}>
 
               {/* ====== SCOPE & LABOR ====== */}
+              {showScope && (
               <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {/* Card header */}
                 <div className="px-3 py-3 sm:px-5 sm:py-4 border-b border-border">
@@ -850,6 +851,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           markupVisibility={markupVisibility}
                           crewPricingBase={crewPricingBase}
                           coStatus={co.status}
+                          pricingDisplay="dialog"
                         />
                         <COLineItemReview coId={co.id} item={item} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                       </div>
@@ -857,11 +859,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   )}
                 </div>
               </div>
+              )}
 
 
 
               {/* Materials */}
-              {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
+              {showProcurement && (co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
                 <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
@@ -877,7 +880,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Equipment */}
-              {(co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
+              {showProcurement && (co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
