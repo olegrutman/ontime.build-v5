@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Plus, Trash2 } from 'lucide-react';
 import { BillingPeriodPicker, validateBillingPeriod } from './BillingPeriodPicker';
 import { supabase } from '@/integrations/supabase/client';
+import { buildInvoiceNumber } from '@/lib/invoiceNumber';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
@@ -88,13 +89,12 @@ export function CreateInvoiceDialog({
   };
 
   const generateInvoiceNumber = async () => {
-    const { count } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('project_id', projectId);
-
-    const nextNumber = (count || 0) + 1;
-    setInvoiceNumber(`INV-${nextNumber.toString().padStart(4, '0')}`);
+    try {
+      setInvoiceNumber(await buildInvoiceNumber({ projectId }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate invoice number';
+      toast.error(message);
+    }
   };
 
   const handleLineItemChange = (id: string, field: keyof LineItemDraft, value: string | number) => {
@@ -244,7 +244,7 @@ export function CreateInvoiceDialog({
                 id="invoiceNumber"
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
-                placeholder="INV-0001"
+                placeholder="ABC-001"
               />
             </div>
 

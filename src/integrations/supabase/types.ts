@@ -4121,6 +4121,35 @@ export type Database = {
           },
         ]
       }
+      invoice_number_counters: {
+        Row: {
+          last_value: number
+          prefix: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          last_value?: number
+          prefix: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          last_value?: number
+          prefix?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_number_counters_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           approved_at: string | null
@@ -9989,6 +10018,10 @@ export type Database = {
       mark_notification_read: {
         Args: { _notification_id: string }
         Returns: undefined
+      }
+      next_invoice_sequence: {
+        Args: { p_prefix: string; p_project_id: string }
+        Returns: number
       }
       normalize_phone: { Args: { phone: string }; Returns: string }
       notify_estimate_decision: {

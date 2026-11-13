@@ -52,19 +52,18 @@ export async function buildInvoiceNumber({
   const type = !isOrder ? '' : (order ? (/^WO/i.test(order) ? 'W' : 'C') : (isTM ? 'W' : 'C'));
   const prefix = `${projectCode(name)}-${type}`;
 
-  const { data } = await supabase
-    .from('invoices')
-    .select('invoice_number')
-    .eq('project_id', projectId)
-    .like('invoice_number', `${prefix.replace(/[\\%_]/g, '\\$&')}%`);
-
-  const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`^${escapedPrefix}(\\d+)$`);
-  let max = 0;
-  (data ?? []).forEach(inv => {
-    const m = inv.invoice_number?.match(pattern);
-    if (m) max = Math.max(max, parseInt(m[1], 10));
+  const { data: sequence, error } = await supabase.rpc('next_invoice_sequence', {
+    p_project_id: projectId,
+    p_prefix: prefix,
   });
+  if (error) throw new Error(`Could not allocate an invoice number: ${error.message}`);
+  if (!Number.isInteger(sequence) || sequence < 1) {
+    throw new Error('Could not allocate a valid invoice number');
+  }
+  // Three project letters, a dash, and at most three digits keep every number <= 8 chars.
+  if (sequence > 999) {
+    throw new Error(`The ${prefix} invoice sequence is full; contact the project administrator`);
+  }
 
-  return `${prefix}${(max + 1).toString().padStart(type ? 2 : 3, '0')}`;
+  return `${prefix}${sequence.toString().padStart(type ? 2 : 3, '0')}`;
 }

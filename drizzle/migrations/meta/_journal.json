@@ -484,6 +484,13 @@
       "when": 1794532114405,
       "tag": "0068_sync_approved_co_owner_contract_delta",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794537659251,
+      "tag": "0069_collision_safe_invoice_number_sequences",
+      "breakpoints": true
     }
   ]
 }

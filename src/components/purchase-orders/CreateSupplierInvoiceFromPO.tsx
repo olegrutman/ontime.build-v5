@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { CalendarIcon, DollarSign, FileText, Loader2, Receipt } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { buildInvoiceNumber } from '@/lib/invoiceNumber';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
@@ -57,13 +58,11 @@ export function CreateSupplierInvoiceFromPO({
   projectId,
   onSuccess,
 }: CreateSupplierInvoiceFromPOProps) {
-  const { user, userOrgRoles } = useAuth();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [periodStart, setPeriodStart] = useState<Date>(startOfMonth(new Date()));
   const [periodEnd, setPeriodEnd] = useState<Date>(endOfMonth(new Date()));
-
-  const supplierOrgName = userOrgRoles[0]?.organization?.name;
 
   // Derive from live line items; cached PO header totals can be stale/zero.
   const lineSubtotal = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
@@ -75,53 +74,28 @@ export function CreateSupplierInvoiceFromPO({
       : (po.po_tax_total ?? 0);
   const total = subtotal + taxTotal;
 
-  const getProjectCode = (name: string | undefined): string => {
-    if (!name) return 'XXX';
-    const cleaned = name.replace(/^(the\s+)/i, '').trim();
-    return cleaned.substring(0, 3).toUpperCase();
-  };
-
-  // Generate invoice number on open
+  // Allocate through the shared server-side sequence so every billing company
+  // gets a short number without depending on invoices visible through RLS.
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
+    setInvoiceNumber('');
 
     const generate = async () => {
-      const { data: project } = await supabase
-        .from('projects')
-        .select('name')
-        .eq('id', projectId)
-        .single();
-
-      const projectCode = getProjectCode(project?.name);
-      const initials = getOrgInitials(supplierOrgName);
-      const prefix = `INV-${projectCode}-${initials}`;
-
-      const { data } = await supabase
-        .from('invoices')
-        .select('invoice_number')
-        .eq('project_id', projectId);
-
-      let maxNumber = 0;
-      if (data) {
-        const prefixPattern = new RegExp(`^${prefix}-(\\d+)$`);
-        data.forEach((inv) => {
-          const match = inv.invoice_number.match(prefixPattern);
-          if (match) {
-            const num = parseInt(match[1], 10);
-            if (num > maxNumber) maxNumber = num;
-          }
-        });
+      try {
+        const number = await buildInvoiceNumber({ projectId });
+        if (!cancelled) setInvoiceNumber(number);
+      } catch (error) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : 'Failed to generate invoice number';
+          toast.error(message);
+        }
       }
-      setInvoiceNumber(`${prefix}-${(maxNumber + 1).toString().padStart(4, '0')}`);
     };
 
-    generate();
-  }, [open, projectId, supplierOrgName]);
-
-  const getOrgInitials = (name: string | undefined): string => {
-    if (!name) return 'XX';
-    return name.replace(/^(the\s+)/i, '').trim().substring(0, 2).toUpperCase();
-  };
+    void generate();
+    return () => { cancelled = true; };
+  }, [open, projectId]);
 
   const handleSubmit = async () => {
     if (!user) return;

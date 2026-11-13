@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { like } = vi.hoisted(() => ({ like: vi.fn() }));
+const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock('@/integrations/supabase/client', () => ({
-  supabase: { from: () => ({ select: () => ({ eq: () => ({ like }) }) }) },
+  supabase: { rpc },
 }));
 
 import { buildInvoiceNumber, coTag, invoiceOrderReference } from '@/lib/invoiceNumber';
 
 describe('full invoice order references', () => {
-  beforeEach(() => like.mockResolvedValue({ data: [] }));
+  beforeEach(() => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: 1, error: null });
+  });
 
   it('preserves the exact work order reference from the order page', () => {
     expect(invoiceOrderReference('WO-5 C-PA-IM-0005')).toBe('WO-5 C-PA-IM-0005');
@@ -28,24 +31,35 @@ describe('full invoice order references', () => {
       .toBe('CHE-C01');
   });
 
-  it('numbers contract billing as PROJ-001 and continues its own sequence', async () => {
-    like.mockResolvedValue({ data: [
-      { invoice_number: 'CHE-002' }, { invoice_number: 'CHE-W07' }, { invoice_number: 'INV-CHE-IM-HA-0009' },
-    ] });
+  it('uses the server-allocated contract sequence instead of visible invoice rows', async () => {
+    rpc.mockResolvedValue({ data: 3, error: null });
     expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills' })).toBe('CHE-003');
+    expect(rpc).toHaveBeenCalledWith('next_invoice_sequence', { p_project_id: 'p', p_prefix: 'CHE-' });
   });
 
   it('keeps multi-order invoices on the order sequence', async () => {
-    like.mockResolvedValue({ data: [{ invoice_number: 'CHE-W02' }] });
+    rpc.mockResolvedValue({ data: 3, error: null });
     expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', multiCoCount: 2, isTM: true }))
       .toBe('CHE-W03');
   });
 
   it('stays at 8 characters or fewer', async () => {
-    like.mockResolvedValue({ data: [{ invoice_number: 'CHE-W99' }] });
+    rpc.mockResolvedValue({ data: 100, error: null });
     const n = await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', coNumber: 'WO-1' });
     expect(n).toBe('CHE-W100');
     expect(n.length).toBeLessThanOrEqual(8);
+  });
+
+  it('does not fall back to a collision-prone visible-row count', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'denied' } });
+    await expect(buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills' }))
+      .rejects.toThrow('Could not allocate an invoice number: denied');
+  });
+
+  it('rejects a sequence that would exceed eight characters', async () => {
+    rpc.mockResolvedValue({ data: 1000, error: null });
+    await expect(buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', coNumber: 'WO-1' }))
+      .rejects.toThrow('invoice sequence is full');
   });
 });
 
