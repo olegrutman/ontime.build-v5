@@ -28,7 +28,7 @@ describe('full invoice order references', () => {
 
   it('numbers a change order invoice as PROJ-C01', async () => {
     expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', coNumber: 'CO-CHE-IM-HA-0001' }))
-      .toBe('CHE-C001');
+      .toBe('CHE-C01');
   });
 
   it('uses the server-allocated contract sequence instead of visible invoice rows', async () => {

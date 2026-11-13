@@ -244,7 +244,7 @@ export function CreateInvoiceDialog({
                 id="invoiceNumber"
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
-                placeholder="INV-0001"
+                placeholder="ABC-001"
               />
             </div>
 
