@@ -852,9 +852,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 />
               </div>
 
-              {/* Materials */}
-              {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
-                <div ref={materialsRef}>
+              {/* Materials — always visible so the responsibility tag and add controls never disappear */}
+              <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
                     coTitle={displayTitle} materials={materials}
@@ -876,11 +875,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     onRefresh={refreshDetail}
                   />
                 </div>
-              )}
 
-              {/* Equipment */}
-              {(co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
-                <COEquipmentPanel
+              {/* Equipment — always visible for the same reason */}
+              <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
                   equipmentResponsible={responsibility.equipmentResponsible}
@@ -898,7 +895,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   }
                   onRefresh={refreshDetail}
                 />
-              )}
 
               {/* Photos */}
               <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
