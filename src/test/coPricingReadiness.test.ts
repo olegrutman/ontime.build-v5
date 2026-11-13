@@ -7,6 +7,10 @@ const entry = (id: string, role = 'TC', cost = false, total = 3120) => ({
 });
 
 describe('CO pricing readiness', () => {
+  it('keeps a two-item order incomplete when only one item has the $15,600 price', () => {
+    expect(getCOPricingReadiness(items, [entry('scope-1', 'TC', false, 15600)], 'TC')).toBe('incomplete');
+    expect(getCOPricingReadiness(items, [entry('scope-1', 'TC', false, 15600), entry('scope-2', 'TC', false, 0)], 'TC')).toBe('incomplete');
+  });
   it('is ready only when every scope item has its billing price', () => {
     expect(getCOPricingReadiness(items, [entry('scope-1'), entry('scope-2')], 'TC')).toBe('ready');
     expect(getCOPricingReadiness(items, [entry('scope-1')], 'TC')).toBe('incomplete');

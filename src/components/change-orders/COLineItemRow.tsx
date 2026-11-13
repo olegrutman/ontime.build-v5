@@ -950,13 +950,13 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           ) : (
             <>
               {/* Column headers */}
-              <div className="hidden sm:flex items-center text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-3 sm:px-5 py-2 border-b border-border/50">
-                <span className="w-14 sm:w-20">Date</span>
-                <span className="flex-1">Description</span>
-                <span className="w-20 sm:w-28 text-right">Workload</span>
-                <span className="w-20 sm:w-24 text-right">Billable</span>
+              <div className="hidden sm:flex items-center gap-x-3 text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-3 sm:px-5 py-2 border-b border-border/50">
+                <span className="w-20 shrink-0">Date</span>
+                <span className="flex-1 min-w-0">Description</span>
+                <span className="w-28 shrink-0 text-right">Workload</span>
+                <span className="w-32 shrink-0 text-right">Billable</span>
                 {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                  <span className="w-20 sm:w-24 text-right flex items-center justify-end gap-1">
+                  <span className="w-28 shrink-0 text-right flex items-center justify-end gap-1">
                     <Lock className="h-2.5 w-2.5" /> Int. Cost
                   </span>
                 )}
@@ -973,7 +973,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
                 return (
                   <div key={entry.id} className="border-b border-border/30">
-                    <div className="flex flex-wrap items-center gap-y-1 text-xs px-3 sm:px-5 py-2.5 hover:bg-accent/40">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs px-3 sm:px-5 py-2.5 hover:bg-accent/40">
                       {showGCApproval && (
                         <Checkbox
                           checked={!!gcApproved}
@@ -981,21 +981,21 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                           className="h-3.5 w-3.5 mr-2"
                         />
                       )}
-                      <span className="w-14 sm:w-20 shrink-0 text-muted-foreground">{entry.entry_date}</span>
-                      <span className="min-w-0 basis-[calc(100%-3.5rem)] sm:basis-0 sm:flex-1 text-foreground truncate">
+                      <span className="w-20 shrink-0 text-muted-foreground">{entry.entry_date}</span>
+                      <span className="min-w-0 basis-full sm:basis-0 sm:flex-1 text-foreground break-words">
                         {isDownstream && (
                           <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-state-approved-bg text-state-approved-foreground align-middle">{rl.FC}</span>
                         )}
                         {entry.description || '—'}
                       </span>
                       <span
-                        className="mr-auto sm:mr-0 sm:w-28 text-left sm:text-right font-mono text-muted-foreground"
+                        className="mr-auto sm:mr-0 sm:w-28 shrink-0 text-left sm:text-right font-mono text-muted-foreground break-words"
                         title={formatWorkloadTooltip(entry) ?? undefined}
                       >
                         {formatWorkload(entry)}
                       </span>
                       {/* Billable amount + inline edit pencil */}
-                      <span className="sm:w-24 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1 whitespace-nowrap">
+                      <span className="sm:w-32 shrink-0 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1 whitespace-nowrap">
                         {isDownstream
                           ? <span className="text-muted-foreground/40 font-normal">—</span>
                           : `$${fmt(entry.line_total ?? 0)}`}
@@ -1027,7 +1027,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                        </span>
                       {/* Internal cost + inline edit pencil */}
                       {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                        <span className="ml-3 sm:ml-0 sm:w-24 text-right inline-flex items-center justify-end gap-1 whitespace-nowrap">
+                        <span className="sm:w-28 shrink-0 text-right inline-flex items-center justify-end gap-1 whitespace-nowrap">
                           {isDownstream ? (
                             <span className="inline-flex items-center gap-1 text-state-approved-foreground font-medium font-mono">
                               <Lock className="h-2.5 w-2.5" /> ${fmt(entry.line_total ?? 0)}

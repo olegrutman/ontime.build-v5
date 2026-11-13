@@ -26,8 +26,8 @@ export function COMaterialResponsibilityToggle({
 
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-        {label} by:
+      <span className="text-xs text-muted-foreground font-medium">
+        {label} responsible company:
       </span>
 
       {canEdit ? (
@@ -43,7 +43,7 @@ export function COMaterialResponsibilityToggle({
               disabled={isSaving}
               onClick={() => onSet(party)}
               className={cn(
-                'h-auto min-h-7 px-2 py-1 rounded text-[10px] font-semibold transition-colors max-w-[10rem] whitespace-normal break-words',
+                'h-auto min-h-7 px-2 py-1 rounded text-xs font-semibold transition-colors max-w-[10rem] whitespace-normal break-words',
                 responsible === party
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80',

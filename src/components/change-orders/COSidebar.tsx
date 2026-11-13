@@ -101,11 +101,11 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
           headline total deliberately live elsewhere (header strip / KPI strip /
           Financials card) so nothing is printed twice. */}
       <div className="rounded-xl overflow-hidden shadow-lg" style={{ background: 'hsl(var(--navy))' }}>
-        <div className="px-5 pt-4 pb-3 border-b border-white/10 flex items-baseline justify-between gap-3">
+        <div className="px-5 pt-4 pb-3 border-b border-white/10 flex flex-wrap items-baseline justify-between gap-3">
           <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: 'hsl(220 18% 55%)' }}>
             {headlineLabel}
           </p>
-          <span className="font-mono text-lg font-medium text-white tracking-tight">
+          <span className="font-mono text-lg font-medium text-white shrink-0">
             ${headlineValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
@@ -336,9 +336,9 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
               <p className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted-foreground">
                 {isTC ? rl.TC : rl.FC} Profitability
               </p>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Revenue</span>
-                <span className="font-mono font-medium">{fmtCurrency(revenue)}</span>
+              <div className="flex flex-wrap justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">{['approved', 'contracted'].includes(co.status) ? 'Approved revenue' : 'Proposed revenue'}</span>
+                <span className="font-mono font-medium shrink-0">{fmtCurrency(revenue)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Internal Costs</span>

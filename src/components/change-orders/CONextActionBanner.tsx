@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import type { ChangeOrder, COFinancials } from '@/types/changeOrder';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import type { RoleLabels } from '@/hooks/useRoleLabels';
+import type { COPricingReadiness } from '@/lib/coPricingReadiness';
 
 interface CONextActionBannerProps {
   co: ChangeOrder;
@@ -17,6 +18,7 @@ interface CONextActionBannerProps {
   upstreamOrgId?: string | null;
   /** Multi-item orders require individual decisions before whole-order finalization. */
   lineReview?: boolean;
+  pricingReadiness?: COPricingReadiness;
   onAction: (action: string) => void;
 }
 
@@ -103,6 +105,14 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
       };
     }
     if (status === 'closed_for_pricing') {
+      if (props.pricingReadiness !== 'ready') {
+        return {
+          icon: <AlertTriangle className="h-5 w-5" />,
+          title: 'Pricing incomplete',
+          subtitle: `Current proposed total ${fmtCurrency(priceToUpstream)} — finish pricing the remaining scope before submitting to ${upstream}.`,
+          actions: [{ label: 'Review pricing', action: 'scroll_scope' }],
+        };
+      }
       return {
         icon: <Send className="h-5 w-5" />,
         title: `Finalize pricing and submit ${fmtCurrency(priceToUpstream)} to ${upstream}`,
@@ -113,7 +123,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         ],
       };
     }
-    if (['shared', 'work_in_progress'].includes(status)) {
+    if (['shared', 'work_in_progress'].includes(status) && props.pricingReadiness !== 'incomplete') {
       // TC requests FC hours; FC has no downstream FC, so just builds price directly.
       if (isTC) {
         return {
@@ -138,7 +148,15 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         ],
       };
     }
-    if (status === 'draft' && priceToUpstream > 0) {
+    if (['draft', 'shared', 'work_in_progress'].includes(status) && props.pricingReadiness === 'incomplete') {
+      return {
+        icon: <AlertTriangle className="h-5 w-5" />,
+        title: 'Pricing incomplete',
+        subtitle: `Current proposed total ${fmtCurrency(priceToUpstream)} — finish pricing the remaining scope before submitting to ${upstream}.`,
+        actions: [{ label: 'Review pricing', action: 'scroll_scope' }],
+      };
+    }
+    if (status === 'draft' && props.pricingReadiness === 'ready') {
       return {
         icon: <Send className="h-5 w-5" />,
         title: `Priced at ${fmtCurrency(priceToUpstream)} — ready to submit to ${upstream}`,
