@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle, Users, CalendarDays, Clock } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -51,6 +52,8 @@ interface COLineItemRowProps {
   crewPricingBase?: { enabled: boolean; hourlyRate: number; markupPercent: number };
   /** CO lifecycle status — the subcontractor's price is frozen once submitted upstream. */
   coStatus?: string;
+  /** New pricing entries can use a focused dialog instead of expanding the row. */
+  pricingDisplay?: 'inline' | 'dialog';
 }
 
 
@@ -80,6 +83,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
+  pricingDisplay = 'inline',
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -336,7 +340,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
 
 
-  const autoExpand = canAddLabor && entryCount === 0 && !showActualForm;
+  const autoExpand = pricingDisplay === 'inline' && canAddLabor && entryCount === 0 && !showActualForm;
 
   // Strip markdown asterisks AND any trailing "Scope:" bullet list
   // (the AI narrative already covers what's in the bullets — showing both reads as duplicate)
@@ -477,7 +481,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 ) : canAddLabor && !tcPricingLocked ? (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
                     className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
                     style={{ color: 'hsl(var(--amber-d))' }}
                   >
@@ -546,7 +550,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             ) : canAddLabor && !tcPricingLocked ? (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
+                onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
                 className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
                 style={{ color: 'hsl(var(--amber-d))' }}
               >
