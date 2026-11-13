@@ -1,6 +1,6 @@
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

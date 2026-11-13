@@ -23,6 +23,8 @@ interface COKPIStripProps {
   tcBillableTotal?: number;
   onRefresh?: () => void;
   markupVisibility?: MarkupVisibility;
+  pricedCount?: number;
+  itemCount?: number;
 }
 
 function fmtCurrency(value: number) {

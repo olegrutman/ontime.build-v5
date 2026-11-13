@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Loader2, Wrench, Pencil, Check, X } from 'lucide-react';
