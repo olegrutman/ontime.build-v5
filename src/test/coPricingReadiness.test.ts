@@ -22,6 +22,12 @@ describe('CO pricing readiness', () => {
   it('requires prices for existing procurement rows too', () => {
     expect(getCOPricingReadiness(items, items.map(i => entry(i.id)), 'TC', [{ billed_amount: 0 }])).toBe('incomplete');
   });
+  it('does not let another company\'s priced materials hide an unpriced row owned by this company', () => {
+    expect(getCOPricingReadiness(items, items.map(i => entry(i.id)), 'TC', [
+      { responsible: 'TC', billed_amount: 0 },
+      { responsible: 'GC', billed_amount: 500 },
+    ])).toBe('incomplete');
+  });
   it('does not mark empty scope or zero-value entries as ready', () => {
     expect(getCOPricingReadiness([], [], 'TC')).toBe('unpriced');
     expect(getCOPricingReadiness(items, items.map(i => entry(i.id, 'TC', false, 0)), 'TC')).toBe('unpriced');
