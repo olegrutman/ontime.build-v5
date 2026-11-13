@@ -19,6 +19,7 @@ interface COEquipmentPanelProps {
   canEdit:   boolean;
   /** Inline-edit window for already-saved rows; locks once CO is submitted upstream. */
   canEditExternal?: boolean;
+  responsibilityControl?: ReactNode;
   onRefresh: () => void;
 }
 

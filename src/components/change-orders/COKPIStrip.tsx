@@ -132,6 +132,16 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
         : undefined,
     });
 
+    tiles.push({
+      label: 'Pricing progress',
+      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
+      color: C.amber,
+      sub: 'Scope items priced',
+      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
+        ? { text: 'Ready', variant: 'healthy' }
+        : { text: 'In progress', variant: 'watch' },
+    });
+
     // Detailed mode: show TC margin (revenue & cost both restricted to TC-responsible buckets)
     if (markupVisibility === 'detailed') {
       const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
@@ -238,6 +248,33 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
         color: C.amber,
       });
     }
+
+    const privateCost = isTC
+      ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost
+      : financials.fcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
+    const margin = totalToUpstream - privateCost;
+    tiles.push({
+      label: 'Private cost',
+      value: fmtCurrency(privateCost),
+      color: C.amber,
+      sub: 'Only your company sees this',
+    });
+    tiles.push({
+      label: 'Gross margin',
+      value: privateCost > 0 ? fmtCurrency(margin) : 'Pending',
+      color: privateCost > 0 && margin < 0 ? C.red : C.green,
+      sub: privateCost > 0 && totalToUpstream > 0 ? `${((margin / totalToUpstream) * 100).toFixed(1)}% of revenue` : 'Add a private cost to calculate',
+      badge: privateCost > 0 ? { text: margin >= 0 ? 'Positive' : 'Over budget', variant: margin >= 0 ? 'healthy' : 'watch' } : undefined,
+    });
+    tiles.push({
+      label: 'Pricing progress',
+      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
+      color: C.blue,
+      sub: 'Scope items priced',
+      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
+        ? { text: 'Ready', variant: 'healthy' }
+        : { text: 'In progress', variant: 'watch' },
+    });
 
     if (financials.retainagePercent > 0 && financials.viewer.retainageAmount > 0) {
       tiles.push({
