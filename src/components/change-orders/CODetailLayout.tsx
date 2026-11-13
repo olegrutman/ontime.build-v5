@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
@@ -267,13 +267,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   async function handleAction(action: string) {
     switch (action) {
-      case 'scroll_scope': goToSection('scope', scopeRef); break;
-      case 'scroll_materials': goToSection('procurement', materialsRef); break;
-      case 'scroll_pricing': goToSection('scope', pricingRef); break;
-      case 'scroll_fc': goToSection('scope', scopeRef); break;
-      case 'log_hours': goToSection('scope', scopeRef); break;
+      case 'scroll_scope': goToSection(scopeRef); break;
+      case 'scroll_materials': goToSection(materialsRef); break;
+      case 'scroll_pricing': goToSection(pricingRef); break;
+      case 'scroll_fc': goToSection(scopeRef); break;
+      case 'log_hours': goToSection(scopeRef); break;
       case 'request_fc':
-        goToSection('scope');
+        goToSection(scopeRef);
         if (fcOrgOptions.length === 0) {
           toast.info('No crews found on this project');
         } else if (fcOrgOptions.length === 1) {
@@ -412,7 +412,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         }
         break;
       case 'noop': {
-        if (design === 'guided') setGuidedSection('summary');
         const team = document.getElementById('co-team-card');
         if (team) team.scrollIntoView({ behavior: 'smooth' });
         toast.info('Assign an upstream party in the Team card before submitting.');
@@ -616,40 +615,42 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         <div className="w-full px-4 lg:px-5 py-4 space-y-4">
 
 
-          <CODesignSwitcher value={design} onChange={changeDesign} />
+          <COHeaderStrip
+            co={co}
+            role={role}
+            myOrgName={myOrgName}
+            myOrgId={myOrgId}
+            pricingReadiness={pricingReadiness}
+            fromLabel={isGC ? rl.TC : myOrgName}
+            toLabel={isFC ? rl.TC : rl.GC}
+          />
 
-          {/* Full-width Header Card + Pipeline */}
-          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} myOrgId={myOrgId} pricingReadiness={pricingReadiness} />
-
-          {design !== 'focus' && (
-            <COCompactSummary
-              total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-              statusLabel={coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}
-              pricedCount={pricedCount}
-              itemCount={lineItems.length}
-            />
-          )}
-
-          {design === 'guided' && <COGuidedNav value={guidedSection} onChange={setGuidedSection} />}
-
-          {showSummary && design === 'document' && (
-            <COBillingStatusCard
-              coId={co.id}
-              projectId={projectId}
-              status={co.status}
-              approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-            />
-          )}
+          <COKPIStrip
+            co={co}
+            isGC={isGC}
+            isTC={isTC}
+            isFC={isFC}
+            financials={financials}
+            hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)}
+            hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)}
+            materialResponsible={responsibility.materialResponsible}
+            equipmentResponsible={responsibility.equipmentResponsible}
+            tcBillableTotal={tcBillableTotal}
+            onRefresh={refreshDetail}
+            markupVisibility={markupVisibility}
+            pricedCount={pricedCount}
+            itemCount={lineItems.length}
+          />
 
           {/* Next step first — one clear action. */}
           <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
-          {showScope && <COPricingUnlockBar
+          {<COPricingUnlockBar
             co={co}
             canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
           />}
-          {showScope && !hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
