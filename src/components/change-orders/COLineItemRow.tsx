@@ -1297,7 +1297,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           )}
 
           {/* Actual cost form */}
-          {showActualForm && (
+          {showActualForm && pricingDisplay === 'inline' && (
             <div className="px-3 sm:px-5 pb-4 border-t border-border/50">
               <LaborEntryForm
                 coId={coId} lineItemId={item.id} orgId={orgId}
