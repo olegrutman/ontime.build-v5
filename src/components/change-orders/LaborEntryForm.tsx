@@ -194,7 +194,7 @@ export function LaborEntryForm({
     isActualCost,
     markupPercent: markupPct,
   });
-  const { baseTotal, markupAmount, total: computedTotal } = amounts;
+  const { markupAmount, total: computedTotal } = amounts;
 
   const showMarginPreview = !isActualCost && computedTotal > 0 && internalCostValue > 0;
   const marginDollars = computedTotal - internalCostValue;

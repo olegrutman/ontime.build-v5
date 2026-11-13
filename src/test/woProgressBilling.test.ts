@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { woBillingSummary, fixedProgressAmount, clampToRemaining } from '@/lib/woProgressBilling';
+import { applyWoInvoiceLine, type WoBilledInfo } from '@/lib/woProgressBillingData';
 
 describe('WO progress billing', () => {
   it('fixed price: 60% of $25,475 bills $15,285', () => {
@@ -25,5 +26,24 @@ describe('WO progress billing', () => {
   it('status is fully billed at the approved value', () => {
     expect(woBillingSummary(6332, 6332).status).toBe('fully_billed');
     expect(woBillingSummary(6332, 0).status).toBe('unbilled');
+  });
+
+  it('shows a $1,550 draft separately: $0 billed while reserving its source entry', () => {
+    const info: WoBilledInfo = { billed: 0, draft: 0, entryIds: new Set(), legacyFullyBilled: false };
+    applyWoInvoiceLine(info, 'DRAFT', { source_co_id: 'co-1', source_entry_ids: ['entry-1'], current_billed: 1550 });
+    expect(info.billed).toBe(0);
+    expect(info.draft).toBe(1550);
+    expect(info.entryIds.has('entry-1')).toBe(true);
+    expect(woBillingSummary(5862.50, info.billed).remaining).toBe(5862.50);
+  });
+
+  it('counts submitted, approved and paid lines as billed but never rejected lines', () => {
+    const info: WoBilledInfo = { billed: 0, draft: 0, entryIds: new Set(), legacyFullyBilled: false };
+    for (const status of ['SUBMITTED', 'APPROVED', 'PAID']) {
+      applyWoInvoiceLine(info, status, { source_co_id: 'co-1', current_billed: 100 });
+    }
+    applyWoInvoiceLine(info, 'REJECTED', { source_co_id: 'co-1', current_billed: 500 });
+    expect(info.billed).toBe(300);
+    expect(info.draft).toBe(0);
   });
 });
