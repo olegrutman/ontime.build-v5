@@ -446,10 +446,9 @@ export function LaborEntryForm({
                     <div className="relative">
                       <input
                         type="number" step="1" min="0" value={crewSize} onChange={e => setCrewSize(e.target.value)} placeholder="0"
-                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        className={cn(fieldInput, 'text-center text-base font-semibold')}
                         style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">men</span>
                     </div>
                   </div>
                   <div className="col-span-4 space-y-1.5">
@@ -457,10 +456,9 @@ export function LaborEntryForm({
                     <div className="relative">
                       <input
                         type="number" step="0.5" min="0" value={days} onChange={e => setDays(e.target.value)} placeholder="0"
-                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        className={cn(fieldInput, 'text-center text-base font-semibold')}
                         style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">days</span>
                     </div>
                   </div>
                   <div className="col-span-4 space-y-1.5">
@@ -468,10 +466,9 @@ export function LaborEntryForm({
                     <div className="relative">
                       <input
                         type="number" step="0.25" min="0" value={hoursPerDay} onChange={e => setHoursPerDay(e.target.value)} placeholder="0"
-                        className={cn(fieldInput, 'text-center text-base font-semibold pr-10')}
+                        className={cn(fieldInput, 'text-center text-base font-semibold')}
                         style={{ ...mono, color: 'hsl(var(--amber-d))' }}
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground pointer-events-none">hr/d</span>
                     </div>
                   </div>
                 </>
