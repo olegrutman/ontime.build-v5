@@ -105,6 +105,21 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const canEditHeader = canEditExternal && isMyOrgItem;
 
   const [deleting, setDeleting] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const canCompleteItem = (isTC || (isFC && (isMyOrgItem || laborEntries.some(e => e.org_id === orgId && !e.is_actual_cost))))
+    && ['approved', 'contracted'].includes(coStatus ?? '') && item.approval_status === 'approved';
+
+  async function completeItem() {
+    setCompleting(true);
+    try {
+      const { error } = await supabase.rpc('complete_co_item', { _item_id: item.id });
+      if (error) throw error;
+      toast.success('Item completed — available for billing');
+      onRefresh();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Could not mark item completed');
+    } finally { setCompleting(false); }
+  }
 
   async function saveHeader() {
     setSavingHeader(true);
@@ -668,6 +683,20 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </div>
           </div>
         </div>
+
+      {(item.completed_at || canCompleteItem) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2 sm:px-4">
+          {item.completed_at ? (
+            <span className="inline-flex items-center gap-2 text-xs font-semibold text-state-approved-foreground">
+              <CheckCircle className="h-4 w-4 shrink-0" /> Completed · {new Date(item.completed_at).toLocaleDateString()}
+            </span>
+          ) : (
+            <Button variant="outline" size="sm" onClick={completeItem} disabled={completing} aria-label={`Mark ${item.item_name} completed`} className="gap-2">
+              {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />} Mark item completed
+            </Button>
+          )}
+        </div>
+      )}
 
       <COItemPricingDialog
         open={expanded}
