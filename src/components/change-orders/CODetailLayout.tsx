@@ -288,6 +288,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'scroll_fc': goToSection('scope', scopeRef); break;
       case 'log_hours': goToSection('scope', scopeRef); break;
       case 'request_fc':
+        goToSection('scope');
         if (fcOrgOptions.length === 0) {
           toast.info('No crews found on this project');
         } else if (fcOrgOptions.length === 1) {
@@ -426,6 +427,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         }
         break;
       case 'noop': {
+        if (design === 'guided') setGuidedSection('summary');
         const team = document.getElementById('co-team-card');
         if (team) team.scrollIntoView({ behavior: 'smooth' });
         toast.info('Assign an upstream party in the Team card before submitting.');
