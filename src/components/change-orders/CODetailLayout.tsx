@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -17,7 +17,7 @@ import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
-import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
+import { getCOPricingReadiness, coPricingStatusLabel } from '@/lib/coPricingReadiness';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -41,6 +41,7 @@ import { COLineItemReview, COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
+import { CODesignSwitcher, COGuidedNav, COCompactSummary, type CODetailDesign, type COGuidedSection } from './CODesignSwitcher';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -61,7 +62,7 @@ import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
+import { CO_STATUS_LABELS, type COStatus, type COFCOrgOption } from '@/types/changeOrder';
 
 interface CODetailLayoutProps {
   coId: string;
