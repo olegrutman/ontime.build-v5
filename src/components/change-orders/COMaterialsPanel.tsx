@@ -739,10 +739,13 @@ export function COMaterialsPanel({
 
   return (
     <div className="co-light-shell">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
-        <div className="flex items-center gap-2">
-          <Package className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">Materials</h3>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border co-light-header">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Materials</h3>
+          </div>
+          {responsibilityControl}
           {materialsOnSite && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               On site — pricing ref only

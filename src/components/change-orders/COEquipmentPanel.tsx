@@ -193,10 +193,13 @@ export function COEquipmentPanel({
 
   return (
     <div className="co-light-shell">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
-        <div className="flex items-center gap-2">
-          <Wrench className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border co-light-header">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2">
+            <Wrench className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
+          </div>
+          {responsibilityControl}
         </div>
         {canManageEquipment && (
           <div className="flex gap-1">
