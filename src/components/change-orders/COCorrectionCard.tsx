@@ -8,13 +8,17 @@ import { usePermission } from '@/components/auth/RequirePermission';
 import { correctionLabel, type OrderCorrection } from '@/lib/coCorrection';
 import { COCorrectionBadge } from './COCorrectionBadge';
 
-export function COCorrectionCard({ corrections, myOrgId, projectId, onRefresh }: { corrections: OrderCorrection[]; myOrgId: string; projectId: string; onRefresh: () => void }) {
+export function COCorrectionCard({ corrections, myOrgId, projectId, onRefresh, presentation = 'details' }: { corrections: OrderCorrection[]; myOrgId: string; projectId: string; onRefresh: () => void; presentation?: 'actions' | 'details' }) {
   const qc = useQueryClient();
   const canCreate = usePermission('canCreateChangeOrders');
   const canApprove = usePermission('canApprove');
   const [saving, setSaving] = useState(false);
   const active = corrections.filter(c => correctionLabel(c));
   if (!active.length) return null;
+  const actionable = active.filter(c => c.state !== 'pending'
+    ? c.from_org_id === myOrgId && canCreate
+    : c.to_org_id === myOrgId && canApprove);
+  if (presentation === 'actions' && !actionable.length) return null;
   async function act(c: OrderCorrection, approve?: boolean) {
     setSaving(true);
     try {
@@ -28,19 +32,23 @@ export function COCorrectionCard({ corrections, myOrgId, projectId, onRefresh }:
     } catch (error) { toast.error((error as { message?: string }).message ?? 'Could not update correction'); }
     finally { setSaving(false); }
   }
-  return <section className="border border-secondary/40 bg-secondary/5 rounded-2xl p-4 space-y-3">
+  return <section className={presentation === 'actions' ? 'border-t border-border pt-3 space-y-3' : 'border border-secondary/40 bg-secondary/5 rounded-2xl p-4 space-y-3'}>
     <h3 className="flex items-center gap-2 font-heading text-base font-bold uppercase text-foreground"><Flag className="h-4 w-4 text-secondary" />Order corrections</h3>
-    {active.map(c => <div key={c.from_org_id} className="space-y-3">
+    {(presentation === 'actions' ? actionable : active).map(c => <div key={c.from_org_id} className="space-y-3">
+      {presentation === 'details' && <>
       <COCorrectionBadge correction={c} />
       <p className="text-xs text-muted-foreground">Scope or billable details changed. Existing approval remains in effect until the correction is accepted.</p>
       {c.state === 'pending' && c.scope_snapshot?.length ? <ul className="divide-y divide-border">{c.scope_snapshot.map((item, index) => <li key={index} className="flex flex-wrap items-start justify-between gap-2 py-2 text-sm"><span className="min-w-0 break-words">{item.item}{item.description && <span className="block text-xs text-muted-foreground">{item.description}</span>}</span><span className="shrink-0 font-mono text-xs">{item.qty ?? '—'} {item.unit}</span></li>)}</ul> : null}
+      <p className="text-xs text-muted-foreground">Correction actions are in the Actions box.</p>
+      </>}
+      {presentation === 'actions' &&
       <div className="flex flex-wrap gap-2">
-        {c.state !== 'pending' && c.from_org_id === myOrgId && canCreate && <Button disabled={saving} onClick={() => void act(c)}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Submit correction</Button>}
+        {c.state !== 'pending' && c.from_org_id === myOrgId && canCreate && <Button className="w-full whitespace-normal h-auto min-h-10 gap-2" disabled={saving} onClick={() => void act(c)}>{saving ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Send className="h-4 w-4 shrink-0" />}Submit correction</Button>}
         {c.state === 'pending' && c.to_org_id === myOrgId && canApprove && <>
-          <Button disabled={saving} onClick={() => void act(c, true)}><Check className="h-4 w-4" />Approve correction</Button>
-          <Button variant="outline" disabled={saving} onClick={() => void act(c, false)}><X className="h-4 w-4" />Return for correction</Button>
+          <Button className="w-full whitespace-normal h-auto min-h-10 gap-2" disabled={saving} onClick={() => void act(c, true)}><Check className="h-4 w-4 shrink-0" />Approve correction</Button>
+          <Button className="w-full whitespace-normal h-auto min-h-10 gap-2" variant="outline" disabled={saving} onClick={() => void act(c, false)}><X className="h-4 w-4 shrink-0" />Return for correction</Button>
         </>}
-      </div>
+      </div>}
     </div>)}
   </section>;
 }

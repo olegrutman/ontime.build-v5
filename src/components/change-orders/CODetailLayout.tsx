@@ -683,6 +683,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             onToggle={setRevisionUnlocked}
           />
           {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+              <COCorrectionCard presentation="actions" corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
             </section>
           </div>
           {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
