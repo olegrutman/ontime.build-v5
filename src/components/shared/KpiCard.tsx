@@ -96,13 +96,13 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills = [], c
               {headerAction}
             </div>
           </div>
-          <Button variant="ghost" onClick={() => setOpen(true)} aria-label={`View ${label} breakdown`} className="h-auto w-full flex-1 flex-col items-start justify-start gap-0 rounded-none p-0 text-left hover:bg-transparent hover:text-foreground">
-            <span className="min-h-8 text-[0.7rem] font-semibold uppercase leading-snug text-muted-foreground [overflow-wrap:anywhere]">{label}</span>
+          <Button variant="ghost" onClick={() => setOpen(true)} aria-label={`View ${label} breakdown`} className="h-auto min-w-0 w-full flex-1 flex-col items-start justify-start gap-0 rounded-none p-0 text-left whitespace-normal hover:bg-transparent hover:text-foreground">
+            <span className="w-full min-w-0 min-h-8 text-[0.7rem] font-semibold uppercase leading-snug text-muted-foreground [overflow-wrap:anywhere]">{label}</span>
             <span className="flex w-full min-w-0 items-end justify-between gap-2">
               <span className="min-w-0 text-xl sm:text-2xl leading-tight tabular-nums text-foreground [overflow-wrap:anywhere]" style={fontMono}>{value}</span>
               {spark && <span className="shrink-0">{spark}</span>}
             </span>
-            <span className="mt-1 min-h-9 text-[0.75rem] font-normal leading-snug text-muted-foreground [overflow-wrap:anywhere]">{sub}</span>
+            <span className="w-full min-w-0 mt-1 min-h-9 text-[0.75rem] font-normal leading-snug text-muted-foreground [overflow-wrap:anywhere]">{sub}</span>
           </Button>
         </div>
         <Button variant="ghost" onClick={() => setOpen(true)} className="h-auto min-h-10 w-full shrink-0 justify-between rounded-none border-t border-border bg-accent px-3 py-2 text-xs text-muted-foreground hover:bg-primary/10 hover:text-foreground">

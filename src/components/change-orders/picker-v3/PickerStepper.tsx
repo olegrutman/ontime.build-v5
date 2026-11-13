@@ -10,7 +10,7 @@ interface PickerStepperProps {
 
 export function PickerStepper({ currentStep, onStepClick, completedSteps }: PickerStepperProps) {
   return (
-    <div className="bg-background border-b flex items-center gap-1.5 px-6 py-3.5 overflow-x-auto scrollbar-hide sticky top-[57px] z-[9]">
+    <div className="bg-background border-b flex flex-wrap items-center gap-1.5 px-3 sm:px-6 py-3.5 sticky top-[57px] z-[9]">
       {PICKER_STEPS.map((step, i) => {
         const isDone = completedSteps?.has(step.num) ?? step.num < currentStep;
         const isActive = step.num === currentStep;
