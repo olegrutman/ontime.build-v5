@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const invoiceId = typeof body.invoice_id === 'string' ? body.invoice_id : '';
     const submitting = body.submitting === true;
+    const showFullScope = body.show_full_scope === true;
     if (!invoiceId) return json({ error: 'invoice_id required' }, 400);
 
     const asUser = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -191,35 +192,41 @@ Deno.serve(async (req) => {
     const columns = {
       number: margin + 5,
       description: margin + 20,
-      scheduled: margin + 260,
-      previous: margin + 331,
-      current: margin + 397,
-      total: margin + 444,
-      remaining: margin + 497,
-      percent: right - 2,
+      scheduled: margin + contentWidth / 6 - 8,
+      previous: margin + contentWidth * 2 / 6 - 8,
+      current: margin + contentWidth * 3 / 6 - 8,
+      total: margin + contentWidth * 4 / 6 - 8,
+      remaining: margin + contentWidth * 5 / 6 - 8,
+      percent: right - 8,
     };
 
     const drawTableHeader = () => {
       doc.setFillColor(...PANEL).setDrawColor(...BORDER);
-      doc.roundedRect(margin, y, contentWidth, 24, 3, 3, 'FD');
-      doc.setTextColor(...MUTED).setFont('helvetica', 'bold').setFontSize(5.4);
+      doc.roundedRect(margin, y, contentWidth, 38, 3, 3, 'FD');
+      doc.setTextColor(...MUTED).setFont('helvetica', 'bold').setFontSize(7);
       doc.text('#', columns.number, y + 15);
       doc.text('DESCRIPTION', columns.description, y + 15);
-      doc.text('SCHEDULED', columns.scheduled, y + 15, { align: 'right' });
-      doc.text('PREVIOUS', columns.previous, y + 15, { align: 'right' });
-      doc.text('THIS PERIOD', columns.current, y + 15, { align: 'right' });
-      doc.text('TOTAL BILLED', columns.total, y + 15, { align: 'right' });
-      doc.text('REMAINING', columns.remaining, y + 15, { align: 'right' });
-      doc.text('%', columns.percent, y + 15, { align: 'right' });
-      y += 31;
+      doc.text('SCHEDULED', columns.scheduled, y + 29, { align: 'right' });
+      doc.text('PREVIOUS', columns.previous, y + 29, { align: 'right' });
+      doc.text('THIS PERIOD', columns.current, y + 29, { align: 'right' });
+      doc.text('TOTAL BILLED', columns.total, y + 29, { align: 'right' });
+      doc.text('REMAINING', columns.remaining, y + 29, { align: 'right' });
+      doc.text('% BILLED', columns.percent, y + 29, { align: 'right' });
+      y += 51;
     };
 
     drawTableHeader();
     for (let index = 0; index < lines.length; index++) {
       const line = lines[index];
-      const descriptionLines = (doc.splitTextToSize(safeText(line.description), 212) as string[]).slice(0, 2);
-      const rowHeight = Math.max(18, descriptionLines.length * 9 + 5);
-      if (y + rowHeight > height - 115) {
+      // Measure using the same font used to render. Descriptions occupy their
+      // own full-width band, never the space reserved for the money columns.
+      doc.setFont('helvetica', 'normal').setFontSize(9);
+      const descriptionLines = doc.splitTextToSize(safeText(line.description), contentWidth - 28) as string[];
+      const scope = showFullScope && safeText(line.line_notes, '') !== safeText(line.description, '')
+        ? safeText(line.line_notes, '') : '';
+      doc.setFontSize(8);
+      const scopeLines = scope ? doc.splitTextToSize(scope, contentWidth - 28) as string[] : [];
+      if (y + 55 > height - 80) {
         doc.addPage();
         drawHeader(true);
         drawTableHeader();
@@ -227,11 +234,32 @@ Deno.serve(async (req) => {
       const totalBilled = num(line.total_billed) || num(line.previous_billed) + num(line.current_billed);
       const remaining = num(line.scheduled_value) - totalBilled;
       const percent = num(line.scheduled_value) > 0 ? (totalBilled / num(line.scheduled_value)) * 100 : 0;
-      doc.setTextColor(...MUTED).setFont('helvetica', 'normal').setFontSize(6.5);
+      doc.setTextColor(...MUTED).setFont('helvetica', 'normal').setFontSize(8);
       doc.text(String(index + 1), columns.number, y);
-      doc.setTextColor(...INK).setFontSize(7);
-      doc.text(descriptionLines, columns.description, y);
-      doc.setFont('courier', 'normal').setFontSize(5.7);
+      const drawTextLines = (textLines: string[], fontSize: number, muted = false) => {
+        for (const text of textLines) {
+          if (y + 14 > height - 80) {
+            doc.addPage();
+            drawHeader(true);
+            drawTableHeader();
+          }
+          doc.setTextColor(...(muted ? MUTED : INK)).setFont('helvetica', 'normal').setFontSize(fontSize);
+          doc.text(text, columns.description, y);
+          y += fontSize + 4;
+        }
+      };
+      drawTextLines(descriptionLines, 9);
+      if (scopeLines.length) {
+        y += 2;
+        drawTextLines(scopeLines, 8, true);
+      }
+      if (y + 28 > height - 80) {
+        doc.addPage();
+        drawHeader(true);
+        drawTableHeader();
+      }
+      y += 5;
+      doc.setTextColor(...INK).setFont('courier', 'normal').setFontSize(8);
       doc.text(money(line.scheduled_value), columns.scheduled, y, { align: 'right' });
       doc.text(money(line.previous_billed), columns.previous, y, { align: 'right' });
       doc.setTextColor(...TEAL).setFont('courier', 'bold');
@@ -241,7 +269,7 @@ Deno.serve(async (req) => {
       doc.text(money(remaining), columns.remaining, y, { align: 'right' });
       doc.setTextColor(...TEAL);
       doc.text(`${percent.toFixed(1)}%`, columns.percent, y, { align: 'right' });
-      y += rowHeight;
+      y += 25;
       doc.setDrawColor(...BORDER).setLineWidth(0.35);
       doc.line(margin, y - 7, right, y - 7);
     }
