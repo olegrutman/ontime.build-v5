@@ -481,6 +481,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
+  const showScope = design !== 'guided' || guidedSection === 'scope';
+  const showProcurement = design !== 'guided' || guidedSection === 'procurement';
+  const showRecords = design !== 'guided' || guidedSection === 'records';
+  const showSummary = design !== 'guided' || guidedSection === 'summary';
 
 
 
