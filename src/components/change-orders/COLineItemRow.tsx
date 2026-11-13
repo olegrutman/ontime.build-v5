@@ -428,25 +428,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   </span>
                 )}
 
-                {item.category_name && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
-                )}
-                {friendlyUnit && (
+                {friendlyUnit && item.qty == null && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{friendlyUnit}</span>
                 )}
                 {item.qty != null && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium font-mono">qty {item.qty}</span>
-                )}
-                {item.reason && (
-                  <span
-                    className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                    style={{
-                      backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode]?.bg,
-                      color: CO_REASON_COLORS[item.reason as COReasonCode]?.text,
-                    }}
-                  >
-                    {CO_REASON_LABELS[item.reason as COReasonCode]}
-                  </span>
                 )}
                 {item.location_tag && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-[10px] font-medium text-muted-foreground">
@@ -462,7 +448,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               {/* Mobile money line — desktop shows table columns instead */}
-              <div className="2xl:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+              <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
                 {isPriced ? (
                   <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
                 ) : showProvisional ? (
@@ -478,7 +464,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 ) : canAddLabor && !tcPricingLocked ? (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
                     className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
                     style={{ color: 'hsl(var(--amber-d))' }}
                   >
@@ -487,22 +473,20 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 ) : (
                   <span className="text-muted-foreground">Not priced</span>
                 )}
-                {isTC && fcTotal > 0 && (
-                  <span className="inline-flex items-center gap-1 font-mono text-state-approved-foreground">
-                    <Lock className="h-3 w-3" /> ${fmt(fcTotal)} crew
-                  </span>
-                )}
-                {showInternalCell && hasMargin && (
-                  <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-state-approved' : 'text-destructive')}>
-                    {marginPct.toFixed(1)}%
-                  </span>
-                )}
+                <span className={cn(
+                  'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                  item.approval_status === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
+                  item.approval_status === 'rejected' && 'bg-destructive/10 text-destructive',
+                  item.approval_status === 'pending' && 'bg-muted text-muted-foreground',
+                )}>
+                  {item.approval_status === 'approved' ? 'Approved' : item.approval_status === 'rejected' ? 'Rejected' : 'Pending review'}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Crew cost column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden text-right">
             {isTC && fcTotal > 0 ? (
               <>
                 <span className="inline-flex items-center justify-end gap-1 font-mono text-sm font-semibold text-foreground">
@@ -523,7 +507,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Rate column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden md:block text-right">
             <span className="text-sm text-foreground">{modeLabel}</span>
             {isHourlyMode && totalHours > 0 && (
               <span className="block font-mono text-[10px] text-muted-foreground">{fmtHours(totalHours)}h</span>
@@ -531,7 +515,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Billable column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden md:block text-right">
             {isPriced ? (
               <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             ) : showProvisional ? (
@@ -547,7 +531,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             ) : canAddLabor && !tcPricingLocked ? (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
+                onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
                 className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
                 style={{ color: 'hsl(var(--amber-d))' }}
               >
@@ -559,7 +543,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Margin column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden text-right">
             {showInternalCell && hasMargin ? (
               <span className={cn(
                 'font-mono text-sm font-semibold',
@@ -574,12 +558,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
 
             <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-              {pricingDisplay === 'dialog' && canAddLabor && !tcPricingLocked && (
+              {canAddLabor && !tcPricingLocked && (
                 <button
                   type="button"
                   aria-label={`Add pricing for ${item.item_name}`}
                   title="Add pricing"
-                  onClick={() => setFormOpen(true)}
+                  onClick={() => { setExpanded(true); setFormOpen(true); }}
                   className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 transition-colors text-xs font-semibold"
                 >
                   <DollarSign className="h-3.5 w-3.5" />
@@ -715,9 +699,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               )}
               <button
                 type="button"
-                aria-label={expanded ? 'Collapse pricing details' : 'Expand pricing details'}
+                aria-label={`Open ${item.item_name} details`}
                 aria-expanded={expanded}
-                onClick={() => setExpanded(!expanded)}
+                onClick={() => setExpanded(true)}
                 className="h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')} />
