@@ -393,15 +393,15 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
         onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
         className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
       >
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] md:items-center md:gap-3">
+        <div className="flex flex-col gap-2 2xl:grid 2xl:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] 2xl:items-center 2xl:gap-3">
           {/* # column — desktop */}
-          <div className="hidden md:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+          <div className="hidden 2xl:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
             {index !== undefined && <span className="text-sm font-bold">{index}</span>}
           </div>
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Numbered index — mobile */}
             {index !== undefined && (
-              <div className="md:hidden flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+              <div className="2xl:hidden flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
                 <span className="text-sm font-bold">{index}</span>
               </div>
             )}
@@ -461,7 +461,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               {/* Mobile money line — desktop shows table columns instead */}
-              <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+              <div className="2xl:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
                 {isPriced ? (
                   <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
                 ) : showProvisional ? (
@@ -501,7 +501,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Crew cost column (desktop) */}
-          <div className="hidden md:block text-right">
+          <div className="hidden 2xl:block text-right">
             {isTC && fcTotal > 0 ? (
               <>
                 <span className="inline-flex items-center justify-end gap-1 font-mono text-sm font-semibold text-foreground">
@@ -522,7 +522,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Rate column (desktop) */}
-          <div className="hidden md:block text-right">
+          <div className="hidden 2xl:block text-right">
             <span className="text-sm text-foreground">{modeLabel}</span>
             {isHourlyMode && totalHours > 0 && (
               <span className="block font-mono text-[10px] text-muted-foreground">{fmtHours(totalHours)}h</span>
@@ -530,7 +530,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Billable column (desktop) */}
-          <div className="hidden md:block text-right">
+          <div className="hidden 2xl:block text-right">
             {isPriced ? (
               <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             ) : showProvisional ? (
@@ -558,7 +558,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Margin column (desktop) */}
-          <div className="hidden md:block text-right">
+          <div className="hidden 2xl:block text-right">
             {showInternalCell && hasMargin ? (
               <span className={cn(
                 'font-mono text-sm font-semibold',
