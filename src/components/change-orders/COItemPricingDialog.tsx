@@ -181,7 +181,7 @@ export function COItemPricingDialog({
   const billableTotal = visibleBillable.reduce((sum, entry) => sum + Number(entry.line_total ?? 0), 0);
   const margin = billableTotal - roleCostTotal;
   const marginPct = billableTotal > 0 ? (margin / billableTotal) * 100 : 0;
-  const hideGCBreakdown = isGC && markupVisibility === 'hidden';
+  const hideGCBreakdown = isGC && markupVisibility === 'hidden' && pricingType === 'fixed';
   const gcSummaryOnly = isGC && markupVisibility === 'summary';
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
@@ -375,9 +375,9 @@ export function COItemPricingDialog({
                 </Tabs>
               ) : (
                 <div className="p-3 sm:p-5">
-                  {hideGCBreakdown ? (
-                    <p className="rounded-xl border border-border bg-muted/20 px-4 py-4 text-sm text-muted-foreground">Rates, markup and private costs are hidden by the project's privacy settings.</p>
-                  ) : visibleBillable.length > 0 ? renderRows(visibleBillable, { hideRates: gcSummaryOnly }) : (
+                  {hideGCBreakdown || gcSummaryOnly ? (
+                    <p className="rounded-xl border border-border bg-muted/20 px-4 py-4 text-sm text-muted-foreground">Detailed rates, markup and private costs are hidden by the project's privacy settings.</p>
+                  ) : visibleBillable.length > 0 ? renderRows(visibleBillable) : (
                     <p className="text-sm text-muted-foreground">No pricing entries.</p>
                   )}
                 </div>

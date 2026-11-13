@@ -26,7 +26,7 @@ export function applyWoInvoiceLine(info: WoBilledInfo, status: string, line: WoI
   else info.billed += amount;
 }
 
-/** Billed-to-date per WO for invoices the given org issued (draft/rejected/void excluded). */
+/** Billed and draft amounts per WO for invoices the given org issued; rejected/void are excluded. */
 export async function fetchWoBilledToDate(projectId: string, orgId: string, coIds: string[]): Promise<Map<string, WoBilledInfo>> {
   const out = new Map<string, WoBilledInfo>();
   coIds.forEach(id => out.set(id, { billed: 0, draft: 0, entryIds: new Set(), legacyFullyBilled: false }));
