@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Check, Clock, DollarSign, Lock, CalendarDays, Trash2 } from 'lucide-react';
+import { Loader2, Check, Clock, DollarSign, Lock, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { computeCrewHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 import { seedFromEntry, seedForNewEntry } from '@/lib/laborEntrySeed';
 import { calculateLaborEntryAmount } from '@/lib/laborEntryMath';
@@ -70,7 +69,6 @@ export function LaborEntryForm({
   const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
-  const [internalCostOpen, setInternalCostOpen] = useState(true);
   const [internalCost, setInternalCost] = useState('');
   const [costType, setCostType] = useState('labor_wages');
 
@@ -229,10 +227,6 @@ export function LaborEntryForm({
     : null;
 
   const canSave = !validationMessage;
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const dateLabel = entryDate === todayStr
-    ? `Today, ${format(new Date(), 'MMM d')}`
-    : format(new Date(entryDate + 'T12:00:00'), 'EEE, MMM d');
 
   function handleQuickHour(h: number) {
     setHours(String(h));
@@ -242,7 +236,7 @@ export function LaborEntryForm({
 
   function resetForm() {
     setHours(''); setLumpSum('');
-    setInternalCost(''); setInternalCostOpen(true); setCostType('labor_wages');
+    setInternalCost(''); setCostType('labor_wages');
     setImportedFC(false);
     setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
     setCrewSize(''); setDays(''); setHoursPerDay(''); setUseCrewMath(true);
@@ -588,7 +582,7 @@ export function LaborEntryForm({
               <p className="text-xs leading-relaxed text-muted-foreground">Progress is separate from hours and charges.</p>
             </div>
           )}
-          <div className="w-full space-y-1.5 sm:w-44 sm:shrink-0">
+          <div className="w-40 max-w-full space-y-1.5 sm:w-44 sm:shrink-0">
             <Label htmlFor={`labor-date-${lineItemId}`} className="text-xs text-muted-foreground">Work date</Label>
             <Input id={`labor-date-${lineItemId}`} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} aria-label="Work date" className="h-9 text-sm" />
           </div>
