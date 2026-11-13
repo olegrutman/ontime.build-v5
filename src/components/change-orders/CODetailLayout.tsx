@@ -1,5 +1,5 @@
-import { useState, useRef, type RefObject } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -24,7 +24,6 @@ import { toast } from 'sonner';
 import { CONextActionBanner } from './CONextActionBanner';
 import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
-import { COBillingStatusCard } from './COBillingStatusCard';
 import { COPriceRevisionCard } from './COPriceRevisionCard';
 import { COPricingUnlockBar } from './COPricingUnlockBar';
 import { canSubmitPriceRevision } from '@/lib/coPriceRevision';
@@ -35,13 +34,12 @@ import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { WOBilledToDateCard } from './WOBilledToDateCard';
 import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
-import { COStickyFooter } from './COStickyFooter';
+import { COStatusActions } from './COStatusActions';
 import { COLineItemRow } from './COLineItemRow';
 import { COLineItemReview, COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
-import { CODesignSwitcher, COGuidedNav, COCompactSummary, type CODetailDesign, type COGuidedSection } from './CODesignSwitcher';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -71,10 +69,6 @@ interface CODetailLayoutProps {
 
 export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedDesign = searchParams.get('design');
-  const design: CODetailDesign = requestedDesign === 'guided' || requestedDesign === 'document' ? requestedDesign : 'focus';
-  const [guidedSection, setGuidedSection] = useState<COGuidedSection>('scope');
   const { user } = useAuth();
   const canApprove = usePermission('canApprove');
   const queryClient = useQueryClient();
@@ -263,21 +257,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   function handleBack() { navigate(`/project/${projectId}/change-orders`); }
 
-  function changeDesign(next: CODetailDesign) {
-    setGuidedSection('scope');
-    const params = new URLSearchParams(searchParams);
-    params.set('design', next);
-    setSearchParams(params, { replace: true });
-  }
-
-  function goToSection(section: COGuidedSection, ref?: RefObject<HTMLDivElement>) {
-    if (design === 'guided') setGuidedSection(section);
-    window.setTimeout(() => ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), design === 'guided' ? 60 : 0);
+  function goToSection(ref?: RefObject<HTMLDivElement | null>) {
+    ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function openPhotos(type?: 'before' | 'during' | 'after') {
-    if (design === 'guided') setGuidedSection('procurement');
-    window.setTimeout(() => photosCardRef.current?.openAdd(type), design === 'guided' ? 60 : 0);
+    photosCardRef.current?.openAdd(type);
   }
 
   async function handleAction(action: string) {
@@ -481,10 +466,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
-  const showScope = design !== 'guided' || guidedSection === 'scope';
-  const showProcurement = design !== 'guided' || guidedSection === 'procurement';
-  const showRecords = design !== 'guided' || guidedSection === 'records';
-  const showSummary = design !== 'guided' || guidedSection === 'summary';
 
 
 
