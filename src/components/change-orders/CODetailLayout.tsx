@@ -892,12 +892,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               )}
 
               {/* Photos */}
-              <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
+              {showProcurement && <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />}
 
               {/* External Invites */}
-              <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
+              {showRecords && <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />}
 
               {/* Activity — Collapsible */}
+              {showRecords && (
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -936,8 +937,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
+              )}
 
               {/* Audit Log — Collapsible */}
+              {showRecords && (
               <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -956,21 +959,34 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
+              )}
             </div>
 
-            {/* Sidebar */}
+            {/* Focus sidebar */}
+            {design === 'focus' && (
               <div className="hidden xl:block w-[300px] 2xl:w-[340px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
                 {billedCard}
                 {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
               </div>
+            )}
           </div>
 
+          {design === 'focus' && (
             <div className="space-y-3 xl:hidden">
               <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
               {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
             </div>
+          )}
+
+          {design !== 'focus' && showSummary && (
+            <div className={cn('space-y-3', design === 'document' ? 'mx-auto w-full max-w-5xl' : 'mx-auto w-full max-w-3xl')}>
+              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
+              {billedCard}
+              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+            </div>
+          )}
         </div>
       </div>
 
