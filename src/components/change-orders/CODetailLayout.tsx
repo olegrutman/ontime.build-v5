@@ -32,6 +32,7 @@ import { useCOCorrections } from '@/hooks/useCOCorrections';
 import { COSidebar } from './COSidebar';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { WOBilledToDateCard } from './WOBilledToDateCard';
+import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStatusActions } from './COStatusActions';
@@ -481,11 +482,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     const entries = laborEntries.filter(e => e.co_line_item_id === li.id);
     const sum = (rows: typeof entries) => rows.reduce((t, e) => t + (e.line_total ?? 0), 0);
     const billRole = isFC ? 'FC' : 'TC';
-    const revenue = sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === billRole));
+    const excludedFromApproval = co.approved_amount != null && li.approval_status === 'rejected';
+    const revenue = excludedFromApproval ? 0 : sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === billRole));
     let cost = 0;
     if (isTC || isFC) {
-      const actual = entries.filter(e => e.is_actual_cost && e.entered_by_role === billRole);
-      cost = sum(actual);
+      const actual = entries.filter(e => e.is_actual_cost && e.entered_by_role === billRole && e.org_id === myOrgId);
+      cost = actual.reduce((total, entry) => total + actualEntryBaseCost(entry), 0);
       if (isTC) {
         const imported = new Set(actual.flatMap(e => ((e as { source_fc_entry_ids?: string[] | null }).source_fc_entry_ids ?? [])));
         cost += sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === 'FC' && !imported.has(e.id)));
@@ -680,10 +682,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
           />
-          {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+          {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
             </section>
           </div>
-          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} />}
+          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
@@ -775,8 +777,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                         />
                       </div>
                       <span className="text-xs font-medium text-muted-foreground">
-                        {pricedCount}/{lineItems.length} priced
-                        {(isTC || isFC) && totalLogged > 0 && <> · <span className="font-mono font-semibold text-foreground">${totalLogged.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span> logged</>}
+                        {pricedCount}/{lineItems.length} labor items priced · {pricingReadiness === 'ready' ? 'Pricing complete' : 'Pricing incomplete'}
                       </span>
                     </div>
                   )}
@@ -851,6 +852,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   compact
                 />
               </div>
+
+              {billedCard}
 
               {/* Materials — always visible so the responsibility tag and add controls never disappear */}
               <div ref={materialsRef}>
@@ -965,7 +968,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
             <aside className="hidden w-[300px] shrink-0 space-y-3 self-start xl:sticky xl:top-14 xl:block 2xl:w-[320px]">
               <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-              {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
             </aside>
           </div>

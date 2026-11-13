@@ -1,26 +1,23 @@
 import { CODescriptionEditor } from './CODescriptionEditor';
 import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { COItemPricingDialog } from './COItemPricingDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle, Users, CalendarDays, Clock } from 'lucide-react';
+import { ChevronDown, CheckCircle, MapPin, Lock, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { fmtHours, formatWorkload, formatWorkloadTooltip, hasCrewMath } from '@/lib/crewWorkload';
+import { fmtHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { LaborEntryForm } from './LaborEntryForm';
-import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import { CO_REASON_LABELS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
-import { canRemoveLaborEntry } from '@/lib/laborEntryDelete';
+import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
-import { COLineItemReview } from './COLineReview';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -92,11 +89,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const nteCap = item.nte_cap ?? coNteCap;
   const nteUsed = coNteUsed; // NTE used is CO-level aggregate
   const hasPricingOverride = item.pricing_type != null && item.pricing_type !== coPricingType;
-  const [showActualForm, setShowActualForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [editEntryId, setEditEntryId] = useState<string | null>(null);
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [editHeaderOpen, setEditHeaderOpen] = useState(false);
   const [savingHeader, setSavingHeader] = useState(false);
   const [draftName, setDraftName] = useState(item.item_name);
@@ -107,7 +101,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const [draftPricingType, setDraftPricingType] = useState<COPricingType | ''>(item.pricing_type as COPricingType ?? '');
   const [draftNteCap, setDraftNteCap] = useState(item.nte_cap != null ? String(item.nte_cap) : '');
 
-  const myRoleStr = isFC ? 'FC' : isTC ? 'TC' : isGC ? 'GC' : null;
   const isMyOrgItem = item.org_id === orgId;
   const canEditHeader = canEditExternal && isMyOrgItem;
 
@@ -173,40 +166,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
     }
   }
 
-  function canEditEntry(entry: COLaborEntry): boolean {
-    return canRemoveLaborEntry({
-      entryRole: entry.entered_by_role,
-      entryOrgId: entry.org_id,
-      isActualCost: entry.is_actual_cost,
-      myRole: myRoleStr,
-      myOrgId: orgId,
-      canEditExternal,
-      canEditInternal,
-    });
-  }
-
-  async function deleteEntry(entry: COLaborEntry) {
-    if (!canEditEntry(entry)) {
-      toast.error('This entry is locked — it belongs to an agreed amount.');
-      return;
-    }
-    const amount = `$${fmt(entry.line_total ?? 0)}`;
-    const label = entry.is_actual_cost ? 'internal cost entry' : 'entry';
-    if (!window.confirm(`Remove this ${label}? ${amount} will come off this scope item.`)) return;
-    setDeletingEntryId(entry.id);
-    try {
-      const { error } = await supabase.from('co_labor_entries').delete().eq('id', entry.id);
-      if (error) throw error;
-      toast.success('Entry removed');
-      setEditEntryId(null);
-      onRefresh();
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Failed to remove entry');
-    } finally {
-      setDeletingEntryId(null);
-    }
-  }
-
   const billable = laborEntries.filter(e => !e.is_actual_cost);
   const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
   const actualCosts = laborEntries.filter(e => e.is_actual_cost && e.entered_by_role === myRole);
@@ -216,7 +175,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   const fcTotal = fcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const actualTotal = actualCosts.reduce((s, e) => s + actualEntryBaseCost(e), 0);
 
   // Crew log hours without a rate — those hours carry no dollar value until
   // someone prices them, so surface it instead of letting the line read as $0.
@@ -303,16 +262,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
   const entryCount = visibleBillable.length;
 
-  // Unified entry table: a subcontractor sees their own billable entries and the
-  // crew's downstream charges in one chronological list, each tagged by role.
-  const tableEntries: { entry: COLaborEntry; kind: 'billable' | 'downstream' }[] = isTC
-    ? [
-        ...tcBillable.map(e => ({ entry: e, kind: 'billable' as const })),
-        ...fcBillable.map(e => ({ entry: e, kind: 'downstream' as const })),
-      ].sort((a, b) => (a.entry.entry_date ?? '').localeCompare(b.entry.entry_date ?? ''))
-    : visibleBillable.map(e => ({ entry: e, kind: 'billable' as const }));
-
-  const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
 
   const statusColor = getStatusColor(visibleBillable, showGCApproval);
@@ -449,7 +398,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               {/* Mobile money line — desktop shows table columns instead */}
               <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
                 {isPriced ? (
-                  <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
+                  <span className="font-mono text-lg font-bold text-foreground">${fmt(totalForRole)}</span>
                 ) : showProvisional ? (
                   <button
                     type="button"
@@ -516,7 +465,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           {/* Billable column (desktop) */}
           <div className="hidden md:block text-right">
             {isPriced ? (
-              <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
+              <span className="font-mono text-lg font-bold text-foreground">${fmt(totalForRole)}</span>
             ) : showProvisional ? (
               <button
                 type="button"
@@ -720,617 +669,33 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
         </div>
 
-      <Dialog open={expanded} onOpenChange={(open) => {
-        setExpanded(open);
-        if (!open) {
-          setFormOpen(false);
-          setShowActualForm(false);
-          setEditEntryId(null);
-        }
-      }}>
-        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-4xl gap-0 overflow-y-auto rounded-2xl p-0">
-          <DialogHeader className="border-b border-border bg-card px-5 py-4 pr-12 text-left">
-            <DialogTitle className="font-heading text-2xl text-foreground">{item.item_name}</DialogTitle>
-            <DialogDescription className="whitespace-pre-line break-words text-sm text-muted-foreground">
-              {cleanDescription || 'Review scope, pricing and private costs for this item.'}
-            </DialogDescription>
-            <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-muted-foreground">
-              {item.location_tag && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{item.location_tag}</span>}
-              {item.qty != null && <span>Quantity: {item.qty} {friendlyUnit ?? item.unit}</span>}
-              {item.category_name && <span>{item.category_name}</span>}
-              {item.reason && <span>{CO_REASON_LABELS[item.reason as COReasonCode]}</span>}
-            </div>
-          </DialogHeader>
-
-          <div className={cn('grid border-b border-border bg-muted/20 px-3 py-3 sm:px-5', isGC && markupVisibility !== 'detailed' ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3')}>
-            <div className="min-w-0 pr-2">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Billable price</p>
-              <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(billableTotal)}</p>
-            </div>
-            {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-              <div className="min-w-0 border-l border-border px-2 sm:px-4">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Private cost</p>
-                <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(roleCostTotal)}</p>
-              </div>
-            )}
-            {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-              <div className="col-span-2 min-w-0 border-t border-border pt-3 sm:col-span-1 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Item margin</p>
-                <p className={cn('mt-1 whitespace-nowrap font-mono text-sm font-bold sm:text-lg', hasMargin && marginAmount < 0 ? 'text-destructive' : 'text-foreground')}>
-                  {hasMargin ? `${marginPct.toFixed(1)}%` : 'Pending'}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <COLineItemReview coId={coId} item={item} canReview={canReview} onRefresh={onRefresh} />
-
-        <div className="bg-background">
-          {hideGCBreakdown ? (
-            <div className="px-3 sm:px-5 py-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Approved line total</span>
-                <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
-              </div>
-              {visibleBillable.length > 0 && (
-                <p className="text-[10px] text-muted-foreground">{visibleBillable.length} entr{visibleBillable.length === 1 ? 'y' : 'ies'} · rates and markup hidden</p>
-              )}
-            </div>
-          ) : gcSummaryOnly ? (
-            <div className="px-3 sm:px-5 py-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Labor Total</span>
-                <span className="font-mono font-semibold text-foreground">${fmt(tcTotal)}</span>
-              </div>
-              {billable.length > 0 && (
-                <p className="text-[10px] text-muted-foreground">{billable.length} entr{billable.length === 1 ? 'y' : 'ies'} · Rates hidden in summary mode</p>
-              )}
-            </div>
-          ) : tableEntries.length === 0 ? (
-            /* Empty state */
-            <div className="px-6 py-8 text-center">
-              <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-foreground">No pricing added yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Add an entry to start tracking billable work for this scope item</p>
-            </div>
-          ) : isTC && fcBillable.length > 0 ? (
-            /* Design A — two labeled ledgers: the crew's work (read-only) and the
-               subcontractor's own billing (editable), so cost and billable numbers
-               never blur together and crew math is spelled out in plain language. */
-            <>
-              {/* Crew ledger — read only */}
-              <div className="px-3 sm:px-5 pt-3 pb-1.5 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-state-approved-foreground flex items-center gap-1">
-                  <Lock className="h-2.5 w-2.5" /> {rl.FC}'s work · your private cost
-                </span>
-                <span className="text-[9px] px-1.5 py-px rounded-full bg-state-approved-bg text-state-approved-foreground font-semibold uppercase tracking-wide">View only</span>
-              </div>
-              <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-state-approved/70 bg-state-approved/50 divide-y divide-emerald-200/60 dark:divide-emerald-900/30">
-                {fcBillable.map(entry => {
-                  const rate = entry.hourly_rate;
-                  return (
-                    <div key={entry.id} className="px-3.5 py-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground">{entry.description || 'Submitted time'}</p>
-                          <p className="text-[10px] text-muted-foreground">{entry.entry_date}</p>
-                        </div>
-                        <p className="font-mono text-sm font-bold text-state-approved-foreground">${fmt(entry.line_total ?? 0)}</p>
-                      </div>
-                      {hasCrewMath(entry) ? (
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-card border border-border px-2 py-1"><Users className="h-3 w-3 text-muted-foreground" />{entry.crew_size} workers</span>
-                          <span className="text-muted-foreground">×</span>
-                          <span className="inline-flex items-center gap-1 rounded-md bg-card border border-border px-2 py-1"><CalendarDays className="h-3 w-3 text-muted-foreground" />{entry.days} days</span>
-                          <span className="text-muted-foreground">×</span>
-                          <span className="inline-flex items-center gap-1 rounded-md bg-card border border-border px-2 py-1"><Clock className="h-3 w-3 text-muted-foreground" />{entry.hours_per_day} hrs/day</span>
-                          <span className="text-muted-foreground">=</span>
-                          <span className="inline-flex items-center rounded-md bg-state-approved-bg px-2 py-1 font-mono font-bold text-state-approved-foreground">{fmtHours(entry.hours ?? 0)} hrs</span>
-                          {rate != null && rate > 0 && <span className="text-muted-foreground">@ ${fmt(rate)}/hr</span>}
-                        </div>
-                      ) : entry.pricing_mode === 'lump_sum' ? (
-                        <p className="mt-1.5 text-[11px] text-muted-foreground">Lump sum</p>
-                      ) : (entry.hours ?? 0) > 0 ? (
-                        <p className="mt-1.5 text-[11px] text-muted-foreground">
-                          {fmtHours(entry.hours ?? 0)} hrs{rate != null && rate > 0 ? ` @ $${fmt(rate)}/hr` : ''}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* TC billing ledger — editable */}
-              <div className="px-3 sm:px-5 pt-2 pb-1.5 border-t border-border/60">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Your billing to {rl.GC}</span>
-              </div>
-              {tcBillable.length === 0 ? (
-                <p className="mx-3 sm:mx-5 mb-3 text-xs text-muted-foreground">
-                  No billing entries yet{provisionalAmount > 0 ? ' — confirm the crew-based price on the item above or add your own entry.' : '.'}
-                </p>
-              ) : (
-                <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-border bg-card divide-y divide-border/60">
-                  {tcBillable.map(entry => {
-                    const editable = canEditEntry(entry);
-                    const isEditingThisRow = editEntryId === entry.id;
-                    const entryRate = entry.hourly_rate;
-                    return (
-                      <div key={entry.id}>
-                        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-3">
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-foreground">{entry.description || 'Billing entry'}</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {entry.entry_date}
-                              {entry.pricing_mode === 'lump_sum'
-                                ? ' · lump sum'
-                                : (entry.hours ?? 0) > 0
-                                  ? ` · ${fmtHours(entry.hours ?? 0)} hrs${entryRate != null && entryRate > 0 ? ` @ $${fmt(entryRate)}/hr` : ''}`
-                                  : ''}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <p className="font-mono text-sm font-bold text-foreground">${fmt(entry.line_total ?? 0)}</p>
-                            {editable && (
-                              <button
-                                type="button"
-                                aria-label="Edit billable entry"
-                                onClick={(e) => { e.stopPropagation(); setEditEntryId(isEditingThisRow ? null : entry.id); }}
-                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                                title="Edit billable entry"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </button>
-                            )}
-                            {editable && (
-                              <button
-                                type="button"
-                                aria-label="Remove billable entry"
-                                onClick={(e) => { e.stopPropagation(); deleteEntry(entry); }}
-                                disabled={deletingEntryId === entry.id}
-                                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                                title="Remove entry"
-                              >
-                                {deletingEntryId === entry.id
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : <Trash2 className="h-3 w-3" />}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        {isEditingThisRow && (
-                          <div className="px-3.5 pb-3 pt-1 bg-accent/20">
-                            <LaborEntryForm
-                              coId={coId} lineItemId={item.id} orgId={orgId}
-                              enteredByRole={enteredByRole} pricingType={pricingType}
-                              isTC={isTC} isFC={isFC}
-                              isActualCost={false}
-                              editingEntry={entry}
-                              onSaved={() => { setEditEntryId(null); onRefresh(); }}
-                              onCancel={() => setEditEntryId(null)}
-                              onDelete={() => deleteEntry(entry)}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Own internal costs — private, never billed upstream */}
-              {actualCosts.length > 0 && (
-                <>
-                  <div className="px-3 sm:px-5 pt-2 pb-1.5 border-t border-border/60">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                      <Lock className="h-2.5 w-2.5" /> Your own internal costs · private
-                    </span>
-                  </div>
-                  <div className="mx-3 sm:mx-5 mb-3 rounded-xl border border-border bg-muted/20 divide-y divide-border/60">
-                    {actualCosts.map(a => {
-                      const editable = canEditEntry(a);
-                      const isEditingThisRow = editEntryId === a.id;
-                      return (
-                        <div key={a.id}>
-                          <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-foreground">{a.description || 'Internal cost'}</p>
-                              <p className="text-[10px] text-muted-foreground">{a.entry_date}</p>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <p className="font-mono text-xs font-semibold text-state-approved-foreground inline-flex items-center gap-1">
-                                <Lock className="h-2.5 w-2.5" /> ${fmt(a.line_total ?? 0)}
-                              </p>
-                              {editable && (
-                                <button
-                                  type="button"
-                                  aria-label="Edit internal cost"
-                                  onClick={(e) => { e.stopPropagation(); setEditEntryId(isEditingThisRow ? null : a.id); }}
-                                  className="p-1 rounded hover:bg-muted text-state-approved-foreground hover:text-state-approved-foreground"
-                                  title="Edit internal cost"
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </button>
-                              )}
-                              {editable && (
-                                <button
-                                  type="button"
-                                  aria-label="Remove internal cost"
-                                  onClick={(e) => { e.stopPropagation(); deleteEntry(a); }}
-                                  disabled={deletingEntryId === a.id}
-                                  className="p-1 rounded hover:bg-destructive/10 text-state-approved-foreground hover:text-destructive"
-                                  title="Remove internal cost"
-                                >
-                                  {deletingEntryId === a.id
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <Trash2 className="h-3 w-3" />}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          {isEditingThisRow && (
-                            <div className="px-3.5 pb-3 pt-1 bg-accent/20">
-                              <LaborEntryForm
-                                coId={coId} lineItemId={item.id} orgId={orgId}
-                                enteredByRole={enteredByRole} pricingType={pricingType}
-                                isTC={isTC} isFC={isFC}
-                                isActualCost
-                                editingEntry={a}
-                                onSaved={() => { setEditEntryId(null); onRefresh(); }}
-                                onCancel={() => setEditEntryId(null)}
-                                onDelete={() => deleteEntry(a)}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {/* Summary strip — one place for cost, billable and margin */}
-              <div className="border-t border-border bg-muted/20 px-3 sm:px-5 py-2.5 flex flex-wrap gap-x-6 gap-y-1 text-xs">
-                <span className="text-muted-foreground">Cost <span className="font-mono font-semibold text-foreground">${fmt(roleCostTotal)}</span></span>
-                <span className="text-muted-foreground">Billable <span className="font-mono font-semibold text-foreground">${fmt(billableTotal)}</span></span>
-                {hasMargin && (
-                  <span className="text-muted-foreground">Margin <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-state-approved' : 'text-destructive')}>${fmt(marginAmount)} · {marginPct.toFixed(1)}%</span></span>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Column headers */}
-              <div className="hidden sm:flex items-center gap-x-3 text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium px-3 sm:px-5 py-2 border-b border-border/50">
-                <span className="w-20 shrink-0">Date</span>
-                <span className="flex-1 min-w-0">Description</span>
-                <span className="w-28 shrink-0 text-right">Workload</span>
-                <span className="w-32 shrink-0 text-right">Billable</span>
-                {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                  <span className="w-28 shrink-0 text-right flex items-center justify-end gap-1">
-                    <Lock className="h-2.5 w-2.5" /> Int. Cost
-                  </span>
-                )}
-              </div>
-
-              {/* Entry rows */}
-              {tableEntries.map(({ entry, kind }) => {
-                const isDownstream = kind === 'downstream';
-                const gcApproved = (entry as any).gc_approved;
-                const matchingActual = isDownstream ? undefined : actualCosts.find(a => a.entry_date === entry.entry_date);
-                const billableEditable = canEditEntry(entry);
-                const internalEditable = matchingActual ? canEditEntry(matchingActual) : false;
-                const isEditingThisRow = editEntryId === entry.id || editEntryId === matchingActual?.id;
-
-                return (
-                  <div key={entry.id} className="border-b border-border/30">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs px-3 sm:px-5 py-2.5 hover:bg-accent/40">
-                      {showGCApproval && (
-                        <Checkbox
-                          checked={!!gcApproved}
-                          onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
-                          className="h-3.5 w-3.5 mr-2"
-                        />
-                      )}
-                      <span className="w-20 shrink-0 text-muted-foreground">{entry.entry_date}</span>
-                      <span className="min-w-0 basis-full sm:basis-0 sm:flex-1 text-foreground break-words">
-                        {isDownstream && (
-                          <span className="inline-block mr-1.5 px-1.5 py-px rounded-full text-[9px] font-bold uppercase tracking-wide bg-state-approved-bg text-state-approved-foreground align-middle">{rl.FC}</span>
-                        )}
-                        {entry.description || '—'}
-                      </span>
-                      <span
-                        className="mr-auto sm:mr-0 sm:w-28 shrink-0 text-left sm:text-right font-mono text-muted-foreground break-words"
-                        title={formatWorkloadTooltip(entry) ?? undefined}
-                      >
-                        {formatWorkload(entry)}
-                      </span>
-                      {/* Billable amount + inline edit pencil */}
-                      <span className="sm:w-32 shrink-0 text-right font-mono font-semibold text-foreground inline-flex items-center justify-end gap-1 whitespace-nowrap">
-                        {isDownstream
-                          ? <span className="text-muted-foreground/40 font-normal">—</span>
-                          : `$${fmt(entry.line_total ?? 0)}`}
-                        {!isDownstream && billableEditable && (
-                          <button
-                            type="button"
-                            aria-label="Edit billable entry"
-                            onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === entry.id ? null : entry.id); }}
-                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                            title="Edit billable entry"
-                          >
-                             <Pencil className="h-3 w-3" />
-                           </button>
-                         )}
-                          {!isDownstream && billableEditable && (
-                           <button
-                             type="button"
-                             aria-label="Remove billable entry"
-                             onClick={(e) => { e.stopPropagation(); deleteEntry(entry); }}
-                             disabled={deletingEntryId === entry.id}
-                             className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                             title="Remove entry"
-                           >
-                             {deletingEntryId === entry.id
-                               ? <Loader2 className="h-3 w-3 animate-spin" />
-                               : <Trash2 className="h-3 w-3" />}
-                           </button>
-                         )}
-                       </span>
-                      {/* Internal cost + inline edit pencil */}
-                      {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
-                        <span className="sm:w-28 shrink-0 text-right inline-flex items-center justify-end gap-1 whitespace-nowrap">
-                          {isDownstream ? (
-                            <span className="inline-flex items-center gap-1 text-state-approved-foreground font-medium font-mono">
-                              <Lock className="h-2.5 w-2.5" /> ${fmt(entry.line_total ?? 0)}
-                            </span>
-                          ) : matchingActual ? (
-                            <>
-                              <span className="inline-flex items-center gap-1 text-state-approved-foreground font-medium">
-                                <Lock className="h-2.5 w-2.5" /> ${fmt(matchingActual.line_total ?? 0)}
-                              </span>
-                              {internalEditable && (
-                                <button
-                                  type="button"
-                                  aria-label="Edit internal cost"
-                                  onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === matchingActual.id ? null : matchingActual.id); }}
-                                  className="p-0.5 rounded hover:bg-muted text-state-approved-foreground hover:text-state-approved-foreground"
-                                  title="Edit internal cost"
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                 </button>
-                               )}
-                               {internalEditable && (
-                                 <button
-                                   type="button"
-                                   aria-label="Remove internal cost"
-                                   onClick={(e) => { e.stopPropagation(); deleteEntry(matchingActual); }}
-                                   disabled={deletingEntryId === matchingActual.id}
-                                   className="p-0.5 rounded hover:bg-destructive/10 text-state-approved-foreground hover:text-destructive"
-                                   title="Remove internal cost"
-                                 >
-                                   {deletingEntryId === matchingActual.id
-                                     ? <Loader2 className="h-3 w-3 animate-spin" />
-                                     : <Trash2 className="h-3 w-3" />}
-                                 </button>
-                               )}
-                             </>
-                           ) : (
-                            canEditInternal && (
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
-                                className="text-muted-foreground/50 hover:text-muted-foreground text-[10px]"
-                              >
-                                + add cost
-                              </button>
-                            )
-                          )}
-                        </span>
-                      )}
-                    </div>
-
-                    {isEditingThisRow && (() => {
-                      const editingObj = editEntryId === entry.id ? entry : matchingActual!;
-                      return (
-                        <div className="px-3 sm:px-5 pb-3 pt-1 bg-accent/20">
-                          <LaborEntryForm
-                            coId={coId} lineItemId={item.id} orgId={orgId}
-                            enteredByRole={enteredByRole} pricingType={pricingType}
-                            isTC={isTC} isFC={isFC}
-                            isActualCost={editingObj.is_actual_cost}
-                            editingEntry={editingObj}
-                            onSaved={() => { setEditEntryId(null); onRefresh(); }}
-                             onCancel={() => setEditEntryId(null)}
-                             onDelete={() => deleteEntry(editingObj)}
-                           />
-                         </div>
-                       );
-                     })()}
-                  </div>
-                );
-              })}
-
-              {/* Orphan internal costs (no matching billable date) */}
-              {(isTC || isFC) && (() => {
-                const billableDates = new Set(visibleBillable.map(e => e.entry_date));
-                const orphanActuals = actualCosts.filter(a => !billableDates.has(a.entry_date));
-                if (orphanActuals.length === 0) return null;
-                return (
-                  <div className="border-t border-border/40 bg-state-approved/30">
-                    <div className="px-3 sm:px-5 py-1.5 text-[10px] uppercase tracking-wider text-state-approved-foreground font-semibold flex items-center gap-1">
-                      <Lock className="h-2.5 w-2.5" /> Internal-only entries
-                    </div>
-                    {orphanActuals.map(a => {
-                      const editable = canEditEntry(a);
-                      const isEditingThisRow = editEntryId === a.id;
-                      return (
-                        <div key={a.id} className="border-b border-border/30 last:border-b-0">
-                          <div className="flex items-center text-xs px-3 sm:px-5 py-2 hover:bg-accent/40">
-                            <span className="w-14 sm:w-20 text-muted-foreground">{a.entry_date}</span>
-                            <span className="flex-1 text-muted-foreground truncate">{a.description || '—'}</span>
-                            <span
-                              className="w-14 sm:w-20 text-right font-mono text-muted-foreground truncate"
-                              title={formatWorkloadTooltip(a) ?? undefined}
-                            >
-                              {formatWorkload(a)}
-                            </span>
-                            <span className="w-20 sm:w-24 text-right font-mono text-muted-foreground/40">—</span>
-                            <span className="w-20 sm:w-28 text-right inline-flex items-center justify-end gap-1">
-                              <span className="inline-flex items-center gap-1 text-state-approved-foreground font-medium font-mono">
-                                <Lock className="h-2.5 w-2.5" /> ${fmt(a.line_total ?? 0)}
-                              </span>
-                              {editable && (
-                                <button
-                                  type="button"
-                                  aria-label="Edit internal cost"
-                                  onClick={(e) => { e.stopPropagation(); setEditEntryId(editEntryId === a.id ? null : a.id); }}
-                                  className="p-0.5 rounded hover:bg-muted text-state-approved-foreground hover:text-state-approved-foreground"
-                                  title="Edit internal cost"
-                                >
-                                   <Pencil className="h-3 w-3" />
-                                 </button>
-                               )}
-                               {editable && (
-                                 <button
-                                   type="button"
-                                   aria-label="Remove internal cost"
-                                   onClick={(e) => { e.stopPropagation(); deleteEntry(a); }}
-                                   disabled={deletingEntryId === a.id}
-                                   className="p-0.5 rounded hover:bg-destructive/10 text-state-approved-foreground hover:text-destructive"
-                                   title="Remove internal cost"
-                                 >
-                                   {deletingEntryId === a.id
-                                     ? <Loader2 className="h-3 w-3 animate-spin" />
-                                     : <Trash2 className="h-3 w-3" />}
-                                 </button>
-                               )}
-                             </span>
-                           </div>
-                          {isEditingThisRow && (
-                            <div className="px-3 sm:px-5 pb-3 pt-1 bg-accent/20">
-                              <LaborEntryForm
-                                coId={coId} lineItemId={item.id} orgId={orgId}
-                                enteredByRole={enteredByRole} pricingType={pricingType}
-                                isTC={isTC} isFC={isFC}
-                                isActualCost
-                                editingEntry={a}
-                                onSaved={() => { setEditEntryId(null); onRefresh(); }}
-                                onCancel={() => setEditEntryId(null)}
-                                onDelete={() => deleteEntry(a)}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-
-              {/* TC's cost for this scope item — crew charges + own internal costs */}
-              {isTC && (fcCostForTC > 0 || actualTotal > 0) && (
-                <div className="border-t border-border px-3 sm:px-5 py-2.5 bg-muted/20">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold mb-1.5 flex items-center gap-1">
-                    <Lock className="h-2.5 w-2.5" /> Your cost for this item
-                  </p>
-                  {fcCostForTC > 0 && (
-                    <div className="flex items-center text-xs py-1.5 text-muted-foreground">
-                      <span className="flex-1 truncate">{rl.FC} charges</span>
-                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(fcCostForTC)}</span>
-                    </div>
-                  )}
-                  {actualTotal > 0 && (
-                    <div className="flex items-center text-xs py-1.5 text-muted-foreground">
-                      <span className="flex-1 truncate">Own internal costs</span>
-                      <span className="w-20 sm:w-24 text-right font-mono">${fmt(actualTotal)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-xs font-bold text-foreground pt-1.5 border-t border-border/40">
-                    <span>Total cost</span>
-                    <span className="font-mono">${fmt(roleCostTotal)}</span>
-                  </div>
-                  {billableTotal > 0 && (
-                    <div className="flex justify-between text-xs pt-1 text-muted-foreground">
-                      <span>Margin on this item</span>
-                      <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-state-approved' : 'text-destructive')}>
-                        ${fmt(marginAmount)} · {marginPct.toFixed(1)}%
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-            </>
-          )}
-
-          <div className="flex flex-col gap-2 border-t border-border bg-card px-3 py-3 sm:flex-row sm:px-5">
-            {canAddLabor && !formOpen && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => { setFormOpen(true); setShowActualForm(false); }}
-                className="h-9 gap-2 text-xs"
-              >
-                <Plus className="h-4 w-4" /> Add pricing entry
-              </Button>
-            )}
-            {canEditInternal && (isTC || isFC) && !showActualForm && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => { setShowActualForm(true); setFormOpen(false); }}
-                className="h-9 gap-2 text-xs"
-              >
-                <Lock className="h-3.5 w-3.5" /> Log private cost
-              </Button>
-            )}
-            {(isTC || isFC) && (
-              <p className="text-[11px] text-muted-foreground sm:ml-auto sm:self-center">
-                Private costs are never shown to the other company.
-              </p>
-            )}
-          </div>
-
-          {formOpen && (
-            <div className="border-t border-border bg-muted/20 px-3 pb-4 pt-3 sm:px-5 [&>div]:shadow-none">
-              <LaborEntryForm
-                key="billable"
-                coId={coId}
-                lineItemId={item.id}
-                orgId={orgId}
-                enteredByRole={enteredByRole}
-                pricingType={pricingType}
-                isTC={isTC}
-                isFC={isFC}
-                nteCap={nteCap}
-                nteUsed={nteUsed}
-                onSaved={() => { setFormOpen(false); onRefresh(); }}
-                onCancel={() => setFormOpen(false)}
-              />
-            </div>
-          )}
-
-          {showActualForm && (
-            <div className="border-t border-border bg-muted/20 px-3 pb-4 pt-3 sm:px-5 [&>div]:shadow-none">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lock className="h-3.5 w-3.5" /> Private cost — never shared upstream</p>
-              <LaborEntryForm
-                key="private-cost"
-                coId={coId}
-                lineItemId={item.id}
-                orgId={orgId}
-                enteredByRole={enteredByRole}
-                pricingType={pricingType}
-                isTC={isTC}
-                isFC={isFC}
-                isActualCost
-                onSaved={() => { setShowActualForm(false); onRefresh(); }}
-                onCancel={() => setShowActualForm(false)}
-              />
-            </div>
-          )}
-        </div>
-        </DialogContent>
-      </Dialog>
+      <COItemPricingDialog
+        open={expanded}
+        onOpenChange={(open) => {
+          setExpanded(open);
+          if (!open) setFormOpen(false);
+        }}
+        openFormOnOpen={formOpen}
+        item={item}
+        laborEntries={laborEntries}
+        coId={coId}
+        orgId={orgId}
+        pricingType={pricingType}
+        nteCap={nteCap}
+        nteUsed={nteUsed}
+        isGC={isGC}
+        isTC={isTC}
+        isFC={isFC}
+        canAddLabor={canAddLabor}
+        canEditExternal={canEditExternal}
+        canEditInternal={canEditInternal}
+        onRefresh={onRefresh}
+        markupVisibility={markupVisibility}
+        canReview={canReview}
+        provisionalAmount={provisionalAmount}
+        confirmingCrewPrice={confirmingCrewPrice}
+        onConfirmCrewPrice={confirmCrewPrice}
+      />
     </div>
   );
 });

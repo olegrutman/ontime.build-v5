@@ -148,6 +148,9 @@ export interface COLaborEntry {
   hours: number | null;
   hourly_rate: number | null;
   lump_sum: number | null;
+  base_hourly_rate?: number | null;
+  base_lump_sum?: number | null;
+  markup_percent?: number | null;
   line_total: number;
   description: string | null;
   is_actual_cost: boolean;

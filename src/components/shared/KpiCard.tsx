@@ -78,10 +78,10 @@ export function BarRow({ label, value, pct, barColor }: { label: string; value: 
 }
 
 /* ─── KPI Card ─── */
-export function KpiCard({ accent, icon, iconBg, label, value, sub, pills = [], children, idx = 0, spark, headerAction, className }: {
+export function KpiCard({ accent, icon, iconBg, label, value, sub, pills = [], children, idx = 0, spark, headerAction, className, valueClassName }: {
   accent: string; icon: ReactNode; iconBg: string; label: string; value: string; sub: string;
   pills?: { type: PillType; text: string }[]; children?: ReactNode; idx?: number;
-  spark?: ReactNode; headerAction?: ReactNode; className?: string;
+  spark?: ReactNode; headerAction?: ReactNode; className?: string; valueClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -99,7 +99,7 @@ export function KpiCard({ accent, icon, iconBg, label, value, sub, pills = [], c
           <Button variant="ghost" onClick={() => setOpen(true)} aria-label={`View ${label} breakdown`} className="h-auto min-w-0 w-full flex-1 flex-col items-start justify-start gap-0 rounded-none p-0 text-left whitespace-normal hover:bg-transparent hover:text-foreground">
             <span className="w-full min-w-0 min-h-8 text-[0.7rem] font-semibold uppercase leading-snug text-muted-foreground [overflow-wrap:anywhere]">{label}</span>
             <span className="flex w-full min-w-0 items-end justify-between gap-2">
-              <span className="min-w-0 text-xl sm:text-2xl leading-tight tabular-nums text-foreground [overflow-wrap:anywhere]" style={fontMono}>{value}</span>
+              <span className={cn("min-w-0 text-xl sm:text-2xl leading-tight tabular-nums text-foreground [overflow-wrap:anywhere]", valueClassName)} style={fontMono}>{value}</span>
               {spark && <span className="shrink-0">{spark}</span>}
             </span>
             <span className="w-full min-w-0 mt-1 min-h-9 text-[0.75rem] font-normal leading-snug text-muted-foreground [overflow-wrap:anywhere]">{sub}</span>

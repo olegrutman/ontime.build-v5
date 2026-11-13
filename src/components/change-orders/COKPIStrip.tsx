@@ -10,6 +10,7 @@ import type { COFinancials, ChangeOrder } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import type { RoleLabels } from '@/hooks/useRoleLabels';
+import { cn } from '@/lib/utils';
 
 interface COKPIStripProps {
   co: ChangeOrder;
@@ -41,8 +42,7 @@ export interface COKPIItemBreakdown {
 }
 
 function fmtCurrency(value: number) {
-  if (value === 0) return '$0';
-  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 interface KPITile {
@@ -58,6 +58,7 @@ interface KPITile {
   markupPercent?: number | null;
   passedToOwner?: boolean | null;
   kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'other';
+  primary?: boolean;
 }
 
 function tilePills(tile: KPITile) {
@@ -95,8 +96,11 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
         label: headlineLabel,
         value: fmtCurrency(tcSubmitted),
         color: 'hsl(var(--primary))',
-        sub: headlineSub,
+        sub: ['approved', 'contracted'].includes(props.co.status)
+          ? 'Frozen approval amount · before tax'
+          : headlineSub,
         kind: 'revenue',
+        primary: true,
       },
     ];
 
@@ -138,17 +142,6 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       color: gcBudget && gcBudget >= gcCost ? C.green : C.amber,
       sub: gcBudget ? 'Owner price minus order cost' : 'Set your owner price to calculate',
     });
-    tiles.push({
-      label: 'Pricing progress',
-      kind: 'progress',
-      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
-      color: C.amber,
-      sub: 'Scope items priced',
-      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
-        ? { text: 'Ready', variant: 'healthy' }
-        : { text: 'In progress', variant: 'watch' },
-    });
-
     // Tax tile when there's tax (responsibility-aware — exclude tax on GC-procured M&E)
     if (financials.billableTotalTax > 0) {
       tiles.push({
@@ -192,18 +185,25 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     const myBillable = ownLaborToUpstream > 0
       ? ownLaborToUpstream
       : (isTC && props.co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
+    const isApproved = ['approved', 'contracted'].includes(props.co.status);
+    const currentRevenue = totalToUpstream > 0 ? totalToUpstream : myBillable;
+    const revenue = isApproved && isTC && props.co.approved_amount != null
+      ? Number(props.co.approved_amount)
+      : currentRevenue;
     tiles.push({
-      label: ['approved', 'contracted'].includes(props.co.status) ? 'Approved revenue' : 'Proposed revenue',
-      value: fmtCurrency(totalToUpstream > 0 ? totalToUpstream : myBillable),
+      label: isApproved ? 'Approved price' : 'Proposed price',
+      value: fmtCurrency(revenue),
       color: 'hsl(var(--primary))',
       kind: 'revenue',
-      badge: myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
+      primary: true,
+      sub: isApproved ? 'Frozen approval amount · before tax' : 'Current billable amount · before tax',
+      badge: isApproved ? { text: 'Approved', variant: 'healthy' } : myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
     });
 
     const privateCost = isTC
       ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost
       : financials.fcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
-    const margin = totalToUpstream - privateCost;
+    const margin = revenue - privateCost;
     tiles.push({
       label: 'Private cost',
       kind: 'cost',
@@ -216,20 +216,9 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       kind: 'margin',
       value: privateCost > 0 ? fmtCurrency(margin) : 'Pending',
       color: privateCost > 0 && margin < 0 ? C.red : C.green,
-      sub: privateCost > 0 && totalToUpstream > 0 ? `${((margin / totalToUpstream) * 100).toFixed(1)}% of revenue` : 'Add a private cost to calculate',
+      sub: privateCost > 0 && revenue > 0 ? `${((margin / revenue) * 100).toFixed(1)}% of ${isApproved ? 'approved' : 'proposed'} revenue` : 'Add a private cost to calculate',
       badge: privateCost > 0 ? { text: margin >= 0 ? 'Positive' : 'Over budget', variant: margin >= 0 ? 'healthy' : 'watch' } : undefined,
     });
-    tiles.push({
-      label: 'Pricing progress',
-      kind: 'progress',
-      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
-      color: C.blue,
-      sub: 'Scope items priced',
-      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
-        ? { text: 'Ready', variant: 'healthy' }
-        : { text: 'In progress', variant: 'watch' },
-    });
-
     if (financials.retainagePercent > 0 && financials.viewer.retainageAmount > 0) {
       tiles.push({
         label: 'Retainage Held',
@@ -356,9 +345,10 @@ function parseMoney(v: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[] }) {
+function Breakdown({ tile, items, financials }: { tile: KPITile; items: COKPIItemBreakdown[]; financials: COFinancials }) {
   const kind = tile.kind ?? 'other';
-  if (kind === 'other' || items.length === 0) return null;
+  if (kind === 'other') return null;
+  if (items.length === 0) return <p className="px-4 py-5 text-sm text-muted-foreground">No item-level amounts yet.</p>;
   if (kind === 'progress') {
     return (
       <div className="divide-y divide-border">
@@ -374,7 +364,17 @@ function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[]
   const amount = (it: COKPIItemBreakdown) => kind === 'revenue' ? it.revenue : kind === 'cost' ? it.cost : it.revenue - it.cost;
   const total = tile.value === 'Pending' ? null : parseMoney(tile.value);
   const itemsSum = items.reduce((s, it) => s + amount(it), 0);
-  const other = total == null ? 0 : total - itemsSum;
+  const materials = kind === 'revenue'
+    ? financials.viewer.ownMaterialsTotal
+    : kind === 'cost'
+      ? financials.viewer.ownMaterialsCost
+      : financials.viewer.ownMaterialsTotal - financials.viewer.ownMaterialsCost;
+  const equipment = kind === 'revenue'
+    ? financials.viewer.ownEquipmentTotal
+    : kind === 'cost'
+      ? financials.viewer.ownEquipmentCost
+      : financials.viewer.ownEquipmentTotal - financials.viewer.ownEquipmentCost;
+  const adjustment = total == null ? 0 : total - itemsSum - materials - equipment;
   return (
     <div className="divide-y divide-border">
       {items.map((it, i) => (
@@ -383,10 +383,20 @@ function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[]
           <span className="shrink-0 font-mono font-semibold text-foreground">{fmtCurrency(amount(it))}</span>
         </div>
       ))}
-      {Math.abs(other) >= 1 && (
+      {Math.abs(materials) >= 0.005 && (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
-          <span>Materials, equipment &amp; other</span>
-          <span className="shrink-0 font-mono font-semibold">{fmtCurrency(other)}</span>
+          <span>Materials</span><span className="shrink-0 font-mono font-semibold">{fmtCurrency(materials)}</span>
+        </div>
+      )}
+      {Math.abs(equipment) >= 0.005 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+          <span>Equipment</span><span className="shrink-0 font-mono font-semibold">{fmtCurrency(equipment)}</span>
+        </div>
+      )}
+      {Math.abs(adjustment) >= 0.005 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+          <span>Approval adjustment</span>
+          <span className="shrink-0 font-mono font-semibold">{fmtCurrency(adjustment)}</span>
         </div>
       )}
       <div className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5 text-sm font-bold">
@@ -397,14 +407,14 @@ function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[]
   );
 }
 
-function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[] }) {
+function CompactTile({ tile, items, financials }: { tile: KPITile; items: COKPIItemBreakdown[]; financials: COFinancials }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)} aria-label={`View ${tile.label} breakdown`}
-        className="h-auto min-w-0 flex-col items-start gap-0.5 whitespace-normal rounded-xl px-3 py-2 text-left">
+        className={cn('h-auto min-w-0 flex-col items-start gap-0.5 whitespace-normal rounded-xl px-3 py-2 text-left', tile.primary && 'col-span-2 py-3')}>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{tile.label}</span>
-        <span className="font-mono text-base font-bold text-foreground">{tile.value}</span>
+        <span className={cn('font-mono text-lg font-bold text-foreground', tile.primary && 'text-2xl')}>{tile.value}</span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md gap-0 overflow-hidden rounded-2xl p-0">
@@ -412,7 +422,7 @@ function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown
             <DialogTitle className="font-heading text-xl">{tile.label}</DialogTitle>
             {tile.sub && <DialogDescription>{tile.sub}</DialogDescription>}
           </DialogHeader>
-          <Breakdown tile={tile} items={items} /> 
+          <Breakdown tile={tile} items={items} financials={financials} /> 
           {(tile.kind ?? 'other') === 'other' && <p className="p-4 font-mono text-xl">{tile.value}</p>}
         </DialogContent>
       </Dialog>
@@ -423,9 +433,6 @@ function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown
 export function COKPIStrip(props: COKPIStripProps) {
   const rl = useRoleLabelsContext();
   const tiles = getTiles(props, rl);
-  const colCount = tiles.length;
-  const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : colCount === 3 ? 'lg:grid-cols-3' : colCount === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-1';
-
   const items = props.itemBreakdown ?? [];
 
   if (props.compact) {
@@ -433,19 +440,21 @@ export function COKPIStrip(props: COKPIStripProps) {
       <div className="grid grid-cols-2 gap-2">
         {tiles.map(tile => tile.editable
           ? <div key={tile.label} className="col-span-2"><EditableBudgetTile tile={tile} coId={props.co.id} onRefresh={props.onRefresh} /></div>
-          : <CompactTile key={tile.label} tile={tile} items={items} />)}
+          : <CompactTile key={tile.label} tile={tile} items={items} financials={props.financials} />)}
       </div>
     );
   }
 
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-2.5`}>
+    <div className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2">
       {tiles.map((tile, idx) => tile.editable
         ? <EditableBudgetTile key={tile.label} tile={tile} coId={props.co.id} onRefresh={props.onRefresh} />
         : <KpiCard key={tile.label} label={tile.label} value={tile.value} sub={tile.sub ?? tile.label}
-            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}>
-            {(tile.kind ?? 'other') !== 'other' && items.length > 0
-              ? <div><p className="px-4 pt-3 text-xs text-muted-foreground">{tile.sub}</p><Breakdown tile={tile} items={items} /></div>
+            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}
+            className={tile.primary ? 'sm:col-span-2' : undefined}
+            valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}>
+            {(tile.kind ?? 'other') !== 'other'
+              ? <Breakdown tile={tile} items={items} financials={props.financials} />
               : undefined}
           </KpiCard>)}
     </div>

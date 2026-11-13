@@ -27,6 +27,8 @@ export function getCOPricingReadiness(
   ).length;
   const total = items.length + procurement.length;
   const priced = pricedItems + pricedProcurement;
+  if (pricedItems !== items.length) return priced > 0 ? 'incomplete' : 'unpriced';
+  if (procurement.some(row => !Number.isFinite(Number(row.billed_amount)) || Number(row.billed_amount) === 0)) return 'incomplete';
   if (total > 0 && priced === total) return 'ready';
   return priced > 0 ? 'incomplete' : 'unpriced';
 }
