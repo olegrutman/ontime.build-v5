@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { COFinancials, ChangeOrder } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
@@ -25,6 +26,18 @@ interface COKPIStripProps {
   markupVisibility?: MarkupVisibility;
   pricedCount?: number;
   itemCount?: number;
+  /** Viewer-scoped per-item amounts so every card can show how its total is made. */
+  itemBreakdown?: COKPIItemBreakdown[];
+  /** Small tappable chips (phones) instead of full cards. */
+  compact?: boolean;
+}
+
+export interface COKPIItemBreakdown {
+  id: string;
+  name: string;
+  revenue: number;
+  cost: number;
+  priced: boolean;
 }
 
 function fmtCurrency(value: number) {
@@ -44,6 +57,7 @@ interface KPITile {
   gcCost?: number;
   markupPercent?: number | null;
   passedToOwner?: boolean | null;
+  kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'other';
 }
 
 function tilePills(tile: KPITile) {
@@ -82,6 +96,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
         value: fmtCurrency(tcSubmitted),
         color: 'hsl(var(--primary))',
         sub: headlineSub,
+        kind: 'revenue',
       },
     ];
 
@@ -118,12 +133,14 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
 
     tiles.push({
       label: 'Order margin',
+      kind: 'other',
       value: passedToOwner === false ? 'Absorbed' : gcBudget ? fmtCurrency(gcBudget - gcCost) : 'Pending',
       color: gcBudget && gcBudget >= gcCost ? C.green : C.amber,
       sub: gcBudget ? 'Owner price minus order cost' : 'Set your owner price to calculate',
     });
     tiles.push({
       label: 'Pricing progress',
+      kind: 'progress',
       value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
       color: C.amber,
       sub: 'Scope items priced',
@@ -179,6 +196,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       label: ['approved', 'contracted'].includes(props.co.status) ? 'Approved revenue' : 'Proposed revenue',
       value: fmtCurrency(totalToUpstream > 0 ? totalToUpstream : myBillable),
       color: 'hsl(var(--primary))',
+      kind: 'revenue',
       badge: myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
     });
 
@@ -188,12 +206,14 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     const margin = totalToUpstream - privateCost;
     tiles.push({
       label: 'Private cost',
+      kind: 'cost',
       value: fmtCurrency(privateCost),
       color: C.amber,
       sub: 'Only your company sees this',
     });
     tiles.push({
       label: 'Gross margin',
+      kind: 'margin',
       value: privateCost > 0 ? fmtCurrency(margin) : 'Pending',
       color: privateCost > 0 && margin < 0 ? C.red : C.green,
       sub: privateCost > 0 && totalToUpstream > 0 ? `${((margin / totalToUpstream) * 100).toFixed(1)}% of revenue` : 'Add a private cost to calculate',
@@ -201,6 +221,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     });
     tiles.push({
       label: 'Pricing progress',
+      kind: 'progress',
       value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
       color: C.blue,
       sub: 'Scope items priced',
@@ -330,18 +351,103 @@ function EditableBudgetTile({ tile, coId, onRefresh }: { tile: KPITile; coId: st
   );
 }
 
+function parseMoney(v: string) {
+  const n = Number(v.replace(/[^0-9.\-]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function Breakdown({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[] }) {
+  const kind = tile.kind ?? 'other';
+  if (kind === 'other' || items.length === 0) return null;
+  if (kind === 'progress') {
+    return (
+      <div className="divide-y divide-border">
+        {items.map((it, i) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+            <span className="min-w-0 break-words"><span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}</span>{it.name}</span>
+            <span className={it.priced ? 'shrink-0 text-xs font-semibold text-state-approved' : 'shrink-0 text-xs font-semibold text-state-open'}>{it.priced ? 'Priced' : 'Not priced'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  const amount = (it: COKPIItemBreakdown) => kind === 'revenue' ? it.revenue : kind === 'cost' ? it.cost : it.revenue - it.cost;
+  const total = tile.value === 'Pending' ? null : parseMoney(tile.value);
+  const itemsSum = items.reduce((s, it) => s + amount(it), 0);
+  const other = total == null ? 0 : total - itemsSum;
+  return (
+    <div className="divide-y divide-border">
+      {items.map((it, i) => (
+        <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+          <span className="min-w-0 break-words"><span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}</span>{it.name}</span>
+          <span className="shrink-0 font-mono font-semibold text-foreground">{fmtCurrency(amount(it))}</span>
+        </div>
+      ))}
+      {Math.abs(other) >= 1 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+          <span>Materials, equipment &amp; other</span>
+          <span className="shrink-0 font-mono font-semibold">{fmtCurrency(other)}</span>
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5 text-sm font-bold">
+        <span>Total</span>
+        <span className="shrink-0 font-mono">{total == null ? 'Pending' : fmtCurrency(total)}</span>
+      </div>
+    </div>
+  );
+}
+
+function CompactTile({ tile, items }: { tile: KPITile; items: COKPIItemBreakdown[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)} aria-label={`View ${tile.label} breakdown`}
+        className="h-auto min-w-0 flex-col items-start gap-0.5 whitespace-normal rounded-xl px-3 py-2 text-left">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{tile.label}</span>
+        <span className="font-mono text-base font-bold text-foreground">{tile.value}</span>
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md gap-0 overflow-hidden rounded-2xl p-0">
+          <DialogHeader className="border-b border-border px-4 py-3 pr-12 text-left">
+            <DialogTitle className="font-heading text-xl">{tile.label}</DialogTitle>
+            {tile.sub && <DialogDescription>{tile.sub}</DialogDescription>}
+          </DialogHeader>
+          <Breakdown tile={tile} items={items} /> 
+          {(tile.kind ?? 'other') === 'other' && <p className="p-4 font-mono text-xl">{tile.value}</p>}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export function COKPIStrip(props: COKPIStripProps) {
   const rl = useRoleLabelsContext();
   const tiles = getTiles(props, rl);
   const colCount = tiles.length;
   const gridCols = colCount >= 5 ? 'lg:grid-cols-5' : colCount === 4 ? 'lg:grid-cols-4' : colCount === 3 ? 'lg:grid-cols-3' : colCount === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-1';
 
+  const items = props.itemBreakdown ?? [];
+
+  if (props.compact) {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {tiles.map(tile => tile.editable
+          ? <div key={tile.label} className="col-span-2"><EditableBudgetTile tile={tile} coId={props.co.id} onRefresh={props.onRefresh} /></div>
+          : <CompactTile key={tile.label} tile={tile} items={items} />)}
+      </div>
+    );
+  }
+
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-2.5`}>
       {tiles.map((tile, idx) => tile.editable
         ? <EditableBudgetTile key={tile.label} tile={tile} coId={props.co.id} onRefresh={props.onRefresh} />
         : <KpiCard key={tile.label} label={tile.label} value={tile.value} sub={tile.sub ?? tile.label}
-            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)} />)}
+            icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}>
+            {(tile.kind ?? 'other') !== 'other' && items.length > 0
+              ? <div><p className="px-4 pt-3 text-xs text-muted-foreground">{tile.sub}</p><Breakdown tile={tile} items={items} /></div>
+              : undefined}
+          </KpiCard>)}
     </div>
   );
 }
