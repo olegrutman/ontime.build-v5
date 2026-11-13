@@ -34,10 +34,10 @@ export default function CODetail() {
     >
       <div className="flex flex-1 overflow-hidden">
         <ProjectSidebar isTM={(projectInfo?.contract_mode ?? 'fixed') === 'tm'} />
-        <main className="flex-1 overflow-auto lg:ml-[200px] xl:ml-[220px] pb-36 lg:pb-6">
+        <main className="flex-1 min-w-0 overflow-auto lg:ml-[200px] xl:ml-[220px] pb-36 lg:pb-6">
           <CODetailLayout coId={coId} projectId={projectId} />
         </main>
-        <ProjectBottomNav />
+        <ProjectBottomNav isTM={projectInfo?.contract_mode === 'tm'} />
       </div>
     </ProjectShell>
   );
