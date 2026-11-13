@@ -21,6 +21,12 @@ describe('invoice and KPI integrity', () => {
   it('keeps material commitments separate across projects', () => {
     expect(projectMaterialCommitment(100, 0) + projectMaterialCommitment(0, 100)).toBe(200);
   });
+  it('uses actual base cost instead of a historical marked-up private-cost total', () => {
+    const rows = [
+      { id: 'actual', org_id: 'sub', is_actual_cost: true, pricing_mode: 'hourly', hours: 30, base_hourly_rate: 45, line_total: 1552.50 },
+    ];
+    expect(coLaborCost(rows, 'sub')).toEqual({ ownLabor: 1350, subcontract: 0, total: 1350 });
+  });
   it('counts crew imports once while retaining unimported crew work and independent internal cost', () => {
     const rows = [
       { id: 'crew-a', org_id: 'crew', entered_by_role: 'FC', line_total: 100 },

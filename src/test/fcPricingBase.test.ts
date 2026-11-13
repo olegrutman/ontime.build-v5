@@ -34,6 +34,17 @@ describe('computeFcPricingBase', () => {
     expect(r.calculatedPrice).toBe(520);
   });
 
+  it('applies the same 15% markup to hourly and lump-sum crew-derived pricing', () => {
+    const r = computeFcPricingBase({
+      fcTotalHours: 50,
+      fcLumpSumTotal: 0,
+      hourlyRate: 65,
+      markupPercent: 15,
+      pricingType: 'fixed',
+    });
+    expect(r.calculatedPrice).toBe(3737.50);
+  });
+
   it('falls back to lump sum plus markup when no hours were submitted', () => {
     const r = computeFcPricingBase({
       fcTotalHours: 0,
