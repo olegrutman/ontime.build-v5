@@ -331,7 +331,7 @@ export default function ProjectHome() {
     >
       <div className="flex flex-1 overflow-hidden md:pr-3 md:pt-3">
         <ProjectSidebar isSupplier={isSupplier} isTM={isTM} isFC={isFC} />
-        <main className="flex-1 overflow-auto md:ml-[200px] xl:ml-[220px]">
+        <main className="flex-1 min-w-0 overflow-auto lg:ml-[200px] xl:ml-[220px]">
           <div className={cn(
             "max-w-7xl mx-auto w-full",
             activeTab === 'overview' ? 'px-3 sm:px-6 pt-3 sm:pt-4' : 'px-3 sm:px-6 pt-4 sm:pt-6 space-y-6',

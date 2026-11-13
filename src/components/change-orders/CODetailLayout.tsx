@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/components/auth/RequirePermission';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
@@ -74,7 +73,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const { user } = useAuth();
   const canApprove = usePermission('canApprove');
   const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
   const coV4 = useCoV4Flag();
   const { data: corrections = [] } = useCOCorrections(projectId, coId);
   const rl = useRoleLabelsContext();
@@ -772,7 +770,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 <div>
                   <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                   {lineItems.length > 0 && (
-                    <div className="hidden md:grid md:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] md:gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
+                    <div className="hidden 2xl:grid 2xl:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] 2xl:gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
                       <span>#</span>
                       <span>Item</span>
                       <span className="text-right">Crew cost</span>
@@ -915,22 +913,18 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             </div>
 
             {/* Sidebar */}
-            {!isMobile && (
-              <div className="w-[300px] xl:w-[340px] shrink-0 space-y-3 sticky top-14 self-start">
+              <div className="hidden xl:block w-[300px] 2xl:w-[340px] shrink-0 space-y-3 sticky top-14 self-start">
                 <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
                 {billedCard}
                 {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
               </div>
-            )}
           </div>
 
-          {isMobile && (
-            <>
+            <div className="space-y-3 xl:hidden">
               <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
               {billedCard}
               {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-            </>
-          )}
+            </div>
         </div>
       </div>
 
