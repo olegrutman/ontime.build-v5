@@ -1,26 +1,23 @@
 import { CODescriptionEditor } from './CODescriptionEditor';
 import { useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { COItemPricingDialog } from './COItemPricingDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle, Users, CalendarDays, Clock } from 'lucide-react';
+import { ChevronDown, CheckCircle, MapPin, Lock, DollarSign, Trash2, Pencil, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { fmtHours, formatWorkload, formatWorkloadTooltip, hasCrewMath } from '@/lib/crewWorkload';
+import { fmtHours } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { LaborEntryForm } from './LaborEntryForm';
-import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import { CO_REASON_LABELS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode, COPricingType } from '@/types/changeOrder';
 import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
-import { canRemoveLaborEntry } from '@/lib/laborEntryDelete';
+import { actualEntryBaseCost } from '@/lib/laborEntryMath';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
-import { COLineItemReview } from './COLineReview';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -92,11 +89,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const nteCap = item.nte_cap ?? coNteCap;
   const nteUsed = coNteUsed; // NTE used is CO-level aggregate
   const hasPricingOverride = item.pricing_type != null && item.pricing_type !== coPricingType;
-  const [showActualForm, setShowActualForm] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [editEntryId, setEditEntryId] = useState<string | null>(null);
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [editHeaderOpen, setEditHeaderOpen] = useState(false);
   const [savingHeader, setSavingHeader] = useState(false);
   const [draftName, setDraftName] = useState(item.item_name);
@@ -107,7 +101,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const [draftPricingType, setDraftPricingType] = useState<COPricingType | ''>(item.pricing_type as COPricingType ?? '');
   const [draftNteCap, setDraftNteCap] = useState(item.nte_cap != null ? String(item.nte_cap) : '');
 
-  const myRoleStr = isFC ? 'FC' : isTC ? 'TC' : isGC ? 'GC' : null;
   const isMyOrgItem = item.org_id === orgId;
   const canEditHeader = canEditExternal && isMyOrgItem;
 
@@ -216,7 +209,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
 
   const fcTotal = fcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const actualTotal = actualCosts.reduce((s, e) => s + actualEntryBaseCost(e), 0);
 
   // Crew log hours without a rate — those hours carry no dollar value until
   // someone prices them, so surface it instead of letting the line read as $0.
