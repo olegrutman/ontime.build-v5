@@ -65,7 +65,9 @@ export function LaborEntryForm({
   const [lumpSum, setLumpSum] = useState(entrySeed?.lumpSum ?? '');
 
 
-  const [description, setDescription] = useState(editingEntry?.description ?? '');
+  // Preserve historical entry notes without asking users to repeat item scope.
+  const description = editingEntry?.description ?? '';
+  const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
   const [internalCostOpen, setInternalCostOpen] = useState(true);
@@ -79,6 +81,15 @@ export function LaborEntryForm({
   const [crewSize, setCrewSize] = useState(editingEntry?.crew_size != null ? String(editingEntry.crew_size) : '');
   const [days, setDays] = useState(editingEntry?.days != null ? String(editingEntry.days) : '');
   const [hoursPerDay, setHoursPerDay] = useState(editingEntry?.hours_per_day != null ? String(editingEntry.hours_per_day) : '');
+
+  useEffect(() => {
+    let cancelled = false;
+    if (pricingType !== 'tm' && pricingType !== 'nte') return;
+    void supabase.from('change_orders').select('completed_at').eq('id', coId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setCompletedAt(data?.completed_at ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [coId, pricingType]);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,7 +241,7 @@ export function LaborEntryForm({
   }
 
   function resetForm() {
-    setHours(''); setLumpSum(''); setDescription('');
+    setHours(''); setLumpSum('');
     setInternalCost(''); setInternalCostOpen(true); setCostType('labor_wages');
     setImportedFC(false);
     setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
@@ -408,35 +419,24 @@ export function LaborEntryForm({
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Context row: description + date */}
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-12 sm:col-span-8 space-y-1.5">
-            <label className={microLabel}>Description</label>
-            <input
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="What work was done…"
-              className={fieldInput}
-            />
-          </div>
-          <div className="col-span-12 sm:col-span-4 space-y-1.5">
-            <label className={microLabel}>Date</label>
-            <div className="relative">
-              <input
-                id={`labor-date-${lineItemId}`}
-                type="date"
-                value={entryDate}
-                onChange={e => setEntryDate(e.target.value)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                aria-label="Entry date"
-              />
-              <div className={cn(fieldInput, 'flex items-center justify-between gap-2 pointer-events-none')}>
-                <span className="truncate">{dateLabel}</span>
-                <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-              </div>
+        {mode === 'hourly' && (
+          <section className="space-y-2" aria-label="Time entry method">
+            <h4 className="text-sm font-semibold text-foreground">How are you entering time?</h4>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button type="button" variant={useCrewMath ? 'outline' : 'default'} aria-pressed={!useCrewMath} onClick={() => setUseCrewMath(false)} className="h-auto min-h-10 whitespace-normal px-3 py-2">
+                Total hours
+              </Button>
+              <Button type="button" variant={useCrewMath ? 'default' : 'outline'} aria-pressed={useCrewMath} onClick={() => setUseCrewMath(true)} className="h-auto min-h-10 whitespace-normal px-3 py-2">
+                Crew × days × hours
+              </Button>
             </div>
-          </div>
-        </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {useCrewMath
+                ? 'Enter the number of workers, days worked, and hours per worker each day. For example: 3 workers × 2 days × 8 hours = 48 total hours.'
+                : 'Enter the combined hours worked by everyone. For example: 3 workers working 8 hours each = 24 total hours.'}
+            </p>
+          </section>
+        )}
 
         {/* Billable precision grid — stable 4/4/4 geometry */}
         <div className="grid grid-cols-12 gap-3">
@@ -445,7 +445,7 @@ export function LaborEntryForm({
               {useCrewMath ? (
                 <>
                   <div className="col-span-4 space-y-1.5">
-                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Crew</label>
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Workers</label>
                     <div className="relative">
                       <input
                         type="number" step="1" min="0" value={crewSize} onChange={e => setCrewSize(e.target.value)} placeholder="0"
@@ -465,7 +465,7 @@ export function LaborEntryForm({
                     </div>
                   </div>
                   <div className="col-span-4 space-y-1.5">
-                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hrs/Day</label>
+                    <label className={microLabel} style={{ color: 'hsl(var(--amber-d))' }}>Hours/day</label>
                     <div className="relative">
                       <input
                         type="number" step="0.25" min="0" value={hoursPerDay} onChange={e => setHoursPerDay(e.target.value)} placeholder="0"
@@ -541,42 +541,12 @@ export function LaborEntryForm({
         {/* Crew math toggle + workload summary */}
         {mode === 'hourly' && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Entry mode</span>
-                <button
-                  type="button"
-                  onClick={() => setUseCrewMath(v => !v)}
-                  className={cn(
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    useCrewMath ? 'bg-[hsl(var(--amber))]' : 'bg-muted'
-                  )}
-                  aria-pressed={useCrewMath}
-                >
-                  <span
-                    className={cn(
-                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                      useCrewMath ? 'translate-x-6' : 'translate-x-1'
-                    )}
-                  />
-                </button>
-                <span className="text-xs font-medium text-foreground">
-                  {useCrewMath ? 'Crew math' : 'Direct hours'}
-                </span>
-              </div>
-              {useCrewMath && hoursValue > 0 && (
-                <span className="text-xs font-bold" style={{ ...mono, color: 'hsl(var(--amber-d))' }}>
-                  {fmtHours(hoursValue)} hrs total
-                </span>
-              )}
-            </div>
-
             {useCrewMath ? (
               <div className="rounded-xl border border-border bg-muted/30 p-3 flex items-center justify-between">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Workload</span>
                   <span className="text-sm font-semibold text-foreground">
-                    {crewSizeValue || 0} men × {daysValue || 0} days × {hoursPerDayValue || 0} hr/day
+                    {crewSizeValue || 0} workers × {daysValue || 0} days × {hoursPerDayValue || 0} hr/day
                   </span>
                 </div>
                 <div className="text-right">
@@ -609,6 +579,20 @@ export function LaborEntryForm({
             )}
           </div>
         )}
+
+        <div className="flex flex-wrap items-start gap-4 border-t border-border pt-4">
+          {!isActualCost && (pricingType === 'tm' || pricingType === 'nte') && (
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Work completed (%) · order</Label>
+              <p className="font-mono text-lg font-semibold text-foreground">{completedAt ? '100%' : 'Not recorded'}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">Progress is separate from hours and charges.</p>
+            </div>
+          )}
+          <div className="w-full space-y-1.5 sm:w-44 sm:shrink-0">
+            <Label htmlFor={`labor-date-${lineItemId}`} className="text-xs text-muted-foreground">Work date</Label>
+            <Input id={`labor-date-${lineItemId}`} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} aria-label="Work date" className="h-9 text-sm" />
+          </div>
+        </div>
 
         {/* Crew-time prefill note */}
         {prefilledFromCrew && !isActualCost && (

@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Simplify the pricing entry form: time-entry method first with explanation, no duplicate description input, compact Work date and separate recorded completion display; verify desktop and phones without changing billing rules.
 - [x] Replace the CO/WO layout experiments with one project-style workspace: persistent order summary, compact item rows, one item/pricing pop-up, procurement responsibility beside its section, and no duplicate actions; verified real pricing save/removal, approved and draft orders, role-scoped financial displays, and 320/394px layouts.
 - [x] Build and verify three selectable CO/WO page layouts (Focus, Step by step, Document) with a real pricing pop-up; preserve approvals, privacy, and saved totals. Live price save/readback and cleanup passed; all layouts and pop-up pass 320/394px with no overflow; 376 tests and preview build pass.
 - [x] Fix tablet sidebar overlap and cramped work-order pricing; 11 widths audited for four roles, 376 tests pass.
