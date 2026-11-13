@@ -611,7 +611,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto pb-44 md:pb-8">
+      <div className="flex-1 overflow-y-auto pb-28 lg:pb-8">
         <div className="w-full px-4 lg:px-5 py-4 space-y-4">
 
 
@@ -868,7 +868,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
 
               {/* Activity — Collapsible */}
-              {showRecords && (
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -907,10 +906,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
-              )}
 
               {/* Audit Log — Collapsible */}
-              {showRecords && (
               <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -929,44 +926,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
-              )}
             </div>
 
-            {/* Focus sidebar */}
-            {design === 'focus' && (
-              <div className="hidden xl:block w-[300px] 2xl:w-[340px] shrink-0 space-y-3 sticky top-14 self-start">
-                <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-                {billedCard}
-                {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-              </div>
-            )}
+            <aside className="hidden w-[300px] shrink-0 self-start xl:sticky xl:top-14 xl:block 2xl:w-[320px]">
+              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
+              {billedCard}
+              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+            </aside>
           </div>
 
-          {design === 'focus' && (
-            <div className="space-y-3 xl:hidden">
-              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-              {billedCard}
-              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-            </div>
-          )}
-
-          {design !== 'focus' && showSummary && (
-            <div className={cn('space-y-3', design === 'document' ? 'mx-auto w-full max-w-5xl' : 'mx-auto w-full max-w-3xl')}>
-              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-              {billedCard}
-              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-            </div>
-          )}
+          <div className="space-y-3 xl:hidden">
+            <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
+            {billedCard}
+            {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+          </div>
         </div>
       </div>
-
-      <COStickyFooter
-        status={status} isGC={isGC} isTC={isTC} isFC={isFC}
-        financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
-        total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-        photoCount={photos.length} photosBlocked={photosBlocked}
-        onOpenCamera={() => openPhotos()}
-      />
 
       <COExternalInviteDialog
         open={externalInviteOpen}
