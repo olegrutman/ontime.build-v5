@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
@@ -270,7 +270,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     setSearchParams(params, { replace: true });
   }
 
-  function goToSection(section: COGuidedSection, ref?: React.RefObject<HTMLDivElement>) {
+  function goToSection(section: COGuidedSection, ref?: RefObject<HTMLDivElement>) {
     if (design === 'guided') setGuidedSection(section);
     window.setTimeout(() => ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), design === 'guided' ? 60 : 0);
   }
@@ -318,7 +318,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         if (co) {
           if (photosBlocked) {
             toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
-            photosCardRef.current?.openAdd('during');
+            openPhotos('during');
             break;
           }
           try {
@@ -366,7 +366,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           }
           if (photosBlocked) {
             toast.error('At least 1 photo is required before submitting. This project has photo requirements enabled.');
-            photosCardRef.current?.openAdd('during');
+            openPhotos('during');
             break;
           }
           try {
@@ -397,7 +397,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'approve':
         if (co) {
           if (lineItems.length > 1) {
-            scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+            goToSection('scope', scopeRef);
             toast.info('Review each scope item, then finish the review in Actions.');
             break;
           }
@@ -411,7 +411,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'reject':
         if (co) {
           if (lineItems.length > 1) {
-            scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+            goToSection('scope', scopeRef);
             toast.info('Reject individual items with a reason, then finish the review in Actions.');
             break;
           }
