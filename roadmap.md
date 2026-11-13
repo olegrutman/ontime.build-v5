@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Build and verify three selectable CO/WO page layouts (Focus, Step by step, Document) with a real pricing pop-up; preserve approvals, privacy, and saved totals.
 - [x] Fix tablet sidebar overlap and cramped work-order pricing; 11 widths audited for four roles, 376 tests pass.
 - [ ] Fix remaining clipped dashboard KPI labels, General Contractor dashboard table headers, supplier dashboard team names and long work-order numbers on phones.
 - [x] Correct CO/WO screenshot issues: shared pricing readiness shows Pricing incomplete for 1/2 priced at $15,600; proposed revenue and responsibility labels clarified, pricing columns separated and working area widened. Verified owning subcontractor desktop and 320/394px expanded pricing; six readiness tests pass, preview build OK, required phone audit 26 views with zero findings. Submission and approval rules unchanged.
