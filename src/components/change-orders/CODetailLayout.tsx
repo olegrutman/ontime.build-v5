@@ -17,7 +17,7 @@ import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
-import { getCOPricingReadiness, coPricingStatusLabel } from '@/lib/coPricingReadiness';
+import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -36,7 +36,7 @@ import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { COStatusActions } from './COStatusActions';
 import { COLineItemRow } from './COLineItemRow';
-import { COLineItemReview, COLineReviewBar } from './COLineReview';
+import { COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
@@ -60,7 +60,7 @@ import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CO_STATUS_LABELS, type COStatus, type COFCOrgOption } from '@/types/changeOrder';
+import { type COStatus, type COFCOrgOption } from '@/types/changeOrder';
 
 interface CODetailLayoutProps {
   coId: string;
@@ -660,12 +660,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               laborEntries={laborEntries}
             />
           </div>
-          {<COPricingUnlockBar
+          <COPricingUnlockBar
             co={co}
             canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
-          />}
+          />
           {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
 
           {/* Secondary items collapse into tappable tags. */}
@@ -718,47 +718,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none whitespace-nowrap">Scope &amp; Labor</h3>
-                        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:gap-3 mt-1.5">
-
-                          <p className="text-[11px] text-muted-foreground">
-                            {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
-                          </p>
-                          <COMaterialResponsibilityToggle
-                            type="material"
-                            responsible={responsibility.materialResponsible}
-                            isOverridden={responsibility.materialOverridden}
-                            canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
-                            isSaving={responsibility.isSaving}
-                            onSet={responsibility.setMaterialOverride}
-                          />
-                          <COMaterialResponsibilityToggle
-                            type="equipment"
-                            responsible={responsibility.equipmentResponsible}
-                            isOverridden={responsibility.equipmentOverridden}
-                            canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
-                            isSaving={responsibility.isSaving}
-                            onSet={responsibility.setEquipmentOverride}
-                          />
-                        </div>
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">
+                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · select an item to view details and pricing
+                        </p>
                       </div>
 
                     </div>
-                    {/* Compact money summary — replaces the big KPI cards for TC/FC */}
-                    {false && !isGC && (
-                      <span className="hidden md:inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                        {isFC ? (
-                          <>My billable <span className="font-semibold text-foreground">${(financials.viewer.ownLaborToUpstream ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
-                        ) : (
-                          <>
-                            Cost <span className="font-semibold text-foreground">${scopeCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                            → Billable <span className="font-semibold text-foreground">${(tcBillableTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                            {tcBillableTotal > 0 && (
-                              <> · Margin <span className={(tcBillableTotal - scopeCost) >= 0 ? 'font-semibold text-success' : 'font-semibold text-destructive'}>{(((tcBillableTotal - scopeCost) / tcBillableTotal) * 100).toFixed(1)}%</span></>
-                            )}
-                          </>
-                        )}
-                      </span>
-                    )}
                     {canEdit && !nteBlocked && co && (
                       <AddItemsChooser
                         projectId={projectId}
@@ -804,14 +769,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 <div>
                   <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                   {lineItems.length > 0 && (
-                    <div className="hidden 2xl:grid 2xl:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] 2xl:gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
+                    <div className="hidden px-4 py-2 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
                       <span>#</span>
                       <span>Item</span>
-                      <span className="text-right">Crew cost</span>
-                      <span className="text-right">Rate</span>
-                      <span className="text-right">Billable</span>
-                      <span className="text-right">Margin</span>
-                      <span />
+                      <span className="text-right">Pricing</span>
+                      <span className="text-right">Price</span>
+                      <span className="text-right">Review</span>
+                      <span className="text-right">Open</span>
                     </div>
                   )}
                   {lineItems.length === 0 ? (
@@ -841,9 +805,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           markupVisibility={markupVisibility}
                           crewPricingBase={crewPricingBase}
                           coStatus={co.status}
-                          pricingDisplay="dialog"
+                          canReview={canReviewLineItems}
                         />
-                        <COLineItemReview coId={co.id} item={item} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                       </div>
                     ))
                   )}
@@ -861,6 +824,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     materialsResponsible={responsibility.materialResponsible}
                     canEdit={canEdit}
                     canEditExternal={canEditExternal}
+                    responsibilityControl={
+                      <COMaterialResponsibilityToggle
+                        type="material"
+                        responsible={responsibility.materialResponsible}
+                        isOverridden={responsibility.materialOverridden}
+                        canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
+                        isSaving={responsibility.isSaving}
+                        onSet={responsibility.setMaterialOverride}
+                      />
+                    }
                     onRefresh={refreshDetail}
                   />
                 </div>
@@ -874,6 +847,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   equipmentResponsible={responsibility.equipmentResponsible}
                   canEdit={canEdit}
                   canEditExternal={canEditExternal}
+                  responsibilityControl={
+                    <COMaterialResponsibilityToggle
+                      type="equipment"
+                      responsible={responsibility.equipmentResponsible}
+                      isOverridden={responsibility.equipmentOverridden}
+                      canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
+                      isSaving={responsibility.isSaving}
+                      onSet={responsibility.setEquipmentOverride}
+                    />
+                  }
                   onRefresh={refreshDetail}
                 />
               )}
