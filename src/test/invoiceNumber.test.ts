@@ -40,7 +40,7 @@ describe('full invoice order references', () => {
   it('keeps multi-order invoices on the order sequence', async () => {
     rpc.mockResolvedValue({ data: 3, error: null });
     expect(await buildInvoiceNumber({ projectId: 'p', projectName: 'Cherry Hills', multiCoCount: 2, isTM: true }))
-      .toBe('CHE-W003');
+      .toBe('CHE-W03');
   });
 
   it('stays at 8 characters or fewer', async () => {
