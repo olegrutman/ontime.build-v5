@@ -911,6 +911,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
               </p>
             </div>
           </div>
+          {attachPdf && hasInvoiceLineScopeText(lineItems) && (
+            <div className="flex items-center gap-3">
+              <Switch id="attach-invoice-full-scope" checked={showFullNotes} onCheckedChange={setShowFullNotes} />
+              <Label htmlFor="attach-invoice-full-scope">Include full scope in the PDF</Label>
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSubmit}>Submit</AlertDialogAction>
