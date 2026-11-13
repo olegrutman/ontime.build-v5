@@ -2,12 +2,31 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface WoBilledInfo {
   billed: number;
+  /** Draft amounts are visible separately and never count as billed. */
+  draft: number;
+  /** Includes draft entry IDs as well, preventing a second invoice for the same entry. */
   entryIds: Set<string>;
   /** Billed by an invoice created before progress billing existed (whole WO consumed). */
   legacyFullyBilled: boolean;
 }
 
-/** Billed-to-date per WO for invoices the given org issued (rejected invoices excluded). */
+export type WoInvoiceLineLike = {
+  source_co_id: string | null;
+  source_entry_ids?: string[] | null;
+  current_billed: number | null;
+};
+
+/** One shared status rule: issued invoices bill; drafts reserve entries but are not billed. */
+export function applyWoInvoiceLine(info: WoBilledInfo, status: string, line: WoInvoiceLineLike) {
+  const normalized = String(status).toUpperCase();
+  if (['REJECTED', 'VOID', 'VOIDED'].includes(normalized)) return;
+  for (const entryId of line.source_entry_ids ?? []) info.entryIds.add(entryId);
+  const amount = Number(line.current_billed) || 0;
+  if (normalized === 'DRAFT') info.draft += amount;
+  else info.billed += amount;
+}
+
+/** Billed-to-date per WO for invoices the given org issued (draft/rejected/void excluded). */
 export async function fetchWoBilledToDate(projectId: string, orgId: string, coIds: string[]): Promise<Map<string, WoBilledInfo>> {
   const out = new Map<string, WoBilledInfo>();
   coIds.forEach(id => out.set(id, { billed: 0, draft: 0, entryIds: new Set(), legacyFullyBilled: false }));
