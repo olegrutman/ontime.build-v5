@@ -1,13 +1,12 @@
 import { cn } from '@/lib/utils';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { ChangeOrder, COStatus, COCreatedByRole } from '@/types/changeOrder';
-import { Check, Pencil } from 'lucide-react';
+import { ArrowRight, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cleanTitle } from '@/lib/coTitle';
-import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { CODescriptionEditor } from './CODescriptionEditor';
 import { coPricingStatusLabel, type COPricingReadiness } from '@/lib/coPricingReadiness';
 
@@ -17,42 +16,20 @@ interface COHeaderStripProps {
   myOrgName: string;
   pricingReadiness?: COPricingReadiness;
   myOrgId?: string;
+  fromLabel: string;
+  toLabel: string;
 }
 
-const ROLE_PILL_COLORS: Record<string, string> = {
-  GC: 'bg-type-sov',
-  TC: 'bg-state-approved',
-  FC: 'bg-state-open',
-};
-
-// Pipeline steps — labels match the status pill / action button vocabulary
-const PIPELINE_STEPS = [
-  { key: 'draft', label: 'Draft' },
-  { key: 'pricing', label: 'Pricing' },
-  { key: 'review', label: 'Review' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'invoiced', label: 'Invoiced' },
-] as const;
-
-function getActiveStep(status: string): number {
-  switch (status) {
-    case 'draft': return 0;
-    case 'shared':
-    case 'work_in_progress':
-    case 'closed_for_pricing':
-    case 'rejected': return 1;
-    case 'submitted': return 2;
-    case 'approved': return 3;
-    case 'contracted': return 4;
-    default: return 0;
-  }
-}
-
-export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }: COHeaderStripProps) {
-  const rl = useRoleLabelsContext();
+export function COHeaderStrip({
+  co,
+  myOrgName,
+  pricingReadiness,
+  myOrgId,
+  fromLabel,
+  toLabel,
+}: COHeaderStripProps) {
   const status = co.status as COStatus;
   const isWithdrawn = status === 'withdrawn';
-  const activeStep = getActiveStep(status);
   const userName = co.title && co.title !== co.co_number ? co.title : null;
   const isCreator = !!myOrgId && co.org_id === myOrgId && !isWithdrawn;
   const summary = (co as { problem_summary?: string | null }).problem_summary ?? '';
@@ -61,6 +38,8 @@ export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(co.title ?? '');
   const [saving, setSaving] = useState(false);
+  const documentLabel = co.document_type === 'WO' ? 'Work order workspace' : 'Change order workspace';
+  const statusLabel = coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status];
 
   const saveTitle = async () => {
     const next = cleanTitle(draft);
@@ -77,143 +56,81 @@ export function COHeaderStrip({ co, role, myOrgName, pricingReadiness, myOrgId }
     qc.invalidateQueries({ queryKey: ['change-orders', co.project_id] });
   };
 
-  // Avatar shows the company's initials — never the internal role code.
-  const roleName = rl.label(role);
-  const orgInitials = (myOrgName || roleName)
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(w => w.charAt(0).toUpperCase())
-    .join('') || '—';
-  const showRoleLine =
-    !!myOrgName && roleName.trim().toLowerCase() !== myOrgName.trim().toLowerCase();
-
   return (
-    <div className={cn('bg-card border border-border rounded-xl overflow-hidden shadow-sm', isWithdrawn && 'opacity-60')}>
-      {/* Top section */}
-      <div className="px-3 py-3 sm:px-5 sm:py-4">
-        <div className="flex items-start justify-between gap-2 sm:gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <h1
-                className={cn('font-heading text-foreground min-w-0 break-words text-[1.5rem] sm:text-[2rem]', isWithdrawn && 'line-through')}
-                style={{ fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.01em' }}
-              >
+    <header className={cn('rounded-2xl bg-[hsl(var(--foreground))] px-4 py-4 text-white shadow-sm sm:px-5', isWithdrawn && 'opacity-60')}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-mono text-[0.62rem] uppercase tracking-[0.25em] text-white/60">{documentLabel}</p>
+        <span className={cn(
+          'inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-center text-[0.68rem] font-bold uppercase tracking-wider',
+          status === 'approved' || status === 'contracted'
+            ? 'border-state-approved/30 bg-state-approved/15 text-state-approved'
+            : status === 'submitted'
+              ? 'border-type-sov/30 bg-type-sov/15 text-type-sov'
+              : status === 'rejected' || status === 'withdrawn'
+                ? 'border-destructive/30 bg-destructive/15 text-destructive'
+                : 'border-white/15 bg-white/10 text-white/80',
+        )}>
+          {statusLabel}
+        </span>
+      </div>
 
-                {co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order')}
-              </h1>
-              {(status === 'rejected' || co.kept_internal) && <span className={cn(
-                'inline-flex items-center text-[0.7rem] px-2.5 py-1 rounded-full font-semibold uppercase tracking-wide',
-                status === 'approved' ? 'bg-state-approved-bg text-state-approved-foreground' :
-                status === 'submitted' ? 'bg-type-sov/10 text-type-sov' :
-                status === 'rejected' ? 'bg-destructive/10 text-destructive' :
-                status === 'work_in_progress' || status === 'closed_for_pricing' ? 'bg-state-open-bg text-state-open-foreground' :
-                'bg-muted text-muted-foreground'
-              )}>
-                {coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}
-              </span>}
-            </div>
-            {editing ? (
-              <input
-                autoFocus
-                aria-label="Order title"
-                value={draft}
-                maxLength={100}
-                disabled={saving}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={saveTitle}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveTitle();
-                  if (e.key === 'Escape') { setDraft(co.title ?? ''); setEditing(false); }
-                }}
-                className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground"
-              />
-            ) : canRename ? (
-              <button
-                type="button"
-                onClick={() => { setDraft(co.title ?? ''); setEditing(true); }}
-                className="group mt-1 flex max-w-full items-start gap-1.5 text-left text-sm text-muted-foreground hover:text-foreground"
-                aria-label="Rename order"
-              >
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className={cn('break-words font-heading text-[1.75rem] font-bold uppercase leading-none tracking-normal [overflow-wrap:anywhere] sm:text-4xl', isWithdrawn && 'line-through')}>
+            {co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order')}
+          </h1>
+          {editing ? (
+            <input
+              autoFocus
+              aria-label="Order title"
+              value={draft}
+              maxLength={100}
+              disabled={saving}
+              onChange={(event) => setDraft(event.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') saveTitle();
+                if (event.key === 'Escape') { setDraft(co.title ?? ''); setEditing(false); }
+              }}
+              className="mt-2 w-full rounded-md border border-white/20 bg-white/10 px-2 py-1 text-sm text-white outline-none placeholder:text-white/40"
+            />
+          ) : canRename ? (
+            <button
+              type="button"
+              onClick={() => { setDraft(co.title ?? ''); setEditing(true); }}
+              className="group mt-2 flex max-w-full items-start gap-1.5 text-left text-sm text-white/70 hover:text-white"
+              aria-label="Rename order"
+            >
+              <span className="break-words">{userName ?? 'Add a title'}</span>
+              <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
+            </button>
+          ) : isCreator ? (
+            <CODescriptionEditor
+              coId={co.id}
+              status={status}
+              title={co.title ?? ''}
+              description={summary}
+              label="Edit title & description"
+              triggerClassName="group mt-2 -mx-1.5 block max-w-full rounded-md px-1.5 py-1 text-left hover:bg-white/10 transition-colors"
+            >
+              <span className="flex items-start gap-1.5 text-sm text-white/80 group-hover:text-white">
                 <span className="break-words">{userName ?? 'Add a title'}</span>
                 <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
-              </button>
-            ) : isCreator ? (
-              <CODescriptionEditor coId={co.id} status={status} title={co.title ?? ''} description={summary} label="Edit title & description"
-                triggerClassName="group mt-1 -mx-1.5 block max-w-full rounded-md px-1.5 py-1 text-left hover:bg-muted/60 transition-colors">
-                <span className="flex items-start gap-1.5 text-sm text-muted-foreground group-hover:text-foreground">
-                  <span className="break-words">{userName ?? 'Add a title'}</span>
-                  <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100" />
-                </span>
-                <span className="mt-1 block text-xs text-muted-foreground break-words whitespace-pre-line">{summary || 'Add a description'}</span>
-              </CODescriptionEditor>
-            ) : userName && (
-              <p className="text-sm text-muted-foreground mt-1 break-words">{userName}</p>
-            )}
-            {!(isCreator && !canRename && !editing) && summary && <p className="mt-1 text-xs text-muted-foreground break-words whitespace-pre-line">{summary}</p>}
-          </div>
+              </span>
+              <span className="mt-1 block whitespace-pre-line break-words text-xs text-white/60">{summary || 'Add a description'}</span>
+            </CODescriptionEditor>
+          ) : userName ? (
+            <p className="mt-2 break-words text-sm text-white/70">{userName}</p>
+          ) : null}
+          {!(isCreator && !canRename && !editing) && summary && <p className="mt-1 whitespace-pre-line break-words text-xs text-white/60">{summary}</p>}
+        </div>
 
-          {/* TC name / role */}
-          <div className="flex items-center gap-2 shrink-0 max-w-[45%]">
-            <span
-              className={cn(
-                'inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white shrink-0',
-                ROLE_PILL_COLORS[role] ?? 'bg-muted',
-              )}
-              title={myOrgName}
-            >
-              {orgInitials}
-            </span>
-            <div className="hidden min-[380px]:block text-right min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{myOrgName || roleName}</p>
-              {showRoleLine && (
-                <p className="text-[10px] text-muted-foreground truncate">{roleName}</p>
-              )}
-            </div>
-          </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs sm:max-w-[46%]">
+          <span className="min-w-0 break-words font-semibold text-white">{fromLabel || myOrgName}</span>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-white/40" />
+          <span className="min-w-0 break-words font-semibold text-white">{toLabel}</span>
         </div>
       </div>
-
-      {/* Status Pipeline */}
-      <div className="border-t border-border bg-accent/50 px-3 sm:px-5 py-3.5">
-        <div className="flex min-w-0 items-start justify-between gap-1">
-
-          {PIPELINE_STEPS.map((step, i) => {
-            const isCompleted = i < activeStep;
-            const isActive = i === activeStep;
-            const isFuture = i > activeStep;
-
-            return (
-              <div key={step.key} className="flex min-w-0 items-center flex-1 last:flex-initial">
-                <div className="flex min-w-0 flex-col items-center gap-1">
-                  <div className={cn(
-                    'w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all',
-                    isCompleted && 'bg-[hsl(var(--navy))] text-white',
-                    isActive && 'bg-[hsl(var(--amber))] text-[hsl(var(--navy))] shadow-[0_0_0_4px_hsl(var(--amber)/0.2)]',
-                    isFuture && 'bg-muted/40 text-muted-foreground border border-border',
-                  )}>
-                    {isCompleted ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                  </div>
-                  <span className={cn(
-                    'max-w-full text-center text-[9px] min-[360px]:text-[10px] font-medium leading-tight whitespace-normal break-words',
-                    isCompleted && 'text-foreground',
-                    isActive && 'text-[hsl(var(--amber-d))] font-semibold',
-                    isFuture && 'text-muted-foreground/60',
-                  )}>
-                    {step.label}
-                  </span>
-                </div>
-                {i < PIPELINE_STEPS.length - 1 && (
-                  <div className={cn(
-                    'flex-1 h-[2px] mx-2 mt-[-16px]',
-                    i < activeStep ? 'bg-[hsl(var(--navy))]' : 'bg-border',
-                  )} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+    </header>
   );
 }

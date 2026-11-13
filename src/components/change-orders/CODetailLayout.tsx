@@ -1,5 +1,5 @@
 import { useState, useRef, type RefObject } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
@@ -17,14 +17,13 @@ import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
-import { getCOPricingReadiness, coPricingStatusLabel } from '@/lib/coPricingReadiness';
+import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 import { CONextActionBanner } from './CONextActionBanner';
 import { COKPIStrip } from './COKPIStrip';
 import { COHeaderStrip } from './COHeaderStrip';
-import { COBillingStatusCard } from './COBillingStatusCard';
 import { COPriceRevisionCard } from './COPriceRevisionCard';
 import { COPricingUnlockBar } from './COPricingUnlockBar';
 import { canSubmitPriceRevision } from '@/lib/coPriceRevision';
@@ -35,13 +34,12 @@ import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { WOBilledToDateCard } from './WOBilledToDateCard';
 import { CombinedSOVCard } from './CombinedSOVCard';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
-import { COStickyFooter } from './COStickyFooter';
+import { COStatusActions } from './COStatusActions';
 import { COLineItemRow } from './COLineItemRow';
-import { COLineItemReview, COLineReviewBar } from './COLineReview';
+import { COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
-import { CODesignSwitcher, COGuidedNav, COCompactSummary, type CODetailDesign, type COGuidedSection } from './CODesignSwitcher';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -62,7 +60,7 @@ import { CreateInvoiceFromCOs } from '@/components/invoices/CreateInvoiceFromCOs
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CO_STATUS_LABELS, type COStatus, type COFCOrgOption } from '@/types/changeOrder';
+import { type COStatus, type COFCOrgOption } from '@/types/changeOrder';
 
 interface CODetailLayoutProps {
   coId: string;
@@ -71,10 +69,6 @@ interface CODetailLayoutProps {
 
 export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedDesign = searchParams.get('design');
-  const design: CODetailDesign = requestedDesign === 'guided' || requestedDesign === 'document' ? requestedDesign : 'focus';
-  const [guidedSection, setGuidedSection] = useState<COGuidedSection>('scope');
   const { user } = useAuth();
   const canApprove = usePermission('canApprove');
   const queryClient = useQueryClient();
@@ -263,32 +257,23 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   function handleBack() { navigate(`/project/${projectId}/change-orders`); }
 
-  function changeDesign(next: CODetailDesign) {
-    setGuidedSection('scope');
-    const params = new URLSearchParams(searchParams);
-    params.set('design', next);
-    setSearchParams(params, { replace: true });
-  }
-
-  function goToSection(section: COGuidedSection, ref?: RefObject<HTMLDivElement>) {
-    if (design === 'guided') setGuidedSection(section);
-    window.setTimeout(() => ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), design === 'guided' ? 60 : 0);
+  function goToSection(ref?: RefObject<HTMLDivElement | null>) {
+    ref?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function openPhotos(type?: 'before' | 'during' | 'after') {
-    if (design === 'guided') setGuidedSection('procurement');
-    window.setTimeout(() => photosCardRef.current?.openAdd(type), design === 'guided' ? 60 : 0);
+    photosCardRef.current?.openAdd(type);
   }
 
   async function handleAction(action: string) {
     switch (action) {
-      case 'scroll_scope': goToSection('scope', scopeRef); break;
-      case 'scroll_materials': goToSection('procurement', materialsRef); break;
-      case 'scroll_pricing': goToSection('scope', pricingRef); break;
-      case 'scroll_fc': goToSection('scope', scopeRef); break;
-      case 'log_hours': goToSection('scope', scopeRef); break;
+      case 'scroll_scope': goToSection(scopeRef); break;
+      case 'scroll_materials': goToSection(materialsRef); break;
+      case 'scroll_pricing': goToSection(pricingRef); break;
+      case 'scroll_fc': goToSection(scopeRef); break;
+      case 'log_hours': goToSection(scopeRef); break;
       case 'request_fc':
-        goToSection('scope');
+        goToSection(scopeRef);
         if (fcOrgOptions.length === 0) {
           toast.info('No crews found on this project');
         } else if (fcOrgOptions.length === 1) {
@@ -398,7 +383,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'approve':
         if (co) {
           if (lineItems.length > 1) {
-            goToSection('scope', scopeRef);
+            goToSection(scopeRef);
             toast.info('Review each scope item, then finish the review in Actions.');
             break;
           }
@@ -412,7 +397,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'reject':
         if (co) {
           if (lineItems.length > 1) {
-            goToSection('scope', scopeRef);
+            goToSection(scopeRef);
             toast.info('Reject individual items with a reason, then finish the review in Actions.');
             break;
           }
@@ -427,7 +412,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         }
         break;
       case 'noop': {
-        if (design === 'guided') setGuidedSection('summary');
         const team = document.getElementById('co-team-card');
         if (team) team.scrollIntoView({ behavior: 'smooth' });
         toast.info('Assign an upstream party in the Team card before submitting.');
@@ -481,10 +465,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
   const rfiBlocked = !!(co as any).blocked_by_rfi_id;
   const displayTitle = co.title ?? co.co_number ?? (co.document_type === 'WO' ? 'Work Order' : 'Change Order');
-  const showScope = design !== 'guided' || guidedSection === 'scope';
-  const showProcurement = design !== 'guided' || guidedSection === 'procurement';
-  const showRecords = design !== 'guided' || guidedSection === 'records';
-  const showSummary = design !== 'guided' || guidedSection === 'summary';
 
 
 
@@ -502,13 +482,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const totalLogged = laborEntries
     .filter(e => !e.is_actual_cost && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole))
     .reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const roleActualCost = isTC ? financials.tcActualCostTotal : financials.fcActualCostTotal;
-  const scopeCost = isTC
-    ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost
-    : roleActualCost;
-  const displayBillable = (isTC || isFC) ? financials.viewer.totalToUpstream : totalLogged;
-  const grossMargin = displayBillable - roleActualCost;
-  const grossMarginPct = displayBillable > 0 ? (grossMargin / displayBillable) * 100 : 0;
 
   // Responsibility-aware billable-to-GC total. Centralized in useChangeOrderDetail
   // so every consumer (KPI strip, scope strip, sidebar, sticky footer, hero block,
@@ -631,44 +604,62 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto pb-44 md:pb-8">
+      <div className="flex-1 overflow-y-auto pb-28 lg:pb-8">
         <div className="w-full px-4 lg:px-5 py-4 space-y-4">
 
 
-          <CODesignSwitcher value={design} onChange={changeDesign} />
+          <COHeaderStrip
+            co={co}
+            role={role}
+            myOrgName={myOrgName}
+            myOrgId={myOrgId}
+            pricingReadiness={pricingReadiness}
+            fromLabel={isGC ? rl.TC : myOrgName}
+            toLabel={isFC ? rl.TC : rl.GC}
+          />
 
-          {/* Full-width Header Card + Pipeline */}
-          <COHeaderStrip co={co} role={role} myOrgName={myOrgName} myOrgId={myOrgId} pricingReadiness={pricingReadiness} />
+          <COKPIStrip
+            co={co}
+            isGC={isGC}
+            isTC={isTC}
+            isFC={isFC}
+            financials={financials}
+            hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)}
+            hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)}
+            materialResponsible={responsibility.materialResponsible}
+            equipmentResponsible={responsibility.equipmentResponsible}
+            tcBillableTotal={tcBillableTotal}
+            onRefresh={refreshDetail}
+            markupVisibility={markupVisibility}
+            pricedCount={pricedCount}
+            itemCount={lineItems.length}
+          />
 
-          {design !== 'focus' && (
-            <COCompactSummary
-              total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-              statusLabel={coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status]}
-              pricedCount={pricedCount}
-              itemCount={lineItems.length}
-            />
-          )}
-
-          {design === 'guided' && <COGuidedNav value={guidedSection} onChange={setGuidedSection} />}
-
-          {showSummary && design === 'document' && (
-            <COBillingStatusCard
-              coId={co.id}
+          {/* Guidance and the only workflow action group sit together at the top. */}
+          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
+            <COStatusActions
+              co={co}
+              isGC={isGC}
+              isTC={isTC}
+              isFC={isFC}
+              currentOrgId={myOrgId}
               projectId={projectId}
-              status={co.status}
-              approvedTotal={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
+              financials={financials}
+              collaborators={collaborators}
+              onRefresh={refreshDetail}
+              lineItemCount={lineItems.length}
+              lineItems={lineItems}
+              laborEntries={laborEntries}
             />
-          )}
-
-          {/* Next step first — one clear action. */}
-          <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
-          {showScope && <COPricingUnlockBar
+          </div>
+          <COPricingUnlockBar
             co={co}
             canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
             unlocked={revisionUnlocked}
             onToggle={setRevisionUnlocked}
-          />}
-          {showScope && !hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+          />
+          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={totalLogged} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
@@ -706,18 +697,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           />
 
 
-          {/* KPI Row — GC keeps the full strip (incl. the editable budget tile);
-              TC/FC get a compact money summary inside the Scope & Labor header instead. */}
-          {isGC && showSummary && (
-            <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)} hasEquipment={co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)} materialResponsible={responsibility.materialResponsible} equipmentResponsible={responsibility.equipmentResponsible} tcBillableTotal={tcBillableTotal} onRefresh={refreshDetail} markupVisibility={markupVisibility} />
-          )}
-
-          {/* Focus uses a side rail; Document stays intentionally narrow and linear. */}
-          <div className={cn('flex gap-4', design === 'document' && 'mx-auto w-full max-w-5xl')}>
+          <div className="flex gap-4">
             <div className="flex-1 min-w-0 space-y-4" ref={pricingRef}>
 
               {/* ====== SCOPE & LABOR ====== */}
-              {showScope && (
               <div ref={scopeRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {/* Card header */}
                 <div className="px-3 py-3 sm:px-5 sm:py-4 border-b border-border">
@@ -728,47 +711,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none whitespace-nowrap">Scope &amp; Labor</h3>
-                        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:flex-wrap sm:gap-3 mt-1.5">
-
-                          <p className="text-[11px] text-muted-foreground">
-                            {lineItems.length} item{lineItems.length !== 1 ? 's' : ''}
-                          </p>
-                          <COMaterialResponsibilityToggle
-                            type="material"
-                            responsible={responsibility.materialResponsible}
-                            isOverridden={responsibility.materialOverridden}
-                            canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
-                            isSaving={responsibility.isSaving}
-                            onSet={responsibility.setMaterialOverride}
-                          />
-                          <COMaterialResponsibilityToggle
-                            type="equipment"
-                            responsible={responsibility.equipmentResponsible}
-                            isOverridden={responsibility.equipmentOverridden}
-                            canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
-                            isSaving={responsibility.isSaving}
-                            onSet={responsibility.setEquipmentOverride}
-                          />
-                        </div>
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">
+                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · select an item to view details and pricing
+                        </p>
                       </div>
 
                     </div>
-                    {/* Compact money summary — replaces the big KPI cards for TC/FC */}
-                    {false && !isGC && (
-                      <span className="hidden md:inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                        {isFC ? (
-                          <>My billable <span className="font-semibold text-foreground">${(financials.viewer.ownLaborToUpstream ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span></>
-                        ) : (
-                          <>
-                            Cost <span className="font-semibold text-foreground">${scopeCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                            → Billable <span className="font-semibold text-foreground">${(tcBillableTotal ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                            {tcBillableTotal > 0 && (
-                              <> · Margin <span className={(tcBillableTotal - scopeCost) >= 0 ? 'font-semibold text-success' : 'font-semibold text-destructive'}>{(((tcBillableTotal - scopeCost) / tcBillableTotal) * 100).toFixed(1)}%</span></>
-                            )}
-                          </>
-                        )}
-                      </span>
-                    )}
                     {canEdit && !nteBlocked && co && (
                       <AddItemsChooser
                         projectId={projectId}
@@ -814,14 +762,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 <div>
                   <COLineReviewBar coId={co.id} items={lineItems} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                   {lineItems.length > 0 && (
-                    <div className="hidden 2xl:grid 2xl:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] 2xl:gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground">
+                    <div className="hidden px-4 py-2 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
                       <span>#</span>
                       <span>Item</span>
-                      <span className="text-right">Crew cost</span>
-                      <span className="text-right">Rate</span>
-                      <span className="text-right">Billable</span>
-                      <span className="text-right">Margin</span>
-                      <span />
+                      <span className="text-right">Pricing</span>
+                      <span className="text-right">Price</span>
+                      <span className="text-right">Review</span>
+                      <span className="text-right">Open</span>
                     </div>
                   )}
                   {lineItems.length === 0 ? (
@@ -851,20 +798,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           markupVisibility={markupVisibility}
                           crewPricingBase={crewPricingBase}
                           coStatus={co.status}
-                          pricingDisplay="dialog"
+                          canReview={canReviewLineItems}
                         />
-                        <COLineItemReview coId={co.id} item={item} canReview={canReviewLineItems} onRefresh={refreshDetail} />
                       </div>
                     ))
                   )}
                 </div>
               </div>
-              )}
-
-
 
               {/* Materials */}
-              {showProcurement && (co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
+              {(co.materials_needed || materials.length > 0 || (canEdit && isMaterialsOwner)) && (
                 <div ref={materialsRef}>
                 <COMaterialsPanel
                     coId={co.id} orgId={myOrgId} projectId={projectId}
@@ -874,31 +817,50 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     materialsResponsible={responsibility.materialResponsible}
                     canEdit={canEdit}
                     canEditExternal={canEditExternal}
+                    responsibilityControl={
+                      <COMaterialResponsibilityToggle
+                        type="material"
+                        responsible={responsibility.materialResponsible}
+                        isOverridden={responsibility.materialOverridden}
+                        canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
+                        isSaving={responsibility.isSaving}
+                        onSet={responsibility.setMaterialOverride}
+                      />
+                    }
                     onRefresh={refreshDetail}
                   />
                 </div>
               )}
 
               {/* Equipment */}
-              {showProcurement && (co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
+              {(co.equipment_needed || equipment.length > 0 || (canEdit && isEquipmentOwner)) && (
                 <COEquipmentPanel
                   coId={co.id} orgId={myOrgId} equipment={equipment}
                   isTC={isTC} isGC={isGC} isFC={isFC}
                   equipmentResponsible={responsibility.equipmentResponsible}
                   canEdit={canEdit}
                   canEditExternal={canEditExternal}
+                  responsibilityControl={
+                    <COMaterialResponsibilityToggle
+                      type="equipment"
+                      responsible={responsibility.equipmentResponsible}
+                      isOverridden={responsibility.equipmentOverridden}
+                      canEdit={(isGC || isTC) && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId) && status !== 'withdrawn'}
+                      isSaving={responsibility.isSaving}
+                      onSet={responsibility.setEquipmentOverride}
+                    />
+                  }
                   onRefresh={refreshDetail}
                 />
               )}
 
               {/* Photos */}
-              {showProcurement && <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />}
+              <COPhotosCard ref={photosCardRef} coId={co.id} role={role} lineItems={lineItems} />
 
               {/* External Invites */}
-              {showRecords && <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />}
+              <COExternalInvitesCard coId={co.id} coNumber={co.co_number} coTitle={displayTitle} />
 
               {/* Activity — Collapsible */}
-              {showRecords && (
               <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -937,10 +899,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
-              )}
 
               {/* Audit Log — Collapsible */}
-              {showRecords && (
               <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
                 <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                   <CollapsibleTrigger asChild>
@@ -959,44 +919,22 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                   </CollapsibleContent>
                 </div>
               </Collapsible>
-              )}
             </div>
 
-            {/* Focus sidebar */}
-            {design === 'focus' && (
-              <div className="hidden xl:block w-[300px] 2xl:w-[340px] shrink-0 space-y-3 sticky top-14 self-start">
-                <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-                {billedCard}
-                {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-              </div>
-            )}
+            <aside className="hidden w-[300px] shrink-0 space-y-3 self-start xl:sticky xl:top-14 xl:block 2xl:w-[320px]">
+              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
+              {billedCard}
+              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+            </aside>
           </div>
 
-          {design === 'focus' && (
-            <div className="space-y-3 xl:hidden">
-              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-              {billedCard}
-              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-            </div>
-          )}
-
-          {design !== 'focus' && showSummary && (
-            <div className={cn('space-y-3', design === 'document' ? 'mx-auto w-full max-w-5xl' : 'mx-auto w-full max-w-3xl')}>
-              <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-              {billedCard}
-              {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
-            </div>
-          )}
+          <div className="space-y-3 xl:hidden">
+            <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
+            {billedCard}
+            {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
+          </div>
         </div>
       </div>
-
-      <COStickyFooter
-        status={status} isGC={isGC} isTC={isTC} isFC={isFC}
-        financials={financials} fcCollabName={fcCollabName} onAction={handleAction}
-        total={isGC ? tcBillableTotal : financials.viewer.totalToUpstream}
-        photoCount={photos.length} photosBlocked={photosBlocked}
-        onOpenCamera={() => openPhotos()}
-      />
 
       <COExternalInviteDialog
         open={externalInviteOpen}

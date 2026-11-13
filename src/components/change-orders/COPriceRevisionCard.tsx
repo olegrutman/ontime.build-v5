@@ -27,10 +27,10 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
     },
   });
   const pending = revisions.find(revision => revision.status === 'pending');
-  const latest = revisions[0];
   const canSubmit = isTC && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreate);
   const changed = Math.abs(currentLabor - Number(co.tc_submitted_price ?? 0)) > 0.005;
-  if (!pending && !(canSubmit && changed) && !latest) return null;
+  // Decided revisions remain in the audit log; only active corrections belong in the workspace.
+  if (!pending && !(canSubmit && changed)) return null;
 
   async function act(approve?: boolean) {
     setSaving(true);
@@ -49,13 +49,13 @@ export function COPriceRevisionCard({ co, myOrgId, isTC, isGC, currentLabor, onR
     } finally { setSaving(false); }
   }
 
-  const revision = pending ?? latest;
+  const revision = pending;
   const scope = Array.isArray(revision?.scope_snapshot) ? revision.scope_snapshot as { item: string; description?: string; amount: number }[] : [];
   return (
     <section className="border border-border rounded-2xl bg-card p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-heading text-base font-bold uppercase">Revised price approval</h3>
-        <span className="text-xs font-medium text-muted-foreground">{pending ? 'Awaiting contractor decision' : latest ? `Revision ${latest.status}` : 'Pricing correction'}</span>
+        <span className="text-xs font-medium text-muted-foreground">{pending ? 'Awaiting contractor decision' : 'Pricing correction'}</span>
       </div>
       {revision && (
         <>

@@ -23,6 +23,8 @@ interface COKPIStripProps {
   tcBillableTotal?: number;
   onRefresh?: () => void;
   markupVisibility?: MarkupVisibility;
+  pricedCount?: number;
+  itemCount?: number;
 }
 
 function fmtCurrency(value: number) {
@@ -84,22 +86,6 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     ];
 
 
-    // Show mat/equip breakdown tiles only when TC is responsible AND there's a value
-    if (matResp === 'TC' && tcMaterialCost > 0) {
-      tiles.push({
-        label: 'Material Cost',
-        value: fmtCurrency(tcMaterialCost),
-        color: C.green,
-      });
-    }
-    if (eqResp === 'TC' && tcEquipmentCost > 0) {
-      tiles.push({
-        label: 'Equipment Cost',
-        value: fmtCurrency(tcEquipmentCost),
-        color: C.yellow,
-      });
-    }
-
     const gcOwnMatCost = matResp === 'GC' ? financials.materialsCost : 0;
     const gcOwnEqCost = eqResp === 'GC' ? financials.equipmentCost : 0;
     const gcCost = tcSubmitted + gcOwnMatCost + gcOwnEqCost;
@@ -130,23 +116,21 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
         : undefined,
     });
 
-    // Detailed mode: show TC margin (revenue & cost both restricted to TC-responsible buckets)
-    if (markupVisibility === 'detailed') {
-      const ownMatCost = financials.materialResponsible === 'TC' ? financials.materialsCost : 0;
-      const ownEqCost = financials.equipmentResponsible === 'TC' ? financials.equipmentCost : 0;
-      // Crew-time pricing: crew billable rows and the TC internal-cost copy
-      // mirror the same work — count once to avoid a fake loss.
-      const tcLaborCost = financials.tcLaborCostTotal;
-      const tcInternalCost = tcLaborCost + ownMatCost + ownEqCost;
-      const tcMargin = tcSubmitted - tcInternalCost;
-      const tcMarginPct = tcSubmitted > 0 ? (tcMargin / tcSubmitted) * 100 : 0;
-      tiles.push({
-        label: `${rl.TC} margin`,
-        value: fmtCurrency(tcMargin),
-        color: tcMargin >= 0 ? C.green : C.red,
-        badge: tcInternalCost > 0 ? { text: `${tcMarginPct.toFixed(0)}%`, variant: tcMargin >= 0 ? 'healthy' as const : 'watch' as const } : undefined,
-      });
-    }
+    tiles.push({
+      label: 'Order margin',
+      value: passedToOwner === false ? 'Absorbed' : gcBudget ? fmtCurrency(gcBudget - gcCost) : 'Pending',
+      color: gcBudget && gcBudget >= gcCost ? C.green : C.amber,
+      sub: gcBudget ? 'Owner price minus order cost' : 'Set your owner price to calculate',
+    });
+    tiles.push({
+      label: 'Pricing progress',
+      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
+      color: C.amber,
+      sub: 'Scope items priced',
+      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
+        ? { text: 'Ready', variant: 'healthy' }
+        : { text: 'In progress', variant: 'watch' },
+    });
 
     // Tax tile when there's tax (responsibility-aware — exclude tax on GC-procured M&E)
     if (financials.billableTotalTax > 0) {
@@ -179,32 +163,11 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   }
 
   if (isTC || isFC) {
-    const upstream = isTC ? rl.GC : rl.TC;
-    // Use viewer-scoped totals so FC collaborators don't pull TC's mats/eq
-    const matCost = financials.viewer.ownMaterialsTotal;
-    const eqCost = financials.viewer.ownEquipmentTotal;
-    const matEquip = matCost + eqCost;
+    // Use viewer-scoped totals so FC collaborators don't pull TC's mats/eq.
     const ownLaborToUpstream = financials.viewer.ownLaborToUpstream;
     const totalToUpstream = financials.viewer.totalToUpstream;
 
     const tiles: KPITile[] = [];
-
-    if (isTC) {
-      tiles.push({
-        label: `${rl.FC} cost`,
-        value: fmtCurrency(financials.fcLaborTotal),
-        color: C.amber,
-        sub: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs logged` : undefined,
-        badge: financials.fcLaborTotal > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
-      });
-    } else {
-      tiles.push({
-        label: 'Hours Logged',
-        value: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs` : '—',
-        color: C.amber,
-        sub: financials.fcTotalHours > 0 ? `${Math.ceil(financials.fcTotalHours / 8)} days` : undefined,
-      });
-    }
 
     // When the TC prices from crew time but no billable rows exist yet (e.g. the
     // crew submitted the WO directly), fall back to the crew-derived total so the
@@ -213,29 +176,38 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       ? ownLaborToUpstream
       : (isTC && props.co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
     tiles.push({
-      label: isTC ? 'My Billable' : 'My Labor',
-      value: fmtCurrency(myBillable),
+      label: ['approved', 'contracted'].includes(props.co.status) ? 'Approved revenue' : 'Proposed revenue',
+      value: fmtCurrency(totalToUpstream > 0 ? totalToUpstream : myBillable),
       color: 'hsl(var(--primary))',
       badge: myBillable > 0 ? { text: 'Priced', variant: 'healthy' } : { text: 'Awaiting input', variant: 'watch' },
     });
 
-    if (matEquip > 0) {
-      tiles.push({
-        label: 'Materials + Equipment',
-        value: fmtCurrency(matEquip),
-        color: C.green,
-      });
-    }
-
-    // The Action Rail header already prints the headline "Total to {upstream}".
-    // Only repeat it here when it differs from own labor (i.e. mats/eq/tax roll in).
-    if (Math.abs(totalToUpstream - ownLaborToUpstream) > 0.005) {
-      tiles.push({
-        label: `Total to ${upstream}`,
-        value: fmtCurrency(totalToUpstream),
-        color: C.amber,
-      });
-    }
+    const privateCost = isTC
+      ? financials.tcLaborCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost
+      : financials.fcActualCostTotal + financials.viewer.ownMaterialsCost + financials.viewer.ownEquipmentCost;
+    const margin = totalToUpstream - privateCost;
+    tiles.push({
+      label: 'Private cost',
+      value: fmtCurrency(privateCost),
+      color: C.amber,
+      sub: 'Only your company sees this',
+    });
+    tiles.push({
+      label: 'Gross margin',
+      value: privateCost > 0 ? fmtCurrency(margin) : 'Pending',
+      color: privateCost > 0 && margin < 0 ? C.red : C.green,
+      sub: privateCost > 0 && totalToUpstream > 0 ? `${((margin / totalToUpstream) * 100).toFixed(1)}% of revenue` : 'Add a private cost to calculate',
+      badge: privateCost > 0 ? { text: margin >= 0 ? 'Positive' : 'Over budget', variant: margin >= 0 ? 'healthy' : 'watch' } : undefined,
+    });
+    tiles.push({
+      label: 'Pricing progress',
+      value: `${props.pricedCount ?? 0}/${props.itemCount ?? 0}`,
+      color: C.blue,
+      sub: 'Scope items priced',
+      badge: (props.pricedCount ?? 0) === (props.itemCount ?? 0) && (props.itemCount ?? 0) > 0
+        ? { text: 'Ready', variant: 'healthy' }
+        : { text: 'In progress', variant: 'watch' },
+    });
 
     if (financials.retainagePercent > 0 && financials.viewer.retainageAmount > 0) {
       tiles.push({

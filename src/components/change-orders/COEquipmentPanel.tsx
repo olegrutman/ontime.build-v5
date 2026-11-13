@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Loader2, Wrench, Pencil, Check, X } from 'lucide-react';
@@ -18,6 +19,7 @@ interface COEquipmentPanelProps {
   canEdit:   boolean;
   /** Inline-edit window for already-saved rows; locks once CO is submitted upstream. */
   canEditExternal?: boolean;
+  responsibilityControl?: ReactNode;
   onRefresh: () => void;
 }
 
@@ -62,8 +64,10 @@ export function COEquipmentPanel({
   equipmentResponsible,
   canEdit,
   canEditExternal = false,
+  responsibilityControl,
   onRefresh,
 }: COEquipmentPanelProps) {
+  const rl = useRoleLabelsContext();
   const [drafts, setDrafts]         = useState<DraftEquip[]>([]);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState<string | null>(null);
@@ -80,7 +84,7 @@ export function COEquipmentPanel({
     (!equipmentResponsible && (isTC || isGC || isFC));
   const canManageEquipment = canEdit && isResponsibleForEquipment;
   const responsibleLabel =
-    equipmentResponsible === 'GC' ? 'GC' : equipmentResponsible === 'TC' ? 'TC' : null;
+    equipmentResponsible === 'GC' ? rl.GC : equipmentResponsible === 'TC' ? rl.TC : null;
 
   function startEdit(item: COEquipmentItem) {
     setEditingId(item.id);
@@ -189,10 +193,13 @@ export function COEquipmentPanel({
 
   return (
     <div className="co-light-shell">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
-        <div className="flex items-center gap-2">
-          <Wrench className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border co-light-header">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2">
+            <Wrench className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
+          </div>
+          {responsibilityControl}
         </div>
         {canManageEquipment && (
           <div className="flex gap-1">

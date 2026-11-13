@@ -9,7 +9,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronDown, CheckCircle, MapPin, Plus, Lock, TrendingUp, DollarSign, Trash2, Pencil, Loader2, AlertTriangle, Users, CalendarDays, Clock } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { fmtHours, formatWorkload, formatWorkloadTooltip, hasCrewMath } from '@/lib/crewWorkload';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +20,7 @@ import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import { canRemoveLaborEntry } from '@/lib/laborEntryDelete';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
+import { COLineItemReview } from './COLineReview';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -52,8 +52,8 @@ interface COLineItemRowProps {
   crewPricingBase?: { enabled: boolean; hourlyRate: number; markupPercent: number };
   /** CO lifecycle status — the subcontractor's price is frozen once submitted upstream. */
   coStatus?: string;
-  /** New pricing entries can use a focused dialog instead of expanding the row. */
-  pricingDisplay?: 'inline' | 'dialog';
+  /** Item-level approval stays inside the same item window. */
+  canReview?: boolean;
 }
 
 
@@ -72,10 +72,10 @@ function getStatusColor(entries: COLaborEntry[], showGCApproval: boolean): Statu
   return 'gray';
 }
 
-const STATUS_BORDER_COLOR: Record<StatusColor, string> = {
-  gray: '#E4E8F0',
-  amber: '#F5A623',
-  green: '#059669',
+const STATUS_BORDER_CLASS: Record<StatusColor, string> = {
+  gray: 'border-l-border',
+  amber: 'border-l-state-open',
+  green: 'border-l-state-approved',
 };
 
 export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
@@ -83,7 +83,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   coId, orgId, coPricingType, coNteCap, coNteUsed = 0,
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
-  pricingDisplay = 'inline',
+  canReview = false,
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -340,7 +340,6 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const marginPct = hasMargin ? (marginAmount / billableTotal) * 100 : 0;
 
 
-  const autoExpand = pricingDisplay === 'inline' && canAddLabor && entryCount === 0 && !showActualForm;
 
   // Strip markdown asterisks AND any trailing "Scope:" bullet list
   // (the AI narrative already covers what's in the bullets — showing both reads as duplicate)
@@ -388,40 +387,37 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   }
 
   return (
-    <div ref={ref} className={cn('border-b border-border last:border-b-0')} style={{ borderLeft: `3px solid ${STATUS_BORDER_COLOR[statusColor]}` }}>
+    <div ref={ref} className={cn('border-b border-l-2 border-border last:border-b-0', STATUS_BORDER_CLASS[statusColor])}>
       {/* Item header — clickable to expand */}
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setExpanded(!expanded)}
-        onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
-        className="w-full text-left px-4 py-5 hover:bg-accent/30 transition-colors cursor-pointer"
+        onClick={() => setExpanded(true)}
+        onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(true); } }}
+        aria-label={`Open ${item.item_name} details and pricing`}
+        className="w-full cursor-pointer px-3 py-3 text-left transition-colors hover:bg-accent/30 sm:px-4"
       >
-        <div className="flex flex-col gap-2 2xl:grid 2xl:grid-cols-[1.75rem_minmax(0,1fr)_6.5rem_5.5rem_6.5rem_4rem_2rem] 2xl:items-center 2xl:gap-3">
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
           {/* # column — desktop */}
-          <div className="hidden 2xl:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+          <div className="hidden md:flex items-center justify-center w-8 h-8 rounded-full shrink-0" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
             {index !== undefined && <span className="text-sm font-bold">{index}</span>}
           </div>
           <div className="flex items-start gap-3 min-w-0 flex-1">
             {/* Numbered index — mobile */}
             {index !== undefined && (
-              <div className="2xl:hidden flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
+              <div className="md:hidden flex items-center justify-center w-8 h-8 rounded-full shrink-0 mt-0.5" style={{ background: 'hsl(var(--amber)/0.15)', color: 'hsl(var(--amber-d))' }}>
                 <span className="text-sm font-bold">{index}</span>
               </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-1.5">
-                <p className="min-w-0 break-words font-heading text-foreground leading-tight tracking-tight" style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.item_name}</p>
+                <p className="min-w-0 break-words font-heading text-base font-bold leading-tight tracking-tight text-foreground">{item.item_name}</p>
                 {isMyOrgItem && coStatus && coStatus !== 'withdrawn' && (
                   <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <CODescriptionEditor coId={item.co_id} status={coStatus} lineItemId={item.id} title={item.item_name} description={item.description ?? ''} label="Edit item description" onSaved={onRefresh} />
                   </span>
                 )}
               </div>
-
-              {cleanDescription && (
-                <p className="mt-1 text-xs italic text-muted-foreground leading-relaxed line-clamp-2">{cleanDescription}</p>
-              )}
 
               <div className="flex items-center gap-1.5 flex-wrap mt-2">
                 {unpricedFCHours > 0 && (
@@ -431,25 +427,11 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                   </span>
                 )}
 
-                {item.category_name && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{item.category_name}</span>
-                )}
-                {friendlyUnit && (
+                {friendlyUnit && item.qty == null && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium">{friendlyUnit}</span>
                 )}
                 {item.qty != null && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-muted-foreground font-medium font-mono">qty {item.qty}</span>
-                )}
-                {item.reason && (
-                  <span
-                    className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                    style={{
-                      backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode]?.bg,
-                      color: CO_REASON_COLORS[item.reason as COReasonCode]?.text,
-                    }}
-                  >
-                    {CO_REASON_LABELS[item.reason as COReasonCode]}
-                  </span>
                 )}
                 {item.location_tag && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-[10px] font-medium text-muted-foreground">
@@ -465,7 +447,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               </div>
 
               {/* Mobile money line — desktop shows table columns instead */}
-              <div className="2xl:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+              <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
                 {isPriced ? (
                   <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
                 ) : showProvisional ? (
@@ -481,7 +463,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 ) : canAddLabor && !tcPricingLocked ? (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
                     className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
                     style={{ color: 'hsl(var(--amber-d))' }}
                   >
@@ -490,22 +472,20 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 ) : (
                   <span className="text-muted-foreground">Not priced</span>
                 )}
-                {isTC && fcTotal > 0 && (
-                  <span className="inline-flex items-center gap-1 font-mono text-state-approved-foreground">
-                    <Lock className="h-3 w-3" /> ${fmt(fcTotal)} crew
-                  </span>
-                )}
-                {showInternalCell && hasMargin && (
-                  <span className={cn('font-mono font-semibold', marginAmount >= 0 ? 'text-state-approved' : 'text-destructive')}>
-                    {marginPct.toFixed(1)}%
-                  </span>
-                )}
+                <span className={cn(
+                  'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                  item.approval_status === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
+                  item.approval_status === 'rejected' && 'bg-destructive/10 text-destructive',
+                  item.approval_status === 'pending' && 'bg-muted text-muted-foreground',
+                )}>
+                  {item.approval_status === 'approved' ? 'Approved' : item.approval_status === 'rejected' ? 'Rejected' : 'Pending review'}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Crew cost column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden text-right">
             {isTC && fcTotal > 0 ? (
               <>
                 <span className="inline-flex items-center justify-end gap-1 font-mono text-sm font-semibold text-foreground">
@@ -526,7 +506,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Rate column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden md:block text-right">
             <span className="text-sm text-foreground">{modeLabel}</span>
             {isHourlyMode && totalHours > 0 && (
               <span className="block font-mono text-[10px] text-muted-foreground">{fmtHours(totalHours)}h</span>
@@ -534,7 +514,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Billable column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden md:block text-right">
             {isPriced ? (
               <span className="font-mono text-sm font-bold text-foreground">${fmt(totalForRole)}</span>
             ) : showProvisional ? (
@@ -550,7 +530,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             ) : canAddLabor && !tcPricingLocked ? (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); if (pricingDisplay === 'inline') setExpanded(true); setFormOpen(true); }}
+                onClick={(e) => { e.stopPropagation(); setExpanded(true); setFormOpen(true); }}
                 className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
                 style={{ color: 'hsl(var(--amber-d))' }}
               >
@@ -562,7 +542,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
           {/* Margin column (desktop) */}
-          <div className="hidden 2xl:block text-right">
+          <div className="hidden text-right">
             {showInternalCell && hasMargin ? (
               <span className={cn(
                 'font-mono text-sm font-semibold',
@@ -576,14 +556,25 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
 
 
+          <div className="hidden justify-end md:flex">
+            <span className={cn(
+              'inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold',
+              item.approval_status === 'approved' && 'bg-state-approved-bg text-state-approved-foreground',
+              item.approval_status === 'rejected' && 'bg-destructive/10 text-destructive',
+              item.approval_status === 'pending' && 'bg-muted text-muted-foreground',
+            )}>
+              {item.approval_status === 'approved' ? 'Approved' : item.approval_status === 'rejected' ? 'Rejected' : 'Pending'}
+            </span>
+          </div>
+
             <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-              {pricingDisplay === 'dialog' && canAddLabor && !tcPricingLocked && (
+              {canAddLabor && !tcPricingLocked && (
                 <button
                   type="button"
                   aria-label={`Add pricing for ${item.item_name}`}
                   title="Add pricing"
-                  onClick={() => setFormOpen(true)}
-                  className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 transition-colors text-xs font-semibold"
+                  onClick={() => { setExpanded(true); setFormOpen(true); }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary/20 md:hidden"
                 >
                   <DollarSign className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Price</span>
@@ -718,9 +709,9 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
               )}
               <button
                 type="button"
-                aria-label={expanded ? 'Collapse pricing details' : 'Expand pricing details'}
+                aria-label={`Open ${item.item_name} details`}
                 aria-expanded={expanded}
-                onClick={() => setExpanded(!expanded)}
+                onClick={() => setExpanded(true)}
                 className="h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', expanded && 'rotate-180')} />
@@ -729,9 +720,52 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
           </div>
         </div>
 
-      {/* Expanded entries panel */}
-      {expanded && (
-        <div className="bg-accent/30 border-t border-border">
+      <Dialog open={expanded} onOpenChange={(open) => {
+        setExpanded(open);
+        if (!open) {
+          setFormOpen(false);
+          setShowActualForm(false);
+          setEditEntryId(null);
+        }
+      }}>
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-4xl gap-0 overflow-y-auto rounded-2xl p-0">
+          <DialogHeader className="border-b border-border bg-card px-5 py-4 pr-12 text-left">
+            <DialogTitle className="font-heading text-2xl text-foreground">{item.item_name}</DialogTitle>
+            <DialogDescription className="whitespace-pre-line break-words text-sm text-muted-foreground">
+              {cleanDescription || 'Review scope, pricing and private costs for this item.'}
+            </DialogDescription>
+            <div className="flex flex-wrap gap-2 pt-1 text-[11px] text-muted-foreground">
+              {item.location_tag && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{item.location_tag}</span>}
+              {item.qty != null && <span>Quantity: {item.qty} {friendlyUnit ?? item.unit}</span>}
+              {item.category_name && <span>{item.category_name}</span>}
+              {item.reason && <span>{CO_REASON_LABELS[item.reason as COReasonCode]}</span>}
+            </div>
+          </DialogHeader>
+
+          <div className={cn('grid border-b border-border bg-muted/20 px-3 py-3 sm:px-5', isGC && markupVisibility !== 'detailed' ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3')}>
+            <div className="min-w-0 pr-2">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Billable price</p>
+              <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(billableTotal)}</p>
+            </div>
+            {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
+              <div className="min-w-0 border-l border-border px-2 sm:px-4">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Private cost</p>
+                <p className="mt-1 whitespace-nowrap font-mono text-sm font-bold text-foreground sm:text-lg">${fmt(roleCostTotal)}</p>
+              </div>
+            )}
+            {(isTC || isFC || (isGC && markupVisibility === 'detailed')) && (
+              <div className="col-span-2 min-w-0 border-t border-border pt-3 sm:col-span-1 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Item margin</p>
+                <p className={cn('mt-1 whitespace-nowrap font-mono text-sm font-bold sm:text-lg', hasMargin && marginAmount < 0 ? 'text-destructive' : 'text-foreground')}>
+                  {hasMargin ? `${marginPct.toFixed(1)}%` : 'Pending'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <COLineItemReview coId={coId} item={item} canReview={canReview} onRefresh={onRefresh} />
+
+        <div className="bg-background">
           {hideGCBreakdown ? (
             <div className="px-3 sm:px-5 py-4 space-y-2">
               <div className="flex justify-between text-sm">
@@ -752,7 +786,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 <p className="text-[10px] text-muted-foreground">{billable.length} entr{billable.length === 1 ? 'y' : 'ies'} · Rates hidden in summary mode</p>
               )}
             </div>
-          ) : tableEntries.length === 0 && !autoExpand ? (
+          ) : tableEntries.length === 0 ? (
             /* Empty state */
             <div className="px-6 py-8 text-center">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
@@ -1228,122 +1262,75 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
             </>
           )}
 
-          {/* Add pricing entry toggle */}
-          {canAddLabor && pricingDisplay === 'dialog' && (
-            <button
-              type="button"
-              onClick={() => setFormOpen(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-xs font-semibold border-t border-border/50 text-foreground hover:bg-accent/40 transition-colors"
-            >
-              <Plus className="h-4 w-4" /> Add pricing entry
-              <span className="font-normal text-muted-foreground">— opens a focused window</span>
-            </button>
-          )}
-          {canAddLabor && pricingDisplay === 'inline' && (
-            <Collapsible open={formOpen || autoExpand} onOpenChange={setFormOpen}>
-              {!autoExpand && (
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      'w-full flex items-center gap-2.5 px-3 sm:px-5 py-3.5 text-xs transition-colors border-t border-border/50',
-                      formOpen
-                        ? 'bg-[hsl(var(--amber)/0.05)]'
-                        : 'hover:bg-accent/40',
-                    )}
-                  >
-                    <div className="w-6 h-6 rounded-full bg-[hsl(var(--amber)/0.1)] flex items-center justify-center">
-                      <Plus className="h-3.5 w-3.5" style={{ color: 'hsl(var(--amber-d))' }} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-foreground">Add pricing entry</p>
-                      <p className="text-[10px] text-muted-foreground">Log hours, flat rate, or unit pricing</p>
-                    </div>
-                  </button>
-                </CollapsibleTrigger>
-              )}
-              <CollapsibleContent>
-                <div className="px-3 sm:px-5 pb-4 pt-2">
-                  <LaborEntryForm
-                    coId={coId} lineItemId={item.id} orgId={orgId}
-                    enteredByRole={enteredByRole} pricingType={pricingType}
-                    isTC={isTC} isFC={isFC}
-                    nteCap={nteCap} nteUsed={nteUsed}
-                    onSaved={() => { setFormOpen(false); onRefresh(); }}
-                    onCancel={() => setFormOpen(false)}
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+          <div className="flex flex-col gap-2 border-t border-border bg-card px-3 py-3 sm:flex-row sm:px-5">
+            {canAddLabor && !formOpen && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => { setFormOpen(true); setShowActualForm(false); }}
+                className="h-9 gap-2 text-xs"
+              >
+                <Plus className="h-4 w-4" /> Add pricing entry
+              </Button>
+            )}
+            {canEditInternal && (isTC || isFC) && !showActualForm && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => { setShowActualForm(true); setFormOpen(false); }}
+                className="h-9 gap-2 text-xs"
+              >
+                <Lock className="h-3.5 w-3.5" /> Log private cost
+              </Button>
+            )}
+            {(isTC || isFC) && (
+              <p className="text-[11px] text-muted-foreground sm:ml-auto sm:self-center">
+                Private costs are never shown to the other company.
+              </p>
+            )}
+          </div>
 
-
-          {/* Internal cost entry stays open after approval / completion — real costs
-              (invoices, timesheets, receipts) land late and never touch the billable side. */}
-          {!canAddLabor && canEditInternal && (isTC || isFC) && !showActualForm && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setShowActualForm(true); }}
-              className="w-full flex items-center gap-2.5 px-3 sm:px-5 py-3 text-xs border-t border-border/50 hover:bg-accent/40 transition-colors"
-            >
-              <div className="w-6 h-6 rounded-full bg-state-approved/10 flex items-center justify-center">
-                <Plus className="h-3.5 w-3.5 text-state-approved-foreground" />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold text-foreground">Log internal cost</p>
-                <p className="text-[10px] text-muted-foreground">Private — does not change the billable amount</p>
-              </div>
-            </button>
-          )}
-
-          {/* Actual cost form */}
-          {showActualForm && pricingDisplay === 'inline' && (
-            <div className="px-3 sm:px-5 pb-4 border-t border-border/50">
+          {formOpen && (
+            <div className="border-t border-border bg-muted/20 px-3 pb-4 pt-3 sm:px-5 [&>div]:shadow-none">
               <LaborEntryForm
-                coId={coId} lineItemId={item.id} orgId={orgId}
-                enteredByRole={enteredByRole} pricingType={pricingType}
-                isTC={isTC} isFC={isFC} isActualCost
+                key="billable"
+                coId={coId}
+                lineItemId={item.id}
+                orgId={orgId}
+                enteredByRole={enteredByRole}
+                pricingType={pricingType}
+                isTC={isTC}
+                isFC={isFC}
+                nteCap={nteCap}
+                nteUsed={nteUsed}
+                onSaved={() => { setFormOpen(false); onRefresh(); }}
+                onCancel={() => setFormOpen(false)}
+              />
+            </div>
+          )}
+
+          {showActualForm && (
+            <div className="border-t border-border bg-muted/20 px-3 pb-4 pt-3 sm:px-5 [&>div]:shadow-none">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lock className="h-3.5 w-3.5" /> Private cost — never shared upstream</p>
+              <LaborEntryForm
+                key="private-cost"
+                coId={coId}
+                lineItemId={item.id}
+                orgId={orgId}
+                enteredByRole={enteredByRole}
+                pricingType={pricingType}
+                isTC={isTC}
+                isFC={isFC}
+                isActualCost
                 onSaved={() => { setShowActualForm(false); onRefresh(); }}
                 onCancel={() => setShowActualForm(false)}
               />
             </div>
           )}
         </div>
-      )}
-
-      {pricingDisplay === 'dialog' && (
-        <Dialog
-          open={formOpen || showActualForm}
-          onOpenChange={(open) => {
-            if (!open) {
-              setFormOpen(false);
-              setShowActualForm(false);
-            }
-          }}
-        >
-          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-2xl">
-            <DialogHeader className="px-5 py-4 pr-12 border-b border-border bg-card">
-              <DialogTitle className="font-heading text-xl text-foreground">
-                {showActualForm ? 'Log private cost' : 'Price this work'}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                {item.item_name}. Your total updates as you enter the work; nothing is saved until you confirm.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="p-3 sm:p-4 bg-background [&>div]:shadow-none">
-              <LaborEntryForm
-                key={showActualForm ? 'private-cost' : 'billable'}
-                coId={coId} lineItemId={item.id} orgId={orgId}
-                enteredByRole={enteredByRole} pricingType={pricingType}
-                isTC={isTC} isFC={isFC} isActualCost={showActualForm}
-                nteCap={nteCap} nteUsed={nteUsed}
-                onSaved={() => { setFormOpen(false); setShowActualForm(false); onRefresh(); }}
-                onCancel={() => { setFormOpen(false); setShowActualForm(false); }}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });
