@@ -68,11 +68,13 @@ export function CompactHealthHero({
           {label}
         </span>
         <span style={{ fontSize: '1.4rem', color: C.ink, lineHeight: 1, ...fontVal }}>
-          {fmtSigned(projectedMargin)}
+          {marginKnown ? fmtSigned(projectedMargin) : '—'}
         </span>
-        <span style={{ fontSize: '0.82rem', color: s.color, ...fontMono }}>
-          {pctRounded >= 0 ? '+' : ''}{pctRounded}%
-        </span>
+        {marginKnown && (
+          <span style={{ fontSize: '0.82rem', color: s.color, ...fontMono }}>
+            {pctRounded >= 0 ? '+' : ''}{pctRounded}%
+          </span>
+        )}
       </div>
 
       <p

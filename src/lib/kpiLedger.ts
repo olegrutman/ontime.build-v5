@@ -449,7 +449,7 @@ export function buildProjectLedger(input: LedgerInput): ProjectLedger {
     baseContract, pendingAwardRevenue, approvedCOAdds, pendingCOAdds, revisedContract,
     baseCost, pendingAwardCost, coCost, materialCommitment, revisedCost,
     forecastMargin, forecastMarginPct,
-    billed: billedTerm, collected: collectedTerm, retainageHeld: retainageTerm,
+    billed: billedTerm, collected: collectedTerm, cashPosition, retainageHeld: retainageTerm,
     percentComplete,
     earnedRevenue, earnedCost, marginToDate, marginToDatePct, marginToDateMeaningful,
     coNetMargin, pendingCONetAtRisk,

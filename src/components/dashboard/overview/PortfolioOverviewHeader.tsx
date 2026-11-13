@@ -123,6 +123,7 @@ export function PortfolioOverviewHeader({
         projectedMarginPct={financials.projectedMarginRevisedPct}
         label="Projected Portfolio Margin"
         summary={summary}
+        awaitingUpstream={!marginKnown}
       />
       {strip}
     </div>
