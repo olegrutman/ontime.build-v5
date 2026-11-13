@@ -1,4 +1,5 @@
 # Project architecture rules
+- Pricing-entry progress is informational and separate from hourly billing; use saved completion evidence and show unknown progress as unrecorded rather than infer it from billed amounts.
 - Project navigation uses the same lg threshold for fixed sidebar visibility and content offsets; CO/WO financial panels stack below xl and dense pricing columns begin at 2xl, because tablet widths cannot fit desktop navigation and both ledgers safely.
 - CO/WO procurement responsibility uses a narrow authenticated party-checked RPC across non-withdrawn states; saves refresh responsibility-aware financial queries and preserve approved prices, because procurement reassignment must not silently bypass review or fail under row policies.
 - CO/WO description edits synchronize a sole creator-owned scope item and its header atomically through update_co_description; multi-item edits rebuild the aggregate summary without overwriting distinct items or another company's scope, preserving pricing and approval state.
