@@ -26,6 +26,7 @@ import type { COMaterialItem } from '@/types/changeOrder';
 import { PO_STATUS_LABELS } from '@/types/purchaseOrder';
 import type { POWizardV2LineItem } from '@/types/poWizardV2';
 import { SmartPicker as ProductPickerContent, SmartPickerHandle as ProductPickerHandle } from '@/components/po-wizard-v2/SmartPicker';
+import { getNteEntryStatus } from '@/lib/coPricingPresentation';
 
 const UOM_OPTIONS = ['ea', 'LF', 'SF', 'SQ', 'bag', 'box', 'sheet', 'roll', 'gal', 'lb', 'ton', 'hr'];
 
@@ -45,6 +46,8 @@ interface COMaterialsPanelProps {
   canEditExternal?: boolean;
   responsibilityControl?: ReactNode;
   onRefresh: () => void;
+  nteCap?: number | null;
+  nteUsed?: number;
 }
 
 interface DraftRow {
@@ -77,13 +80,24 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function MarkupEditor({ materialId, initialValue, onRefresh }: { materialId: string; initialValue: number; onRefresh: () => void }) {
+function MarkupEditor({ materialId, initialValue, onRefresh, validateNext }: {
+  materialId: string;
+  initialValue: number;
+  onRefresh: () => void;
+  validateNext?: (markup: number) => string | null;
+}) {
   const [value, setValue] = useState(String(initialValue ?? 0));
   const [saving, setSaving] = useState(false);
 
   async function commit() {
     const num = parseFloat(value) || 0;
     if (num === initialValue) return;
+    const validation = validateNext?.(num);
+    if (validation) {
+      toast.error(validation);
+      setValue(String(initialValue));
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase.from('co_material_items').update({
@@ -168,6 +182,8 @@ export function COMaterialsPanel({
   canEditExternal = false,
   responsibilityControl,
   onRefresh,
+  nteCap = null,
+  nteUsed = 0,
 }: COMaterialsPanelProps) {
   const rl = useRoleLabelsContext();
   const navigate = useNavigate();
@@ -211,6 +227,17 @@ export function COMaterialsPanel({
 
   async function commitMatEdit(id: string) {
     if (!matDraft) return;
+    const material = materials.find(row => row.id === id);
+    if (material) {
+      const quantity = parseFloat(matDraft.quantity) || 0;
+      const unitCost = matDraft.unit_cost.trim() === '' ? 0 : (parseFloat(matDraft.unit_cost) || 0);
+      const nextBilled = quantity * unitCost * (1 + Number(material.markup_percent ?? 0) / 100);
+      const status = getNteEntryStatus(nteUsed, nextBilled, nteCap, Number(material.billed_amount ?? 0));
+      if (status.exceedsCap) {
+        toast.error(`This material would exceed the NTE ceiling. ${fmt(status.remainingBeforeEntry)} remains before this edit.`);
+        return;
+      }
+    }
     setSavingMatEdit(true);
     try {
       const { error } = await supabase.from('co_material_items').update({
@@ -449,6 +476,17 @@ export function COMaterialsPanel({
           unit_cost: supplierPriceMap.get(m.id)!.unit_price!,
         }));
 
+      const billedDelta = updates.reduce((total, update) => {
+        const material = materials.find(row => row.id === update.id)!;
+        const nextBilled = material.quantity * update.unit_cost * (1 + Number(material.markup_percent ?? 0) / 100);
+        return total + nextBilled - Number(material.billed_amount ?? 0);
+      }, 0);
+      const status = getNteEntryStatus(nteUsed, Math.max(0, billedDelta), nteCap);
+      if (status.exceedsCap) {
+        toast.error(`Supplier pricing would exceed the NTE ceiling. ${fmt(status.remainingBeforeEntry)} remains.`);
+        return;
+      }
+
       for (const { id, unit_cost } of updates) {
         const { error } = await supabase
           .from('co_material_items')
@@ -470,6 +508,15 @@ export function COMaterialsPanel({
   async function saveRows() {
     const valid = draftRows.filter(row => row.description.trim() && parseFloat(row.quantity) > 0);
     if (valid.length === 0) return;
+    const newBilled = valid.reduce((total, row) => {
+      const base = (parseFloat(row.quantity) || 0) * (parseFloat(row.unit_cost) || 0);
+      return total + base * (1 + (parseFloat(row.markup_percent) || 0) / 100);
+    }, 0);
+    const status = getNteEntryStatus(nteUsed, newBilled, nteCap);
+    if (status.exceedsCap) {
+      toast.error(`These materials would exceed the NTE ceiling. ${fmt(status.remainingBeforeEntry)} remains.`);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -520,6 +567,11 @@ export function COMaterialsPanel({
   }
 
   const handlePickerAdd = useCallback(async (item: POWizardV2LineItem) => {
+    const status = getNteEntryStatus(nteUsed, item.quantity * Number(item.unit_price ?? 0), nteCap);
+    if (status.exceedsCap) {
+      toast.error(`This material would exceed the NTE ceiling. ${fmt(status.remainingBeforeEntry)} remains.`);
+      return;
+    }
     try {
       const { error } = await supabase.from('co_material_items').insert({
         co_id: coId,
@@ -547,7 +599,7 @@ export function COMaterialsPanel({
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to add material');
     }
-  }, [addedByRole, coId, materialsOnSite, onRefresh, orgId]);
+  }, [addedByRole, coId, materials.length, materialsOnSite, nteCap, nteUsed, onRefresh, orgId]);
 
   async function resolvePricingOwnerOrgId() {
     const { data: contracts, error } = await supabase
@@ -861,7 +913,16 @@ export function COMaterialsPanel({
                       {(showPricingColumns || draftRows.length > 0) && !hideCostFromViewer && (
                         <td className="text-right px-2 py-2.5">
                           {canEdit && (isTC || isFC) ? (
-                            <MarkupEditor materialId={material.id} initialValue={material.markup_percent} onRefresh={onRefresh} />
+                            <MarkupEditor
+                              materialId={material.id}
+                              initialValue={material.markup_percent}
+                              onRefresh={onRefresh}
+                              validateNext={nextMarkup => {
+                                const nextBilled = material.quantity * Number(material.unit_cost ?? 0) * (1 + nextMarkup / 100);
+                                const status = getNteEntryStatus(nteUsed, nextBilled, nteCap, Number(material.billed_amount ?? 0));
+                                return status.exceedsCap ? `This markup would exceed the NTE ceiling. ${fmt(status.remainingBeforeEntry)} remains.` : null;
+                              }}
+                            />
                           ) : (
                             <span className="text-muted-foreground">{material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}</span>
                           )}
