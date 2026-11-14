@@ -1,6 +1,6 @@
 import { Calculator, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { C, KpiCard } from '@/components/shared/KpiCard';
+import { Bar, C, KpiCard } from '@/components/shared/KpiCard';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import type { RoleLabels } from '@/hooks/useRoleLabels';
 import { cn } from '@/lib/utils';
+import { unbilledActuals } from '@/lib/coPricingPresentation';
 
 interface COKPIStripProps {
   co: ChangeOrder;
@@ -31,6 +32,11 @@ interface COKPIStripProps {
   itemBreakdown?: COKPIItemBreakdown[];
   /** Small tappable chips (phones) instead of full cards. */
   compact?: boolean;
+  billedToDate?: number;
+  draftBilling?: number;
+  loggedHours?: number;
+  completedItemCount?: number;
+  activeItemCount?: number;
 }
 
 export interface COKPIItemBreakdown {
@@ -39,6 +45,9 @@ export interface COKPIItemBreakdown {
   revenue: number;
   cost: number;
   priced: boolean;
+  hours: number;
+  completed: boolean;
+  rejected: boolean;
 }
 
 function fmtCurrency(value: number) {
@@ -59,13 +68,14 @@ interface KPITile {
   passedToOwner?: boolean | null;
   kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'other';
   primary?: boolean;
+  meter?: { percent: number; color: string };
 }
 
 function tilePills(tile: KPITile) {
   return tile.badge ? [{ type: tile.badge.variant === 'healthy' ? 'pg' as const : tile.badge.variant === 'watch' ? 'pa' as const : 'pm' as const, text: tile.badge.text }] : [];
 }
 
-function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
+function getLegacyTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   const { isGC, isTC, isFC, financials, markupVisibility = 'hidden' } = props;
   const matResp = props.materialResponsible ?? 'TC';
   const eqResp = props.equipmentResponsible ?? 'TC';
