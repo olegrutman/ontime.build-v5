@@ -1,6 +1,6 @@
 import { Calculator, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { C, KpiCard } from '@/components/shared/KpiCard';
+import { Bar, C, KpiCard } from '@/components/shared/KpiCard';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import type { MarkupVisibility } from '@/hooks/useMarkupVisibility';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
 import type { RoleLabels } from '@/hooks/useRoleLabels';
 import { cn } from '@/lib/utils';
+import { unbilledActuals } from '@/lib/coPricingPresentation';
 
 interface COKPIStripProps {
   co: ChangeOrder;
@@ -31,6 +32,12 @@ interface COKPIStripProps {
   itemBreakdown?: COKPIItemBreakdown[];
   /** Small tappable chips (phones) instead of full cards. */
   compact?: boolean;
+  billedToDate?: number;
+  draftBilling?: number;
+  billingLoaded?: boolean;
+  loggedHours?: number;
+  completedItemCount?: number;
+  activeItemCount?: number;
 }
 
 export interface COKPIItemBreakdown {
@@ -39,6 +46,9 @@ export interface COKPIItemBreakdown {
   revenue: number;
   cost: number;
   priced: boolean;
+  hours: number;
+  completed: boolean;
+  rejected: boolean;
 }
 
 function fmtCurrency(value: number) {
@@ -57,8 +67,9 @@ interface KPITile {
   gcCost?: number;
   markupPercent?: number | null;
   passedToOwner?: boolean | null;
-  kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'other';
+  kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'hours' | 'other';
   primary?: boolean;
+  meter?: { percent: number; color: string };
 }
 
 function tilePills(tile: KPITile) {
@@ -66,6 +77,144 @@ function tilePills(tile: KPITile) {
 }
 
 function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
+  const { co, financials, isGC, isTC, isFC } = props;
+  const legacy = getLegacyTiles(props, rl);
+  const supplemental = legacy.filter(tile =>
+    tile.editable || tile.label === 'Retainage Held' || tile.label === 'Net Payable' ||
+    tile.label === (financials.taxJurisdictionLabel ?? 'Tax'));
+  const billingLoaded = props.billingLoaded !== false;
+  const billed = Math.max(0, props.billedToDate ?? 0);
+  const draft = Math.max(0, props.draftBilling ?? 0);
+  const hours = Math.max(0, props.loggedHours ?? 0);
+  const isApproved = ['approved', 'contracted'].includes(co.status);
+  const matResp = props.materialResponsible ?? 'TC';
+  const eqResp = props.equipmentResponsible ?? 'TC';
+  const gcHeadline = props.tcBillableTotal ?? (financials.tcBillableToGC
+    + (matResp === 'TC' ? financials.materialsTotal : 0)
+    + (eqResp === 'TC' ? financials.equipmentTotal : 0));
+  const ownLabor = financials.viewer.ownLaborToUpstream;
+  const ownBillable = ownLabor > 0 ? ownLabor : (isTC && co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
+  const currentRevenue = financials.viewer.totalToUpstream > 0 ? financials.viewer.totalToUpstream : ownBillable;
+  const revenue = isGC
+    ? gcHeadline
+    : isApproved && isTC && co.approved_amount != null
+      ? Number(co.approved_amount)
+      : currentRevenue;
+  const runningTotal = isGC ? gcHeadline : currentRevenue;
+  const billingSub = !billingLoaded ? 'Loading invoice records…' : draft > 0 ? `${fmtCurrency(draft)} on drafts · not billed` : 'Issued invoices only';
+  const billedValue = billingLoaded ? fmtCurrency(billed) : '…';
+
+  if (co.pricing_type === 'fixed') {
+    const base = legacy.filter(tile => !['Private cost', 'Gross margin', 'Order margin'].includes(tile.label));
+    const primaryIndex = base.findIndex(tile => tile.primary);
+    const modeTiles: KPITile[] = [
+      {
+        label: 'Billed to date',
+        value: billedValue,
+        color: C.blue,
+        sub: !billingLoaded ? billingSub : `${revenue > 0 ? `${Math.min(100, (billed / revenue) * 100).toFixed(1)}% of the approved price` : 'No issued invoices'} · ${billingSub}`,
+        kind: 'other',
+      },
+      {
+        label: 'Remaining to bill',
+        value: billingLoaded ? fmtCurrency(Math.max(0, revenue - billed)) : '…',
+        color: C.green,
+        sub: billingLoaded ? 'Approved fixed price minus issued invoices' : billingSub,
+        kind: 'other',
+      },
+      {
+        label: 'Scope completion',
+        value: `${props.completedItemCount ?? 0} of ${props.activeItemCount ?? 0}`,
+        color: C.purple,
+        sub: 'Completed scope items · progress billing remains separate',
+        kind: 'progress',
+      },
+    ];
+    base.splice(primaryIndex >= 0 ? primaryIndex + 1 : 1, 0, ...modeTiles);
+    return base;
+  }
+
+  if (co.pricing_type === 'tm') {
+    return [
+      {
+        label: isApproved ? 'Running actuals' : 'Current actuals',
+        value: fmtCurrency(runningTotal),
+        color: C.purple,
+        sub: 'Dated labor + materials + equipment · before tax',
+        kind: 'revenue',
+        primary: true,
+        badge: { text: 'Open ended', variant: 'neutral' },
+      },
+      {
+        label: 'Logged hours',
+        value: `${hours.toLocaleString('en-US', { maximumFractionDigits: 1 })}h`,
+        color: C.blue,
+        sub: 'Hourly billing entries visible to your company',
+        kind: 'hours',
+      },
+      {
+        label: 'Available to invoice',
+        value: billingLoaded ? fmtCurrency(unbilledActuals(runningTotal, billed, draft)) : '…',
+        color: C.green,
+        sub: !billingLoaded ? billingSub : `Actuals not on issued or draft invoices · ${billingSub}`,
+        kind: 'other',
+      },
+      {
+        label: 'Billed to date',
+        value: billedValue,
+        color: C.blue,
+        sub: billingSub,
+        kind: 'other',
+      },
+      ...supplemental,
+    ];
+  }
+
+  const cap = Math.max(0, Number(co.nte_cap) || 0);
+  const used = Math.max(0, financials.nteUsedAmount);
+  const percent = cap > 0 ? (used / cap) * 100 : 0;
+  const meterColor = percent >= 95 ? C.red : percent >= 80 ? C.amber : C.green;
+  return [
+    {
+      label: 'Actuals / NTE ceiling',
+      value: fmtCurrency(used),
+      color: meterColor,
+      sub: `${percent.toFixed(1)}% of ${fmtCurrency(cap)} authorized ceiling`,
+      kind: 'revenue',
+      primary: true,
+      meter: { percent, color: meterColor },
+      badge: percent >= 100
+        ? { text: 'Ceiling reached', variant: 'watch' }
+        : percent >= 80
+          ? { text: 'Approaching ceiling', variant: 'watch' }
+          : { text: 'Within ceiling', variant: 'healthy' },
+    },
+    {
+      label: 'Remaining headroom',
+      value: fmtCurrency(Math.max(0, cap - used)),
+      color: meterColor,
+      sub: percent >= 100 ? 'Request a cap increase before more actuals' : 'Available before the authorized ceiling',
+      kind: 'other',
+    },
+    {
+      label: 'Logged hours',
+      value: `${hours.toLocaleString('en-US', { maximumFractionDigits: 1 })}h`,
+      color: C.blue,
+      sub: 'Hourly billing entries visible to your company',
+      kind: 'hours',
+    },
+    {
+      label: 'Billed to date',
+      value: billedValue,
+      color: C.blue,
+      sub: `${billingSub}${billingLoaded ? ' · invoices cannot pass the ceiling' : ''}`,
+      kind: 'other',
+    },
+    ...supplemental,
+  ];
+}
+
+function getLegacyTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   const { isGC, isTC, isFC, financials, markupVisibility = 'hidden' } = props;
   const matResp = props.materialResponsible ?? 'TC';
   const eqResp = props.equipmentResponsible ?? 'TC';
@@ -355,7 +504,21 @@ function Breakdown({ tile, items, financials }: { tile: KPITile; items: COKPIIte
         {items.map((it, i) => (
           <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
             <span className="min-w-0 break-words"><span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}</span>{it.name}</span>
-            <span className={it.priced ? 'shrink-0 text-xs font-semibold text-state-approved' : 'shrink-0 text-xs font-semibold text-state-open'}>{it.priced ? 'Priced' : 'Not priced'}</span>
+            <span className={it.completed ? 'shrink-0 text-xs font-semibold text-state-approved' : 'shrink-0 text-xs font-semibold text-muted-foreground'}>
+              {it.rejected ? 'Rejected · excluded' : it.completed ? 'Completed' : 'Not completed'}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (kind === 'hours') {
+    return (
+      <div className="divide-y divide-border">
+        {items.map((it, i) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+            <span className="min-w-0 break-words"><span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}</span>{it.name}</span>
+            <span className="shrink-0 font-mono font-semibold text-foreground">{it.hours.toLocaleString('en-US', { maximumFractionDigits: 1 })}h</span>
           </div>
         ))}
       </div>
@@ -415,6 +578,7 @@ function CompactTile({ tile, items, financials }: { tile: KPITile; items: COKPII
         className={cn('h-auto min-w-0 flex-col items-start gap-0.5 whitespace-normal rounded-xl px-3 py-2 text-left', tile.primary && 'col-span-2 py-3')}>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{tile.label}</span>
         <span className={cn('font-mono text-lg font-bold text-foreground', tile.primary && 'text-2xl')}>{tile.value}</span>
+        {tile.meter && <span className="mt-1 w-full"><Bar pct={tile.meter.percent} color={tile.meter.color} /></span>}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md gap-0 overflow-hidden rounded-2xl p-0">
@@ -452,7 +616,8 @@ export function COKPIStrip(props: COKPIStripProps) {
         : <KpiCard key={tile.label} label={tile.label} value={tile.value} sub={tile.sub ?? tile.label}
             icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}
             className={tile.primary ? 'sm:col-span-2' : undefined}
-            valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}>
+            valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}
+            spark={tile.meter ? <Bar pct={tile.meter.percent} color={tile.meter.color} /> : undefined}>
             {(tile.kind ?? 'other') !== 'other'
               ? <Breakdown tile={tile} items={items} financials={props.financials} />
               : undefined}

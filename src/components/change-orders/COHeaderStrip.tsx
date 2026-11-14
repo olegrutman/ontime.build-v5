@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { ChangeOrder, COStatus, COCreatedByRole } from '@/types/changeOrder';
-import { ArrowRight, Pencil } from 'lucide-react';
+import { ArrowRight, Clock3, Gauge, LockKeyhole, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { cleanTitle } from '@/lib/coTitle';
 import { CODescriptionEditor } from './CODescriptionEditor';
 import { coPricingStatusLabel, type COPricingReadiness } from '@/lib/coPricingReadiness';
+import { CO_PRICING_PRESENTATION } from '@/lib/coPricingPresentation';
 
 interface COHeaderStripProps {
   co: ChangeOrder;
@@ -40,6 +41,8 @@ export function COHeaderStrip({
   const [saving, setSaving] = useState(false);
   const documentLabel = co.document_type === 'WO' ? 'Work order workspace' : 'Change order workspace';
   const statusLabel = coPricingStatusLabel(status, pricingReadiness, co.kept_internal) ?? CO_STATUS_LABELS[status];
+  const pricingPresentation = CO_PRICING_PRESENTATION[co.pricing_type];
+  const PricingIcon = co.pricing_type === 'fixed' ? LockKeyhole : co.pricing_type === 'tm' ? Clock3 : Gauge;
 
   const saveTitle = async () => {
     const next = cleanTitle(draft);
@@ -60,18 +63,28 @@ export function COHeaderStrip({
     <header className={cn('rounded-2xl bg-[hsl(var(--foreground))] px-4 py-4 text-white shadow-sm sm:px-5', isWithdrawn && 'opacity-60')}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-mono text-[0.62rem] uppercase tracking-[0.25em] text-white/60">{documentLabel}</p>
-        <span className={cn(
-          'inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-center text-[0.68rem] font-bold uppercase tracking-wider',
-          status === 'approved' || status === 'contracted'
-            ? 'border-state-approved/30 bg-state-approved/15 text-state-approved'
-            : status === 'submitted'
-              ? 'border-type-sov/30 bg-type-sov/15 text-type-sov'
-              : status === 'rejected' || status === 'withdrawn'
-                ? 'border-destructive/30 bg-destructive/15 text-destructive'
-                : 'border-white/15 bg-white/10 text-white/80',
-        )}>
-          {statusLabel}
-        </span>
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+          <span className={cn(
+            'inline-flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-wider',
+            co.pricing_type === 'fixed' && 'border-state-approved/40 bg-state-approved/15 text-state-approved',
+            co.pricing_type === 'tm' && 'border-type-project/40 bg-type-project/15 text-type-project',
+            co.pricing_type === 'nte' && 'border-state-open/40 bg-state-open/15 text-state-open',
+          )}>
+            <PricingIcon className="h-3.5 w-3.5 shrink-0" />{pricingPresentation.label}
+          </span>
+          <span className={cn(
+            'inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-center text-[0.68rem] font-bold uppercase tracking-wider',
+            status === 'approved' || status === 'contracted'
+              ? 'border-state-approved/30 bg-state-approved/15 text-state-approved'
+              : status === 'submitted'
+                ? 'border-type-sov/30 bg-type-sov/15 text-type-sov'
+                : status === 'rejected' || status === 'withdrawn'
+                  ? 'border-destructive/30 bg-destructive/15 text-destructive'
+                  : 'border-white/15 bg-white/10 text-white/80',
+          )}>
+            {statusLabel}
+          </span>
+        </div>
       </div>
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -129,6 +142,19 @@ export function COHeaderStrip({
           <span className="min-w-0 break-words font-semibold text-white">{fromLabel || myOrgName}</span>
           <ArrowRight className="h-3.5 w-3.5 shrink-0 text-white/40" />
           <span className="min-w-0 break-words font-semibold text-white">{toLabel}</span>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+        <PricingIcon className="mt-0.5 h-4 w-4 shrink-0 text-white/70" />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-white/90">What to expect</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-white/65">{pricingPresentation.expectation}</p>
+          {co.pricing_type === 'nte' && (
+            <p className="mt-1.5 font-mono text-xs font-semibold text-white/85">
+              Authorized ceiling: {co.nte_cap != null ? `$${Number(co.nte_cap).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Not set'}
+            </p>
+          )}
         </div>
       </div>
     </header>

@@ -612,7 +612,7 @@ export function COStatusActions({
         id: co.id,
         updates: { completed_at: new Date().toISOString() },
       });
-      toast.success('CO marked as completed');
+      toast.success(co.pricing_type === 'fixed' ? 'Work marked as completed' : 'Order closed out');
       await logActivity('marked_completed');
       await notifyOrg(co.org_id, 'CO_COMPLETED');
       onRefresh();
@@ -634,7 +634,7 @@ export function COStatusActions({
           contracted_at: new Date().toISOString(),
         },
       });
-      toast.success(`Completion acknowledged — ${rl.TC} can now invoice`);
+      toast.success(co.pricing_type === 'fixed' ? `Completion acknowledged — ${rl.TC} can now invoice` : 'Closeout approved');
       await logActivity('acknowledged_completion');
       await notifyOrg(co.assigned_to_org_id, 'CO_ACKNOWLEDGED');
       onRefresh();
@@ -768,7 +768,7 @@ export function COStatusActions({
         <div className="flex items-center gap-2">
           <Check className="h-4 w-4 co-light-success-text" />
           <span className="text-sm font-medium text-foreground">
-            Contracted — TC can now invoice
+            Contracted — {rl.TC} can now invoice
           </span>
         </div>
         {canReleaseRetainage && (
@@ -853,13 +853,13 @@ export function COStatusActions({
           {canCloseForPricing && (
             <Button size="sm" variant="outline" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1 border-state-open/30 text-state-open-foreground hover:bg-state-open-bg" onClick={doCloseForPricing} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
-              Close CO for Final Pricing
+              {co.pricing_type === 'fixed' ? 'Close CO for Final Pricing' : 'Close scope for authorization'}
             </Button>
           )}
           {(canSubmit || canSubmitFCPricing) && (
             <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              {canSubmitFCPricing ? `Submit ${rl.FC} pricing` : 'Submit for approval'}
+              {canSubmitFCPricing ? `Submit ${rl.FC} pricing` : co.pricing_type === 'fixed' ? 'Submit scope & price' : co.pricing_type === 'tm' ? 'Submit rates & actuals' : 'Submit rates & ceiling'}
             </Button>
           )}
           {canRecall && (
@@ -904,7 +904,7 @@ export function COStatusActions({
                   ? `Send to ${rl.GC}`
                   : itemReview
                     ? !lineReview.complete ? 'Finish review' : lineReview.approved === 0 ? 'Finish rejection' : lineReview.rejected > 0 ? 'Finish partial approval' : 'Finish approval'
-                    : 'Approve'}
+                    : co.pricing_type === 'fixed' ? 'Approve scope & price' : co.pricing_type === 'tm' ? 'Authorize rates & actuals' : 'Authorize rates & cap'}
               </Button>
             </>
           )}
@@ -922,13 +922,13 @@ export function COStatusActions({
           {canMarkCompleted && (
             <Button size="sm" variant="outline" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doMarkCompleted} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-              Mark Work Completed
+              {co.pricing_type === 'fixed' ? 'Mark Work Completed' : 'Close out order'}
             </Button>
           )}
           {canAcknowledge && (
             <Button size="sm" className="w-full min-h-8 h-auto py-1 whitespace-normal leading-snug text-xs gap-1" onClick={doAcknowledgeCompletion} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <ThumbsUp className="h-3 w-3" />}
-              Acknowledge Completion
+              {co.pricing_type === 'fixed' ? 'Acknowledge Completion' : 'Approve closeout'}
             </Button>
           )}
         </div>
@@ -968,13 +968,19 @@ export function COStatusActions({
               ? `Send to ${rl.GC}`
               : itemReview
                 ? lineReview.approved === 0 ? 'Reject all items' : lineReview.rejected > 0 ? 'Finish partial approval' : 'Approve all items'
-                : co.document_type === 'WO' ? 'Approve work order' : 'Approve change order'}</AlertDialogTitle>
+                : co.pricing_type === 'fixed'
+                  ? (co.document_type === 'WO' ? 'Approve work order scope & price' : 'Approve change order scope & price')
+                  : co.pricing_type === 'tm' ? 'Authorize rates & actuals' : 'Authorize rates & NTE ceiling'}</AlertDialogTitle>
             <AlertDialogDescription>
               {forwardsToGC
                 ? `This sends the approved ${co.document_type === 'WO' ? 'work order' : 'change order'} to ${rl.GC} for their approval.`
                 : itemReview
                   ? `${lineReview.approved} approved · ${lineReview.rejected} rejected. ${lineReview.approved > 0 ? `Only the approved amount of ${money(gcCostBase)} will be added to the contract.` : 'No amount will be added to the contract.'}`
-                  : `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`}
+                  : co.pricing_type === 'fixed'
+                    ? `Are you sure you want to approve this ${co.document_type === 'WO' ? 'work order' : 'change order'}?`
+                    : co.pricing_type === 'tm'
+                      ? 'This authorizes the submitted rates and current actuals. The running total may continue to grow from dated entries.'
+                      : `This authorizes actuals up to the ${money(co.nte_cap ?? 0)} ceiling. New entries cannot pass that ceiling without an approved increase.`}
               {!forwardsToGC && (!itemReview || lineReview.approved > 0) && co.pricing_type === 'fixed' && (
                 <span className="block mt-1">
                   The subcontractor will be able to submit an invoice for approved work.

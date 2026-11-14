@@ -1,6 +1,5 @@
 import { forwardRef } from 'react';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
-import { CONTEPanel } from './CONTEPanel';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { COSOVPanel } from './COSOVPanel';
 import { COTeamCard } from './COTeamCard';
@@ -45,8 +44,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
   const {
     co, isGC, isTC, isFC, collaborators, fcOrgOptions, fcCollabName,
     canRequestFCInput, canCompleteFCInput,
-    nteLog, requestFCInput, completeFCInput,
-    requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
+    requestFCInput, completeFCInput,
     onRefresh, financials,
   } = props;
   const rl = useRoleLabelsContext();
@@ -80,20 +78,6 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
         </div>
       )}
 
-      {co.pricing_type === 'nte' && co.nte_cap && (
-        <CONTEPanel
-          co={co}
-          nteLog={nteLog}
-          usedAmount={financials.laborTotal}
-          isGC={isGC}
-          isTC={isTC}
-          isFC={isFC}
-          requestNTEIncrease={requestNTEIncrease}
-          approveNTEIncrease={approveNTEIncrease}
-          rejectNTEIncrease={rejectNTEIncrease}
-          onRefresh={onRefresh}
-        />
-      )}
     </div>
   );
 });

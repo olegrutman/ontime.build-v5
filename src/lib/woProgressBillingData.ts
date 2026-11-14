@@ -26,14 +26,19 @@ export function applyWoInvoiceLine(info: WoBilledInfo, status: string, line: WoI
   else info.billed += amount;
 }
 
-/** Billed and draft amounts per WO for invoices the given org issued; rejected/void are excluded. */
-export async function fetchWoBilledToDate(projectId: string, orgId: string, coIds: string[]): Promise<Map<string, WoBilledInfo>> {
+/** Billed and draft amounts per WO for invoices issued or received by the given org; rejected/void are excluded. */
+export async function fetchWoBilledToDate(
+  projectId: string,
+  orgId: string,
+  coIds: string[],
+  direction: 'issued' | 'received' = 'issued',
+): Promise<Map<string, WoBilledInfo>> {
   const out = new Map<string, WoBilledInfo>();
   coIds.forEach(id => out.set(id, { billed: 0, draft: 0, entryIds: new Set(), legacyFullyBilled: false }));
   if (coIds.length === 0) return out;
 
   const { data: contracts } = await supabase
-    .from('project_contracts').select('id').eq('project_id', projectId).eq('from_org_id', orgId);
+    .from('project_contracts').select('id').eq('project_id', projectId).eq(direction === 'issued' ? 'from_org_id' : 'to_org_id', orgId);
   const contractIds = (contracts ?? []).map(c => c.id);
   if (contractIds.length === 0) return out;
 

@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 import { seedFromEntry, seedForNewEntry } from '@/lib/laborEntrySeed';
 import { calculateLaborEntryAmount } from '@/lib/laborEntryMath';
+import { getNteEntryStatus } from '@/lib/coPricingPresentation';
 
 
 function fmtHours(n: number) {
@@ -68,7 +69,6 @@ export function LaborEntryForm({
   const description = editingEntry?.description ?? '';
   const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showNTEWarn, setShowNTEWarn] = useState(false);
   const [internalCost, setInternalCost] = useState('');
   const [costType, setCostType] = useState('labor_wages');
 
@@ -209,11 +209,13 @@ export function LaborEntryForm({
   const marginDollars = computedTotal - internalCostValue;
   const marginPercent = computedTotal > 0 ? (marginDollars / computedTotal) * 100 : 0;
 
-  const projectedUsed = nteUsed + computedTotal;
-  const ntePercent = nteCap && nteCap > 0 ? (projectedUsed / nteCap) * 100 : null;
-  const willExceed = ntePercent !== null && ntePercent >= 95;
+  const replacedEntryAmount = isEditing && !isActualCost ? Number(editingEntry?.line_total ?? 0) : 0;
+  const nteStatus = getNteEntryStatus(nteUsed, computedTotal, nteCap, replacedEntryAmount);
+  const ntePercent = nteCap && nteCap > 0 ? nteStatus.percentUsed : null;
+  const projectedUsed = nteStatus.projectedUsed;
+  const willExceed = nteStatus.exceedsCap;
 
-  const validationMessage =
+  const fieldValidation =
     !entryDate ? 'Select a date.'
     : mode === 'lump_sum' ? (lumpSumValue <= 0 ? 'Enter an amount greater than zero.' : null)
     : useCrewMath
@@ -225,6 +227,9 @@ export function LaborEntryForm({
     : hoursValue <= 0 ? 'Enter hours greater than zero.'
     : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
     : null;
+  const validationMessage = fieldValidation ?? (!isActualCost && willExceed
+    ? `This entry exceeds the remaining NTE allowance of $${nteStatus.remainingBeforeEntry.toFixed(2)}.`
+    : null);
 
   const canSave = !validationMessage;
 
@@ -238,7 +243,7 @@ export function LaborEntryForm({
     setHours(''); setLumpSum('');
     setInternalCost(''); setCostType('labor_wages');
     setImportedFC(false);
-    setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
+    setEntryDate(format(new Date(), 'yyyy-MM-dd'));
     setCrewSize(''); setDays(''); setHoursPerDay(''); setUseCrewMath(true);
   }
 
@@ -264,9 +269,9 @@ export function LaborEntryForm({
     if (!user) { toast.error('Sign in required'); return; }
     if (!canSave) { toast.error(validationMessage ?? 'Complete required fields.'); return; }
 
-    if (!isActualCost && !isEditing && nteCap && nteCap > 0) {
-      if (nteUsed >= nteCap) { toast.error('NTE cap reached — an increase must be approved.'); return; }
-      if (willExceed && !showNTEWarn) { setShowNTEWarn(true); return; }
+    if (!isActualCost && willExceed) {
+      toast.error(`This entry exceeds the NTE ceiling. Reduce it to ${money(nteStatus.remainingBeforeEntry)} or less, or request an increase.`);
+      return;
     }
 
     setSaving(true);
@@ -362,7 +367,7 @@ export function LaborEntryForm({
       onSaved();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to save');
-    } finally { setSaving(false); setShowNTEWarn(false); }
+    } finally { setSaving(false); }
   }
 
   const fieldInput = 'w-full h-10 rounded-lg px-3 text-sm bg-background border border-border text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-[hsl(var(--amber))] focus:ring-2 focus:ring-[hsl(var(--amber)/0.25)] transition-colors';
@@ -387,7 +392,7 @@ export function LaborEntryForm({
           <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground truncate font-heading">
             {isEditing
               ? (isActualCost ? 'Edit private cost' : 'Edit pricing entry')
-              : (isActualCost ? 'Log private cost' : 'Add pricing entry')}
+              : (isActualCost ? 'Log private cost' : pricingType === 'fixed' ? 'Add pricing entry' : 'Log dated actuals')}
           </h3>
         </div>
         <div className="grid grid-cols-2 w-full sm:w-auto p-1 rounded-lg bg-background border border-border">
@@ -668,26 +673,28 @@ export function LaborEntryForm({
           </div>
         )}
 
-        {/* NTE warning */}
-        {showNTEWarn && ntePercent !== null && (
-          <div className="rounded-xl border border-dashed border-destructive/50 bg-destructive/5 p-3.5 space-y-3">
-            <p className="text-[11px] font-bold uppercase tracking-tight text-destructive">NTE cap warning</p>
-            <p className="text-xs text-destructive/90">
-              This entry will bring you to <span className="font-bold" style={mono}>{ntePercent.toFixed(1)}%</span> of the {money(nteCap ?? 0)} cap.
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 h-10" onClick={() => setShowNTEWarn(false)}>Cancel</Button>
-              <Button variant="destructive" className="flex-1 h-10" onClick={attemptSave} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Log anyway'}
-              </Button>
+        {/* The NTE ceiling is a hard stop, not a warning that can be bypassed. */}
+        {!isActualCost && pricingType === 'nte' && nteCap != null && nteCap > 0 && (
+          <div className={cn(
+            'rounded-xl border p-3.5',
+            willExceed ? 'border-destructive/50 bg-destructive/5' : nteStatus.approachingCap ? 'border-state-open/40 bg-state-open-bg' : 'border-border bg-muted/30',
+          )}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className={cn('text-[11px] font-bold uppercase tracking-tight', willExceed ? 'text-destructive' : 'text-foreground')}>
+                {willExceed ? 'Ceiling exceeded' : 'NTE allowance'}
+              </p>
+              <p className="font-mono text-xs font-semibold text-foreground">{money(nteStatus.remainingBeforeEntry)} remaining before this entry</p>
             </div>
+            <p className={cn('mt-1 text-xs leading-relaxed', willExceed ? 'text-destructive' : 'text-muted-foreground')}>
+              Projected: {money(projectedUsed)} of {money(nteCap)} ({ntePercent?.toFixed(1)}%).
+              {willExceed ? ' Reduce this entry or request an approved cap increase.' : nteStatus.approachingCap ? ' This entry uses at least 80% of the ceiling.' : ''}
+            </p>
           </div>
         )}
       </div>
 
       {/* Summary + actions */}
-      {!showNTEWarn && (
-        <div className="px-4 py-3 border-t border-border bg-muted/40 flex flex-wrap items-center justify-between gap-3">
+      <div className="px-4 py-3 border-t border-border bg-muted/40 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-5">
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-widest font-bold text-muted-foreground">
@@ -732,7 +739,6 @@ export function LaborEntryForm({
             </Button>
           </div>
         </div>
-      )}
     </div>
   );
 }

@@ -33,6 +33,7 @@ interface CONTEPanelProps {
   approveNTEIncrease: UseMutationResult<ChangeOrder, Error, { nteLogId: string; requestedIncrease: number }, unknown>;
   rejectNTEIncrease: UseMutationResult<void, Error, { nteLogId: string; note: string }, unknown>;
   onRefresh: () => void;
+  presentation?: 'details' | 'actions';
 }
 
 function fmt(n: number) {
@@ -50,6 +51,7 @@ export function CONTEPanel({
   approveNTEIncrease,
   rejectNTEIncrease,
   onRefresh,
+  presentation = 'details',
 }: CONTEPanelProps) {
   const rl = useRoleLabelsContext();
   const [requestOpen, setRequestOpen] = useState(false);
@@ -179,6 +181,7 @@ export function CONTEPanel({
 
   return (
     <>
+      {presentation === 'details' && (
       <div className="co-light-shell">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
           <div className="flex items-center gap-2">
@@ -338,6 +341,54 @@ export function CONTEPanel({
           )}
         </div>
       </div>
+      )}
+
+      {presentation === 'actions' && (
+        <div className="space-y-2 rounded-xl border border-state-open/30 bg-state-open-bg/60 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-foreground">Ceiling actions</p>
+            <span className={cn('text-[11px] font-semibold', isNearCap ? 'text-destructive' : 'text-muted-foreground')}>{pct.toFixed(1)}% used</span>
+          </div>
+
+          {(isWarning || isNearCap) && !hasPending && (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {isOver ? 'Ceiling reached. New over-cap entries are locked.' : `Approaching the ${fmt(cap)} ceiling. Request more room before work passes it.`}
+            </p>
+          )}
+
+          {hasPending && pendingRequest && (
+            <div className="rounded-lg border border-border bg-card p-3">
+              <p className="text-xs font-semibold text-foreground">Requested increase: +${fmt(pendingRequest.requested_increase)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">New ceiling if approved: ${fmt(pendingRequest.current_cap_at_request + pendingRequest.requested_increase)}</p>
+              {isGC ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setRejectId(pendingRequest.id)} disabled={acting}>Decline</Button>
+                  <Button size="sm" onClick={() => setApproveId(pendingRequest.id)} disabled={acting}><Check className="h-3.5 w-3.5" />Approve increase</Button>
+                </div>
+              ) : (
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Waiting for {rl.GC} approval</p>
+              )}
+            </div>
+          )}
+
+          {!hasPending && (isTC || isFC) && (
+            <Button variant={isNearCap ? 'default' : 'outline'} size="sm" className="min-h-9 w-full gap-1.5 whitespace-normal" onClick={() => setRequestOpen(true)} disabled={acting}>
+              <TrendingUp className="h-3.5 w-3.5" />Request cap increase
+            </Button>
+          )}
+
+          {nteLog.some(e => e.approved_at || e.rejected_at) && (
+            <details className="pt-1 text-xs text-muted-foreground">
+              <summary className="cursor-pointer select-none">Ceiling history</summary>
+              <div className="mt-2 space-y-1">
+                {nteLog.filter(e => e.approved_at || e.rejected_at).map(entry => (
+                  <p key={entry.id}>{entry.approved_at ? `Approved +$${fmt(entry.requested_increase)}` : `Declined $${fmt(entry.requested_increase)}`}</p>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
 
       {/* Request increase dialog */}
       <AlertDialog open={requestOpen} onOpenChange={setRequestOpen}>

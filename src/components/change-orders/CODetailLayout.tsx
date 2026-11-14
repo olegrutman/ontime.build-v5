@@ -1,6 +1,6 @@
 import { useState, useRef, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
+import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare, Clock3 } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,8 @@ import { COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
+import { CONTEPanel } from './CONTEPanel';
+import { fetchWoBilledToDate } from '@/lib/woProgressBillingData';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -90,6 +92,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfPerspectiveOpen, setPdfPerspectiveOpen] = useState(false);
+  const [entryRequest, setEntryRequest] = useState<{ itemId: string; token: number } | null>(null);
 
   async function downloadPdfWithPerspective(
     perspective?: 'upstream' | 'downstream',
@@ -207,6 +210,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     canEdit, canEditExternal, canEditInternal, canRequestFCInput, canCompleteFCInput, nteBlocked,
     pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
   } = useCORoleContext(co ?? null, collaborators, financials, revisionUnlocked);
+  const { data: billingInfo } = useQuery({
+    queryKey: ['co-order-billing', projectId, coId, myOrgId, isGC ? 'received' : 'issued'],
+    enabled: !!myOrgId && !!coId,
+    queryFn: async () => {
+      const result = await fetchWoBilledToDate(projectId, myOrgId, [coId], isGC ? 'received' : 'issued');
+      return result.get(coId) ?? null;
+    },
+  });
 
   // My own labor rate / markup — used to show the crew-derived amount on unpriced
   // scope items so the item card matches the side panel.
@@ -266,13 +277,23 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     photosCardRef.current?.openAdd(type);
   }
 
+  function openFirstEntry() {
+    const item = lineItems.find(row => row.approval_status !== 'rejected');
+    if (!item) {
+      toast.info('Add a scope item before logging work.');
+      return;
+    }
+    setEntryRequest({ itemId: item.id, token: Date.now() });
+    goToSection(scopeRef);
+  }
+
   async function handleAction(action: string) {
     switch (action) {
       case 'scroll_scope': goToSection(scopeRef); break;
       case 'scroll_materials': goToSection(materialsRef); break;
       case 'scroll_pricing': goToSection(pricingRef); break;
       case 'scroll_fc': goToSection(scopeRef); break;
-      case 'log_hours': goToSection(scopeRef); break;
+      case 'log_hours': openFirstEntry(); break;
       case 'request_fc':
         goToSection(scopeRef);
         if (fcOrgOptions.length === 0) {
@@ -493,7 +514,19 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         cost += sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === 'FC' && !imported.has(e.id)));
       }
     }
-    return { id: li.id, name: li.item_name, revenue, cost, priced: getCOPricingReadiness([li], laborEntries, role) === 'ready' };
+    const hours = entries
+      .filter(e => !e.is_actual_cost && e.pricing_mode === 'hourly' && e.entered_by_role === (isFC ? 'FC' : 'TC') && (isGC || e.org_id === myOrgId))
+      .reduce((total, entry) => total + Number(entry.hours ?? 0), 0);
+    return {
+      id: li.id,
+      name: li.item_name,
+      revenue,
+      cost,
+      priced: getCOPricingReadiness([li], laborEntries, role) === 'ready',
+      hours,
+      completed: !!li.completed_at,
+      rejected: li.approval_status === 'rejected',
+    };
   });
   // Sum only the viewer's own billing-role entries — adding the crew's cost and
   // the subcontractor's price for the same work would double count it.
@@ -501,6 +534,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const totalLogged = laborEntries
     .filter(e => !e.is_actual_cost && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole))
     .reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const totalLoggedHours = laborEntries
+    .filter(e => !e.is_actual_cost && e.pricing_mode === 'hourly' && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole && e.org_id === myOrgId))
+    .reduce((s, e) => s + Number(e.hours ?? 0), 0);
+  const activeLineItems = lineItems.filter(item => item.approval_status !== 'rejected');
+  const completedItemCount = activeLineItems.filter(item => !!item.completed_at).length;
 
   // Responsibility-aware billable-to-GC total. Centralized in useChangeOrderDetail
   // so every consumer (KPI strip, scope strip, sidebar, sticky footer, hero block,
@@ -520,6 +558,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const tcBillableTotal = co.approved_amount ?? (financials.billableGrandTotal > 0
     ? financials.billableGrandTotal
     : (crewDerivedPrice?.fcHasSubmitted ? crewDerivedPrice.calculatedPrice : financials.billableGrandTotal));
+  const orderBillingValue = Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
+  const billedToDate = billingInfo?.legacyFullyBilled ? orderBillingValue : Number(billingInfo?.billed ?? 0);
+  const draftBilling = Number(billingInfo?.draft ?? 0);
 
 
 
@@ -539,7 +580,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     tcBillableTotal,
   };
 
-  const billedCard = co && (isTC || isFC) ? (
+  const billedCard = co && (isTC || isFC) && co.pricing_type !== 'tm' ? (
     <WOBilledToDateCard
       projectId={projectId}
       coId={co.id}
@@ -597,15 +638,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               >
                 <Receipt className="h-3.5 w-3.5" /> {linkedInvoice.invoice_number}
               </Button>
-            ) : (isTC || isFC) && (status === 'approved' || status === 'contracted') ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs gap-1 text-primary"
-                onClick={() => setCreateInvoiceOpen(true)}
-              >
-                <Receipt className="h-3.5 w-3.5" /> Generate Invoice
-              </Button>
             ) : null}
             {isGC && (
               <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-muted-foreground" onClick={() => setExternalInviteOpen(true)}>
@@ -657,11 +689,43 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             pricedCount={pricedCount}
             itemCount={lineItems.length}
             itemBreakdown={itemBreakdown}
+            billedToDate={billedToDate}
+            draftBilling={draftBilling}
+            billingLoaded={billingInfo != null}
+            loggedHours={totalLoggedHours}
+            completedItemCount={completedItemCount}
+            activeItemCount={activeLineItems.length}
           />
               </div>
               <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
             </div>
             <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm xl:sticky xl:top-14">
+              {(isTC || isFC) && co.pricing_type !== 'fixed' && canEdit && !nteBlocked && lineItems.some(item => item.approval_status !== 'rejected') && (
+                <Button className="min-h-10 w-full gap-2 whitespace-normal" onClick={openFirstEntry}>
+                  <Clock3 className="h-4 w-4 shrink-0" />Log hours &amp; actuals
+                </Button>
+              )}
+              {(isTC || isFC) && (status === 'approved' || status === 'contracted') && (
+                <Button variant="outline" className="min-h-10 w-full gap-2 whitespace-normal" onClick={() => setCreateInvoiceOpen(true)}>
+                  <Receipt className="h-4 w-4 shrink-0" />
+                  {co.pricing_type === 'fixed' ? 'Create progress invoice' : 'Invoice logged actuals'}
+                </Button>
+              )}
+              {co.pricing_type === 'nte' && co.nte_cap != null && (
+                <CONTEPanel
+                  presentation="actions"
+                  co={co}
+                  nteLog={nteLog}
+                  usedAmount={financials.nteUsedAmount}
+                  isGC={isGC}
+                  isTC={isTC}
+                  isFC={isFC}
+                  requestNTEIncrease={requestNTEIncrease}
+                  approveNTEIncrease={approveNTEIncrease}
+                  rejectNTEIncrease={rejectNTEIncrease}
+                  onRefresh={refreshDetail}
+                />
+              )}
               <COStatusActions
               co={co}
               isGC={isGC}
@@ -676,17 +740,19 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               lineItems={lineItems}
               laborEntries={laborEntries}
             />
+          {pricingType === 'fixed' && (
             <COPricingUnlockBar
-            co={co}
-            canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
-            unlocked={revisionUnlocked}
-            onToggle={setRevisionUnlocked}
-          />
-          {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+              co={co}
+              canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
+              unlocked={revisionUnlocked}
+              onToggle={setRevisionUnlocked}
+            />
+          )}
+          {pricingType === 'fixed' && !hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
               <COCorrectionCard presentation="actions" corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
             </section>
           </div>
-          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
+          {pricingType === 'fixed' && !hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
@@ -739,7 +805,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <div className="min-w-0 flex-1">
                         <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none whitespace-nowrap">Scope &amp; Labor</h3>
                         <p className="mt-1.5 text-[11px] text-muted-foreground">
-                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · select an item to view details and pricing
+                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · {co.pricing_type === 'fixed' ? 'select an item to view its agreed price and completion' : 'open an item to review or log dated actuals'}
                         </p>
                       </div>
 
@@ -768,8 +834,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     </details>
                   )}
 
-                  {/* Progress bar */}
-                  {lineItems.length > 0 && (
+                  {/* Fixed orders track pricing readiness; running orders track actuals instead. */}
+                  {lineItems.length > 0 && co.pricing_type === 'fixed' && (
                     <div className="flex flex-wrap items-center gap-3 mt-3">
                       <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
                         <div
@@ -782,6 +848,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       </span>
                     </div>
                   )}
+                  {lineItems.length > 0 && co.pricing_type !== 'fixed' && (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                      <span>{totalLoggedHours.toLocaleString('en-US', { maximumFractionDigits: 1 })} hours logged</span>
+                      <span>{co.pricing_type === 'nte' ? 'Every new billable entry is checked against the ceiling' : 'Running actuals update as dated entries are saved'}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Line items */}
@@ -791,8 +863,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     <div className="hidden px-4 py-2 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
                       <span>#</span>
                       <span>Item</span>
-                      <span className="text-right">Pricing</span>
-                      <span className="text-right">Price</span>
+                      <span className="text-right">{co.pricing_type === 'fixed' ? 'Pricing' : 'Entry'}</span>
+                      <span className="text-right">{co.pricing_type === 'fixed' ? 'Price' : 'Actuals'}</span>
                       <span className="text-right">Review</span>
                       <span className="text-right">Open</span>
                     </div>
@@ -814,7 +886,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
                           role={role} isGC={isGC} isTC={isTC} isFC={isFC}
                           coId={co.id} orgId={myOrgId} coPricingType={pricingType}
-                          coNteCap={co.nte_cap} coNteUsed={financials.laborTotal}
+                          coNteCap={co.nte_cap} coNteUsed={financials.nteUsedAmount}
+                          entryRequestToken={entryRequest?.itemId === item.id ? entryRequest.token : undefined}
                           canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
                           canEditExternal={canEditExternal}
                           canEditInternal={canEditInternal}
@@ -850,6 +923,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             pricedCount={pricedCount}
             itemCount={lineItems.length}
             itemBreakdown={itemBreakdown}
+            billedToDate={billedToDate}
+            draftBilling={draftBilling}
+            billingLoaded={billingInfo != null}
+            loggedHours={totalLoggedHours}
+            completedItemCount={completedItemCount}
+            activeItemCount={activeLineItems.length}
                   compact
                 />
               </div>
@@ -877,6 +956,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       />
                     }
                     onRefresh={refreshDetail}
+                    nteCap={co.pricing_type === 'nte' ? co.nte_cap : null}
+                    nteUsed={financials.nteUsedAmount}
                   />
                 </div>
 
@@ -898,6 +979,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     />
                   }
                   onRefresh={refreshDetail}
+                  nteCap={co.pricing_type === 'nte' ? co.nte_cap : null}
+                  nteUsed={financials.nteUsedAmount}
                 />
 
               {/* Photos */}
@@ -975,7 +1058,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           <div className="space-y-3 xl:hidden">
             <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-            {billedCard}
             {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
           </div>
         </div>
@@ -997,6 +1079,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         projectId={projectId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['co-linked-invoice', coId] });
+          queryClient.invalidateQueries({ queryKey: ['co-order-billing', projectId, coId] });
           refreshDetail();
         }}
         isTM={co.document_type === 'WO'}
