@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
 import { coLaborCost } from '@/lib/coLaborCost';
-import { approvedLaborForReview } from '@/lib/coLineReview';
+import { approvedLaborForReview, finalizedCOApprovalAmount } from '@/lib/coLineReview';
 import { getNteUsedAmount } from '@/lib/coPricingPresentation';
 
 import type {
@@ -211,7 +211,8 @@ export function useChangeOrderDetail(coId: string | null) {
     : tcLaborTotal;
   // Bug 2: grandTotal uses tcBillableToGC to avoid double-counting when FC pricing is base
   const grandTotal = tcBillableToGC + materialsTotal + equipmentTotal;
-  const hasPartialLineApproval = co?.approved_amount != null && lineItems.some(item => item.approval_status === 'rejected');
+  const finalizedApprovalAmount = finalizedCOApprovalAmount(co);
+  const hasPartialLineApproval = finalizedApprovalAmount != null && lineItems.some(item => item.approval_status === 'rejected');
   const approvedTcBillableToGC = hasPartialLineApproval
     ? approvedLaborForReview(lineItems, laborEntries)
     : tcBillableToGC;
@@ -281,7 +282,7 @@ export function useChangeOrderDetail(coId: string | null) {
     ?? 'TC') as 'GC' | 'TC';
   const billableMaterialsTotal = matResp === 'TC' ? materialsTotal : 0;
   const billableEquipmentTotal = eqResp === 'TC' ? equipmentTotal : 0;
-  const billableGrandTotal = co?.approved_amount ?? (approvedTcBillableToGC + billableMaterialsTotal + billableEquipmentTotal);
+  const billableGrandTotal = finalizedApprovalAmount ?? (approvedTcBillableToGC + billableMaterialsTotal + billableEquipmentTotal);
   // The ceiling tracks current billable actuals, not the frozen approval snapshot.
   // Crew-derived labor is already deduplicated in laborTotal.
   const nteUsedAmount = getNteUsedAmount(laborTotal, billableMaterialsTotal, billableEquipmentTotal);
