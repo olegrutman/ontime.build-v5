@@ -210,6 +210,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     canEdit, canEditExternal, canEditInternal, canRequestFCInput, canCompleteFCInput, nteBlocked,
     pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
   } = useCORoleContext(co ?? null, collaborators, financials, revisionUnlocked);
+  const { data: billingInfo } = useQuery({
+    queryKey: ['co-order-billing', projectId, coId, myOrgId, isGC ? 'received' : 'issued'],
+    enabled: !!myOrgId && !!coId,
+    queryFn: async () => {
+      const result = await fetchWoBilledToDate(projectId, myOrgId, [coId], isGC ? 'received' : 'issued');
+      return result.get(coId) ?? null;
+    },
+  });
 
   // My own labor rate / markup — used to show the crew-derived amount on unpriced
   // scope items so the item card matches the side panel.
