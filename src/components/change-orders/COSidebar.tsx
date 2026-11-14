@@ -44,8 +44,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
   const {
     co, isGC, isTC, isFC, collaborators, fcOrgOptions, fcCollabName,
     canRequestFCInput, canCompleteFCInput,
-    nteLog, requestFCInput, completeFCInput,
-    requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
+    requestFCInput, completeFCInput,
     onRefresh, financials,
   } = props;
   const rl = useRoleLabelsContext();
