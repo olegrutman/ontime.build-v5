@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import type { COLaborRole, COPricingMode, COLaborEntry } from '@/types/changeOrder';
 import { seedFromEntry, seedForNewEntry } from '@/lib/laborEntrySeed';
 import { calculateLaborEntryAmount } from '@/lib/laborEntryMath';
+import { getNteEntryStatus } from '@/lib/coPricingPresentation';
 
 
 function fmtHours(n: number) {
@@ -68,7 +69,6 @@ export function LaborEntryForm({
   const description = editingEntry?.description ?? '';
   const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showNTEWarn, setShowNTEWarn] = useState(false);
   const [internalCost, setInternalCost] = useState('');
   const [costType, setCostType] = useState('labor_wages');
 
@@ -209,11 +209,13 @@ export function LaborEntryForm({
   const marginDollars = computedTotal - internalCostValue;
   const marginPercent = computedTotal > 0 ? (marginDollars / computedTotal) * 100 : 0;
 
-  const projectedUsed = nteUsed + computedTotal;
-  const ntePercent = nteCap && nteCap > 0 ? (projectedUsed / nteCap) * 100 : null;
-  const willExceed = ntePercent !== null && ntePercent >= 95;
+  const replacedEntryAmount = isEditing && !isActualCost ? Number(editingEntry?.line_total ?? 0) : 0;
+  const nteStatus = getNteEntryStatus(nteUsed, computedTotal, nteCap, replacedEntryAmount);
+  const ntePercent = nteCap && nteCap > 0 ? nteStatus.percentUsed : null;
+  const projectedUsed = nteStatus.projectedUsed;
+  const willExceed = nteStatus.exceedsCap;
 
-  const validationMessage =
+  const fieldValidation =
     !entryDate ? 'Select a date.'
     : mode === 'lump_sum' ? (lumpSumValue <= 0 ? 'Enter an amount greater than zero.' : null)
     : useCrewMath
@@ -225,6 +227,9 @@ export function LaborEntryForm({
     : hoursValue <= 0 ? 'Enter hours greater than zero.'
     : rateValue <= 0 ? 'Enter an hourly rate greater than zero.'
     : null;
+  const validationMessage = fieldValidation ?? (!isActualCost && willExceed
+    ? `This entry exceeds the remaining NTE allowance of ${money(nteStatus.remainingBeforeEntry)}.`
+    : null);
 
   const canSave = !validationMessage;
 
@@ -238,7 +243,7 @@ export function LaborEntryForm({
     setHours(''); setLumpSum('');
     setInternalCost(''); setCostType('labor_wages');
     setImportedFC(false);
-    setShowNTEWarn(false); setEntryDate(format(new Date(), 'yyyy-MM-dd'));
+    setEntryDate(format(new Date(), 'yyyy-MM-dd'));
     setCrewSize(''); setDays(''); setHoursPerDay(''); setUseCrewMath(true);
   }
 
@@ -264,9 +269,9 @@ export function LaborEntryForm({
     if (!user) { toast.error('Sign in required'); return; }
     if (!canSave) { toast.error(validationMessage ?? 'Complete required fields.'); return; }
 
-    if (!isActualCost && !isEditing && nteCap && nteCap > 0) {
-      if (nteUsed >= nteCap) { toast.error('NTE cap reached — an increase must be approved.'); return; }
-      if (willExceed && !showNTEWarn) { setShowNTEWarn(true); return; }
+    if (!isActualCost && willExceed) {
+      toast.error(`This entry exceeds the NTE ceiling. Reduce it to ${money(nteStatus.remainingBeforeEntry)} or less, or request an increase.`);
+      return;
     }
 
     setSaving(true);
@@ -362,7 +367,7 @@ export function LaborEntryForm({
       onSaved();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to save');
-    } finally { setSaving(false); setShowNTEWarn(false); }
+    } finally { setSaving(false); }
   }
 
   const fieldInput = 'w-full h-10 rounded-lg px-3 text-sm bg-background border border-border text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-[hsl(var(--amber))] focus:ring-2 focus:ring-[hsl(var(--amber)/0.25)] transition-colors';
