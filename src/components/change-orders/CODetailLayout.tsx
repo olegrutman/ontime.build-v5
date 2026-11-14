@@ -539,9 +539,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     .reduce((s, e) => s + Number(e.hours ?? 0), 0);
   const activeLineItems = lineItems.filter(item => item.approval_status !== 'rejected');
   const completedItemCount = activeLineItems.filter(item => !!item.completed_at).length;
-  const orderBillingValue = Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
-  const billedToDate = billingInfo?.legacyFullyBilled ? orderBillingValue : Number(billingInfo?.billed ?? 0);
-  const draftBilling = Number(billingInfo?.draft ?? 0);
 
   // Responsibility-aware billable-to-GC total. Centralized in useChangeOrderDetail
   // so every consumer (KPI strip, scope strip, sidebar, sticky footer, hero block,
@@ -561,6 +558,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const tcBillableTotal = co.approved_amount ?? (financials.billableGrandTotal > 0
     ? financials.billableGrandTotal
     : (crewDerivedPrice?.fcHasSubmitted ? crewDerivedPrice.calculatedPrice : financials.billableGrandTotal));
+  const orderBillingValue = Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
+  const billedToDate = billingInfo?.legacyFullyBilled ? orderBillingValue : Number(billingInfo?.billed ?? 0);
+  const draftBilling = Number(billingInfo?.draft ?? 0);
 
 
 
@@ -580,7 +580,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     tcBillableTotal,
   };
 
-  const billedCard = co && (isTC || isFC) ? (
+  const billedCard = co && (isTC || isFC) && co.pricing_type !== 'tm' ? (
     <WOBilledToDateCard
       projectId={projectId}
       coId={co.id}
@@ -637,15 +637,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                 onClick={() => navigate(`/project/${projectId}/invoices`)}
               >
                 <Receipt className="h-3.5 w-3.5" /> {linkedInvoice.invoice_number}
-              </Button>
-            ) : (isTC || isFC) && (status === 'approved' || status === 'contracted') ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs gap-1 text-primary"
-                onClick={() => setCreateInvoiceOpen(true)}
-              >
-                <Receipt className="h-3.5 w-3.5" /> Generate Invoice
               </Button>
             ) : null}
             {isGC && (
