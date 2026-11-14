@@ -204,14 +204,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   });
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [revisionUnlocked, setRevisionUnlocked] = useState(false);
-  const { data: billingInfo } = useQuery({
-    queryKey: ['co-order-billing', projectId, coId, myOrgId, isGC ? 'received' : 'issued'],
-    enabled: !!myOrgId && !!coId,
-    queryFn: async () => {
-      const result = await fetchWoBilledToDate(projectId, myOrgId, [coId], isGC ? 'received' : 'issued');
-      return result.get(coId) ?? null;
-    },
-  });
   const canCreateOrders = usePermission('canCreateChangeOrders');
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
