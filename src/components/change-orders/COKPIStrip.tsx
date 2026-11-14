@@ -66,7 +66,7 @@ interface KPITile {
   gcCost?: number;
   markupPercent?: number | null;
   passedToOwner?: boolean | null;
-  kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'other';
+  kind?: 'revenue' | 'cost' | 'margin' | 'progress' | 'hours' | 'other';
   primary?: boolean;
   meter?: { percent: number; color: string };
 }
@@ -501,7 +501,21 @@ function Breakdown({ tile, items, financials }: { tile: KPITile; items: COKPIIte
         {items.map((it, i) => (
           <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
             <span className="min-w-0 break-words"><span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}</span>{it.name}</span>
-            <span className={it.priced ? 'shrink-0 text-xs font-semibold text-state-approved' : 'shrink-0 text-xs font-semibold text-state-open'}>{it.priced ? 'Priced' : 'Not priced'}</span>
+            <span className={it.completed ? 'shrink-0 text-xs font-semibold text-state-approved' : 'shrink-0 text-xs font-semibold text-muted-foreground'}>
+              {it.rejected ? 'Rejected · excluded' : it.completed ? 'Completed' : 'Not completed'}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (kind === 'hours') {
+    return (
+      <div className="divide-y divide-border">
+        {items.map((it, i) => (
+          <div key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+            <span className="min-w-0 break-words"><span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}</span>{it.name}</span>
+            <span className="shrink-0 font-mono font-semibold text-foreground">{it.hours.toLocaleString('en-US', { maximumFractionDigits: 1 })}h</span>
           </div>
         ))}
       </div>
@@ -561,6 +575,7 @@ function CompactTile({ tile, items, financials }: { tile: KPITile; items: COKPII
         className={cn('h-auto min-w-0 flex-col items-start gap-0.5 whitespace-normal rounded-xl px-3 py-2 text-left', tile.primary && 'col-span-2 py-3')}>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{tile.label}</span>
         <span className={cn('font-mono text-lg font-bold text-foreground', tile.primary && 'text-2xl')}>{tile.value}</span>
+        {tile.meter && <span className="mt-1 w-full"><Bar pct={tile.meter.percent} color={tile.meter.color} /></span>}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md gap-0 overflow-hidden rounded-2xl p-0">
@@ -598,7 +613,8 @@ export function COKPIStrip(props: COKPIStripProps) {
         : <KpiCard key={tile.label} label={tile.label} value={tile.value} sub={tile.sub ?? tile.label}
             icon={<Calculator size={18} />} accent={tile.color} iconBg={C.surface2} idx={idx} pills={tilePills(tile)}
             className={tile.primary ? 'sm:col-span-2' : undefined}
-            valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}>
+            valueClassName={tile.primary ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-xl'}
+            spark={tile.meter ? <Bar pct={tile.meter.percent} color={tile.meter.color} /> : undefined}>
             {(tile.kind ?? 'other') !== 'other'
               ? <Breakdown tile={tile} items={items} financials={props.financials} />
               : undefined}

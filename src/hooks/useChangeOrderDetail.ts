@@ -5,6 +5,7 @@ import { useCoV4Flag } from '@/hooks/useCoV4Flag';
 import { resolveUpstreamBillerOrgId } from '@/lib/fcPricingBase';
 import { coLaborCost } from '@/lib/coLaborCost';
 import { approvedLaborForReview } from '@/lib/coLineReview';
+import { getNteUsedAmount } from '@/lib/coPricingPresentation';
 
 import type {
   ChangeOrder,
@@ -223,8 +224,6 @@ export function useChangeOrderDetail(coId: string | null) {
     ? (tcActualCostTotal > 0 ? tcActualCostTotal : fcActualCostTotal)
     : tcActualCostTotal + fcActualCostTotal;
   const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
-  // Bug 3: NTE tracks labor spend only, not materials/equipment
-  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0;
 
   // Tax computations — use snapshot if available, else project settings
   const { data: projectTaxSettings } = useQuery({
@@ -283,6 +282,10 @@ export function useChangeOrderDetail(coId: string | null) {
   const billableMaterialsTotal = matResp === 'TC' ? materialsTotal : 0;
   const billableEquipmentTotal = eqResp === 'TC' ? equipmentTotal : 0;
   const billableGrandTotal = co?.approved_amount ?? (approvedTcBillableToGC + billableMaterialsTotal + billableEquipmentTotal);
+  // The ceiling tracks current billable actuals, not the frozen approval snapshot.
+  // Crew-derived labor is already deduplicated in laborTotal.
+  const nteUsedAmount = getNteUsedAmount(laborTotal, billableMaterialsTotal, billableEquipmentTotal);
+  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (nteUsedAmount / co.nte_cap) * 100 : 0;
   const billableMaterialsTax = billableMaterialsTotal * taxPct;
   const billableEquipmentTax = billableEquipmentTotal * taxPct;
   const billableLaborTax = laborTaxable ? approvedTcBillableToGC * taxPct : 0;
@@ -372,6 +375,7 @@ export function useChangeOrderDetail(coId: string | null) {
     fcActualCostTotal,
     useFcPricingBase: !!co?.use_fc_pricing_base,
     profitMargin,
+    nteUsedAmount,
     nteUsedPercent,
     materialsTax,
     laborTax: billableLaborTax,
