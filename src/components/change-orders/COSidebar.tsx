@@ -1,6 +1,5 @@
 import { forwardRef } from 'react';
 import { useRoleLabelsContext } from '@/contexts/RoleLabelsContext';
-import { CONTEPanel } from './CONTEPanel';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { COSOVPanel } from './COSOVPanel';
 import { COTeamCard } from './COTeamCard';
@@ -80,20 +79,6 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
         </div>
       )}
 
-      {co.pricing_type === 'nte' && co.nte_cap && (
-        <CONTEPanel
-          co={co}
-          nteLog={nteLog}
-          usedAmount={financials.laborTotal}
-          isGC={isGC}
-          isTC={isTC}
-          isFC={isFC}
-          requestNTEIncrease={requestNTEIncrease}
-          approveNTEIncrease={approveNTEIncrease}
-          rejectNTEIncrease={rejectNTEIncrease}
-          onRefresh={onRefresh}
-        />
-      )}
     </div>
   );
 });
