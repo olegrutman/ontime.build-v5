@@ -804,7 +804,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <div className="min-w-0 flex-1">
                         <h3 className="font-heading text-base font-bold uppercase tracking-wide text-foreground leading-none whitespace-nowrap">Scope &amp; Labor</h3>
                         <p className="mt-1.5 text-[11px] text-muted-foreground">
-                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · select an item to view details and pricing
+                          {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · {co.pricing_type === 'fixed' ? 'select an item to view its agreed price and completion' : 'open an item to review or log dated actuals'}
                         </p>
                       </div>
 
@@ -833,8 +833,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     </details>
                   )}
 
-                  {/* Progress bar */}
-                  {lineItems.length > 0 && (
+                  {/* Fixed orders track pricing readiness; running orders track actuals instead. */}
+                  {lineItems.length > 0 && co.pricing_type === 'fixed' && (
                     <div className="flex flex-wrap items-center gap-3 mt-3">
                       <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
                         <div
@@ -845,6 +845,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       <span className="text-xs font-medium text-muted-foreground">
                         {pricedCount}/{lineItems.length} labor items priced · {pricingReadiness === 'ready' ? 'Pricing complete' : 'Pricing incomplete'}
                       </span>
+                    </div>
+                  )}
+                  {lineItems.length > 0 && co.pricing_type !== 'fixed' && (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                      <span>{totalLoggedHours.toLocaleString('en-US', { maximumFractionDigits: 1 })} hours logged</span>
+                      <span>{co.pricing_type === 'nte' ? 'Every new billable entry is checked against the ceiling' : 'Running actuals update as dated entries are saved'}</span>
                     </div>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import { CODescriptionEditor } from './CODescriptionEditor';
-import { useState, forwardRef } from 'react';
+import { useEffect, useState, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -51,6 +51,8 @@ interface COLineItemRowProps {
   coStatus?: string;
   /** Item-level approval stays inside the same item window. */
   canReview?: boolean;
+  /** Opens this item directly in entry mode from the Actions box. */
+  entryRequestToken?: number;
 }
 
 
@@ -81,6 +83,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   canAddLabor, canEditExternal = false, canEditInternal = false,
   onRefresh, isEven = true, index, markupVisibility = 'hidden', crewPricingBase, coStatus,
   canReview = false,
+  entryRequestToken,
 }, ref) {
   const rl = useRoleLabelsContext();
 
@@ -100,6 +103,12 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   const [draftReason, setDraftReason] = useState<COReasonCode | ''>(item.reason ?? '');
   const [draftPricingType, setDraftPricingType] = useState<COPricingType | ''>(item.pricing_type as COPricingType ?? '');
   const [draftNteCap, setDraftNteCap] = useState(item.nte_cap != null ? String(item.nte_cap) : '');
+
+  useEffect(() => {
+    if (!entryRequestToken) return;
+    setExpanded(true);
+    setFormOpen(true);
+  }, [entryRequestToken]);
 
   const isMyOrgItem = item.org_id === orgId;
   const canEditHeader = canEditExternal && isMyOrgItem;
@@ -327,8 +336,8 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   // ---- Collapsed-row table cell values (hoisted so the header grid stays declarative) ----
   const isHourlyMode = visibleBillable.length > 0
     ? !visibleBillable.every(e => e.pricing_mode === 'lump_sum')
-    : pricingType === 'tm';
-  const modeLabel = isHourlyMode ? 'Hourly' : visibleBillable.length > 0 ? 'Lump sum' : pricingType === 'fixed' ? 'Fixed' : pricingType === 'tm' ? 'Hourly' : 'NTE';
+    : pricingType !== 'fixed';
+  const modeLabel = isHourlyMode ? 'Hourly' : visibleBillable.length > 0 ? 'Lump sum' : pricingType === 'fixed' ? 'Fixed' : 'Hourly';
   const totalHours = isHourlyMode ? visibleBillable.reduce((s, e) => s + (e.hours ?? 0), 0) : 0;
   const isPriced = entryCount > 0 || totalForRole > 0;
   // Once the order is submitted upstream the subcontractor's price is frozen —
@@ -431,7 +440,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                     className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] px-2 py-1 text-xs font-semibold"
                     style={{ color: 'hsl(var(--amber-d))' }}
                   >
-                    <DollarSign className="h-3 w-3" /> Set price
+                    <DollarSign className="h-3 w-3" /> {pricingType === 'fixed' ? 'Set price' : 'Log actuals'}
                   </button>
                 ) : (
                   <span className="text-muted-foreground">Not priced</span>
@@ -498,7 +507,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
                 className="inline-flex items-center gap-1 rounded-md border border-dashed border-state-open/70 bg-[hsl(var(--amber)/0.08)] hover:bg-[hsl(var(--amber)/0.15)] px-2 py-1 text-xs font-semibold transition-colors"
                 style={{ color: 'hsl(var(--amber-d))' }}
               >
-                <DollarSign className="h-3 w-3" /> Set price
+                <DollarSign className="h-3 w-3" /> {pricingType === 'fixed' ? 'Set price' : 'Log actuals'}
               </button>
             ) : (
               <span className="text-xs text-muted-foreground">Not priced</span>

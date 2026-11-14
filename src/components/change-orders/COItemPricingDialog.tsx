@@ -301,7 +301,7 @@ export function COItemPricingDialog({
             <>
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border bg-muted/20 px-5 py-5">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Billable price</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{pricingType === 'fixed' ? 'Agreed item price' : 'Running item actuals'}</p>
                   <p className="mt-1 whitespace-nowrap font-mono text-3xl font-bold text-foreground sm:text-4xl">{money(billableTotal)}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">{visibleBillable.length} billing entr{visibleBillable.length === 1 ? 'y' : 'ies'}</p>
@@ -321,8 +321,8 @@ export function COItemPricingDialog({
                   <TabsContent value="billing" className="m-0 p-3 sm:p-5">
                     {visibleBillable.length > 0 ? renderRows(visibleBillable) : (
                       <div className="rounded-xl border border-dashed border-border px-5 py-8 text-center">
-                        <p className="text-sm font-semibold text-foreground">No billing entries yet</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Add an entry to build this item's billable price.</p>
+                        <p className="text-sm font-semibold text-foreground">{pricingType === 'fixed' ? 'No pricing entries yet' : 'No dated actuals yet'}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{pricingType === 'fixed' ? "Add an entry to set this item's agreed price." : 'Log work dates, hours and rates as the work happens.'}</p>
                         {provisionalAmount > 0 && onConfirmCrewPrice && (
                           <Button type="button" className="mt-4 gap-2" onClick={onConfirmCrewPrice} disabled={confirmingCrewPrice}>
                             {confirmingCrewPrice ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
@@ -333,7 +333,7 @@ export function COItemPricingDialog({
                     )}
                     {canAddLabor && (
                       <Button type="button" className="mt-3 gap-2" onClick={() => setFormMode('billable')}>
-                        <Plus className="h-4 w-4" /> Add pricing entry
+                        <Plus className="h-4 w-4" /> {pricingType === 'fixed' ? 'Add pricing entry' : 'Log hours & actuals'}
                       </Button>
                     )}
                   </TabsContent>
