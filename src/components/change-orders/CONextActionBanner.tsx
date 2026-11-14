@@ -59,10 +59,18 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
       }
       return {
         icon: <CheckCircle className="h-5 w-5" />,
-        title: `Review & approve ${fmtCurrency(priceToUpstream)}`,
-        subtitle: `${rl.TC} submitted this work order for your approval`,
+        title: co.pricing_type === 'fixed'
+          ? `Review & approve ${fmtCurrency(priceToUpstream)}`
+          : co.pricing_type === 'tm'
+            ? 'Authorize rates and current actuals'
+            : `Authorize rates and the ${fmtCurrency(co.nte_cap ?? 0)} ceiling`,
+        subtitle: co.pricing_type === 'fixed'
+          ? `${rl.TC} submitted this ${co.document_type === 'WO' ? 'work order' : 'change order'} for your approval`
+          : co.pricing_type === 'tm'
+            ? 'The running total will continue to reflect dated labor, materials and equipment'
+            : 'New actuals cannot pass the ceiling without an approved increase',
         actions: [
-          { label: 'Approve', action: 'approve', primary: true },
+          { label: co.pricing_type === 'fixed' ? 'Approve' : 'Authorize', action: 'approve', primary: true },
           { label: 'Reject', action: 'reject' },
         ],
       };
@@ -115,8 +123,8 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
       }
       return {
         icon: <Send className="h-5 w-5" />,
-        title: `Finalize pricing and submit ${fmtCurrency(priceToUpstream)} to ${upstream}`,
-        subtitle: 'Review your pricing, then submit for approval',
+        title: co.pricing_type === 'fixed' ? `Finalize pricing and submit ${fmtCurrency(priceToUpstream)} to ${upstream}` : `Submit rates and current actuals to ${upstream}`,
+        subtitle: co.pricing_type === 'fixed' ? 'Review your pricing, then submit for approval' : 'Authorization covers the billing rules; actuals continue to accrue from dated entries',
         actions: [
           { label: `Submit to ${upstream}`, action: submitActionName, primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
@@ -156,7 +164,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
         actions: [{ label: 'Review pricing', action: 'scroll_scope' }],
       };
     }
-    if (status === 'draft' && props.pricingReadiness === 'ready') {
+    if (status === 'draft' && co.pricing_type === 'fixed' && props.pricingReadiness === 'ready') {
       return {
         icon: <Send className="h-5 w-5" />,
         title: `Priced at ${fmtCurrency(priceToUpstream)} — ready to submit to ${upstream}`,
@@ -167,10 +175,10 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     if (status === 'draft') {
       return {
         icon: <Zap className="h-5 w-5" />,
-        title: 'Build your price — add labor and materials',
-        subtitle: `Log labor and materials, then submit to ${upstream}`,
+        title: co.pricing_type === 'fixed' ? 'Build your price — add labor and materials' : 'Log actuals as work happens',
+        subtitle: co.pricing_type === 'fixed' ? `Log labor and materials, then submit to ${upstream}` : `Use dated hours, materials and equipment, then submit the billing rules to ${upstream}`,
         actions: [
-          { label: 'Log Hours', action: 'log_hours', primary: true },
+          { label: co.pricing_type === 'fixed' ? 'Log Hours' : 'Log actuals', action: 'log_hours', primary: true },
           { label: 'Add Materials', action: 'scroll_materials' },
           submitAction,
         ],
@@ -195,8 +203,8 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     if (status === 'submitted') {
       return {
         icon: <Clock className="h-5 w-5" />,
-        title: `Waiting on ${upstream} approval`,
-        subtitle: `Submitted ${fmtCurrency(priceToUpstream)} — you'll be notified when reviewed`,
+        title: `Waiting on ${upstream} authorization`,
+        subtitle: co.pricing_type === 'fixed' ? `Submitted ${fmtCurrency(priceToUpstream)} — you'll be notified when reviewed` : `Current actuals ${fmtCurrency(priceToUpstream)} · dated entries remain separate from the authorization decision`,
         actions: [],
       };
     }

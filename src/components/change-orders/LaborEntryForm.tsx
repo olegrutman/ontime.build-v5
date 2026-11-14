@@ -392,7 +392,7 @@ export function LaborEntryForm({
           <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground truncate font-heading">
             {isEditing
               ? (isActualCost ? 'Edit private cost' : 'Edit pricing entry')
-              : (isActualCost ? 'Log private cost' : 'Add pricing entry')}
+              : (isActualCost ? 'Log private cost' : pricingType === 'fixed' ? 'Add pricing entry' : 'Log dated actuals')}
           </h3>
         </div>
         <div className="grid grid-cols-2 w-full sm:w-auto p-1 rounded-lg bg-background border border-border">
