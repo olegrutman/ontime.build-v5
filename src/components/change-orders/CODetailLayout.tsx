@@ -1,6 +1,6 @@
 import { useState, useRef, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare } from 'lucide-react';
+import { Flag, Users, ArrowLeft, Loader2, Send, Hammer, ShieldCheck, ExternalLink, Download, Receipt, FileText, MessageSquare, Clock3 } from 'lucide-react';
 import { VoiceInputButton } from '@/components/VoiceInputButton';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,8 @@ import { COLineReviewBar } from './COLineReview';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COMaterialResponsibilityToggle } from './COMaterialResponsibilityToggle';
+import { CONTEPanel } from './CONTEPanel';
+import { fetchWoBilledToDate } from '@/lib/woProgressBillingData';
 
 import { COActivityFeed } from './COActivityFeed';
 import { COAuditLog } from './COAuditLog';
@@ -90,6 +92,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const [externalInviteOpen, setExternalInviteOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfPerspectiveOpen, setPdfPerspectiveOpen] = useState(false);
+  const [entryRequest, setEntryRequest] = useState<{ itemId: string; token: number } | null>(null);
 
   async function downloadPdfWithPerspective(
     perspective?: 'upstream' | 'downstream',
@@ -201,6 +204,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   });
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false);
   const [revisionUnlocked, setRevisionUnlocked] = useState(false);
+  const { data: billingInfo } = useQuery({
+    queryKey: ['co-order-billing', projectId, coId, myOrgId, isGC ? 'received' : 'issued'],
+    enabled: !!myOrgId && !!coId,
+    queryFn: async () => {
+      const result = await fetchWoBilledToDate(projectId, myOrgId, [coId], isGC ? 'received' : 'issued');
+      return result.get(coId) ?? null;
+    },
+  });
   const canCreateOrders = usePermission('canCreateChangeOrders');
   const {
     isGC, isTC, isFC, role, myOrgId, myOrgName,
@@ -266,13 +277,23 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     photosCardRef.current?.openAdd(type);
   }
 
+  function openFirstEntry() {
+    const item = lineItems.find(row => row.approval_status !== 'rejected');
+    if (!item) {
+      toast.info('Add a scope item before logging work.');
+      return;
+    }
+    setEntryRequest({ itemId: item.id, token: Date.now() });
+    goToSection(scopeRef);
+  }
+
   async function handleAction(action: string) {
     switch (action) {
       case 'scroll_scope': goToSection(scopeRef); break;
       case 'scroll_materials': goToSection(materialsRef); break;
       case 'scroll_pricing': goToSection(pricingRef); break;
       case 'scroll_fc': goToSection(scopeRef); break;
-      case 'log_hours': goToSection(scopeRef); break;
+      case 'log_hours': openFirstEntry(); break;
       case 'request_fc':
         goToSection(scopeRef);
         if (fcOrgOptions.length === 0) {
@@ -493,7 +514,19 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         cost += sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === 'FC' && !imported.has(e.id)));
       }
     }
-    return { id: li.id, name: li.item_name, revenue, cost, priced: getCOPricingReadiness([li], laborEntries, role) === 'ready' };
+    const hours = entries
+      .filter(e => !e.is_actual_cost && e.pricing_mode === 'hourly' && e.entered_by_role === (isFC ? 'FC' : 'TC') && (isGC || e.org_id === myOrgId))
+      .reduce((total, entry) => total + Number(entry.hours ?? 0), 0);
+    return {
+      id: li.id,
+      name: li.item_name,
+      revenue,
+      cost,
+      priced: getCOPricingReadiness([li], laborEntries, role) === 'ready',
+      hours,
+      completed: !!li.completed_at,
+      rejected: li.approval_status === 'rejected',
+    };
   });
   // Sum only the viewer's own billing-role entries — adding the crew's cost and
   // the subcontractor's price for the same work would double count it.
@@ -501,6 +534,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const totalLogged = laborEntries
     .filter(e => !e.is_actual_cost && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole))
     .reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const totalLoggedHours = laborEntries
+    .filter(e => !e.is_actual_cost && e.pricing_mode === 'hourly' && (isGC ? e.entered_by_role === 'TC' : e.entered_by_role === viewerEntryRole && e.org_id === myOrgId))
+    .reduce((s, e) => s + Number(e.hours ?? 0), 0);
+  const activeLineItems = lineItems.filter(item => item.approval_status !== 'rejected');
+  const completedItemCount = activeLineItems.filter(item => !!item.completed_at).length;
+  const orderBillingValue = Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
+  const billedToDate = billingInfo?.legacyFullyBilled ? orderBillingValue : Number(billingInfo?.billed ?? 0);
+  const draftBilling = Number(billingInfo?.draft ?? 0);
 
   // Responsibility-aware billable-to-GC total. Centralized in useChangeOrderDetail
   // so every consumer (KPI strip, scope strip, sidebar, sticky footer, hero block,
