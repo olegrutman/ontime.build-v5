@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { COEquipmentItem } from '@/types/changeOrder';
+import { getNteEntryStatus } from '@/lib/coPricingPresentation';
 
 interface COEquipmentPanelProps {
   coId:      string;
@@ -21,6 +22,8 @@ interface COEquipmentPanelProps {
   canEditExternal?: boolean;
   responsibilityControl?: ReactNode;
   onRefresh: () => void;
+  nteCap?: number | null;
+  nteUsed?: number;
 }
 
 function fmt(n: number) {
@@ -66,6 +69,8 @@ export function COEquipmentPanel({
   canEditExternal = false,
   responsibilityControl,
   onRefresh,
+  nteCap = null,
+  nteUsed = 0,
 }: COEquipmentPanelProps) {
   const rl = useRoleLabelsContext();
   const [drafts, setDrafts]         = useState<DraftEquip[]>([]);
@@ -99,6 +104,15 @@ export function COEquipmentPanel({
 
   async function commitEdit() {
     if (!editingId || !editDraft) return;
+    const item = equipment.find(row => row.id === editingId);
+    if (item) {
+      const nextBilled = (parseFloat(editDraft.cost) || 0) * (1 + (parseFloat(editDraft.markup_percent) || 0) / 100);
+      const status = getNteEntryStatus(nteUsed, nextBilled, nteCap, Number(item.billed_amount ?? 0));
+      if (status.exceedsCap) {
+        toast.error(`This equipment would exceed the NTE ceiling. ${fmt(status.remainingBeforeEntry)} remains before this edit.`);
+        return;
+      }
+    }
     setSavingEdit(true);
     try {
       const { error } = await supabase.from('co_equipment_items').update({
@@ -144,6 +158,15 @@ export function COEquipmentPanel({
   async function saveDrafts() {
     const valid = drafts.filter(d => d.description.trim() && parseFloat(d.cost) > 0);
     if (valid.length === 0) return;
+    const newBilled = valid.reduce((total, draft) => {
+      const cost = parseFloat(draft.cost) || 0;
+      return total + cost * (1 + (parseFloat(draft.markup_percent) || 0) / 100);
+    }, 0);
+    const status = getNteEntryStatus(nteUsed, newBilled, nteCap);
+    if (status.exceedsCap) {
+      toast.error(`This equipment would exceed the NTE ceiling. ${fmt(status.remainingBeforeEntry)} remains.`);
+      return;
+    }
 
     setSaving(true);
     try {

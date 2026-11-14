@@ -954,6 +954,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                       />
                     }
                     onRefresh={refreshDetail}
+                    nteCap={co.pricing_type === 'nte' ? co.nte_cap : null}
+                    nteUsed={financials.nteUsedAmount}
                   />
                 </div>
 
@@ -975,6 +977,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     />
                   }
                   onRefresh={refreshDetail}
+                  nteCap={co.pricing_type === 'nte' ? co.nte_cap : null}
+                  nteUsed={financials.nteUsedAmount}
                 />
 
               {/* Photos */}
