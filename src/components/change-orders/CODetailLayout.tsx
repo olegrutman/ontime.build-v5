@@ -689,11 +689,42 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             pricedCount={pricedCount}
             itemCount={lineItems.length}
             itemBreakdown={itemBreakdown}
+            billedToDate={billedToDate}
+            draftBilling={draftBilling}
+            loggedHours={totalLoggedHours}
+            completedItemCount={completedItemCount}
+            activeItemCount={activeLineItems.length}
           />
               </div>
               <CONextActionBanner co={co} isGC={isGC} isTC={isTC} isFC={isFC} isFCCollaborator={isFC && collaborators.some(c => c.organization_id === myOrgId && c.status === 'active') && co.org_id !== myOrgId} financials={financials} fcCollabName={fcCollabName} upstreamOrgId={coRouting?.defaultId ?? null} onAction={handleAction} lineReview={lineItems.length > 1} pricingReadiness={pricingReadiness} />
             </div>
             <section aria-label="Actions" className="space-y-3 rounded-2xl border-2 border-primary/30 bg-card p-3 shadow-sm xl:sticky xl:top-14">
+              {(isTC || isFC) && co.pricing_type !== 'fixed' && canEdit && !nteBlocked && lineItems.some(item => item.approval_status !== 'rejected') && (
+                <Button className="min-h-10 w-full gap-2 whitespace-normal" onClick={openFirstEntry}>
+                  <Clock3 className="h-4 w-4 shrink-0" />Log hours &amp; actuals
+                </Button>
+              )}
+              {(isTC || isFC) && (status === 'approved' || status === 'contracted') && (
+                <Button variant="outline" className="min-h-10 w-full gap-2 whitespace-normal" onClick={() => setCreateInvoiceOpen(true)}>
+                  <Receipt className="h-4 w-4 shrink-0" />
+                  {co.pricing_type === 'fixed' ? 'Create progress invoice' : 'Invoice logged actuals'}
+                </Button>
+              )}
+              {co.pricing_type === 'nte' && co.nte_cap != null && (
+                <CONTEPanel
+                  presentation="actions"
+                  co={co}
+                  nteLog={nteLog}
+                  usedAmount={financials.nteUsedAmount}
+                  isGC={isGC}
+                  isTC={isTC}
+                  isFC={isFC}
+                  requestNTEIncrease={requestNTEIncrease}
+                  approveNTEIncrease={approveNTEIncrease}
+                  rejectNTEIncrease={rejectNTEIncrease}
+                  onRefresh={refreshDetail}
+                />
+              )}
               <COStatusActions
               co={co}
               isGC={isGC}
@@ -708,17 +739,19 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               lineItems={lineItems}
               laborEntries={laborEntries}
             />
+          {pricingType === 'fixed' && (
             <COPricingUnlockBar
-            co={co}
-            canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
-            unlocked={revisionUnlocked}
-            onToggle={setRevisionUnlocked}
-          />
-          {!hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
+              co={co}
+              canUnlock={!hasRejectedLineItems && isTC && canCreateOrders && canSubmitPriceRevision(co.status, co.org_id, myOrgId, canCreateOrders)}
+              unlocked={revisionUnlocked}
+              onToggle={setRevisionUnlocked}
+            />
+          )}
+          {pricingType === 'fixed' && !hasRejectedLineItems && <COPriceRevisionActions co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} correctionManaged={corrections.some(c => c.version > c.approved_version)} />}
               <COCorrectionCard presentation="actions" corrections={corrections} myOrgId={myOrgId} projectId={projectId} onRefresh={refreshDetail} />
             </section>
           </div>
-          {!hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
+          {pricingType === 'fixed' && !hasRejectedLineItems && <COPriceRevisionCard co={co} myOrgId={myOrgId} isTC={isTC} isGC={isGC} currentLabor={financials.billableGrandTotal} onRefresh={refreshDetail} />}
 
           {/* Secondary items collapse into tappable tags. */}
           {(() => {
@@ -846,7 +879,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                           laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
                           role={role} isGC={isGC} isTC={isTC} isFC={isFC}
                           coId={co.id} orgId={myOrgId} coPricingType={pricingType}
-                          coNteCap={co.nte_cap} coNteUsed={financials.laborTotal}
+                          coNteCap={co.nte_cap} coNteUsed={financials.nteUsedAmount}
+                          entryRequestToken={entryRequest?.itemId === item.id ? entryRequest.token : undefined}
                           canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
                           canEditExternal={canEditExternal}
                           canEditInternal={canEditInternal}
@@ -882,6 +916,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             pricedCount={pricedCount}
             itemCount={lineItems.length}
             itemBreakdown={itemBreakdown}
+            billedToDate={billedToDate}
+            draftBilling={draftBilling}
+            loggedHours={totalLoggedHours}
+            completedItemCount={completedItemCount}
+            activeItemCount={activeLineItems.length}
                   compact
                 />
               </div>
@@ -1007,7 +1046,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
           <div className="space-y-3 xl:hidden">
             <COSidebar {...sidebarProps} currentLaborTotal={totalLogged} />
-            {billedCard}
             {coV4 && <CombinedSOVCard projectId={projectId} currentCoId={coId} />}
           </div>
         </div>
@@ -1029,6 +1067,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         projectId={projectId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['co-linked-invoice', coId] });
+          queryClient.invalidateQueries({ queryKey: ['co-order-billing', projectId, coId] });
           refreshDetail();
         }}
         isTM={co.document_type === 'WO'}
