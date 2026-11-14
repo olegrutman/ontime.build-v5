@@ -612,7 +612,7 @@ export function COStatusActions({
         id: co.id,
         updates: { completed_at: new Date().toISOString() },
       });
-      toast.success('CO marked as completed');
+      toast.success(co.pricing_type === 'fixed' ? 'Work marked as completed' : 'Order closed out');
       await logActivity('marked_completed');
       await notifyOrg(co.org_id, 'CO_COMPLETED');
       onRefresh();
@@ -634,7 +634,7 @@ export function COStatusActions({
           contracted_at: new Date().toISOString(),
         },
       });
-      toast.success(`Completion acknowledged — ${rl.TC} can now invoice`);
+      toast.success(co.pricing_type === 'fixed' ? `Completion acknowledged — ${rl.TC} can now invoice` : 'Closeout approved');
       await logActivity('acknowledged_completion');
       await notifyOrg(co.assigned_to_org_id, 'CO_ACKNOWLEDGED');
       onRefresh();
@@ -768,7 +768,7 @@ export function COStatusActions({
         <div className="flex items-center gap-2">
           <Check className="h-4 w-4 co-light-success-text" />
           <span className="text-sm font-medium text-foreground">
-            Contracted — TC can now invoice
+            Contracted — {rl.TC} can now invoice
           </span>
         </div>
         {canReleaseRetainage && (

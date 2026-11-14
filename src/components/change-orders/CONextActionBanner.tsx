@@ -203,7 +203,7 @@ function getBannerConfig(props: CONextActionBannerProps, rl: RoleLabels): Banner
     if (status === 'submitted') {
       return {
         icon: <Clock className="h-5 w-5" />,
-        title: `Waiting on ${upstream} authorization`,
+        title: co.pricing_type === 'fixed' ? `Waiting on ${upstream} approval` : `Waiting on ${upstream} authorization`,
         subtitle: co.pricing_type === 'fixed' ? `Submitted ${fmtCurrency(priceToUpstream)} — you'll be notified when reviewed` : `Current actuals ${fmtCurrency(priceToUpstream)} · dated entries remain separate from the authorization decision`,
         actions: [],
       };
