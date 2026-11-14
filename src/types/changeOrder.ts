@@ -264,6 +264,8 @@ export interface COFinancials {
   useFcPricingBase: boolean;
   tcBillableToGC: number;
   profitMargin: number | null;
+  /** Billable labor, materials and equipment consumed against the authorized NTE ceiling. */
+  nteUsedAmount: number;
   nteUsedPercent: number | null;
   materialsTax: number;
   laborTax: number;

@@ -98,7 +98,8 @@ export function useCORoleContext(
     const isFCCreator = isFC && co?.org_id === myOrgId;
     const fcPostSubmitPricing = isFC && isCollaboratorOrg &&
       ['submitted', 'approved', 'contracted'].includes(co?.status ?? '');
-    const baseCanEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted') || fcPostSubmitPricing) && (isGC || isTC || isFC);
+    const runningPricingStatuses = ['submitted', 'approved', 'contracted'];
+    const baseCanEdit = (isActiveStatus || (isRunningPricing && runningPricingStatuses.includes(co?.status ?? '')) || fcPostSubmitPricing) && (isGC || isTC || isFC);
     // Approved-order revision: the owning subcontractor may reopen its own pricing.
     // The approved price keeps governing until the contractor accepts the revision.
     const revisionOpen = revisionUnlocked && isTC && !!co && co.org_id === myOrgId &&
