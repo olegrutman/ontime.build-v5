@@ -75,6 +75,142 @@ function tilePills(tile: KPITile) {
   return tile.badge ? [{ type: tile.badge.variant === 'healthy' ? 'pg' as const : tile.badge.variant === 'watch' ? 'pa' as const : 'pm' as const, text: tile.badge.text }] : [];
 }
 
+function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
+  const { co, financials, isGC, isTC, isFC } = props;
+  const legacy = getLegacyTiles(props, rl);
+  const supplemental = legacy.filter(tile =>
+    tile.editable || tile.label === 'Retainage Held' || tile.label === 'Net Payable' ||
+    tile.label === (financials.taxJurisdictionLabel ?? 'Tax'));
+  const billed = Math.max(0, props.billedToDate ?? 0);
+  const draft = Math.max(0, props.draftBilling ?? 0);
+  const hours = Math.max(0, props.loggedHours ?? 0);
+  const isApproved = ['approved', 'contracted'].includes(co.status);
+  const matResp = props.materialResponsible ?? 'TC';
+  const eqResp = props.equipmentResponsible ?? 'TC';
+  const gcHeadline = props.tcBillableTotal ?? (financials.tcBillableToGC
+    + (matResp === 'TC' ? financials.materialsTotal : 0)
+    + (eqResp === 'TC' ? financials.equipmentTotal : 0));
+  const ownLabor = financials.viewer.ownLaborToUpstream;
+  const ownBillable = ownLabor > 0 ? ownLabor : (isTC && co.use_fc_pricing_base ? (props.tcBillableTotal ?? 0) : 0);
+  const currentRevenue = financials.viewer.totalToUpstream > 0 ? financials.viewer.totalToUpstream : ownBillable;
+  const revenue = isGC
+    ? gcHeadline
+    : isApproved && isTC && co.approved_amount != null
+      ? Number(co.approved_amount)
+      : currentRevenue;
+  const runningTotal = isGC ? gcHeadline : currentRevenue;
+  const billingSub = draft > 0 ? `${fmtCurrency(draft)} on drafts · not billed` : 'Issued invoices only';
+
+  if (co.pricing_type === 'fixed') {
+    const base = legacy.filter(tile => !['Private cost', 'Gross margin', 'Order margin'].includes(tile.label));
+    const primaryIndex = base.findIndex(tile => tile.primary);
+    const modeTiles: KPITile[] = [
+      {
+        label: 'Billed to date',
+        value: fmtCurrency(billed),
+        color: C.blue,
+        sub: `${revenue > 0 ? `${Math.min(100, (billed / revenue) * 100).toFixed(1)}% of the approved price` : 'No issued invoices'} · ${billingSub}`,
+        kind: 'other',
+      },
+      {
+        label: 'Remaining to bill',
+        value: fmtCurrency(Math.max(0, revenue - billed)),
+        color: C.green,
+        sub: 'Approved fixed price minus issued invoices',
+        kind: 'other',
+      },
+      {
+        label: 'Scope completion',
+        value: `${props.completedItemCount ?? 0} of ${props.activeItemCount ?? 0}`,
+        color: C.purple,
+        sub: 'Completed scope items · progress billing remains separate',
+        kind: 'progress',
+      },
+    ];
+    base.splice(primaryIndex >= 0 ? primaryIndex + 1 : 1, 0, ...modeTiles);
+    return base;
+  }
+
+  if (co.pricing_type === 'tm') {
+    return [
+      {
+        label: isApproved ? 'Running actuals' : 'Current actuals',
+        value: fmtCurrency(runningTotal),
+        color: C.purple,
+        sub: 'Dated labor + materials + equipment · before tax',
+        kind: 'revenue',
+        primary: true,
+        badge: { text: 'Open ended', variant: 'neutral' },
+      },
+      {
+        label: 'Logged hours',
+        value: `${hours.toLocaleString('en-US', { maximumFractionDigits: 1 })}h`,
+        color: C.blue,
+        sub: 'Hourly billing entries visible to your company',
+        kind: 'hours',
+      },
+      {
+        label: 'Available to invoice',
+        value: fmtCurrency(unbilledActuals(runningTotal, billed, draft)),
+        color: C.green,
+        sub: `Actuals not on issued or draft invoices · ${billingSub}`,
+        kind: 'other',
+      },
+      {
+        label: 'Billed to date',
+        value: fmtCurrency(billed),
+        color: C.blue,
+        sub: billingSub,
+        kind: 'other',
+      },
+      ...supplemental,
+    ];
+  }
+
+  const cap = Math.max(0, Number(co.nte_cap) || 0);
+  const used = Math.max(0, financials.nteUsedAmount);
+  const percent = cap > 0 ? (used / cap) * 100 : 0;
+  const meterColor = percent >= 95 ? C.red : percent >= 80 ? C.amber : C.green;
+  return [
+    {
+      label: 'Actuals / NTE ceiling',
+      value: fmtCurrency(used),
+      color: meterColor,
+      sub: `${percent.toFixed(1)}% of ${fmtCurrency(cap)} authorized ceiling`,
+      kind: 'revenue',
+      primary: true,
+      meter: { percent, color: meterColor },
+      badge: percent >= 100
+        ? { text: 'Ceiling reached', variant: 'watch' }
+        : percent >= 80
+          ? { text: 'Approaching ceiling', variant: 'watch' }
+          : { text: 'Within ceiling', variant: 'healthy' },
+    },
+    {
+      label: 'Remaining headroom',
+      value: fmtCurrency(Math.max(0, cap - used)),
+      color: meterColor,
+      sub: percent >= 100 ? 'Request a cap increase before more actuals' : 'Available before the authorized ceiling',
+      kind: 'other',
+    },
+    {
+      label: 'Logged hours',
+      value: `${hours.toLocaleString('en-US', { maximumFractionDigits: 1 })}h`,
+      color: C.blue,
+      sub: 'Hourly billing entries visible to your company',
+      kind: 'hours',
+    },
+    {
+      label: 'Billed to date',
+      value: fmtCurrency(billed),
+      color: C.blue,
+      sub: `${billingSub} · invoices cannot pass the ceiling`,
+      kind: 'other',
+    },
+    ...supplemental,
+  ];
+}
+
 function getLegacyTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   const { isGC, isTC, isFC, financials, markupVisibility = 'hidden' } = props;
   const matResp = props.materialResponsible ?? 'TC';
