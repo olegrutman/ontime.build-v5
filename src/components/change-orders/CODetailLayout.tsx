@@ -862,8 +862,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
                     <div className="hidden px-4 py-2 text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground md:grid md:grid-cols-[2rem_minmax(0,1fr)_7rem_8rem_7rem_5rem] md:items-center md:gap-3">
                       <span>#</span>
                       <span>Item</span>
-                      <span className="text-right">Pricing</span>
-                      <span className="text-right">Price</span>
+                      <span className="text-right">{co.pricing_type === 'fixed' ? 'Pricing' : 'Entry'}</span>
+                      <span className="text-right">{co.pricing_type === 'fixed' ? 'Price' : 'Actuals'}</span>
                       <span className="text-right">Review</span>
                       <span className="text-right">Open</span>
                     </div>

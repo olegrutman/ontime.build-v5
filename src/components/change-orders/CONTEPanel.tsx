@@ -350,7 +350,7 @@ export function CONTEPanel({
             <span className={cn('text-[11px] font-semibold', isNearCap ? 'text-destructive' : 'text-muted-foreground')}>{pct.toFixed(1)}% used</span>
           </div>
 
-          {isWarning && !hasPending && (
+          {(isWarning || isNearCap) && !hasPending && (
             <p className="text-xs leading-relaxed text-muted-foreground">
               {isOver ? 'Ceiling reached. New over-cap entries are locked.' : `Approaching the ${fmt(cap)} ceiling. Request more room before work passes it.`}
             </p>
