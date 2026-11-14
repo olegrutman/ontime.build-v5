@@ -1,9 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { approvedLaborForReview, summarizeLineReview } from '@/lib/coLineReview';
+import { approvedLaborForReview, finalizedCOApprovalAmount, summarizeLineReview } from '@/lib/coLineReview';
 
 const item = (id: string, approval_status: 'pending' | 'approved' | 'rejected') => ({ id, approval_status });
 
 describe('per-line CO/WO review', () => {
+  it('uses revised pricing rather than zero approval for a rejected proposal', () => {
+    expect(finalizedCOApprovalAmount({ status: 'rejected', approved_amount: 0 }) ?? 1500).toBe(1500);
+  });
+
+  it('preserves partial approval on accepted orders', () => {
+    expect(finalizedCOApprovalAmount({ status: 'approved', approved_amount: 1000 }) ?? 1500).toBe(1000);
+  });
+
+  it('preserves a legitimate zero approval on contracted orders', () => {
+    expect(finalizedCOApprovalAmount({ status: 'contracted', approved_amount: 0 }) ?? 1500).toBe(0);
+  });
+
+  it('ignores stale review totals when an order returns to pricing', () => {
+    expect(finalizedCOApprovalAmount({ status: 'closed_for_pricing', approved_amount: 1000 }) ?? 1500).toBe(1500);
+  });
   it('keeps review incomplete while any item is pending', () => {
     expect(summarizeLineReview([item('a', 'approved'), item('b', 'pending')])).toMatchObject({
       pending: 1,

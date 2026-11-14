@@ -2,6 +2,13 @@ import type { COLaborEntry, COLineItem } from '@/types/changeOrder';
 
 export type COLineApprovalStatus = 'pending' | 'approved' | 'rejected';
 
+/** Review results govern accepted scope, not a rejected order's next proposal. */
+export function finalizedCOApprovalAmount(co: { status?: string; approved_amount?: number | null } | null | undefined): number | null {
+  return co?.status === 'approved' || co?.status === 'contracted'
+    ? co.approved_amount ?? null
+    : null;
+}
+
 export interface COLineReviewSummary {
   total: number;
   pending: number;

@@ -18,6 +18,7 @@ import { useCORoutingTargets } from '@/hooks/useCORoutingTargets';
 import { resolveCOAssignee, snapshotCOSubmission, materializeCrewPricingForOrg } from '@/lib/coSubmitPrep';
 import { computeFcPricingBase } from '@/lib/fcPricingBase';
 import { getCOPricingReadiness } from '@/lib/coPricingReadiness';
+import { finalizedCOApprovalAmount } from '@/lib/coLineReview';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -482,6 +483,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
 
   const status = co.status as COStatus;
+  const finalizedApprovalAmount = finalizedCOApprovalAmount(co);
   const canReviewLineItems = isGC && canApprove && status === 'submitted' && lineItems.length > 1
     && (co.org_id === myOrgId || co.assigned_to_org_id === myOrgId);
   const hasRejectedLineItems = lineItems.some(item => item.approval_status === 'rejected');
@@ -503,7 +505,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     const entries = laborEntries.filter(e => e.co_line_item_id === li.id);
     const sum = (rows: typeof entries) => rows.reduce((t, e) => t + (e.line_total ?? 0), 0);
     const billRole = isFC ? 'FC' : 'TC';
-    const excludedFromApproval = co.approved_amount != null && li.approval_status === 'rejected';
+    const excludedFromApproval = finalizedApprovalAmount != null && li.approval_status === 'rejected';
     const revenue = excludedFromApproval ? 0 : sum(entries.filter(e => !e.is_actual_cost && e.entered_by_role === billRole));
     let cost = 0;
     if (isTC || isFC) {
@@ -555,10 +557,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         pricingType: co.pricing_type,
       })
     : null;
-  const tcBillableTotal = co.approved_amount ?? (financials.billableGrandTotal > 0
+  const tcBillableTotal = finalizedApprovalAmount ?? (financials.billableGrandTotal > 0
     ? financials.billableGrandTotal
     : (crewDerivedPrice?.fcHasSubmitted ? crewDerivedPrice.calculatedPrice : financials.billableGrandTotal));
-  const orderBillingValue = Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
+  const orderBillingValue = Number(finalizedApprovalAmount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0);
   const billedToDate = billingInfo?.legacyFullyBilled ? orderBillingValue : Number(billingInfo?.billed ?? 0);
   const draftBilling = Number(billingInfo?.draft ?? 0);
 
@@ -589,7 +591,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       nteCap={(co as any).nte_cap ?? null}
       value={isFC
         ? Number(financials.viewer.ownLaborToUpstream ?? 0)
-        : Number(co.approved_amount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
+        : Number(finalizedApprovalAmount ?? (co as any).tc_submitted_price ?? tcBillableTotal ?? 0)}
     />
   ) : null;
 
