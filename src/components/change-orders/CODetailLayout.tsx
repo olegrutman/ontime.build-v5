@@ -691,6 +691,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             itemBreakdown={itemBreakdown}
             billedToDate={billedToDate}
             draftBilling={draftBilling}
+            billingLoaded={billingInfo != null}
             loggedHours={totalLoggedHours}
             completedItemCount={completedItemCount}
             activeItemCount={activeLineItems.length}
@@ -924,6 +925,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
             itemBreakdown={itemBreakdown}
             billedToDate={billedToDate}
             draftBilling={draftBilling}
+            billingLoaded={billingInfo != null}
             loggedHours={totalLoggedHours}
             completedItemCount={completedItemCount}
             activeItemCount={activeLineItems.length}

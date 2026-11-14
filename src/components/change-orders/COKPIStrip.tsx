@@ -34,6 +34,7 @@ interface COKPIStripProps {
   compact?: boolean;
   billedToDate?: number;
   draftBilling?: number;
+  billingLoaded?: boolean;
   loggedHours?: number;
   completedItemCount?: number;
   activeItemCount?: number;
@@ -81,6 +82,7 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
   const supplemental = legacy.filter(tile =>
     tile.editable || tile.label === 'Retainage Held' || tile.label === 'Net Payable' ||
     tile.label === (financials.taxJurisdictionLabel ?? 'Tax'));
+  const billingLoaded = props.billingLoaded !== false;
   const billed = Math.max(0, props.billedToDate ?? 0);
   const draft = Math.max(0, props.draftBilling ?? 0);
   const hours = Math.max(0, props.loggedHours ?? 0);
@@ -99,7 +101,8 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       ? Number(co.approved_amount)
       : currentRevenue;
   const runningTotal = isGC ? gcHeadline : currentRevenue;
-  const billingSub = draft > 0 ? `${fmtCurrency(draft)} on drafts · not billed` : 'Issued invoices only';
+  const billingSub = !billingLoaded ? 'Loading invoice records…' : draft > 0 ? `${fmtCurrency(draft)} on drafts · not billed` : 'Issued invoices only';
+  const billedValue = billingLoaded ? fmtCurrency(billed) : '…';
 
   if (co.pricing_type === 'fixed') {
     const base = legacy.filter(tile => !['Private cost', 'Gross margin', 'Order margin'].includes(tile.label));
@@ -107,16 +110,16 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     const modeTiles: KPITile[] = [
       {
         label: 'Billed to date',
-        value: fmtCurrency(billed),
+        value: billedValue,
         color: C.blue,
-        sub: `${revenue > 0 ? `${Math.min(100, (billed / revenue) * 100).toFixed(1)}% of the approved price` : 'No issued invoices'} · ${billingSub}`,
+        sub: !billingLoaded ? billingSub : `${revenue > 0 ? `${Math.min(100, (billed / revenue) * 100).toFixed(1)}% of the approved price` : 'No issued invoices'} · ${billingSub}`,
         kind: 'other',
       },
       {
         label: 'Remaining to bill',
-        value: fmtCurrency(Math.max(0, revenue - billed)),
+        value: billingLoaded ? fmtCurrency(Math.max(0, revenue - billed)) : '…',
         color: C.green,
-        sub: 'Approved fixed price minus issued invoices',
+        sub: billingLoaded ? 'Approved fixed price minus issued invoices' : billingSub,
         kind: 'other',
       },
       {
@@ -151,14 +154,14 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
       },
       {
         label: 'Available to invoice',
-        value: fmtCurrency(unbilledActuals(runningTotal, billed, draft)),
+        value: billingLoaded ? fmtCurrency(unbilledActuals(runningTotal, billed, draft)) : '…',
         color: C.green,
-        sub: `Actuals not on issued or draft invoices · ${billingSub}`,
+        sub: !billingLoaded ? billingSub : `Actuals not on issued or draft invoices · ${billingSub}`,
         kind: 'other',
       },
       {
         label: 'Billed to date',
-        value: fmtCurrency(billed),
+        value: billedValue,
         color: C.blue,
         sub: billingSub,
         kind: 'other',
@@ -202,9 +205,9 @@ function getTiles(props: COKPIStripProps, rl: RoleLabels): KPITile[] {
     },
     {
       label: 'Billed to date',
-      value: fmtCurrency(billed),
+      value: billedValue,
       color: C.blue,
-      sub: `${billingSub} · invoices cannot pass the ceiling`,
+      sub: `${billingSub}${billingLoaded ? ' · invoices cannot pass the ceiling' : ''}`,
       kind: 'other',
     },
     ...supplemental,
