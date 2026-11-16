@@ -30,7 +30,7 @@
 - Hired crew tasks hold pricing and cumulative progress separately from daily workers; progress draws lock the task and post only actual payments to the shared private cost ledger, because completed work is not automatically paid payroll.
 - Crew project budgets are organization-private and separate from upstream contracts; overview actual costs count ledger spending once, while forecasts use the greater of budget and actual in each expense category.
 
-- Shared interactive primitives must keep fixed controls non-shrinking and allow text to wrap safely on phone-width screens, because page-specific overflow fixes are inconsistent.- Run `scripts/mobile-audit/mobile_audit.py` (per account, 320/394px) after layout changes, because page-wide checks miss text clipped inside cards.
+- Shared primitives keep fixed controls non-shrinking and wrap text on phones, because per-page overflow fixes drift.- Run `scripts/mobile-audit/mobile_audit.py` (320/394px) after layout changes; page-wide checks miss clipped card text.
 - Keep the public landing experience isolated from the signed-in Command Center design system, because marketing typography and storytelling must not alter operational screens.
 - Resolve proposal parties through the authorized proposal_parties RPC and persist the contractual recipient; PDF exports must validate issuer-scoped RLS before rendering, because downstream agreements and private costs must not leak across companies.
 
