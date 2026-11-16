@@ -49,3 +49,5 @@
 - Signed-in screens use semantic state/destructive/type tokens instead of raw palette colors, h1/h2 default to the condensed heading face, and KPI values use the mono number face; light text on dark surfaces uses white opacity, because per-page colors and fonts drifted from the Command Center design.
 - Remodel/T&M setup stores the material default on the creator's project_participants row; ensure_tm_project_contracts copies it onto auto-created work-order contracts, because those contracts are created later at invite acceptance.
 - Multi-item CO/WO review persists protected per-line decisions and a final approved_amount; parent finalization, contract deltas, SOVs and invoice paths must exclude rejected scope because whole-order status alone cannot represent partial approval.
+
+- Field reports are crew→hiring-Subcontractor private; items carry no prices and change status only through submit_field_report/decide_field_item/link_field_item_conversion, and others see only released/converted items, because the Subcontractor is the release firewall.
