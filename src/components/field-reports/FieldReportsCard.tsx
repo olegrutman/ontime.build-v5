@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList } from 'lucide-react';
+import { Mic, Square, Plus, Trash2, Send, Check, Pause, Loader2, ClipboardList, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -220,6 +220,30 @@ function DraftEditor({ report, items, onChange }: { report: any; items: any[]; o
     onChange();
   };
 
+  const [sorting, setSorting] = useState(false);
+  const sortWithAi = async () => {
+    setSorting(true);
+    try {
+      await saveText();
+      const { data, error } = await supabase.functions.invoke('field-report-sort', { body: { report_id: report.id } });
+      if (error || data?.error) throw new Error(data?.error || error?.message || 'Could not sort the update');
+      const found = (data?.items || []) as Array<{ kind: Kind; description: string; location: string | null; quantity: number | null; unit: string | null }>;
+      if (data?.transcript && !report.transcript) await db.from('field_reports').update({ transcript: data.transcript }).eq('id', report.id);
+      if (!found.length) { toast({ title: 'No items found', description: 'Add more detail, or add items by hand.' }); return; }
+      const { data: u } = await supabase.auth.getUser();
+      const { error: insErr } = await db.from('field_report_items').insert(found.map(f => ({
+        report_id: report.id, project_id: report.project_id, crew_org_id: report.crew_org_id, reviewer_org_id: report.reviewer_org_id,
+        kind: f.kind, description: f.description, location: f.location, quantity: f.quantity, unit: f.unit,
+        created_by: u.user?.id, status: 'draft', ai_generated: true,
+      })));
+      if (insErr) throw new Error(insErr.message);
+      toast({ title: `${found.length} item${found.length === 1 ? '' : 's'} added`, description: 'Check each one. Remove anything that is wrong before sending.' });
+      onChange();
+    } catch (e: any) {
+      toast({ title: 'Could not sort the update', description: e.message, variant: 'destructive' });
+    } finally { setSorting(false); }
+  };
+
   const removeItem = async (id: string) => { await db.from('field_report_items').delete().eq('id', id); onChange(); };
 
   const toggleRecord = async () => {
@@ -265,7 +289,12 @@ function DraftEditor({ report, items, onChange }: { report: any; items: any[]; o
           {recording ? <><Square className="h-4 w-4 mr-1" />Stop recording</> : <><Mic className="h-4 w-4 mr-1" />{report.audio_path ? 'Re-record voice note' : 'Record voice note'}</>}
         </Button>
         {report.audio_path && !recording && <span className="text-xs text-muted-foreground">Voice note attached</span>}
+        <Button type="button" size="sm" onClick={sortWithAi} disabled={sorting || recording || (!text.trim() && !report.audio_path)}>
+          {sorting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}Sort into items
+        </Button>
       </div>
+      <p className="text-xs text-muted-foreground">Sort into items reads your update or voice note and adds items below. Check them before sending.</p>
+      {report.transcript && <p className="text-xs rounded-lg bg-muted p-2"><span className="font-medium">Voice note text:</span> {report.transcript}</p>}
 
       <div className="rounded-xl border p-3 space-y-2">
         <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Add an item</p>
