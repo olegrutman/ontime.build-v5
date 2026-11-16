@@ -1,4 +1,5 @@
 import { needsSupplierChoice } from '@/lib/fieldItemConversion';
+import { LinkedFieldReportPhotos } from '@/components/field-reports/FieldReportPhotoGallery';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import {
@@ -1049,6 +1050,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
           </div>
         </CardContent>
       </Card>
+
+      <LinkedFieldReportPhotos poId={po.id} />
 
       {/* Activity Timeline */}
       <POActivityTimeline po={po} />

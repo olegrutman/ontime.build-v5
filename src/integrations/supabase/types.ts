@@ -3946,6 +3946,51 @@ export type Database = {
           },
         ]
       }
+      field_report_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          project_id: string
+          report_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          report_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          report_id?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_report_photos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_report_photos_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "field_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_reports: {
         Row: {
           audio_path: string | null
@@ -9801,6 +9846,10 @@ export type Database = {
         Args: { _name: string }
         Returns: boolean
       }
+      can_access_field_report_photo_object: {
+        Args: { _object_name: string }
+        Returns: boolean
+      }
       can_approve_supplier_po: {
         Args: { _po_id: string; _user_id?: string }
         Returns: boolean
@@ -9839,6 +9888,14 @@ export type Database = {
       can_see_project: { Args: { p_project_id: string }; Returns: boolean }
       can_supplier_edit_po_pricing: {
         Args: { _po_id: string; _user_id?: string }
+        Returns: boolean
+      }
+      can_upload_field_report_photo: {
+        Args: { _report: string }
+        Returns: boolean
+      }
+      can_view_field_report_photos: {
+        Args: { _report: string; _user: string }
         Returns: boolean
       }
       can_view_po_pricing: { Args: { po_id: string }; Returns: boolean }
