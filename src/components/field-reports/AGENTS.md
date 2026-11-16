@@ -1,0 +1,1 @@
+- Field-report AI sorting only returns suggestions; the crew's own session saves them as draft items so row policies and crew review still apply.
