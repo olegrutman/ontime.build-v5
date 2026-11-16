@@ -554,6 +554,13 @@
       "when": 1794856098376,
       "tag": "0078_field_po_note_on_supplier_pick",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1794856390713,
+      "tag": "0079_field_release_one_alert_per_report",
+      "breakpoints": true
     }
   ]
 }
