@@ -86,6 +86,12 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   // RFIs
   RFI_SUBMITTED: HelpCircle,
   RFI_ANSWERED: MessageSquareReply,
+
+  // Field reports
+  FIELD_REPORT_SUBMITTED: ClipboardList,
+  FIELD_ITEM_RELEASED: CheckCircle2,
+  FIELD_ITEM_HELD: AlertTriangle,
+  FIELD_ITEM_CONVERTED: ClipboardList,
 };
 
 // Use semantic tokens from the design system. text-warning / text-success /
@@ -141,6 +147,10 @@ const typeColors: Record<string, string> = {
   // RFIs
   RFI_SUBMITTED: 'text-primary',
   RFI_ANSWERED: 'text-success',
+  FIELD_REPORT_SUBMITTED: 'text-primary',
+  FIELD_ITEM_RELEASED: 'text-success',
+  FIELD_ITEM_HELD: 'text-warning',
+  FIELD_ITEM_CONVERTED: 'text-primary',
 };
 
 // Notifications whose action_url should be ignored in favor of the dashboard
