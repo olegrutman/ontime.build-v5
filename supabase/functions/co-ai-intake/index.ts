@@ -38,6 +38,7 @@ Return strict JSON: { "package_title": string, "lines": [ {
 } ] }
 
 Rules:
+- The request may be spoken dictation. Read clearly misheard building terms by sound and context (e.g. "by fours" = 2x4s, "trust" = trusses, "joyce" = joists, "sheeting" = sheathing); never add facts.
 - Split only on real scope changes; do not invent items.
 - Keep titles short and concrete. No prices, no markup, no schedule talk.
 - problem field: be direct and professional. Lead with the action, state the location, end with the handoff condition. Avoid passive voice, "must be", "is required", "to provide", or vague explanations.
