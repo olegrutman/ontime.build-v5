@@ -51,3 +51,4 @@
 - Multi-item CO/WO review persists protected per-line decisions and a final approved_amount; parent finalization, contract deltas, SOVs and invoice paths must exclude rejected scope because whole-order status alone cannot represent partial approval.
 
 - Field reports: crew+hiring Sub only, no prices, status via RPCs; others see released items (Sub is the firewall).
+- Field-report AI sorting only returns suggestions; the crew's own session saves them as draft items, so row policies and crew review still gate everything.
