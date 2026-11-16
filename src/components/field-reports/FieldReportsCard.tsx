@@ -209,8 +209,8 @@ function ReviewActions({ item, onChange }: { item: any; onChange: () => void }) 
   const decide = async (decision: 'release' | 'hold') => {
     setBusy(true);
     const { error } = await db.rpc('decide_field_item', { p_item_id: item.id, p_decision: decision, p_reason: decision === 'hold' ? reason : null });
-    setBusy(false);
-    if (error) toast({ title: 'Could not save decision', description: error.message, variant: 'destructive' });
+    // Stay locked after success until the refreshed list replaces these buttons, so a second tap can't re-decide the item.
+    if (error) { setBusy(false); toast({ title: 'Could not save decision', description: error.message, variant: 'destructive' }); }
     else onChange();
   };
   if (holding) return (
