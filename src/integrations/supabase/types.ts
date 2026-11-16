@@ -9643,6 +9643,19 @@ export type Database = {
         Args: { _org_a: string; _org_b: string; _project_id: string }
         Returns: string
       }
+      _notify_org_users: {
+        Args: {
+          _body: string
+          _entity_id: string
+          _entity_type: string
+          _key: string
+          _org: string
+          _title: string
+          _type: string
+          _url: string
+        }
+        Returns: undefined
+      }
       accept_org_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -10801,6 +10814,10 @@ export type Database = {
         | "PO_PENDING_APPROVAL"
         | "PO_RETURNED"
         | "ESTIMATE_PARSED"
+        | "FIELD_REPORT_SUBMITTED"
+        | "FIELD_ITEM_RELEASED"
+        | "FIELD_ITEM_HELD"
+        | "FIELD_ITEM_CONVERTED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -11019,6 +11036,10 @@ export const Constants = {
         "PO_PENDING_APPROVAL",
         "PO_RETURNED",
         "ESTIMATE_PARSED",
+        "FIELD_REPORT_SUBMITTED",
+        "FIELD_ITEM_RELEASED",
+        "FIELD_ITEM_HELD",
+        "FIELD_ITEM_CONVERTED",
       ],
       order_status: [
         "DRAFT",
