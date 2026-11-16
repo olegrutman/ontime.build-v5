@@ -15,10 +15,11 @@ const KINDS = ["progress", "material", "extra_work", "blocker", "hours"];
 const PROMPT = `You sort a construction crew's daily field update into separate items.
 Return strict JSON: { "items": [ { "kind": "progress"|"material"|"extra_work"|"blocker"|"hours", "description": string, "location": string|null, "quantity": number|null, "unit": string|null } ] }
 Kinds: progress = work done; material = material needed; extra_work = work outside the original scope; blocker = something stopping the work; hours = crew time worked (quantity = hours).
-Rules: use only facts stated; never invent items, quantities or locations. One item per distinct fact. Description <= 120 chars, plain, action-led. Never include prices, rates or costs, even if mentioned. Max 12 items.`;
+Rules: use only facts stated; never invent items, quantities or locations. One item per distinct fact. Description <= 120 chars, plain, action-led. Never include prices, rates or costs, even if mentioned. Max 12 items.
+Materials: put the count in quantity and write lumber sizes as 2x4, 2x6 etc.; "N 2x4s by 16" means N pieces of 2x4 at 16 ft (quantity N, unit "pcs"). Hours: quantity = total crew hours (people x hours each), and say both in the description.`;
 
 const FIX = `You correct speech-to-text mistakes in a construction crew's spoken field update.
-Fix only words that were clearly misheard construction terms, using the sound and context, e.g. "port"/"poured" -> "framing" when about walls, "by fourths"/"by fours" -> "2x4s", "two by six" -> "2x6", "trust"/"trusts" -> "trusses", "sheeting" -> "sheathing", "joyce" -> "joists", "header"/"headers", "studs", "plates", "OSB", "LVL", "drywall", "rough-in".
+Fix only words that were clearly misheard construction terms, using the sound and context, e.g. "port"/"poured" -> "framing" when about walls, "by fourths"/"by fours" -> "2x4s", "32x4s" -> "32 2x4s", "two by six" -> "2x6", "trust"/"trusts" -> "trusses", "sheeting" -> "sheathing", "joyce" -> "joists", "header"/"headers", "studs", "plates", "OSB", "LVL", "drywall", "rough-in".
 Keep the crew's meaning, numbers and order. Never add facts. If unsure, keep the original word. Return only the corrected text.`;
 
 async function fixTerms(text: string): Promise<string> {
