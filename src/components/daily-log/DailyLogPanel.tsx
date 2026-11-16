@@ -20,6 +20,7 @@ import { QuickNotesCard } from './QuickNotesCard';
 import { CriticalScheduleCard } from '@/components/project/CriticalScheduleCard';
 import { FieldCaptureList } from '@/components/field-capture/FieldCaptureList';
 import { useAuth } from '@/hooks/useAuth';
+import { FieldSummaryCard } from './FieldSummaryCard';
 import { FieldReportsCard } from '@/components/field-reports/FieldReportsCard';
 
 import type { WeatherData, SafetyIncident } from '@/types/dailyLog';
@@ -159,6 +160,8 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
       <CriticalScheduleCard projectId={projectId} onNavigate={(tab) => { window.location.pathname = window.location.pathname.replace(/\/[^/]*$/, '/') + tab; }} />
 
       {/* Cards */}
+      <FieldSummaryCard projectId={projectId} date={dateStr} />
+
       <WeatherCard
         weather={(log?.weather_data as WeatherData) || {}}
         onChange={handleWeatherChange}
