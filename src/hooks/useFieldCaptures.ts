@@ -116,7 +116,7 @@ export function useFieldCaptures(projectId: string, date?: string) {
 
       // Upload voice note
       if (input.voiceFile) {
-        const path = `${input.project_id}/${captureId}/voice.webm`;
+        const path = `${input.project_id}/${captureId}/voice.${input.voiceFile.type.includes("mp4") ? "m4a" : "webm"}`;
         voice_note_url = await uploadMedia('field-captures', path, input.voiceFile);
       }
 
