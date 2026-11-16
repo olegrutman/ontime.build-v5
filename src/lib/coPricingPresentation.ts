@@ -50,7 +50,9 @@ export function getNteEntryStatus(
     projectedUsed,
     remainingBeforeEntry,
     percentUsed,
-    exceedsCap: safeCap > 0 && projectedUsed > safeCap + 0.005,
+    // Edits that do not raise the entry (lower amounts, date changes) stay allowed even when already over the cap.
+    exceedsCap: safeCap > 0 && projectedUsed > safeCap + 0.005
+      && (Number(entryAmount) || 0) > Math.max(0, Number(replacedEntryAmount) || 0) + 0.005,
     approachingCap: safeCap > 0 && percentUsed >= 80 && projectedUsed <= safeCap + 0.005,
   };
 }
