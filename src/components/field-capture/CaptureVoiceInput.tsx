@@ -19,7 +19,8 @@ export function CaptureVoiceInput({ onRecord, hasRecording, onClear, disabled }:
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const mime = ['audio/webm', 'audio/mp4'].find((t) => typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(t));
+      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       chunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
@@ -27,7 +28,7 @@ export function CaptureVoiceInput({ onRecord, hasRecording, onClear, disabled }:
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || mime || 'audio/webm' });
         onRecord(blob);
         stream.getTracks().forEach((t) => t.stop());
       };
