@@ -519,6 +519,13 @@
       "when": 1794846393212,
       "tag": "0073_nte_cap_billable_rows_and_edits",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1794847111443,
+      "tag": "0074_field_reports_foundation",
+      "breakpoints": true
     }
   ]
 }
