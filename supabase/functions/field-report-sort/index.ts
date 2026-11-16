@@ -1,6 +1,7 @@
 // Sorts a crew's field update (typed text and/or voice note) into draft items.
 // Returns suggestions only; the crew's own client saves them, so row policies still apply.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { generateResponse, transcribeAudio, GatewayError } from "npm:@lovable.dev/ai-gateway@0.1.13";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,7 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = "openai/gpt-6-astra";
 const KINDS = ["progress", "material", "extra_work", "blocker", "hours"];
 
 const PROMPT = `You sort a construction crew's daily field update into separate items.
@@ -16,17 +17,16 @@ Return strict JSON: { "items": [ { "kind": "progress"|"material"|"extra_work"|"b
 Kinds: progress = work done; material = material needed; extra_work = work outside the original scope; blocker = something stopping the work; hours = crew time worked (quantity = hours).
 Rules: use only facts stated; never invent items, quantities or locations. One item per distinct fact. Description <= 120 chars, plain, action-led. Never include prices, rates or costs, even if mentioned. Max 12 items.`;
 
-async function gateway(messages: unknown[], key: string) {
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
-    body: JSON.stringify({ model: MODEL, messages, temperature: 0.2, max_tokens: 1200 }),
-  });
-  if (r.status === 429) throw Object.assign(new Error("busy"), { code: 429 });
-  if (r.status === 402) throw Object.assign(new Error("credits"), { code: 402 });
-  if (!r.ok) throw new Error(`gateway ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  const d = await r.json();
-  return String(d?.choices?.[0]?.message?.content ?? "");
+async function sortText(text: string): Promise<string> {
+  const r: any = await generateResponse({
+    model: MODEL,
+    instructions: PROMPT,
+    input: [{ role: "user", content: "Return JSON.\n\n" + text.slice(0, 8000) }],
+    text: { format: { type: "json_object" } },
+  } as any);
+  if (typeof r?.output_text === "string") return r.output_text;
+  const parts = (r?.output ?? []).flatMap((o: any) => o?.content ?? []).filter((c: any) => c?.type === "output_text");
+  return parts.map((c: any) => c.text).join("");
 }
 
 Deno.serve(async (req) => {
@@ -49,19 +49,15 @@ Deno.serve(async (req) => {
     const { data: member } = await sb.from("user_org_roles").select("id").eq("user_id", u.user.id).eq("organization_id", rep.crew_org_id).maybeSingle();
     if (!member) return json({ error: "Only the crew can sort its report" }, 403);
 
-    const key = Deno.env.get("LOVABLE_API_KEY")!;
-    let transcript: string | null = rep.transcript ?? null;
+        let transcript: string | null = rep.transcript ?? null;
     if (rep.audio_path && !transcript) {
       const { data: file } = await sb.storage.from("field-audio").download(rep.audio_path);
       if (file) {
         const buf = new Uint8Array(await file.arrayBuffer());
-        let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
         const format = rep.audio_path.endsWith(".m4a") ? "mp4" : "webm";
         try {
-          transcript = (await gateway([{ role: "user", content: [
-            { type: "text", text: "Transcribe this construction crew voice note word for word. Return only the transcript text." },
-            { type: "input_audio", input_audio: { data: btoa(bin), format } },
-          ] }], key)).trim().slice(0, 6000) || null;
+          const t: any = await transcribeAudio({ model: "google/gemini-3.5-transcribe", file: new Blob([buf], { type: format === "mp4" ? "audio/mp4" : "audio/webm" }) });
+          transcript = String(t?.text ?? "").trim().slice(0, 6000) || null;
         } catch (e) { console.error("transcribe failed", e); }
       }
     }
@@ -69,7 +65,7 @@ Deno.serve(async (req) => {
     const text = [rep.raw_text, transcript].filter(Boolean).join("\n\n").trim();
     if (!text) return json({ error: "Type an update or record a voice note first" }, 400);
 
-    const raw = await gateway([{ role: "system", content: PROMPT }, { role: "user", content: text.slice(0, 8000) }], key);
+    const raw = await sortText(text);
     const m = raw.match(/\{[\s\S]*\}/);
     const parsed = m ? JSON.parse(m[0]) : { items: [] };
     const items = (Array.isArray(parsed.items) ? parsed.items : []).slice(0, 12)
@@ -83,8 +79,11 @@ Deno.serve(async (req) => {
       }));
     return json({ transcript, items });
   } catch (e: any) {
-    if (e?.code === 429) return json({ error: "AI is busy, try again in a minute" }, 429);
-    if (e?.code === 402) return json({ error: "AI credits are used up" }, 402);
+    if (e instanceof GatewayError) {
+      console.error("gateway", e.code, e.httpStatus, e.ids);
+      if (e.httpStatus === 429) return json({ error: "AI is busy, try again in a minute" }, 429);
+      if (e.httpStatus === 402) return json({ error: "AI credits are used up" }, 402);
+    }
     console.error(e);
     return json({ error: "Could not sort the update" }, 500);
   }
