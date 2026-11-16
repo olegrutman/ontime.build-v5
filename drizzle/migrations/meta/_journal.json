@@ -561,6 +561,13 @@
       "when": 1794856390713,
       "tag": "0079_field_release_one_alert_per_report",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1794861310708,
+      "tag": "0080_field_report_photos",
+      "breakpoints": true
     }
   ]
 }
