@@ -69,7 +69,7 @@ export async function createMaterialOrderFromItem(item: any): Promise<string> {
   return po.id;
 }
 
-export const FIELD_NO_SUPPLIER_NOTE = 'From crew field report. No supplier on this project yet — choose one before sending.';
+export const FIELD_NO_SUPPLIER_NOTE = 'From crew field report. No supplier on this project yet — add one, then pick it with Edit before sending.';
 export const STAND_IN_SUPPLIER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 /** A field-report order still on the stand-in supplier must get a real supplier before it is sent. */
 export function needsSupplierChoice(po: { notes?: string | null; supplier_id?: string | null } | null | undefined): boolean {

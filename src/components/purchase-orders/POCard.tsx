@@ -206,7 +206,7 @@ export function POCard({
 
 
         {showSubmitButton && needsSupplierChoice(po) && (
-          <p className="mt-3 text-xs text-destructive">Choose a supplier with Edit before sending.</p>
+          <p className="mt-3 text-xs text-destructive">Add a supplier to this project, then pick it with Edit before sending.</p>
         )}
         {/* Action buttons */}
         {(showSubmitButton || showEditButton || showApprovalButtons) && (
