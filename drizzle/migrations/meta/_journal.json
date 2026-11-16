@@ -512,6 +512,13 @@
       "when": 1794595931823,
       "tag": "0072_fix_single_item_approval_uuid_aggregate",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1794846393212,
+      "tag": "0073_nte_cap_billable_rows_and_edits",
+      "breakpoints": true
     }
   ]
 }

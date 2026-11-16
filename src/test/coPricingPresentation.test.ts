@@ -29,3 +29,12 @@ describe('pricing-mode calculations', () => {
     expect(unbilledActuals(2000, 800, 300)).toBe(900);
   });
 });
+
+describe('NTE edits over the ceiling', () => {
+  it('allows lowering an entry when the order is already over the cap', () => {
+    expect(getNteEntryStatus(12000, 500, 10000, 1000).exceedsCap).toBe(false);
+  });
+  it('still blocks raising an entry past the cap', () => {
+    expect(getNteEntryStatus(9500, 2000, 10000, 1000).exceedsCap).toBe(true);
+  });
+});

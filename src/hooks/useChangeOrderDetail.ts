@@ -285,7 +285,9 @@ export function useChangeOrderDetail(coId: string | null) {
   const billableGrandTotal = finalizedApprovalAmount ?? (approvedTcBillableToGC + billableMaterialsTotal + billableEquipmentTotal);
   // The ceiling tracks current billable actuals, not the frozen approval snapshot.
   // Crew-derived labor is already deduplicated in laborTotal.
-  const nteUsedAmount = getNteUsedAmount(laborTotal, billableMaterialsTotal, billableEquipmentTotal);
+  const nteUsedAmount = getNteUsedAmount(
+    // The ceiling governs what is billed upstream; crew rows are the subcontractor's cost unless they are the pricing base.
+    co?.use_fc_pricing_base ? laborTotal : tcLaborTotal, billableMaterialsTotal, billableEquipmentTotal);
   const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (nteUsedAmount / co.nte_cap) * 100 : 0;
   const billableMaterialsTax = billableMaterialsTotal * taxPct;
   const billableEquipmentTax = billableEquipmentTotal * taxPct;
