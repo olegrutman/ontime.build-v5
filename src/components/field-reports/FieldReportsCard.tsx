@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FieldReportPhotoEditor } from './FieldReportPhotoEditor';
+import { FieldReportPhotoGallery, type FieldReportPhoto } from './FieldReportPhotoGallery';
 
 const db = supabase as any;
 type Kind = 'progress' | 'material' | 'extra_work' | 'blocker' | 'hours';
@@ -46,19 +48,22 @@ export function FieldReportsCard({ projectId, date }: Props) {
       const { data: reports } = await db.from('field_reports').select('*').eq('project_id', projectId).eq('report_date', date).order('created_at');
       const ids = (reports || []).map((r: any) => r.id);
       const next = new Date(date + 'T00:00:00Z'); next.setUTCDate(next.getUTCDate() + 1);
-      const [{ data: own }, { data: rel }] = await Promise.all([
+      const [{ data: own }, { data: rel }, { data: photos, error: photoError }] = await Promise.all([
         ids.length ? db.from('field_report_items').select('*').in('report_id', ids).order('created_at') : Promise.resolve({ data: [] }),
         db.from('field_report_items').select('*').eq('project_id', projectId).in('status', ['released', 'converted'])
           .gte('released_at', date + 'T00:00:00Z').lt('released_at', next.toISOString()).order('released_at'),
+        ids.length ? db.from('field_report_photos').select('*').in('report_id', ids).order('created_at') : Promise.resolve({ data: [], error: null }),
       ]);
+      if (photoError) throw photoError;
       const seen = new Set((own || []).map((i: any) => i.id));
       const items = [...(own || []), ...(rel || []).filter((i: any) => !seen.has(i.id))];
-      return { reports: reports || [], items };
+      return { reports: reports || [], items, photos: photos || [] };
     },
   });
   const refresh = () => qc.invalidateQueries({ queryKey: key });
   const reports: any[] = data?.reports || [];
   const items: any[] = data?.items || [];
+  const photos: FieldReportPhoto[] = data?.photos || [];
 
   const crewPair = pairs[0];
   const myDraft = reports.find(r => r.status === 'draft' && myOrgs.includes(r.crew_org_id));
@@ -92,14 +97,14 @@ export function FieldReportsCard({ projectId, date }: Props) {
 
       {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
 
-      {myDraft && <DraftEditor report={myDraft} items={items.filter(i => i.report_id === myDraft.id)} onChange={refresh} />}
+      {myDraft && <DraftEditor report={myDraft} items={items.filter(i => i.report_id === myDraft.id)} photos={photos.filter(p => p.report_id === myDraft.id)} onChange={refresh} />}
 
       {mySent.map(r => (
-        <ReportBlock key={r.id} title="Sent for review" report={r} items={items.filter(i => i.report_id === r.id)} />
+        <ReportBlock key={r.id} title="Sent for review" report={r} items={items.filter(i => i.report_id === r.id)} photos={photos.filter(p => p.report_id === r.id)} />
       ))}
 
       {toReview.map(r => (
-        <ReportBlock key={r.id} title="From your crew" report={r} items={items.filter(i => i.report_id === r.id)} reviewer onChange={refresh} />
+        <ReportBlock key={r.id} title="From your crew" report={r} items={items.filter(i => i.report_id === r.id)} photos={photos.filter(p => p.report_id === r.id)} reviewer onChange={refresh} />
       ))}
 
       {releasedOnly.length > 0 && (
@@ -139,7 +144,7 @@ function ItemRow({ item, children }: { item: any; children?: React.ReactNode }) 
   );
 }
 
-function ReportBlock({ title, report, items, reviewer, onChange }: { title: string; report: any; items: any[]; reviewer?: boolean; onChange?: () => void }) {
+function ReportBlock({ title, report, items, photos, reviewer, onChange }: { title: string; report: any; items: any[]; photos: FieldReportPhoto[]; reviewer?: boolean; onChange?: () => void }) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const loadAudio = async () => {
     const { data } = await supabase.storage.from('field-audio').createSignedUrl(report.audio_path, 600);
@@ -152,6 +157,7 @@ function ReportBlock({ title, report, items, reviewer, onChange }: { title: stri
       {report.audio_path && (audioUrl
         ? <audio controls src={audioUrl} className="w-full" />
         : <Button variant="outline" size="sm" onClick={loadAudio}><Mic className="h-4 w-4 mr-1" />Play voice note</Button>)}
+      <FieldReportPhotoGallery photos={photos} />
       {items.map(i => (
         <ItemRow key={i.id} item={i}>
           {reviewer && i.status === 'crew_confirmed' && <ReviewActions item={i} onChange={onChange!} />}
@@ -230,7 +236,7 @@ function ReviewActions({ item, onChange }: { item: any; onChange: () => void }) 
   );
 }
 
-function DraftEditor({ report, items, onChange }: { report: any; items: any[]; onChange: () => void }) {
+function DraftEditor({ report, items, photos, onChange }: { report: any; items: any[]; photos: FieldReportPhoto[]; onChange: () => void }) {
   const { toast } = useToast();
   const [text, setText] = useState(report.raw_text || '');
   const [kind, setKind] = useState<Kind>('progress');
@@ -344,6 +350,8 @@ function DraftEditor({ report, items, onChange }: { report: any; items: any[]; o
       </div>
       <p className="text-xs text-muted-foreground">Sort into items reads your update or voice note and adds items below. Check them before sending.</p>
       {report.transcript && <p className="text-xs rounded-lg bg-muted p-2"><span className="font-medium">Voice note text:</span> {report.transcript}</p>}
+
+      <FieldReportPhotoEditor report={report} photos={photos} onChange={onChange} />
 
       <div className="rounded-xl border p-3 space-y-2">
         <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Add an item</p>
