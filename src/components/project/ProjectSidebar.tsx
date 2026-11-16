@@ -57,7 +57,7 @@ const ITEMS = {
   sov: { key: 'sov', label: 'Schedule of Values', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts' },
   estimates: { key: 'estimates', label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
   schedule: { key: 'schedule', label: 'Schedule', icon: CalendarDays, route: 'schedule', featureKey: 'schedule_gantt', premium: true },
-  dailyLog: { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs', premium: true },
+  dailyLog: { key: 'daily-log', label: 'Daily Log', icon: PenLine, route: 'daily-log', featureKey: 'daily_logs' },
   crewTracker: { key: 'crew-tracker', label: 'Crew Tracker', icon: Receipt, route: 'crew-tracker' },
   rfis: { key: 'rfis', label: 'RFIs', icon: MessageSquareMore, route: 'rfis', premium: true },
   returns: { key: 'returns', label: 'Returns', icon: RotateCcw, route: 'returns', featureKey: 'returns_tracking' },

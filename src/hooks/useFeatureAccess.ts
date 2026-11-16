@@ -30,8 +30,15 @@ export function useOrgFeaturesForCurrentOrg() {
  * Check whether a specific feature is enabled for the current org.
  * Returns { enabled, limit, loading }.
  */
+/** Features open to every organization regardless of plan (tiers paused for now). */
+export const ALWAYS_ON_FEATURES: ReadonlySet<string> = new Set(['daily_logs']);
+
 export function useFeatureAccess(featureKey: FeatureKey) {
   const { data: features, isLoading } = useOrgFeaturesForCurrentOrg();
+
+  if (ALWAYS_ON_FEATURES.has(featureKey)) {
+    return { enabled: true, limit: null, loading: false, source: 'always_on' };
+  }
 
   const feature = features?.find((f) => f.feature_key === featureKey);
 
