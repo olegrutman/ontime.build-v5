@@ -273,6 +273,11 @@ function DraftEditor({ report, items, onChange }: { report: any; items: any[]; o
       if (error || serverMsg) throw new Error(serverMsg || 'Could not sort the update');
       const found = (data?.items || []) as Array<{ kind: Kind; description: string; location: string | null; quantity: number | null; unit: string | null }>;
       if (data?.transcript && !report.transcript) await db.from('field_reports').update({ transcript: data.transcript }).eq('id', report.id);
+      if (found.length) {
+        // A new sort replaces earlier automatic drafts; items the crew typed by hand stay.
+        const { error: delErr } = await db.from('field_report_items').delete().eq('report_id', report.id).eq('status', 'draft').eq('ai_generated', true);
+        if (delErr) throw new Error(delErr.message);
+      }
       if (!found.length) { toast({ title: 'No items found', description: 'Add more detail, or add items by hand.' }); return; }
       const { data: u } = await supabase.auth.getUser();
       const { error: insErr } = await db.from('field_report_items').insert(found.map(f => ({
@@ -305,7 +310,7 @@ function DraftEditor({ report, items, onChange }: { report: any; items: any[]; o
         const path = `${report.id}/${Date.now()}.${ext}`;
         const { error } = await supabase.storage.from('field-audio').upload(path, new Blob(chunks.current, { type }), { contentType: type });
         if (error) { toast({ title: 'Could not save recording', description: error.message, variant: 'destructive' }); return; }
-        await db.from('field_reports').update({ audio_path: path }).eq('id', report.id);
+        await db.from('field_reports').update({ audio_path: path, transcript: null }).eq('id', report.id);
         toast({ title: 'Voice note saved' });
         onChange();
       };
