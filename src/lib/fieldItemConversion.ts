@@ -57,7 +57,7 @@ export async function createMaterialOrderFromItem(item: any): Promise<string> {
   if (nErr || !poNumber) throw nErr || new Error('Could not number the order');
   const { data: po, error } = await db.from('purchase_orders').insert({
     organization_id: orgId, created_by_org_id: orgId, po_number: poNumber, po_name: `Field request · ${String(item.description).slice(0, 60)}`,
-    supplier_id: supplierId, project_id: item.project_id, status: 'ACTIVE', notes: orgIds.length ? 'From crew field report. Not yet sent to the supplier.' : 'From crew field report. No supplier on this project yet — choose one before sending.',
+    supplier_id: supplierId, project_id: item.project_id, status: 'ACTIVE', notes: orgIds.length ? 'From crew field report. Not yet sent to the supplier.' : FIELD_NO_SUPPLIER_NOTE,
   }).select('id').single();
   if (error) throw error;
   const { error: lErr } = await db.from('po_line_items').insert({
@@ -67,4 +67,11 @@ export async function createMaterialOrderFromItem(item: any): Promise<string> {
   if (lErr) { await db.from('purchase_orders').delete().eq('id', po.id); throw lErr; }
   try { await link(item.id, { po: po.id }); } catch (e) { await db.from('purchase_orders').delete().eq('id', po.id); throw e; }
   return po.id;
+}
+
+export const FIELD_NO_SUPPLIER_NOTE = 'From crew field report. No supplier on this project yet — choose one before sending.';
+export const STAND_IN_SUPPLIER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+/** A field-report order still on the stand-in supplier must get a real supplier before it is sent. */
+export function needsSupplierChoice(po: { notes?: string | null; supplier_id?: string | null } | null | undefined): boolean {
+  return !!po && po.supplier_id === STAND_IN_SUPPLIER_ID && (po.notes ?? '').includes('No supplier on this project yet');
 }

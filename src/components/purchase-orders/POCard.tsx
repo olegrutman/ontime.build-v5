@@ -1,3 +1,4 @@
+import { needsSupplierChoice } from '@/lib/fieldItemConversion';
 import { format } from 'date-fns';
 import { Eye, Edit, Download, Send, Loader2, Lock, Receipt, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -204,6 +205,9 @@ export function POCard({
         </div>
 
 
+        {showSubmitButton && needsSupplierChoice(po) && (
+          <p className="mt-3 text-xs text-destructive">Choose a supplier with Edit before sending.</p>
+        )}
         {/* Action buttons */}
         {(showSubmitButton || showEditButton || showApprovalButtons) && (
           <div className="flex items-center gap-2 mt-4 pt-3 border-t">
@@ -214,7 +218,7 @@ export function POCard({
               </Button>
             )}
             {showSubmitButton && (
-              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-type-sov hover:bg-type-sov">
+              <Button size="sm" onClick={handleSubmit} disabled={submitting || needsSupplierChoice(po)} title={needsSupplierChoice(po) ? 'Choose a supplier first (Edit)' : undefined} className="bg-type-sov hover:bg-type-sov">
                 {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                 {supplierRaised ? 'Send for Approval' : 'Submit to Supplier'}
               </Button>
