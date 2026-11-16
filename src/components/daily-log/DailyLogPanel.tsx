@@ -20,6 +20,7 @@ import { QuickNotesCard } from './QuickNotesCard';
 import { CriticalScheduleCard } from '@/components/project/CriticalScheduleCard';
 import { FieldCaptureList } from '@/components/field-capture/FieldCaptureList';
 import { useAuth } from '@/hooks/useAuth';
+import { FieldReportsCard } from '@/components/field-reports/FieldReportsCard';
 
 import type { WeatherData, SafetyIncident } from '@/types/dailyLog';
 
@@ -209,6 +210,8 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
         onChange={handleNotesChange}
         disabled={isSubmitted}
       />
+
+      <FieldReportsCard projectId={projectId} date={dateStr} />
 
       {/* Field Captures for this date */}
       {orgId && (
